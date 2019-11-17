@@ -20,30 +20,6 @@ from zato.common.model import FTPChannel
 # ################################################################################################################################
 # ################################################################################################################################
 
-'''
-class Index(_Index):
-    method_allowed = 'GET'
-    url_name = 'channel-ftp'
-    template = 'zato/channel/ftp/index.html'
-    service_name = 'channel.ftp.get-list'
-    output_class = FTPChannel
-    paginate = True
-
-    class SimpleIO(_Index.SimpleIO):
-        input_required = 'cluster_id',
-        output_required = 'id', 'name', 'is_active', 'address', 'max_connections', 'max_conn_per_ip', 'command_timeout', \
-          'banner', 'log_prefix', 'base_directory', 'read_throttle', 'write_throttle',  \
-          'log_level'
-        output_optional = 'service_id', 'service_name', 'topic_name'
-        output_repeated = True
-
-    def handle(self):
-        return {
-           'create_form': CreateForm(req=self.req),
-           'edit_form': EditForm(prefix='edit', req=self.req),
-        }
-'''
-
 class Index(_Index):
     method_allowed = 'GET'
     url_name = 'channel-ftp'
@@ -54,7 +30,10 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id', 'type_'
-        output_required = 'id', 'name'
+        output_required = 'id', 'name', 'is_active', 'address', 'max_connections', 'max_conn_per_ip', 'command_timeout', \
+           'banner', 'log_prefix', 'base_directory', 'read_throttle', 'write_throttle', \
+           'passive_ports', 'log_level'
+        output_optional = 'service_name', 'topic_name'
         output_repeated = True
 
     def handle(self):
@@ -66,29 +45,11 @@ class Index(_Index):
 # ################################################################################################################################
 # ################################################################################################################################
 
-'''
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_active', 'max_connections', 'max_conn_per_ip', 'command_timeout', \
-           'banner', 'log_prefix', 'base_directory', 'read_throttle', 'write_throttle', \
-           'passive_ports', 'log_level'
-        input_optional = 'service_name', 'topic_name'
-        output_required = 'id', 'name'
-
-    def success_message(self, item):
-        return 'FTP channel `{}` successfully {}'.format(item.name, self.verb)
-'''
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class _CreateEdit(CreateEdit):
-    method_allowed = 'POST'
-
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_active', 'max_connections', 'max_conn_per_ip', 'command_timeout', \
+        input_required = 'name', 'is_active', 'address', 'max_connections', 'max_conn_per_ip', 'command_timeout', \
            'banner', 'log_prefix', 'base_directory', 'read_throttle', 'write_throttle', \
            'passive_ports', 'log_level'
         input_optional = 'service_name', 'topic_name'
@@ -103,7 +64,7 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['pool_size'] = 1
 
     def success_message(self, item):
-        return 'Successfully {} outgoing FTP channel `{}`'.format(self.verb, item.name)
+        return 'Successfully {} FTP channel `{}`'.format(self.verb, item.name)
 
 # ################################################################################################################################
 # ################################################################################################################################
