@@ -20,6 +20,9 @@ class FTPChannel(object):
         self.id   = None            # type: int
         self.name = None            # type: str
         self.is_active = None       # type: bool
+        self.address = None         # type: str
+        self.host = None            # type: str
+        self.port = None            # type: int
         self.max_connections = None # type: int
         self.max_conn_per_ip = None # type: int
         self.command_timeout = None # type: int

@@ -13,6 +13,11 @@ from logging import getLogger
 # Bunch
 from bunch import bunchify
 
+# pyftpdlib
+from pyftpdlib.authorizers import DummyAuthorizer
+from pyftpdlib.handlers import FTPHandler, ThrottledDTPHandler
+from pyftpdlib.servers import FTPServer
+
 # Zato
 from zato.common.model import FTPChannel
 
@@ -24,15 +29,47 @@ logging.basicConfig(level=logging.INFO, format=log_format)
 logger = getLogger('zato')
 
 # ################################################################################################################################
+
+_megabyte = 1048576 # 2 ** 20 bytes
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ChannelFTPImpl(object):
     def __init__(self, model):
         # type: (FTPChannel)
-        self._model = model
+        self.model = model
 
     def serve_forever(self):
-        pass
+        logger.info('Starting FTP channel `%s` (%s)', self.model.name, self.model.to_dict())
+
+        authorizer = DummyAuthorizer()
+        authorizer.add_user('abc', 'def', '/tmp', 'elradfmwMT')
+
+        # We need these subclasses to set Python class-wide parameters on a per-channel basis
+        class _FTPHandler(FTPHandler):
+            pass
+
+        class _ThrottledDTPHandler(ThrottledDTPHandler):
+            pass
+
+        dtp_handler = _ThrottledDTPHandler
+        dtp_handler.read_limit = self.model.read_throttle
+        dtp_handler.write_limit = self.model.write_throttle
+
+        handler = _FTPHandler
+        handler.dtp_handler = dtp_handler
+        handler.authorizer = authorizer
+        handler.banner = self.model.banner
+        handler.timeout = self.model.command_timeout
+        handler.log_prefix = self.model.log_prefix
+        handler.masquerade_address = self.model.masq_address
+
+        server = FTPServer((self.model.host, self.model.port), handler)
+        server.max_cons = self.model.max_connections
+        server.max_cons_per_ip = self.model.max_conn_per_ip
+
+        server.serve_forever()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,8 +78,9 @@ def main():
 
     config = bunchify({
         'id': 1,
+        'name': 'My FTP channel',
         'address': '0.0.0.0:21021',
-        'banner': 'Welcome',
+        'banner': 'Welcome to Zato',
         'base_directory': './work/ftp',
         'command_timeout': 300,
         'log_level': 'INFO',
@@ -50,8 +88,8 @@ def main():
         'masq_address': None,
         'max_conn_per_ip': '20',
         'max_connections': '200',
-        'passive_ports': None,
-        'read_throttle': '10',
+        'passive_ports': '50100-50200',
+        'read_throttle': '0.25',
         'write_throttle': '10',
         'service_name': 'helpers.raw-request-logger',
         'topic_name': None,
@@ -60,8 +98,26 @@ def main():
     # Use expected data types in configuration
     config.max_conn_per_ip = int(config.max_conn_per_ip)
     config.max_connections = int(config.max_connections)
-    config.read_throttle = int(config.read_throttle)
-    config.write_throttle = int(config.write_throttle)
+    config.read_throttle = float(config.read_throttle)
+    config.write_throttle = float(config.write_throttle)
+
+    # Turn megabytes into bytes
+    config.read_throttle = int(config.read_throttle * _megabyte)
+    config.write_throttle = int(config.write_throttle * _megabyte)
+
+    # Break address into components
+    host, port = config.address.split(':')
+    host = host.strip()
+    port = int(port.strip())
+    config.host = host
+    config.port = port
+
+    # Break passive ports into components
+    if config.passive_ports:
+        start, stop = config.passive_ports.split('-')
+        start = int(start.strip())
+        stop = int(stop.strip())
+        config.passive_ports = [start, stop]
 
     # Python-level configuration object
     model = FTPChannel.from_dict(config)
