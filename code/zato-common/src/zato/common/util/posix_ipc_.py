@@ -6,12 +6,9 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import hashlib
-import sys
 from datetime import datetime, timedelta
 from json import loads
 from logging import getLogger
@@ -21,6 +18,7 @@ from traceback import format_exc
 
 # posix-ipc
 import posix_ipc as ipc
+
 # Zato
 from zato.common.util.json_ import dumps
 
@@ -31,16 +29,6 @@ logger = getLogger('zato')
 # ################################################################################################################################
 
 _shmem_pattern = '/zato-shmem-{}'
-
-def form_name(suffix):
-    """Darwin's SysV IPC implementation is older than time itself. Unlike
-    Linux, its name field is limited to 31 bytes. Therefore on Darwin, use a
-    truncated hash of the suffix to avoid OSError."""
-    if sys.platform == 'darwin':
-        avail = 31 + 2 - len(_shmem_pattern)
-        suffix = hashlib.md5(suffix).hexdigest()[avail:]
-
-    return _shmem_pattern.format(suffix)
 
 # ################################################################################################################################
 
@@ -60,7 +48,7 @@ class SharedMemoryIPC(object):
     def create(self, shmem_suffix, size, needs_create):
         """ Creates all IPC structures.
         """
-        self.shmem_name = form_name(shmem_suffix)
+        self.shmem_name = _shmem_pattern.format(shmem_suffix)
         self.size = size
 
         # Create or read share memory
@@ -83,9 +71,8 @@ class SharedMemoryIPC(object):
     def store(self, data):
         """ Serializes input data as JSON and stores it in RAM, overwriting any previous data.
         """
-        # Ensure trailing garbage is removed when data shrinks.
-        self._mmap[:] = b'\x00' * len(self._mmap)
-        self._mmap[:len(dumped)] = dumped
+        self._mmap.seek(0)
+        self._mmap.write(dumps(data).encode('utf8'))
         self._mmap.flush()
 
     def store_initial(self):
@@ -99,7 +86,8 @@ class SharedMemoryIPC(object):
     def load(self, needs_loads=True):
         """ Reads in all data from RAM and, optionally, loads it as JSON.
         """
-        data = self._mmap[:].strip(b'\x00')
+        self._mmap.seek(0)
+        data = self._mmap.read(self.size).strip(b'\x00')
         return loads(data.decode('utf8')) if needs_loads else data
 
     def close(self):

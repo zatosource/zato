@@ -7,17 +7,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import platform
-import sys
 from logging import getLogger
 
-# Zato
-from zato.common.util.posix_ipc import SharedMemoryIPC
-
 # keyutils
-if platform.system() == 'Linux':
-    import keyutils as _keyutils
-
+import keyutils as _keyutils
 
 # ################################################################################################################################
 
@@ -25,9 +18,10 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
-class LinuxKeyUtils(object):
+class KeyUtils(object):
     """ A higher-level wrapper around Linux kernel's keyutils facilities, i.e. keyctl(2) and related syscalls.
     """
+    _user_keyring = _keyutils.KEY_SPEC_USER_KEYRING
 
 # ################################################################################################################################
 
@@ -54,7 +48,7 @@ class LinuxKeyUtils(object):
         pid = pid or self.default_pid
 
         formatted = self._format_proc_key(key, pid)
-        key_id = _keyutils.request_key(formatted, _keyutils.KEY_SPEC_USER_KEYRING)
+        key_id = _keyutils.request_key(formatted, self._user_keyring)
 
         if not key_id:
             raise ValueError('No such key `{}` in proc keyring'.format(formatted))
@@ -66,7 +60,7 @@ class LinuxKeyUtils(object):
     def user_set(self, key, value, pid=None):
         """ Sets key to value in current user's keyring.
         """
-        return _keyutils.add_key(self._format_proc_key(key, pid), value, _keyutils.KEY_SPEC_USER_KEYRING)
+        return _keyutils.add_key(self._format_proc_key(key, pid), value, self._user_keyring)
 
 # ################################################################################################################################
 
@@ -80,67 +74,6 @@ class LinuxKeyUtils(object):
     def user_delete(self, key, pid=None):
         """ Deletes key from current user's keyring.
         """
-        return _keyutils.unlink(self._get_user_key_id(key, pid), _keyutils.KEY_SPEC_USER_KEYRING)
-# ################################################################################################################################
-
-class IpcKeyUtils(LinuxKeyUtils):
-    """ An IPC-based stand-in for the Linux keyring API, for OSes that don't support it.
-    """
-    KEYRING_SIZE = 65536
-
-# ################################################################################################################################
-
-    def __init__(self, default_key=None, default_pid=None):
-        super(IpcKeyUtils, self).__init__(default_key, default_pid)
-        self.uid_shmem = SharedMemoryIPC()
-        self.uid_shmem.create('uid-keyring', self.KEYRING_SIZE)
-
-# ################################################################################################################################
-
-    def _get_user_key_id(self, key=None, pid=None):
-        """ Returns ID under which a given key name is known.
-        """
-        key = key or self.default_key
-        pid = pid or self.default_pid
-        return self._format_proc_key(key, pid)
-
-# ################################################################################################################################
-
-    def user_set(self, key, value, pid=None):
-        """ Sets key to value in current user's keyring.
-        """
-        keyring = self.uid_shmem.load()
-        keyring[self._format_proc_key(key, pid)] = value
-        self.uid_shmem.store(keyring)
-
-# ################################################################################################################################
-
-    def user_get(self, key=None, pid=None):
-        """ Returns value of key from current user's keyring.
-        """
-        keyring = self.uid_shmem.load()
-        return keyring[self._get_user_key_id(key)]
-
-# ################################################################################################################################
-
-    def user_delete(self, key, pid=None):
-        """ Deletes key from current user's keyring.
-        """
-        keyring = self.uid_shmem.load()
-        keyring.pop(self._get_user_key_id(key), None)
-        self.uid_shmem.store(keyring)
-
-# ################################################################################################################################
-
-def KeyUtils(*args, **kwargs):
-    """Factory function that returns an implementation appropriate for the active platform.
-    """
-    if platform.system() == 'Linux':
-        if sys.platform == 'linux2':
-            klass = LinuxKeyUtils
-        else:
-            klass = IpcKeyUtils
-
-    return klass(*args, **kwargs)
+        return _keyutils.unlink(self._get_user_key_id(key, pid), self._user_keyring)
 
 # ################################################################################################################################
