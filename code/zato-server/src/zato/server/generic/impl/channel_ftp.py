@@ -64,6 +64,7 @@ class ChannelFTPImpl(object):
         handler.timeout = self.model.command_timeout
         handler.log_prefix = self.model.log_prefix
         handler.masquerade_address = self.model.masq_address
+        handler.passive_ports = self.model.passive_ports
 
         server = FTPServer((self.model.host, self.model.port), handler)
         server.max_cons = self.model.max_connections
