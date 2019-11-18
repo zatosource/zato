@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+import socket
 from logging import getLogger
 
 # Bunch
@@ -31,6 +32,51 @@ logger = getLogger('zato')
 # ################################################################################################################################
 
 _megabyte = 1048576 # 2 ** 20 bytes
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _FTPServer(FTPServer):
+    """ A subclass of FTPServer needed to add SO_REUSEPORT to socket options.
+    """
+    def bind_af_unspecified(self, addr):
+        """ The same as in the parent class except for the usage of SO_REUSEPORT below.
+        """
+        assert self.socket is None
+        host, port = addr
+        if host == "":
+            # When using bind() "" is a symbolic name meaning all
+            # available interfaces. People might not know we're
+            # using getaddrinfo() internally, which uses None
+            # instead of "", so we'll make the conversion for them.
+            host = None
+        err = "getaddrinfo() returned an empty list"
+        info = socket.getaddrinfo(host, port, socket.AF_UNSPEC,
+                                  socket.SOCK_STREAM, 0, socket.AI_PASSIVE)
+        for res in info:
+            self.socket = None
+            self.del_channel()
+            af, socktype, proto, canonname, sa = res
+            try:
+                self.create_socket(af, socktype)
+                self.set_reuse_addr()
+
+                # This line was added in Zato
+                self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+
+                self.bind(sa)
+            except socket.error as _:
+                err = _
+                if self.socket is not None:
+                    self.socket.close()
+                    self.del_channel()
+                    self.socket = None
+                continue
+            break
+        if self.socket is None:
+            self.del_channel()
+            raise socket.error(err)
+        return af
 
 # ################################################################################################################################
 # ################################################################################################################################
