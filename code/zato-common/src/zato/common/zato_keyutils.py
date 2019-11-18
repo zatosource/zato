@@ -7,6 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import platform
 import sys
 from logging import getLogger
 
@@ -14,11 +15,8 @@ from logging import getLogger
 from zato.common.util.posix_ipc import SharedMemoryIPC
 
 # keyutils
-try:
+if platform.system() == 'Linux':
     import keyutils as _keyutils
-except ImportError:
-    # Only available on linux2.
-    pass
 
 
 # ################################################################################################################################
@@ -137,10 +135,11 @@ class IpcKeyUtils(LinuxKeyUtils):
 def KeyUtils(*args, **kwargs):
     """Factory function that returns an implementation appropriate for the active platform.
     """
-    if sys.platform == 'linux2':
-        klass = LinuxKeyUtils
-    else:
-        klass = IpcKeyUtils
+    if platform.system() == 'Linux':
+        if sys.platform == 'linux2':
+            klass = LinuxKeyUtils
+        else:
+            klass = IpcKeyUtils
 
     return klass(*args, **kwargs)
 
