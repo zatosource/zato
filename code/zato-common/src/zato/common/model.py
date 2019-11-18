@@ -26,3 +26,6 @@ class FTPChannel(object):
         self.write_throttle = None  # type: int
         self.log_level = None       # type: str
         self.service_name = None    # type: str
+        self.topic_name = None      # type: str
+        self.masq_address = None    # type: str
+        self.passive_ports = None   # type: str
