@@ -39,6 +39,21 @@ $PY_BINARY -m pip install numpy==1.14.0
 $PY_BINARY -m pip install -r requirements.txt
 $PY_BINARY -m pip install -r _req_py$EXTRA_REQ_VERSION.txt
 
+if [ "$(uname -s)" = "Darwin" ]
+then
+  [[ -z ${POSTGRESQL_BIN_PATH} ]] && POSTGRESQL_BIN_PATH="/Applications/Postgres.app/"
+  if [[ -d "${POSTGRESQL_BIN_PATH}" ]]; then
+    pip uninstall psycopg
+    export PATH="/usr/local/opt/openssl/bin:$PATH:/Applications/Postgres.app/Contents/Versions/latest/bin"
+    export LDFLAGS="-L/usr/local/opt/openssl/lib"
+    export CPPFLAGS="-I/usr/local/opt/openssl/include"
+    pip install --no-binary :all: psycopg2==2.7.4
+  else
+    echo "Failed to find ${POSTGRESQL_BIN_PATH} in the system. Use the 'POSTGRESQL_BIN_PATH' to specify the path to PostgreSQL binaries." >&2
+    exit 1
+  fi
+fi
+
 
 # zato-common must be first.
 $PY_BINARY -m pip install \
