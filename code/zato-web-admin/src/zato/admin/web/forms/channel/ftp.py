@@ -36,6 +36,9 @@ class CreateForm(forms.Form):
     read_throttle = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}), initial=_default.THROTTLE_READ)
     write_throttle = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}), initial=_default.THROTTLE_WRITE)
 
+    masq_address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:27%'}))
+    passive_ports = forms.CharField(widget=forms.TextInput(attrs={'style':'width:35%'}))
+
     log_level = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:10%'}), initial=FTP.CHANNEL.LOG_LEVEL.INFO.id)
 
     def __init__(self, prefix=None, post_data=None, req=None):

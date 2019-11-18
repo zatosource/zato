@@ -92,6 +92,10 @@ $.fn.zato.channel.ftp.data_table.new_row = function(item, data, include_tr) {
     // 8
     row += String.format("<td class='ignore'>{0}</td>", item.topic_name);
     row += String.format("<td class='ignore'>{0}</td>", item.log_level);
+    row += String.format("<td class='ignore'>{0}</td>", item.masq_address);
+
+    // 9
+    row += String.format("<td class='ignore'>{0}</td>", item.passive_ports);
 
     if(include_tr) {
         row += '</tr>';

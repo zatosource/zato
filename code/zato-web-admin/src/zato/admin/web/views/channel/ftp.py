@@ -30,7 +30,7 @@ class Index(_Index):
         output_required = 'id', 'name', 'is_active', 'address', 'max_connections', 'max_conn_per_ip', 'command_timeout', \
            'banner', 'log_prefix', 'base_directory', 'read_throttle', 'write_throttle', \
            'passive_ports', 'log_level'
-        output_optional = 'service_name', 'topic_name'
+        output_optional = 'service_name', 'topic_name', 'masq_address', 'passive_ports'
         output_repeated = True
 
     def handle(self):
@@ -49,7 +49,7 @@ class _CreateEdit(CreateEdit):
         input_required = 'name', 'is_active', 'address', 'max_connections', 'max_conn_per_ip', 'command_timeout', \
            'banner', 'log_prefix', 'base_directory', 'read_throttle', 'write_throttle', \
            'passive_ports', 'log_level'
-        input_optional = 'service_name', 'topic_name'
+        input_optional = 'service_name', 'topic_name', 'masq_address', 'passive_ports'
         output_required = 'id', 'name'
 
     def populate_initial_input_dict(self, initial_input_dict):
