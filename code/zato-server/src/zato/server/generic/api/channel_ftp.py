@@ -24,7 +24,7 @@ logger = getLogger(__name__)
 class ChannelFTPWrapper(Wrapper):
     """ Represents an FTP channel.
     """
-    wrapper_type = 'MongoDB connection'
+    wrapper_type = 'FTP channel'
 
     def __init__(self, *args, **kwargs):
         super(ChannelFTPWrapper, self).__init__(*args, **kwargs)
@@ -35,6 +35,9 @@ class ChannelFTPWrapper(Wrapper):
     def _init_impl(self):
 
         with self.update_lock:
+
+            print(111, self.config)
+            z
 
             #
             # ZZZ
