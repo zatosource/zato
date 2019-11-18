@@ -24,7 +24,7 @@ from zato.common.model import FTPChannel
 # ################################################################################################################################
 
 log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
-logging.basicConfig(level=logging.INFO, format=log_format)
+logging.basicConfig(level=logging.DEBUG, format=log_format)
 
 logger = getLogger('zato')
 
@@ -100,6 +100,11 @@ def main():
     config.max_connections = int(config.max_connections)
     config.read_throttle = float(config.read_throttle)
     config.write_throttle = float(config.write_throttle)
+
+    # Make sure at least an empty log prefix exists and prefix each log entry with current channel's name
+    if not config.log_prefix:
+        config.log_prefix = ''
+    config.log_prefix = '[{}] {}'.format(config.name, config.log_prefix).strip()
 
     # Turn megabytes into bytes
     config.read_throttle = int(config.read_throttle * _megabyte)

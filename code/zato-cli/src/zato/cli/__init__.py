@@ -178,7 +178,11 @@ loggers:
         handlers: [stdout, notif_sql]
         qualname: zato_notif_sql
         propagate: false
-
+    pyftpdlib:
+        level: DEBUG
+        handlers: [stdout, default]
+        qualname: pyftpdlib
+        propagate: false
 handlers:
     default:
         formatter: default
