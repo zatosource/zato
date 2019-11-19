@@ -914,6 +914,14 @@ class ObjectImporter(object):
 
         if response.ok:
             self.logger.info("Updated password for '{}' ({})".format(attrs.name, service_name))
+
+            # Wait for a moment before continuing to let AMQP connectors change their passwords.
+            # This is needed because we may want to create channels right after the password
+            # has been changed and this requires valid credentials, including the very
+            # which is being changed here.
+            if item_type == 'def_amqp':
+                sleep(5)
+
         return response
 
 class ObjectManager(object):
