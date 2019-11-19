@@ -10,20 +10,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import datetime
-from tempfile import NamedTemporaryFile
-from traceback import format_exc
-
-# Bunch
-from bunch import bunchify
-
-# sh
-from sh import Command, ErrorReturnCode
 
 # Zato
-from zato.common import SFTP
-from zato.common.sftp import SFTPOutput
-from zato.common.util.json_ import dumps
-from zato.server.connection.connector.subprocess_.base import BaseConnectionContainer, Response
+from zato.server.connection.connector.subprocess_.base import BaseConnectionContainer
 from zato.server.generic.impl.channel_ftp import ChannelFTP
 
 # ################################################################################################################################
