@@ -662,19 +662,25 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def _init_subprocess_connectors(self):
         """ Sets up subprocess-based connectors.
         """
+        # Common
+        ipc_tcp_start_port = int(self.fs_server_config.misc.get('ipc_tcp_start_port', 34567))
+
+        has_ftp = bool(self.worker_store.worker_config.channel_ftp.keys())
+        has_ibm_mq = bool(self.worker_store.worker_config.definition_wmq.keys())
+        has_sftp = bool(self.worker_store.worker_config.out_sftp.keys())
+
         # FTP
-        is_ok = self.connector_ftp.start_ftp_connector(int(self.fs_server_config.ibm_mq.ipc_tcp_start_port))
+        if has_ftp and self.connector_ftp.start_ftp_connector(ipc_tcp_start_port):
+            self.connector_ftp.create_initial_ftp_channels(self.worker_store.worker_config.channel_ftp)
 
         # IBM MQ
         # Set up subprocess-based IBM MQ connections if that component is enabled
-        if self.fs_server_config.component_enabled.ibm_mq:
+        if has_ibm_mq and self.fs_server_config.component_enabled.ibm_mq:
 
             # Will block for a few seconds at most, until is_ok is returned
             # which indicates that a connector started or not.
-            is_ok = self.connector_ibm_mq.start_ibm_mq_connector(int(self.fs_server_config.ibm_mq.ipc_tcp_start_port))
-
             try:
-                if is_ok:
+                if self.connector_ibm_mq.start_ibm_mq_connector(ipc_tcp_start_port):
                     self.connector_ibm_mq.create_initial_wmq_definitions(self.worker_store.worker_config.definition_wmq)
                     self.connector_ibm_mq.create_initial_wmq_outconns(self.worker_store.worker_config.out_wmq)
                     self.connector_ibm_mq.create_initial_wmq_channels(self.worker_store.worker_config.channel_wmq)
@@ -682,8 +688,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 logger.warn('Could not create initial IBM MQ objects, e:`%s`', e)
 
         # SFTP
-        is_ok = self.connector_sftp.start_sftp_connector(int(self.fs_server_config.ibm_mq.ipc_tcp_start_port))
-        if is_ok:
+        if has_sftp and self.connector_sftp.start_sftp_connector(ipc_tcp_start_port):
             self.connector_sftp.create_initial_sftp_outconns(self.worker_store.worker_config.out_sftp)
 
 # ################################################################################################################################
