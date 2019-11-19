@@ -1,0 +1,399 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}IBM MQ connection definitions{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/definition/jms-wmq.js"></script>
+
+    <script>
+
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            'name',
+            'host',
+            'port',
+
+            '_queue_manager',
+            'channel',
+            '_username',
+            '_ssl',
+            '_ssl_cipher_spec',
+
+            '_ssl_key_repository',
+            'max_chars_printed',
+            '_change_password',
+            '_edit',
+            '_delete',
+
+            '_ping',
+            'id',
+            'cache_open_send_queues',
+            'cache_open_receive_queues',
+            'use_shared_connections',
+
+            'ssl',
+            'username',
+            'queue_manager',
+            'ssl_cipher_spec',
+            'ssl_key_repository',
+
+            'use_jms',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">IBM MQ definitions</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% include "zato/search-form.html" with page_prompt="Show definitions"%}
+
+
+    {% if cluster_id %}
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.definition.jms_wmq.create()">Create a new IBM MQ definition</a>
+        </div>
+
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Host</a></th>
+                        <th><a href="#">Port</a></th>
+
+                        <th><a href="#">QM</a></th>
+                        <th><a href="#">Channel</a></th>
+                        <th><a href="#">Username</a></th>
+                        <th><a href="#">SSL/TLS</a></th>
+                        <th><a href="#">Cipher spec</a></th>
+
+                        <th><a href="#">Key repo</a></th>
+                        <th><a href="#">Chars printed</a></th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.host }}</td>
+                        <td>{{ item.port }}</td>
+
+                        <td>{{ item.queue_manager|default_if_none:'<span class="form_hint">---</span>' }}</td>
+                        <td>{{ item.channel }}</td>
+                        <td>{{ item.username|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>{{ item.ssl|yesno:'Yes,No' }}</td>
+                        <td>{{ item.ssl_cipher_spec|default_if_none:'<span class="form_hint">---</span>' }}</td>
+
+                        <td>{{ item.ssl_key_repository|default_if_none:'<span class="form_hint">---</span>' }}</td>
+                        <td>{{ item.max_chars_printed }}</td>
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
+                        <td><a href="javascript:$.fn.zato.definition.jms_wmq.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.definition.jms_wmq.delete_('{{ item.id }}')">Delete</a></td>
+
+                        <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.cache_open_send_queues }}</td>
+                        <td class='ignore'>{{ item.cache_open_receive_queues }}</td>
+                        <td class='ignore'>{{ item.use_shared_connections }}</td>
+
+                        <td class='ignore'>{{ item.ssl }}</td>
+                        <td class='ignore'>{{ item.username|default:'' }}</td>
+                        <td class='ignore'>{{ item.queue_manager|default:'' }}</td>
+                        <td class='ignore'>{{ item.ssl_cipher_spec|default:'' }}</td>
+                        <td class='ignore'>{{ item.ssl_key_repository|default:'' }}</td>
+
+                        <td class='ignore'>{{ item.use_jms }}</td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='24'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "definition-wmq-create" %}" method="post" id="create-form">
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle;width:18%">Name</td>
+                            <td>
+                                {{ create_form.name }}
+                                |
+                                Queue manager
+                                {{ create_form.queue_manager }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Host</td>
+                            <td style="vertical-align:middle">
+                                {{ create_form.host }}
+                                |
+                                Port
+                                {{ create_form.port }}
+                                |
+                                <label>
+                                Use JMS
+                                {{ create_form.use_jms }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Channel</td>
+                            <td>
+                                {{ create_form.channel }}
+                                |
+                                Username
+                                {{ create_form.username }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Cache queues</td>
+                            <td>
+                                <label>
+                                Send
+                                {{ create_form.cache_open_send_queues }}
+                                </label>
+                                |
+                                <label>
+                                Receive
+                                {{ create_form.cache_open_receive_queues }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Share connections</span></td>
+                            <td style="vertical-align:middle">
+                                <label>
+                                {{ create_form.use_shared_connections }} <span class='form_hint'>(untick if queue manager is on z/OS)</span>
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Use SSL/TLS</td>
+                            <td>
+                                {{ create_form.ssl }}
+                                |
+                                Cipher spec
+                                {{ create_form.ssl_cipher_spec }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">SSL/TLS repo</td>
+                            <td>{{ create_form.ssl_key_repository }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Max chars</td>
+                            <td>
+                                {{ create_form.max_chars_printed }}
+                                <span class='form_hint'>(how many characters to log on DEBUG level)</span>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "definition-wmq-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle;width:18%">Name</td>
+                            <td>
+                                {{ edit_form.name }}
+                                |
+                                Queue manager
+                                {{ edit_form.queue_manager }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Host</td>
+                            <td style="vertical-align:middle">
+                                {{ edit_form.host }}
+                                |
+                                Port
+                                {{ edit_form.port }}
+                                |
+                                <label>
+                                Use JMS
+                                {{ edit_form.use_jms }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Channel</td>
+                            <td>
+                                {{ edit_form.channel }}
+                                |
+                                Username
+                                {{ edit_form.username }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Cache queues</td>
+                            <td>
+                                Send
+                                <label>
+                                {{ edit_form.cache_open_send_queues }}
+                                </label>
+                                |
+                                <label>
+                                Receive
+                                {{ edit_form.cache_open_receive_queues }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Share connections</span></td>
+                            <td style="vertical-align:middle">
+                                <label>
+                                {{ edit_form.use_shared_connections }} <span class='form_hint'>(untick if queue manager is on z/OS)
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Use SSL/TLS</td>
+                            <td>
+                                {{ edit_form.ssl }}
+                                |
+                                Cipher spec
+                                {{ edit_form.ssl_cipher_spec }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">SSL/TLS repo</td>
+                            <td>{{ edit_form.ssl_key_repository }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Max chars</td>
+                            <td>
+                                {{ edit_form.max_chars_printed }}
+                                <span class='form_hint'>(how many characters to log on DEBUG level)</span>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+
+        <div id="change_password-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "definition-wmq-change-password" %}" method="post" id="change_password-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td id="change-password-name"></td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Password</td>
+                            <td>{{ change_password_form.password1 }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Confirm password</td>
+                            <td>{{ change_password_form.password2 }}
+                                <input type="hidden" id="id_change_password-id" name="id" />
+                                <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
+
+    {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

@@ -1,0 +1,107 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Pub/sub dict values - subscriptions{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_topic',
+            '_endpoint',
+            '_sub_key',
+            '_creation_time'
+            '_meta',
+            '_extcli',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Pub/sub dict {{ dict_name }} {{ server_name }}:{{ server_pid }} (subscriptions), key:{{ key }}</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+    {% if cluster_id %}
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th style="width:5%">&nbsp;</th>
+
+                        <th><a href="#">Topic</a></th>
+                        <th><a href="#">Endpoint</a></th>
+                        <th><a href="#">Sub key</a></th>
+                        <th><a href="#">Creation time</a></th>
+                        <th><a href="#">Meta</a></th>
+                        <th><a href="#">EXTCLI</a></th>
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+
+                        <td>
+                            <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;query={{ item.topic_name }}">{{ item.topic_name }}</a>
+                        </td>
+
+                        <td>
+                            <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;query={{ item.endpoint_name }}">{{ item.endpoint_name }}</a>
+                        </td>
+
+                        <td>
+                            <a href="{% url "pubsub-endpoint-queues" cluster_id item.endpoint_id item.topic_name|slugify %}?cluster={{ cluster_id }}&amp;query={{ item.sub_key }}">{{ item.sub_key }}</a>
+                        </td>
+
+                        <td style="width:16%">
+                            <a
+                                id="a_creation_time_{{ item.id }}"
+                                href="javascript:$.fn.zato.toggle_time('creation_time_{{ item.id }}', '{{ item.creation_time }}', '{{ item.creation_time_utc }}')">{{ item.creation_time }}
+                            </a>
+                        </td>
+                        <td>
+                            id:{{ item.id }}, tdi:{{ item.task_delivery_interval }},
+                            unwsxc:{{ item.unsub_on_wsx_close|yesno:"t,f" }}
+                        </td>
+
+                        <td>
+                            {{ item.ext_client_id }}
+                        </td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='5'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

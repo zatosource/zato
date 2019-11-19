@@ -1,0 +1,7 @@
+    {% if search_form.zato_auto_submit %}
+    <script>
+        if(!$(document).getUrlParam('cluster')) {
+            $("#main_page_form").submit();
+        }
+    </script>
+    {% endif %}

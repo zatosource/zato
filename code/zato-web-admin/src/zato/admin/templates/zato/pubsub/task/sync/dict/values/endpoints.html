@@ -1,0 +1,100 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Pub/sub dict values - endpoints{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_type',
+            '_name',
+            '_topic_patterns',
+            '_regexp_patterns',
+            '_creation_time'
+            '_meta',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Pub/sub dict {{ dict_name }} {{ server_name }}:{{ server_pid }} (endpoints), key:{{ key }}</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+    {% if cluster_id %}
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th style="width:5%">&nbsp;</th>
+
+                        <th><a href="#">Type</a></th>
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Topic patterns</a></th>
+                        <th><a href="#">Regexp patterns</a></th>
+                        <th><a href="#">Meta</a></th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+
+                        <td>
+                            {{ item.endpoint_type }}
+                        </td>
+
+                        <td>
+                            <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;query={{ item.name }}">{{ item.name }}</a>
+                        </td>
+
+                        <td>
+                            <pre>{{ item.topic_patterns }}</pre>
+                        </td>
+
+                        <td>
+                            pub:{{ item.pub_topic_patterns }}
+                            <br/>
+                            sub:{{ item.sub_topic_patterns }}
+                        </td>
+
+                        <td>
+                            id:{{ item.id }}, is-i:{{ item.is_internal|yesno:"t,f" }}, is-a:{{ item.is_active|yesno:"t,f" }}, role:{{ item.role }}
+                        </td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='4'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

@@ -1,0 +1,37 @@
+
+.ui-dialog-titlebar {
+    background-color:#333;
+	font-size:13px;
+	border:1px solid #666;
+	border-bottom:none;
+	text-align:left;
+	color:#eee;
+	text-shadow: 1px 1px 0 #000;
+}
+
+.ui-icon-closethick {
+	display:none
+}
+
+.ui-dialog-buttonset {
+	text-align:right;
+}
+
+.ui-icon-closethick {
+	display:none
+}
+
+.ui-widget {
+	box-shadow: 1px 1px 10px #000;
+}
+
+.ui-datepicker { 
+    border: 1px solid #aaaaaa; 
+    background: #ffffff url(images/ui-bg_glass_75_ffffff_1x400.png) 50% 50% repeat-x; 
+    color: #222222; 
+    font-size:0.9em
+}
+
+.ui-slider .ui-slider-handle {
+	border:1px solid #999;
+}

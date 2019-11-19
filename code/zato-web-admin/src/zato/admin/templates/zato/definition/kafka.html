@@ -1,0 +1,457 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Kafka definitions{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    {% comment %} Common JS {% endcomment %}
+    <script type="text/javascript" src="/static/js/common.js"></script>
+
+    {% comment %} Kafka {% endcomment %}
+    <script type="text/javascript" src="/static/js/definition/kafka.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+
+            'name',
+            '_is_active',
+            'server_list',
+
+            '_should_use_zookeeper',
+            '_source_address',
+            'broker_version',
+
+            '_edit',
+            '_delete',
+            '_ping',
+
+            'id',
+            'is_active',
+
+            {% comment %} 1 {% endcomment %}
+            'should_use_zookeeper',
+            'should_exclude_internal_topics',
+            'socket_timeout',
+            'offset_timeout',
+
+            {% comment %} 2 {% endcomment %}
+            'is_tls_enabled',
+            'tls_private_key_file',
+            'tls_cert_file',
+            'tls_ca_certs_file',
+
+            {% comment %} 3 {% endcomment %}
+            'tls_pem_passphrase',
+            'source_address',
+
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Kafka definitions</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% with has_generic="1" generic_type="def-kafka" %}
+    {% include "zato/search-form.html" with page_prompt="Show definitions" %}
+{% endwith %}
+
+    {% if cluster_id %}
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.definition.kafka.create()">Create a new Kafka definition</a>
+        </div>
+
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+                        <th><a href="#">Servers</a></th>
+
+                        <th><a href="#">Use ZK</a></th>
+                        <th><a href="#">Src. address</a></th>
+                        <th><a href="#">Broker version</a></th>
+
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 1 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 2 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 3 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.server_list|linebreaksbr }}</td>
+
+                        <td>{{ item.should_use_zookeeper|yesno:'Yes,No' }}</td>
+                        <td>{{ item.source_address|default:"<span class='form_hint'>---</span>" }}</td>
+                        <td>{{ item.broker_version }}</td>
+
+                        <td><a href="javascript:$.fn.zato.definition.kafka.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.definition.kafka.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
+
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
+
+                        {% comment %} 1 {% endcomment %}
+                        <td class='ignore'>{{ item.should_use_zookeeper }}</td>
+                        <td class='ignore'>{{ item.should_exclude_internal_topics }}</td>
+                        <td class='ignore'>{{ item.socket_timeout }}</td>
+                        <td class='ignore'>{{ item.offset_timeout }}</td>
+
+                        {% comment %} 2 {% endcomment %}
+                        <td class='ignore'>{{ item.is_tls_enabled }}</td>
+                        <td class='ignore'>{{ item.tls_private_key_file }}</td>
+                        <td class='ignore'>{{ item.tls_cert_file }}</td>
+                        <td class='ignore'>{{ item.tls_ca_certs_file }}</td>
+
+                        {% comment %} 3 {% endcomment %}
+                        <td class='ignore'>{{ item.tls_pem_passphrase }}</td>
+                        <td class='ignore'>{{ item.source_address }}</td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='16'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "definition-kafka-create" %}" method="post" id="create-form">
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle;width:8%">Name</td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                Active
+                                {{ create_form.is_active }}
+                                </label>
+                                |
+                                <label>
+                                Use ZK
+                                {{ create_form.should_use_zookeeper }}
+                                </label>
+                                |
+                                <label>
+                                Excl. internal topics
+                                {{ create_form.should_exclude_internal_topics }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Timeout
+                                <br/>
+                                <span class="form_hint">(in sec.)</span>
+                            </td>
+                            <td>
+                                <label>
+                                Socket <span class="form_hint">(x3)</span>
+                                {{ create_form.socket_timeout }}
+                                </label>
+                                <label>
+                                Offset
+                                {{ create_form.offset_timeout }}
+                                </label>
+                                |
+                                Brk vers.
+                                {{ create_form.broker_version }}
+                                </label>
+                                |
+                                Src. addr.
+                                {{ create_form.source_address }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                            TLS
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.tls-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="tls-block hidden">
+                            <td>
+                            </td>
+                            <td>
+                                <label>
+                                Enabled
+                                {{ create_form.is_tls_enabled }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr class="tls-block hidden">
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                Private key file
+                                <br/>
+                                {{ create_form.tls_private_key_file }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr class="tls-block hidden">
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                Private key passphrase
+                                <br/>
+                                {{ create_form.tls_pem_passphrase }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr class="tls-block hidden">
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                Certificate file
+                                <br/>
+                                {{ create_form.tls_cert_file }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr class="tls-block hidden">
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                CA certificates file
+                                <br/>
+                                {{ create_form.tls_ca_certs_file }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Servers</td>
+                            <td>
+                                {{ create_form.server_list }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "definition-kafka-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:8%">Name</td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                Active
+                                {{ edit_form.is_active }}
+                                </label>
+                                |
+                                <label>
+                                Use ZK
+                                {{ edit_form.should_use_zookeeper }}
+                                </label>
+                                |
+                                <label>
+                                Excl. internal topics
+                                {{ edit_form.should_exclude_internal_topics }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Timeout
+                                <br/>
+                                <span class="form_hint">(in sec.)</span>
+                            </td>
+                            <td>
+                                <label>
+                                Socket <span class="form_hint">(x3)</span>
+                                {{ edit_form.socket_timeout }}
+                                </label>
+                                <label>
+                                Offset
+                                {{ edit_form.offset_timeout }}
+                                </label>
+                                |
+                                Brk vers.
+                                {{ edit_form.broker_version }}
+                                </label>
+                                |
+                                Src. addr.
+                                {{ edit_form.source_address }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                            TLS
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.tls-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="tls-block hidden">
+                            <td>
+                            </td>
+                            <td>
+                                <label>
+                                Enabled
+                                {{ edit_form.is_tls_enabled }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr class="tls-block hidden">
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                Private key file
+                                <br/>
+                                {{ edit_form.tls_private_key_file }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr class="tls-block hidden">
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                Private key passphrase
+                                <br/>
+                                {{ edit_form.tls_pem_passphrase }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr class="tls-block hidden">
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                Certificate file
+                                <br/>
+                                {{ edit_form.tls_cert_file }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr class="tls-block hidden">
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                CA certificates file
+                                <br/>
+                                {{ edit_form.tls_ca_certs_file }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Servers</td>
+                            <td>
+                                {{ edit_form.server_list }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+
+    {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

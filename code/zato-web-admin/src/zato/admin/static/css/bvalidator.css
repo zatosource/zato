@@ -1,0 +1,55 @@
+
+/* invalid input */
+.bvalidator_invalid{
+	background-color: #FFFFAE;
+}
+
+/* error message */
+.bvalidator_errmsg {
+	background-color:#333;
+	font-size:12px;
+	border:1px solid #999;
+	color:#FFF;
+	display:none;
+	-moz-border-radius:4px;
+	-webkit-border-radius:4px;
+	-moz-border-radius-bottomleft:0;
+	-moz-border-radius-topleft:0;
+	-webkit-border-bottom-left-radius:0;
+	-webkit-border-top-left-radius:0;
+	-moz-box-shadow:0 0 6px #ddd;
+	-webkit-box-shadow:0 0 6px #ddd;
+	white-space:nowrap;
+	padding-top: 2px;
+	padding-right: 10px;
+	padding-bottom: 2px;
+	padding-left: 5px;
+	font-family: Arial, Helvetica, sans-serif;
+	-moz-opacity:.90;
+	filter:alpha(opacity=90);
+	opacity:.90; 
+	text-shadow: none;
+}
+
+/* close icon */
+.bvalidator_errmsg .bvalidator_close_icon {
+	margin-left: 5px;
+	margin-top: -2px;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: bold;
+	color:#F96;
+	cursor:pointer;
+}
+
+/* arrow */
+.bvalidator_errmsg em {
+	display:block;
+	border-color: #333 transparent transparent;
+	border-style: solid;
+	border-width: 10px 10px 0;
+	height: 0;
+	width: 0;
+	position:absolute;
+	bottom:-10px;
+	left:5px;
+}

@@ -1,0 +1,86 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Log on{% endblock %}
+
+{% block "extra_css" %}
+    <style type='text/css'>
+        table.form-data input {
+            width:100%
+        }
+    </style>
+
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type='text/javascript'>
+        $(document).ready(function() {
+            $('#id_username').focus();
+        });
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+
+<h2 class="zato">Please enter your credentials</h2>
+
+<!-- Preloads the image so it's always displayed properly in the actual app -->
+<img src="/static/gfx/ajax-loader.gif" style="display:none" alt="Please wait" />
+
+<div style="width:45%;margin: 0px auto -1px auto;padding-top:20px">
+    <form method="post" action="{% url "login" %}" style="width:100%">
+        {% csrf_token %}
+        <table class="form-data" border="">
+            <tr>
+                <td style="width:{% if is_totp_enabled %}19{% else %}7{% endif %}%">
+                    Username
+                </td>
+                <td>
+                    {{ form.username }}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    Password
+                </td>
+                <td>
+                    {{ form.password }}
+                </td>
+            </tr>
+
+            {% if is_totp_enabled %}
+
+            <tr>
+                <td>
+                    Security code
+                </td>
+                <td>
+                    {{ form.totp_code }}
+                </td>
+            </tr>
+
+            {% endif %}
+
+            <tr>
+                <td></td>
+                <td>
+                    {% if has_errors %}
+                    Invalid credentials. Please try again.
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2" style="text-align:left">
+                    <button id="login" type="submit">Log in</button>
+                    <input type="hidden" name="next" value="{{ next }}" />
+                </td>
+            </tr>
+        </table>
+    </form>
+</div>
+
+</div>
+
+
+{% endblock %}

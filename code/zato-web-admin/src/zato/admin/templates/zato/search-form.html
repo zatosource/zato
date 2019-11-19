@@ -1,0 +1,33 @@
+
+    <div class="prompt" style="float:left; width:60%">
+    <form action="." method="get" id="main_page_form">
+        {{ search_form.cluster }}
+
+        {% if meta or show_search_form %} {% comment %} Statistics and other pages will not need the search box {% endcomment %}
+        {{ search_form.query }}
+        {% endif %}
+
+        {% comment %}
+        Note that connection and transport exist only with HTTP channels.
+        {% endcomment %}
+        {{ search_form.connection }}
+        {{ search_form.transport }}
+
+        {% comment %}
+        Needed for pub/sub topic messages that uses GET query parameters
+        {% endcomment %}
+
+        {% if has_pubsub %}
+            <input type="hidden" name="has_gd" value="{{ has_gd }}" />
+        {% endif %}
+
+        {% if has_generic %}
+            <input type="hidden"  name="type_" value="{{ generic_type }}" />
+        {% endif %}
+
+        <input type="submit"  style="vertical-align:top" value="{{ page_prompt }}" />
+    </form>
+    </div>
+
+    {% include "zato/paginate/action-panel.html" %}
+    {% include "zato/auto-submit.html" %}

@@ -1,0 +1,118 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/colorpicker/css/colorpicker.css">
+{% endblock %}
+
+{% block "extra_js" %}
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/js/qrcode.js"></script>
+    <script type="text/javascript" src="/static/js/account/settings.js"></script>
+    <script type="text/javascript" src="/static/js/colorpicker/js/colorpicker.js"></script>
+{% endblock %}
+
+{% block "content" %}
+
+<h2 class="zato">Account : Basic settings</h2>
+
+{% if messages %}
+    {% for message in messages %}
+    <div id="user-message-div"><pre id="user-message" class="user-message user-message-{{ message.tags }}">{{ message }}</pre></div>
+    {% endfor %}
+{% endif %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+
+<div id="markup">
+    <form action="./save/" method="post" id="settings_form">
+    {% csrf_token %}
+    <table id="data-table">
+
+        <tr>
+            <td class="inline_header" colspan="4">Date and time</td>
+        </tr>
+        <tr>
+            <td style="width:15%">Time zone</td>
+            <td style="width:25%;text-align:left">{{ form.timezone }}
+            <br/>
+            <span class="form_hint">(default: UTC)</span></td>
+            <td style="width:15%">Date and time format</td>
+            <td style="width:40%;text-align:left">{{ form.date_format }} {{ form.time_format }}
+            <br/>
+            <span class="form_hint">(default: dd-mm-yyyy, 24-hour)
+            </span></td>
+        </tr>
+
+        <tr>
+            <td class="inline_header" colspan="4">Cluster color markers</td>
+        </tr>
+
+        {% for cluster in clusters %}
+            <tr>
+                <td style="width:15%;line-height:25px">{{ cluster.name }}</td>
+
+                <td style="text-align:left;line-height:25px" colspan="3">
+                    <input type="checkbox"
+                        id="checkbox_{{ cluster.id }}"
+                        name="checkbox_{{ cluster.id }}"
+                        style="vertical-align:middle;margin-bottom:5px"
+                        {% if cluster.id|slugify in cluster_colors %}checked="checked"{% endif %}
+                        />&nbsp;
+
+                    <span id="color_picker_span_{{ cluster.id }}" {% if not cluster.id|slugify in cluster_colors %}class="hidden"{% endif %}>
+                        {% if cluster.id|slugify in cluster_colors %}
+                            <input type="text"
+                                style="color:#{{ cluster_colors|bunchget:cluster.id }}; background-color:#{{ cluster_colors|bunchget:cluster.id }}"
+                                id="color_{{ cluster.id }}"
+                                name="color_{{ cluster.id }}"
+                                value="{{ cluster_colors|bunchget:cluster.id }}" />
+
+                        {% else %}
+                            <input type="text" style="color:#999" id="color_{{ cluster.id }}" name="color_{{ cluster.id }}" value="{{ default_prompt }}" />
+                        {% endif %}
+                        {% if cluster.id|slugify in cluster_colors %}<a id="previev_a_{{ cluster.id }}" href="javascript:$.fn.zato.account.basic_settings.preview({{ cluster.id }})">(preview)</a>{% endif %}
+                    </span>
+                </td>
+            </tr>
+        {% endfor %}
+
+        <tr>
+            <td class="inline_header" colspan="4">Multi-factor authentication</td>
+        </tr>
+        <tr>
+            <td style="width:15%">
+                TOTP
+                <br/>
+                <a class="form_hint" href="javascript:$.fn.zato.account.basic_settings.generate_new_totp_key();">Generate new</a>
+            </td>
+            <td style="width:25%;text-align:left" colspan="3">
+                <table style="width:100%">
+                    <tr>
+                        <td style="width:2%">Key</td>
+                        <td>{{ form.totp_key }}</td>
+                    </tr>
+                    <tr>
+                        <td>Label</td>
+                        <td>{{ form.totp_key_label }}</td>
+                    </tr>
+                </table>
+                <div id="totp_key_qr_code" style="width:100px; height:100px; margin-top:25px;margin-bottom:25px"></div>
+
+                {{ form.totp_key_provision_uri }}
+                <input id="id_username" name="username" type="hidden" value="{{ username }}"/>
+
+            </td>
+        </tr>
+
+        <tr>
+            <td colspan="4" style="text-align:right;border-top:1px solid #ddd"><button id="save_settings" name="save_settings" type="submit">Save settings</button></td>
+        </tr>
+    </table>
+    </form>
+</div>
+
+
+{% endblock %}

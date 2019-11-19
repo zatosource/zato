@@ -1,0 +1,227 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Services{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/fileuploader.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.sparkline.min.js"></script>
+    <script type="text/javascript" src="/static/js/fileuploader.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/service/index.js"></script>
+
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            'name',
+            '_is_active',
+            'impl_name',
+            '_is_internal',
+            'rate_1h',
+            'mean_1h',
+            '_edit',
+            '_delete',
+
+            'id',
+            'is_active',
+            'is_internal',
+            'slow_threshold',
+
+            'is_json_schema_enabled',
+            'needs_json_schema_err_details',
+
+            'is_rate_limit_active',
+            'rate_limit_type',
+            'rate_limit_def',
+            'rate_limit_check_parent_def',
+        ]
+    }
+
+    var on_upload_complete = function(id, file_name, response){
+        if(response.success) {
+            $.fn.zato.user_message(true, 'Service package uploaded, check the server logs for details');
+        }
+        else {
+            $.fn.zato.user_message(false, response.response);
+        }
+    };
+
+    function create_uploader(){
+        var uploader = new qq.FileUploader({
+            element: $('#uploader')[0],
+            action: 'cluster/{{ cluster_id }}/upload/',
+            onComplete: on_upload_complete,
+            debug: true,
+            template: '<div class="qq-uploader" style="width:150px">' +
+                    '<div class="qq-upload-drop-area"><span>Drop files here to upload</span></div>' +
+                    '<div class="qq-upload-button" style="width:100px">Upload services</div>' +
+                    '<ul class="qq-upload-list" style="width:500px"></ul>' +
+                 '</div>'
+        });
+    }
+
+    $(document).ready(function() {
+      create_uploader();
+    });
+
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Services</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% include "zato/search-form.html" with page_prompt="Show services" %}
+
+    {% if cluster_id %}
+        <div class='page_prompt'>
+            <div id="uploader">
+                <noscript>
+                    <p>Please enable JavaScript to use file uploader</p>
+                </noscript>
+            </div>
+        </div>
+
+        <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+                        <th><a href="#">Implementation</a></th>
+                        <th><a href="#">Internal</a></th>
+                        <th>1h req/s</th>
+                        <th>1h mean</th>
+
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+                        <td><a href="{% url "service-overview" item.name %}?cluster={{ cluster_id }}">{{ item.name }}</a></td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.impl_name }}</td>
+                        <td>{{ item.is_internal|yesno:'Yes,No' }}</td>
+                        <td id="rate_1h_{{ item.id }}">&lt;0.01</td>
+                        <td id="mean_1h_{{ item.id }}">&lt;0.01</td>
+
+                        <td><a href="javascript:$.fn.zato.service.edit('{{ item.id }}')">Edit</a></td>
+                        <td>
+                            {% if item.may_be_deleted %}
+                            <a href="javascript:$.fn.zato.service.delete_('{{ item.id }}')">Delete</a>
+                            {% endif %}
+                        </td>
+
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+
+                        <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.is_internal }}</td>
+                        <td class='ignore'>{{ item.slow_threshold }}</td>
+
+                        <td class='ignore'>{{ item.is_json_schema_enabled }}</td>
+                        <td class='ignore'>{{ item.needs_json_schema_err_details }}</td>
+
+                        <td class='ignore'>{{ item.is_rate_limit_active }}</td>
+                        <td class='ignore'>{{ item.rate_limit_type }}</td>
+                        <td class='ignore'>{{ item.rate_limit_def }}</td>
+                        <td class='ignore'>{{ item.rate_limit_check_parent_def }}</td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='13'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "service-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle;width:14%">Options</td>
+                            <td>
+                            <label>
+                            Active
+                            {{ edit_form.is_active }}
+                            </label>
+                            |
+                            <label>
+                                Slow threshold <span class="form_hint">(ms)</span>
+                                {{ edit_form.slow_threshold }}
+                            </label>
+                            </td>
+                        </tr>
+
+                        {% include "zato/include/json-schema/edit.html" %}
+                        {% include "zato/include/rate-limiting/edit.html" %}
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="edit-id" />
+                </form>
+            </div>
+        </div>
+
+
+    {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

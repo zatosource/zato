@@ -1,0 +1,549 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Scheduler{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.timepicker.addon.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.ui.slideraccess.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.ui.timepicker.addon.js"></script>
+
+    {% comment %} Common JS {% endcomment %}
+    <script type="text/javascript" src="/static/js/common.js"></script>
+
+    <script>
+    var friendly_names = new Object();
+
+    {% for name, friendly_name in friendly_names%}
+        friendly_names['{{ name }}'] = '{{ friendly_name }}';
+    {% endfor %}
+
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            'name',
+            '_is_active',
+            '_job_type',
+            '_definition_text',
+            'service',
+            '_execute',
+            '_edit',
+            '_delete',
+            'id',
+            'is_active',
+            'job_type',
+            'start_date',
+            'extra',
+            'weeks',
+            'days',
+            'hours',
+            'minutes',
+            'seconds',
+            'repeats',
+            'cron_definition'
+        ]
+    }
+    </script>
+
+    {% comment %} Scheduler JS {% endcomment %}
+    <script type="text/javascript" src="/static/js/scheduler.js"></script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Scheduler jobs</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% include "zato/search-form.html" with page_prompt="Show jobs"%}
+
+    {% if cluster_id %}
+
+        <input type="hidden" id="cluster_id" value="{{ cluster_id }}" />
+
+
+    <div class='page_prompt' style="clear:left">
+        Create a new job:
+            <a href="javascript:$.fn.zato.scheduler.create('one_time')" class="common">one-time</a>,
+            <a href="javascript:$.fn.zato.scheduler.create('interval_based')" class="common">interval-based</a>,
+            <a href="javascript:$.fn.zato.scheduler.create('cron_style')" class="common">cron-style</a>
+    </div>
+
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+                        <th><a href="#">Job type</a></th>
+                        <th>Definition</th>
+                        <th><a href="#">Service</a></th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                </thead>
+
+                <tbody>
+                {% if jobs %}
+                {% for job in jobs %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ job.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+                        <td>{{ job.name }}</td>
+                        <td>{{ job.is_active|yesno:"Yes,No" }}</td>
+                        <td>{{ job.job_type_friendly }}</td>
+                        <td>{{ job.definition_text|safe }}</td>
+                        <td><a href="{% url "service-overview" job.service_name %}?cluster={{ cluster_id }}">{{ job.service_name }}</a></td>
+                        <td><a href="javascript:$.fn.zato.scheduler.execute({{ job.id }})">Execute</a></td>
+                        <td><a href="javascript:$.fn.zato.scheduler.edit('{{ job.job_type }}', {{ job.id }})">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.scheduler.delete_({{ job.id }});">Delete</a></td>
+                        <td class='ignore job_id_{{ job.id }}'>{{ job.id }}</td>
+                        <td class='ignore'>{{ job.is_active }}</td>
+                        <td class='ignore'>{{ job.job_type }}</td>
+                        <td class='ignore'>{{ job.start_date }}</td>
+                        <td class='ignore'>{{ job.extra|default:"" }}</td>
+                        <td class='ignore'>{{ job.interval_based.weeks|default:"" }}</td>
+                        <td class='ignore'>{{ job.interval_based.days|default:"" }}</td>
+                        <td class='ignore'>{{ job.interval_based.hours|default:"" }}</td>
+                        <td class='ignore'>{{ job.interval_based.minutes|default:"" }}</td>
+                        <td class='ignore'>{{ job.interval_based.seconds|default:"" }}</td>
+                        <td class='ignore'>{{ job.interval_based.repeats|default:"" }}</td>
+                        <td class='ignore'>{{ job.cron_style.cron_definition|default:"" }}</td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='22'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        <div id="create-one_time" class='data-popup ignore'>
+            <div>
+                <form action=".?cluster={{ cluster_id }}" method="post" id="create-form-one_time">
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td>{{ create_one_time_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Active</td>
+                            <td>{{ create_one_time_form.is_active }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Start date &amp; time<br/>
+                                <span class="form_hint">(e.g. {{ sample_dt }})</span>
+                            </td>
+                            <td>
+                                <input id="id_create-one_time-start_date" class="required"
+                                    name="create-one_time-start_date" type="text" />
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ create_one_time_form.service }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Extra data</td>
+                            <td>{{ create_one_time_form.extra }}</td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+
+                    </table>
+
+                    <input type="hidden" name="zato_action" value="create" />
+                    <input type="hidden" name="job_type" value="one_time" />
+
+                </form>
+            </div>
+        </div>
+
+
+        <div id="edit-one_time" class='data-popup ignore'>
+            <div>
+                <form action=".?cluster={{ cluster_id }}" method="post" id="edit-form-one_time">
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td>{{ edit_one_time_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Active</td>
+                            <td>{{ edit_one_time_form.is_active }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Date &amp; time<br/>
+                                <span class="form_hint">(e.g. {{ sample_dt }})</span>
+                            </td>
+                            <td>
+                                <input id="id_edit-one_time-start_date" class="required"
+                                    name="edit-one_time-start_date" type="text" />
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ edit_one_time_form.service }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Extra data</td>
+                            <td>{{ edit_one_time_form.extra }}</td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+
+                    </table>
+
+                    {{ edit_one_time_form.id }}
+                    <input type="hidden" name="zato_action" value="edit" />
+                    <input type="hidden" name="job_type" value="one_time" />
+
+                </form>
+            </div>
+        </div>
+
+        <div id="create-interval_based" class='data-popup ignore'>
+            <div>
+                <form action=".?cluster={{ cluster_id }}" method="post" id="create-form-interval_based">
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td>{{ create_interval_based_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Active</td>
+                            <td>{{ create_interval_based_form.is_active }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Weeks</td>
+                            <td>{{ create_interval_based_form.weeks }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Days</td>
+                            <td>{{ create_interval_based_form.days }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Hours</td>
+                            <td>{{ create_interval_based_form.hours }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Minutes</td>
+                            <td>{{ create_interval_based_form.minutes }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Seconds</td>
+                            <td>{{ create_interval_based_form.seconds }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Start date &amp; time<br/>
+                                <span class="form_hint">(e.g. {{ sample_dt }})</span>
+                            </td>
+                            <td>
+                                <input id="id_create-interval_based-start_date" class="required"
+                                    name="create-interval_based-start_date" type="text" />
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Number of repeats</td>
+                            <td>{{ create_interval_based_form.repeats }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ create_interval_based_form.service }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Extra data</td>
+                            <td>{{ create_interval_based_form.extra }}</td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+
+                    </table>
+
+                    <input type="hidden" name="zato_action" value="create" />
+                    <input type="hidden" name="job_type" value="interval_based" />
+
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-interval_based" class='data-popup ignore'>
+            <div>
+                <form action=".?cluster={{ cluster_id }}" method="post" id="edit-form-interval_based">
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td>{{ edit_interval_based_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Active</td>
+                            <td>{{ edit_interval_based_form.is_active }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Weeks</td>
+                            <td>{{ edit_interval_based_form.weeks }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Days</td>
+                            <td>{{ edit_interval_based_form.days }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Hours</td>
+                            <td>{{ edit_interval_based_form.hours }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Minutes</td>
+                            <td>{{ edit_interval_based_form.minutes }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Seconds</td>
+                            <td>{{ edit_interval_based_form.seconds }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Start date &amp; time<br/>
+                                <span class="form_hint">(e.g. {{ sample_dt }})</span>
+                            </td>
+                            <td>
+                                <input id="id_edit-interval_based-start_date"
+                                    name="edit-interval_based-start_date" type="text" />
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Number of repeats</td>
+                            <td>{{ edit_interval_based_form.repeats }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ edit_interval_based_form.service }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Extra data</td>
+                            <td>{{ edit_interval_based_form.extra }}</td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+
+                    </table>
+
+                    {{ edit_interval_based_form.id }}
+                    <input type="hidden" name="zato_action" value="edit" />
+                    <input type="hidden" name="job_type" value="interval_based" />
+
+                </form>
+            </div>
+        </div>
+
+        <div id="create-cron_style" class='data-popup ignore'>
+            <div>
+                <form action=".?cluster={{ cluster_id }}" method="post" id="create-form-cron_style">
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td>{{ create_cron_style_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Active</td>
+                            <td>{{ create_cron_style_form.is_active }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Start date &amp; time<br/>
+                                <span class="form_hint">(e.g. {{ sample_dt }})</span>
+                            </td>
+                            <td>
+                                <input id="id_create-cron_style-start_date" class="required"
+                                    name="create-cron_style-start_date" type="text" />
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Definition<br/>
+                            <span class="form_hint">(cron syntax)</span>
+                            </td>
+                            <td>{{ create_cron_style_form.cron_definition }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ create_cron_style_form.service }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Extra data</td>
+                            <td>{{ create_cron_style_form.extra }}</td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+
+                    </table>
+
+                    <input type="hidden" name="zato_action" value="create" />
+                    <input type="hidden" name="job_type" value="cron_style" />
+
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-cron_style" class='data-popup ignore'>
+            <div>
+                <form action=".?cluster={{ cluster_id }}" method="post" id="edit-form-cron_style">
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td>{{ edit_cron_style_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Active</td>
+                            <td>{{ edit_cron_style_form.is_active }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Start date &amp; time<br/>
+                                <span class="form_hint">(e.g. {{ sample_dt }})</span>
+                            </td>
+                            <td>
+                                <input id="id_edit-cron_style-start_date" class="required"
+                                    name="edit-cron_style-start_date" type="text" />
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Definition<br/>
+                            <span class="form_hint">(cron syntax)</span>
+                            </td>
+                            <td>{{ edit_cron_style_form.cron_definition }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ edit_cron_style_form.service }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Extra data</td>
+                            <td>{{ edit_cron_style_form.extra }}</td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+
+                    </table>
+
+                    {{ edit_cron_style_form.id }}
+                    <input type="hidden" name="zato_action" value="edit" />
+                    <input type="hidden" name="job_type" value="cron_style" />
+
+                </form>
+            </div>
+        </div>
+
+        <form>
+            <input type="hidden" id="js_date_format" value="{{ js_date_format }}" />
+            <input type="hidden" id="js_time_format" value="{{ js_time_format }}" />
+            <input type="hidden" id="js_ampm" value="{{ js_ampm }}" />
+        </form>
+
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

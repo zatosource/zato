@@ -1,0 +1,102 @@
+--- configobj.py.orig	2018-02-08 19:13:29.275264183 +0100
++++ configobj.py	2018-02-08 19:13:44.059264422 +0100
+@@ -17,6 +17,7 @@
+ import re
+ import sys
+ 
++from ast import literal_eval
+ from codecs import BOM_UTF8, BOM_UTF16, BOM_UTF16_BE, BOM_UTF16_LE
+ 
+ import six
+@@ -1175,7 +1176,8 @@
+                  interpolation=True, raise_errors=False, list_values=True,
+                  create_empty=False, file_error=False, stringify=True,
+                  indent_type=None, default_encoding=None, unrepr=False,
+-                 write_empty_values=False, _inspec=False):
++                 write_empty_values=False, _inspec=False, use_zato=True, zato_crypto_manager=None,
++                 zato_secrets_conf=None, zato_secrets_url_prefix='zato+secret://'):
+         """
+         Parse a config file or create a config file object.
+ 
+@@ -1186,6 +1188,11 @@
+                     write_empty_values=False, _inspec=False)``
+         """
+         self._inspec = _inspec
++        self.use_zato = use_zato
++        self.zato_crypto_manager = zato_crypto_manager
++        self.zato_secrets_conf = zato_secrets_conf
++        self.zato_secrets_url_prefix = zato_secrets_url_prefix
++
+         # init the superclass
+         Section.__init__(self, self, 0, self)
+ 
+@@ -1633,6 +1640,52 @@
+                 # is a keyword value
+                 # value will include any inline comment
+                 (indent, key, value) = mat.groups()
++
++                # Handle Zato-specific needs
++                if self.use_zato:
++
++                    # This may be an environment variable ..
++                    if value.startswith('$'):
++
++                        # .. but not if it's just a $ sign or an actual variable starting with it.
++                        if not (len(value) == 1 or value.startswith('$$')):
++                            env_key_name = value[1:].upper().decode('utf8')
++                            try:
++                                value = os.environ[env_key_name]
++                            except KeyError:
++                                raise KeyError('Environment variable `{}` not found, config key `{}`'.format(env_key_name, key))
++
++                    # .. this may be a value to decrypt with a secret key (note that it is an if, not elif,
++                    # to make it possible for environment variables to point to secrets.conf).
++                    if value.startswith(self.zato_secrets_url_prefix):
++
++                        entry = value.replace(self.zato_secrets_url_prefix, '', 1)
++                        if not entry:
++                            raise ValueError('Missing entry in address `{}`, config key `{}`'.format(value, key))
++
++                        entry = entry.split('.')
++                        group_name = entry[0]
++                        group_key = '.'.join(entry[1:])
++
++                        group = self.zato_secrets_conf.get(group_name)
++                        if not group:
++                            raise ValueError('Group not found `{}`, config key `{}`, value `{}`'.format(
++                                group_name, key, value))
++
++                        if not group_key in group:
++                            raise ValueError('Group key not found `{}`, config key `{}`, value `{}`'.format(
++                                group_key, key, value))
++                        else:
++                            encrypted = group[group_key]
++                            if encrypted:
++                                try:
++                                    value = self.zato_crypto_manager.decrypt(encrypted)
++                                except Exception as e:
++                                    raise ValueError('Could not decrypt value `{}`, group:`{}`, group_key:`{}`, e:`{}`'.format(
++                                        encrypted, group, group_key, e))
++                            else:
++                                value = encrypted # This will happen if 'encrypted' is actually an empty string
++
+                 if indent and (self.indent_type is None):
+                     self.indent_type = indent
+                 # check for a multiline value
+@@ -1690,6 +1743,16 @@
+                 # add the key.
+                 # we set unrepr because if we have got this far we will never
+                 # be creating a new section
++
++                # As a last resort, we can attempt to convert strings to their actual
++                # data types, e.g. integers.
++                if self.use_zato:
++                    try:
++                        value = literal_eval(value)
++                    except Exception:
++                        # That's OK, we just had to try
++                        pass
++
+                 this_section.__setitem__(key, value, unrepr=True)
+                 this_section.inline_comments[key] = comment
+                 this_section.comments[key] = comment_list
