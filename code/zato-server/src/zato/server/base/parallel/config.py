@@ -127,6 +127,10 @@ class ConfigLoader(object):
         query = self.odb.get_channel_amqp_list(server.cluster.id, True)
         self.config.channel_amqp = ConfigDict.from_query('channel_amqp', query, decrypt_func=self.decrypt)
 
+        # FTP
+        query = self.odb.get_out_sftp_list(server.cluster.id, True)
+        self.config.channel_ftp = ConfigDict.from_query('channel_ftp', query, decrypt_func=self.decrypt, drop_opaque=True)
+
         # STOMP
         query = self.odb.get_channel_stomp_list(server.cluster.id, True)
         self.config.channel_stomp = ConfigDict.from_query('channel_stomp', query, decrypt_func=self.decrypt)
