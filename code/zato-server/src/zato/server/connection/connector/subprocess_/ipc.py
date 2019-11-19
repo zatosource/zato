@@ -193,6 +193,7 @@ class SubprocessIPC(object):
 
         address = address_pattern.format(self.ipc_tcp_port, 'api')
         response = post(address, data=dumps(msg), auth=self.get_credentials())
+        aaa
 
         if not response.ok:
             if raise_on_error:
