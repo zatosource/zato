@@ -24,20 +24,14 @@ from zato.common import SFTP
 from zato.common.sftp import SFTPOutput
 from zato.common.util.json_ import dumps
 from zato.server.connection.connector.subprocess_.base import BaseConnectionContainer, Response
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class FTPConnection(object):
-    """ Wraps access to SFTP commands via command line.
-    """
+from zato.server.generic.impl.channel_ftp import ChannelFTP
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class FTPConnectionContainer(BaseConnectionContainer):
 
-    connection_class = FTPConnection
+    connection_class = ChannelFTP
     ipc_name = conn_type = logging_file_name = 'ftp'
 
     remove_id_from_def_msg = False

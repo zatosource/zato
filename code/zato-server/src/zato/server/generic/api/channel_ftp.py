@@ -36,9 +36,6 @@ class ChannelFTPWrapper(Wrapper):
 
         with self.update_lock:
 
-            print(111, self.config)
-            z
-
             #
             # ZZZ
             #

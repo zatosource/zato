@@ -549,7 +549,7 @@ class BaseConnectionContainer(object):
                 self._create_definition(msg)
             except Exception as e:
                 self.logger.warn(format_exc())
-                return Response(_http_503, str(e.message))
+                return Response(_http_503, str(e.args[0]))
             else:
                 return Response()
 

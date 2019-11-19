@@ -200,7 +200,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Generic connections - IM Slack
         self.outconn_im_slack = {}
 
-
         # Generic connections - IM Telegram
         self.outconn_im_telegram = {}
 
@@ -518,13 +517,12 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             self.sql_pool_store[pool_name] = config
 
     def init_ftp(self):
-        """ Initializes FTP connetions. The method replaces whatever value self.out_ftp
+        """ Initializes FTP connections. The method replaces whatever value self.out_ftp
         previously had (initially this would be a ConfigDict of connection definitions).
         """
         config_list = self.worker_config.out_ftp.get_config_list()
         self.worker_config.out_ftp = FTPStore()
         self.worker_config.out_ftp.add_params(config_list)
-
 
     def init_sftp(self):
         """ Each outgoing SFTP connection requires a connection handle to be attached here,
@@ -1006,7 +1004,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # These generic connections are regular - they use common API methods for such connections
         regular_maps = [
-            channel_ftp_map,
             def_kafka_map,
             outconn_im_slack_map,
             outconn_im_telegram_map,
@@ -1030,10 +1027,32 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         for password_item in password_maps:
             password_item[_generic_msg.change_password] = self._change_password_generic_connection
 
-        # Outgoing SFTP connections require for a different API to be called (provided by ParallelServer)
+        # Some generic connections require different admin APIs
+        channel_ftp_map[_generic_msg.create] = self._on_outconn_ftp_create
+        channel_ftp_map[_generic_msg.edit]   = self._on_outconn_ftp_edit
+        channel_ftp_map[_generic_msg.delete] = self._on_outconn_ftp_delete
+
         outconn_sftp_map[_generic_msg.create] = self._on_outconn_sftp_create
         outconn_sftp_map[_generic_msg.edit]   = self._on_outconn_sftp_edit
         outconn_sftp_map[_generic_msg.delete] = self._on_outconn_sftp_delete
+
+# ################################################################################################################################
+
+    def _on_outconn_ftp_create(self, msg):
+        connector_msg = deepcopy(msg)
+        self.worker_config.channel_ftp[msg.name] = msg
+        self.worker_config.channel_ftp[msg.name].conn = FTPIPCFacade(self.server, msg)
+        return self.server.connector_ftp.invoke_connector(connector_msg)
+
+# ################################################################################################################################
+
+    def _on_outconn_ftp_edit(self, msg):
+        zzz
+
+# ################################################################################################################################
+
+    def _on_outconn_ftp_delete(self, msg):
+        www
 
 # ################################################################################################################################
 
