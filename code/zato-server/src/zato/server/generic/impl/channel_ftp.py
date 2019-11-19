@@ -208,39 +208,3 @@ class ChannelFTP(object):
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-def main():
-
-    config = bunchify({
-        'id': 1,
-        'name': 'My FTP channel',
-        'address': '0.0.0.0:21021',
-        'banner': 'Welcome to Zato',
-        'base_directory': './work/ftp',
-        'command_timeout': 300,
-        'log_level': 'INFO',
-        'log_prefix': '%(remote_ip)s:%(remote_port)s-[%(username)s]',
-        'masq_address': None,
-        'max_conn_per_ip': '20',
-        'max_connections': '200',
-        'passive_ports': '50100-50200',
-        'read_throttle': '0.25',
-        'write_throttle': '10',
-        'service_name': 'helpers.raw-request-logger',
-        'topic_name': None,
-    })
-
-
-
-    # Create a low-level channel object ..
-    impl = ChannelFTP(model)
-
-    # .. and start it.
-    impl.serve_forever()
-
-# ################################################################################################################################
-
-if __name__ == '__main__':
-    main()
-
-# ################################################################################################################################
