@@ -21,6 +21,16 @@ from pyftpdlib.servers import FTPServer
 
 # Zato
 from zato.common.model import FTPChannel
+from zato.common.util import spawn_greenlet
+
+# ################################################################################################################################
+
+if 0:
+    # Type checking
+    from logging import Logger
+
+    # For pyflakes
+    Logger = Logger
 
 # ################################################################################################################################
 
@@ -109,10 +119,59 @@ class _FTPServer(FTPServer):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ChannelFTPImpl(object):
-    def __init__(self, model):
-        self.model = model # type: FTPChannel
+class ChannelFTP(object):
+    def __init__(self, logger, **config):
+        # type: (Logger, dict)
+        self.logger = logger
+        self.model = self._get_model_from_config(config)
         self.server = None # type: FTPServer
+
+# ################################################################################################################################
+
+    def _get_model_from_config(self, config):
+        # type: (dict) -> FTPChannel
+
+        # For dotted-attribute access
+        config = bunchify(config)
+
+        # Use expected data types in configuration
+        config.max_conn_per_ip = int(config.max_conn_per_ip)
+        config.max_connections = int(config.max_connections)
+        config.read_throttle = float(config.read_throttle)
+        config.write_throttle = float(config.write_throttle)
+
+        # Make sure at least an empty log prefix exists and prefix each log entry with current channel's name
+        if not config.log_prefix:
+            config.log_prefix = ''
+        config.log_prefix = '[{}] {}'.format(config.name, config.log_prefix).strip()
+
+        # Turn megabytes into bytes
+        config.read_throttle = int(config.read_throttle * _megabyte)
+        config.write_throttle = int(config.write_throttle * _megabyte)
+
+        # Break address into components
+        host, port = config.address.split(':')
+        host = host.strip()
+        port = int(port.strip())
+        config.host = host
+        config.port = port
+
+        # Break passive ports into components
+        if config.passive_ports:
+            start, stop = config.passive_ports.split('-')
+            start = int(start.strip())
+            stop = int(stop.strip())
+            config.passive_ports = [start, stop]
+
+        # Return a Python-level configuration object
+        return FTPChannel.from_dict(config)
+
+# ################################################################################################################################
+
+    def connect(self):
+        spawn_greenlet(self.serve_forever)
+
+# ################################################################################################################################
 
     def serve_forever(self):
         logger.info('Starting FTP channel `%s` (%s)', self.model.name, self.model.to_dict())
@@ -171,40 +230,10 @@ def main():
         'topic_name': None,
     })
 
-    # Use expected data types in configuration
-    config.max_conn_per_ip = int(config.max_conn_per_ip)
-    config.max_connections = int(config.max_connections)
-    config.read_throttle = float(config.read_throttle)
-    config.write_throttle = float(config.write_throttle)
 
-    # Make sure at least an empty log prefix exists and prefix each log entry with current channel's name
-    if not config.log_prefix:
-        config.log_prefix = ''
-    config.log_prefix = '[{}] {}'.format(config.name, config.log_prefix).strip()
-
-    # Turn megabytes into bytes
-    config.read_throttle = int(config.read_throttle * _megabyte)
-    config.write_throttle = int(config.write_throttle * _megabyte)
-
-    # Break address into components
-    host, port = config.address.split(':')
-    host = host.strip()
-    port = int(port.strip())
-    config.host = host
-    config.port = port
-
-    # Break passive ports into components
-    if config.passive_ports:
-        start, stop = config.passive_ports.split('-')
-        start = int(start.strip())
-        stop = int(stop.strip())
-        config.passive_ports = [start, stop]
-
-    # Python-level configuration object
-    model = FTPChannel.from_dict(config)
 
     # Create a low-level channel object ..
-    impl = ChannelFTPImpl(model)
+    impl = ChannelFTP(model)
 
     # .. and start it.
     impl.serve_forever()
