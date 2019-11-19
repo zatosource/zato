@@ -28,6 +28,7 @@ log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)
 logging.basicConfig(level=logging.DEBUG, format=log_format)
 
 logger = getLogger('zato')
+logger_pyftpdlib = getLogger('pyftpdlib')
 
 # ################################################################################################################################
 
@@ -37,8 +38,12 @@ _megabyte = 1048576 # 2 ** 20 bytes
 # ################################################################################################################################
 
 class _FTPServer(FTPServer):
-    """ A subclass of FTPServer needed to add SO_REUSEPORT to socket options.
+    """ A subclass of FTPServer needed to add functionality to base methods.
     """
+    def __init__(self, *args, **kwargs):
+        self.zato_keep_running = True
+        super(_FTPServer, self).__init__(*args, **kwargs)
+
     def bind_af_unspecified(self, addr):
         """ The same as in the parent class except for the usage of SO_REUSEPORT below.
         """
@@ -61,7 +66,7 @@ class _FTPServer(FTPServer):
                 self.create_socket(af, socktype)
                 self.set_reuse_addr()
 
-                # This line was added in Zato
+                # This line was added for Zato
                 self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
 
                 self.bind(sa)
@@ -79,12 +84,35 @@ class _FTPServer(FTPServer):
         return af
 
 # ################################################################################################################################
+
+    def serve_forever(self, timeout=None, blocking=True, handle_exit=True):
+        if handle_exit:
+            log = handle_exit and blocking
+            if log:
+                self._log_start()
+
+            try:
+                self.ioloop.loop(timeout, blocking)
+            except (KeyboardInterrupt, SystemExit):
+                logger_pyftpdlib.info("received interrupt signal")
+
+            if blocking:
+                if log:
+                    logger_pyftpdlib.info(
+                        ">>> shutting down FTP server (%s active socket "
+                        "fds) <<<",
+                        self._map_len())
+                self.close_all()
+        else:
+            self.ioloop.loop(timeout, blocking)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ChannelFTPImpl(object):
     def __init__(self, model):
-        # type: (FTPChannel)
-        self.model = model
+        self.model = model # type: FTPChannel
+        self.server = None # type: FTPServer
 
     def serve_forever(self):
         logger.info('Starting FTP channel `%s` (%s)', self.model.name, self.model.to_dict())
@@ -112,11 +140,12 @@ class ChannelFTPImpl(object):
         handler.masquerade_address = self.model.masq_address
         handler.passive_ports = self.model.passive_ports
 
-        server = FTPServer((self.model.host, self.model.port), handler)
-        server.max_cons = self.model.max_connections
-        server.max_cons_per_ip = self.model.max_conn_per_ip
+        self.server = _FTPServer((self.model.host, self.model.port), handler)
+        self.server.max_cons = self.model.max_connections
+        self.server.max_cons_per_ip = self.model.max_conn_per_ip
+        self.server.zato_keep_running = False
 
-        server.serve_forever()
+        self.server.serve_forever()
 
 # ################################################################################################################################
 # ################################################################################################################################
