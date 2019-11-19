@@ -1218,6 +1218,7 @@ class IPC:
 
     class CONNECTOR:
         class USERNAME:
+            FTP = 'zato.connector.ftp'
             IBM_MQ = 'zato.connector.wmq'
             SFTP   = 'zato.connector.sftp'
 
