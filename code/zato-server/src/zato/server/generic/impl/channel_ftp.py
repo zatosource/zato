@@ -169,7 +169,9 @@ class ChannelFTP(object):
 # ################################################################################################################################
 
     def connect(self):
-        spawn_greenlet(self.serve_forever)
+        spawn_greenlet(self.serve_forever, timeout=20)
+        import os
+        self.logger.warn('QQQ %s', os.getpid())
 
 # ################################################################################################################################
 

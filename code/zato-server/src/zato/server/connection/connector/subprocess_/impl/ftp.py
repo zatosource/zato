@@ -54,10 +54,10 @@ class FTPConnectionContainer(BaseConnectionContainer):
 
 # ################################################################################################################################
 
-    def _on_CHANNEL_FTP_CHANGE_PASSWORD(self, msg):
-        return super(FTPConnectionContainer, self).on_definition_change_password(msg)
+    def _on_CHANNEL_FTP_USER_CHANGE_PASSWORD(self, msg):
+        www
 
-    _on_GENERIC_CONNECTION_CHANGE_PASSWORD = _on_CHANNEL_FTP_CHANGE_PASSWORD
+    _on_GENERIC_CONNECTION_CHANGE_PASSWORD = _on_CHANNEL_FTP_USER_CHANGE_PASSWORD
 
 # ################################################################################################################################
 
