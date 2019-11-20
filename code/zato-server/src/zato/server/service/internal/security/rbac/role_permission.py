@@ -35,6 +35,7 @@ output_optional_extra = ['role_name', 'service_name', 'perm_name']
 create_edit_rewrite = ['id']
 skip_input_params = ['name']
 extra_delete_attrs = ['role_id', 'service_id', 'perm_id']
+skip_create_integrity_error = True
 check_existing_one = False
 
 # ################################################################################################################################
