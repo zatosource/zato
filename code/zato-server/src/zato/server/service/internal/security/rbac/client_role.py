@@ -17,7 +17,7 @@ from six import add_metaclass
 # Zato
 from zato.common.broker_message import RBAC
 from zato.common.odb.model import RBACClientRole, RBACRole
-from zato.common.odb.query import rbac_client_role_list
+from zato.common.odb.query import rbac_client_role_list, rbac_role
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
@@ -28,10 +28,12 @@ get_list_docs = 'RBAC client roles'
 broker_message = RBAC
 broker_message_prefix = 'CLIENT_ROLE_'
 list_func = rbac_client_role_list
+input_optional_extra = ['role_name']
 output_optional_extra = ['client_name', 'role_name']
 create_edit_rewrite = ['id']
 skip_input_params = ['name']
 extra_delete_attrs = ['client_def', 'role_id']
+skip_create_integrity_error = True
 check_existing_one = False
 
 # ################################################################################################################################
@@ -40,9 +42,9 @@ def instance_hook(service, input, instance, attrs):
 
     if attrs.is_create_edit:
         with closing(service.odb.session()) as session:
-            role = session.query(RBACRole).\
-                filter(RBACRole.id==input.role_id).one()
+            role = rbac_role(session, service.server.cluster_id, input.role_id, input.role_name)
 
+        instance.role_id = role.id
         instance.name = '{}:::{}'.format(instance.client_def, role.name)
 
 # ################################################################################################################################

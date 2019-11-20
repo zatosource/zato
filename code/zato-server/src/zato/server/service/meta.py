@@ -329,6 +329,7 @@ class CreateEditMeta(AdminServiceMeta):
             input.update(attrs.initial_input)
             verb = 'edit' if attrs.is_edit else 'create'
             old_name = None
+            has_integrity_error = False
 
             with closing(self.odb.session()) as session:
                 try:
@@ -386,6 +387,8 @@ class CreateEditMeta(AdminServiceMeta):
                     except IntegrityError:
                         if not attrs.skip_create_integrity_error:
                             raise
+                        else:
+                            has_integrity_error = True
 
                 except Exception:
                     msg = 'Could not {} the object, e:`%s`'.format(verb)
@@ -406,7 +409,8 @@ class CreateEditMeta(AdminServiceMeta):
                     if attrs.broker_message_hook:
                         attrs.broker_message_hook(self, input, instance, attrs, 'create_edit')
 
-                    self.broker_client.publish(input)
+                    if not has_integrity_error:
+                        self.broker_client.publish(input)
 
                     for name in chain(attrs.create_edit_rewrite, self.SimpleIO.output_required):
                         value = getattr(instance, name, singleton)
