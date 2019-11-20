@@ -21,6 +21,7 @@ from bunch import bunchify
 
 # SQLAlchemy
 from sqlalchemy import Boolean, Integer
+from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.common import ZATO_NOT_GIVEN
@@ -179,6 +180,7 @@ def update_attrs(cls, name, attrs):
     attrs.sio_default_value = getattr(mod, 'sio_default_value', None)
     attrs.get_list_docs = getattr(mod, 'get_list_docs', None)
     attrs.delete_require_instance = getattr(mod, 'delete_require_instance', True)
+    attrs.skip_create_integrity_error = getattr(mod, 'skip_create_integrity_error', False)
     attrs._meta_session = None
 
     attrs.is_create = False
@@ -378,7 +380,12 @@ class CreateEditMeta(AdminServiceMeta):
                         attrs.instance_hook(self, input, instance, attrs)
 
                     session.add(instance)
-                    session.commit()
+
+                    try:
+                        session.commit()
+                    except IntegrityError:
+                        if not attrs.skip_create_integrity_error:
+                            raise
 
                 except Exception:
                     msg = 'Could not {} the object, e:`%s`'.format(verb)
