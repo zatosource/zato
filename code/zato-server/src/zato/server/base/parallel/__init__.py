@@ -665,16 +665,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Common
         ipc_tcp_start_port = int(self.fs_server_config.misc.get('ipc_tcp_start_port', 34567))
 
-        has_ftp = bool(self.worker_store.worker_config.channel_ftp.keys())
         has_ibm_mq = bool(self.worker_store.worker_config.definition_wmq.keys())
         has_sftp = bool(self.worker_store.worker_config.out_sftp.keys())
 
-        # FTP
-        if has_ftp and self.connector_ftp.start_ftp_connector(ipc_tcp_start_port):
-            self.connector_ftp.create_initial_ftp_channels(self.worker_store.worker_config.channel_ftp)
-
         # IBM MQ
-        # Set up subprocess-based IBM MQ connections if that component is enabled
         if has_ibm_mq and self.fs_server_config.component_enabled.ibm_mq:
 
             # Will block for a few seconds at most, until is_ok is returned
