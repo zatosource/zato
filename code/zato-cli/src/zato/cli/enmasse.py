@@ -986,8 +986,12 @@ class ObjectManager(object):
         service_info = SERVICE_BY_NAME[item_type]
 
         if item_type == 'json_rpc':
-            if item['security_id'] is None:
-                item['security_id'] = ZATO_NONE
+
+            if item['sec_use_rbac'] is True:
+                item['security_id'] = 'ZATO_SEC_USE_RBAC'
+
+            elif item['security_id'] is None:
+                item['security_id'] = 'ZATO_NONE'
 
         for field_name, info in iteritems(service_info.object_dependencies):
 
