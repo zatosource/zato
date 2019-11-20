@@ -670,7 +670,7 @@ class ObjectImporter(object):
             return True
 
         # RBAC client roles cannot be edited
-        elif item_type == 'rbac_client_role':
+        elif item_type == 'rbac_client_role' and is_edit:
             return True
 
 # ################################################################################################################################
