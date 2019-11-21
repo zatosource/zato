@@ -792,14 +792,15 @@ class ObjectImporter(object):
         # type: (Results)
 
         existing_defs = []
+        existing_rbac_role = []
+        existing_rbac_role_permission = []
+        existing_rbac_client_role = []
         existing_other = []
 
-        # Definitions or other objects for which self.may_be_dependency returns True,
-        # as they are found in the input enmasse file - they do not exist in ODB yet.
         new_defs = []
-
-        # Objects other than the ones from new_defs that are found in the enmasse file
-        # and which do not exist in ODB yet.
+        new_rbac_role = []
+        new_rbac_role_permission = []
+        new_rbac_client_role = []
         new_other = []
 
         #
@@ -808,13 +809,26 @@ class ObjectImporter(object):
 
         for w in already_existing.warnings:
             item_type, _ = w.value_raw
-            existing = existing_defs if 'def' in item_type else existing_other
+
+            if 'def' in item_type:
+                existing = existing_defs
+            elif item_type == 'rbac_role':
+                existing = existing_rbac_role
+            elif item_type == 'rbac_role_permission':
+                existing = existing_rbac_role_permission
+            elif item_type == 'rbac_client_role':
+                existing = existing_rbac_client_role
+            else:
+                existing = existing_other
             existing.append(w)
 
         #
         # .. actually invoke the updates now ..
         #
-        for w in existing_defs + existing_other:
+        existing_combined = existing_defs + existing_rbac_role + existing_rbac_role_permission + \
+            existing_rbac_client_role + existing_other
+
+        for w in existing_combined:
 
             item_type, attrs = w.value_raw
 
@@ -830,14 +844,24 @@ class ObjectImporter(object):
         #
         for item_type, items in iteritems(self.json):
             if self.may_be_dependency(item_type):
-                new_defs.append({item_type: items})
+                if item_type == 'rbac_role':
+                    append_to = new_rbac_role
+                elif item_type == 'rbac_role_permission':
+                    append_to = new_rbac_role_permission
+                elif item_type == 'rbac_client_role':
+                    append_to = new_rbac_client_role
+                else:
+                    append_to = new_defs
             else:
-                new_other.append({item_type: items})
+                append_to = new_other
+            append_to.append({item_type: items})
 
         #
         # .. actually create the objects now.
         #
-        for elem in new_defs + new_other:
+        new_combined = new_defs + new_rbac_role + new_rbac_role_permission + new_rbac_client_role + new_other
+
+        for elem in new_combined:
             for item_type, attr_list in iteritems(elem):
                 for attrs in attr_list:
 
