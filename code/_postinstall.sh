@@ -43,11 +43,11 @@ if [ "$(uname -s)" = "Darwin" ]
 then
   [[ -z ${POSTGRESQL_BIN_PATH} ]] && POSTGRESQL_BIN_PATH="$(dirname $(find /usr/local/Cellar/postgresql -name pg_dump|head -n 1))"
   if [[ -n "${POSTGRESQL_BIN_PATH}" && -d "${POSTGRESQL_BIN_PATH}" ]]; then
-    pip uninstall -y psycopg2 SQLAlchemy
+    $PY_BINARY -m pip uninstall -y psycopg2 SQLAlchemy
     export PATH="/usr/local/opt/openssl/bin:$PATH:${POSTGRESQL_BIN_PATH}"
     export LDFLAGS="-L/usr/local/opt/openssl/lib"
     export CPPFLAGS="-I/usr/local/opt/openssl/include"
-    pip install --no-binary :all: psycopg2==2.7.4 SQLAlchemy==1.2.8
+    $PY_BINARY -m pip install --no-binary :all: psycopg2==2.7.4 SQLAlchemy==1.2.8
   else
     echo "Failed to find ${POSTGRESQL_BIN_PATH} in the system. Use the 'POSTGRESQL_BIN_PATH' to specify the path to PostgreSQL binaries." >&2
     exit 1
