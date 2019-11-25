@@ -12,7 +12,7 @@ echo "*** Zato Mac installation using $PY_BINARY ***"
 
 brew install \
     bzip2 curl bzr git gsasl haproxy libev libevent libffi libxml2 libxslt \
-    libyaml openldap openssl ossp-uuid postgresql python2 swig \
+    libyaml openldap openssl ossp-uuid postgresql python2 swig automake \
     || true
 
 curl https://bootstrap.pypa.io/get-pip.py | sudo /usr/local/bin/$PY_BINARY
