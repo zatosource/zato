@@ -8,11 +8,12 @@ fi
 
 # Python version to use needs to be provided by our caller
 PY_BINARY=$1
+
 echo "*** Zato Mac installation using $PY_BINARY ***"
 
 brew install \
     bzip2 curl bzr git gsasl haproxy libev libevent libffi libxml2 libxslt \
-    libyaml openldap openssl ossp-uuid postgresql python2 swig automake \
+    libyaml openldap openssl ossp-uuid postgresql swig automake autoconf libtool ${PY_BINARY:-python2} \
     || true
 
 curl https://bootstrap.pypa.io/get-pip.py | sudo /usr/local/bin/$PY_BINARY
