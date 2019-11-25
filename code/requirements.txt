@@ -62,7 +62,7 @@ keyring==3.7
 keyutils==0.5; platform_system == 'Linux'
 kombu==4.2.1
 ldap3==2.5.2
-lxml==3.7.3
+lxml==4.4.1
 Mako==0.9.0
 markdown==2.6.7
 MarkupSafe==1.0
