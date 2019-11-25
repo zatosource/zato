@@ -47,7 +47,7 @@ then
     export PATH="/usr/local/opt/openssl/bin:$PATH:${POSTGRESQL_BIN_PATH}"
     export LDFLAGS="-L/usr/local/opt/openssl/lib"
     export CPPFLAGS="-I/usr/local/opt/openssl/include"
-    $PY_BINARY -m pip install --no-binary :all: psycopg2==2.7.4 SQLAlchemy==1.2.8
+    $PY_BINARY -m pip install --no-binary :all: psycopg2==2.7.7 SQLAlchemy==1.2.8
   else
     echo "Failed to find ${POSTGRESQL_BIN_PATH} in the system. Use the 'POSTGRESQL_BIN_PATH' to specify the path to PostgreSQL binaries." >&2
     exit 1
