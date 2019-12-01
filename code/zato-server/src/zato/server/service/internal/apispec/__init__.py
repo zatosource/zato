@@ -189,8 +189,18 @@ class GetSphinx(Service):
         datatype_border = '=' * longest_datatype
         required_border = '=' * longest_required
 
+        # The table is within a 'table' block which is why it needs to be indented
+        table_indent = ' ' * 3
+
+        # Left-align the table
+        buff.write('.. table::\n')
+        buff.write(table_indent) # Note no \n here
+        buff.write(':align: left\n\n')
+
+        buff.write(table_indent)
         self.write_separators(buff, name_border, datatype_border, required_border)
 
+        buff.write(table_indent)
         buff.write('Name'.ljust(longest_name))
         buff.write(col_sep)
 
@@ -201,9 +211,12 @@ class GetSphinx(Service):
         buff.write(col_sep)
         buff.write('\n')
 
+        buff.write(table_indent)
         self.write_separators(buff, name_border, datatype_border, required_border)
 
         for item in sio_lines:
+
+            buff.write(table_indent)
 
             # First, add the services to the main table
             buff.write(item.name.ljust(longest_name))
@@ -217,6 +230,7 @@ class GetSphinx(Service):
 
             buff.write('\n')
 
+        buff.write(table_indent)
         self.write_separators(buff, name_border, datatype_border, required_border)
         buff.write('\n')
 
