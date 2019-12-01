@@ -196,7 +196,7 @@ class ServiceInfo(object):
         if not doc:
             return
 
-        split = doc.splitlines()
+        split = doc.strip().splitlines()
         summary = split[0]
 
         # format_docstring expects an empty line between summary and description

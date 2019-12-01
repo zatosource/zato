@@ -36,7 +36,7 @@ class OpenAPIGenerator(object):
 # ################################################################################################################################
 
     def _get_response_name(self, service_name):
-        return b'response_{}'.format(fs_safe_name(service_name))
+        return 'response_{}'.format(fs_safe_name(service_name))
 
 # ################################################################################################################################
 
@@ -48,7 +48,7 @@ class OpenAPIGenerator(object):
 
             response_name = self._get_response_name(item.name)
             out[response_name] = {
-                b'title': b'Response object for {}'.format(item.name),
+                b'title': 'Response object for {}'.format(item.name),
                 b'type': b'object',
             }
             properties = {}
