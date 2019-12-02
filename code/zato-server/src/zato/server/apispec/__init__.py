@@ -99,7 +99,6 @@ class ServiceInfo(object):
 
     def parse(self):
         self.set_config()
-        #self.set_simple_io()
         self.set_summary_desc()
 
 # ################################################################################################################################
@@ -197,6 +196,9 @@ class ServiceInfo(object):
             return
 
         split = doc.strip().splitlines()
+        if not split:
+            return
+
         summary = split[0]
 
         # format_docstring expects an empty line between summary and description
