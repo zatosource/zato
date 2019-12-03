@@ -30,6 +30,11 @@ from zato.server.service import Bool
 
 # ################################################################################################################################
 
+if 0:
+    from past.builtins import unicode
+
+# ################################################################################################################################
+
 no_value = '---'
 col_sep = ' ' # Column separator
 len_col_sep = len(col_sep)
@@ -131,9 +136,19 @@ class GetSphinx(Service):
 
 # ################################################################################################################################
 
+    def _make_sphinx_safe(self, data):
+        # type: (unicode) -> unicode
+        return data.replace('*', '\*')
+
+# ################################################################################################################################
+
     def get_service_table_line(self, idx, name, docs, sio):
         name_fs_safe = 'service_{}'.format(fs_safe_name(name))
         file_name = '{}.rst'.format(name_fs_safe)
+
+        summary = docs.summary
+        if summary:
+            summary = self._make_sphinx_safe(summary)
 
         return bunchify({
             'ns': str(idx),
@@ -142,7 +157,7 @@ class GetSphinx(Service):
             'name': name_fs_safe,
             'name_link': """:doc:`{} <./{}>`""".format(name, name_fs_safe),
             'file_name': file_name,
-            'description': docs.summary or no_value,
+            'description': summary or no_value,
             'docs': docs,
             'sio': sio
         })
@@ -252,7 +267,9 @@ class GetSphinx(Service):
         buff.write('\n')
         buff.write('\n')
 
-        buff.write(item.docs.full)
+        docs_full = self._make_sphinx_safe(item.docs.full)
+
+        buff.write(docs_full)
         buff.write('\n')
         buff.write('\n')
 
