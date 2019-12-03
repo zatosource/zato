@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 from json import loads
 from logging import getLogger
 from mmap import mmap
+from random import SystemRandom
 from time import sleep
 from traceback import format_exc
 
@@ -36,9 +37,11 @@ def form_name(suffix):
     """Darwin's SysV IPC implementation is older than time itself. Unlike
     Linux, its name field is limited to 31 bytes. Therefore on Darwin, use a
     truncated hash of the suffix to avoid OSError."""
+
     if sys.platform == 'darwin':
+        srand = SystemRandom()
         avail = 31 + 2 - len(_shmem_pattern)
-        suffix = hashlib.md5(suffix).hexdigest()[avail:]
+        suffix = hashlib.md5("{}{}".format(srand,suffix)).hexdigest()[avail:]
 
     return _shmem_pattern.format(suffix)
 
