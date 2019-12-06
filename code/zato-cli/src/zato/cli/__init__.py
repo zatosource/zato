@@ -366,6 +366,8 @@ def run_command(args):
         ('sso_create_user', 'zato.cli.sso.CreateUser'),
         ('sso_create_super_user', 'zato.cli.sso.CreateSuperUser'),
         ('sso_delete_user', 'zato.cli.sso.DeleteUser'),
+        ('sso_login', 'zato.cli.sso.Login'),
+        ('sso_logout', 'zato.cli.sso.Logout'),
         ('sso_lock_user', 'zato.cli.sso.LockUser'),
         ('sso_reset_totp_key', 'zato.cli.sso.ResetTOTPKey'),
         ('sso_reset_user_password', 'zato.cli.sso.ResetUserPassword'),
