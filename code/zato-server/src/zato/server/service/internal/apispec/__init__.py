@@ -33,6 +33,8 @@ from zato.server.service import Bool
 if 0:
     from past.builtins import unicode
 
+    unicode = unicode
+
 # ################################################################################################################################
 
 no_value = '---'
