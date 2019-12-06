@@ -79,8 +79,10 @@ class SSOCommand(ZatoCommand):
         def _hash_secret(_secret):
             return crypto_manager.hash_secret(_secret, 'sso.super-user')
 
-        return UserAPI(None, sso_conf, _get_session, crypto_manager.encrypt, crypto_manager.decrypt, _hash_secret, None,
-            new_user_id)
+        user_api = UserAPI(None, sso_conf, None, crypto_manager.encrypt, crypto_manager.decrypt, _hash_secret, None, new_user_id)
+        user_api.post_configure(_get_session, True, False)
+
+        return user_api
 
 # ################################################################################################################################
 
@@ -230,6 +232,37 @@ class UnlockUser(SSOCommand):
     def _on_sso_command(self, args, user, user_api):
         user_api.lock_user_cli(user.user_id)
         self.logger.info('Unlocked user account `%s`', args.username)
+
+# ################################################################################################################################
+
+class Login(SSOCommand):
+    """ Logs a user in.
+    """
+    opts = [
+        {'name': 'username', 'help': 'User to log in as (no password is required)'},
+    ]
+
+    def _on_sso_command(self, args, user, user_api):
+        # type: (Namespace, SSOUser, UserAPI)
+        response = user_api.login(
+            _cid, args.username, None, None, '127.0.0.1', user_agent='Zato CLI {}'.format(current_host()), skip_sec=True)
+        self.logger.info('User logged in %s', response.to_dict())
+
+# ################################################################################################################################
+
+class Logout(SSOCommand):
+    """ Logs a user out by their UST.
+    """
+    user_required = False
+
+    opts = [
+        {'name': 'ust', 'help': 'User session token to log out by'},
+    ]
+
+    def _on_sso_command(self, args, user, user_api):
+        # type: (Namespace, SSOUser, UserAPI)
+        user_api.logout(_cid, args.ust, None, '127.0.0.1', skip_sec=True)
+        self.logger.info('User logged out by UST')
 
 # ################################################################################################################################
 

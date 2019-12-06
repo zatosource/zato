@@ -44,10 +44,11 @@ _approved = const.approval_status.approved
 
 def _session_with_opaque(session, _opaque_attr=GENERIC.ATTR_NAME):
     if session:
-        opaque = getattr(session, GENERIC.ATTR_NAME, None)
+        opaque = getattr(session, _opaque_attr, None)
         if opaque:
             opaque = loads(opaque)
-            setattr(session, _opaque_attr, opaque)
+            session = session._asdict()
+            session[_opaque_attr] = opaque
     return session
 
 # ################################################################################################################################
