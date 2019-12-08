@@ -12,6 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from json import loads
 from datetime import datetime
 
+# Bunch
+from bunch import bunchify
+
 # SQLAlchemy
 from sqlalchemy import or_
 
@@ -49,6 +52,7 @@ def _session_with_opaque(session, _opaque_attr=GENERIC.ATTR_NAME):
             opaque = loads(opaque)
             session = session._asdict()
             session[_opaque_attr] = opaque
+            return bunchify(session)
     return session
 
 # ################################################################################################################################
