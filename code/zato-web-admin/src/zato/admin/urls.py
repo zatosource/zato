@@ -21,9 +21,9 @@ from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
 from zato.admin.web.views.cache import memcached_ as cache_memcached
 from zato.admin.web.views.channel import amqp_ as channel_amqp
-from zato.admin.web.views.channel import ftp as channel_ftp
 from zato.admin.web.views.channel import jms_wmq as channel_jms_wmq
 from zato.admin.web.views.channel import json_rpc as channel_json_rpc
+from zato.admin.web.views.channel import sftp as channel_sftp
 from zato.admin.web.views.channel import stomp as channel_stomp
 from zato.admin.web.views.channel import web_socket as channel_web_socket
 from zato.admin.web.views.channel import zmq as channel_zmq
@@ -920,14 +920,14 @@ urlpatterns += [
 urlpatterns += [
 
     # .. FTP
-    url(r'^zato/channel/ftp/$',
-        login_required(channel_ftp.Index()), name=channel_ftp.Index.url_name),
-    url(r'^zato/channel/ftp/create/$',
-        login_required(channel_ftp.Create()), name=channel_ftp.Create.url_name),
-    url(r'^zato/channel/ftp/edit/$',
-        login_required(channel_ftp.Edit()), name=channel_ftp.Edit.url_name),
-    url(r'^zato/channel/ftp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(channel_ftp.Delete()), name=channel_ftp.Delete.url_name),
+    url(r'^zato/channel/sftp/$',
+        login_required(channel_sftp.Index()), name=channel_sftp.Index.url_name),
+    url(r'^zato/channel/sftp/create/$',
+        login_required(channel_sftp.Create()), name=channel_sftp.Create.url_name),
+    url(r'^zato/channel/sftp/edit/$',
+        login_required(channel_sftp.Edit()), name=channel_sftp.Edit.url_name),
+    url(r'^zato/channel/sftp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(channel_sftp.Delete()), name=channel_sftp.Delete.url_name),
     ]
 
 # ################################################################################################################################

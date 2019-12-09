@@ -14,28 +14,18 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # ################################################################################################################################
 # ################################################################################################################################
 
-class FTPChannel(object):
+class SFTPChannel(object):
     def __init__(self):
         self._config_attrs = []
-        self.id   = None            # type: int
-        self.name = None            # type: str
-        self.is_active = None       # type: bool
-        self.address = None         # type: str
-        self.host = None            # type: str
-        self.port = None            # type: int
-        self.max_connections = None # type: int
-        self.max_conn_per_ip = None # type: int
-        self.command_timeout = None # type: int
-        self.banner = None          # type: str
-        self.log_prefix = None      # type: str
-        self.base_directory = None  # type: str
-        self.read_throttle = None   # type: int
-        self.write_throttle = None  # type: int
-        self.log_level = None       # type: str
-        self.service_name = None    # type: str
-        self.topic_name = None      # type: str
-        self.masq_address = None    # type: str
-        self.passive_ports = None   # type: str
+        self.id   = None               # type: int
+        self.name = None               # type: str
+        self.is_active = None          # type: bool
+        self.address = None            # type: str
+        self.service_name = None       # type: str
+        self.topic_name = None         # type: str
+        self.idle_timeout = None       # type: int
+        self.keep_alive_timeout = None # type: int
+        self.host_key = None           # type: str
 
 # ################################################################################################################################
 
@@ -50,8 +40,8 @@ class FTPChannel(object):
 
     @staticmethod
     def from_dict(config):
-        # type: (dict) -> FTPChannel
-        out = FTPChannel()
+        # type: (dict) -> SFTPChannel
+        out = SFTPChannel()
         for k, v in config.items():
             out._config_attrs.append(k)
             setattr(out, k, v)
