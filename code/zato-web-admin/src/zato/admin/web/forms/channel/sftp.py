@@ -29,6 +29,7 @@ class CreateForm(forms.Form):
     keep_alive_timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}), initial=_default.KEEP_ALIVE_TIMEOUT)
 
     host_key = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    sftp_command = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.SFTP_COMMAND)
 
     def __init__(self, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
