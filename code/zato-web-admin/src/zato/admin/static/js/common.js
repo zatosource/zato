@@ -55,6 +55,7 @@ $.namespace('zato.cache.builtin.entries');
 $.namespace('zato.cache.memcached');
 $.namespace('zato.channel');
 $.namespace('zato.channel.amqp');
+$.namespace('zato.channel.ftp');
 $.namespace('zato.channel.jms_wmq');
 $.namespace('zato.channel.json_rpc');
 $.namespace('zato.channel.kafka');
@@ -855,6 +856,10 @@ $.fn.zato.data_table.on_submit_complete = function(data, status, action) {
 
 $.fn.zato.data_table.service_text = function(service, cluster_id) {
     return String.format('<a href="/zato/service/overview/{0}/?cluster={1}">{0}</a>', service, cluster_id);
+}
+
+$.fn.zato.data_table.topic_text = function(topic, cluster_id) {
+    return String.format('<a href="/zato/pubsub/topic/?cluster={1}&amp;query={0}">{0}</a>', topic, cluster_id);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

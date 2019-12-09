@@ -1,0 +1,452 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}FTP channels{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    {% if items %}
+    <style type="text/css">
+        .ui-dialog-titlebar {
+            margin-bottom:-4px !important;
+        }
+    </style>
+    {% endif %}
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    {% comment %} Common JS {% endcomment %}
+    <script type="text/javascript" src="/static/js/common.js"></script>
+
+    {% comment %} HTTP Basic Auth {% endcomment %}
+    <script type="text/javascript" src="/static/js/channel/ftp/index.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+
+            {% comment %} 1 {% endcomment %}
+            'name',
+            '_is_active',
+            'address',
+
+            {% comment %} 2 {% endcomment %}
+            '_service',
+            '_topic',
+            'base_directory',
+
+            {% comment %} 3 {% endcomment %}
+            '_edit',
+            '_delete',
+            'id',
+
+            {% comment %} 4 {% endcomment %}
+            'is_active',
+            'max_connections',
+            'command_timeout',
+
+            {% comment %} 5 {% endcomment %}
+            'banner',
+            'log_prefix',
+            'read_throttle',
+
+            {% comment %} 6 {% endcomment %}
+            'write_throttle',
+
+            {% comment %} 7 {% endcomment %}
+            'max_conn_per_ip',
+            'service_name',
+
+            {% comment %} 8 {% endcomment %}
+            'topic_name',
+            'log_level',
+            'masq_address',
+
+            {% comment %} 9 {% endcomment %}
+            'passive_ports',
+
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">FTP channels</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% with has_generic="1" generic_type="channel-ftp" %}
+    {% include "zato/search-form.html" with page_prompt="Show channels"%}
+{% endwith %}
+
+
+    {% if cluster_id %}
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.channel.ftp.create()">Create a new FTP channel</a>
+        </div>
+
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        {% comment %} 1 {% endcomment %}
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+                        <th><a href="#">Address</a></th>
+
+                        {% comment %} 2 {% endcomment %}
+                        <th><a href="#">Service</a></th>
+                        <th><a href="#">Topic</a></th>
+                        <th><a href="#">Base directory</a></th>
+
+                        {% comment %} 3 {% endcomment %}
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 4 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 5 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 6 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 7 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 8 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 9 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        {% comment %} 1 {% endcomment %}
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.address }}</td>
+
+                        {% comment %} 2 {% endcomment %}
+                        <td>
+                            {% if item.service_name %}
+                                <a href="{% url "service-overview" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a>
+                            {% else %}
+                                <span class="form_hint">---</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.topic_name %}
+                                <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;query={{ item.topic_name }}">{{ item.topic_name }}</a>
+                            {% else %}
+                                <span class="form_hint">---</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ item.base_directory }}</td>
+
+                        {% comment %} 3 {% endcomment %}
+                        <td><a href="javascript:$.fn.zato.channel.ftp.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.channel.ftp.delete_('{{ item.id }}')">Delete</a></td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+
+                        {% comment %} 4 {% endcomment %}
+                        <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.max_connections }}</td>
+                        <td class='ignore'>{{ item.command_timeout }}</td>
+
+                        {% comment %} 5 {% endcomment %}
+                        <td class='ignore'>{{ item.banner }}</td>
+                        <td class='ignore'>{{ item.log_prefix }}</td>
+                        <td class='ignore'>{{ item.read_throttle }}</td>
+
+                        {% comment %} 6 {% endcomment %}
+                        <td class='ignore'>{{ item.write_throttle }}</td>
+
+                        {% comment %} 7 {% endcomment %}
+                        <td class='ignore'>{{ item.max_conn_per_ip }}</td>
+                        <td class='ignore'>{{ item.service_name }}</td>
+
+                        {% comment %} 8 {% endcomment %}
+                        <td class='ignore'>{{ item.topic_name }}</td>
+                        <td class='ignore'>{{ item.log_level }}</td>
+                        <td class='ignore'>{{ item.masq_address }}</td>
+
+                        {% comment %} 9 {% endcomment %}
+                        <td class='ignore'>{{ item.passive_ports }}</td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='25'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "channel-ftp-create" %}" method="post" id="create-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:12%">
+                                <label for="id_name">Name</label>
+                            </td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_is_active">Active</label>
+                            </td>
+                            <td>
+                            {{ create_form.is_active }}
+                            |
+                            <label for="id_address">Address</label>
+                            {{ create_form.address }}
+                            |
+                            <label for="id_base_directory">Base dir.</label>
+                            {{ create_form.base_directory }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Max conn.
+                            </td>
+                            <td>
+                                <label for="id_max_connections">Total</label>
+                                {{ create_form.max_connections }}
+                                |
+                                <label for="id_max_conn_per_ip">Per IP</label>
+                                {{ create_form.max_conn_per_ip }}
+                                |
+                                <label for="id_command_timeout">Timeout</label>
+                                {{ create_form.command_timeout }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Throttle
+                            </td>
+                            <td>
+                                <label for="id_read_throttle">Read</label>
+                                {{ create_form.read_throttle }}
+                                |
+                                <label for="id_write_throttle">Write</label>
+                                {{ create_form.write_throttle }}
+                                |
+                                <label for="id_log_level">Log level</label>
+                                {{ create_form.log_level }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_masq_address">Masq. addr.</label>
+                            </td>
+                            <td>
+                                {{ create_form.masq_address }}
+                                |
+                                <label for="id_passive_ports">Passive ports</label>
+                                {{ create_form.passive_ports }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_service_name">Service</label>
+                            </td>
+                            <td>{{ create_form.service_name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_topic_name">Topic</label>
+                            </td>
+                            <td>{{ create_form.topic_name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_log_prefix">Log prefix</label>
+                            </td>
+                            <td>
+                            {{ create_form.log_prefix }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_banner">Banner</label>
+                            </td>
+                            <td>
+                                {{ create_form.banner }}
+                            </td>
+                        </td>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "channel-ftp-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:12%">
+                                <label for="id_edit-name">Name</label>
+                            </td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-is_active">Active</label>
+                            </td>
+                            <td>
+                            {{ edit_form.is_active }}
+                            |
+                            <label for="id_edit-address">Address</label>
+                            {{ edit_form.address }}
+                            |
+                            <label for="id_edit-base_directory">Base dir.</label>
+                            {{ edit_form.base_directory }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Max conn.</td>
+                            </td>
+                            <td>
+                                <label for="id_edit-max_connections">Total</label>
+                                {{ edit_form.max_connections }}
+                                |
+                                <label for="id_edit-max_conn_per_ip">Per IP</label>
+                                {{ edit_form.max_conn_per_ip }}
+                                |
+                                <label for="id_edit-command_timeout">Timeout</label>
+                                {{ edit_form.command_timeout }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Throttle</td>
+                            </td>
+                            <td>
+                                <label for="id_edit-read_throttle">Read</label>
+                                {{ edit_form.read_throttle }}
+                                |
+                                <label for="id_edit-write_throttle">Write</label>
+                                {{ edit_form.write_throttle }}
+                                |
+                                <label for="id_edit-log_level">Log level</label>
+                                {{ edit_form.log_level }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-masq_address">Masq. addr.</label>
+                            </td>
+                            <td>
+                                {{ edit_form.masq_address }}
+                                |
+                                <label for="id_edit-passive_ports">Passive ports</label>
+                                {{ edit_form.passive_ports }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-service_name">Service</label>
+                            </td>
+                            <td>{{ edit_form.service_name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-topic_name">Topic</label>
+                            </td>
+                            <td>{{ edit_form.topic_name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-log_prefix">Log prefix</label>
+                            </td>
+                            <td>
+                            {{ edit_form.log_prefix }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-banner">Banner</label>
+                            </td>
+                            <td>
+                                {{ edit_form.banner }}
+                            </td>
+                        </td>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+    {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

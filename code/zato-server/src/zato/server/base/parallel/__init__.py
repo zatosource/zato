@@ -57,6 +57,7 @@ from zato.server.config import ConfigStore
 from zato.server.connection.server import Servers
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
+from zato.server.base.parallel.subprocess_.ftp import FTPIPC
 from zato.server.base.parallel.subprocess_.ibm_mq import IBMMQIPC
 from zato.server.base.parallel.subprocess_.outconn_sftp import SFTPIPC
 from zato.server.pickup import PickupManager
@@ -189,6 +190,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.user_ctx_lock = gevent.lock.RLock()
 
         # Connectors
+        self.connector_ftp    = FTPIPC(self)
         self.connector_ibm_mq = IBMMQIPC(self)
         self.connector_sftp   = SFTPIPC(self)
 
@@ -634,25 +636,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             self.invoke_startup_services(is_first)
             spawn_greenlet(self.set_up_pickup)
 
-            # Set up subprocess-based IBM MQ connections if that component is enabled
-            if self.fs_server_config.component_enabled.ibm_mq:
+            # Subprocess-based connectors
+            self._init_subprocess_connectors()
 
-                # Will block for a few seconds at most, until is_ok is returned
-                # which indicates that a connector started or not.
-                is_ok = self.connector_ibm_mq.start_ibm_mq_connector(int(self.fs_server_config.ibm_mq.ipc_tcp_start_port))
-
-                try:
-                    if is_ok:
-                        self.connector_ibm_mq.create_initial_wmq_definitions(self.worker_store.worker_config.definition_wmq)
-                        self.connector_ibm_mq.create_initial_wmq_outconns(self.worker_store.worker_config.out_wmq)
-                        self.connector_ibm_mq.create_initial_wmq_channels(self.worker_store.worker_config.channel_wmq)
-                except Exception as e:
-                    logger.warn('Could not create initial IBM MQ objects, e:`%s`', e)
-
-            # Set up subprocess-based SFTP connections
-            is_ok = self.connector_sftp.start_sftp_connector(int(self.fs_server_config.ibm_mq.ipc_tcp_start_port))
-            if is_ok:
-                self.connector_sftp.create_initial_sftp_outconns(self.worker_store.worker_config.out_sftp)
 
         else:
             self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_OTHER, kwargs={
@@ -670,6 +656,34 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         })
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
+
+# ################################################################################################################################
+
+    def _init_subprocess_connectors(self):
+        """ Sets up subprocess-based connectors.
+        """
+        # Common
+        ipc_tcp_start_port = int(self.fs_server_config.misc.get('ipc_tcp_start_port', 34567))
+
+        has_ibm_mq = bool(self.worker_store.worker_config.definition_wmq.keys())
+        has_sftp = bool(self.worker_store.worker_config.out_sftp.keys())
+
+        # IBM MQ
+        if has_ibm_mq and self.fs_server_config.component_enabled.ibm_mq:
+
+            # Will block for a few seconds at most, until is_ok is returned
+            # which indicates that a connector started or not.
+            try:
+                if self.connector_ibm_mq.start_ibm_mq_connector(ipc_tcp_start_port):
+                    self.connector_ibm_mq.create_initial_wmq_definitions(self.worker_store.worker_config.definition_wmq)
+                    self.connector_ibm_mq.create_initial_wmq_outconns(self.worker_store.worker_config.out_wmq)
+                    self.connector_ibm_mq.create_initial_wmq_channels(self.worker_store.worker_config.channel_wmq)
+            except Exception as e:
+                logger.warn('Could not create initial IBM MQ objects, e:`%s`', e)
+
+        # SFTP
+        if has_sftp and self.connector_sftp.start_sftp_connector(ipc_tcp_start_port):
+            self.connector_sftp.create_initial_sftp_outconns(self.worker_store.worker_config.out_sftp)
 
 # ################################################################################################################################
 
