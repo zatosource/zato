@@ -1307,7 +1307,7 @@ class GENERIC:
 
     class CONNECTION:
         class TYPE:
-            CHANNEL_FTP = 'channel-ftp'
+            CHANNEL_SFTP = 'channel-sftp'
             DEF_KAFKA = 'def-kafka'
             OUTCONN_IM_SLACK = 'outconn-im-slack'
             OUTCONN_IM_TELEGRAM = 'outconn-im-telegram'
@@ -1459,6 +1459,20 @@ class TELEGRAM:
 # ################################################################################################################################
 
 class SFTP:
+
+    class CHANNEL:
+        class DEFAULT:
+            ADDRESS            = '0.0.0.0:33022'
+            IDLE_TIMEOUT       = 300
+            KEEP_ALIVE_TIMEOUT = 10
+
+        class INVOKE_MODE:
+            SYNC = NameId('Sync', 'sync')
+            IN_BACKGROUND = NameId('In-backgorund', 'in-background')
+
+            def __iter__(self):
+                return iter((self.IN_BACKGROUND, self.SYNC))
+
     class DEFAULT:
         BANDWIDTH_LIMIT = 10
         BUFFER_SIZE = 32768
@@ -1515,36 +1529,6 @@ class MS_SQL:
     ZATO_DIRECT = 'zato+mssql1'
     EXTRA_KWARGS = 'login_timeout', 'appname', 'blocksize', 'use_mars', 'readonly', 'use_tz', 'bytes_to_unicode', \
         'cafile', 'validate_host'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class FTP:
-    class CHANNEL:
-        class DEFAULT:
-            ADDRESS = '0.0.0.0:21021'
-            MAX_CONN = 200
-            MAX_CONN_PER_IP = 20
-            COMMAND_TIMEOUT = 300
-            BANNER = 'Welcome'
-            LOG_PREFIX = '%(remote_ip)s:%(remote_port)s-[%(username)s]'
-            BASE_DIRECTORY = './work/ftp'
-            THROTTLE_READ  = 10
-            THROTTLE_WRITE = 10
-
-        class LOG_LEVEL:
-            INFO = NameId('Info', 'INFO')
-            DEBUG = NameId('Debug', 'DEBUG')
-
-            def __iter__(self):
-                return iter((self.INFO, self.DEBUG))
-
-        class INVOKE_MODE:
-            SYNC = NameId('Sync', 'sync')
-            IN_BACKGROUND = NameId('In-backgorund', 'in-background')
-
-            def __iter__(self):
-                return iter((self.IN_BACKGROUND, self.SYNC))
 
 # ################################################################################################################################
 # ################################################################################################################################

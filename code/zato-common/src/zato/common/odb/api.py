@@ -1160,11 +1160,11 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_channel_ftp_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of FTP channels.
+    def get_channel_sftp_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of SFTP channels.
         """
         with closing(self.session()) as session:
-            return query_generic.connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.CHANNEL_FTP, needs_columns)
+            return query_generic.connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.CHANNEL_SFTP, needs_columns)
 
 # ################################################################################################################################
 

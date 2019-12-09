@@ -9,20 +9,20 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.admin.web.forms.channel.ftp import CreateForm, EditForm
+from zato.admin.web.forms.channel.sftp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.common import GENERIC
-from zato.common.model import FTPChannel
+from zato.common.model import SFTPChannel
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Index(_Index):
     method_allowed = 'GET'
-    url_name = 'channel-ftp'
-    template = 'zato/channel/ftp/index.html'
+    url_name = 'channel-sftp'
+    template = 'zato/channel/sftp/index.html'
     service_name = 'zato.generic.connection.get-list'
-    output_class = FTPChannel
+    output_class = SFTPChannel
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
@@ -53,7 +53,7 @@ class _CreateEdit(CreateEdit):
         output_required = 'id', 'name'
 
     def populate_initial_input_dict(self, initial_input_dict):
-        initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.CHANNEL_FTP
+        initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.CHANNEL_SFTP
         initial_input_dict['is_internal'] = False
         initial_input_dict['is_channel'] = True
         initial_input_dict['is_outconn'] = False
@@ -61,20 +61,20 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['pool_size'] = 1
 
     def success_message(self, item):
-        return 'Successfully {} FTP channel `{}`'.format(self.verb, item.name)
+        return 'Successfully {} SFTP channel `{}`'.format(self.verb, item.name)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Create(_CreateEdit):
-    url_name = 'channel-ftp-create'
+    url_name = 'channel-sftp-create'
     service_name = 'zato.generic.connection.create'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Edit(_CreateEdit):
-    url_name = 'channel-ftp-edit'
+    url_name = 'channel-sftp-edit'
     form_prefix = 'edit-'
     service_name = 'zato.generic.connection.edit'
 
@@ -82,8 +82,8 @@ class Edit(_CreateEdit):
 # ################################################################################################################################
 
 class Delete(_Delete):
-    url_name = 'channel-ftp-delete'
-    error_message = 'Could not delete FTP channel'
+    url_name = 'channel-sftp-delete'
+    error_message = 'Could not delete SFTP channel'
     service_name = 'zato.generic.connection.delete'
 
 # ################################################################################################################################

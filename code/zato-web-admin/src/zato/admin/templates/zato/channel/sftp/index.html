@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}FTP channels{% endblock %}
+{% block html_title %}SFTP channels{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -20,11 +20,8 @@
     <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
-    {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
-
-    {% comment %} HTTP Basic Auth {% endcomment %}
-    <script type="text/javascript" src="/static/js/channel/ftp/index.js"></script>
+    <script type="text/javascript" src="/static/js/channel/sftp/index.js"></script>
 
     <script>
     $.fn.zato.data_table.get_columns = function() {
@@ -40,7 +37,7 @@
             {% comment %} 2 {% endcomment %}
             '_service',
             '_topic',
-            'base_directory',
+            'host_key',
 
             {% comment %} 3 {% endcomment %}
             '_edit',
@@ -49,28 +46,12 @@
 
             {% comment %} 4 {% endcomment %}
             'is_active',
-            'max_connections',
-            'command_timeout',
+            'service_name',
+            'topic_name',
 
             {% comment %} 5 {% endcomment %}
-            'banner',
-            'log_prefix',
-            'read_throttle',
-
-            {% comment %} 6 {% endcomment %}
-            'write_throttle',
-
-            {% comment %} 7 {% endcomment %}
-            'max_conn_per_ip',
-            'service_name',
-
-            {% comment %} 8 {% endcomment %}
-            'topic_name',
-            'log_level',
-            'masq_address',
-
-            {% comment %} 9 {% endcomment %}
-            'passive_ports',
+            'idle_timeout',
+            'keep_alive_timeout'
 
         ]
     }
@@ -79,7 +60,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">FTP channels</h2>
+<h2 class="zato">SFTP channels</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -87,14 +68,14 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% with has_generic="1" generic_type="channel-ftp" %}
+{% with has_generic="1" generic_type="channel-sftp" %}
     {% include "zato/search-form.html" with page_prompt="Show channels"%}
 {% endwith %}
 
 
     {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.channel.ftp.create()">Create a new FTP channel</a>
+            <a href="javascript:$.fn.zato.channel.sftp.create()">Create a new SFTP channel</a>
         </div>
 
 
@@ -113,7 +94,7 @@
                         {% comment %} 2 {% endcomment %}
                         <th><a href="#">Service</a></th>
                         <th><a href="#">Topic</a></th>
-                        <th><a href="#">Base directory</a></th>
+                        <th><a href="#">Host key</a></th>
 
                         {% comment %} 3 {% endcomment %}
                         <th>&nbsp;</th>
@@ -127,22 +108,6 @@
 
                         {% comment %} 5 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
-                        {% comment %} 6 {% endcomment %}
-                        <th class='ignore'>&nbsp;</th>
-
-                        {% comment %} 7 {% endcomment %}
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
-                        {% comment %} 8 {% endcomment %}
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
-                        {% comment %} 9 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                 </thead>
 
@@ -173,42 +138,33 @@
                                 <span class="form_hint">---</span>
                             {% endif %}
                         </td>
-                        <td>{{ item.base_directory }}</td>
+                        <td>
+                            {% if item.host_key %}
+                                {{ item.host_key }}
+                            {% else %}
+                                <span class="form_hint">---</span>
+                            {% endif %}
+                        </td>
 
                         {% comment %} 3 {% endcomment %}
-                        <td><a href="javascript:$.fn.zato.channel.ftp.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.channel.ftp.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.channel.sftp.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.channel.sftp.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
 
                         {% comment %} 4 {% endcomment %}
                         <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.max_connections }}</td>
-                        <td class='ignore'>{{ item.command_timeout }}</td>
+                        <td class='ignore'>{{ item.service_name }}</td>
+                        <td class='ignore'>{{ item.topic_name }}</td>
 
                         {% comment %} 5 {% endcomment %}
-                        <td class='ignore'>{{ item.banner }}</td>
-                        <td class='ignore'>{{ item.log_prefix }}</td>
-                        <td class='ignore'>{{ item.read_throttle }}</td>
+                        <td class='ignore'>{{ item.idle_timeout }}</td>
+                        <td class='ignore'>{{ item.keep_alive_timeout }}</td>
 
-                        {% comment %} 6 {% endcomment %}
-                        <td class='ignore'>{{ item.write_throttle }}</td>
-
-                        {% comment %} 7 {% endcomment %}
-                        <td class='ignore'>{{ item.max_conn_per_ip }}</td>
-                        <td class='ignore'>{{ item.service_name }}</td>
-
-                        {% comment %} 8 {% endcomment %}
-                        <td class='ignore'>{{ item.topic_name }}</td>
-                        <td class='ignore'>{{ item.log_level }}</td>
-                        <td class='ignore'>{{ item.masq_address }}</td>
-
-                        {% comment %} 9 {% endcomment %}
-                        <td class='ignore'>{{ item.passive_ports }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='25'>No results</td>
+                        <td colspan='14'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -220,10 +176,10 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "channel-ftp-create" %}" method="post" id="create-form">
+                <form action="{% url "channel-sftp-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:12%">
+                            <td style="vertical-align:middle;width:13%">
                                 <label for="id_name">Name</label>
                             </td>
                             <td>{{ create_form.name }}</td>
@@ -239,52 +195,19 @@
                             <label for="id_address">Address</label>
                             {{ create_form.address }}
                             |
-                            <label for="id_base_directory">Base dir.</label>
-                            {{ create_form.base_directory }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                                Max conn.
-                            </td>
-                            <td>
-                                <label for="id_max_connections">Total</label>
-                                {{ create_form.max_connections }}
-                                |
-                                <label for="id_max_conn_per_ip">Per IP</label>
-                                {{ create_form.max_conn_per_ip }}
-                                |
-                                <label for="id_command_timeout">Timeout</label>
-                                {{ create_form.command_timeout }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                                Throttle
-                            </td>
-                            <td>
-                                <label for="id_read_throttle">Read</label>
-                                {{ create_form.read_throttle }}
-                                |
-                                <label for="id_write_throttle">Write</label>
-                                {{ create_form.write_throttle }}
-                                |
-                                <label for="id_log_level">Log level</label>
-                                {{ create_form.log_level }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_masq_address">Masq. addr.</label>
-                            </td>
-                            <td>
-                                {{ create_form.masq_address }}
-                                |
-                                <label for="id_passive_ports">Passive ports</label>
-                                {{ create_form.passive_ports }}
+                            TMT
+                            <span class="form_hint">
+                            (in s)
+                            </span>
+                            <label>
+                            Idle
+                            {{ create_form.idle_timeout }}
+                            </label>
+                            |
+                            <label>
+                            Keep-alive
+                            {{ create_form.keep_alive_timeout }}
+                            </label>
                             </td>
                         </tr>
 
@@ -301,24 +224,12 @@
                             </td>
                             <td>{{ create_form.topic_name }}</td>
                         </tr>
-
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_log_prefix">Log prefix</label>
+                                <label for="id_host_key">Host key</label>
                             </td>
-                            <td>
-                            {{ create_form.log_prefix }}
-                            </td>
+                            <td>{{ create_form.host_key }}</td>
                         </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_banner">Banner</label>
-                            </td>
-                            <td>
-                                {{ create_form.banner }}
-                            </td>
-                        </td>
 
                         <tr>
                             <td colspan="2" style="text-align:right">
@@ -334,7 +245,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "channel-ftp-edit" %}" method="post" id="edit-form">
+                <form action="{% url "channel-sftp-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:12%">
@@ -350,53 +261,22 @@
                             <td>
                             {{ edit_form.is_active }}
                             |
-                            <label for="id_edit-address">Address</label>
+                            <label for="id_address">Address</label>
                             {{ edit_form.address }}
                             |
-                            <label for="id_edit-base_directory">Base dir.</label>
-                            {{ edit_form.base_directory }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Max conn.</td>
-                            </td>
-                            <td>
-                                <label for="id_edit-max_connections">Total</label>
-                                {{ edit_form.max_connections }}
-                                |
-                                <label for="id_edit-max_conn_per_ip">Per IP</label>
-                                {{ edit_form.max_conn_per_ip }}
-                                |
-                                <label for="id_edit-command_timeout">Timeout</label>
-                                {{ edit_form.command_timeout }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Throttle</td>
-                            </td>
-                            <td>
-                                <label for="id_edit-read_throttle">Read</label>
-                                {{ edit_form.read_throttle }}
-                                |
-                                <label for="id_edit-write_throttle">Write</label>
-                                {{ edit_form.write_throttle }}
-                                |
-                                <label for="id_edit-log_level">Log level</label>
-                                {{ edit_form.log_level }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_edit-masq_address">Masq. addr.</label>
-                            </td>
-                            <td>
-                                {{ edit_form.masq_address }}
-                                |
-                                <label for="id_edit-passive_ports">Passive ports</label>
-                                {{ edit_form.passive_ports }}
+                            TMT
+                            <span class="form_hint">
+                            (in s)
+                            </span>
+                            <label>
+                            Idle
+                            {{ edit_form.idle_timeout }}
+                            </label>
+                            |
+                            <label>
+                            Keep-alive
+                            {{ edit_form.keep_alive_timeout }}
+                            </label>
                             </td>
                         </tr>
 
@@ -413,24 +293,12 @@
                             </td>
                             <td>{{ edit_form.topic_name }}</td>
                         </tr>
-
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_edit-log_prefix">Log prefix</label>
+                                <label for="id_edit-host_key">Host key</label>
                             </td>
-                            <td>
-                            {{ edit_form.log_prefix }}
-                            </td>
+                            <td>{{ edit_form.host_key }}</td>
                         </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_edit-banner">Banner</label>
-                            </td>
-                            <td>
-                                {{ edit_form.banner }}
-                            </td>
-                        </td>
 
                         <tr>
                             <td colspan="2" style="text-align:right">
