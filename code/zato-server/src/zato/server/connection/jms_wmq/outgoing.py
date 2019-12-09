@@ -28,7 +28,7 @@ class WMQFacade(object):
         delivery_mode=None):
         """ Puts a message on an IBM MQ MQ queue.
         """
-        return self.service.server.send_wmq_message({
+        return self.service.server.connector_ibm_mq.send_wmq_message({
             'data': msg,
             'outconn_name': outconn_name,
             'queue_name': queue_name,
