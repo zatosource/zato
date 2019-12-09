@@ -244,7 +244,7 @@ class OnMessageReceived(AdminService):
             'expiration': expiration,
             'reply_to': msg['reply_to'],
             'data': data,
-            'mqmd': pickle_loads(msg['mqmd'].encode('utf8'))
+            'mqmd': pickle_loads(msg['mqmd'])
         })
 
 # ################################################################################################################################
