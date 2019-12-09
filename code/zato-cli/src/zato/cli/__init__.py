@@ -178,7 +178,6 @@ loggers:
         handlers: [stdout, notif_sql]
         qualname: zato_notif_sql
         propagate: false
-
 handlers:
     default:
         formatter: default

@@ -101,7 +101,7 @@ class SubprocessIPC(object):
             self._check_enabled()
 
         self.ipc_tcp_port = get_free_port(ipc_tcp_start_port)
-        logger.info('Starting {} connector for server `%s` on `%s`'.format(self.connector_name),
+        logger.info('Starting {} connector for server `%s` on port `%s`'.format(self.connector_name),
             self.server.name, self.ipc_tcp_port)
 
         # Credentials for both servers and connectors
@@ -194,6 +194,7 @@ class SubprocessIPC(object):
 
         address = address_pattern.format(self.ipc_tcp_port, 'api')
         response = post(address, data=dumps(msg), auth=self.get_credentials())
+        aaa
 
         if not response.ok:
             if raise_on_error:
