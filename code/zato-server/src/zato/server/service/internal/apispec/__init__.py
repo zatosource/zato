@@ -30,6 +30,13 @@ from zato.server.service import Bool
 
 # ################################################################################################################################
 
+if 0:
+    from past.builtins import unicode
+
+    unicode = unicode
+
+# ################################################################################################################################
+
 no_value = '---'
 col_sep = ' ' # Column separator
 len_col_sep = len(col_sep)
@@ -131,9 +138,19 @@ class GetSphinx(Service):
 
 # ################################################################################################################################
 
+    def _make_sphinx_safe(self, data):
+        # type: (unicode) -> unicode
+        return data.replace('*', '\*')
+
+# ################################################################################################################################
+
     def get_service_table_line(self, idx, name, docs, sio):
         name_fs_safe = 'service_{}'.format(fs_safe_name(name))
         file_name = '{}.rst'.format(name_fs_safe)
+
+        summary = docs.summary
+        if summary:
+            summary = self._make_sphinx_safe(summary)
 
         return bunchify({
             'ns': str(idx),
@@ -142,7 +159,7 @@ class GetSphinx(Service):
             'name': name_fs_safe,
             'name_link': """:doc:`{} <./{}>`""".format(name, name_fs_safe),
             'file_name': file_name,
-            'description': docs.summary or no_value,
+            'description': summary or no_value,
             'docs': docs,
             'sio': sio
         })
@@ -189,8 +206,18 @@ class GetSphinx(Service):
         datatype_border = '=' * longest_datatype
         required_border = '=' * longest_required
 
+        # The table is within a 'table' block which is why it needs to be indented
+        table_indent = ' ' * 3
+
+        # Left-align the table
+        buff.write('.. table::\n')
+        buff.write(table_indent) # Note no \n here
+        buff.write(':align: left\n\n')
+
+        buff.write(table_indent)
         self.write_separators(buff, name_border, datatype_border, required_border)
 
+        buff.write(table_indent)
         buff.write('Name'.ljust(longest_name))
         buff.write(col_sep)
 
@@ -201,9 +228,12 @@ class GetSphinx(Service):
         buff.write(col_sep)
         buff.write('\n')
 
+        buff.write(table_indent)
         self.write_separators(buff, name_border, datatype_border, required_border)
 
         for item in sio_lines:
+
+            buff.write(table_indent)
 
             # First, add the services to the main table
             buff.write(item.name.ljust(longest_name))
@@ -217,6 +247,7 @@ class GetSphinx(Service):
 
             buff.write('\n')
 
+        buff.write(table_indent)
         self.write_separators(buff, name_border, datatype_border, required_border)
         buff.write('\n')
 
@@ -238,7 +269,9 @@ class GetSphinx(Service):
         buff.write('\n')
         buff.write('\n')
 
-        buff.write(item.docs.full)
+        docs_full = self._make_sphinx_safe(item.docs.full)
+
+        buff.write(docs_full)
         buff.write('\n')
         buff.write('\n')
 

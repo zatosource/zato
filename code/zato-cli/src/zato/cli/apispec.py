@@ -63,17 +63,16 @@ class APISpec(ZatoCommand):
                 except ValueError:
                     pass
 
-        if args.with_api_invoke:
-            api_invoke_path = args.api_invoke_path if args.api_invoke_path else '/zato/api/invoke/{service_name}'
-
         request = {
             'return_internal': args.with_internal,
             'include': args.include,
             'exclude': ','.join(exclude),
             'needs_api_invoke': args.with_api_invoke,
             'needs_rest_channels': args.with_rest_channels,
-            'api_invoke_path': api_invoke_path
         }
+
+        if args.with_api_invoke:
+            request['api_invoke_path'] = args.api_invoke_path if args.api_invoke_path else '/zato/api/invoke/{service_name}'
 
         if not args.dir:
             now = fs_safe_now()

@@ -41,7 +41,7 @@ from past.builtins import basestring
 # Zato
 from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
-from zato.common import SECRETS, ZATO_NONE
+from zato.common import SECRETS
 from zato.common.util import get_client_from_server_conf
 from zato.common.util.tcp import wait_for_zato_ping
 

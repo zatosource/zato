@@ -317,6 +317,22 @@ def get_parser():
     add_opts(sso_lock_user, sso_mod.LockUser.opts)
 
     #
+    # login
+    #
+    sso_login = sso_subs.add_parser('login', description=sso_mod.Login.__doc__, parents=[base_parser])
+    sso_login.add_argument('path', help='Path to a Zato server')
+    sso_login.set_defaults(command='sso_login')
+    add_opts(sso_login, sso_mod.Login.opts)
+
+    #
+    # logout
+    #
+    sso_logout = sso_subs.add_parser('logout', description=sso_mod.Logout.__doc__, parents=[base_parser])
+    sso_logout.add_argument('path', help='Path to a Zato server')
+    sso_logout.set_defaults(command='sso_logout')
+    add_opts(sso_logout, sso_mod.Logout.opts)
+
+    #
     # unlock-user
     #
     sso_unlock_user = sso_subs.add_parser('unlock-user', description=sso_mod.UnlockUser.__doc__, parents=[base_parser])
