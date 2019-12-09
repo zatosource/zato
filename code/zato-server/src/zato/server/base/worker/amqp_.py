@@ -61,9 +61,13 @@ class AMQP(WorkerImpl):
 
     def on_broker_msg_DEFINITION_AMQP_DELETE(self, msg):
         with self.update_lock:
+            to_del = []
             for out_name, def_name in iteritems(self.amqp_out_name_to_def):
                 if def_name == msg.name:
-                    del self.amqp_out_name_to_def[out_name]
+                    to_del.append(out_name)
+
+            for out_name in to_del:
+                del self.amqp_out_name_to_def[out_name]
 
             self.amqp_api.delete(msg.name)
 

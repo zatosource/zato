@@ -25,7 +25,7 @@ class SFTPIPC(SubprocessIPC):
     auth_username = IPC.CONNECTOR.USERNAME.SFTP
     pidfile_suffix = 'sftp'
 
-    connector_module = 'zato.server.connection.connector.subprocess_.impl.sftp'
+    connector_module = 'zato.server.connection.connector.subprocess_.impl.outconn_sftp'
 
     action_outgoing_create = OUTGOING.SFTP_CREATE
     action_send = OUTGOING.SFTP_EXECUTE

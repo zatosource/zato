@@ -72,6 +72,7 @@ class SubprocessIPC(object):
     def __init__(self, server):
         # type: (ParallelServer)
         self.server = server
+        self.ipc_tcp_port = None
 
 # ################################################################################################################################
 
