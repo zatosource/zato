@@ -75,6 +75,7 @@ $.fn.zato.channel.sftp.data_table.new_row = function(item, data, include_tr) {
     // 5
     row += String.format("<td class='ignore'>{0}</td>", item.idle_timeout);
     row += String.format("<td class='ignore'>{0}</td>", item.keep_alive_timeout);
+    row += String.format("<td class='ignore'>{0}</td>", item.sftp_command);
 
     if(include_tr) {
         row += '</tr>';

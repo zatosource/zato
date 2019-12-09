@@ -1465,6 +1465,7 @@ class SFTP:
             ADDRESS            = '0.0.0.0:33022'
             IDLE_TIMEOUT       = 300
             KEEP_ALIVE_TIMEOUT = 10
+            SFTP_COMMAND       = 'dropbear'
 
         class INVOKE_MODE:
             SYNC = NameId('Sync', 'sync')
