@@ -20,7 +20,7 @@ from zato.common.model import SFTPChannel
 class Index(_Index):
     method_allowed = 'GET'
     url_name = 'channel-sftp'
-    template = 'zato/channel/sftp/index.html'
+    template = 'zato/channel/sftp.html'
     service_name = 'zato.generic.connection.get-list'
     output_class = SFTPChannel
     paginate = True
