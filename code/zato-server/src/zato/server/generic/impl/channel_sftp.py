@@ -12,6 +12,9 @@ import logging
 # Bunch
 from bunch import bunchify
 
+# sh
+from sh import Command
+
 # Zato
 from zato.common.model import SFTPChannel as SFTPChannelModel
 from zato.common.util import spawn_greenlet
@@ -28,11 +31,48 @@ logger = logging.getLogger('zato')
 
 class SFTPServer(object):
     def __init__(self, logger, model):
-        self.logger = logger       # type: logging.Logger
-        self.model = model         # type: SFTPChannelModel
+        self.logger = logger # type: logging.Logger
+        self.model = model   # type: SFTPChannelModel
+        self.command = self.get_command()
+
+# ################################################################################################################################
+
+    def get_command(self):
+        """ Returns a reusable sh.Command object that can will start an SFTP server.
+        """
+        # A list of arguments that will be added to the base command
+        args = []
+
+        # Disable local port forwarding
+        args.append('-j')
+
+        # Disable remote port forwarding
+        args.append('-k')
+
+        # Disable password logins for root
+        args.append('-g')
+
+        # Disable root logins
+        args.append('-w')
+
+        # Log to stdout
+        args.append('-E')
+
+        # Do not fork into background
+        args.append('-F')
+
+        # Base command to build additional arguments into
+        command = Command(self.model.sftp_command)
+        command = command.bake(*args)
+
+        return command
+
+# ################################################################################################################################
 
     def serve_forever(self):
-        logger.warn('CCC %s', self.model.to_dict())
+        logger.warn('CCC %s', self.command)
+
+        self.command()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -62,27 +102,8 @@ class SFTPChannel(object):
         config = bunchify(config)
 
         # Use expected data types in configuration
-        config.max_conn_per_ip = int(config.max_conn_per_ip)
-        config.max_connections = int(config.max_connections)
-
-        # Make sure at least an empty log prefix exists and prefix each log entry with current channel's name
-        if not config.log_prefix:
-            config.log_prefix = ''
-        config.log_prefix = '[{}] {}'.format(config.name, config.log_prefix).strip()
-
-        # Break address into components
-        host, port = config.address.split(':')
-        host = host.strip()
-        port = int(port.strip())
-        config.host = host
-        config.port = port
-
-        # Break passive ports into components
-        if config.passive_ports:
-            start, stop = config.passive_ports.split('-')
-            start = int(start.strip())
-            stop = int(stop.strip())
-            config.passive_ports = [start, stop]
+        config.idle_timeout = int(config.idle_timeout)
+        config.keep_alive_timeout = int(config.keep_alive_timeout)
 
         # Return a Python-level configuration object
         return SFTPChannelModel.from_dict(config)
@@ -95,16 +116,12 @@ def main():
         'id': 1,
         'name': 'My FTP channel',
         'address': '0.0.0.0:21021',
-        'banner': 'Welcome to Zato',
-        'base_directory': './work/ftp',
-        'command_timeout': 300,
-        'log_level': 'INFO',
-        'log_prefix': '%(remote_ip)s:%(remote_port)s-[%(username)s]',
-        'max_conn_per_ip': '20',
-        'max_connections': '200',
-        'passive_ports': '50100-50200',
         'service_name': 'helpers.raw-request-logger',
         'topic_name': None,
+        'idle_timeout': '300',
+        'keep_alive_timeout': '20',
+        'sftp_command': 'dropbear',
+        'host_key': '',
     })
 
     channel = SFTPChannel(config)
