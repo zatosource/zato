@@ -31,7 +31,7 @@ from zato.common import RATE_LIMIT, SEC_DEF_TYPE, TOTP
 from zato.common.audit import audit_pii
 from zato.common.crypto import CryptoManager
 from zato.common.exception import BadRequest
-from zato.common.odb.model import SSOLinkedAuth as LinkedAuth, SSOUser as UserModel
+from zato.common.odb.model import SSOLinkedAuth as LinkedAuth, SSOSession as SessionModel, SSOUser as UserModel
 from zato.common.util.json_ import dumps
 from zato.sso import const, not_given, status_code, User as UserEntity, ValidationError
 from zato.sso.attr import AttrAPI
@@ -80,6 +80,9 @@ _utcnow = datetime.utcnow
 
 LinkedAuthTable = LinkedAuth.__table__
 LinkedAuthTableDelete = LinkedAuthTable.delete
+
+SessionModelTable = SessionModel.__table__
+SessionModelTableDelete = SessionModelTable.delete
 
 UserModelTable = UserModel.__table__
 UserModelTableDelete = UserModelTable.delete
@@ -1344,13 +1347,13 @@ class UserAPI(object):
         self._check_linked_auth_call('user.delete_linked_auth', cid, ust, user_id, auth_type, auth_id, current_app, remote_addr)
 
         # All internal auth types have this prefix
-        auth_type = 'zato.{}'.format(auth_type)
+        zato_auth_type = 'zato.{}'.format(auth_type)
 
         with closing(self.odb_session_func()) as session:
 
             # First, confirm that such a mapping exists at all ..
             existing = session.query(LinkedAuth).\
-                filter(LinkedAuth.auth_type==auth_type).\
+                filter(LinkedAuth.auth_type==zato_auth_type).\
                 filter(LinkedAuth.auth_id==auth_id).\
                 filter(LinkedAuth.user_id==user_id).\
                 first()
@@ -1361,11 +1364,19 @@ class UserAPI(object):
             # .. delete it now, knowing that it does ..
             session.execute(LinkedAuthTableDelete().\
                 where(sql_and(
-                    LinkedAuthTable.c.auth_type==auth_type,
+                    LinkedAuthTable.c.auth_type==zato_auth_type,
                     LinkedAuthTable.c.auth_id==auth_id,
                     LinkedAuthTable.c.user_id==user_id,
                 ))
             )
+
+            # .. delete any sessions possibly existing for this link ..
+            session.execute(SessionModelTableDelete().\
+                where(sql_and(
+                    SessionModelTable.c.ext_session_id=='{}.{}'.format(auth_type, auth_id),
+                ))
+            )
+
             session.commit()
 
         return auth_id
