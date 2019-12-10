@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 import os
 from datetime import datetime, timedelta
+from json import loads
 from logging import INFO, WARN
 from re import IGNORECASE
 from tempfile import mkstemp
@@ -617,6 +618,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.odb.server_up_down(
             server.token, SERVER_UP_STATUS.RUNNING, True, self.host, self.port, self.preferred_address, use_tls)
 
+        # These flags are needed if we are the first worker or not
+        has_ibm_mq = bool(self.worker_store.worker_config.definition_wmq.keys()) \
+            and self.fs_server_config.component_enabled.ibm_mq
+
+        has_sftp = bool(self.worker_store.worker_config.out_sftp.keys())
+
         if is_first:
 
             logger.info('First worker of `%s` is %s', self.name, self.pid)
@@ -634,30 +641,21 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             self.invoke_startup_services(is_first)
             spawn_greenlet(self.set_up_pickup)
 
-            # Set up subprocess-based IBM MQ connections if that component is enabled
-            if self.fs_server_config.component_enabled.ibm_mq:
-
-                # Will block for a few seconds at most, until is_ok is returned
-                # which indicates that a connector started or not.
-                is_ok = self.connector_ibm_mq.start_ibm_mq_connector(int(self.fs_server_config.ibm_mq.ipc_tcp_start_port))
-
-                try:
-                    if is_ok:
-                        self.connector_ibm_mq.create_initial_wmq_definitions(self.worker_store.worker_config.definition_wmq)
-                        self.connector_ibm_mq.create_initial_wmq_outconns(self.worker_store.worker_config.out_wmq)
-                        self.connector_ibm_mq.create_initial_wmq_channels(self.worker_store.worker_config.channel_wmq)
-                except Exception as e:
-                    logger.warn('Could not create initial IBM MQ objects, e:`%s`', e)
-
-            # Set up subprocess-based SFTP connections
-            is_ok = self.connector_sftp.start_sftp_connector(int(self.fs_server_config.ibm_mq.ipc_tcp_start_port))
-            if is_ok:
-                self.connector_sftp.create_initial_sftp_outconns(self.worker_store.worker_config.out_sftp)
+            # Subprocess-based connectors
+            self._init_subprocess_connectors(has_ibm_mq, has_sftp)
 
         else:
             self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_OTHER, kwargs={
                 'parallel_server': self,
             })
+
+            # We are not the first worker so, if IBM MQ is enabled, we need to get its connector's
+            # configuration through IPC and populate our own configuration accordingly.
+            if has_ibm_mq:
+                response = self.connector_config_ipc.get_config('zato-ibm-mq')
+                if response:
+                    response = loads(response)
+                    self.connector_ibm_mq.ipc_tcp_port = response['port']
 
         # IPC
         self.ipc_api.name = self.ipc_api.get_endpoint_name(self.cluster.name, self.name, self.pid)
@@ -670,6 +668,31 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         })
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
+
+# ################################################################################################################################
+
+    def _init_subprocess_connectors(self, has_ibm_mq, has_sftp):
+        """ Sets up subprocess-based connectors.
+        """
+        # Common
+        ipc_tcp_start_port = int(self.fs_server_config.misc.get('ipc_tcp_start_port', 34567))
+
+        # IBM MQ
+        if has_ibm_mq:
+
+            # Will block for a few seconds at most, until is_ok is returned
+            # which indicates that a connector started or not.
+            try:
+                if self.connector_ibm_mq.start_ibm_mq_connector(ipc_tcp_start_port):
+                    self.connector_ibm_mq.create_initial_wmq_definitions(self.worker_store.worker_config.definition_wmq)
+                    self.connector_ibm_mq.create_initial_wmq_outconns(self.worker_store.worker_config.out_wmq)
+                    self.connector_ibm_mq.create_initial_wmq_channels(self.worker_store.worker_config.channel_wmq)
+            except Exception as e:
+                logger.warn('Could not create initial IBM MQ objects, e:`%s`', e)
+
+        # SFTP
+        if has_sftp and self.connector_sftp.start_sftp_connector(ipc_tcp_start_port):
+            self.connector_sftp.create_initial_sftp_outconns(self.worker_store.worker_config.out_sftp)
 
 # ################################################################################################################################
 
