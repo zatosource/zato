@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 import os
 from datetime import datetime, timedelta
+from json import loads
 from logging import INFO, WARN
 from re import IGNORECASE
 from tempfile import mkstemp
@@ -619,6 +620,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.odb.server_up_down(
             server.token, SERVER_UP_STATUS.RUNNING, True, self.host, self.port, self.preferred_address, use_tls)
 
+        # These flags are needed if we are the first worker or not
+        has_ibm_mq = bool(self.worker_store.worker_config.definition_wmq.keys()) \
+            and self.fs_server_config.component_enabled.ibm_mq
+
+        has_sftp = bool(self.worker_store.worker_config.out_sftp.keys())
+
         if is_first:
 
             logger.info('First worker of `%s` is %s', self.name, self.pid)
@@ -637,13 +644,20 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             spawn_greenlet(self.set_up_pickup)
 
             # Subprocess-based connectors
-            self._init_subprocess_connectors()
-
+            self._init_subprocess_connectors(has_ibm_mq, has_sftp)
 
         else:
             self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_OTHER, kwargs={
                 'parallel_server': self,
             })
+
+            # We are not the first worker so, if IBM MQ is enabled, we need to get its connector's
+            # configuration through IPC and populate our own configuration accordingly.
+            if has_ibm_mq:
+                response = self.connector_config_ipc.get_config('zato-ibm-mq')
+                if response:
+                    response = loads(response)
+                    self.connector_ibm_mq.ipc_tcp_port = response['port']
 
         # IPC
         self.ipc_api.name = self.ipc_api.get_endpoint_name(self.cluster.name, self.name, self.pid)
@@ -659,17 +673,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _init_subprocess_connectors(self):
+    def _init_subprocess_connectors(self, has_ibm_mq, has_sftp):
         """ Sets up subprocess-based connectors.
         """
         # Common
         ipc_tcp_start_port = int(self.fs_server_config.misc.get('ipc_tcp_start_port', 34567))
 
-        has_ibm_mq = bool(self.worker_store.worker_config.definition_wmq.keys())
-        has_sftp = bool(self.worker_store.worker_config.out_sftp.keys())
-
         # IBM MQ
-        if has_ibm_mq and self.fs_server_config.component_enabled.ibm_mq:
+        if has_ibm_mq:
 
             # Will block for a few seconds at most, until is_ok is returned
             # which indicates that a connector started or not.
