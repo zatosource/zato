@@ -17,7 +17,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.ChannelSFTP;
     $.fn.zato.data_table.new_row_func = $.fn.zato.channel.sftp.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'address', 'idle_timeout', 'keep_alive_timeout']);
+    $.fn.zato.data_table.setup_forms(['name', 'address', 'idle_timeout', 'keep_alive_timeout', 'sftp_command']);
 })
 
 $.fn.zato.channel.sftp.create = function() {
@@ -76,6 +76,9 @@ $.fn.zato.channel.sftp.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.idle_timeout);
     row += String.format("<td class='ignore'>{0}</td>", item.keep_alive_timeout);
     row += String.format("<td class='ignore'>{0}</td>", item.sftp_command);
+
+    // 6
+    row += String.format("<td class='ignore'>{0}</td>", item.host_key);
 
     if(include_tr) {
         row += '</tr>';

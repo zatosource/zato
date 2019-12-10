@@ -26,6 +26,7 @@ class SFTPChannel(object):
         self.idle_timeout = None       # type: int
         self.keep_alive_timeout = None # type: int
         self.host_key = None           # type: str
+        self.sftp_command = None       # type: str
 
 # ################################################################################################################################
 
