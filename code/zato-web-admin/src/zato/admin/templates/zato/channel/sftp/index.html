@@ -37,7 +37,7 @@
             {% comment %} 2 {% endcomment %}
             '_service',
             '_topic',
-            'host_key',
+            '_host_key',
 
             {% comment %} 3 {% endcomment %}
             '_edit',
@@ -53,6 +53,9 @@
             'idle_timeout',
             'keep_alive_timeout',
             'sftp_command',
+
+            {% comment %} 6 {% endcomment %}
+            'host_key',
 
         ]
     }
@@ -110,6 +113,10 @@
                         {% comment %} 5 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 6 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -160,6 +167,10 @@
                         {% comment %} 5 {% endcomment %}
                         <td class='ignore'>{{ item.idle_timeout }}</td>
                         <td class='ignore'>{{ item.keep_alive_timeout }}</td>
+                        <td class='ignore'>{{ item.sftp_command }}</td>
+
+                        {% comment %} 6 {% endcomment %}
+                        <td class='ignore'>{{ item.host_key|default:"" }}</td>
 
                     </tr>
                 {% endfor %}
@@ -224,6 +235,12 @@
                                 <label for="id_topic_name">Topic</label>
                             </td>
                             <td>{{ create_form.topic_name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_host_key">Command</label>
+                            </td>
+                            <td>{{ create_form.sftp_command }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">
@@ -293,6 +310,12 @@
                                 <label for="id_edit-topic_name">Topic</label>
                             </td>
                             <td>{{ edit_form.topic_name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_host_key">Command</label>
+                            </td>
+                            <td>{{ edit_form.sftp_command }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">

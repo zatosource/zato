@@ -27,10 +27,8 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id', 'type_'
-        output_required = 'id', 'name', 'is_active', 'address', 'max_connections', 'max_conn_per_ip', 'command_timeout', \
-           'banner', 'log_prefix', 'base_directory', 'read_throttle', 'write_throttle', \
-           'passive_ports', 'log_level'
-        output_optional = 'service_name', 'topic_name', 'masq_address', 'passive_ports'
+        output_required = 'id', 'name', 'is_active', 'address', 'idle_timeout', 'keep_alive_timeout', 'sftp_command'
+        output_optional = 'service_name', 'topic_name', 'host_key'
         output_repeated = True
 
     def handle(self):
@@ -46,10 +44,8 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_active', 'address', 'max_connections', 'max_conn_per_ip', 'command_timeout', \
-           'banner', 'log_prefix', 'base_directory', 'read_throttle', 'write_throttle', \
-           'passive_ports', 'log_level'
-        input_optional = 'service_name', 'topic_name', 'masq_address', 'passive_ports'
+        input_required = 'name', 'is_active', 'address', 'idle_timeout', 'keep_alive_timeout', 'sftp_command'
+        input_optional = 'service_name', 'topic_name', 'host_key'
         output_required = 'id', 'name'
 
     def populate_initial_input_dict(self, initial_input_dict):
