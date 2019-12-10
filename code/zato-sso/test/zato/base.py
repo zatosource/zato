@@ -133,8 +133,6 @@ class BaseTest(TestCase):
         data = loads(response.text)
         data = bunchify(data)
 
-        return data
-
         # Most tests require status OK and CID
         if expect_ok:
             self.assertNotEquals(data.get('cid', _not_given), _not_given)
