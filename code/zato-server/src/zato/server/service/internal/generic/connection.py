@@ -12,7 +12,7 @@ from contextlib import closing
 from copy import deepcopy
 from datetime import datetime
 from errno import ENOENT
-from json import dumps, loads
+from json import loads
 
 # Bunch
 from bunch import bunchify
