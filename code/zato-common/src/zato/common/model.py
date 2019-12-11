@@ -14,7 +14,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SFTPChannel(object):
+class FileChannel(object):
     def __init__(self):
         self._config_attrs = []
         self.id   = None               # type: int
