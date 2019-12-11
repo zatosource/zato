@@ -89,8 +89,6 @@ class SFTPServer(object):
         command = Command(self.model.sftp_command)
         command = command.bake(*args)
 
-
-
         return command
 
 # ################################################################################################################################

@@ -17,6 +17,9 @@ from json import dumps, loads
 # Bunch
 from bunch import bunchify
 
+# sh
+import sh
+
 # Zato
 from zato.common import GENERIC as COMMON_GENERIC
 from zato.common.broker_message import GENERIC
@@ -100,7 +103,33 @@ def channel_sftp_hook(self, data, model, old_name):
         file_name = '{}.{}'.format(fs_safe_name(data.name), suffix)
         key_location = os.path.join(self.server.sftp_channel_dir, file_name)
 
-        # Assign the key to model
+        # Command to create an SFTP key ..
+        genkey_command = self.server.fs_server_config.misc.sftp_genkey_command
+
+        # .. its arguments ..
+        args = []
+
+        # Key type = ECDSA
+        args.append('-t')
+        args.append('ecdsa')
+
+
+        # Key size in bits = 384
+        args.append('-s')
+        args.append('384')
+
+        # Its path in the file system
+        args.append('-f')
+        args.append(key_location)
+
+        # .. create the key on disk ..
+
+        command = getattr(sh, genkey_command)
+        command(*args)
+
+        self.logger.info('Created SFTP host key `%s`', key_location)
+
+        # .. and assign the path to model
         opaque.host_key = key_location
         opaque = dumps(opaque)
 
