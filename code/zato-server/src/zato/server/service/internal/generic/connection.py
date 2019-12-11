@@ -7,16 +7,18 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from contextlib import closing
 from copy import deepcopy
 from datetime import datetime
-from json import loads
+from json import dumps, loads
 
 # Zato
 from zato.common import GENERIC as COMMON_GENERIC
 from zato.common.broker_message import GENERIC
 from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.odb.query.generic import connection_list
+from zato.common.util import fs_safe_name
 from zato.common.util.json_ import dumps
 from zato.server.generic.connection import GenericConnection
 from zato.server.service import Bool, Int
@@ -30,6 +32,15 @@ from six import add_metaclass
 
 # ################################################################################################################################
 
+if 0:
+    from bunch import Bunch
+    from zato.server.service import Service
+
+    Bunch = Bunch
+    Service = Service
+
+# ################################################################################################################################
+
 elem = 'generic_connection'
 model = ModelGenericConn
 label = 'a generic connection'
@@ -37,6 +48,36 @@ broker_message = GENERIC
 broker_message_prefix = 'CONNECTION_'
 list_func = None
 extra_delete_attrs = ['type_']
+
+# ################################################################################################################################
+
+# Optional connection creation / edit hooks, separately for each connection type.
+
+def channel_sftp_hook(self, data, model, old_name):
+    # type: (_CreateEdit, Bunch, ModelGenericConn, str)
+
+    opaque = getattr(model, COMMON_GENERIC.ATTR_NAME)
+    opaque = loads(opaque)
+
+    model_host_key = opaque['host_key']
+
+    # We need to ensure that the SFTP channel has its key,
+    # if it was not configured explicitly by user then we need to generate and save it ourselves.
+    if not model_host_key:
+
+        # Location for the new key
+        file_name = '{}.key'.format(fs_safe_name(data.name))
+        key_location = os.path.join(self.server.sftp_channel_dir, file_name)
+
+        # Assign the key to model
+        opaque['host_key'] = key_location
+        opaque = dumps(opaque)
+
+        setattr(model, COMMON_GENERIC.ATTR_NAME, opaque)
+
+hook = {
+    COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_SFTP: channel_sftp_hook
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,6 +95,8 @@ class _CreateEditSIO(AdminSIO):
 class _CreateEdit(_BaseService):
     """ Creates a new or updates an existing generic connection in ODB.
     """
+    is_edit = None
+
     class SimpleIO(_CreateEditSIO):
         output_required = ('id', 'name')
         default_value = None
@@ -93,6 +136,10 @@ class _CreateEdit(_BaseService):
                 if key == 'secret':
                     continue
                 setattr(model, key, value)
+
+            hook_func = hook.get(data.type_)
+            if hook_func:
+                hook_func(self, data, model, old_name)
 
             session.add(model)
             session.commit()

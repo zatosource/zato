@@ -557,6 +557,8 @@ directories = (
     'config/repo/lua/user',
     'config/repo/schema',
     'config/repo/schema/json',
+    'config/repo/sftp',
+    'config/repo/sftp/channel',
     'config/repo/static',
     'config/repo/static/email',
     'config/repo/tls',
