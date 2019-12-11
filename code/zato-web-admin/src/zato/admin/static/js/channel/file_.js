@@ -1,9 +1,9 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.data_table.ChannelSFTP = new Class({
+$.fn.zato.data_table.ChannelFile = new Class({
     toString: function() {
-        var s = '<ChannelSFTP id:{0} name:{1} is_active:{2}>';
+        var s = '<ChannelFile id:{0} name:{1} is_active:{2}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)',
                                 this.is_active ? this.is_active : '(none)');
@@ -14,21 +14,21 @@ $.fn.zato.data_table.ChannelSFTP = new Class({
 
 $(document).ready(function() {
     $('#data-table').tablesorter();
-    $.fn.zato.data_table.class_ = $.fn.zato.data_table.ChannelSFTP;
-    $.fn.zato.data_table.new_row_func = $.fn.zato.channel.sftp.data_table.new_row;
+    $.fn.zato.data_table.class_ = $.fn.zato.data_table.ChannelFile;
+    $.fn.zato.data_table.new_row_func = $.fn.zato.channel.file_.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'address', 'idle_timeout', 'keep_alive_timeout', 'sftp_command']);
 })
 
-$.fn.zato.channel.sftp.create = function() {
+$.fn.zato.channel.file_.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new SFTP channel', null);
 }
 
-$.fn.zato.channel.sftp.edit = function(id) {
+$.fn.zato.channel.file_.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the SFTP channel', id);
 }
 
-$.fn.zato.channel.sftp.data_table.new_row = function(item, data, include_tr) {
+$.fn.zato.channel.file_.data_table.new_row = function(item, data, include_tr) {
     var row = '';
 
     if(include_tr) {
@@ -63,8 +63,8 @@ $.fn.zato.channel.sftp.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', item.host_key ? item.host_key : $.fn.zato.empty_value);
 
     // 3
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.sftp.edit('{0}')\">Edit</a>", item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.channel.sftp.delete_({0});'>Delete</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.file_.edit('{0}')\">Edit</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.channel.file_.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
 
     // 4
@@ -87,7 +87,7 @@ $.fn.zato.channel.sftp.data_table.new_row = function(item, data, include_tr) {
     return row;
 }
 
-$.fn.zato.channel.sftp.delete_ = function(id) {
+$.fn.zato.channel.file_.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'SFTP channel `{0}` deleted',
         'Are you sure you want to delete SFTP channel `{0}`?',

@@ -1460,32 +1460,6 @@ class TELEGRAM:
 
 class SFTP:
 
-    class CHANNEL:
-        class DEFAULT:
-            ADDRESS      = '0.0.0.0:33022'
-            SFTP_COMMAND = 'sshd'
-            CONFIG = """
-LogLevel INFO
-LoginGraceTime 30s
-
-PrintMotd no
-
-UsePAM yes
-PubkeyAuthentication yes
-PasswordAuthentication no
-ChallengeResponseAuthentication no
-PermitRootLogin no
-
-AcceptEnv LANG LC_*
-""".strip()
-
-        class INVOKE_MODE:
-            SYNC = NameId('Sync', 'sync')
-            IN_BACKGROUND = NameId('In-backgorund', 'in-background')
-
-            def __iter__(self):
-                return iter((self.IN_BACKGROUND, self.SYNC))
-
     class DEFAULT:
         BANDWIDTH_LIMIT = 10
         BUFFER_SIZE = 32768
