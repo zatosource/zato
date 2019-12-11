@@ -61,9 +61,35 @@ class SFTPServer(object):
         # Do not fork into background
         args.append('-F')
 
+        # Idle timeout
+        args.append('-I {}'.format(self.model.idle_timeout))
+
+        # Keep-alive timeout
+        args.append('-K {}'.format(self.model.keep_alive_timeout))
+
+        # Bind address
+        args.append('-p {}'.format(self.model.address))
+
+        # PID file
+        #args.append('-p {}'.format(self.model.pid))
+
+        # Generate a host key if one is not given on input (-R)
+        # or use the one provided in configuration (-r).
+        args.append('-R')
+
+        '''
+        -I 300 \
+        -K 10 \
+        -p 0.0.0.0:33022 \
+        -P ./dropbear.pid
+        -r ./ssh_host_ed25519_key
+        '''
+
         # Base command to build additional arguments into
         command = Command(self.model.sftp_command)
         command = command.bake(*args)
+
+
 
         return command
 
