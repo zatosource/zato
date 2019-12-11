@@ -1462,10 +1462,22 @@ class SFTP:
 
     class CHANNEL:
         class DEFAULT:
-            ADDRESS            = '0.0.0.0:33022'
-            IDLE_TIMEOUT       = 300
-            KEEP_ALIVE_TIMEOUT = 10
-            SFTP_COMMAND       = 'dropbear'
+            ADDRESS      = '0.0.0.0:33022'
+            SFTP_COMMAND = 'sshd'
+            CONFIG = """
+LogLevel INFO
+LoginGraceTime 30s
+
+PrintMotd no
+
+UsePAM yes
+PubkeyAuthentication yes
+PasswordAuthentication no
+ChallengeResponseAuthentication no
+PermitRootLogin no
+
+AcceptEnv LANG LC_*
+""".strip()
 
         class INVOKE_MODE:
             SYNC = NameId('Sync', 'sync')

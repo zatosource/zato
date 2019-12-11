@@ -37,7 +37,7 @@
             {% comment %} 2 {% endcomment %}
             '_service',
             '_topic',
-            '_host_key',
+            '_users_allowed',
 
             {% comment %} 3 {% endcomment %}
             '_edit',
@@ -50,12 +50,9 @@
             'topic_name',
 
             {% comment %} 5 {% endcomment %}
-            'idle_timeout',
-            'keep_alive_timeout',
+            'users_allowed',
+            'config_file',
             'sftp_command',
-
-            {% comment %} 6 {% endcomment %}
-            'host_key',
 
         ]
     }
@@ -98,7 +95,7 @@
                         {% comment %} 2 {% endcomment %}
                         <th><a href="#">Service</a></th>
                         <th><a href="#">Topic</a></th>
-                        <th><a href="#">Host key</a></th>
+                        <th><a href="#">Users</a></th>
 
                         {% comment %} 3 {% endcomment %}
                         <th>&nbsp;</th>
@@ -115,8 +112,6 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
-                        {% comment %} 6 {% endcomment %}
-                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -147,8 +142,8 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% if item.host_key %}
-                                {{ item.host_key }}
+                            {% if item.users_allowed %}
+                                {{ item.users_allowed }}
                             {% else %}
                                 <span class="form_hint">---</span>
                             {% endif %}
@@ -165,18 +160,15 @@
                         <td class='ignore'>{{ item.topic_name }}</td>
 
                         {% comment %} 5 {% endcomment %}
-                        <td class='ignore'>{{ item.idle_timeout }}</td>
-                        <td class='ignore'>{{ item.keep_alive_timeout }}</td>
+                        <td class='ignore'>{{ item.users_allowed }}</td>
+                        <td class='ignore'>{{ item.config_file }}</td>
                         <td class='ignore'>{{ item.sftp_command }}</td>
-
-                        {% comment %} 6 {% endcomment %}
-                        <td class='ignore'>{{ item.host_key|default:"" }}</td>
 
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='14'>No results</td>
+                        <td colspan='17'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -199,26 +191,22 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_is_active">Active</label>
                             </td>
                             <td>
-                            {{ create_form.is_active }}
-                            |
-                            <label for="id_address">Address</label>
-                            {{ create_form.address }}
-                            |
-                            TMT
-                            <span class="form_hint">
-                            (in s)
-                            </span>
+
                             <label>
-                            Idle
-                            {{ create_form.idle_timeout }}
+                            Active
+                            {{ create_form.is_active }}
                             </label>
                             |
                             <label>
-                            Keep-alive
-                            {{ create_form.keep_alive_timeout }}
+                            Address
+                            {{ create_form.address }}
+                            </label>
+                            |
+                            <label>
+                            Command
+                            {{ create_form.sftp_command }}
                             </label>
                             </td>
                         </tr>
@@ -238,16 +226,17 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_host_key">Command</label>
+                                <label for="id_host_key">Users allowed</label>
                             </td>
-                            <td>{{ create_form.sftp_command }}</td>
+                            <td>{{ create_form.users_allowed }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_host_key">Host key</label>
+                                <label for="id_host_key">Config file</label>
                             </td>
-                            <td>{{ create_form.host_key }}</td>
+                            <td>{{ create_form.config_file }}</td>
                         </tr>
+
 
                         <tr>
                             <td colspan="2" style="text-align:right">
