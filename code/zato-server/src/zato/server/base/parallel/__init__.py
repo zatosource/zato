@@ -117,12 +117,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.soap12_content_type = None
         self.plain_xml_content_type = None
         self.json_content_type = None
-        self.service_modules = None # Set programmatically in Spring
-        self.service_sources = None # Set in a config file
-        self.base_dir = None        # type: unicode
-        self.tls_dir = None         # type: unicode
-        self.static_dir = None      # type: unicode
-        self.json_schema_dir = None # type: unicode
+        self.service_modules = None   # Set programmatically in Spring
+        self.service_sources = None   # Set in a config file
+        self.base_dir = None          # type: unicode
+        self.tls_dir = None           # type: unicode
+        self.static_dir = None        # type: unicode
+        self.json_schema_dir = None   # type: unicode
+        self.sftp_channel_dir = None  # type: unicode
         self.hot_deploy_config = None # type: Bunch
         self.pickup = None
         self.fs_server_config = None # type: Bunch
@@ -626,6 +627,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         has_sftp = bool(self.worker_store.worker_config.out_sftp.keys())
 
+        # Directories for SSH keys used by SFTP channels
+        self.sftp_channel_dir = os.path.join(self.repo_location, 'sftp', 'channel')
+
         if is_first:
 
             logger.info('First worker of `%s` is %s', self.name, self.pid)
@@ -645,6 +649,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
             # Subprocess-based connectors
             self._init_subprocess_connectors(has_ibm_mq, has_sftp)
+
+            # SFTP channels are new in 3.1 and the directories may not exist
+            if not os.path.exists(self.sftp_channel_dir):
+                os.makedirs(self.sftp_channel_dir)
 
         else:
             self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_OTHER, kwargs={
