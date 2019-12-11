@@ -131,6 +131,7 @@ default_error_message="An error has occurred"
 startup_callable=
 return_json_schema_errors=False
 ipc_tcp_start_port=34567
+sftp_genkey_command=dropbearkey
 
 [http]
 methods_allowed=GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS

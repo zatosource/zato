@@ -375,8 +375,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def _after_init_common(self, server):
-        """ Initializes parts of the server that don't depend on whether the
-        server's been allowed to join the cluster or not.
+        """ Initializes parts of the server that don't depend on whether the server's been allowed to join the cluster or not.
         """
         # Patterns to match during deployment
         self.service_store.patterns_matcher.read_config(self.fs_server_config.deploy_patterns_allowed)
@@ -394,6 +393,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.kvdb.init()
 
         kvdb_logger.info('Worker config `%s`', kvdb_config)
+
+        # New in 3.1, it may be missing in the config file
+        if not self.fs_server_config.misc.get('sftp_genkey_command'):
+            self.fs_server_config.misc.sftp_genkey_command = 'dropbearkey'
 
         # Lua programs, both internal and user defined ones.
         for name, program in self.get_lua_programs():
