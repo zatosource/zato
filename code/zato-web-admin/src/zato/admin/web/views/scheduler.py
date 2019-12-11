@@ -200,7 +200,10 @@ def _create_interval_based(client, user_profile, cluster, params):
     start_date = input_dict.get('start_date')
     if start_date:
         start_date = _get_start_date(start_date)
+
     repeats = params.get('create-interval_based-repeats')
+    repeats = int(repeats) if repeats else None
+
     weeks = params.get('create-interval_based-weeks')
     days = params.get('create-interval_based-days')
     hours = params.get('create-interval_based-hours')
@@ -253,7 +256,10 @@ def _edit_interval_based(client, user_profile, cluster, params):
     start_date = input_dict.get('start_date')
     if start_date:
         start_date = _get_start_date(start_date)
+
     repeats = params.get('edit-interval_based-repeats')
+    repeats = int(repeats) if repeats else None
+
     weeks = params.get('edit-interval_based-weeks')
     days = params.get('edit-interval_based-days')
     hours = params.get('edit-interval_based-hours')
