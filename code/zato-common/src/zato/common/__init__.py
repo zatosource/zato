@@ -1307,7 +1307,7 @@ class GENERIC:
 
     class CONNECTION:
         class TYPE:
-            CHANNEL_SFTP = 'channel-sftp'
+            CHANNEL_FILE_TRANSFER = 'channel-file-transfer'
             DEF_KAFKA = 'def-kafka'
             OUTCONN_IM_SLACK = 'outconn-im-slack'
             OUTCONN_IM_TELEGRAM = 'outconn-im-telegram'
