@@ -17,7 +17,6 @@ from sh import Command
 
 # Zato
 from zato.common.model import SFTPChannel as SFTPChannelModel
-from zato.common.util import spawn_greenlet
 
 # ################################################################################################################################
 
