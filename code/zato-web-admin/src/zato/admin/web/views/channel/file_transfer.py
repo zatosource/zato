@@ -27,7 +27,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id', 'type_'
-        output_required = 'id', 'name', 'is_active', 'address', 'idle_timeout', 'keep_alive_timeout', 'sftp_command'
+        output_required = 'id', 'name', 'is_active', 'address', 'idle_timeout', 'keep_alive_timeout'
         output_optional = 'service_name', 'topic_name', 'host_key'
         output_repeated = True
 
@@ -44,12 +44,12 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_active', 'address', 'idle_timeout', 'keep_alive_timeout', 'sftp_command'
+        input_required = 'name', 'is_active', 'address', 'idle_timeout', 'keep_alive_timeout'
         input_optional = 'service_name', 'topic_name', 'host_key'
         output_required = 'id', 'name'
 
     def populate_initial_input_dict(self, initial_input_dict):
-        initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.CHANNEL_SFTP
+        initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER
         initial_input_dict['is_internal'] = False
         initial_input_dict['is_channel'] = True
         initial_input_dict['is_outconn'] = False
@@ -57,7 +57,7 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['pool_size'] = 1
 
     def success_message(self, item):
-        return 'Successfully {} SFTP channel `{}`'.format(self.verb, item.name)
+        return 'Successfully {} file transfer channel `{}`'.format(self.verb, item.name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -79,7 +79,7 @@ class Edit(_CreateEdit):
 
 class Delete(_Delete):
     url_name = 'channel-file-transfer-delete'
-    error_message = 'Could not delete SFTP channel'
+    error_message = 'Could not delete file transfer channel'
     service_name = 'zato.generic.connection.delete'
 
 # ################################################################################################################################

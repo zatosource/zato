@@ -21,13 +21,13 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ChannelFTPWrapper(Wrapper):
-    """ Represents an FTP channel.
+class ChannelFileTransferWrapper(Wrapper):
+    """ Represents a file transfer channel.
     """
-    wrapper_type = 'FTP channel'
+    wrapper_type = 'File transfer channel'
 
     def __init__(self, *args, **kwargs):
-        super(ChannelFTPWrapper, self).__init__(*args, **kwargs)
+        super(ChannelFileTransferWrapper, self).__init__(*args, **kwargs)
         self._client = None
 
 # ################################################################################################################################
@@ -39,7 +39,7 @@ class ChannelFTPWrapper(Wrapper):
             #
             # ZZZ
             #
-            # Create FTP channels here
+            # Create file transfer channels here
 
             # We can assume we are done building the channel now
             self.is_connected = True
