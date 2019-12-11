@@ -8,12 +8,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+import os
 
 # Bunch
 from bunch import bunchify
 
 # sh
-from sh import Command
+import sh
 
 # Zato
 from zato.common.model import SFTPChannel as SFTPChannelModel
@@ -67,28 +68,19 @@ class SFTPServer(object):
         args.append('-K {}'.format(self.model.keep_alive_timeout))
 
         # Bind address
-        args.append('-p {}'.format(self.model.address))
+        args.append('-p')
+        args.append(self.model.address)
+
+        # Host key to use
+        args.append('-r')
+        args.append(self.model.host_key)
 
         # PID file
         #args.append('-p {}'.format(self.model.pid))
 
-        # Generate a host key if one is not given on input (-R)
-        # or use the one provided in configuration (-r).
-        args.append('-R')
-
-        '''
-        -I 300 \
-        -K 10 \
-        -p 0.0.0.0:33022 \
-        -P ./dropbear.pid
-        -r ./ssh_host_ed25519_key
-        '''
-
         # Base command to build additional arguments into
-        command = Command(self.model.sftp_command)
-        command = command.bake(*args)
-
-        return command
+        command = getattr(sh, self.model.sftp_command)
+        command(*args)
 
 # ################################################################################################################################
 
@@ -128,6 +120,9 @@ class SFTPChannel(object):
         config.idle_timeout = int(config.idle_timeout)
         config.keep_alive_timeout = int(config.keep_alive_timeout)
 
+        # Resolve home directories
+        config.host_key = os.path.expanduser(config.host_key)
+
         # Return a Python-level configuration object
         return SFTPChannelModel.from_dict(config)
 
@@ -138,13 +133,13 @@ def main():
     config = bunchify({
         'id': 1,
         'name': 'My FTP channel',
-        'address': '0.0.0.0:21021',
+        'address': '0.0.0.0:33022',
         'service_name': 'helpers.raw-request-logger',
         'topic_name': None,
         'idle_timeout': '300',
         'keep_alive_timeout': '20',
         'sftp_command': 'dropbear',
-        'host_key': '',
+        'host_key': '~/tmp/mykey.txt',
     })
 
     channel = SFTPChannel(config)
