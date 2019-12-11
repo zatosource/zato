@@ -11,7 +11,11 @@ import os
 from contextlib import closing
 from copy import deepcopy
 from datetime import datetime
+from errno import ENOENT
 from json import dumps, loads
+
+# Bunch
+from bunch import bunchify
 
 # Zato
 from zato.common import GENERIC as COMMON_GENERIC
@@ -56,21 +60,48 @@ extra_delete_attrs = ['type_']
 def channel_sftp_hook(self, data, model, old_name):
     # type: (_CreateEdit, Bunch, ModelGenericConn, str)
 
+    # All auto-generated keys will have this suffix
+    suffix = 'zato.key'
+
+    # By default, assume we will not need to generate a new key
+    generate_host_key = False
+
+    # Unwrap opaque attributes
     opaque = getattr(model, COMMON_GENERIC.ATTR_NAME)
     opaque = loads(opaque)
-
-    model_host_key = opaque['host_key']
+    opaque = bunchify(opaque)
 
     # We need to ensure that the SFTP channel has its key,
     # if it was not configured explicitly by user then we need to generate and save it ourselves.
-    if not model_host_key:
+    if not opaque.host_key:
+        generate_host_key = True
+
+    else:
+        # At this point we know that we already have a key on input,
+        # but, if it is a rename, we need to delete the previous one,
+        # although only if it was automatically generated.
+        if model.name != old_name:
+            if opaque.host_key and opaque.host_key.endswith(suffix):
+
+                # First, delete the old one ..
+                try:
+                    os.remove(opaque.host_key)
+                except OSError as e:
+                    if e.errno != ENOENT:
+                        raise
+
+                # .. and signal that a new one be generated
+                finally:
+                    generate_host_key = True
+
+    if generate_host_key:
 
         # Location for the new key
-        file_name = '{}.key'.format(fs_safe_name(data.name))
+        file_name = '{}.{}'.format(fs_safe_name(data.name), suffix)
         key_location = os.path.join(self.server.sftp_channel_dir, file_name)
 
         # Assign the key to model
-        opaque['host_key'] = key_location
+        opaque.host_key = key_location
         opaque = dumps(opaque)
 
         setattr(model, COMMON_GENERIC.ATTR_NAME, opaque)
