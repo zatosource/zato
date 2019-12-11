@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}SFTP channels{% endblock %}
+{% block html_title %}File transfer{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -21,7 +21,7 @@
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/javascript" src="/static/js/channel/sftp.js"></script>
+    <script type="text/javascript" src="/static/js/channel/file_.js"></script>
 
     <script>
     $.fn.zato.data_table.get_columns = function() {
@@ -32,12 +32,10 @@
             {% comment %} 1 {% endcomment %}
             'name',
             '_is_active',
-            'address',
 
             {% comment %} 2 {% endcomment %}
             '_service',
             '_topic',
-            '_users_allowed',
 
             {% comment %} 3 {% endcomment %}
             '_edit',
@@ -48,12 +46,6 @@
             'is_active',
             'service_name',
             'topic_name',
-
-            {% comment %} 5 {% endcomment %}
-            'users_allowed',
-            'config_file',
-            'sftp_command',
-
         ]
     }
     </script>
@@ -61,7 +53,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">SFTP channels</h2>
+<h2 class="zato">File transfer</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -69,14 +61,14 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% with has_generic="1" generic_type="channel-sftp" %}
+{% with has_generic="1" generic_type="channel-file_" %}
     {% include "zato/search-form.html" with page_prompt="Show channels"%}
 {% endwith %}
 
 
     {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.channel.sftp.create()">Create a new SFTP channel</a>
+            <a href="javascript:$.fn.zato.channel.file_.create()">Create a new channel</a>
         </div>
 
 
@@ -95,7 +87,6 @@
                         {% comment %} 2 {% endcomment %}
                         <th><a href="#">Service</a></th>
                         <th><a href="#">Topic</a></th>
-                        <th><a href="#">Users</a></th>
 
                         {% comment %} 3 {% endcomment %}
                         <th>&nbsp;</th>
@@ -103,11 +94,6 @@
                         <th class='ignore'>&nbsp;</th>
 
                         {% comment %} 4 {% endcomment %}
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
-                        {% comment %} 5 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -141,28 +127,16 @@
                                 <span class="form_hint">---</span>
                             {% endif %}
                         </td>
-                        <td>
-                            {% if item.users_allowed %}
-                                {{ item.users_allowed }}
-                            {% else %}
-                                <span class="form_hint">---</span>
-                            {% endif %}
-                        </td>
 
                         {% comment %} 3 {% endcomment %}
-                        <td><a href="javascript:$.fn.zato.channel.sftp.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.channel.sftp.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.channel.file_.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.channel.file_.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
 
                         {% comment %} 4 {% endcomment %}
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.service_name }}</td>
                         <td class='ignore'>{{ item.topic_name }}</td>
-
-                        {% comment %} 5 {% endcomment %}
-                        <td class='ignore'>{{ item.users_allowed }}</td>
-                        <td class='ignore'>{{ item.config_file }}</td>
-                        <td class='ignore'>{{ item.sftp_command }}</td>
 
                     </tr>
                 {% endfor %}
@@ -180,7 +154,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "channel-sftp-create" %}" method="post" id="create-form">
+                <form action="{% url "channel-file-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:13%">
@@ -237,7 +211,6 @@
                             <td>{{ create_form.config_file }}</td>
                         </tr>
 
-
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
@@ -252,7 +225,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "channel-sftp-edit" %}" method="post" id="edit-form">
+                <form action="{% url "channel-file-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:12%">
