@@ -21,7 +21,7 @@
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/javascript" src="/static/js/channel/file_.js"></script>
+    <script type="text/javascript" src="/static/js/channel/file-transfer.js"></script>
 
     <script>
     $.fn.zato.data_table.get_columns = function() {
@@ -61,14 +61,14 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% with has_generic="1" generic_type="channel-file_" %}
+{% with has_generic="1" generic_type="channel-file-transfer" %}
     {% include "zato/search-form.html" with page_prompt="Show channels"%}
 {% endwith %}
 
 
     {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.channel.file_.create()">Create a new channel</a>
+            <a href="javascript:$.fn.zato.channel.file_transfer.create()">Create a new channel</a>
         </div>
 
 
@@ -129,8 +129,8 @@
                         </td>
 
                         {% comment %} 3 {% endcomment %}
-                        <td><a href="javascript:$.fn.zato.channel.file_.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.channel.file_.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.channel.file_transfer.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.channel.file_transfer.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
 
                         {% comment %} 4 {% endcomment %}
@@ -154,7 +154,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "channel-file-create" %}" method="post" id="create-form">
+                <form action="{% url "channel-file-transfer-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:13%">
@@ -225,7 +225,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "channel-file-edit" %}" method="post" id="edit-form">
+                <form action="{% url "channel-file-transfer-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:12%">
@@ -304,3 +304,4 @@
 {% endif %}{% comment %}not zato_clusters{% endcomment %}
 
 {% endblock %}
+

@@ -9,20 +9,20 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.admin.web.forms.channel.file_ import CreateForm, EditForm
+from zato.admin.web.forms.channel.file_transfer import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.common import GENERIC
-from zato.common.model import FileChannel
+from zato.common.model import FileTransferChannel
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Index(_Index):
     method_allowed = 'GET'
-    url_name = 'channel-file'
-    template = 'zato/channel/file_.html'
+    url_name = 'channel-file-transfer'
+    template = 'zato/channel/file-transfer.html'
     service_name = 'zato.generic.connection.get-list'
-    output_class = FileChannel
+    output_class = FileTransferChannel
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
@@ -63,14 +63,14 @@ class _CreateEdit(CreateEdit):
 # ################################################################################################################################
 
 class Create(_CreateEdit):
-    url_name = 'channel-file-create'
+    url_name = 'channel-file-transfer-create'
     service_name = 'zato.generic.connection.create'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Edit(_CreateEdit):
-    url_name = 'channel-file-edit'
+    url_name = 'channel-file-transfer-edit'
     form_prefix = 'edit-'
     service_name = 'zato.generic.connection.edit'
 
@@ -78,7 +78,7 @@ class Edit(_CreateEdit):
 # ################################################################################################################################
 
 class Delete(_Delete):
-    url_name = 'channel-file-delete'
+    url_name = 'channel-file-transfer-delete'
     error_message = 'Could not delete SFTP channel'
     service_name = 'zato.generic.connection.delete'
 
