@@ -79,6 +79,7 @@ if typing.TYPE_CHECKING:
     # Zato
     from zato.common.crypto import ServerCryptoManager
     from zato.common.odb.api import ODBManager
+    from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
     from zato.server.service.store import ServiceStore
     from zato.sso.api import SSOAPI
 
@@ -87,6 +88,7 @@ if typing.TYPE_CHECKING:
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
     SSOAPI = SSOAPI
+    SubprocessIPC = SubprocessIPC
 
 # ################################################################################################################################
 
@@ -661,14 +663,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_OTHER, kwargs={
                 'parallel_server': self,
             })
-
-            # We are not the first worker so, if IBM MQ is enabled, we need to get its connector's
-            # configuration through IPC and populate our own configuration accordingly.
-            if has_ibm_mq:
-                response = self.connector_config_ipc.get_config('zato-ibm-mq')
-                if response:
-                    response = loads(response)
-                    self.connector_ibm_mq.ipc_tcp_port = response['port']
+            self._populate_connector_config(has_ibm_mq, has_sftp)
 
         # IPC
         self.ipc_api.name = self.ipc_api.get_endpoint_name(self.cluster.name, self.name, self.pid)
@@ -681,6 +676,27 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         })
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
+
+# ################################################################################################################################
+
+    def _populate_connector_config(self, has_ibm_mq, has_sftp):
+        """ Called when we are not the first worker so, any connector is enabled,
+        we need to get its configuration through IPC and populate our own accordingly.
+        """
+        ipc_config_name_to_enabled = {
+            IBMMQIPC.ipc_config_name: has_ibm_mq,
+            SFTPIPC.ipc_config_name: has_sftp
+        }
+
+        for ipc_config_name, is_enabled in ipc_config_name_to_enabled.items():
+            if is_enabled:
+                response = self.connector_config_ipc.get_config(ipc_config_name)
+                if response:
+                    response = loads(response)
+                    connector_suffix = ipc_config_name.replace('zato-', '').replace('-', '_')
+                    connector_attr = 'connector_{}'.format(connector_suffix)
+                    connector = getattr(self, connector_attr) # type: SubprocessIPC
+                    connector.ipc_tcp_port = response['port']
 
 # ################################################################################################################################
 
