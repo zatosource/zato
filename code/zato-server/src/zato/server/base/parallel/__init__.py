@@ -78,6 +78,7 @@ if typing.TYPE_CHECKING:
     # Zato
     from zato.common.crypto import ServerCryptoManager
     from zato.common.odb.api import ODBManager
+    from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
     from zato.server.service.store import ServiceStore
     from zato.sso.api import SSOAPI
 
@@ -86,6 +87,7 @@ if typing.TYPE_CHECKING:
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
     SSOAPI = SSOAPI
+    SubprocessIPC = SubprocessIPC
 
 # ################################################################################################################################
 
