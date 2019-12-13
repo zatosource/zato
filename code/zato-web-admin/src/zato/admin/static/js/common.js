@@ -796,16 +796,16 @@ $.fn.zato.data_table.setup_forms = function(attrs) {
     */
     let multirow_elems = $('[class~="multirow"]');
 
-    for(let idx=0; idx < multirow_elems.length; idx++) {
-        if(idx > 0) {
+    for(let row_idx=0; row_idx < multirow_elems.length; row_idx++) {
+        if(row_idx > 0) {
             continue;
         }
 
-        let elem = $(multirow_elems[idx]);
+        let elem = $(multirow_elems[row_idx]);
         let parent = elem.parent()
 
         let elem_id = elem.attr('id')
-        let row_id = elem_id + '_' + idx
+        let row_id = elem_id + '_' + row_idx
         let div_id = 'div_' + row_id;
 
         console.log('Multirow elem found: '+ elem_id + ' ' + div_id);
@@ -829,27 +829,55 @@ $.fn.zato.data_table.setup_forms = function(attrs) {
         // Now, create add / remove buttons
         // (note that we use $.insertAfter which is why the order of addition of buttons is reversed)
 
-        let button_remove = $.fn.zato.data_table.multirow.get_button(row_id, '-');
+        let button_remove = $.fn.zato.data_table.multirow.get_button(row_idx, row_id, elem_id, '+', true);
         button_remove.insertAfter(elem);
 
-        let button_add = $.fn.zato.data_table.multirow.get_button(row_id, '+');
-        button_add.insertAfter(elem);
-
-        console.log(div);
+        //let button_add = $.fn.zato.data_table.multirow.get_button(row_id, '+');
+        //button_add.insertAfter(elem);
 
     }
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.data_table.multirow.get_button = function(row_id, text) {
+$.fn.zato.data_table.multirow.get_button = function(row_idx, row_id, elem_id, text, is_first) {
     let button = $('<button/>');
-    let button_id = 'button_' + row_id
+
+    let is_add = text=='+' ? true  : false;
+    let action = is_add    ? 'add' : 'remove';
+
+    let button_id = 'button_' + action + '_' + row_id;
+    let on_click = `javascript:$.fn.zato.data_table.multirow.on_button_clicked(
+        ${row_idx}, "${row_id}", "${elem_id}", ${is_add}, ${is_first})`;
+
     button.attr('id', button_id);
     button.prop('type', 'button');
     button.attr('class', 'multirow-button');
+    button.attr('onclick', on_click);
     button.text(text);
+
     return button
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.data_table.multirow.on_button_clicked = function(row_idx, row_id, elem_id, is_add, is_first) {
+    console.log(`${row_idx}, ${row_id}, ${elem_id}, ${is_add}, ${is_first}`)
+
+    if(is_add) {
+        // Find the element to be cloned ..
+        let div = $('#div_' + row_id);
+        let child_selector = `[id=${elem_id}]`;
+
+        let child = div.children(child_selector)
+        let cloned = $(child).clone(true, true);
+
+        console.log('QQQ '+ cloned);
+    }
+    else {
+        console.log('ZZZ');
+    }
+
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
