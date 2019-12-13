@@ -797,9 +797,6 @@ $.fn.zato.data_table.setup_forms = function(attrs) {
     let multirow_elems = $('[class~="multirow"]');
 
     for(let row_idx=0; row_idx < multirow_elems.length; row_idx++) {
-        if(row_idx > 0) {
-            continue;
-        }
 
         let elem = $(multirow_elems[row_idx]);
         let parent = elem.parent()
@@ -861,6 +858,11 @@ $.fn.zato.data_table.multirow.get_button = function(row_id, elem_id, text, is_ad
 $.fn.zato.data_table.multirow.on_button_clicked = function(row_id, elem_id, is_add) {
     console.log(`row_id=${row_id}, elem_id=${elem_id}, is_add=${is_add}`)
 
+    // Find all divs for such an element ID along with the last one in the list
+    let existing = $(`div[id^="div_${elem_id}"]`);
+    let existing_size = existing.size();
+    let last = existing[existing_size-1];
+
     if(is_add) {
 
         // Generate a random ID for the new row
@@ -879,16 +881,20 @@ $.fn.zato.data_table.multirow.on_button_clicked = function(row_id, elem_id, is_a
         let new_div_id = 'div_' + new_row_id;
         new_div.attr('id', new_div_id);
 
-        new_div.insertAfter(div);
+        new_div.insertAfter(last);
         cloned.appendTo(new_div);
 
     }
     else {
 
-        // Find all divs for such an element ID
-        let existing = $(`div[id^="div_${elem_id}"]`);
 
-       console.log('EXIST '+ existing.size());
+        // If there is only one such element, it will be the first one, so we cannot remove it ..
+        if(existing_size == 1) {
+            return
+        }
+
+        // .. otherwise, remove the last element found.
+        last.remove();
     }
 
 }
