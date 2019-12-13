@@ -18,8 +18,8 @@ class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
-    service_name = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
-    topic_name = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
+    service_name = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:80%', 'class':'multirow'}))
+    topic_name = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:80%', 'class':'multirow'}))
 
     def __init__(self, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
