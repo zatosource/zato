@@ -71,6 +71,7 @@ $.namespace('zato.cloud.openstack.swift');
 $.namespace('zato.cluster');
 $.namespace('zato.cluster.servers');
 $.namespace('zato.data_table');
+$.namespace('zato.data_table.multirow');
 $.namespace('zato.definition');
 $.namespace('zato.definition.amqp');
 $.namespace('zato.definition.cassandra');
@@ -790,6 +791,65 @@ $.fn.zato.data_table.setup_forms = function(attrs) {
             return false;
         });
     });
+
+    /* Find all multi-row elements and make it possible to add or remove new ones.
+    */
+    let multirow_elems = $('[class~="multirow"]');
+
+    for(let idx=0; idx < multirow_elems.length; idx++) {
+        if(idx > 0) {
+            continue;
+        }
+
+        let elem = $(multirow_elems[idx]);
+        let parent = elem.parent()
+
+        let elem_id = elem.attr('id')
+        let row_id = elem_id + '_' + idx
+        let div_id = 'div_' + row_id;
+
+        console.log('Multirow elem found: '+ elem_id + ' ' + div_id);
+
+        // Create a new div and reattach the element found to it,
+        // attaching the div to the parent afterwards.
+
+        // Create the div first ..
+        let div = $('<div/>');
+        div.attr('id', div_id);
+
+        // .. detach the element ..
+        elem.detach();
+
+        // .. attach the element to the new div ..
+        elem.appendTo(div)
+
+        // .. and now append the new div to the elem's previous parent.
+        div.appendTo(parent);
+
+        // Now, create add / remove buttons
+        // (note that we use $.insertAfter which is why the order of addition of buttons is reversed)
+
+        let button_remove = $.fn.zato.data_table.multirow.get_button(row_id, '-');
+        button_remove.insertAfter(elem);
+
+        let button_add = $.fn.zato.data_table.multirow.get_button(row_id, '+');
+        button_add.insertAfter(elem);
+
+        console.log(div);
+
+    }
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.data_table.multirow.get_button = function(row_id, text) {
+    let button = $('<button/>');
+    let button_id = 'button_' + row_id
+    button.attr('id', button_id);
+    button.prop('type', 'button');
+    button.attr('class', 'multirow-button');
+    button.text(text);
+    return button
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
