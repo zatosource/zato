@@ -639,6 +639,10 @@ $.fn.zato.data_table.setup_change_password = function() {
 
 $.fn.zato.data_table._create_edit = function(action, title, id) {
 
+    // Clean up all the multirow elements that were possibly
+    // automatically generated for that form.
+    $('div[class="multirow-added"]').remove();
+
     if(action == 'edit') {
 
         var form = $(String.format('#{0}-form', action));
@@ -880,13 +884,13 @@ $.fn.zato.data_table.multirow.on_button_clicked = function(row_id, elem_id, is_a
         let new_div = $('<div/>');
         let new_div_id = 'div_' + new_row_id;
         new_div.attr('id', new_div_id);
+        new_div.attr('class', 'multirow-added');
 
         new_div.insertAfter(last);
         cloned.appendTo(new_div);
 
     }
     else {
-
 
         // If there is only one such element, it will be the first one, so we cannot remove it ..
         if(existing_size == 1) {
@@ -896,7 +900,6 @@ $.fn.zato.data_table.multirow.on_button_clicked = function(row_id, elem_id, is_a
         // .. otherwise, remove the last element found.
         last.remove();
     }
-
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
