@@ -71,8 +71,11 @@ class SharedMemoryIPC(object):
             self.size, self.key_name)
 
         try:
-            self._mem = ipc.SharedMemory(self.shmem_name, ipc.O_CREAT if needs_create else 0, size=self.size)
-        except ipc.ExistentialError:
+            try:
+                self._mem = ipc.SharedMemory(self.shmem_name, ipc.O_CREAT if needs_create else 0, size=self.size)
+            except ValueError:
+                self._mem = ipc.SharedMemory(self.shmem_name, ipc.O_CREAT if needs_create else 0)
+        except  ipc.ExistentialError:
             raise ValueError('Could not create shmem `{}` ({}), e:`{}`'.format(self.shmem_name, self.key_name, format_exc()))
 
         # Map memory to mmap

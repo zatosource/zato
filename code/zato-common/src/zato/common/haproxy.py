@@ -19,7 +19,7 @@ from zato.common.util import make_repr, timeouting_popen
 logger = getLogger(__name__)
 
 # We'll wait up to that many seconds for HAProxy to validate the config file.
-HAPROXY_VALIDATE_TIMEOUT = 0.6
+HAPROXY_VALIDATE_TIMEOUT = 6
 
 # Statistics commands understood by HAproxy 1.3.x and newer. Note that the
 # command numbers must be consecutively increasing across HAProxy versions.
