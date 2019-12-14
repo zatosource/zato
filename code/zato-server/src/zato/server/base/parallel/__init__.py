@@ -981,6 +981,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    @staticmethod
+    def worker_abort(worker):
+
+        id = worker.pid
+        logger.warn("worker is being killed - {}".format(pid))
+
+# ################################################################################################################################
+
     def cleanup_wsx(self, needs_pid=False):
         """ Delete persistent information about WSX clients currently registered with the server.
         """
