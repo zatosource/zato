@@ -25,19 +25,21 @@ INITIAL_CHOICES = list(iteritems(INITIAL_CHOICES_DICT))[0]
 # ################################################################################################################################
 
 SELECT_SERVICE_FIELDS = [
-    'service_name',
-    'service_id',
-    'service',
     'hook_service_id',
     'hook_service_name',
+    'on_close_service_name',
     'on_connect_service_name',
     'on_message_service_name',
-    'on_close_service_name',
+    'service',
+    'service_id',
+    'service_list',
+    'service_name',
 ]
 
 # ################################################################################################################################
 
 SELECT_TOPICS_FIELDS = [
+    'topic_list',
     'topic_name',
 ]
 
