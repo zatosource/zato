@@ -1,5 +1,5 @@
 
-// /////////////////////////////////////////////////////////////////////////////
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.data_table.ChannelFileTransfer = new Class({
     toString: function() {
@@ -10,7 +10,7 @@ $.fn.zato.data_table.ChannelFileTransfer = new Class({
     }
 });
 
-// /////////////////////////////////////////////////////////////////////////////
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $(document).ready(function() {
     $('#data-table').tablesorter();
@@ -18,15 +18,60 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.channel.file_transfer.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'pickup_from', 'file_patterns']);
+
+    $('#id_source_type').change(function() {
+        $.fn.zato.channel.file_transfer.on_source_type_changed();
+    });
+
 })
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.file_transfer.on_source_type_changed = function() {
+    var source_type = $('#id_source_type').val();
+    if(source_type) {
+
+        let ftp = $('#id_ftp_source_id');
+        let sftp = $('#id_sftp_source_id');
+
+        if(source_type=='local') {
+            ftp.val('');
+            sftp.val('');
+            ftp.addClass('hidden');
+            sftp.addClass('hidden');
+        }
+
+        else if(source_type=='ftp') {
+            sftp.val('');
+            ftp.removeClass('hidden');
+            sftp.addClass('hidden');
+        }
+
+        else if(source_type=='sftp') {
+            ftp.val('');
+            sftp.removeClass('hidden');
+            ftp.addClass('hidden');
+        }
+
+    }
+    else {
+        console.log('WWW');
+    }
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.channel.file_transfer.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new file transfer channel', null);
 }
 
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.channel.file_transfer.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the file transfer channel', id);
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, include_tr) {
     var row = '';
@@ -55,11 +100,11 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     // 1
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
+    row += String.format('<td>{0}</td>', item.source_html);
 
     // 2
     row += String.format('<td>{0}</td>', service_link);
     row += String.format('<td>{0}</td>', item.pickup_from ? item.pickup_from : $.fn.zato.empty_value);
-    row += String.format('<td>{0}</td>', item.file_patterns);
 
     // 3
     row += String.format('<td>{0}</td>', item.move_processed_to ? item.move_processed_to : $.fn.zato.empty_value);
@@ -82,6 +127,8 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
 
     // 7
     row += String.format('<td>{0}</td>', item.is_internal);
+    row += String.format('<td>{0}</td>', item.source_type);
+    row += String.format('<td>{0}</td>', item.source_id);
 
     if(include_tr) {
         row += '</tr>';
@@ -90,9 +137,13 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     return row;
 }
 
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.channel.file_transfer.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'File transfer channel `{0}` deleted',
         'Are you sure you want to delete file transfer channel `{0}`?',
         true);
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
