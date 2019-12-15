@@ -41,8 +41,8 @@ class FileTransferChannel(object):
 
     @staticmethod
     def from_dict(config):
-        # type: (dict) -> SFTPChannel
-        out = SFTPChannel()
+        # type: (dict) -> FileTransferChannel
+        out = FileTransferChannel()
         for k, v in config.items():
             out._config_attrs.append(k)
             setattr(out, k, v)
