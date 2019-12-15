@@ -1524,6 +1524,14 @@ class FILE_TRANSFER:
     class DEFAULT:
         FILE_PATTERNS = '*'
 
+    class SOURCE_TYPE:
+        LOCAL = NameId('Local', 'local')
+        FTP = NameId('FTP', 'ftp')
+        SFTP = NameId('SFTP', 'sftp')
+
+        def __iter__(self):
+            return iter((self.LOCAL, self.FTP, self.SFTP))
+
 # ################################################################################################################################
 # ################################################################################################################################
 

@@ -162,7 +162,7 @@ def add_topics(form, req, by_id=True):
 
 # ################################################################################################################################
 
-def add_select_from_service(form, req, service_name, field_names, by_id=True):
+def add_select_from_service(form, req, service_name, field_names, by_id=True, service_extra=None):
     if req.zato.cluster_id:
 
         field_names = field_names if isinstance(field_names, list) else [field_names]
@@ -176,7 +176,13 @@ def add_select_from_service(form, req, service_name, field_names, by_id=True):
         field.choices = []
         field.choices.append(INITIAL_CHOICES)
 
-        for item in req.zato.client.invoke(service_name, {'cluster_id': req.zato.cluster_id, }).data:
+        service_request = {'cluster_id': req.zato.cluster_id}
+        service_request.update(service_extra or {})
+
+        response = req.zato.client.invoke(service_name, service_request)
+        response = response.data if isinstance(response.data, list) else response.data.response
+
+        for item in response:
             id_attr = item.id if by_id else item.name
             field.choices.append([id_attr, item.name])
 

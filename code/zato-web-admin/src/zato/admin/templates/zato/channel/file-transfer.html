@@ -32,11 +32,11 @@
             {% comment %} 1 {% endcomment %}
             'name',
             '_is_active',
+            '_source_html',
 
             {% comment %} 2 {% endcomment %}
             '_recipient',
             'pickup_from',
-            'file_patterns',
 
             {% comment %} 3 {% endcomment %}
             'move_processed_to',
@@ -59,6 +59,12 @@
 
             {% comment %} 7 {% endcomment %}
             'is_internal',
+            'source_type',
+            'ftp_source_id',
+
+            {% comment %} 8 {% endcomment %}
+            'sftp_source_id',
+            'file_patterns',
         ]
     }
     </script>
@@ -95,11 +101,11 @@
                         {% comment %} 1 {% endcomment %}
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
+                        <th><a href="#">Source</a></th>
 
                         {% comment %} 2 {% endcomment %}
                         <th><a href="#">RCP</a></th>
                         <th><a href="#">From</a></th>
-                        <th><a href="#">Files</a></th>
 
                         {% comment %} 3 {% endcomment %}
                         <th><a href="#">To</a></th>
@@ -122,6 +128,12 @@
 
                         {% comment %} 7 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 8 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -135,6 +147,7 @@
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.source_html }}</td>
 
                         {% comment %} 2 {% endcomment %}
                         <td>
@@ -144,9 +157,7 @@
                                 <span class="form_hint">---</span>
                             {% endif %}
                         </td>
-
                         <td>{{ item.pickup_from }}</td>
-                        <td>{{ item.file_patterns }}</td>
 
                         {% comment %} 3 {% endcomment %}
                         <td>{{ item.move_processed_to }}</td>
@@ -169,6 +180,12 @@
 
                         {% comment %} 7 {% endcomment %}
                         <td class='ignore'>{{ item.is_internal }}</td>
+                        <td class='ignore'>{{ item.source_type }}</td>
+                        <td class='ignore'>{{ item.ftp_source_id }}</td>
+
+                        {% comment %} 8 {% endcomment %}
+                        <td class='ignore'>{{ item.sftp_source_id }}</td>
+                        <td class='ignore'>{{ item.file_patterns }}</td>
 
                     </tr>
                 {% endfor %}
@@ -230,9 +247,21 @@
                             </td>
                         </tr>
 
+
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_pickup_from">From</label>
+                                <label for="id_source_type">Source</label>
+                            </td>
+                            <td>
+                                {{ create_form.source_type }}
+                                {{ create_form.ftp_source_id }}
+                                {{ create_form.sftp_source_id }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_pickup_from">Dir. from</label>
                             </td>
                             <td>
                                 {{ create_form.pickup_from }}
@@ -250,7 +279,7 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_topic_name">To</label>
+                                <label for="id_topic_name">Dir. to</label>
                             </td>
                             <td>{{ create_form.move_processed_to }}</td>
                         </tr>
