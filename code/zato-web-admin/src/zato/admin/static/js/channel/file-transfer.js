@@ -17,7 +17,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.ChannelFileTransfer;
     $.fn.zato.data_table.new_row_func = $.fn.zato.channel.file_transfer.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'pickup_from', 'file_patterns']);
+    $.fn.zato.data_table.setup_forms(['name', 'source_type', 'pickup_from', 'file_patterns']);
 
     $('#id_source_type').change(function() {
         $.fn.zato.channel.file_transfer.on_source_type_changed();
