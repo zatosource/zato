@@ -12,10 +12,16 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_select, add_services, add_topics
-from zato.common import FILE_TRANSFER
+from zato.admin.web.forms import add_select, add_select_from_service, add_services, add_topics
+from zato.common import FILE_TRANSFER, GENERIC
+
+# ################################################################################################################################
 
 _default = FILE_TRANSFER.DEFAULT
+_source_type = FILE_TRANSFER.SOURCE_TYPE()
+_sftp = GENERIC.CONNECTION.TYPE.OUTCONN_SFTP
+
+# ################################################################################################################################
 
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
@@ -34,10 +40,19 @@ class CreateForm(forms.Form):
     parse_on_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     delete_after_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
+    source_type = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:15%'}))
+    ftp_source_id = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:84%', 'class':'hidden'}))
+    sftp_source_id = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:84%', 'class':'hidden'}))
+
     def __init__(self, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
+        add_select(self, 'source_type', _source_type)
         add_services(self, req)
         add_topics(self, req, by_id=False)
+        add_select_from_service(self, req, 'zato.outgoing.ftp.get-list', 'ftp_source_id')
+        add_select_from_service(self, req, 'zato.generic.connection.get-list', 'sftp_source_id', service_extra={'type_':_sftp})
+
+# ################################################################################################################################
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
@@ -45,3 +60,4 @@ class EditForm(CreateForm):
     parse_on_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     delete_after_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
+# ################################################################################################################################
