@@ -128,7 +128,12 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     // 7
     row += String.format('<td>{0}</td>', item.is_internal);
     row += String.format('<td>{0}</td>', item.source_type);
-    row += String.format('<td>{0}</td>', item.source_id);
+    row += String.format('<td>{0}</td>', item.ftp_source_id);
+
+    // 8
+    row += String.format('<td>{0}</td>', item.sftp_source_id);
+    row += String.format('<td>{0}</td>', item.file_patterns);
+    row += String.format('<td>{0}</td>', item.scheduler_job_id);
 
     if(include_tr) {
         row += '</tr>';

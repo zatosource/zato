@@ -65,6 +65,7 @@
             {% comment %} 8 {% endcomment %}
             'sftp_source_id',
             'file_patterns',
+            'scheduler_job_id',
         ]
     }
     </script>
@@ -134,6 +135,7 @@
                         {% comment %} 8 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -186,6 +188,7 @@
                         {% comment %} 8 {% endcomment %}
                         <td class='ignore'>{{ item.sftp_source_id }}</td>
                         <td class='ignore'>{{ item.file_patterns }}</td>
+                        <td class='ignore'>{{ item.scheduler_job_id }}</td>
 
                     </tr>
                 {% endfor %}
@@ -256,6 +259,16 @@
                                 {{ create_form.source_type }}
                                 {{ create_form.ftp_source_id }}
                                 {{ create_form.sftp_source_id }}
+                            </td>
+                        </tr>
+
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_scheduler_job_id">Schedule</label>
+                            </td>
+                            <td>
+                                {{ create_form.scheduler_job_id }}
                             </td>
                         </tr>
 
