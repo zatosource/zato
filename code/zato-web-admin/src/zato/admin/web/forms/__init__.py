@@ -179,6 +179,8 @@ def add_select_from_service(form, req, service_name, field_names, by_id=True, se
         service_request = {'cluster_id': req.zato.cluster_id}
         service_request.update(service_extra or {})
 
+        print(111, service_name, service_request)
+
         response = req.zato.client.invoke(service_name, service_request)
         response = response.data if isinstance(response.data, list) else response.data.response
 

@@ -868,7 +868,7 @@ class ODBManager(SessionWrapper):
         """ Returns a list of jobs defined on the given cluster.
         """
         with closing(self.session()) as session:
-            return query.job_list(session, cluster_id, needs_columns)
+            return query.job_list(session, cluster_id, None, needs_columns)
 
 # ################################################################################################################################
 
