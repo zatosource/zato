@@ -44,6 +44,8 @@ class CreateForm(forms.Form):
     ftp_source_id = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:84%', 'class':'hidden'}))
     sftp_source_id = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:84%', 'class':'hidden'}))
 
+    scheduler_job_id = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
+
     def __init__(self, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
         add_select(self, 'source_type', _source_type)
@@ -51,6 +53,9 @@ class CreateForm(forms.Form):
         add_topics(self, req, by_id=False)
         add_select_from_service(self, req, 'zato.outgoing.ftp.get-list', 'ftp_source_id')
         add_select_from_service(self, req, 'zato.generic.connection.get-list', 'sftp_source_id', service_extra={'type_':_sftp})
+        add_select_from_service(self, req, 'zato.scheduler.job.get-list', 'scheduler_job_id', service_extra={
+            'service_name': FILE_TRANSFER.SCHEDULER_SERVICE
+        })
 
 # ################################################################################################################################
 
