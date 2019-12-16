@@ -39,6 +39,9 @@ from zato.common import SCHEDULER, TRACE1, ZatoException
 from zato.common.odb.model import CronStyleJob, IntervalBasedJob, Job
 from zato.common.util import pprint
 
+# Python 2/3 compatibility
+from past.builtins import unicode
+
 logger = logging.getLogger(__name__)
 
 create_one_time_prefix = 'create-one_time'
@@ -79,10 +82,10 @@ def _interval_based_job_def(user_profile, start_date, repeats, weeks, days, hour
             buf.write(' Execute once.')
         elif repeats == 2:
             buf.write(' Repeat twice.')
-        # .. my hand is itching to add 'repeats thrice.' here ;-)
+        # .. thrice or more
         elif repeats > 2:
             buf.write(' Repeat ')
-            buf.write(str(repeats))
+            buf.write(repeats if isinstance(repeats, unicode) else repeats.decode('utf8'))
             buf.write(' times.')
 
     interval = []
@@ -200,7 +203,10 @@ def _create_interval_based(client, user_profile, cluster, params):
     start_date = input_dict.get('start_date')
     if start_date:
         start_date = _get_start_date(start_date)
+
     repeats = params.get('create-interval_based-repeats')
+    repeats = int(repeats) if repeats else None
+
     weeks = params.get('create-interval_based-weeks')
     days = params.get('create-interval_based-days')
     hours = params.get('create-interval_based-hours')
@@ -253,7 +259,10 @@ def _edit_interval_based(client, user_profile, cluster, params):
     start_date = input_dict.get('start_date')
     if start_date:
         start_date = _get_start_date(start_date)
+
     repeats = params.get('edit-interval_based-repeats')
+    repeats = int(repeats) if repeats else None
+
     weeks = params.get('edit-interval_based-weeks')
     days = params.get('edit-interval_based-days')
     hours = params.get('edit-interval_based-hours')
@@ -393,8 +402,7 @@ def index(req):
                 return HttpResponse(response, content_type='application/javascript')
             except Exception:
                 msg = 'Could not invoke action `{}`, job_type:`{}`, e:`{}` req.POST:`{}`, req.GET:`{}'.format(
-                    action, job_type, format_exc(), pprint(req.POST), pprint(req.GET))
-
+                    action, job_type, format_exc(), req.POST, req.GET)
                 logger.error(msg)
                 return HttpResponseServerError(msg)
 

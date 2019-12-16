@@ -21,6 +21,7 @@ from bunch import bunchify
 
 # SQLAlchemy
 from sqlalchemy import Boolean, Integer
+from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.common import ZATO_NOT_GIVEN
@@ -179,6 +180,7 @@ def update_attrs(cls, name, attrs):
     attrs.sio_default_value = getattr(mod, 'sio_default_value', None)
     attrs.get_list_docs = getattr(mod, 'get_list_docs', None)
     attrs.delete_require_instance = getattr(mod, 'delete_require_instance', True)
+    attrs.skip_create_integrity_error = getattr(mod, 'skip_create_integrity_error', False)
     attrs._meta_session = None
 
     attrs.is_create = False
@@ -327,6 +329,7 @@ class CreateEditMeta(AdminServiceMeta):
             input.update(attrs.initial_input)
             verb = 'edit' if attrs.is_edit else 'create'
             old_name = None
+            has_integrity_error = False
 
             with closing(self.odb.session()) as session:
                 try:
@@ -378,7 +381,14 @@ class CreateEditMeta(AdminServiceMeta):
                         attrs.instance_hook(self, input, instance, attrs)
 
                     session.add(instance)
-                    session.commit()
+
+                    try:
+                        session.commit()
+                    except IntegrityError:
+                        if not attrs.skip_create_integrity_error:
+                            raise
+                        else:
+                            has_integrity_error = True
 
                 except Exception:
                     msg = 'Could not {} the object, e:`%s`'.format(verb)
@@ -399,7 +409,8 @@ class CreateEditMeta(AdminServiceMeta):
                     if attrs.broker_message_hook:
                         attrs.broker_message_hook(self, input, instance, attrs, 'create_edit')
 
-                    self.broker_client.publish(input)
+                    if not has_integrity_error:
+                        self.broker_client.publish(input)
 
                     for name in chain(attrs.create_edit_rewrite, self.SimpleIO.output_required):
                         value = getattr(instance, name, singleton)

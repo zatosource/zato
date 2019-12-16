@@ -41,7 +41,7 @@ from past.builtins import basestring
 # Zato
 from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
-from zato.common import SECRETS, ZATO_NONE
+from zato.common import SECRETS
 from zato.common.util import get_client_from_server_conf
 from zato.common.util.tcp import wait_for_zato_ping
 
@@ -670,7 +670,7 @@ class ObjectImporter(object):
             return True
 
         # RBAC client roles cannot be edited
-        elif item_type == 'rbac_client_role':
+        elif item_type == 'rbac_client_role' and is_edit:
             return True
 
 # ################################################################################################################################
@@ -792,14 +792,15 @@ class ObjectImporter(object):
         # type: (Results)
 
         existing_defs = []
+        existing_rbac_role = []
+        existing_rbac_role_permission = []
+        existing_rbac_client_role = []
         existing_other = []
 
-        # Definitions or other objects for which self.may_be_dependency returns True,
-        # as they are found in the input enmasse file - they do not exist in ODB yet.
         new_defs = []
-
-        # Objects other than the ones from new_defs that are found in the enmasse file
-        # and which do not exist in ODB yet.
+        new_rbac_role = []
+        new_rbac_role_permission = []
+        new_rbac_client_role = []
         new_other = []
 
         #
@@ -808,13 +809,26 @@ class ObjectImporter(object):
 
         for w in already_existing.warnings:
             item_type, _ = w.value_raw
-            existing = existing_defs if 'def' in item_type else existing_other
+
+            if 'def' in item_type:
+                existing = existing_defs
+            elif item_type == 'rbac_role':
+                existing = existing_rbac_role
+            elif item_type == 'rbac_role_permission':
+                existing = existing_rbac_role_permission
+            elif item_type == 'rbac_client_role':
+                existing = existing_rbac_client_role
+            else:
+                existing = existing_other
             existing.append(w)
 
         #
         # .. actually invoke the updates now ..
         #
-        for w in existing_defs + existing_other:
+        existing_combined = existing_defs + existing_rbac_role + existing_rbac_role_permission + \
+            existing_rbac_client_role + existing_other
+
+        for w in existing_combined:
 
             item_type, attrs = w.value_raw
 
@@ -830,14 +844,24 @@ class ObjectImporter(object):
         #
         for item_type, items in iteritems(self.json):
             if self.may_be_dependency(item_type):
-                new_defs.append({item_type: items})
+                if item_type == 'rbac_role':
+                    append_to = new_rbac_role
+                elif item_type == 'rbac_role_permission':
+                    append_to = new_rbac_role_permission
+                elif item_type == 'rbac_client_role':
+                    append_to = new_rbac_client_role
+                else:
+                    append_to = new_defs
             else:
-                new_other.append({item_type: items})
+                append_to = new_other
+            append_to.append({item_type: items})
 
         #
         # .. actually create the objects now.
         #
-        for elem in new_defs + new_other:
+        new_combined = new_defs + new_rbac_role + new_rbac_role_permission + new_rbac_client_role + new_other
+
+        for elem in new_combined:
             for item_type, attr_list in iteritems(elem):
                 for attrs in attr_list:
 
@@ -914,6 +938,14 @@ class ObjectImporter(object):
 
         if response.ok:
             self.logger.info("Updated password for '{}' ({})".format(attrs.name, service_name))
+
+            # Wait for a moment before continuing to let AMQP connectors change their passwords.
+            # This is needed because we may want to create channels right after the password
+            # has been changed and this requires valid credentials, including the very
+            # which is being changed here.
+            if item_type == 'def_amqp':
+                sleep(5)
+
         return response
 
 class ObjectManager(object):
@@ -978,8 +1010,12 @@ class ObjectManager(object):
         service_info = SERVICE_BY_NAME[item_type]
 
         if item_type == 'json_rpc':
-            if item['security_id'] is None:
-                item['security_id'] = ZATO_NONE
+
+            if item['sec_use_rbac'] is True:
+                item['security_id'] = 'ZATO_SEC_USE_RBAC'
+
+            elif item['security_id'] is None:
+                item['security_id'] = 'ZATO_NONE'
 
         for field_name, info in iteritems(service_info.object_dependencies):
 
