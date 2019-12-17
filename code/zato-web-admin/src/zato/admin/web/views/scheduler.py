@@ -85,7 +85,11 @@ def _interval_based_job_def(user_profile, start_date, repeats, weeks, days, hour
         # .. thrice or more
         elif repeats > 2:
             buf.write(' Repeat ')
-            buf.write(repeats if isinstance(repeats, unicode) else repeats.decode('utf8'))
+            if isinstance(repeats, int):
+                repeats = str(repeats)
+            else:
+                repeats = repeats if isinstance(repeats, unicode) else repeats.decode('utf8')
+            buf.write(repeats)
             buf.write(' times.')
 
     interval = []
@@ -109,12 +113,11 @@ def _interval_based_job_def(user_profile, start_date, repeats, weeks, days, hour
 
 def _get_success_message(action, job_type, job_name):
 
-    msg = 'Successfully {0} the {1} job [{2}]'
+    msg = 'Successfully {} the {} job `{}`'
     verb = 'created' if action == 'create' else 'updated'
     job_type = job_type.replace('_', '-')
 
     return msg.format(verb, job_type, job_name)
-
 
 def _cron_style_job_def(user_profile, start_date, cron_definition):
     start_date = _get_start_date(start_date)
