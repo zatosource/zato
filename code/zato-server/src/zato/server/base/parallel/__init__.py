@@ -466,8 +466,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 
         # Find out if we are on a platform that can handle our posix_ipc
-        _skip_platform = self.fs_server_config.misc.posix_ipc_skip_platform
+        _skip_platform = self.fs_server_config.misc.get('posix_ipc_skip_platform')
         _skip_platform = _skip_platform if isinstance(_skip_platform, list) else [_skip_platform]
+        _skip_platform = [elem for elem in _skip_platform if elem]
         self.fs_server_config.misc.posix_ipc_skip_platform = _skip_platform
 
         if self.platform_system in self.fs_server_config.misc.posix_ipc_skip_platform:
