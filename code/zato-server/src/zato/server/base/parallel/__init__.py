@@ -14,6 +14,7 @@ import os
 from datetime import datetime, timedelta
 from json import loads
 from logging import INFO, WARN
+from platform import system as platform_system
 from re import IGNORECASE
 from tempfile import mkstemp
 from traceback import format_exc
@@ -178,10 +179,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.default_internal_pubsub_endpoint_id = None
         self.rate_limiting = None # type: RateLimiting
         self.jwt_secret = None # type: bytes
-        self._hash_secret_method = None
-        self._hash_secret_rounds = None
-        self._hash_secret_salt_size = None
+        self._hash_secret_method = None # type: unicode
+        self._hash_secret_rounds = None # type: int
+        self._hash_secret_salt_size = None # type: int
         self.sso_tool = SSOTool(self)
+        self.platform_system = platform_system().lower() # type: unicode
+        self.has_posix_ipc = True
 
         # Our arbiter may potentially call the cleanup procedure multiple times
         # and this will be set to True the first time around.
@@ -461,11 +464,24 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         register_diag_handlers()
 
-        # Create all POSIX IPC objects now that we have the deployment key
-        self.shmem_size = int(float(self.fs_server_config.shmem.size) * 10**6) # Convert to megabytes as integer
 
-        self.server_startup_ipc.create(self.deployment_key, self.shmem_size)
-        self.connector_config_ipc.create(self.deployment_key, self.shmem_size)
+        # Find out if we are on a platform that can handle our posix_ipc
+        _skip_platform = self.fs_server_config.misc.posix_ipc_skip_platform
+        _skip_platform = _skip_platform if isinstance(_skip_platform, list) else [_skip_platform]
+        self.fs_server_config.misc.posix_ipc_skip_platform = _skip_platform
+
+        if self.platform_system in self.fs_server_config.misc.posix_ipc_skip_platform:
+            self.has_posix_ipc = False
+
+        # Create all POSIX IPC objects now that we have the deployment key,
+        # but only if our platform allows it.
+        if self.has_posix_ipc:
+            self.shmem_size = int(float(self.fs_server_config.shmem.size) * 10**6) # Convert to megabytes as integer
+            self.server_startup_ipc.create(self.deployment_key, self.shmem_size)
+            self.connector_config_ipc.create(self.deployment_key, self.shmem_size)
+        else:
+            self.server_startup_ipc = None
+            self.connector_config_ipc = None
 
         # Store the ODB configuration, create an ODB connection pool and have self.odb use it
         self.config.odb_data = self.get_config_odb_data(self)
@@ -523,12 +539,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Normalize hot-deploy configuration
         self.hot_deploy_config = Bunch()
-
         self.hot_deploy_config.pickup_dir = absolutize(self.fs_server_config.hot_deploy.pickup_dir, self.repo_location)
-
         self.hot_deploy_config.work_dir = os.path.normpath(os.path.join(
             self.repo_location, self.fs_server_config.hot_deploy.work_dir))
-
         self.hot_deploy_config.backup_history = int(self.fs_server_config.hot_deploy.backup_history)
         self.hot_deploy_config.backup_format = self.fs_server_config.hot_deploy.backup_format
 
@@ -644,13 +657,16 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             spawn_greenlet(self.set_up_pickup)
 
             # Subprocess-based connectors
-            self._init_subprocess_connectors(has_ibm_mq, has_sftp)
+            if self.has_posix_ipc:
+                self._init_subprocess_connectors(has_ibm_mq, has_sftp)
 
         else:
             self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_OTHER, kwargs={
                 'parallel_server': self,
             })
-            self._populate_connector_config(has_ibm_mq, has_sftp)
+
+            if self.has_posix_ipc:
+                self._populate_connector_config(has_ibm_mq, has_sftp)
 
         # IPC
         self.ipc_api.name = self.ipc_api.get_endpoint_name(self.cluster.name, self.name, self.pid)
@@ -1068,8 +1084,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             self.sql_pool_store.cleanup_on_stop()
 
             # Close all POSIX IPC structures
-            self.server_startup_ipc.close()
-            self.connector_config_ipc.close()
+            if self.has_posix_ipc:
+                self.server_startup_ipc.close()
+                self.connector_config_ipc.close()
 
             # Close ZeroMQ-based IPC
             self.ipc_api.close()
