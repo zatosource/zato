@@ -8,6 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from json import dumps
+
 # Zato
 from zato.admin.web.forms.channel.file_transfer import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
@@ -37,6 +40,17 @@ class Index(_Index):
             'create_form': CreateForm(req=self.req),
             'edit_form': EditForm(prefix='edit', req=self.req),
         }
+
+    def on_before_append_item(self, item):
+        # type: (FileTransferChannel) -> FileTransferChannel
+
+        if item.service_list:
+            item.service_list_json = dumps(sorted(item.service_list))
+
+        if item.topic_list:
+            item.topic_list_json = dumps(sorted(item.topic_list))
+
+        return item
 
 # ################################################################################################################################
 # ################################################################################################################################
