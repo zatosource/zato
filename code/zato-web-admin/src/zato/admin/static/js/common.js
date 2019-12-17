@@ -902,9 +902,12 @@ $.fn.zato.data_table.multirow.add_row = function(row_id, elem_id, is_add) {
     }
     else {
 
-        // If there is only one such element, it will be the first one, so we cannot remove it ..
+        // If there is only one such element, it will be the first one, so we cannot remove it,
+        // instead, we need to clear it out.
         if(existing_size == 1) {
-            return
+            let first = $(existing[0]);
+            first.find('option:selected').remove();
+            return;
         }
 
         // .. otherwise, remove the last element found.
