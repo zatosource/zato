@@ -638,7 +638,7 @@ class RequestHandler(object):
         if payload:
             data=payload.getvalue()
         else:
-            data=b"""<{response_elem} xmlns="{namespace}">
+            data="""<{response_elem} xmlns="{namespace}">
                 <zato_env>
                   <cid>{cid}</cid>
                   <result>{result}</result>
