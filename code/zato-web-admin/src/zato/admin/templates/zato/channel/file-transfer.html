@@ -66,6 +66,10 @@
             'sftp_source_id',
             'file_patterns',
             'scheduler_job_id',
+
+            {% comment %} 9 {% endcomment %}
+            'service_list_json',
+            'topic_list_json',
         ]
     }
     </script>
@@ -137,6 +141,10 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        {% comment %} 9 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
                 </thead>
 
                 <tbody>
@@ -189,6 +197,10 @@
                         <td class='ignore'>{{ item.sftp_source_id }}</td>
                         <td class='ignore'>{{ item.file_patterns }}</td>
                         <td class='ignore'>{{ item.scheduler_job_id }}</td>
+
+                        {% comment %} 9 {% endcomment %}
+                        <td class='ignore'>{{ item.service_list_json }}</td>
+                        <td class='ignore'>{{ item.topic_list_json }}</td>
 
                     </tr>
                 {% endfor %}

@@ -17,16 +17,31 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 class FileTransferChannel(object):
     def __init__(self):
         self._config_attrs = []
-        self.id   = None               # type: int
-        self.name = None               # type: str
-        self.is_active = None          # type: bool
-        self.address = None            # type: str
-        self.service_name = None       # type: str
-        self.topic_name = None         # type: str
-        self.idle_timeout = None       # type: int
-        self.keep_alive_timeout = None # type: int
-        self.host_key = None           # type: str
-        self.sftp_command = None       # type: str
+        self.id   = None      # type: int
+        self.name = None      # type: str
+        self.is_active = None # type: bool
+        self.id = None        # type: int
+        self.name = None      # type: str
+
+        self.is_active = None     # type: bool
+        self.source_type = None   # type: str
+        self.pickup_from = None   # type: str
+        self.service_list = None  # type: list
+        self.topic_list = None    # type: list
+        self.parse_with = None    # type: str
+        self.ftp_source_id = None # type: int
+        self.file_patterns = None # type: str
+
+        self.read_on_pickup = None  # type: bool
+        self.sftp_source_id = None  # type: int
+        self.parse_on_pickup = None # type: bool
+
+        self.service_list_json = None  # type: str
+        self.topic_list_json = None    # type: str
+
+        self.scheduler_job_id = None    # type: int
+        self.move_processed_to = None   # type: str
+        self.delete_after_pickup = None # type: bool
 
 # ################################################################################################################################
 

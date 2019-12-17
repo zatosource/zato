@@ -637,11 +637,15 @@ $.fn.zato.data_table.setup_change_password = function() {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.data_table._create_edit = function(action, title, id) {
+$.fn.zato.data_table._create_edit = function(action, title, id, remove_multirow) {
+
+    let _remove_multirow = remove_multirow === undefined ? true : remove_multirow;
 
     // Clean up all the multirow elements that were possibly
     // automatically generated for that form.
-    $('div[class="multirow-added"]').remove();
+    if(_remove_multirow) {
+        $.fn.zato.data_table.multirow.remove_multirow_added();
+    }
 
     if(action == 'edit') {
 
@@ -655,6 +659,10 @@ $.fn.zato.data_table._create_edit = function(action, title, id) {
     var div = $(String.format('#{0}-div', action));
     div.prev().text(title); // prev() is a .ui-dialog-titlebar
     div.dialog('open');
+}
+
+$.fn.zato.data_table.edit = function(action, title, id, remove_multirow) {
+    $.fn.zato.data_table._create_edit(action, title, id, remove_multirow);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -846,7 +854,7 @@ $.fn.zato.data_table.multirow.get_button = function(row_id, elem_id, text, is_ad
     let action = is_add ? 'add' : 'remove';
 
     let button_id = 'button_' + action + '_' + row_id;
-    let on_click = `javascript:$.fn.zato.data_table.multirow.on_button_clicked("${row_id}", "${elem_id}", ${is_add})`;
+    let on_click = `javascript:$.fn.zato.data_table.multirow.add_row("${row_id}", "${elem_id}", ${is_add})`;
 
     button.attr('id', button_id);
     button.prop('type', 'button');
@@ -859,7 +867,7 @@ $.fn.zato.data_table.multirow.get_button = function(row_id, elem_id, text, is_ad
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.data_table.multirow.on_button_clicked = function(row_id, elem_id, is_add) {
+$.fn.zato.data_table.multirow.add_row = function(row_id, elem_id, is_add) {
     console.log(`row_id=${row_id}, elem_id=${elem_id}, is_add=${is_add}`)
 
     // Find all divs for such an element ID along with the last one in the list
@@ -889,6 +897,8 @@ $.fn.zato.data_table.multirow.on_button_clicked = function(row_id, elem_id, is_a
         new_div.insertAfter(last);
         cloned.appendTo(new_div);
 
+        return cloned;
+
     }
     else {
 
@@ -900,6 +910,30 @@ $.fn.zato.data_table.multirow.on_button_clicked = function(row_id, elem_id, is_a
         // .. otherwise, remove the last element found.
         last.remove();
     }
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.data_table.multirow.remove_multirow_added = function() {
+    $('div[class="multirow-added"]').remove();
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.data_table.multirow.populate_select_field = function(field_name, source) {
+    let row_id = 'id_edit-'+ field_name +'_0';
+    let elem_id = 'id_edit-'+ field_name;
+    let elem = $('#' + elem_id);
+
+    // The very first element need no cloning ..
+    elem.val(source[0]);
+
+    // .. but the rest requires new rows (clones), hence iterating from idx=1;
+    for(var idx=1; idx<source.length; idx++) {
+        let item = source[idx];
+        let cloned = $.fn.zato.data_table.multirow.add_row(row_id, elem_id, true);
+        cloned.val(item);
+    };
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

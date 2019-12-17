@@ -67,11 +67,14 @@ $.fn.zato.channel.file_transfer.create = function() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.channel.file_transfer.edit = function(id) {
+
     let instance = $.fn.zato.data_table.data[id];
-    let form_elem = $('#id_edit-'+ instance.source_type +'_source_id');
-    form_elem.removeClass('hidden');
-    //console.log('QQQ '+ form_elem).attr('id');
-    $.fn.zato.data_table._create_edit('edit', 'Update the file transfer channel', id);
+    let source_type = $('#id_edit-'+ instance.source_type +'_source_id');
+    source_type.removeClass('hidden');
+
+    $.fn.zato.data_table.multirow.remove_multirow_added();
+    $.fn.zato.data_table.edit('edit', 'Update the file transfer channel', id, false);
+    $.fn.zato.data_table.multirow.populate_select_field('service_list', JSON.parse(instance.service_list_json));
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -137,6 +140,10 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     row += String.format("<td class='ignore'>{0}</td>", item.sftp_source_id);
     row += String.format("<td class='ignore'>{0}</td>", item.file_patterns);
     row += String.format("<td class='ignore'>{0}</td>", item.scheduler_job_id);
+
+    // 9
+    row += String.format("<td class='ignore'>{0}</td>", item.service_list_json);
+    row += String.format("<td class='ignore'>{0}</td>", item.topic_list_json);
 
     if(include_tr) {
         row += '</tr>';
