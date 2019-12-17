@@ -481,9 +481,6 @@ class CreateEdit(_BaseView):
             for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
                 if name not in input_dict and name not in self.input_dict:
                     value = self.input.get(name)
-                    print()
-                    print(111, name, dir(self.req.POST))
-                    print()
                     input_dict[name] = value
 
             self.input_dict.update(input_dict)

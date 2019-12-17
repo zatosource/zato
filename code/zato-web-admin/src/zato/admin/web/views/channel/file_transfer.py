@@ -27,8 +27,9 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id', 'type_'
-        output_required = 'id', 'name', 'is_active', 'address', 'idle_timeout', 'keep_alive_timeout'
-        output_optional = 'service_name', 'topic_name', 'host_key'
+        output_required = 'id', 'name', 'is_active', 'source_type', 'pickup_from'
+        output_optional = 'service_list', 'topic_list', 'move_processed_to', 'file_patterns', 'parse_with', 'read_on_pickup', \
+            'parse_on_pickup', 'delete_after_pickup', 'ftp_source_id', 'sftp_source_id', 'scheduler_job_id'
         output_repeated = True
 
     def handle(self):
@@ -44,8 +45,9 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_active', 'address', 'idle_timeout', 'keep_alive_timeout'
-        input_optional = 'service_name', 'topic_name', 'host_key'
+        input_required = 'name', 'is_active', 'source_type', 'pickup_from'
+        input_optional = 'service_list', 'topic_list', 'move_processed_to', 'file_patterns', 'parse_with', 'read_on_pickup', \
+            'parse_on_pickup', 'delete_after_pickup', 'ftp_source_id', 'sftp_source_id', 'scheduler_job_id'
         output_required = 'id', 'name'
 
     def populate_initial_input_dict(self, initial_input_dict):

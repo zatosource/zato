@@ -378,9 +378,31 @@
                             </td>
                         </tr>
 
+
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_edit-pickup_from">From</label>
+                                <label for="id_edit-source_type">Source</label>
+                            </td>
+                            <td>
+                                {{ edit_form.source_type }}
+                                {{ edit_form.ftp_source_id }}
+                                {{ edit_form.sftp_source_id }}
+                            </td>
+                        </tr>
+
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-scheduler_job_id">Schedule</label>
+                            </td>
+                            <td>
+                                {{ edit_form.scheduler_job_id }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-pickup_from">Dir. from</label>
                             </td>
                             <td>
                                 {{ edit_form.pickup_from }}
@@ -398,14 +420,14 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_edit-topic_name">To</label>
+                                <label for="id_edit-move_processed_to">Dir. to</label>
                             </td>
                             <td>{{ edit_form.move_processed_to }}</td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_edit-topic_name">Parse with</label>
+                                <label for="id_edit-parse_with">Parse with</label>
                             </td>
                             <td>{{ edit_form.parse_with }}</td>
                         </tr>
