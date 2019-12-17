@@ -20,42 +20,41 @@ $(document).ready(function() {
     $.fn.zato.data_table.setup_forms(['name', 'source_type', 'pickup_from', 'file_patterns']);
 
     $('#id_source_type').change(function() {
-        $.fn.zato.channel.file_transfer.on_source_type_changed();
+        $.fn.zato.channel.file_transfer.on_source_type_changed('');
+    });
+
+    $('#id_edit-source_type').change(function() {
+        $.fn.zato.channel.file_transfer.on_source_type_changed('edit-');
     });
 
 })
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.file_transfer.on_source_type_changed = function() {
-    var source_type = $('#id_source_type').val();
+$.fn.zato.channel.file_transfer.on_source_type_changed = function(prefix) {
+
+    let id_prefix = '#id_'+ prefix;
+    let source_type = $(id_prefix + 'source_type').val();
+
     if(source_type) {
 
-        let ftp = $('#id_ftp_source_id');
-        let sftp = $('#id_sftp_source_id');
+        let ftp = $(id_prefix + 'ftp_source_id');
+        let sftp = $(id_prefix + 'sftp_source_id');
 
         if(source_type=='local') {
-            ftp.val('');
-            sftp.val('');
             ftp.addClass('hidden');
             sftp.addClass('hidden');
         }
 
         else if(source_type=='ftp') {
-            sftp.val('');
             ftp.removeClass('hidden');
             sftp.addClass('hidden');
         }
 
         else if(source_type=='sftp') {
-            ftp.val('');
             sftp.removeClass('hidden');
             ftp.addClass('hidden');
         }
-
-    }
-    else {
-        console.log('WWW');
     }
 }
 
@@ -68,6 +67,10 @@ $.fn.zato.channel.file_transfer.create = function() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.channel.file_transfer.edit = function(id) {
+    let instance = $.fn.zato.data_table.data[id];
+    let form_elem = $('#id_edit-'+ instance.source_type +'_source_id');
+    form_elem.removeClass('hidden');
+    //console.log('QQQ '+ form_elem).attr('id');
     $.fn.zato.data_table._create_edit('edit', 'Update the file transfer channel', id);
 }
 
@@ -113,27 +116,27 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
 
     // 4
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
-    row += String.format('<td>{0}</td>', item.is_active);
-    row += String.format('<td>{0}</td>', item.service_list);
+    row += String.format("<td class='ignore'>{0}</td>", item.is_active);
+    row += String.format("<td class='ignore'>{0}</td>", item.service_list);
 
     // 5
-    row += String.format('<td>{0}</td>', item.topic_list);
-    row += String.format('<td>{0}</td>', item.read_on_pickup);
+    row += String.format("<td class='ignore'>{0}</td>", item.topic_list);
+    row += String.format("<td class='ignore'>{0}</td>", item.read_on_pickup);
 
     // 6
-    row += String.format('<td>{0}</td>', item.parse_on_pickup);
-    row += String.format('<td>{0}</td>', item.parse_with);
-    row += String.format('<td>{0}</td>', item.delete_after_pickup);
+    row += String.format("<td class='ignore'>{0}</td>", item.parse_on_pickup);
+    row += String.format("<td class='ignore'>{0}</td>", item.parse_with);
+    row += String.format("<td class='ignore'>{0}</td>", item.delete_after_pickup);
 
     // 7
-    row += String.format('<td>{0}</td>', item.is_internal);
-    row += String.format('<td>{0}</td>', item.source_type);
-    row += String.format('<td>{0}</td>', item.ftp_source_id);
+    row += String.format("<td class='ignore'>{0}</td>", item.is_internal);
+    row += String.format("<td class='ignore'>{0}</td>", item.source_type);
+    row += String.format("<td class='ignore'>{0}</td>", item.ftp_source_id);
 
     // 8
-    row += String.format('<td>{0}</td>', item.sftp_source_id);
-    row += String.format('<td>{0}</td>', item.file_patterns);
-    row += String.format('<td>{0}</td>', item.scheduler_job_id);
+    row += String.format("<td class='ignore'>{0}</td>", item.sftp_source_id);
+    row += String.format("<td class='ignore'>{0}</td>", item.file_patterns);
+    row += String.format("<td class='ignore'>{0}</td>", item.scheduler_job_id);
 
     if(include_tr) {
         row += '</tr>';
