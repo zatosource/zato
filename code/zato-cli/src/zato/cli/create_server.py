@@ -130,8 +130,8 @@ return_tracebacks=True
 default_error_message="An error has occurred"
 startup_callable=
 return_json_schema_errors=False
-ipc_tcp_start_port=34567
 sftp_genkey_command=dropbearkey
+posix_ipc_skip_platform=darwin
 
 [http]
 methods_allowed=GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS

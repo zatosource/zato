@@ -621,7 +621,8 @@ class PubSub(object):
                     if self.server.is_first_worker:
 
                         # Store in shared RAM information that our process handles this key
-                        self.server.server_startup_ipc.set_pubsub_pid(self.server.pid)
+                        if self.server.has_posix_ipc:
+                            self.server.server_startup_ipc.set_pubsub_pid(self.server.pid)
 
                         config.server_pid = self.server.pid
                         config.server_name = self.server.name
@@ -634,9 +635,10 @@ class PubSub(object):
                     # in RAM the mapping of sub_key -> server_pid, so we can safely read it here to add
                     # a subscription server.
                     else:
-                        config.server_pid = self.server.server_startup_ipc.get_pubsub_pid()
-                        config.server_name = self.server.name
-                        self.set_sub_key_server(config)
+                        if self.server.has_posix_ipc:
+                            config.server_pid = self.server.server_startup_ipc.get_pubsub_pid()
+                            config.server_name = self.server.name
+                            self.set_sub_key_server(config)
 
 # ################################################################################################################################
 
