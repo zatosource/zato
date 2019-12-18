@@ -290,6 +290,7 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
     var fields = $.fn.zato.form.serialize(form);
     var skip_boolean = ['in_lb']; // A list of boolean fields that should be treated as though they were regular text
 
+    /*
     for(item_attr in instance) {
         console.log('Item attr -> `'+ item_attr +'`');
     }
@@ -297,13 +298,14 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
     for(field_name in fields) {
         console.log('Field -> `'+ field_name +'`');
     }
+    */
 
     for(field_name in fields) {
-        //console.log('Field -> `'+ field_name +'`');
+        // console.log('Field -> `'+ field_name +'`');
         if(field_name.indexOf(name_prefix) === 0 || field_name == 'id') {
             field_name = field_name.replace(name_prefix, '');
             for(item_attr in instance) {
-                //console.log('Item attr -> `'+ item_attr +'`');
+                // console.log('Item attr -> `'+ item_attr +'`');
                 if(item_attr == field_name) {
                     value = instance[item_attr];
                     console.log('Field/value: `'+ item_attr + '` `'+ value +'`');
@@ -703,11 +705,20 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
             value = html_elem.is(':checked');
         }
 
+        else if(html_elem.attr('class') == 'multirow') {
+            // $('div[class="multirow-added"]').remove();
+            let _rows = form.find('[name="'+ prefix+name +'"]');
+            console.log('FFF '+ prefix+name);
+            console.log('FFF '+ _rows.length);
+        }
+
         else {
             value = elem.value;
         }
 
-        console.log('Creating elem from: `'+ name +'` and `'+ value +'`');
+        //console.log('Creating elem from: `'+ name +'` and `'+ value +'`');
+
+        //console.log('BBB '+ name +' '+ html_elem.attr('class'));
 
         instance[name] = value
 
@@ -785,7 +796,7 @@ $.fn.zato.data_table.setup_forms = function(attrs) {
 
         });
 
-        // Doh, not exactly the cleanest approach.
+        // Hm, not exactly the cleanest approach.
         if(action) {
             form_id = '#edit-form';
         }
@@ -851,7 +862,6 @@ $.fn.zato.data_table.setup_forms = function(attrs) {
 
         let button_add = $.fn.zato.data_table.multirow.get_button(row_id, elem_id, '+', true);
         button_add.insertAfter(elem);
-
     }
 }
 
@@ -952,8 +962,7 @@ $.fn.zato.data_table.multirow.populate_select_field = function(field_name, sourc
 $.fn.zato.data_table.on_submit = function(action) {
     var form = $('#' + action +'-form');
     var callback = function(data, status) {
-            return $.fn.zato.data_table.on_submit_complete(data,
-                status, action);
+            return $.fn.zato.data_table.on_submit_complete(data, status, action);
         }
 
     if($.fn.zato.data_table.before_submit_hook) {
@@ -970,6 +979,9 @@ $.fn.zato.data_table.on_submit = function(action) {
 $.fn.zato.data_table.on_submit_complete = function(data, status, action) {
 
     if(status == 'success') {
+
+        console.log('CCC '+ data.responseText);
+
         var json = $.parseJSON(data.responseText);
         var include_tr = true ? action == 'create' : false;
         var row = $.fn.zato.data_table.add_row(json, action, $.fn.zato.data_table.new_row_func, include_tr);
