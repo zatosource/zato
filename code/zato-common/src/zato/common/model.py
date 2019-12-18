@@ -30,6 +30,7 @@ class FileTransferChannel(object):
         self.topic_list = None    # type: list
         self.parse_with = None    # type: str
         self.ftp_source_id = None # type: int
+        self.line_by_line = None  # type: bool
         self.file_patterns = None # type: str
 
         self.read_on_pickup = None  # type: bool
