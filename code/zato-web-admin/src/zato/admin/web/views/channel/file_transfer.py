@@ -35,20 +35,28 @@ class Index(_Index):
             'parse_on_pickup', 'delete_after_pickup', 'ftp_source_id', 'sftp_source_id', 'scheduler_job_id'
         output_repeated = True
 
+# ################################################################################################################################
+
     def handle(self):
         return {
             'create_form': CreateForm(req=self.req),
             'edit_form': EditForm(prefix='edit', req=self.req),
         }
 
+# ################################################################################################################################
+
     def on_before_append_item(self, item):
         # type: (FileTransferChannel) -> FileTransferChannel
 
         if item.service_list:
-            item.service_list_json = dumps(sorted(item.service_list))
+            item.service_list = item.service_list if isinstance(item.service_list, list) else [item.service_list]
+            item.service_list = sorted(item.service_list)
+            item.service_list_json = dumps(item.service_list)
 
         if item.topic_list:
-            item.topic_list_json = dumps(sorted(item.topic_list))
+            item.topic_list = item.topic_list if isinstance(item.topic_list, list) else [item.topic_list]
+            item.topic_list = sorted(item.topic_list)
+            item.topic_list_json = dumps(item.topic_list)
 
         return item
 
@@ -71,6 +79,16 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['is_outconn'] = False
         initial_input_dict['sec_use_rbac'] = False
         initial_input_dict['pool_size'] = 1
+
+
+    def pre_process_item(self, name, value):
+        if name in ('service_list', 'topic_list'):
+            if value:
+                if isinstance(value, list):
+                    value = sorted(set(elem for elem in value))
+                else:
+                    value = [value]
+        return value
 
     def success_message(self, item):
         return 'Successfully {} file transfer channel `{}`'.format(self.verb, item.name)

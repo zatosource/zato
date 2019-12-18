@@ -906,7 +906,7 @@ $.fn.zato.data_table.multirow.add_row = function(row_id, elem_id, is_add) {
         // instead, we need to clear it out.
         if(existing_size == 1) {
             let first = $(existing[0]);
-            first.find('option:selected').remove();
+            first.find('option:selected').removeAttr('selected');
             return;
         }
 
