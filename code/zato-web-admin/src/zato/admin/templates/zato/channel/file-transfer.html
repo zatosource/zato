@@ -165,12 +165,16 @@
                             {% elif item.source_type == "ftp" %}
                                 FTP
                             {% elif item.source_type == "sftp" %}
-                                <a href="{% url "out-sftp" %}?cluster={{ cluster_id}}&amp;type_=outconn-sftp&amp;query={{ item.sftp_source_id }}">{{ item.sftp_source_id }}</a>
+                                <a href="{% url "out-sftp" %}?cluster={{ cluster_id}}&amp;type_=outconn-sftp&amp;query={{ item.sftp_source_name }}">{{ item.sftp_source_name }}</a>
                             {% endif %}
                         </td>
 
                         {% comment %} 2 {% endcomment %}
-                        <td>{{ item.pickup_from }}</td>
+                        <td>
+                            {{ item.pickup_from }}
+                            <br/>
+                            {{ item.file_patterns }}
+                        </td>
                         <td>{{ item.move_processed_to }}</td>
 
                         {% comment %} 3 {% endcomment %}
