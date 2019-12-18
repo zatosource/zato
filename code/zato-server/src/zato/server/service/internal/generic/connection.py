@@ -156,7 +156,7 @@ class Delete(AdminService):
 class GetList(AdminService):
     """ Returns a list of generic connections by their type; includes pagination.
     """
-    _filter_by = GenericConnection.name,
+    _filter_by = ModelGenericConn.name,
 
     class SimpleIO(GetListAdminSIO):
         input_required = ('cluster_id',)
@@ -170,20 +170,31 @@ class GetList(AdminService):
 # ################################################################################################################################
 
     def _enrich_conn_dict(self, conn_dict):
-        for key, service_id in conn_dict.items():
-            if service_id:
+        for key, value in conn_dict.items():
+
+            if value:
+
                 if key.endswith('_service_id'):
                     prefix = key.split('_service_id')[0]
                     service_attr = prefix + '_service_name'
                     try:
                         service_name = self.invoke('zato.service.get-by-id', {
                             'cluster_id': self.request.input.cluster_id,
-                            'id': service_id,
+                            'id': value,
                         })['zato_service_get_by_name_response']['name']
                     except Exception:
                         pass
                     else:
                         conn_dict[service_attr] = service_name
+
+                elif key == 'ftp_source_id':
+                    pass
+
+                elif key == 'sftp_source_id':
+                    config_dict = self.server.config.get_config_by_item_id('out_sftp', 16)
+                    print()
+                    print(111, config_dict)
+                    print()
 
 # ################################################################################################################################
 # ################################################################################################################################
