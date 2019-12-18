@@ -37,8 +37,10 @@ class FileTransferChannel(object):
         self.sftp_source_id = None  # type: int
         self.parse_on_pickup = None # type: bool
 
-        self.service_list_json = None  # type: str
-        self.topic_list_json = None    # type: str
+        self.service_list_json = None # type: str
+        self.topic_list_json = None   # type: str
+        self.ftp_source_name = None   # type: str
+        self.sftp_source_name = None  # type: str
 
         self.scheduler_job_id = None    # type: int
         self.move_processed_to = None   # type: str
