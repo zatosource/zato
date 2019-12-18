@@ -52,6 +52,13 @@ extra_delete_attrs = ['type_']
 hook = {}
 
 # ################################################################################################################################
+
+config_dict_id_name_outconnn = {
+    'ftp_source': 'out_ftp',
+    'sftp_source': 'out_sftp',
+}
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _CreateEditSIO(AdminSIO):
@@ -170,6 +177,11 @@ class GetList(AdminService):
 # ################################################################################################################################
 
     def _enrich_conn_dict(self, conn_dict):
+        # type: (dict)
+
+        # New items that will be potentially added to conn_dict
+        to_add = {}
+
         for key, value in conn_dict.items():
 
             if value:
@@ -187,14 +199,16 @@ class GetList(AdminService):
                     else:
                         conn_dict[service_attr] = service_name
 
-                elif key == 'ftp_source_id':
-                    pass
+                else:
+                    for id_name_base, out_name in config_dict_id_name_outconnn.items():
+                        item_id = '{}_id'.format(id_name_base)
+                        if key == item_id:
+                            config_dict = self.server.config.get_config_by_item_id(out_name, value)
+                            item_name = '{}_name'.format(id_name_base)
+                            to_add[item_name] = config_dict['name']
 
-                elif key == 'sftp_source_id':
-                    config_dict = self.server.config.get_config_by_item_id('out_sftp', 16)
-                    print()
-                    print(111, config_dict)
-                    print()
+        if to_add:
+            conn_dict.update(to_add)
 
 # ################################################################################################################################
 # ################################################################################################################################

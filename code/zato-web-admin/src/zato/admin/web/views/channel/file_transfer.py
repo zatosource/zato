@@ -32,7 +32,8 @@ class Index(_Index):
         input_required = 'cluster_id', 'type_'
         output_required = 'id', 'name', 'is_active', 'source_type', 'pickup_from'
         output_optional = 'service_list', 'topic_list', 'move_processed_to', 'file_patterns', 'parse_with', 'read_on_pickup', \
-            'parse_on_pickup', 'delete_after_pickup', 'ftp_source_id', 'sftp_source_id', 'scheduler_job_id'
+            'parse_on_pickup', 'delete_after_pickup', 'ftp_source_id', 'sftp_source_id', 'scheduler_job_id', \
+            'ftp_source_name', 'sftp_source_name'
         output_repeated = True
 
 # ################################################################################################################################
