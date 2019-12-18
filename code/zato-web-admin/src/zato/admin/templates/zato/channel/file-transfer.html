@@ -35,7 +35,7 @@
             '_source_html',
 
             {% comment %} 2 {% endcomment %}
-            'pickup_from',
+            '_pickup_from_html',
             'move_processed_to',
 
             {% comment %} 3 {% endcomment %}
@@ -71,6 +71,9 @@
             'service_list_json',
             'topic_list_json',
             'line_by_line',
+
+            {% comment %} 10 {% endcomment %}
+            'pickup_from',
         ]
     }
     </script>
@@ -145,6 +148,9 @@
                         {% comment %} 9 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 9 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
 
                 </thead>
@@ -227,6 +233,9 @@
                         <td class='ignore'>{{ item.service_list_json }}</td>
                         <td class='ignore'>{{ item.topic_list_json }}</td>
                         <td class='ignore'>{{ item.line_by_line }}</td>
+
+                        {% comment %} 10 {% endcomment %}
+                        <td class='ignore'>{{ item.pickup_from }}</td>
 
                     </tr>
                 {% endfor %}
