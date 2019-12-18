@@ -60,6 +60,10 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
+SKIP_VALUE = 'zato.skip.value'
+
+# ################################################################################################################################
+
 def parse_response_data(response):
     """ Parses out data and metadata out an internal API call response.
     """
@@ -481,7 +485,9 @@ class CreateEdit(_BaseView):
             for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
                 if name not in input_dict and name not in self.input_dict:
                     value = self.input.get(name)
-                    input_dict[name] = value
+                    value = self.pre_process_item(name, value)
+                    if value != SKIP_VALUE:
+                        input_dict[name] = value
 
             self.input_dict.update(input_dict)
 
@@ -525,6 +531,9 @@ class CreateEdit(_BaseView):
 
         except Exception:
             return HttpResponseServerError(format_exc())
+
+    def pre_process_item(self, name, value):
+        return value
 
     def success_message(self, item):
         raise NotImplementedError('Must be implemented by a subclass')
