@@ -35,11 +35,11 @@
             '_source_html',
 
             {% comment %} 2 {% endcomment %}
-            '_recipient',
             'pickup_from',
+            'move_processed_to',
 
             {% comment %} 3 {% endcomment %}
-            'move_processed_to',
+            '_recipient',
             '_edit',
             '_delete',
 
@@ -70,6 +70,7 @@
             {% comment %} 9 {% endcomment %}
             'service_list_json',
             'topic_list_json',
+            'line_by_line',
         ]
     }
     </script>
@@ -109,11 +110,11 @@
                         <th><a href="#">Source</a></th>
 
                         {% comment %} 2 {% endcomment %}
-                        <th><a href="#">RCP</a></th>
                         <th><a href="#">From</a></th>
+                        <th><a href="#">To</a></th>
 
                         {% comment %} 3 {% endcomment %}
-                        <th><a href="#">To</a></th>
+                        <th style="min-width:30%"><a href="#">Recipients</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
 
@@ -144,6 +145,7 @@
                         {% comment %} 9 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -157,20 +159,39 @@
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.source_html }}</td>
+                        <td>
+                            {% if item.source_type == "local" %}
+                                Local
+                            {% elif item.source_type == "ftp" %}
+                                FTP
+                            {% elif item.source_type == "sftp" %}
+                                <a href="{% url "out-sftp" %}?cluster={{ cluster_id}}&amp;type_=outconn-sftp&amp;query={{ item.sftp_source_id }}">{{ item.sftp_source_id }}</a>
+                            {% endif %}
+                        </td>
 
                         {% comment %} 2 {% endcomment %}
+                        <td>{{ item.pickup_from }}</td>
+                        <td>{{ item.move_processed_to }}</td>
+
+                        {% comment %} 3 {% endcomment %}
+
                         <td>
-                            {% if item.service_list %}
-                                <a href="{% url "service-overview" item.service_list %}?cluster={{ cluster_id }}">{{ item.service_list }}</a>
+                            {% if item.service_list or item.topic_list %}
+                                {% for service_name in item.service_list %}
+                                    <span class="form_hint">S</span>→
+                                        <a href="{% url "service-overview" service_name %}?cluster={{ cluster_id }}">{{ service_name }}</a>
+                                    <br/>
+                                {% endfor %}
+                                {% for topic_name in item.topic_list %}
+                                    <span class="form_hint">T</span>→
+                                        <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id}}&amp;query={{ topic_name }}">{{ topic_name }}</a>
+                                    <br/>
+                                {% endfor %}
                             {% else %}
                                 <span class="form_hint">---</span>
                             {% endif %}
                         </td>
-                        <td>{{ item.pickup_from }}</td>
 
-                        {% comment %} 3 {% endcomment %}
-                        <td>{{ item.move_processed_to }}</td>
                         <td><a href="javascript:$.fn.zato.channel.file_transfer.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.channel.file_transfer.delete_('{{ item.id }}')">Delete</a></td>
 
@@ -201,6 +222,7 @@
                         {% comment %} 9 {% endcomment %}
                         <td class='ignore'>{{ item.service_list_json }}</td>
                         <td class='ignore'>{{ item.topic_list_json }}</td>
+                        <td class='ignore'>{{ item.line_by_line }}</td>
 
                     </tr>
                 {% endfor %}
@@ -239,8 +261,6 @@
 
                             |
 
-                            On pickup:
-
                             <label>
                             Read
                             {{ create_form.read_on_pickup }}
@@ -251,17 +271,20 @@
                             {{ create_form.parse_on_pickup }}
                             </label>
 
-                            |
-
-                            After pickup:
                             <label>
                             Delete
                             {{ create_form.delete_after_pickup }}
                             </label>
 
+                            |
+
+                            <label>
+                            Line-by-line
+                            {{ create_form.line_by_line }}
+                            </label>
+
                             </td>
                         </tr>
-
 
                         <tr>
                             <td style="vertical-align:middle">
@@ -367,8 +390,6 @@
 
                             |
 
-                            On pickup:
-
                             <label>
                             Read
                             {{ edit_form.read_on_pickup }}
@@ -379,17 +400,20 @@
                             {{ edit_form.parse_on_pickup }}
                             </label>
 
-                            |
-
-                            After pickup:
                             <label>
                             Delete
                             {{ edit_form.delete_after_pickup }}
                             </label>
 
+                            |
+
+                            <label>
+                            Line-by-line
+                            {{ edit_form.line_by_line }}
+                            </label>
+
                             </td>
                         </tr>
-
 
                         <tr>
                             <td style="vertical-align:middle">
