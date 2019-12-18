@@ -16,6 +16,7 @@ $(document).ready(function() {
     $('#data-table').tablesorter();
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.ChannelFileTransfer;
     $.fn.zato.data_table.new_row_func = $.fn.zato.channel.file_transfer.data_table.new_row;
+    $.fn.zato.data_table.before_submit_hook = $.fn.zato.channel.file_transfer.before_submit_hook;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'source_type', 'pickup_from', 'file_patterns']);
 
@@ -28,6 +29,15 @@ $(document).ready(function() {
     });
 
 })
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.file_transfer.before_submit_hook = function(_form) {
+    let form = $(_form);
+    let service_list = form.find('div[class="multirow-added"]');
+    console.log('EEE '+ service_list.length);
+    return true;
+}
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -94,8 +104,8 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     let cluster_id = $(document).getUrlParam('cluster');
 
     let source_html = $.fn.zato.empty_value;
-    let pickup_from_html = $.fn.zato.empty_value;
-    let recipients_html = $.fn.zato.empty_value;
+    let pickup_from_html = '';
+    let recipients_html = '';
 
     if(item.source_type == 'local') {
         source_html = 'Local';
@@ -106,6 +116,22 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     else if(item.source_type == 'sftp') {
         source_html = `<a href="/zato/outgoing/sftp/?cluster=${item.cluster_id}&amp;type_=outconn-sftp&amp;query=${item.sftp_source_name}">${item.sftp_source_name}</a>`;
     }
+
+    pickup_from_html += item.pickup_from;
+    pickup_from_html += '<br/>';
+    pickup_from_html += item.file_patterns;
+
+    console.log('QQQ '+ item.service_list);
+
+    /*
+    if(item.service_list || item.topic_list) {
+
+        for(let idx=0; idx < item.service_list.length; idx++) {
+            let service_name = item.service_list[idx];
+            console.log('QQQ '+ service_name);
+        }
+    }
+    */
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
