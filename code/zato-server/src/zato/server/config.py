@@ -312,10 +312,28 @@ class ConfigStore(object):
 
     def get_config_by_item_id(self, attr_name, item_id):
         # type: (str, object) -> dict
+
+        # Imported here to avoid circular references
+        from zato.server.connection.ftp import FTPStore
+
         item_id = int(item_id)
         config = getattr(self, attr_name) # type: dict
-        for value in config.values():
-            config_dict = value['config'] # type: dict
+
+        if isinstance(config, FTPStore):
+            needs_inner_config = False
+            values = config.conn_params.values()
+            logger.warn('QQQ %s %s', attr_name, item_id)
+            logger.warn('WWW %s', values)
+        else:
+            needs_inner_config = True
+            values = config.values()
+
+        for value in values:
+            if needs_inner_config:
+                config_dict = value['config']
+            else:
+                config_dict = value
+
             if config_dict['id'] == item_id:
                 return config_dict
 

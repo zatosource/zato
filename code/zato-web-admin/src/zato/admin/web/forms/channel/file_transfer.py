@@ -48,6 +48,9 @@ class CreateForm(forms.Form):
     scheduler_job_id = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
     line_by_line = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
+    ftp_source_name = forms.HiddenInput()
+    sftp_source_name = forms.HiddenInput()
+
     def __init__(self, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
         add_select(self, 'source_type', _source_type)
