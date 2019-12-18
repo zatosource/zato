@@ -74,6 +74,8 @@
 
             {% comment %} 10 {% endcomment %}
             'pickup_from',
+            'ftp_source_name',
+            'sftp_source_name',
         ]
     }
     </script>
@@ -150,7 +152,9 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
-                        {% comment %} 9 {% endcomment %}
+                        {% comment %} 10 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
                 </thead>
@@ -169,9 +173,9 @@
                             {% if item.source_type == "local" %}
                                 Local
                             {% elif item.source_type == "ftp" %}
-                                FTP
+                                <a href="{% url "out-ftp" %}?cluster={{ cluster_id }}&amp;query={{ item.ftp_source_name }}">{{ item.ftp_source_name }}</a>
                             {% elif item.source_type == "sftp" %}
-                                <a href="{% url "out-sftp" %}?cluster={{ cluster_id}}&amp;type_=outconn-sftp&amp;query={{ item.sftp_source_name }}">{{ item.sftp_source_name }}</a>
+                                <a href="{% url "out-sftp" %}?cluster={{ cluster_id }}&amp;type_=outconn-sftp&amp;query={{ item.sftp_source_name }}">{{ item.sftp_source_name }}</a>
                             {% endif %}
                         </td>
 
@@ -236,6 +240,8 @@
 
                         {% comment %} 10 {% endcomment %}
                         <td class='ignore'>{{ item.pickup_from }}</td>
+                        <td class='ignore'>{{ item.ftp_source_name }}</td>
+                        <td class='ignore'>{{ item.sftp_source_name }}</td>
 
                     </tr>
                 {% endfor %}
@@ -375,6 +381,8 @@
                             </td>
                         </tr>
                     </table>
+                    <input type="hidden" id="id_ftp_source_name" name="ftp_source_name" />
+                    <input type="hidden" id="id_sftp_source_name" name="sftp_source_name" />
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>
@@ -504,6 +512,8 @@
                             </td>
                         </tr>
                     </table>
+                    <input type="hidden" id="id_edit-ftp_source_name" name="ftp_source_name" />
+                    <input type="hidden" id="id_edit-sftp_source_name" name="sftp_source_name" />
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                 </form>

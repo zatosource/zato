@@ -36,8 +36,8 @@ class FTPStore(object):
         self._lock = RLock()
 
     def _add(self, params):
-        """ Adds one set of params to the list of connection parameters. Must not
-        be called without holding onto self._lock
+        """ Adds one set of params to the list of connection parameters.
+        Must not be called without holding onto self._lock
         """
         self.conn_params[params.name] = params
 
@@ -57,8 +57,7 @@ class FTPStore(object):
                 self._add(params)
 
     def get_conn_names(self):
-        """ Returns a list of UTF-8 connection names this store contains,
-        sorted in ascending order.
+        """ Returns a list of UTF-8 connection names this store contains, sorted in ascending order.
         """
         with self._lock:
             return [elem.encode('utf-8') for elem in sorted(self.conn_params)]
