@@ -72,6 +72,9 @@ $.fn.zato.channel.file_transfer.edit = function(id) {
     let source_type = $('#id_edit-'+ instance.source_type +'_source_id');
     source_type.removeClass('hidden');
 
+    $('#id_edit-ftp_source_name').val(instance.ftp_source_name);
+    $('#id_edit-sftp_source_name').val(instance.sftp_source_name);
+
     $.fn.zato.data_table.multirow.remove_multirow_added();
     $.fn.zato.data_table.edit('edit', 'Update the file transfer channel', id, false);
     $.fn.zato.data_table.multirow.populate_select_field('service_list', JSON.parse(instance.service_list_json));
@@ -81,24 +84,27 @@ $.fn.zato.channel.file_transfer.edit = function(id) {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, include_tr) {
-    var row = '';
+    let row = '';
 
     if(include_tr) {
         row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
     }
 
-    var is_active = item.is_active == true;
-    var cluster_id = $(document).getUrlParam('cluster');
+    let is_active = item.is_active == true;
+    let cluster_id = $(document).getUrlParam('cluster');
 
-    var service_link = $.fn.zato.empty_value;
-    var topic_link = $.fn.zato.empty_value;
+    let source_html = $.fn.zato.empty_value;
+    let pickup_from_html = $.fn.zato.empty_value;
+    let recipients_html = $.fn.zato.empty_value;
 
-    if(item.service_name) {
-        service_link = $.fn.zato.data_table.service_text(item.service_name, cluster_id);
+    if(item.source_type == 'local') {
+        source_html = 'Local';
     }
-
-    if(item.topic_name) {
-        topic_link = $.fn.zato.data_table.topic_text(item.topic_name, cluster_id);
+    else if(item.source_type == 'ftp') {
+        source_html = `<a href="/zato/outgoing/ftp/?cluster=${item.cluster_id}&amp;query=${item.ftp_source_name}">${item.ftp_source_name}</a>`;
+    }
+    else if(item.source_type == 'sftp') {
+        source_html = `<a href="/zato/outgoing/sftp/?cluster=${item.cluster_id}&amp;type_=outconn-sftp&amp;query=${item.sftp_source_name}">${item.sftp_source_name}</a>`;
     }
 
     row += "<td class='numbering'>&nbsp;</td>";
@@ -107,14 +113,14 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     // 1
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', item.source_html);
+    row += String.format('<td>{0}</td>', source_html);
 
     // 2
-    row += String.format('<td>{0}</td>', item.pickup_from ? item.pickup_from : $.fn.zato.empty_value);
+    row += String.format('<td>{0}</td>', pickup_from_html);
     row += String.format('<td>{0}</td>', item.move_processed_to ? item.move_processed_to : $.fn.zato.empty_value);
 
     // 3
-    row += String.format('<td>{0}</td>', service_link);
+    row += String.format('<td>{0}</td>', recipients_html);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.file_transfer.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.channel.file_transfer.delete_({0});'>Delete</a>", item.id));
 
@@ -146,6 +152,11 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     row += String.format("<td class='ignore'>{0}</td>", item.service_list_json);
     row += String.format("<td class='ignore'>{0}</td>", item.topic_list_json);
     row += String.format("<td class='ignore'>{0}</td>", item.line_by_line);
+
+    // 10
+    row += String.format("<td class='ignore'>{0}</td>", item.pickup_from);
+    row += String.format("<td class='ignore'>{0}</td>", item.ftp_source_name);
+    row += String.format("<td class='ignore'>{0}</td>", item.sftp_source_name);
 
     if(include_tr) {
         row += '</tr>';
