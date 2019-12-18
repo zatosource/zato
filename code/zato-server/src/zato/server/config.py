@@ -322,8 +322,6 @@ class ConfigStore(object):
         if isinstance(config, FTPStore):
             needs_inner_config = False
             values = config.conn_params.values()
-            logger.warn('QQQ %s %s', attr_name, item_id)
-            logger.warn('WWW %s', values)
         else:
             needs_inner_config = True
             values = config.values()
