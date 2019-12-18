@@ -75,6 +75,7 @@ $.fn.zato.channel.file_transfer.edit = function(id) {
     $.fn.zato.data_table.multirow.remove_multirow_added();
     $.fn.zato.data_table.edit('edit', 'Update the file transfer channel', id, false);
     $.fn.zato.data_table.multirow.populate_select_field('service_list', JSON.parse(instance.service_list_json));
+    $.fn.zato.data_table.multirow.populate_select_field('topic_list', JSON.parse(instance.topic_list_json));
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -109,11 +110,11 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     row += String.format('<td>{0}</td>', item.source_html);
 
     // 2
-    row += String.format('<td>{0}</td>', service_link);
     row += String.format('<td>{0}</td>', item.pickup_from ? item.pickup_from : $.fn.zato.empty_value);
+    row += String.format('<td>{0}</td>', item.move_processed_to ? item.move_processed_to : $.fn.zato.empty_value);
 
     // 3
-    row += String.format('<td>{0}</td>', item.move_processed_to ? item.move_processed_to : $.fn.zato.empty_value);
+    row += String.format('<td>{0}</td>', service_link);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.file_transfer.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.channel.file_transfer.delete_({0});'>Delete</a>", item.id));
 
@@ -144,6 +145,7 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     // 9
     row += String.format("<td class='ignore'>{0}</td>", item.service_list_json);
     row += String.format("<td class='ignore'>{0}</td>", item.topic_list_json);
+    row += String.format("<td class='ignore'>{0}</td>", item.line_by_line);
 
     if(include_tr) {
         row += '</tr>';

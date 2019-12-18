@@ -38,13 +38,15 @@ class CreateForm(forms.Form):
 
     read_on_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     parse_on_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    delete_after_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
+    delete_after_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     source_type = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:15%'}))
+
     ftp_source_id = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:84%', 'class':'hidden'}))
     sftp_source_id = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:84%', 'class':'hidden'}))
 
     scheduler_job_id = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
+    line_by_line = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
     def __init__(self, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
