@@ -308,7 +308,7 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
                 // console.log('Item attr -> `'+ item_attr +'`');
                 if(item_attr == field_name) {
                     value = instance[item_attr];
-                    console.log('Field/value: `'+ item_attr + '` `'+ value +'`');
+                    // console.log('Field/value: `'+ item_attr + '` `'+ value +'`');
                     form_elem_name = id_prefix + field_name;
                     form_elem = $(form_elem_name);
                     if($.fn.zato.like_bool(value)) {
@@ -679,10 +679,10 @@ $.fn.zato.data_table.edit = function(action, title, id, remove_multirow) {
 
 $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) {
 
-    var instance = new $.fn.zato.data_table.class_();
-    var form = $(String.format('#{0}-form', action));
+    let instance = new $.fn.zato.data_table.class_();
+    let form = $(String.format('#{0}-form', action));
 
-    var prefix;
+    let prefix;
     if(action == 'edit') {
         prefix = action + '-';
     }
@@ -690,11 +690,12 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
         prefix = '';
     }
 
-    var name = '';
-    var id = '';
-    var tag_name = '';
-    var html_elem;
-    var value = '';
+    let name = '';
+    let id = '';
+    let tag_name = '';
+    let html_elem;
+    let value = '';
+    let multirow_visited = new Map();
 
     $.each(form.serializeArray(), function(idx, elem) {
         name = elem.name.replace(prefix, '');
@@ -706,19 +707,28 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
         }
 
         else if(html_elem.attr('class') == 'multirow') {
-            // $('div[class="multirow-added"]').remove();
-            let _rows = form.find('[name="'+ prefix+name +'"]');
-            console.log('FFF '+ prefix+name);
-            console.log('FFF '+ _rows.length);
+            let _name_prefixed = prefix+name;
+
+            if(!multirow_visited.get(_name_prefixed)) {
+
+                let _rows = form.find('[name="'+ _name_prefixed +'"]');
+                let _value = [];
+
+                for(var idx=0; idx<_rows.length; idx++) {
+                    let _row = _rows[idx];
+                    _value.push($(_row).val());
+                }
+                value = _value;
+            }
+            multirow_visited.set(_name_prefixed, true);
+
         }
 
         else {
             value = elem.value;
         }
 
-        //console.log('Creating elem from: `'+ name +'` and `'+ value +'`');
-
-        //console.log('BBB '+ name +' '+ html_elem.attr('class'));
+        console.log('Creating elem from: `'+ name +'` and `'+ value +'`');
 
         instance[name] = value
 
