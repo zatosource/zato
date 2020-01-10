@@ -193,7 +193,7 @@ class Create(_CreateEdit):
             'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
             List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
-            Boolean('rate_limit_check_parent_def')
+            Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac')
         output_required = ('id', 'name')
 
     def handle(self):
@@ -202,7 +202,7 @@ class Create(_CreateEdit):
         DefinitionParser.check_definition_from_input(self.request.input)
 
         input = self.request.input
-        input.sec_use_rbac = input.security_id == ZATO_SEC_USE_RBAC
+        input.sec_use_rbac = input.get('sec_use_rbac') or (input.security_id == ZATO_SEC_USE_RBAC)
         input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
         input.soap_action = input.soap_action if input.soap_action else ''
         input.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
@@ -333,7 +333,7 @@ class Edit(_CreateEdit):
             'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
             List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
-            Boolean('rate_limit_check_parent_def')
+            Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac')
         output_required = 'id', 'name'
 
     def handle(self):
@@ -342,7 +342,7 @@ class Edit(_CreateEdit):
         DefinitionParser.check_definition_from_input(self.request.input)
 
         input = self.request.input
-        input.sec_use_rbac = input.security_id == ZATO_SEC_USE_RBAC
+        input.sec_use_rbac = input.get('sec_use_rbac') or (input.security_id == ZATO_SEC_USE_RBAC)
         input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
         input.soap_action = input.soap_action if input.soap_action else ''
 
