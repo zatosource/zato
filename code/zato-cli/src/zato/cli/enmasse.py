@@ -554,6 +554,9 @@ class DependencyScanner(object):
             if not test_item(item, dep_info.get('condition')):
                 continue
 
+            if item.get('security_id') == 'ZATO_SEC_USE_RBAC':
+                continue
+
             if dep_key not in item:
                 results.add_error(
                     (dep_key, dep_info), ERROR_MISSING_DEP, "{} lacks required {} field: {}", item_type, dep_key, item)
@@ -906,6 +909,9 @@ class ObjectImporter(object):
 
         for field_name, info in iteritems(service_info.object_dependencies):
 
+            if item.get('security_id') == 'ZATO_SEC_USE_RBAC':
+                continue
+
             if item.get(field_name) != info.get('empty_value') and 'id_field' in info:
                 dep_obj = self.object_mgr.find(info['dependent_type'], {
                     info['dependent_field']: item[field_name]
@@ -1036,11 +1042,12 @@ class ObjectManager(object):
 
             dep = self.find(info['dependent_type'], {'id': dep_id})
 
-            if not dep:
-                raise Exception('Dependency not found, name:`{}`, field_name:`{}`, type:`{}`, dep_id:`{}`, dep:`{}`, ' \
-                    'item:`{}`'.format(service_info.name, field_name, info['dependent_type'], dep_id, dep, item))
-            else:
-                item[field_name] = dep[info['dependent_field']]
+            if dep_id != 'ZATO_SEC_USE_RBAC':
+                if not dep:
+                    raise Exception('Dependency not found, name:`{}`, field_name:`{}`, type:`{}`, dep_id:`{}`, dep:`{}`, ' \
+                        'item:`{}`'.format(service_info.name, field_name, info['dependent_type'], dep_id, dep, item))
+                else:
+                    item[field_name] = dep[info['dependent_field']]
 
             # JSON-RPC channels cannot have empty security definitions on exports
             if item_type == 'http_soap' and item['name'].startswith('json.rpc.channel'):
