@@ -71,7 +71,7 @@ chmod +x $VIRTUAL_ENV/bin/py
 mkdir zato_extra_paths
 echo "$(pwd)/zato_extra_paths" >> eggs/easy-install.pth
 
-# Apply patches.
+# Patches common to Python 2 and 3
 patch -p0 -d eggs < patches/butler/__init__.py.diff
 patch -p0 -d eggs < patches/configobj.py.diff
 patch -p0 -d eggs < patches/psycopg2/__init__.py.diff --forward || true
@@ -79,11 +79,20 @@ patch -p0 -d eggs < patches/redis/redis/connection.py.diff
 patch -p0 -d eggs < patches/requests/models.py.diff
 patch -p0 -d eggs < patches/requests/sessions.py.diff
 patch -p0 -d eggs < patches/sqlalchemy/sql/crud.py.diff
+patch -p0 -d eggs < patches/sqlalchemy/dialects/postgresql/pg8000.py.diff
 patch -p0 -d eggs < patches/ws4py/server/geventserver.py.diff
 
+# Python 2-specific patches
 if [ $HAS_PYTHON2 == 1 ]
 then
     patch -p0 -d eggs < patches/jsonpointer/jsonpointer.py.diff
     patch -p0 -d eggs < patches/anyjson/__init__.py.diff
     patch -p0 -d eggs < patches/oauth/oauth.py.diff
+    patch -p0 -d eggs < patches/pg8000/core.py.py2.diff
+fi
+
+# Python 3-specific patches
+if [ $HAS_PYTHON3 == 1 ]
+then
+    patch -p0 -d eggs < patches/pg8000/core.py.py3.diff
 fi
