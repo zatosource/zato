@@ -554,6 +554,9 @@ class DependencyScanner(object):
             if not test_item(item, dep_info.get('condition')):
                 continue
 
+            if item.get('security_id') == 'ZATO_SEC_USE_RBAC':
+                continue
+
             if dep_key not in item:
                 results.add_error(
                     (dep_key, dep_info), ERROR_MISSING_DEP, "{} lacks required {} field: {}", item_type, dep_key, item)
