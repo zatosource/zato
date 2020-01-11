@@ -88,7 +88,7 @@ then
     patch -p0 -d eggs < patches/jsonpointer/jsonpointer.py.diff
     patch -p0 -d eggs < patches/anyjson/__init__.py.diff
     patch -p0 -d eggs < patches/oauth/oauth.py.diff
-    patch -p0 -d eggs < patches/pg8000/core.py.py2.diff
+    patch -p0 -d eggs < patches/pg8000/core.py.py27.diff
 fi
 
 # Python 3-specific patches
