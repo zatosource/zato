@@ -25,14 +25,22 @@ INITIAL_CHOICES = list(iteritems(INITIAL_CHOICES_DICT))[0]
 # ################################################################################################################################
 
 SELECT_SERVICE_FIELDS = [
-    'service_name',
-    'service_id',
-    'service',
     'hook_service_id',
     'hook_service_name',
+    'on_close_service_name',
     'on_connect_service_name',
     'on_message_service_name',
-    'on_close_service_name',
+    'service',
+    'service_id',
+    'service_list',
+    'service_name',
+]
+
+# ################################################################################################################################
+
+SELECT_TOPICS_FIELDS = [
+    'topic_list',
+    'topic_name',
 ]
 
 # ################################################################################################################################
@@ -149,7 +157,12 @@ def add_pubsub_services(form, req, by_id=False, initial_service=None):
 
 # ################################################################################################################################
 
-def add_select_from_service(form, req, service_name, field_names, by_id=True):
+def add_topics(form, req, by_id=True):
+    return add_select_from_service(form, req, 'zato.pubsub.topic.get-list', SELECT_TOPICS_FIELDS, by_id=by_id)
+
+# ################################################################################################################################
+
+def add_select_from_service(form, req, service_name, field_names, by_id=True, service_extra=None):
     if req.zato.cluster_id:
 
         field_names = field_names if isinstance(field_names, list) else [field_names]
@@ -163,7 +176,13 @@ def add_select_from_service(form, req, service_name, field_names, by_id=True):
         field.choices = []
         field.choices.append(INITIAL_CHOICES)
 
-        for item in req.zato.client.invoke(service_name, {'cluster_id': req.zato.cluster_id, }).data:
+        service_request = {'cluster_id': req.zato.cluster_id}
+        service_request.update(service_extra or {})
+
+        response = req.zato.client.invoke(service_name, service_request)
+        response = response.data if isinstance(response.data, list) else response.data.response
+
+        for item in response:
             id_attr = item.id if by_id else item.name
             field.choices.append([id_attr, item.name])
 

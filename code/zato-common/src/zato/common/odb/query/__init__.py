@@ -149,26 +149,40 @@ def internal_channel_list(session, cluster_id):
 
 def _job(session, cluster_id):
     return session.query(
-        Job.id, Job.name, Job.is_active,
-        Job.job_type, Job.start_date, Job.extra,
-        Service.name.label('service_name'), Service.impl_name.label('service_impl_name'),
+        Job.id,
+        Job.name,
+        Job.is_active,
+        Job.job_type,
+        Job.start_date,
+        Job.extra,
+        Service.name.label('service_name'),
+        Service.impl_name.label('service_impl_name'),
         Service.id.label('service_id'),
-        IntervalBasedJob.weeks, IntervalBasedJob.days,
-        IntervalBasedJob.hours, IntervalBasedJob.minutes,
-        IntervalBasedJob.seconds, IntervalBasedJob.repeats,
-        CronStyleJob.cron_definition).\
+        IntervalBasedJob.weeks,
+        IntervalBasedJob.days,
+        IntervalBasedJob.hours,
+        IntervalBasedJob.minutes,
+        IntervalBasedJob.seconds,
+        IntervalBasedJob.repeats,
+        CronStyleJob.cron_definition
+        ).\
         outerjoin(IntervalBasedJob, Job.id==IntervalBasedJob.job_id).\
         outerjoin(CronStyleJob, Job.id==CronStyleJob.job_id).\
         filter(Job.cluster_id==Cluster.id).\
         filter(Job.service_id==Service.id).\
-        filter(Cluster.id==cluster_id).\
-        order_by(Job.name)
+        filter(Cluster.id==cluster_id)
 
 @query_wrapper
-def job_list(session, cluster_id, needs_columns=False):
+def job_list(session, cluster_id, service_name=None, needs_columns=False):
     """ All the scheduler's jobs defined in the ODB.
     """
-    return _job(session, cluster_id)
+    q = _job(session, cluster_id)
+
+    if service_name:
+        q = q.filter(Service.name==service_name)
+
+    return q.\
+        order_by(Job.name)
 
 def job_by_name(session, cluster_id, name):
     """ A scheduler's job fetched by its name.

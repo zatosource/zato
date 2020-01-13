@@ -196,8 +196,8 @@ class _CreateEdit(AdminService):
 class _Get(AdminService):
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'job_type', 'start_date', 'service_id', 'service_name')
-        output_optional = ('extra', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats', 'cron_definition')
+        output_required = 'id', 'name', 'is_active', 'job_type', 'start_date', 'service_id', 'service_name'
+        output_optional = 'extra', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats', 'cron_definition'
         output_repeated = True
         default_value = ''
         date_time_format = scheduler_date_time_format
@@ -213,10 +213,11 @@ class GetList(_Get):
     class SimpleIO(_Get.SimpleIO):
         request_elem = 'zato_scheduler_job_get_list_request'
         response_elem = 'zato_scheduler_job_get_list_response'
-        input_optional = GetListAdminSIO.input_optional
+        input_optional = GetListAdminSIO.input_optional + ('service_name',)
 
     def get_data(self, session):
-        return self._search(job_list, session, self.request.input.cluster_id, False)
+        input = self.request.input
+        return self._search(job_list, session, input.cluster_id, input.get('service_name'), False)
 
     def handle(self):
         with closing(self.odb.session()) as session:

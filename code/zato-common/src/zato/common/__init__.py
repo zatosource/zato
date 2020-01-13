@@ -1218,6 +1218,7 @@ class IPC:
 
     class CONNECTOR:
         class USERNAME:
+            FTP = 'zato.connector.ftp'
             IBM_MQ = 'zato.connector.wmq'
             SFTP   = 'zato.connector.sftp'
 
@@ -1306,6 +1307,7 @@ class GENERIC:
 
     class CONNECTION:
         class TYPE:
+            CHANNEL_FILE_TRANSFER = 'channel-file-transfer'
             DEF_KAFKA = 'def-kafka'
             OUTCONN_IM_SLACK = 'outconn-im-slack'
             OUTCONN_IM_TELEGRAM = 'outconn-im-telegram'
@@ -1457,6 +1459,7 @@ class TELEGRAM:
 # ################################################################################################################################
 
 class SFTP:
+
     class DEFAULT:
         BANDWIDTH_LIMIT = 10
         BUFFER_SIZE = 32768
@@ -1513,6 +1516,24 @@ class MS_SQL:
     ZATO_DIRECT = 'zato+mssql1'
     EXTRA_KWARGS = 'login_timeout', 'appname', 'blocksize', 'use_mars', 'readonly', 'use_tz', 'bytes_to_unicode', \
         'cafile', 'validate_host'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class FILE_TRANSFER:
+
+    SCHEDULER_SERVICE = 'pub.zato.channel.file.transfer'
+
+    class DEFAULT:
+        FILE_PATTERNS = '*'
+
+    class SOURCE_TYPE:
+        LOCAL = NameId('Local', 'local')
+        FTP = NameId('FTP', 'ftp')
+        SFTP = NameId('SFTP', 'sftp')
+
+        def __iter__(self):
+            return iter((self.LOCAL, self.FTP, self.SFTP))
 
 # ################################################################################################################################
 # ################################################################################################################################

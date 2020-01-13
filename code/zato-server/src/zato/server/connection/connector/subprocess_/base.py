@@ -180,9 +180,9 @@ class BaseConnectionContainer(object):
     def set_up_logging(self, config):
 
         logger_conf = config['loggers']['zato_{}'.format(self.conn_type)]
-        wmq_handler_conf = config['handlers'][self.conn_type]
-        del wmq_handler_conf['formatter']
-        wmq_handler_conf.pop('class', False)
+        handler_conf = config['handlers'][self.conn_type]
+        del handler_conf['formatter']
+        handler_conf.pop('class', False)
         formatter_conf = config['formatters']['default']['format']
 
         self.logger = getLogger(logger_conf['qualname'])
@@ -190,14 +190,14 @@ class BaseConnectionContainer(object):
 
         formatter = Formatter(formatter_conf)
 
-        wmq_handler_conf['filename'] = path.abspath(path.join(self.base_dir, wmq_handler_conf['filename']))
-        wmq_handler = RotatingFileHandler(**wmq_handler_conf)
-        wmq_handler.setFormatter(formatter)
+        handler_conf['filename'] = path.abspath(path.join(self.base_dir, handler_conf['filename']))
+        handler = RotatingFileHandler(**handler_conf)
+        handler.setFormatter(formatter)
 
         stdout_handler = StreamHandler(sys.stdout)
         stdout_handler.setFormatter(formatter)
 
-        self.logger.addHandler(wmq_handler)
+        self.logger.addHandler(handler)
         self.logger.addHandler(stdout_handler)
 
 # ################################################################################################################################
@@ -293,7 +293,7 @@ class BaseConnectionContainer(object):
 # ################################################################################################################################
 
     def _on_send_exception(self):
-        msg = 'Exception in _on_OUTGOING_WMQ_SEND (2) `{}`'.format(format_exc())
+        msg = 'Exception in _on_OUTGOING_SEND (2) `{}`'.format(format_exc())
         self.logger.warn(msg)
         return Response(_http_503, msg)
 
@@ -549,7 +549,7 @@ class BaseConnectionContainer(object):
                 self._create_definition(msg)
             except Exception as e:
                 self.logger.warn(format_exc())
-                return Response(_http_503, str(e.message))
+                return Response(_http_503, str(e.args[0]))
             else:
                 return Response()
 

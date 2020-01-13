@@ -11,86 +11,61 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Unlike zato.common.odb.model - this place is where DB-independent models are kept,
 # regardless if they're backed by an SQL database or not.
 
-# stdlib
-from logging import getLogger
+# ################################################################################################################################
+# ################################################################################################################################
 
-# Zato
-from zato.common.util import make_repr
-
-logger = getLogger(__name__)
-
-_key_func_dict = {
-    'tx_id': None,
-    'name': None,
-    'target': None,
-    'target_type': None,
-    'on_delivery_success': None,
-    'on_delivery_failed': None,
-
-    'expire_arch_success_after': int,
-    'expire_arch_failed_after': int,
-    'check_after': int,
-    'retry_repeats': int,
-    'retry_seconds': int,
-
-}
-
-class DeliveryItem(object):
-    """ A container for config pieces regarding a particular delivery effort.
-    """
+class FileTransferChannel(object):
     def __init__(self):
-        self.name = None
-        self.target = None
-        self.target_type = None
-        self.tx_id = None
-        self.business_payload = None
-        self.expire_after = None
-        self.expire_arch_success_after = None
-        self.expire_arch_failed_after = None
-        self.special_case_weekends = False
-        self.check_after = None
-        self.retry_repeats = None
-        self.retry_seconds = None
-        self.invoke_func = None
-        self.invoke_args = None
-        self.invoke_kwargs = None
-        self.delivery_key = None
-        self.payload_key = None
-        self.by_target_type_key = None
-        self.uq_by_target_type_key = None
-        self.on_delivery_success = None
-        self.on_delivery_failed = None
+        self._config_attrs = []
+        self.id   = None      # type: int
+        self.name = None      # type: str
+        self.is_active = None # type: bool
+        self.id = None        # type: int
+        self.name = None      # type: str
 
-        self.source_count = None
-        self.target_count = None
+        self.is_active = None     # type: bool
+        self.source_type = None   # type: str
+        self.pickup_from = None   # type: str
+        self.service_list = None  # type: list
+        self.topic_list = None    # type: list
+        self.parse_with = None    # type: str
+        self.ftp_source_id = None # type: int
+        self.line_by_line = None  # type: bool
+        self.file_patterns = None # type: str
 
-        self.creation_time_utc = None
-        self.creation_time = None # In current user's timezone
+        self.read_on_pickup = None  # type: bool
+        self.sftp_source_id = None  # type: int
+        self.parse_on_pickup = None # type: bool
 
-        self.in_doubt_created_at_utc = None
-        self.in_doubt_created_at = None # In current user's timezone
+        self.service_list_json = None # type: str
+        self.topic_list_json = None   # type: str
+        self.ftp_source_name = None   # type: str
+        self.sftp_source_name = None  # type: str
 
-        self.last_updated_utc = None
-        self.last_updated = None # In current user's timezone
+        self.scheduler_job_id = None    # type: int
+        self.move_processed_to = None   # type: str
+        self.delete_after_pickup = None # type: bool
 
-    def __repr__(self):
-        return make_repr(self)
+# ################################################################################################################################
+
+    def to_dict(self):
+        out = {}
+        for name in self._config_attrs:
+            value = getattr(self, name)
+            out[name] = value
+        return out
+
+# ################################################################################################################################
 
     @staticmethod
-    def from_in_doubt_delivery(payload):
-        """ Creates a new delivery item out of previous in-doubt data.
-        """
-        item = DeliveryItem()
-        for key, func in _key_func_dict.items():
-            try:
-                value = payload[key]
-            except TypeError:
-                raise KeyError('[{}] [{}] [{}]'.format(key, type(payload), payload))
+    def from_dict(config):
+        # type: (dict) -> FileTransferChannel
+        out = FileTransferChannel()
+        for k, v in config.items():
+            out._config_attrs.append(k)
+            setattr(out, k, v)
+        return out
 
-            if func:
-                value = func(value)
-            setattr(item, key, value)
+# ################################################################################################################################
+# ################################################################################################################################
 
-        logger.debug('Returning item %r', item)
-
-        return item

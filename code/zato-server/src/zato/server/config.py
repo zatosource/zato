@@ -262,53 +262,78 @@ class ConfigStore(object):
     May /not/ be shared across threads - each thread should get its own copy
     using the .copy method.
     """
-    def __init__(self, out_ftp=ZATO_NONE, out_odoo=ZATO_NONE, out_plain_http=ZATO_NONE, out_soap=ZATO_NONE, out_sql=ZATO_NONE,
-            out_stomp=ZATO_NONE, out_sap=ZATO_NONE, repo_location=ZATO_NONE, basic_auth=ZATO_NONE, wss=ZATO_NONE,
-            tech_acc=ZATO_NONE, url_sec=ZATO_NONE, http_soap=ZATO_NONE, broker_config=ZATO_NONE, odb_data=ZATO_NONE,
-            simple_io=ZATO_NONE, msg_ns=ZATO_NONE, json_pointer=ZATO_NONE, xpath=ZATO_NONE, pubsub_topics=ZATO_NONE):
+    def __init__(self):
 
         # Outgoing connections
-        self.out_ftp = out_ftp    # type: ConfigDict
-        self.out_odoo = out_odoo  # type: ConfigDict
-        self.out_plain_http = out_plain_http # type: ConfigDict
-        self.out_soap = out_soap    # type: ConfigDict
-        self.out_sql = out_sql      # type: ConfigDict
-        self.out_stomp = out_stomp  # type: ConfigDict
-        self.out_sap = out_sap      # type: ConfigDict
+        self.out_ftp = None   # type: ConfigDict
+        self.out_sftp = None  # type: ConfigDict
+        self.out_odoo = None  # type: ConfigDict
+        self.out_soap = None  # type: ConfigDict
+        self.out_sql = None   # type: ConfigDict
+        self.out_stomp = None # type: ConfigDict
+        self.out_sap = None   # type: ConfigDict
+        self.out_plain_http = None # type: ConfigDict
 
         # Local on-disk configuraion repository
-        self.repo_location = repo_location # type: str
+        self.repo_location = None # type: str
 
         # Security definitions
-        self.basic_auth = basic_auth # type: ConfigDict
-        self.wss = wss # type: ConfigDict
+        self.basic_auth = None # type: ConfigDict
+        self.wss = None # type: ConfigDict
 
         # URL security
-        self.url_sec = url_sec # type: ConfigDict
+        self.url_sec = None # type: ConfigDict
 
         # HTTP channels
-        self.http_soap = http_soap # type: ConfigDict
+        self.http_soap = None # type: ConfigDict
 
         # Configuration for broker clients
-        self.broker_config = broker_config
+        self.broker_config = None
 
         # ODB
-        self.odb_data = odb_data
+        self.odb_data = None
 
         # SimpleIO
-        self.simple_io = simple_io # type: ConfigDict
+        self.simple_io = None # type: ConfigDict
 
         # Namespace
-        self.msg_ns = msg_ns # type: ConfigDict
+        self.msg_ns = None # type: ConfigDict
 
         # JSON Pointer
-        self.json_pointer = json_pointer # type: ConfigDict
+        self.json_pointer = None # type: ConfigDict
 
         # XPath
-        self.xpath = xpath # type: ConfigDict
+        self.xpath = None # type: ConfigDict
 
         # Services
         self.service = None # type: ConfigDict
+
+# ################################################################################################################################
+
+    def get_config_by_item_id(self, attr_name, item_id):
+        # type: (str, object) -> dict
+
+        # Imported here to avoid circular references
+        from zato.server.connection.ftp import FTPStore
+
+        item_id = int(item_id)
+        config = getattr(self, attr_name) # type: dict
+
+        if isinstance(config, FTPStore):
+            needs_inner_config = False
+            values = config.conn_params.values()
+        else:
+            needs_inner_config = True
+            values = config.values()
+
+        for value in values:
+            if needs_inner_config:
+                config_dict = value['config']
+            else:
+                config_dict = value
+
+            if config_dict['id'] == item_id:
+                return config_dict
 
 # ################################################################################################################################
 
@@ -320,7 +345,7 @@ class ConfigStore(object):
     def outgoing_connections(self):
         """ Returns all the outgoing connections.
         """
-        return self.out_ftp, self.out_odoo, self.out_plain_http, self.out_soap, self.out_sap
+        return self.out_ftp, self.out_sftp, self.out_odoo, self.out_plain_http, self.out_soap, self.out_sap
 
 # ################################################################################################################################
 
