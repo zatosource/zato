@@ -130,13 +130,11 @@ return_tracebacks=True
 default_error_message="An error has occurred"
 startup_callable=
 return_json_schema_errors=False
+sftp_genkey_command=dropbearkey
 posix_ipc_skip_platform=darwin
 
 [http]
 methods_allowed=GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS
-
-[ibm_mq]
-ipc_tcp_start_port=34567
 
 [stats]
 expire_after=168 # In hours, 168 = 7 days = 1 week
@@ -560,6 +558,8 @@ directories = (
     'config/repo/lua/user',
     'config/repo/schema',
     'config/repo/schema/json',
+    'config/repo/sftp',
+    'config/repo/sftp/channel',
     'config/repo/static',
     'config/repo/static/email',
     'config/repo/tls',

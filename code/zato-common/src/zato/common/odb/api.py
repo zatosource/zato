@@ -868,7 +868,7 @@ class ODBManager(SessionWrapper):
         """ Returns a list of jobs defined on the given cluster.
         """
         with closing(self.session()) as session:
-            return query.job_list(session, cluster_id, needs_columns)
+            return query.job_list(session, cluster_id, None, needs_columns)
 
 # ################################################################################################################################
 
@@ -1160,6 +1160,15 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
+    def get_channel_file_transfer_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of file transfer channels.
+        """
+        with closing(self.session()) as session:
+            return query_generic.connection_list(
+                session, cluster_id, GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER, needs_columns)
+
+# ################################################################################################################################
+
     def get_channel_web_socket(self, cluster_id, channel_id):
         """ Returns a particular WebSocket channel.
         """
@@ -1225,7 +1234,7 @@ class ODBManager(SessionWrapper):
 # ################################################################################################################################
 
     def get_out_sftp_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of outgoing SAP RFC connections.
+        """ Returns a list of outgoing SFTP connections.
         """
         with closing(self.session()) as session:
             return query_generic.connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, needs_columns)

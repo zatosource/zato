@@ -93,6 +93,7 @@ pyasn1==0.4.5
 pycparser==2.10
 pycrypto==2.6
 pyflakes==0.8.1
+pyftpdlib==1.5.5
 pygments==2.0
 PyJWT==1.4.2
 pykafka==2.8.0

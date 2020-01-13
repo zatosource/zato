@@ -242,3 +242,12 @@ class ServiceGateway(Invoke):
     """ Service to invoke other services through.
     """
     name = 'helpers.service-gateway'
+
+# ################################################################################################################################
+
+class ChannelFileTransfer(Service):
+    """ A no-op marker service uses by file transfer channels.
+    """
+    name = 'pub.zato.channel.file.transfer'
+
+# ################################################################################################################################

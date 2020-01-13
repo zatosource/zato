@@ -59,8 +59,9 @@ from zato.server.config import ConfigStore
 from zato.server.connection.server import Servers
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
+from zato.server.base.parallel.subprocess_.ftp import FTPIPC
 from zato.server.base.parallel.subprocess_.ibm_mq import IBMMQIPC
-from zato.server.base.parallel.subprocess_.sftp import SFTPIPC
+from zato.server.base.parallel.subprocess_.outconn_sftp import SFTPIPC
 from zato.server.pickup import PickupManager
 from zato.server.sso import SSOTool
 
@@ -119,12 +120,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.soap12_content_type = None
         self.plain_xml_content_type = None
         self.json_content_type = None
-        self.service_modules = None # Set programmatically in Spring
-        self.service_sources = None # Set in a config file
-        self.base_dir = None        # type: unicode
-        self.tls_dir = None         # type: unicode
-        self.static_dir = None      # type: unicode
-        self.json_schema_dir = None # type: unicode
+        self.service_modules = None   # Set programmatically in Spring
+        self.service_sources = None   # Set in a config file
+        self.base_dir = None          # type: unicode
+        self.tls_dir = None           # type: unicode
+        self.static_dir = None        # type: unicode
+        self.json_schema_dir = None   # type: unicode
+        self.sftp_channel_dir = None  # type: unicode
         self.hot_deploy_config = None # type: Bunch
         self.pickup = None
         self.fs_server_config = None # type: Bunch
@@ -195,6 +197,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.user_ctx_lock = gevent.lock.RLock()
 
         # Connectors
+        self.connector_ftp    = FTPIPC(self)
         self.connector_ibm_mq = IBMMQIPC(self)
         self.connector_sftp   = SFTPIPC(self)
 
@@ -377,8 +380,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def _after_init_common(self, server):
-        """ Initializes parts of the server that don't depend on whether the
-        server's been allowed to join the cluster or not.
+        """ Initializes parts of the server that don't depend on whether the server's been allowed to join the cluster or not.
         """
         # Patterns to match during deployment
         self.service_store.patterns_matcher.read_config(self.fs_server_config.deploy_patterns_allowed)
@@ -396,6 +398,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.kvdb.init()
 
         kvdb_logger.info('Worker config `%s`', kvdb_config)
+
+        # New in 3.1, it may be missing in the config file
+        if not self.fs_server_config.misc.get('sftp_genkey_command'):
+            self.fs_server_config.misc.sftp_genkey_command = 'dropbearkey'
 
         # Lua programs, both internal and user defined ones.
         for name, program in self.get_lua_programs():
@@ -640,6 +646,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         has_sftp = bool(self.worker_store.worker_config.out_sftp.keys())
 
+        # Directories for SSH keys used by SFTP channels
+        self.sftp_channel_dir = os.path.join(self.repo_location, 'sftp', 'channel')
+
         if is_first:
 
             logger.info('First worker of `%s` is %s', self.name, self.pid)
@@ -660,6 +669,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             # Subprocess-based connectors
             if self.has_posix_ipc:
                 self._init_subprocess_connectors(has_ibm_mq, has_sftp)
+
+            # SFTP channels are new in 3.1 and the directories may not exist
+            if not os.path.exists(self.sftp_channel_dir):
+                os.makedirs(self.sftp_channel_dir)
 
         else:
             self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_OTHER, kwargs={

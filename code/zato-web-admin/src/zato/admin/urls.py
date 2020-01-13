@@ -21,6 +21,7 @@ from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
 from zato.admin.web.views.cache import memcached_ as cache_memcached
 from zato.admin.web.views.channel import amqp_ as channel_amqp
+from zato.admin.web.views.channel import file_transfer as channel_file_transfer
 from zato.admin.web.views.channel import jms_wmq as channel_jms_wmq
 from zato.admin.web.views.channel import json_rpc as channel_json_rpc
 from zato.admin.web.views.channel import stomp as channel_stomp
@@ -912,6 +913,21 @@ urlpatterns += [
         login_required(channel_amqp.edit), name='channel-amqp-edit'),
     url(r'^zato/channel/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_amqp.Delete()), name=channel_amqp.Delete.url_name),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. FTP
+    url(r'^zato/channel/file-transfer/$',
+        login_required(channel_file_transfer.Index()), name=channel_file_transfer.Index.url_name),
+    url(r'^zato/channel/file-transfer/create/$',
+        login_required(channel_file_transfer.Create()), name=channel_file_transfer.Create.url_name),
+    url(r'^zato/channel/file-transfer/edit/$',
+        login_required(channel_file_transfer.Edit()), name=channel_file_transfer.Edit.url_name),
+    url(r'^zato/channel/file-transfer/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(channel_file_transfer.Delete()), name=channel_file_transfer.Delete.url_name),
     ]
 
 # ################################################################################################################################
