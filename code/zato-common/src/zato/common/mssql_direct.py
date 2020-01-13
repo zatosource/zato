@@ -16,7 +16,8 @@ from traceback import format_exc
 import pytds
 
 # SQLAlchemy
-from sqlalchemy.pool import _DBProxy, QueuePool as SAQueuePool
+from sqlalchemy.pool import QueuePool as SAQueuePool
+from sqlalchemy.pool.dbapi_proxy import _DBProxy
 
 # Zato
 from zato.common import MS_SQL
