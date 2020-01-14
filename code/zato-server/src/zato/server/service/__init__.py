@@ -198,6 +198,15 @@ class ChannelSecurityInfo(object):
         self.username = username
         self.impl = impl
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'type': self.type,
+            'username': self.username,
+            'impl': self.impl,
+        }
+
 # ################################################################################################################################
 
 class _WSXChannel(object):
@@ -354,7 +363,7 @@ class Service(object):
         self.logger = _get_logger(self.name)
         self.server = None         # type: ParallelServer
         self.broker_client = None
-        self.channel = None
+        self.channel = None # type: ChannelInfo
         self.cid = None
         self.in_reply_to = None
         self.data_format = None
