@@ -198,14 +198,18 @@ class ChannelSecurityInfo(object):
         self.username = username
         self.impl = impl
 
-    def to_dict(self):
-        return {
+    def to_dict(self, needs_impl=False):
+        out = {
             'id': self.id,
             'name': self.name,
             'type': self.type,
             'username': self.username,
-            'impl': self.impl,
         }
+
+        if needs_impl:
+            out['impl'] = self.impl
+
+        return out
 
 # ################################################################################################################################
 
