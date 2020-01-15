@@ -122,7 +122,7 @@ class ServerMessage(object):
         if error_message:
             self.meta.error_message = error_message
 
-    def serialize(self):
+    def serialize(self, _dumps_func):
         """ Serialize server message to client. Note that we make it as small as possible because control messages
         in WebSockets (opcode >= 0x07) must have at most 125 bytes.
         """
@@ -141,7 +141,7 @@ class ServerMessage(object):
                 else:
                     data = self.data
                 msg['data'] = data
-            return dumps(msg)
+            return _dumps_func(msg)
         except Exception:
             logger.warn('Exception while serializing message `%r`, e:`%s`', msg, format_exc())
             raise

@@ -47,6 +47,13 @@ from zato.vault.client import VAULT
 
 # ################################################################################################################################
 
+if 0:
+    from zato.server.base.parallel import ParallelServer
+
+    ParallelServer = ParallelServer
+
+# ################################################################################################################################
+
 logger = getLogger('zato_web_socket')
 logger_zato = getLogger('zato')
 
@@ -120,7 +127,35 @@ class WebSocket(_WebSocket):
         # Referred to soon enough so created here
         self.pub_client_id = 'ws.{}'.format(new_cid())
 
+        # Zato parallel server this WebSocket runs on
+        self.parallel_server = self.config.parallel_server # type: ParallelServer
+
+        # JSON dumps function can be overridden by users
+        self._json_dump_func = self._set_json_dump_func()
+
         super(WebSocket, self).__init__(_unusued_sock, _unusued_protocols, _unusued_extensions, wsgi_environ, **kwargs)
+
+    def _set_json_dump_func(self, _default='rapidjson', _supported=('rapidjson', 'bson')):
+        json_library = self.parallel_server.fs_server_config.wsx.get('json_library', _default)
+
+        if json_library not in _supported:
+
+            # Warn only if something was set by users
+            if json_library:
+                logger.warn('Unrecognized JSON library `%s` configured for WSX, not one of `%s`, switching to `%s`',
+                    json_library, _supported, _default)
+
+            json_library = _default
+
+        if json_library == 'rapidjson':
+            from rapidjson import dumps as dumps_func
+
+        elif json_library == 'bson':
+            from bson.json_util import dumps as dumps_func
+
+        logger.info('Setting JSON dumps function based on `%s`', json_library)
+
+        return dumps_func
 
     def _init(self):
 
@@ -551,7 +586,7 @@ class WebSocket(_WebSocket):
 
                 logger.info('Assigning wsx py:`%s` to `%s`', self.python_id, self.peer_conn_info_pretty)
 
-            return AuthenticateResponse(self.token.value, request.cid, request.id).serialize()
+            return AuthenticateResponse(self.token.value, request.cid, request.id).serialize(self._json_dump_func)
 
 # ################################################################################################################################
 
@@ -562,7 +597,7 @@ class WebSocket(_WebSocket):
             self._local_address, self.config.name, cid, self.peer_conn_info_pretty)
 
         try:
-            self.send(Forbidden(cid, data).serialize())
+            self.send(Forbidden(cid, data).serialize(self._json_dump_func))
         except AttributeError as e:
             # Catch a lower-level exception which may be raised in case the client
             # disconnected and we did not manage to send the Forbidden message.
@@ -790,7 +825,7 @@ class WebSocket(_WebSocket):
         else:
             response = OKResponse(cid, msg.id, service_response)
 
-        serialized = response.serialize()
+        serialized = response.serialize(self._json_dump_func)
 
         logger.info('Sending response `%s` from to `%s` `%s` `%s` `%s` %s', serialized,
             self.python_id, self.pub_client_id, self.ext_client_id, self.ext_client_name, self.peer_conn_info_pretty)
@@ -982,7 +1017,7 @@ class WebSocket(_WebSocket):
 
         # Serialize to string
         msg = _Class(cid, request, ctx)
-        serialized = msg.serialize()
+        serialized = msg.serialize(self._json_dump_func)
 
         # Log what is about to be sent
         if use_send:
