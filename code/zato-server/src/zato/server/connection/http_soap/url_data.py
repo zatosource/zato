@@ -612,7 +612,9 @@ class URLData(CyURLData, OAuthDataStore):
                         self.enrich_with_sec_data(wsgi_environ, _sec.sec_def, sec_type)
                         break
 
-        if not auth_result:
+        if auth_result:
+            return auth_result
+        else:
             logger.warn('None of RBAC definitions allowed request in, cid:`%s`', cid)
 
             # We need to return 401 Unauthorized but we need to send a challenge, i.e. authentication type
