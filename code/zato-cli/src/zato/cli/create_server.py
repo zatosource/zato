@@ -240,6 +240,7 @@ data_len=0
 
 [wsx]
 hook_service=
+json_library=rapidjson
 
 [content_type]
 json = {JSON}
