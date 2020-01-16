@@ -288,7 +288,7 @@ class Request(SIOConverter):
 
 # ################################################################################################################################
 
-    def bunchified(self):
+    def to_bunch(self):
         """ Returns a bunchified (converted into bunch.Bunch) version of self.raw_request,
         deep copied if it's a dict (or a subclass). Note that it makes sense to use this method
         only with dicts or JSON input.
@@ -299,6 +299,9 @@ class Request(SIOConverter):
 
         # Must be a JSON input, raises exception when attempting to load it if it's not
         return bunchify(loads(self.raw_request))
+
+    # Backward-compatibility
+    bunchified = to_bunch
 
 # ################################################################################################################################
 
