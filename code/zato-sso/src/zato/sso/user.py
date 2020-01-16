@@ -1373,7 +1373,7 @@ class UserAPI(object):
             # .. delete any sessions possibly existing for this link ..
             session.execute(SessionModelTableDelete().\
                 where(sql_and(
-                    SessionModelTable.c.ext_session_id=='{}.{}'.format(auth_type, auth_id),
+                    SessionModelTable.c.ext_session_id.startswith('{}.{}'.format(auth_type, auth_id)),
                 ))
             )
 
