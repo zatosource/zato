@@ -19,7 +19,7 @@ from gevent.lock import RLock
 
 # Zato
 from zato.common import ZATO_NONE
-from zato.common.util import make_repr
+from zato.common.util import make_repr, wait_for_dict_key
 
 # ################################################################################################################################
 
@@ -170,6 +170,9 @@ class RBAC(object):
         with self.update_lock:
             self.client_def_to_role_id[client_def].remove(role_id)
             self.role_id_to_client_def[role_id].remove(client_def)
+
+    def wait_for_client_role(self, role_id):
+        wait_for_dict_key(self.role_id_to_name, role_id)
 
 # ################################################################################################################################
 
