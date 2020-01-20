@@ -30,7 +30,7 @@ from ast import literal_eval
 from base64 import b64decode
 from binascii import hexlify as binascii_hexlify
 from contextlib import closing
-from datetime import datetime
+from datetime import datetime, timedelta
 from glob import glob
 from hashlib import sha256
 from inspect import isfunction, ismethod
@@ -1764,5 +1764,34 @@ def slugify(value, allow_unicode=False):
     value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
     value = re.sub('[^\w\s-]', '', value).strip().lower()
     return re.sub('[-\s]+', '_', value)
+
+# ################################################################################################################################
+
+def wait_for_predicate(predicate_func, timeout, interval, *args, **kwargs):
+    # type: (object, int, float, *object, **object) -> bool
+
+    is_fulfilled = predicate_func(*args, **kwargs)
+
+    if not is_fulfilled:
+        start = datetime.utcnow()
+        wait_until = start + timedelta(seconds=timeout)
+
+        while not is_fulfilled:
+            gevent_sleep(interval)
+            is_fulfilled = predicate_func(*args, **kwargs)
+            if datetime.utcnow() > wait_until:
+                break
+
+    return is_fulfilled
+
+# ################################################################################################################################
+
+def wait_for_dict_key(_dict, key, timeout=30, interval=0.01):
+    # type: (dict, object, int, float) -> bool
+
+    def _predicate_dict_key(*_ignored_args, **_ignored_kwargs):
+        return key in _dict
+
+    return wait_for_predicate(_predicate_dict_key, timeout, interval)
 
 # ################################################################################################################################
