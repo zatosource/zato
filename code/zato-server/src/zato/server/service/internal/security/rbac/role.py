@@ -17,7 +17,7 @@ from six import add_metaclass
 # Zato
 from zato.common.broker_message import RBAC
 from zato.common.odb.model import RBACRole
-from zato.common.odb.query import rbac_role_list
+from zato.common.odb.query import rbac_role, rbac_role_list
 from zato.server.service.internal import AdminService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
@@ -30,12 +30,13 @@ get_list_docs = 'RBAC roles'
 broker_message = RBAC
 broker_message_prefix = 'ROLE_'
 list_func = rbac_role_list
+input_optional_extra = ['parent_name']
 output_optional_extra = ['parent_id', 'parent_name']
 create_edit_rewrite = ['id']
 
 # ################################################################################################################################
 
-def instance_hook(service, input, instance, attrs):
+def instance_hook(self, input, instance, attrs):
 
     if attrs.is_create_edit:
         is_root = input.name.lower() == 'root'
@@ -43,24 +44,32 @@ def instance_hook(service, input, instance, attrs):
         if is_root:
             raise ValueError('Root role cannot be changed')
 
+        with closing(self.odb.session()) as session:
+            parent = rbac_role(session, self.server.cluster_id, input.parent_id, input.parent_name)
+            input.parent_id = parent.id
+
         if input.parent_id == instance.id:
             raise ValueError('A role cannot be its own parent')
+        else:
+            instance.parent_id = input.parent_id
 
 # ################################################################################################################################
 
-def response_hook(service, input, instance, attrs, service_type):
+def response_hook(self, input, instance, attrs, service_type):
     if service_type == 'create_edit':
-        service.response.payload.parent_id = instance.parent_id
+        self.response.payload.parent_id = instance.parent_id
 
-        with closing(service.odb.session()) as session:
-            parent = session.query(attrs.model).\
-                filter(attrs.model.id==instance.parent_id).one()
+        if instance.parent_id:
 
-        service.response.payload.parent_name = parent.name
+            with closing(self.odb.session()) as session:
+                parent = session.query(attrs.model).\
+                    filter(attrs.model.id==instance.parent_id).one()
+
+            self.response.payload.parent_name = parent.name
 
 # ################################################################################################################################
 
-def broker_message_hook(service, input, instance, attrs, service_type):
+def broker_message_hook(self, input, instance, attrs, service_type):
     input.id = instance.id
 
 # ################################################################################################################################
