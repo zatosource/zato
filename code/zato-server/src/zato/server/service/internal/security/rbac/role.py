@@ -37,6 +37,7 @@ create_edit_rewrite = ['id']
 # ################################################################################################################################
 
 def instance_hook(self, input, instance, attrs):
+    # type: (Service, Bunch, RBACRole, Bunch)
 
     if attrs.is_create_edit:
         is_root = input.name.lower() == 'root'
@@ -56,6 +57,8 @@ def instance_hook(self, input, instance, attrs):
 # ################################################################################################################################
 
 def response_hook(self, input, instance, attrs, service_type):
+    # type: (Service, Bunch, RBACRole, Bunch, str)
+
     if service_type == 'create_edit':
         self.response.payload.parent_id = instance.parent_id
 
