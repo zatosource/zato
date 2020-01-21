@@ -570,7 +570,7 @@ class URLData(CyURLData, OAuthDataStore):
 # ################################################################################################################################
 
     def check_rbac_delegated_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store,
-            sep=MISC.SEPARATOR, plain_http=URL_TYPE.PLAIN_HTTP):
+            sep=MISC.SEPARATOR, plain_http=URL_TYPE.PLAIN_HTTP, _empty_client_def=tuple()):
 
         auth_result = False
 
@@ -587,7 +587,7 @@ class URLData(CyURLData, OAuthDataStore):
                 return auth_result
 
             if perm_id == http_method_permission_id and resource_id == channel_item['service_id']:
-                for client_def in worker_store.rbac.role_id_to_client_def[role_id]:
+                for client_def in worker_store.rbac.role_id_to_client_def.get(role_id, _empty_client_def):
 
                     _, sec_type, sec_name = client_def.split(sep)
 
