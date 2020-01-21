@@ -599,6 +599,8 @@ class URLData(CyURLData, OAuthDataStore):
 
                 for client_def in worker_store.rbac.role_id_to_client_def.get(role_id, _empty_client_def):
 
+                    logger.warn('IN RBAC DELEG 05 %s', client_def)
+
                     _, sec_type, sec_name = client_def.split(sep)
 
                     _sec = Bunch()
@@ -606,6 +608,8 @@ class URLData(CyURLData, OAuthDataStore):
                     _sec.transport = plain_http
                     _sec.sec_use_rbac = False
                     _sec.sec_def = self.sec_config_getter[sec_type](sec_name)['config']
+
+                    logger.warn('IN RBAC DELEG 06 %s %s', sec_type, sec_name)
 
                     auth_result = self.check_security(
                         _sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store, False)
