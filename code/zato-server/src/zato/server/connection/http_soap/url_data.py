@@ -865,10 +865,10 @@ class URLData(CyURLData, OAuthDataStore):
             del self.basic_auth_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH, True)
 
-            # If this account was linked to an SSO user, delete that link,
+            # This will delete a link from this account an SSO user,
             # assuming that SSO is enabled (in which case it is not None).
             if self.worker.server.sso_api:
-                self.worker.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE(msg.id)
+                self.worker.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE(SEC_DEF_TYPE.BASIC_AUTH, msg.id)
 
     def on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an HTTP Basic Auth security definition.
@@ -951,8 +951,10 @@ class URLData(CyURLData, OAuthDataStore):
             del self.jwt_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.JWT, True)
 
-            # If this account was linked to an SSO user, delete that link
-            self.worker.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE(msg.id)
+            # This will delete a link from this account an SSO user,
+            # assuming that SSO is enabled (in which case it is not None).
+            if self.worker.server.sso_api:
+                self.worker.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE(SEC_DEF_TYPE.JWT, msg.id)
 
     def on_broker_msg_SECURITY_JWT_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of a JWT security definition.
