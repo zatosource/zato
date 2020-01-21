@@ -30,7 +30,6 @@ class SSO(WorkerImpl):
     def on_broker_msg_SSO_USER_CREATE(self, msg):
         self.server._create_sso_user_rate_limiting(msg.user_id, msg.is_rate_limit_active, msg.rate_limit_def)
 
-
 # ################################################################################################################################
 
     def on_broker_msg_SSO_USER_EDIT(self, msg, _type=RATE_LIMIT.OBJECT_TYPE.SSO_USER):
@@ -52,6 +51,6 @@ class SSO(WorkerImpl):
 # ################################################################################################################################
 
     def on_broker_msg_SSO_LINK_AUTH_DELETE(self, msg):
-        self.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE('zato.{}'.format(msg.auth_type), msg.auth_id, msg.user_id)
+        self.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE(msg.auth_type, msg.auth_id)
 
 # ################################################################################################################################

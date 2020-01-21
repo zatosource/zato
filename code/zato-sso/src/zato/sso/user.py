@@ -1394,7 +1394,10 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def on_broker_msg_SSO_LINK_AUTH_DELETE(self, auth_type, auth_id, user_id):
+    def on_broker_msg_SSO_LINK_AUTH_DELETE(self, auth_type, auth_id):
+
+        auth_type = 'zato.{}'.format(auth_type)
+
         with self.lock:
             auth_id_link_map = self.auth_id_link_map[auth_type]
             try:
