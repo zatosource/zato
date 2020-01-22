@@ -85,6 +85,14 @@ def response_hook(self, input, instance, attrs, service_type):
 
 # ################################################################################################################################
 
+def broker_message_hook(self, input, instance, attrs, service_type):
+    # type: (Service, Bunch, RBACClientRole, Bunch, str)
+
+    if service_type == 'create_edit':
+        input.role_id = instance.role_id
+
+# ################################################################################################################################
+
 @add_metaclass(GetListMeta)
 class GetList(AdminService):
     _filter_by = RBACClientRole.name,
