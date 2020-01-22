@@ -572,11 +572,6 @@ class URLData(CyURLData, OAuthDataStore):
     def check_rbac_delegated_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store,
             sep=MISC.SEPARATOR, plain_http=URL_TYPE.PLAIN_HTTP, _empty_client_def=tuple()):
 
-        for key, value in sorted(worker_store.rbac.role_id_to_client_def.items()):
-            logger.warn('IN RBAC DELEG 01 %s %s', key, value)
-
-        logger.warn('IN RBAC DELEG 02 %s', channel_item)
-
         auth_result = False
 
         http_method = wsgi_environ.get('REQUEST_METHOD')
@@ -588,18 +583,12 @@ class URLData(CyURLData, OAuthDataStore):
 
         for role_id, perm_id, resource_id in iterkeys(worker_store.rbac.registry._allowed):
 
-            logger.warn('IN RBAC DELEG 03 %s %s %s', role_id, perm_id, resource_id)
-
             if auth_result:
                 return auth_result
 
             if perm_id == http_method_permission_id and resource_id == channel_item['service_id']:
 
-                logger.warn('IN RBAC DELEG 04 %s', role_id)
-
                 for client_def in worker_store.rbac.role_id_to_client_def.get(role_id, _empty_client_def):
-
-                    logger.warn('IN RBAC DELEG 05 %s', client_def)
 
                     _, sec_type, sec_name = client_def.split(sep)
 
@@ -608,8 +597,6 @@ class URLData(CyURLData, OAuthDataStore):
                     _sec.transport = plain_http
                     _sec.sec_use_rbac = False
                     _sec.sec_def = self.sec_config_getter[sec_type](sec_name)['config']
-
-                    logger.warn('IN RBAC DELEG 06 %s %s', sec_type, sec_name)
 
                     auth_result = self.check_security(
                         _sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store, False)
