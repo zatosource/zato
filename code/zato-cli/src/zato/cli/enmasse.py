@@ -591,8 +591,8 @@ class DependencyScanner(object):
         return results
 
 class ObjectImporter(object):
-    def __init__(self, client, logger, object_mgr, json, ignore_missing):
-        # type: (APIClient, Logger, ObjectManager, dict, bool)
+    def __init__(self, client, logger, object_mgr, json, ignore_missing, args):
+        # type: (APIClient, Logger, ObjectManager, dict, bool, object)
 
         # Zato client.
         self.client = client
@@ -607,6 +607,9 @@ class ObjectImporter(object):
 
         # JSON to import.
         self.json = bunchify(json)
+
+        # Command-line arguments
+        self.args = args
 
         self.ignore_missing = ignore_missing
 
@@ -794,6 +797,8 @@ class ObjectImporter(object):
     def import_objects(self, already_existing):
         # type: (Results)
 
+        rbac_sleep = float(self.args.rbac_sleep)
+
         existing_defs = []
         existing_rbac_role = []
         existing_rbac_role_permission = []
@@ -841,7 +846,7 @@ class ObjectImporter(object):
             results = self._import(item_type, attrs, True)
 
             if 'rbac' in item_type:
-                sleep(1)
+                sleep(rbac_sleep)
 
             if results:
                 return results
@@ -878,7 +883,7 @@ class ObjectImporter(object):
                     results = self._import(item_type, attrs, False)
 
                     if 'rbac' in item_type:
-                        sleep(1)
+                        sleep(rbac_sleep)
 
                     if results:
                         return results
@@ -1336,7 +1341,8 @@ class Enmasse(ManageCommand):
         {'name':'--ignore-missing-defs', 'help':'Ignore missing definitions when exporting to file', 'action':'store_true'},
         {'name':'--replace-odb-objects', 'help':'Force replacing objects already existing in ODB during import', 'action':'store_true'},
         {'name':'--input', 'help':'Path to input file with objects to import'},
-        {'name':'--cols_width', 'help':'A list of columns width to use for the table output, default: {}'.format(DEFAULT_COLS_WIDTH), 'action':'store_true'},
+        {'name':'--rbac-sleep', 'help':'How many seconds to sleep for after creating an RBAC object', 'default':'1'},
+        {'name':'--cols-width', 'help':'A list of columns width to use for the table output, default: {}'.format(DEFAULT_COLS_WIDTH), 'action':'store_true'},
     ]
 
     CODEC_BY_EXTENSION = {
@@ -1625,7 +1631,7 @@ class Enmasse(ManageCommand):
         self.object_mgr.refresh()
 
         importer = ObjectImporter(self.client, self.logger, self.object_mgr, self.json,
-            ignore_missing=self.args.ignore_missing_defs)
+            ignore_missing=self.args.ignore_missing_defs, args=self.args)
 
         # Find channels and jobs that require services that don't exist
         results = importer.validate_import_data()
