@@ -839,6 +839,10 @@ class ObjectImporter(object):
                 continue
 
             results = self._import(item_type, attrs, True)
+
+            if 'rbac' in item_type:
+                sleep(1)
+
             if results:
                 return results
 
@@ -872,6 +876,10 @@ class ObjectImporter(object):
                         continue
 
                     results = self._import(item_type, attrs, False)
+
+                    if 'rbac' in item_type:
+                        sleep(1)
+
                     if results:
                         return results
 
