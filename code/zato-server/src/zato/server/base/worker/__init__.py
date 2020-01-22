@@ -835,8 +835,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         for value in self.worker_config.rbac_role.values():
             self.rbac.create_role(value.config.id, value.config.name, value.config.parent_id)
 
-        for value in sorted(self.worker_config.rbac_client_role.values()):
-            self.logger.warn('INIT RBAC %s', value.config)
+        for value in self.worker_config.rbac_client_role.values():
             self.rbac.create_client_role(value.config.client_def, value.config.role_id)
 
         # TODO - handle 'deny' as well
@@ -2184,7 +2183,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_broker_msg_RBAC_CLIENT_ROLE_CREATE(self, msg):
-        self.logger.warn('RBAC_CLIENT_ROLE_CREATE %s', msg)
         self.rbac.create_client_role(msg.client_def, msg.role_id)
 
     def on_broker_msg_RBAC_CLIENT_ROLE_DELETE(self, msg):
