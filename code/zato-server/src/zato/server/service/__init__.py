@@ -380,6 +380,7 @@ class Service(object):
         self.server = None        # type: ParallelServer
         self.broker_client = None # type: BrokerClientAPI
         self.channel = None # type: ChannelInfo
+        self.chan = self.channel
         self.cid = None          # type: str
         self.in_reply_to = None  # type: str
         self.data_format = None  # type: str
