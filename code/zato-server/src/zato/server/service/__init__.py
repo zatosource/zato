@@ -79,36 +79,49 @@ UTC = UTC
 
 # ################################################################################################################################
 
-# Type checking
-import typing
-
-if typing.TYPE_CHECKING:
+if 0:
 
     # stdlib
+    from datetime import timedelta
     from typing import Callable
 
     # Zato
-    from zato.broker.client import BrokerClient
+    from zato.broker.client import BrokerClient, BrokerClientAPI
     from zato.common.audit import AuditPII
     from zato.common.crypto import ServerCryptoManager
     from zato.common.json_schema import Validator as JSONSchemaValidator
     from zato.common.odb.api import ODBManager
+    from zato.server.connection.ftp import FTPStore
     from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
+    from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.server import Servers
+    from zato.server.connection.cassandra import CassandraAPI
+    from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
+    from zato.server.query import CassandraQueryAPI
     from zato.sso.api import SSOAPI
 
     # For pyflakes
     AuditPII = AuditPII
     BrokerClient = BrokerClient
+    BrokerClientAPI = BrokerClientAPI
     Callable = Callable
+    ConfigDict = ConfigDict
+    ConfigStore = ConfigStore
+    CassandraAPI = CassandraAPI
+    CassandraQueryAPI = CassandraQueryAPI
+    FTPStore = FTPStore
+    JSONPointerStore = JSONPointerStore
     JSONSchemaValidator = JSONSchemaValidator
+    NamespaceStore = NamespaceStore
     ODBManager = ODBManager
     ParallelServer = ParallelServer
     ServerCryptoManager = ServerCryptoManager
     Servers = Servers
     SSOAPI = SSOAPI
+    timedelta = timedelta
     WorkerStore = WorkerStore
+    XPathStore = XPathStore
 
 # ################################################################################################################################
 
@@ -192,11 +205,11 @@ class ChannelSecurityInfo(object):
     __slots__ = ('id', 'name', 'type', 'username', 'impl')
 
     def __init__(self, id, name, type, username, impl):
-        self.id = id
-        self.name = name
-        self.type = type
-        self.username = username
-        self.impl = impl
+        self.id = id     # type: int
+        self.name = name # type: str
+        self.type = type # type: str
+        self.username = username # type: str
+        self.impl = impl # type: dict
 
     def to_dict(self, needs_impl=False):
         out = {
@@ -311,30 +324,29 @@ class Service(object):
     cloud = Cloud()
     definition = Definition()
     im = InstantMessaging()
-    odb = None # type: ODBManager
-    kvdb = None # type: KVDB
+    odb = None    # type: ODBManager
+    kvdb = None   # type: KVDB
     pubsub = None # type: PubSub
-    cassandra_conn = None
-    cassandra_query = None
-    email = None
-    search = None
+    cassandra_conn = None  # type: CassandraAPI
+    cassandra_query = None # type: CassandraQueryAPI
+    email = None  # type: EMailAPI
+    search = None # type: SearchAPI
     amqp = AMQPFacade()
 
     # For WebSockets
     wsx = None # type: WSXFacade
 
     _worker_store = None  # type: WorkerStore
-    _worker_config = None
-    _msg_ns_store = None
-    _ns_store = None
-    _json_pointer_store = None
-    _xpath_store = None
-    _out_ftp = None
-    _out_plain_http = None
+    _worker_config = None # type: ConfigStore
+    _msg_ns_store = None  # type: NamespaceStore
+    _json_pointer_store = None # type: JSONPointerStore
+    _xpath_store = None   # type: XPathStore
+    _out_ftp = None       # type: FTPStore
+    _out_plain_http = None # type: ConfigDict
 
     _req_resp_freq = 0
-    _has_before_job_hooks = None
-    _has_after_job_hooks = None
+    _has_before_job_hooks = None # type: bool
+    _has_after_job_hooks = None  # type: bool
     _before_job_hooks = []
     _after_job_hooks = []
 
@@ -365,24 +377,18 @@ class Service(object):
         self.name = self.__class__.__service_name # Will be set through .get_name by Service Store
         self.impl_name = self.__class__.__service_impl_name # Ditto
         self.logger = _get_logger(self.name)
-        self.server = None         # type: ParallelServer
-        self.broker_client = None
+        self.server = None        # type: ParallelServer
+        self.broker_client = None # type: BrokerClientAPI
         self.channel = None # type: ChannelInfo
-        self.cid = None
-        self.in_reply_to = None
-        self.data_format = None
-        self.transport = None
-        self.wsgi_environ = None
-        self.job_type = None
+        self.cid = None          # type: str
+        self.in_reply_to = None  # type: str
+        self.data_format = None  # type: str
+        self.transport = None    # type: str
+        self.wsgi_environ = None # type: dict
+        self.job_type = None     # type: str
         self.environ = _Bunch()
         self.request = _Request(self.logger)
         self.response = _Response(self.logger)
-        self.invocation_time = None # When was the service invoked
-        self.handle_return_time = None # When did its 'handle' method finished processing the request
-        self.processing_time_raw = None # A timedelta object with the processing time up to microseconds
-        self.processing_time = None # Processing time in milliseconds
-        self.usage = 0 # How many times the service has been invoked
-        self.slow_threshold = maxint # After how many ms to consider the response came too late
         self.msg = None
         self.time = None
         self.patterns = None
@@ -392,6 +398,21 @@ class Service(object):
         self.has_validate_input = False
         self.has_validate_output = False
         self.cache = None
+
+        # When was the service invoked
+        self.invocation_time = None # type: datetime
+
+        # When did our 'handle' method finished processing the request
+        self.handle_return_time = None # type: datetime
+
+        # # A timedelta object with the processing time up to microseconds
+        self.processing_time_raw = None # type: timedelta
+
+        # Processing time in milliseconds
+        self.processing_time = None # type: int
+
+        self.usage = 0 # How many times the service has been invoked
+        self.slow_threshold = maxint # After how many ms to consider the response came too late
 
         self.out = self.outgoing = _Outgoing(
             self.amqp,
@@ -486,6 +507,7 @@ class Service(object):
         if self.component_enabled_search:
             if not Service.search:
                 Service.search = SearchAPI(self._worker_store.search_es_api, self._worker_store.search_solr_api)
+
         if self.component_enabled_msg_path:
             self.msg = MessageFacade(
                 self._json_pointer_store, self._xpath_store, self._msg_ns_store, self.request.payload, self.time)
