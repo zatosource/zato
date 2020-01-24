@@ -46,15 +46,16 @@ stack_format = None
 
 # ################################################################################################################################
 
-# Type checking
-import typing
-
-if typing.TYPE_CHECKING:
+if 0:
+    from zato.server.service import Service
+    from zato.server.service.reqresp import Response
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.http_soap.url_data import URLData
 
     # For pyflakes
     ParallelServer = ParallelServer
+    Response = Response
+    Service = Service
     URLData = URLData
 
 # ################################################################################################################################
@@ -474,13 +475,14 @@ class RequestHandler(object):
     """ Handles individual HTTP requests to a given service.
     """
     def __init__(self, server=None):
-        self.server = server # A ParallelServer instance
-        self.use_soap_envelope = asbool(self.server.fs_server_config.misc.use_soap_envelope)
+        # type: (ParallelServer)
+        self.server = server
+        self.use_soap_envelope = asbool(self.server.fs_server_config.misc.use_soap_envelope) # type: bool
 
 # ################################################################################################################################
 
     def _set_response_data(self, service, **kwargs):
-        """ A callback invoked by the services after it's done producing the response.
+        """ A callback invoked by the services after it is done producing the response.
         """
         data_format = kwargs.get('data_format')
         transport = kwargs.get('transport')
@@ -653,10 +655,11 @@ class RequestHandler(object):
 # ################################################################################################################################
 
     def set_payload(self, response, data_format, transport, service_instance):
-        """ Sets the actual payload to represent the service's response out of
-        whatever the service produced. This includes converting dictionaries into
-        JSON, adding Zato metadata and wrapping the mesasge in SOAP if need be.
+        """ Sets the actual payload to represent the service's response out of what the service produced.
+        This includes converting dictionaries into JSON, adding Zato metadata and wrapping the mesasge in SOAP if need be.
         """
+        # type: (Response, str, str, Service)
+
         if isinstance(service_instance, AdminService):
             if data_format == SIMPLE_IO.FORMAT.JSON:
                 zato_env = {'zato_env':{'result':response.result, 'cid':service_instance.cid, 'details':response.result_details}}
@@ -693,10 +696,12 @@ class RequestHandler(object):
 
 # ################################################################################################################################
 
-    def set_content_type(self, response, data_format, transport, url_match, channel_item):
+    def set_content_type(self, response, data_format, transport, ignored_url_match, channel_item):
         """ Sets a response's content type if one hasn't been supplied by the user.
         """
-        # A user provided their own content type ..
+        # type: (Response, str, str, object, object)
+
+        # A user provided his or her own content type ..
         if response.content_type_changed:
             content_type = response.content_type
         else:
