@@ -268,7 +268,6 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server.sql_pool_store = sql_pool_store
     server.service_modules = []
     server.kvdb = kvdb
-    server.user_config = Bunch()
 
     # Assigned here because it is a circular dependency
     odb_manager.parallel_server = server

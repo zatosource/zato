@@ -160,7 +160,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     """ Dispatches work between different pieces of configuration of an individual gunicorn worker.
     """
     def __init__(self, worker_config=None, server=None):
-        # type: (ConfigStore, ParallelServer) -> None
+        # type: (ConfigStore, ParallelServer)
 
         self.logger = logging.getLogger(self.__class__.__name__)
         self.is_ready = False
