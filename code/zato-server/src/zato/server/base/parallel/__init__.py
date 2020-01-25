@@ -76,14 +76,12 @@ if 0:
 
     # Zato
     from zato.common.crypto import ServerCryptoManager
-    from zato.common.kvdb import KVDB
     from zato.common.odb.api import ODBManager
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
     from zato.server.service.store import ServiceStore
     from zato.sso.api import SSOAPI
 
     # For pyflakes
-    KVDB = KVDB
     ODBManager = ODBManager
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
