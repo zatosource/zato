@@ -23,7 +23,7 @@ from gevent.lock import RLock
 from hvac import Client
 
 # Zato
-from zato.common import VAULT
+from zato.common import UNITTEST, VAULT
 
 # ################################################################################################################################
 
@@ -164,7 +164,9 @@ class VaultConnAPI(object):
             config.name, config.url, config.token, config.get('service_name'), config.tls_verify, config.timeout,
             config.allow_redirects)
         self.config[config.name] = conn
-        self.ping(config.name)
+
+        if config.url != UNITTEST.VAULT_URL:
+            self.ping(config.name)
 
 # ################################################################################################################################
 
