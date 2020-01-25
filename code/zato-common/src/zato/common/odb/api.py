@@ -42,7 +42,7 @@ from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, Depl
 from zato.common.odb.query.pubsub import subscription as query_ps_subscription
 from zato.common.odb.query import generic as query_generic
 from zato.common.odb.unittest_ import UnittestEngine
-from zato.common.util import current_host, get_component_name, get_engine_url, parse_extra_into_dict, \
+from zato.common.util import current_host, get_component_name, get_engine_url, new_cid, parse_extra_into_dict, \
      parse_tls_channel_security_definition, spawn_greenlet
 from zato.common.util.sql import ElemsWithOpaqueMaker, elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
@@ -66,6 +66,12 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 rate_limit_keys = 'is_rate_limit_active', 'rate_limit_def', 'rate_limit_type', 'rate_limit_check_parent_def'
+
+unittest_fs_sql_config = {
+    UNITTEST.SQL_ENGINE: {
+        'ping_query': 'SELECT 1+1'
+    }
+}
 
 # ################################################################################################################################
 
@@ -417,6 +423,16 @@ class PoolStore(object):
             self.wrappers[name] = wrapper
 
     set_item = __setitem__
+
+# ################################################################################################################################
+
+    def add_unittest_item(self, name, fs_sql_config=unittest_fs_sql_config):
+        self.set_item(name, {
+            'password': 'password.{}'.format(new_cid),
+            'engine': UNITTEST.SQL_ENGINE,
+            'fs_sql_config': fs_sql_config,
+            'is_active': True,
+        })
 
 # ################################################################################################################################
 
