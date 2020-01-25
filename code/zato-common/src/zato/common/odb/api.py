@@ -33,7 +33,7 @@ from bunch import Bunch, bunchify
 
 # Zato
 from zato.common import DEPLOYMENT_STATUS, GENERIC, HTTP_SOAP, Inactive, MS_SQL, NotGiven, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, \
-     SERVER_UP_STATUS, ZATO_NONE, ZATO_ODB_POOL_NAME
+     SERVER_UP_STATUS, UNITTEST, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
 from zato.common.odb import get_ping_query, query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
@@ -41,6 +41,7 @@ from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, Depl
      WSSDefinition, VaultConnection
 from zato.common.odb.query.pubsub import subscription as query_ps_subscription
 from zato.common.odb.query import generic as query_generic
+from zato.common.odb.unittest_ import UnittestEngine
 from zato.common.util import current_host, get_component_name, get_engine_url, parse_extra_into_dict, \
      parse_tls_channel_security_definition, spawn_greenlet
 from zato.common.util.sql import ElemsWithOpaqueMaker, elems_with_opaque
@@ -222,7 +223,8 @@ class SQLConnectionPool(object):
         engine_url = get_engine_url(config)
         self.engine = self._create_engine(engine_url, config, _extra)
 
-        if self.engine and self._is_sa_engine(engine_url):
+
+        if self.engine and (not self._is_unittest_engine(engine_url)) and self._is_sa_engine(engine_url):
             event.listen(self.engine, 'checkin', self.on_checkin)
             event.listen(self.engine, 'checkout', self.on_checkout)
             event.listen(self.engine, 'connect', self.on_connect)
@@ -246,15 +248,32 @@ class SQLConnectionPool(object):
 # ################################################################################################################################
 
     def _is_sa_engine(self, engine_url):
+        # type: (str)
         return 'zato+mssql1' not in engine_url
 
 # ################################################################################################################################
 
-    def _create_engine(self, engine_url, config, extra):
-        if self._is_sa_engine(engine_url):
-            return create_engine(engine_url, **extra)
-        else:
+    def _is_unittest_engine(self, engine_url):
+        # type: (str)
+        return 'zato+unittest' in engine_url
 
+# ################################################################################################################################
+
+    def _create_unittest_engine(self, engine_url, config):
+        # type: (str, dict)
+        return UnittestEngine(engine_url, config)
+
+# ################################################################################################################################
+
+    def _create_engine(self, engine_url, config, extra):
+
+        if self._is_unittest_engine(engine_url):
+            return self._create_unittest_engine(engine_url, config)
+
+        elif self._is_sa_engine(engine_url):
+            return create_engine(engine_url, **extra)
+
+        else:
             # This is a direct MS SQL connection
             connect_kwargs = {
                 'dsn': config['host'],
@@ -397,6 +416,8 @@ class PoolStore(object):
             wrapper.init_session(name, config, pool)
 
             self.wrappers[name] = wrapper
+
+    set_item = __setitem__
 
 # ################################################################################################################################
 
