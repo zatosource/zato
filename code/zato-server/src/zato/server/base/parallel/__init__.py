@@ -72,19 +72,18 @@ from past.builtins import unicode
 
 # ################################################################################################################################
 
-# Type checking
-import typing
-
-if typing.TYPE_CHECKING:
+if 0:
 
     # Zato
     from zato.common.crypto import ServerCryptoManager
+    from zato.common.kvdb import KVDB
     from zato.common.odb.api import ODBManager
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
     from zato.server.service.store import ServiceStore
     from zato.sso.api import SSOAPI
 
     # For pyflakes
+    KVDB = KVDB
     ODBManager = ODBManager
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
@@ -143,15 +142,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.worker_pid = None # type: int
         self.cluster = None
         self.cluster_id = None # type: int
-        self.kvdb = None
-        self.startup_jobs = None
+        self.kvdb = None # type: KVDB
+        self.startup_jobs = None # type: dict
         self.worker_store = None # type: WorkerStore
         self.service_store = None # type: ServiceStore
         self.request_dispatcher_dispatch = None
-        self.deployment_lock_expires = None
-        self.deployment_lock_timeout = None
+        self.deployment_lock_expires = None # type: int
+        self.deployment_lock_timeout = None # type: int
         self.deployment_key = ''
-        self.has_gevent = None
+        self.has_gevent = None # type: bool
         self.delivery_store = None
         self.static_config = None
         self.component_enabled = Bunch()
@@ -187,6 +186,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.sso_tool = SSOTool(self)
         self.platform_system = platform_system().lower() # type: unicode
         self.has_posix_ipc = True
+        self.user_config = Bunch()
 
         # Our arbiter may potentially call the cleanup procedure multiple times
         # and this will be set to True the first time around.
