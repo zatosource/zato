@@ -223,7 +223,6 @@ class SQLConnectionPool(object):
         engine_url = get_engine_url(config)
         self.engine = self._create_engine(engine_url, config, _extra)
 
-
         if self.engine and (not self._is_unittest_engine(engine_url)) and self._is_sa_engine(engine_url):
             event.listen(self.engine, 'checkin', self.on_checkin)
             event.listen(self.engine, 'checkout', self.on_checkout)
