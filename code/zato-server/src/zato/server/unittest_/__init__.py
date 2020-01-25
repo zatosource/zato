@@ -195,6 +195,7 @@ class ServiceTestCase(TestCase):
         class_.crypto = self.server.crypto_manager
 
         service = class_() # type: Service
+        service.out.vault = self.vault_conn_api
 
         self.service_store.services[service.impl_name] = {
             'slow_threshold': 100,
