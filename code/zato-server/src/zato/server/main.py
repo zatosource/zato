@@ -34,9 +34,6 @@ if not settings.configured:
     settings.configure()
     django.setup()
 
-# Bunch
-from bunch import Bunch
-
 # ConfigObj
 from configobj import ConfigObj
 
