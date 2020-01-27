@@ -19,7 +19,26 @@ from zato.common import UNITTEST
 
 # ################################################################################################################################
 
+if 0:
+    from sqlalchemy.sql.selectable import Select
+
+    Select = Select
+
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+
+class QueryInfo(object):
+    __slots__ = 'idx', 'is_string', 'data', 'string', 'select'
+
+    def __init__(self):
+        self.idx = None       # type: int
+        self.is_string = None # type: bool
+        self.data = None      # type: object
+        self.string = None # type: str
+        self.select = None     # type: Select
 
 # ################################################################################################################################
 
@@ -45,9 +64,17 @@ class UnittestSession(object):
         # type: (UnittestEngine)
         self.engine = engine
 
+        # How many times we have been called
+        self.idx = 0
+
     def execute(self, query, *args, **kwargs):
+
+        # Increase the execution counter each time we are invoked
+        self.idx += 1
+
         if not isinstance(query, basestring):
             compiled = query.compile(dialect=mysql.dialect())
+            print(109, type(query))
             print(111, compiled)
             print(112, compiled.bind_names)
             print(113, compiled.params)
