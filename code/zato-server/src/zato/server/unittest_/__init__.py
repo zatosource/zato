@@ -33,10 +33,10 @@ from zato.server.service.store import ServiceStore
 # ################################################################################################################################
 
 if 0:
-    from zato.common.odb.unittest_ import QueryInfo
+    from zato.common.odb.unittest_ import QueryCtx
     from zato.server.service import Service
 
-    QueryInfo = QueryInfo
+    QueryCtx = QueryCtx
     Service = Service
 
 # ################################################################################################################################
@@ -173,11 +173,14 @@ class ServiceTestCase(TestCase):
             'HTTP_HOST': 'api.localhost'
         }
 
+        # Callback methods for particular SQL queries
+        self.sql_callback_by_idx = {}
+
 # ################################################################################################################################
 
     def add_outconn_sql(self, name):
         # type: (str, object)
-        self.sql_pool_store.add_unittest_item(name, self.on_sql_query)
+        self.sql_pool_store.add_unittest_item(name, self._on_sql_query)
 
 # ################################################################################################################################
 
@@ -221,11 +224,29 @@ class ServiceTestCase(TestCase):
 
         return response
 
+# ################################################################################################################################
+
+    def _on_sql_query(self, query):
+        """ Main callback function that dispatches a query to individual methods.
+        """
+        # type: (QueryCtx)
+        if query.idx in self.sql_callback_by_idx:
+            func = self.sql_callback_by_idx[query.idx]
+        else:
+            func = self.on_sql_query
+
+        return func(query)
+
+# ################################################################################################################################
+
+    def add_sql_query_by_idx(self, idx, callback_func):
+        # type: (int, object)
+        self.sql_callback_by_idx[idx] = callback_func
 
 # ################################################################################################################################
 
     def on_sql_query(self, query):
-        # type: (QueryInfo)
+        # type: (QueryCtx)
         pass
 
 # ################################################################################################################################

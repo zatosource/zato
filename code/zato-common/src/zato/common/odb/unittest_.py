@@ -13,39 +13,49 @@ import logging
 
 # SQLAlchemy
 from sqlalchemy.dialects import mysql, sqlite
+from sqlalchemy.sql.selectable import Select
 
 # Zato
 from zato.common import UNITTEST
 
-# ################################################################################################################################
-
-if 0:
-    from sqlalchemy.sql.selectable import Select
-
-    Select = Select
+# Python 2/3 compatibility
+from past.builtins import basestring
 
 # ################################################################################################################################
+
+logging.basicConfig(level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-class QueryInfo(object):
-    __slots__ = 'idx', 'is_string', 'data', 'string', 'select'
+class QueryCtx(object):
+    __slots__ = 'idx', 'is_string', 'query', 'string', 'select'
 
     def __init__(self):
         self.idx = None       # type: int
         self.is_string = None # type: bool
-        self.data = None      # type: object
-        self.string = None # type: str
-        self.select = None     # type: Select
+        self.query = None     # type: object
+        self.string = None    # type: str
+        self.select = None    # type: Select
 
+    def to_dict(self):
+        return {
+            'idx': self.idx,
+            'is_string': self.is_string,
+            'query': self.query,
+            'string': self.string,
+            'select': self.select,
+        }
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class UnittestCursor(object):
 
     def __init__(self, result=None):
-        self.result = result
+        self.result = result or []
 
     def close(self, *args, **kwargs):
         pass
@@ -57,6 +67,7 @@ class UnittestCursor(object):
         pass
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class UnittestSession(object):
 
@@ -64,26 +75,26 @@ class UnittestSession(object):
         # type: (UnittestEngine)
         self.engine = engine
 
-        # How many times we have been called
-        self.idx = 0
-
     def execute(self, query, *args, **kwargs):
 
         # Increase the execution counter each time we are invoked
-        self.idx += 1
+        self.engine.config['query_idx'] += 1
 
-        if not isinstance(query, basestring):
-            compiled = query.compile(dialect=mysql.dialect())
-            print(109, type(query))
-            print(111, compiled)
-            print(112, compiled.bind_names)
-            print(113, compiled.params)
-            print(114, compiled)
-            print(115, compiled.binds)
-            for name in sorted(dir(compiled)):
-                print(222, name)
-            print(333, self.engine)
-        return UnittestCursor()
+        query_ctx = QueryCtx()
+        query_ctx.idx = self.engine.config['query_idx']
+        query_ctx.is_string = isinstance(query, basestring)
+        query_ctx.query = query
+
+        if query_ctx.is_string:
+            query_ctx.string = query
+
+        elif isinstance(query, Select):
+            query_ctx.select = query
+
+        callback_func = self.engine.config['callback_func']
+        data = callback_func(query_ctx)
+
+        return UnittestCursor(data)
 
     def begin(self, *args, **kwargs):
         pass
@@ -91,6 +102,7 @@ class UnittestSession(object):
     def close(self, *args, **kwargs):
         pass
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class UnittestEngine(object):
@@ -103,9 +115,13 @@ class UnittestEngine(object):
         self.engine_url = engine_url
         self.config = config
 
+        # How many times we have been called, counted from 0, hence we start from -1
+        self.config['query_idx'] = -1
+
     def connect(self):
         return UnittestSession(self)
 
     _contextual_connect = connect
 
+# ################################################################################################################################
 # ################################################################################################################################
