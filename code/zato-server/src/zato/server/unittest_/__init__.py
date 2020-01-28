@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import os
-from json import dumps
 from unittest import TestCase
 
 # Cryptography
@@ -27,7 +26,7 @@ from zato.server.connection.cache import CacheAPI
 from zato.server.connection.http_soap.channel import RequestHandler
 from zato.server.connection.vault import VaultConnAPI
 from zato.server.base.parallel import ParallelServer
-from zato.server.config import ConfigStore, ConfigDict
+from zato.server.config import ConfigStore
 from zato.server.service.store import ServiceStore
 from zato.server.unittest_.requests_ import RequestsAdapter
 
