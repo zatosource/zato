@@ -21,6 +21,7 @@ from zato.common import CHANNEL, DATA_FORMAT, UNITTEST
 from zato.common.crypto import CryptoManager
 from zato.common.kvdb import KVDB
 from zato.common.odb.api import PoolStore
+from zato.common.odb.unittest_ import SQLRow
 from zato.common.util import new_cid
 from zato.server.base.worker import WorkerStore
 from zato.server.connection.cache import CacheAPI
@@ -29,6 +30,7 @@ from zato.server.connection.vault import VaultConnAPI
 from zato.server.base.parallel import ParallelServer
 from zato.server.config import ConfigStore, ConfigDict
 from zato.server.service.store import ServiceStore
+from zato.server.unittest_.requests_ import RequestsAdapter
 
 # ################################################################################################################################
 
@@ -122,14 +124,19 @@ class Cache(object):
 class ServiceTestCase(TestCase):
     def setUp(self):
 
+        # For mocking out Vault responses
+        self.vault_adapter = RequestsAdapter()
+
+        # We are always the first process in a server
         os.environ['ZATO_SERVER_WORKER_IDX'] = '1'
 
+        # Represents the server.conf file
         self.fs_server_config = FSServerConfig()
 
         self.worker_config = ConfigStore()
         self.fernet_key = Fernet.generate_key() # type: str
         self.crypto_manager = CryptoManager(secret_key=self.fernet_key)
-        self.vault_conn_api = VaultConnAPI()
+        self.vault_conn_api = VaultConnAPI(requests_adapter=self.vault_adapter)
 
         self.server = ParallelServer()
         self.server.fs_server_config = self.fs_server_config
@@ -167,7 +174,6 @@ class ServiceTestCase(TestCase):
         self.request_handler = RequestHandler(self.server)
 
         self.cache = Cache()
-        self.vault_conn_api = VaultConnAPI()
 
         self.wsgi_environ = {
             'HTTP_HOST': 'api.localhost'
@@ -239,7 +245,7 @@ class ServiceTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def add_sql_query_by_idx(self, idx, callback_func):
+    def set_sql_callback_by_idx(self, idx, callback_func):
         # type: (int, object)
         self.sql_callback_by_idx[idx] = callback_func
 
