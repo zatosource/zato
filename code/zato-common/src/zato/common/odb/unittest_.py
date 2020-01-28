@@ -11,6 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 
+# Alchemy-mock
+from alchemy_mock.mocking import UnifiedAlchemyMagicMock
+
 # SQLAlchemy
 from sqlalchemy.dialects import mysql, sqlite
 from sqlalchemy.sql.selectable import Select
@@ -94,7 +97,16 @@ class UnittestSession(object):
         callback_func = self.engine.config['callback_func']
         data = callback_func(query_ctx)
 
-        return UnittestCursor(data)
+        if data:
+            print()
+            print(111, data)
+            print(222, dir(data))
+            data.mapper = 123
+            print()
+
+        data = SQLRow(data)
+
+        return UnittestCursor([data])
 
     def begin(self, *args, **kwargs):
         pass
@@ -119,7 +131,8 @@ class UnittestEngine(object):
         self.config['query_idx'] = -1
 
     def connect(self):
-        return UnittestSession(self)
+        #return UnittestSession(self)
+        return UnifiedAlchemyMagicMock()
 
     _contextual_connect = connect
 

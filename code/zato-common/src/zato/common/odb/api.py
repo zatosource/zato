@@ -331,6 +331,7 @@ class SQLConnectionPool(object):
     def ping(self, fs_sql_config):
         """ Pings the SQL database and returns the response time, in milliseconds.
         """
+        return
         if hasattr(self.engine, 'ping'):
             func = self.engine.ping
             query = self.engine.ping_query
