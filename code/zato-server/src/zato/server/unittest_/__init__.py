@@ -21,7 +21,6 @@ from zato.common import CHANNEL, DATA_FORMAT, UNITTEST
 from zato.common.crypto import CryptoManager
 from zato.common.kvdb import KVDB
 from zato.common.odb.api import PoolStore
-from zato.common.odb.unittest_ import SQLRow
 from zato.common.util import new_cid
 from zato.server.base.worker import WorkerStore
 from zato.server.connection.cache import CacheAPI
@@ -156,6 +155,7 @@ class ServiceTestCase(TestCase):
             }
         }
 
+        self.cache = Cache()
         self.sql_pool_store = PoolStore()
 
         self.worker_store = WorkerStore(self.worker_config, self.server)
@@ -169,11 +169,11 @@ class ServiceTestCase(TestCase):
         self.worker_store.outconn_ldap = {}
         self.worker_store.outconn_mongodb = {}
         self.worker_store.def_kafka = {}
+
         self.worker_store.cache_api = CacheAPI(self.server)
+        self.worker_store.cache_api.default = self.cache
 
         self.request_handler = RequestHandler(self.server)
-
-        self.cache = Cache()
 
         self.wsgi_environ = {
             'HTTP_HOST': 'api.localhost'
@@ -186,7 +186,7 @@ class ServiceTestCase(TestCase):
 
     def add_outconn_sql(self, name):
         # type: (str, object)
-        self.sql_pool_store.add_unittest_item(name, self._on_sql_query)
+        self.sql_pool_store.add_unittest_item(name)
 
 # ################################################################################################################################
 
@@ -229,31 +229,6 @@ class ServiceTestCase(TestCase):
             self.server, broker_client, self.worker_store, cid, simple_io_config, environ=kwargs.get('environ'))
 
         return response
-
-# ################################################################################################################################
-
-    def _on_sql_query(self, query):
-        """ Main callback function that dispatches a query to individual methods.
-        """
-        # type: (QueryCtx)
-        if query.idx in self.sql_callback_by_idx:
-            func = self.sql_callback_by_idx[query.idx]
-        else:
-            func = self.on_sql_query
-
-        return func(query)
-
-# ################################################################################################################################
-
-    def set_sql_callback_by_idx(self, idx, callback_func):
-        # type: (int, object)
-        self.sql_callback_by_idx[idx] = callback_func
-
-# ################################################################################################################################
-
-    def on_sql_query(self, query):
-        # type: (QueryCtx)
-        pass
 
 # ################################################################################################################################
 # ################################################################################################################################

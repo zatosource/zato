@@ -9,26 +9,49 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Bunch
-from bunch import Bunch
+from bunch import bunchify
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Response(object):
-    def json(self):
-        out = Bunch()
-        out.data = Bunch()
-        out.data.meta = Bunch()
-        out.data.meta.username = 'aaa'
+    def __init__(self, data):
+        self.data = data
+        self.status_code = 200
 
-        return out
+    def json(self):
+        return self.data
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class RequestsAdapter(object):
-    def post(self, *args, **kwargs):
-        return Response()
+
+    def __init__(self):
+        self._get_handlers = {}
+        self._post_handlers = {}
+
+# ################################################################################################################################
+
+    def get(self, path, *args, **kwargs):
+        data = self._get_handlers[path](path, args=args, kwargs=bunchify(kwargs))
+        return Response(data)
+
+# ################################################################################################################################
+
+    def post(self, path, *args, **kwargs):
+        data = self._post_handlers[path](path, args=args, kwargs=bunchify(kwargs))
+        return Response(data)
+
+# ################################################################################################################################
+
+    def add_get_handler(self, path, func):
+        self._get_handlers[path] = func
+
+# ################################################################################################################################
+
+    def add_post_handler(self, path, func):
+        self._post_handlers[path] = func
 
 # ################################################################################################################################
 # ################################################################################################################################
