@@ -432,13 +432,12 @@ class PoolStore(object):
 
 # ################################################################################################################################
 
-    def add_unittest_item(self, name, callback_func, fs_sql_config=unittest_fs_sql_config):
+    def add_unittest_item(self, name, fs_sql_config=unittest_fs_sql_config):
         self.set_item(name, {
             'password': 'password.{}'.format(new_cid),
             'engine': UNITTEST.SQL_ENGINE,
             'fs_sql_config': fs_sql_config,
             'is_active': True,
-            'callback_func': callback_func,
         })
 
 # ################################################################################################################################
