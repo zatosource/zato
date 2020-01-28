@@ -11,8 +11,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 
-# Alchemy-mock
-from alchemy_mock.mocking import UnifiedAlchemyMagicMock
+# Mock
+from mock import MagicMock
 
 # SQLAlchemy
 from sqlalchemy.dialects import mysql, sqlite
@@ -106,13 +106,20 @@ class UnittestSession(object):
 
         data = SQLRow(data)
 
-        return UnittestCursor([data])
+        #return UnittestCursor([data])
+        return MagicMock()
 
     def begin(self, *args, **kwargs):
         pass
 
     def close(self, *args, **kwargs):
         pass
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SessionMock(MagicMock):
+    pass
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -131,8 +138,8 @@ class UnittestEngine(object):
         self.config['query_idx'] = -1
 
     def connect(self):
-        #return UnittestSession(self)
-        return UnifiedAlchemyMagicMock()
+        return UnittestSession(self)
+        #return MagicMock()
 
     _contextual_connect = connect
 
