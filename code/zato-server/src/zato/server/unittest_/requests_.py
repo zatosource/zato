@@ -11,6 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Bunch
 from bunch import bunchify
 
+# Zato
+from zato.url_dispatcher import Matcher
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -28,30 +31,53 @@ class Response(object):
 class RequestsAdapter(object):
 
     def __init__(self):
-        self._get_handlers = {}
-        self._post_handlers = {}
+        self._get_handlers = []
+        self._post_handlers = []
+
+# ################################################################################################################################
+
+    def _on_request(self, path, config, args, kwargs):
+        # type: (str, list) -> Response
+        for item in config:
+            matcher = item['matcher'] # type: Matcher
+            if matcher.match(path) is not None:
+                func = item['func']
+                data = func(path, args=args, kwargs=bunchify(kwargs))
+                return Response(data)
+        else:
+            raise KeyError(path)
 
 # ################################################################################################################################
 
     def get(self, path, *args, **kwargs):
-        data = self._get_handlers[path](path, args=args, kwargs=bunchify(kwargs))
-        return Response(data)
+        # type: (...) -> Response
+        return self._on_request(path, self._get_handlers, args, kwargs)
 
 # ################################################################################################################################
 
     def post(self, path, *args, **kwargs):
-        data = self._post_handlers[path](path, args=args, kwargs=bunchify(kwargs))
-        return Response(data)
+        # type: (...) -> Response
+        return self._on_request(path, self._post_handlers, args, kwargs)
+
+# ################################################################################################################################
+
+    def _add_handler(self, path, func, config):
+        # type: (str, object, list)
+        config.append({
+            'path': path,
+            'matcher': Matcher(path),
+            'func': func,
+        })
 
 # ################################################################################################################################
 
     def add_get_handler(self, path, func):
-        self._get_handlers[path] = func
+        self._add_handler(path, func, self._get_handlers)
 
 # ################################################################################################################################
 
     def add_post_handler(self, path, func):
-        self._post_handlers[path] = func
+        self._add_handler(path, func, self._post_handlers)
 
 # ################################################################################################################################
 # ################################################################################################################################
