@@ -23,7 +23,7 @@ cloghandler = cloghandler # For pyflakes
 # Zato
 from zato.cli import apispec as apispec_mod, ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_create_lb_agent_mod, \
      ca_create_scheduler as ca_create_scheduler_mod, ca_create_server as ca_create_server_mod, \
-     ca_create_web_admin as ca_create_web_admin_mod, check_config as check_config_mod, \
+     ca_create_web_admin as ca_create_web_admin_mod, cache as cache_mod, check_config as check_config_mod, \
      component_version as component_version_mod, create_cluster as create_cluster_mod, \
      create_lb as create_lb_mod, create_odb as create_odb_mod, create_scheduler as create_scheduler_mod, \
      create_server as create_server_mod, create_web_admin as create_web_admin_mod, crypto as crypto_mod, \
@@ -101,6 +101,14 @@ def get_parser():
     ca_create_web_admin.set_defaults(command='ca_create_web_admin')
     ca_create_web_admin.add_argument('path', help='Path to a CA directory')
     add_opts(ca_create_web_admin, ca_create_web_admin_mod.Create.opts)
+
+    #
+    # cache
+    #
+    cache = subs.add_parser('cache', description='Get, set, delete and expire cache keys', parents=[base_parser])
+    cache.set_defaults(command='cache')
+    cache.add_argument('path', help='Path to a Zato server')
+    add_opts(cache, cache_mod.Cache.opts)
 
     #
     # check-config
