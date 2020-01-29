@@ -337,6 +337,7 @@ def run_command(args):
         ('ca_create_scheduler', 'zato.cli.ca_create_scheduler.Create'),
         ('ca_create_server', 'zato.cli.ca_create_server.Create'),
         ('ca_create_web_admin', 'zato.cli.ca_create_web_admin.Create'),
+        ('cache', 'zato.cli.cache.Cache'),
         ('check_config', 'zato.cli.check_config.CheckConfig'),
         ('component_version', 'zato.cli.component_version.ComponentVersion'),
         ('create_cluster', 'zato.cli.create_cluster.Create'),
