@@ -862,7 +862,7 @@ class Create(ZatoCommand):
 
             # Multi-key expire
             'zato.cache.builtin.pubapi.expire-by-prefix':    '/zato/cache/expire/by-prefix/{key}',
-            'zato.cache.builtin.pubapi.expire-by-regex':     '/zato/cache/expire/by-prefix/{key}',
+            'zato.cache.builtin.pubapi.expire-by-regex':     '/zato/cache/expire/by-regex/{key}',
             'zato.cache.builtin.pubapi.expire-by-suffix':    '/zato/cache/expire/by-suffix/{key}',
             'zato.cache.builtin.pubapi.expire-contains':     '/zato/cache/expire/contains/{key}',
             'zato.cache.builtin.pubapi.expire-not-contains': '/zato/cache/expire/not-contains/{key}',
