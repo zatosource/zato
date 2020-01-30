@@ -170,6 +170,9 @@ class _Multi(_BaseService):
 
 # ################################################################################################################################
 
+class _GetMulti(_Multi):
+    action = 'get'
+
 class _SetMulti(_Multi):
     action = 'set'
 
@@ -178,6 +181,36 @@ class _DeleteMulti(_Multi):
 
 class _ExpireMulti(_Multi):
     action = 'expire'
+
+# ################################################################################################################################
+
+class GetByPrefix(_GetMulti):
+    def _get_cache_func(self, cache):
+        return cache.get_by_prefix
+
+class GetBySuffix(_GetMulti):
+    def _get_cache_func(self, cache):
+        return cache.get_by_suffix
+
+class GetByRegex(_GetMulti):
+    def _get_cache_func(self, cache):
+        return cache.get_by_regex
+
+class GetContains(_GetMulti):
+    def _get_cache_func(self, cache):
+        return cache.get_contains
+
+class GetNotContains(_GetMulti):
+    def _get_cache_func(self, cache):
+        return cache.get_not_contains
+
+class GetContainsAll(_GetMulti):
+    def _get_cache_func(self, cache):
+        return cache.get_contains_all
+
+class GetContainsAny(_GetMulti):
+    def _get_cache_func(self, cache):
+        return cache.get_contains_any
 
 # ################################################################################################################################
 

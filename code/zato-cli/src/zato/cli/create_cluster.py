@@ -851,6 +851,24 @@ class Create(ZatoCommand):
             # For single keys
             'zato.cache.builtin.pubapi.single-key-service':  '/zato/cache/{key}',
 
+            # Multi-key get
+            'zato.cache.builtin.pubapi.get-by-prefix':       '/zato/cache/get/by-prefix/{key}',
+            'zato.cache.builtin.pubapi.get-by-regex':        '/zato/cache/get/by-regex/{key}',
+            'zato.cache.builtin.pubapi.get-by-suffix':       '/zato/cache/get/by-suffix/{key}',
+            'zato.cache.builtin.pubapi.get-contains':        '/zato/cache/get/contains/{key}',
+            'zato.cache.builtin.pubapi.get-not-contains':    '/zato/cache/get/not-contains/{key}',
+            'zato.cache.builtin.pubapi.get-contains-all':    '/zato/cache/get/contains-all',
+            'zato.cache.builtin.pubapi.get-contains-any':    '/zato/cache/get/contains-any',
+
+            # Multi-key set
+            'zato.cache.builtin.pubapi.set-by-prefix':       '/zato/cache/set/by-prefix/{key}',
+            'zato.cache.builtin.pubapi.set-by-regex':        '/zato/cache/set/by-regex/{key}',
+            'zato.cache.builtin.pubapi.set-by-suffix':       '/zato/cache/set/by-suffix/{key}',
+            'zato.cache.builtin.pubapi.set-contains':        '/zato/cache/set/contains/{key}',
+            'zato.cache.builtin.pubapi.set-not-contains':    '/zato/cache/set/not-contains/{key}',
+            'zato.cache.builtin.pubapi.set-contains-all':    '/zato/cache/set/contains-all',
+            'zato.cache.builtin.pubapi.set-contains-any':    '/zato/cache/set/contains-any',
+
             # Multi-key delete
             'zato.cache.builtin.pubapi.delete-by-prefix':    '/zato/cache/delete/by-prefix/{key}',
             'zato.cache.builtin.pubapi.delete-by-regex':     '/zato/cache/delete/by-regex/{key}',
@@ -869,20 +887,30 @@ class Create(ZatoCommand):
             'zato.cache.builtin.pubapi.expire-contains-all': '/zato/cache/expire/contains-all',
             'zato.cache.builtin.pubapi.expire-contains-any': '/zato/cache/expire/contains-any',
 
-            # Multi-key set
-            'zato.cache.builtin.pubapi.set-by-prefix':       '/zato/cache/set/by-prefix/{key}',
-            'zato.cache.builtin.pubapi.set-by-regex':        '/zato/cache/set/by-regex/{key}',
-            'zato.cache.builtin.pubapi.set-by-suffix':       '/zato/cache/set/by-suffix/{key}',
-            'zato.cache.builtin.pubapi.set-contains':        '/zato/cache/set/contains/{key}',
-            'zato.cache.builtin.pubapi.set-not-contains':    '/zato/cache/set/not-contains/{key}',
-            'zato.cache.builtin.pubapi.set-contains-all':    '/zato/cache/set/contains-all',
-            'zato.cache.builtin.pubapi.set-contains-any':    '/zato/cache/set/contains-any',
         }
 
         service_to_impl = {
 
             # For single keys
             'zato.cache.builtin.pubapi.single-key-service':  'zato.server.service.internal.cache.builtin.pubapi.SingleKeyService',
+
+            # Multi-key get
+            'zato.cache.builtin.pubapi.get-by-prefix':       'zato.server.service.internal.cache.builtin.pubapi.GetByPrefix',
+            'zato.cache.builtin.pubapi.get-by-regex':        'zato.server.service.internal.cache.builtin.pubapi.GetByRegex',
+            'zato.cache.builtin.pubapi.get-by-suffix':       'zato.server.service.internal.cache.builtin.pubapi.GetBySuffix',
+            'zato.cache.builtin.pubapi.get-contains':        'zato.server.service.internal.cache.builtin.pubapi.GetContains',
+            'zato.cache.builtin.pubapi.get-not-contains':    'zato.server.service.internal.cache.builtin.pubapi.GetNotContains',
+            'zato.cache.builtin.pubapi.get-contains-all':    'zato.server.service.internal.cache.builtin.pubapi.GetContainsAll',
+            'zato.cache.builtin.pubapi.get-contains-any':    'zato.server.service.internal.cache.builtin.pubapi.GetContainsAny',
+
+            # Multi-key set
+            'zato.cache.builtin.pubapi.set-by-prefix':       'zato.server.service.internal.cache.builtin.pubapi.SetByPrefix',
+            'zato.cache.builtin.pubapi.set-by-regex':        'zato.server.service.internal.cache.builtin.pubapi.SetByRegex',
+            'zato.cache.builtin.pubapi.set-by-suffix':       'zato.server.service.internal.cache.builtin.pubapi.SetBySuffix',
+            'zato.cache.builtin.pubapi.set-contains':        'zato.server.service.internal.cache.builtin.pubapi.SetContains',
+            'zato.cache.builtin.pubapi.set-not-contains':    'zato.server.service.internal.cache.builtin.pubapi.SetNotContains',
+            'zato.cache.builtin.pubapi.set-contains-all':    'zato.server.service.internal.cache.builtin.pubapi.SetContainsAll',
+            'zato.cache.builtin.pubapi.set-contains-any':    'zato.server.service.internal.cache.builtin.pubapi.SetContainsAny',
 
             # Multi-key delete
             'zato.cache.builtin.pubapi.delete-by-prefix':    'zato.server.service.internal.cache.builtin.pubapi.DeleteByPrefix',
@@ -902,14 +930,6 @@ class Create(ZatoCommand):
             'zato.cache.builtin.pubapi.expire-contains-all': 'zato.server.service.internal.cache.builtin.pubapi.ExpireContainsAll',
             'zato.cache.builtin.pubapi.expire-contains-any': 'zato.server.service.internal.cache.builtin.pubapi.ExpireContainsAny',
 
-            # Multi-key set
-            'zato.cache.builtin.pubapi.set-by-prefix':       'zato.server.service.internal.cache.builtin.pubapi.SetByPrefix',
-            'zato.cache.builtin.pubapi.set-by-regex':        'zato.server.service.internal.cache.builtin.pubapi.SetByRegex',
-            'zato.cache.builtin.pubapi.set-by-suffix':       'zato.server.service.internal.cache.builtin.pubapi.SetBySuffix',
-            'zato.cache.builtin.pubapi.set-contains':        'zato.server.service.internal.cache.builtin.pubapi.SetContains',
-            'zato.cache.builtin.pubapi.set-not-contains':    'zato.server.service.internal.cache.builtin.pubapi.SetNotContains',
-            'zato.cache.builtin.pubapi.set-contains-all':    'zato.server.service.internal.cache.builtin.pubapi.SetContainsAll',
-            'zato.cache.builtin.pubapi.set-contains-any':    'zato.server.service.internal.cache.builtin.pubapi.SetContainsAny',
         }
 
         sec = HTTPBasicAuth(None, 'zato.default.cache.client', True, 'zato.cache', 'Zato cache', new_password(), cluster)
