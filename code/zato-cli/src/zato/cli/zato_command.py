@@ -105,10 +105,12 @@ def get_parser():
     #
     # cache
     #
-    cache = subs.add_parser('cache', description='Get, set, delete and expire cache keys', parents=[base_parser])
-    cache.set_defaults(command='cache')
-    cache.add_argument('path', help='Path to a Zato server')
-    add_opts(cache, cache_mod.Cache.opts)
+    cache = subs.add_parser('cache', description='Cache keys - get, set, delete or expire keys and more', parents=[base_parser])
+    cache_subs = cache.add_subparsers()
+
+    cache_get = cache_subs.add_parser('get', description=cache_mod.CacheGet.__doc__, parents=[base_parser])
+    cache_get.set_defaults(command='cache_get')
+    add_opts(cache_get, cache_mod.CacheGet.opts)
 
     #
     # check-config
