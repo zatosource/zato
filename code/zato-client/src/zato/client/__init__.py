@@ -523,7 +523,7 @@ def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, s
 
     # To avoid circular references
     from zato.common.crypto import ServerCryptoManager
-    from zato.common.util import get_odb_session_from_server_config
+    from zato.common.util import get_odb_session_from_server_config, get_repo_dir_from_component_dir
 
     class ZatoClient(AnyServiceInvoker):
         def __init__(self, *args, **kwargs):
@@ -531,7 +531,7 @@ def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, s
             self.cluster_id = None
             self.odb_session = None
 
-    repo_dir = os.path.join(os.path.abspath(os.path.join(server_dir)), 'config', 'repo')
+    repo_dir = get_repo_dir_from_component_dir(server_dir)
     cm = ServerCryptoManager.from_repo_dir(None, repo_dir, None)
 
     secrets_conf = get_config_func(repo_dir, 'secrets.conf', needs_user_config=False)
