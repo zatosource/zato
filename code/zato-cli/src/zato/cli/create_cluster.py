@@ -544,6 +544,9 @@ class Create(ZatoCommand):
             # SFTP connections / connectors
             self.add_sftp_credentials(session, cluster)
 
+            # Account to access cache services with
+            self.add_cache_credentials(session, cluster)
+
             # SSO
             self.add_sso_endpoints(session, cluster)
 
@@ -1111,7 +1114,13 @@ class Create(ZatoCommand):
     def add_sftp_credentials(self, session, cluster):
         username = IPC.CONNECTOR.USERNAME.SFTP
         sec = HTTPBasicAuth(None, username, True, username, 'Zato SFTP', new_password(), cluster)
+        session.add(sec)
 
+# ################################################################################################################################
+
+    def add_cache_credentials(self, session, cluster):
+        username = CACHE.API_USERNAME
+        sec = HTTPBasicAuth(None, username, True, username, 'Zato Cache', new_password(), cluster)
         session.add(sec)
 
 # ################################################################################################################################

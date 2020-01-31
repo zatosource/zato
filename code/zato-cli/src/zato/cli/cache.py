@@ -14,6 +14,7 @@ import requests
 # Zato
 from zato.cli import ManageCommand
 from zato.common.util import get_client_from_server_conf
+from zato.common.util.cache import Client as CacheClient, CommandConfig
 
 # ################################################################################################################################
 
@@ -29,28 +30,25 @@ if 0:
 
 # ################################################################################################################################
 
+_not_given = '_zato_not_given'
+_modifiers = 'by_prefix', 'by_regex', 'by_suffix', 'contains', 'contains_all', 'contains_any', 'not_contains'
+
+# ################################################################################################################################
+
 common_cache_opts = [
     {'name':'--cache', 'help':'Cache to use, the default one will be used if not given on input', 'default':'default'},
     {'name':'--path', 'help':'Path to a local Zato server'},
     {'name':'--address', 'help':'HTTP(S) address of a Zato server'},
-    {'name':'--username', 'help':'Username to authenticate with to a remote Zato server'},
-    {'name':'--password', 'help':'Password to authenticate with to a remote Zato server'},
+    {'name':'--username', 'help':'Username to authenticate with to a remote Zato server', 'default':_not_given},
+    {'name':'--password', 'help':'Password to authenticate with to a remote Zato server', 'default':_not_given},
 ]
 
 data_type_opts = [
-    {'name':'--string', 'help':'In get and set operations, whether values should be treated as strings'},
-    {'name':'--int', 'help':'In get and set operations, whether values should be treated as integers'},
+    {'name':'--string-key', 'help':'In get and set operations, whether keys should be treated as strings', 'action':'store_true'},
+    {'name':'--int-key', 'help':'In get and set operations, whether keys should be treated as integers', 'action':'store_true'},
+    {'name':'--string-value', 'help':'In get and set operations, whether values should be treated as strings', 'action':'store_true'},
+    {'name':'--int-value', 'help':'In get and set operations, whether values should be treated as integers', 'action':'store_true'},
 ]
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class CacheClient(object):
-    def __init__(self, address, username=None, password=None):
-        # type: (str, str, str)
-        self.address = address
-        self.username = username
-        self.address = address
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,20 +58,31 @@ class CacheCommand(ManageCommand):
     """
     opts = common_cache_opts
 
-    def _on_server(self, args):
-        # type: (Namespace)
+    def _on_server(self, args, _modifiers=_modifiers):
+        # type: (Namespace, tuple)
 
-        # Create an API client to ensure that the server is running ..
-        _zato_client = get_client_from_server_conf(self.component_dir)
+        client = CacheClient.from_server_conf(self.component_dir)
 
-        address = _zato_client.address
-        username, password = _zato_client.session.auth
+        command = args.command
+        command = command.replace('cache_', '') # type: str
 
-        print()
-        print(111, address)
-        print(222, username)
-        print(333, password)
-        print()
+        modifier = None # type: str
+        for elem in _modifiers:
+            if getattr(args, elem, None):
+                modifier = elem
+                break
+
+        command_config = CommandConfig()
+        command_config.command = command
+        command_config.key = args.key
+        command_config.modifier = modifier
+        command_config.is_int_key = args.int_key
+        command_config.is_string_key = args.string_key
+        command_config.is_int_value = args.int_value
+        command_config.is_string_value = args.string_value
+
+        response = client.run_command(command_config)
+
 
 # ################################################################################################################################
 # ################################################################################################################################
