@@ -10,6 +10,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import os
+from json import loads
+
+# Bunch
+from bunch import bunchify
 
 # Requests
 import requests
@@ -20,6 +24,13 @@ from zato.common import CACHE
 from zato.common.crypto import ServerCryptoManager
 from zato.common.util import get_config, get_odb_session_from_server_config, get_repo_dir_from_component_dir
 from zato.common.odb.model import Cluster, HTTPBasicAuth, Server
+
+# ################################################################################################################################
+
+if 0:
+    from requests import Response as RequestsResponse
+
+    RequestsResponse = RequestsResponse
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -46,6 +57,18 @@ class CommandConfig(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class CommandResponse(object):
+    __slots__ = 'key', 'raw', 'data', 'has_value'
+
+    def __init__(self):
+        self.key = None       # type: object
+        self.raw = None       # type: str
+        self.data = None      # type: Bunch
+        self.has_value = None # type: bool
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Client(object):
     """ An HTTP-based Zato cache client.
     """
@@ -60,8 +83,8 @@ class Client(object):
 # ################################################################################################################################
 
     @staticmethod
-    def from_server_conf(server_dir):
-        # type: (str) -> Client
+    def from_server_conf(server_dir, is_https):
+        # type: (str, bool) -> Client
         repo_dir = get_repo_dir_from_component_dir(server_dir)
         cm = ServerCryptoManager.from_repo_dir(None, repo_dir, None)
         secrets_conf = get_config(repo_dir, 'secrets.conf', needs_user_config=False)
@@ -91,7 +114,8 @@ class Client(object):
 
         return Client.from_dict({
             'password': password,
-            'address': config.main.gunicorn_bind
+            'address': config.main.gunicorn_bind,
+            'is_https': is_https,
         })
 
 # ################################################################################################################################
@@ -103,7 +127,7 @@ class Client(object):
         client = Client()
         client.username = CACHE.API_USERNAME
         client.password = config['password']
-        client.address = config['address']
+        client.address = 'http{}://{}'.format('s' if config['is_https'] else '', config['address'])
 
         session = RequestsSession()
         session.auth = (client.username, client.password)
@@ -113,9 +137,48 @@ class Client(object):
 
 # ################################################################################################################################
 
-    def run_command(self, command_config):
-        # type: (CommandConfig)
-        print(222, command_config.to_dict())
+    def _request(self, op, address):
+        # type: (str, str) -> str
+
+        response = self.session.request(op, address) # type: RequestsResponse
+        return response.text
+
+# ################################################################################################################################
+
+    def _get(self, key, pattern='/zato/cache/{}'):
+        # type: (str, str) -> str
+
+        path = pattern.format(key)
+        address = '{}{}'.format(self.address, path)
+
+        return self._request('get', address)
+
+# ################################################################################################################################
+
+    def run_command(self, config):
+        # type: (CommandConfig) -> CommandResponse
+
+        # A get operation ..
+        if config.command == 'get':
+
+            # .. a single-key get
+            if not config.modifier:
+                raw_response = self._get(config.key)
+
+            # .. a multi-key get
+            else:
+                zzz
+
+        response = loads(raw_response)
+        response = bunchify(response)
+
+        _response = CommandResponse()
+        _response.key = config.key
+        _response.raw = raw_response
+        _response.data = response
+        _response.has_value = 'value' in _response.data
+
+        return _response
 
 # ################################################################################################################################
 # ################################################################################################################################

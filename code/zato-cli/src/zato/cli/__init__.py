@@ -428,6 +428,7 @@ class ZatoCommand(object):
         NOT_A_ZATO_WEB_ADMIN = 24
         NOT_A_ZATO_LB = 25
         NOT_A_ZATO_SCHEDULER = 26
+        CACHE_KEY_NOT_FOUND = 27
 
 # ################################################################################################################################
 
