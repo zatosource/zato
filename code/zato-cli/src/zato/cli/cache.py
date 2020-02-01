@@ -8,6 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+import sys
+
 # Requests
 import requests
 
@@ -38,9 +41,11 @@ _modifiers = 'by_prefix', 'by_regex', 'by_suffix', 'contains', 'contains_all', '
 common_cache_opts = [
     {'name':'--cache', 'help':'Cache to use, the default one will be used if not given on input', 'default':'default'},
     {'name':'--path', 'help':'Path to a local Zato server'},
+    {'name':'--is-https', 'help':'When connecting via --path, should HTTPS be used', 'action':'store_true'},
     {'name':'--address', 'help':'HTTP(S) address of a Zato server'},
     {'name':'--username', 'help':'Username to authenticate with to a remote Zato server', 'default':_not_given},
     {'name':'--password', 'help':'Password to authenticate with to a remote Zato server', 'default':_not_given},
+    {'name':'--format', 'help':'Response format, one of text, json or table', 'default':'text'},
 ]
 
 data_type_opts = [
@@ -61,7 +66,7 @@ class CacheCommand(ManageCommand):
     def _on_server(self, args, _modifiers=_modifiers):
         # type: (Namespace, tuple)
 
-        client = CacheClient.from_server_conf(self.component_dir)
+        client = CacheClient.from_server_conf(self.component_dir, args.is_https)
 
         command = args.command
         command = command.replace('cache_', '') # type: str
@@ -83,6 +88,16 @@ class CacheCommand(ManageCommand):
 
         response = client.run_command(command_config)
 
+        # We either report the actual value or an error message.
+        value = response.data.value if response.has_value else response.raw
+
+        # Report what was found ..
+        sys.stdout.write(value)
+        sys.stdout.flush()
+
+        # .. and exit with a non-zero code if there was an error
+        if not response.has_value:
+            sys.exit(self.SYS_ERROR.CACHE_KEY_NOT_FOUND)
 
 # ################################################################################################################################
 # ################################################################################################################################
