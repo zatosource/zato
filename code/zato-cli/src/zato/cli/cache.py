@@ -16,6 +16,7 @@ import requests
 
 # Zato
 from zato.cli import ManageCommand
+from zato.common import NotGiven
 from zato.common.util import get_client_from_server_conf
 from zato.common.util.cache import Client as CacheClient, CommandConfig
 
@@ -86,8 +87,7 @@ class CacheCommand(ManageCommand):
         command_config.modifier = modifier
         command_config.key = args.key
 
-        if command_config.command == 'set':
-            command_config.value = getattr(args, 'value', None)
+        command_config.value = getattr(args, 'value', NotGiven)
 
         if command_config.command in ('get', 'set'):
             command_config.is_int_key = args.int_key

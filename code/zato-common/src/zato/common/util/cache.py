@@ -20,9 +20,9 @@ import requests
 from requests import Session as RequestsSession
 
 # Zato
-from zato.common import CACHE
+from zato.common import CACHE, NotGiven
 from zato.common.crypto import ServerCryptoManager
-from zato.common.util import get_config, get_odb_session_from_server_config, get_repo_dir_from_component_dir
+from zato.common.util import as_bool, get_config, get_odb_session_from_server_config, get_repo_dir_from_component_dir
 from zato.common.odb.model import Cluster, HTTPBasicAuth, Server
 
 # ################################################################################################################################
@@ -151,7 +151,7 @@ class Client(object):
 
 # ################################################################################################################################
 
-    def _request(self, op, key, value=None, pattern='/zato/cache/{}', op_verb_map=op_verb_map):
+    def _request(self, op, key, value=NotGiven, pattern='/zato/cache/{}', op_verb_map=op_verb_map):
         # type: (str, str, str) -> str
 
         # Build a full address
@@ -161,11 +161,12 @@ class Client(object):
         # Get the HTTP verb to use in the request
         verb = op_verb_map[op] # type: str
 
-        if value:
-            data = {'value': value}
-            data = dumps(data)
-        else:
-            data = None
+        data = {'return_prev': True}
+
+        if value is not NotGiven:
+            data['value'] = value
+
+        data = dumps(data)
 
         response = self.session.request(verb, address, data=data) # type: RequestsResponse
         return response.text
@@ -175,7 +176,19 @@ class Client(object):
     def run_command(self, config):
         # type: (CommandConfig) -> CommandResponse
 
-        raw_response = self._request(config.command, config.key, config.value)
+        if config.is_int_key:
+            key = int(config.key)
+        else:
+            key = config.key
+
+        if config.is_int_value:
+            value = int(config.value)
+        elif config.is_bool_value:
+            value = as_bool(config.value)
+        else:
+            value = config.value
+
+        raw_response = self._request(config.command, key, value)
 
         response = loads(raw_response)
         response = bunchify(response)
