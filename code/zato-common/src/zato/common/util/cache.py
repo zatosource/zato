@@ -176,11 +176,6 @@ class Client(object):
     def run_command(self, config):
         # type: (CommandConfig) -> CommandResponse
 
-        if config.is_int_key:
-            key = int(config.key)
-        else:
-            key = config.key
-
         if config.is_int_value:
             value = int(config.value)
         elif config.is_bool_value:
@@ -188,7 +183,7 @@ class Client(object):
         else:
             value = config.value
 
-        raw_response = self._request(config.command, key, value)
+        raw_response = self._request(config.command, config.key, value)
 
         response = loads(raw_response)
         response = bunchify(response)
