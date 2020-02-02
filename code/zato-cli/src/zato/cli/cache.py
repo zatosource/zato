@@ -66,7 +66,7 @@ class CacheCommand(ManageCommand):
         # type: (Namespace, tuple)
 
         if args.address:
-            client = CacheClient.from_server_conf({
+            client = CacheClient.from_dict({
                 'address': args.address,
                 'username': args.username,
                 'password': args.password,
@@ -99,7 +99,7 @@ class CacheCommand(ManageCommand):
         response = client.run_command(command_config)
 
         # Report what was found ..
-        sys.stdout.write(response.raw)
+        sys.stdout.write(response.text)
         sys.stdout.flush()
 
         # .. and exit with a non-zero code if there was an error
