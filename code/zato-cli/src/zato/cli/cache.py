@@ -105,15 +105,7 @@ class CacheCommand(ManageCommand):
 class CacheGet(CacheCommand):
 
     opts = common_cache_opts + data_type_opts + [
-        {'name':'key', 'help':'Key to use'},
-        {'name':'--details', 'help':'Whether to return additional details about data found', 'action':'store_true'},
-        {'name':'--by-prefix', 'help':'Get values of keys matching the prefix', 'action':'store_true'},
-        {'name':'--by-suffix', 'help':'Get values of keys matching the suffix', 'action':'store_true'},
-        {'name':'--by-regex', 'help':'Get values of keys matching the regular expression', 'action':'store_true'},
-        {'name':'--contains', 'help':'Get values of keys containing the string', 'action':'store_true'},
-        {'name':'--not-contains', 'help':'Get values of keys that do not contain the string', 'action':'store_true'},
-        {'name':'--contains-all', 'help':'Get values of keys containing all the strings', 'action':'store_true'},
-        {'name':'--contains-any', 'help':'Get values of keys containing at least one of the strings', 'action':'store_true'},
+        {'name':'key', 'help':'Key to get value of'},
     ]
 
 # ################################################################################################################################
@@ -122,7 +114,7 @@ class CacheGet(CacheCommand):
 class CacheSet(CacheCommand):
 
     opts = common_cache_opts + data_type_opts + [
-        {'name':'key', 'help':'Key to use'},
+        {'name':'key', 'help':'Key to set value of'},
         {'name':'value', 'help':'Value to set'},
     ]
 
@@ -132,7 +124,7 @@ class CacheSet(CacheCommand):
 class CacheDelete(CacheCommand):
 
     opts = common_cache_opts + [
-        {'name':'key', 'help':'Key to use'},
+        {'name':'key', 'help':'Key to delete'},
     ]
 
 # ################################################################################################################################
