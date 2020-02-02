@@ -70,12 +70,11 @@ class CommandConfig(object):
 # ################################################################################################################################
 
 class CommandResponse(object):
-    __slots__ = 'key', 'raw', 'data', 'has_value'
+    __slots__ = 'key', 'text', 'has_value'
 
     def __init__(self):
         self.key = None       # type: object
-        self.raw = None       # type: str
-        self.data = None      # type: Bunch
+        self.text = None      # type: str
         self.has_value = None # type: bool
 
 # ################################################################################################################################
@@ -141,7 +140,13 @@ class Client(object):
         client = Client()
         client.username = config['username']
         client.password = config['password']
-        client.address = 'http{}://{}'.format('s' if config['is_https'] else '', config['address'])
+
+        if config['address'].startswith('http'):
+            address = config['address']
+        else:
+            address = 'http{}://{}'.format('s' if config['is_https'] else '', config['address'])
+
+        client.address = address
 
         session = RequestsSession()
         if client.password:
@@ -186,14 +191,9 @@ class Client(object):
 
         raw_response = self._request(config.command, config.key, value)
 
-        response = loads(raw_response)
-        response = bunchify(response)
-
         _response = CommandResponse()
         _response.key = config.key
-        _response.raw = raw_response
-        _response.data = response
-        _response.has_value = 'value' in _response.data
+        _response.text = raw_response
 
         return _response
 
