@@ -126,6 +126,7 @@ class Client(object):
                 session.close()
 
         return Client.from_dict({
+            'username': CACHE.API_USERNAME,
             'password': password,
             'address': config.main.gunicorn_bind,
             'is_https': is_https,
@@ -138,7 +139,7 @@ class Client(object):
         # type: (dict) -> Client
 
         client = Client()
-        client.username = CACHE.API_USERNAME
+        client.username = config['username']
         client.password = config['password']
         client.address = 'http{}://{}'.format('s' if config['is_https'] else '', config['address'])
 
