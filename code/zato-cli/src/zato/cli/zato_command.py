@@ -112,6 +112,14 @@ def get_parser():
     cache_get.set_defaults(command='cache_get')
     add_opts(cache_get, cache_mod.CacheGet.opts)
 
+    cache_set = cache_subs.add_parser('set', description=cache_mod.CacheSet.__doc__, parents=[base_parser])
+    cache_set.set_defaults(command='cache_set')
+    add_opts(cache_set, cache_mod.CacheSet.opts)
+
+    cache_delete = cache_subs.add_parser('set', description=cache_mod.CacheDelete.__doc__, parents=[base_parser])
+    cache_delete.set_defaults(command='cache_delete')
+    add_opts(cache_delete, cache_mod.CacheDelete.opts)
+
     #
     # check-config
     #
