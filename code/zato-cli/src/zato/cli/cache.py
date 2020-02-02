@@ -122,14 +122,8 @@ class CacheGet(CacheCommand):
 class CacheSet(CacheCommand):
 
     opts = common_cache_opts + data_type_opts + [
-        {'name':'--by-prefix', 'help':'Set keys matching the prefix to hold the input value', 'action':'store_true'},
-        {'name':'--by-suffix', 'help':'Set keys matching the suffix to hold the input value', 'action':'store_true'},
-        {'name':'--by-regex', 'help':'Set keys matching the regular expression to hold the input value', 'action':'store_true'},
-        {'name':'--contains', 'help':'Set keys containing the string to hold the input value', 'action':'store_true'},
-        {'name':'--not-contains', 'help':'Set keys that do not contain the string to hold the input value', 'action':'store_true'},
-        {'name':'--contains-all', 'help':'Set keys containing all the strings to hold the input value', 'action':'store_true'},
-        {'name':'--contains-any', 'help':'Set keys containing at least one of the strings to hold the input value',
-         'action':'store_true'},
+        {'name':'key', 'help':'Key to use'},
+        {'name':'value', 'help':'Value to set'},
     ]
 
 # ################################################################################################################################
@@ -138,13 +132,7 @@ class CacheSet(CacheCommand):
 class CacheDelete(CacheCommand):
 
     opts = common_cache_opts + [
-        {'name':'--by-prefix', 'help':'Delete keys matching the prefix', 'action':'store_true'},
-        {'name':'--by-suffix', 'help':'Delete keys matching the suffix', 'action':'store_true'},
-        {'name':'--by-regex', 'help':'Delete keys matching the regular expression', 'action':'store_true'},
-        {'name':'--contains', 'help':'Delete keys containing the string', 'action':'store_true'},
-        {'name':'--not-contains', 'help':'Delete keys that do not contain the string', 'action':'store_true'},
-        {'name':'--contains-all', 'help':'Delete keys containing all the strings', 'action':'store_true'},
-        {'name':'--contains-any', 'help':'Delete keys containing at least one of the strings', 'action':'store_true'},
+        {'name':'key', 'help':'Key to use'},
     ]
 
 # ################################################################################################################################
@@ -153,13 +141,7 @@ class CacheDelete(CacheCommand):
 class CacheExpire(CacheCommand):
 
     opts = common_cache_opts + [
-        {'name':'--by-prefix', 'help':'Expire keys matching the prefix', 'action':'store_true'},
-        {'name':'--by-suffix', 'help':'Expire keys matching the suffix', 'action':'store_true'},
-        {'name':'--by-regex', 'help':'Expire keys matching the regular expression', 'action':'store_true'},
-        {'name':'--contains', 'help':'Expire keys containing the string', 'action':'store_true'},
-        {'name':'--not-contains', 'help':'Expire keys that do not contain the string', 'action':'store_true'},
-        {'name':'--contains-all', 'help':'Expire keys containing all the strings', 'action':'store_true'},
-        {'name':'--contains-any', 'help':'Expire keys containing at least one of the strings', 'action':'store_true'},
+        {'name':'key', 'help':'Key to use'},
     ]
 
 # ################################################################################################################################
