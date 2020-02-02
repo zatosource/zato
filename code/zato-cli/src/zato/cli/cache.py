@@ -41,12 +41,11 @@ _modifiers = 'by_prefix', 'by_regex', 'by_suffix', 'contains', 'contains_all', '
 
 common_cache_opts = [
     {'name':'--cache', 'help':'Cache to use, the default one will be used if not given on input', 'default':'default'},
-    {'name':'--path', 'help':'Path to a local Zato server'},
+    {'name':'--path', 'help':'Path to a local Zato server', 'default':''},
     {'name':'--is-https', 'help':'When connecting via --path, should HTTPS be used', 'action':'store_true'},
     {'name':'--address', 'help':'HTTP(S) address of a Zato server'},
     {'name':'--username', 'help':'Username to authenticate with to a remote Zato server', 'default':_not_given},
     {'name':'--password', 'help':'Password to authenticate with to a remote Zato server', 'default':_not_given},
-    {'name':'--format', 'help':'Response format, one of text, json or table', 'default':'text'},
 ]
 
 data_type_opts = [
@@ -66,7 +65,15 @@ class CacheCommand(ManageCommand):
     def _on_server(self, args, _modifiers=_modifiers):
         # type: (Namespace, tuple)
 
-        client = CacheClient.from_server_conf(self.component_dir, args.is_https)
+        if args.address:
+            client = CacheClient.from_server_conf({
+                'address': args.address,
+                'username': args.username,
+                'password': args.password,
+                'is_https': args.is_https,
+            })
+        else:
+            client = CacheClient.from_server_conf(self.component_dir, args.is_https)
 
         command = args.command
         command = command.replace('cache_', '') # type: str
