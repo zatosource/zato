@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-import os
 from base64 import b64decode, b64encode
 from datetime import datetime
 from http.client import OK
