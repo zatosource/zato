@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import os
-from json import loads
+from json import dumps, loads
 
 # Bunch
 from bunch import bunchify
@@ -33,19 +33,31 @@ if 0:
     RequestsResponse = RequestsResponse
 
 # ################################################################################################################################
+
+# Maps cache operations to HTTP verbos
+op_verb_map = {
+    'get': 'GET',
+    'set': 'POST',
+    'delete': 'DELETE'
+}
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class CommandConfig(object):
-    __slots__ = 'command', 'key', 'modifier', 'is_string_key', 'is_int_key', 'is_string_value', 'is_int_value', 'format'
+    __slots__ = 'command', 'modifier', 'key', 'value', 'is_string_key', 'is_int_key', 'is_string_value', 'is_int_value', \
+        'is_bool_value', 'format'
 
     def __init__(self):
         self.command = None         # type: str
-        self.key = None             # type: str
         self.modifier = None        # type: str
+        self.key = None             # type: str
+        self.value = None           # type: str
         self.is_string_key = None   # type: bool
         self.is_int_key = None      # type: bool
         self.is_string_value = None # type: bool
         self.is_int_value = None    # type: bool
+        self.is_bool_value = None   # type: bool
         self.format = None          # type: str
 
     def to_dict(self):
@@ -131,20 +143,31 @@ class Client(object):
         client.address = 'http{}://{}'.format('s' if config['is_https'] else '', config['address'])
 
         session = RequestsSession()
-        session.auth = (client.username, client.password)
+        if client.password:
+            session.auth = (client.username, client.password)
         client.session = session
 
         return client
 
 # ################################################################################################################################
 
-    def _request(self, op, key, pattern='/zato/cache/{}'):
+    def _request(self, op, key, value=None, pattern='/zato/cache/{}', op_verb_map=op_verb_map):
         # type: (str, str, str) -> str
 
+        # Build a full address
         path = pattern.format(key)
         address = '{}{}'.format(self.address, path)
 
-        response = self.session.request(op, address) # type: RequestsResponse
+        # Get the HTTP verb to use in the request
+        verb = op_verb_map[op] # type: str
+
+        if value:
+            data = {'value': value}
+            data = dumps(data)
+        else:
+            data = None
+
+        response = self.session.request(verb, address, data=data) # type: RequestsResponse
         return response.text
 
 # ################################################################################################################################
@@ -152,7 +175,7 @@ class Client(object):
     def run_command(self, config):
         # type: (CommandConfig) -> CommandResponse
 
-        raw_response = self._request(config.command, config.key)
+        raw_response = self._request(config.command, config.key, config.value)
 
         response = loads(raw_response)
         response = bunchify(response)

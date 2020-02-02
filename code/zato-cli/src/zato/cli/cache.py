@@ -48,11 +48,15 @@ common_cache_opts = [
     {'name':'--format', 'help':'Response format, one of text, json or table', 'default':'text'},
 ]
 
-data_type_opts = [
+data_type_key_opts = [
     {'name':'--string-key', 'help':'In get and set operations, whether keys should be treated as strings', 'action':'store_true'},
     {'name':'--int-key', 'help':'In get and set operations, whether keys should be treated as integers', 'action':'store_true'},
+]
+
+data_type_opts = data_type_key_opts + [
     {'name':'--string-value', 'help':'In get and set operations, whether values should be treated as strings', 'action':'store_true'},
     {'name':'--int-value', 'help':'In get and set operations, whether values should be treated as integers', 'action':'store_true'},
+    {'name':'--bool-value', 'help':'In get and set operations, whether values should be treated as booleans', 'action':'store_true'},
 ]
 
 # ################################################################################################################################
@@ -79,20 +83,23 @@ class CacheCommand(ManageCommand):
 
         command_config = CommandConfig()
         command_config.command = command
-        command_config.key = args.key
         command_config.modifier = modifier
-        command_config.is_int_key = args.int_key
-        command_config.is_string_key = args.string_key
-        command_config.is_int_value = args.int_value
-        command_config.is_string_value = args.string_value
+        command_config.key = args.key
+
+        if command_config.command == 'set':
+            command_config.value = getattr(args, 'value', None)
+
+        if command_config.command in ('get', 'set'):
+            command_config.is_int_key = args.int_key
+            command_config.is_string_key = args.string_key
+            command_config.is_int_value = args.int_value
+            command_config.is_string_value = args.string_value
+            command_config.is_bool_value = args.bool_value
 
         response = client.run_command(command_config)
 
-        # We either report the actual value or an error message.
-        value = response.data.value if response.has_value else response.raw
-
         # Report what was found ..
-        sys.stdout.write(value)
+        sys.stdout.write(response.raw)
         sys.stdout.flush()
 
         # .. and exit with a non-zero code if there was an error
@@ -123,7 +130,7 @@ class CacheSet(CacheCommand):
 
 class CacheDelete(CacheCommand):
 
-    opts = common_cache_opts + [
+    opts = common_cache_opts + data_type_key_opts + [
         {'name':'key', 'help':'Key to delete'},
     ]
 
