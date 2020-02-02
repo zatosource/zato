@@ -104,9 +104,10 @@ class Client(object):
                 filter(Cluster.id == HTTPBasicAuth.cluster_id).\
                 filter(HTTPBasicAuth.username == CACHE.API_USERNAME).\
                 filter(HTTPBasicAuth.cluster_id == cluster.id).\
-                one() # type: HTTPBasicAuth
+                first() # type: HTTPBasicAuth
 
-            password = security.password
+            if security:
+                password = security.password
 
         finally:
             if session:
@@ -137,37 +138,21 @@ class Client(object):
 
 # ################################################################################################################################
 
-    def _request(self, op, address):
-        # type: (str, str) -> str
+    def _request(self, op, key, pattern='/zato/cache/{}'):
+        # type: (str, str, str) -> str
+
+        path = pattern.format(key)
+        address = '{}{}'.format(self.address, path)
 
         response = self.session.request(op, address) # type: RequestsResponse
         return response.text
 
 # ################################################################################################################################
 
-    def _get(self, key, pattern='/zato/cache/{}'):
-        # type: (str, str) -> str
-
-        path = pattern.format(key)
-        address = '{}{}'.format(self.address, path)
-
-        return self._request('get', address)
-
-# ################################################################################################################################
-
     def run_command(self, config):
         # type: (CommandConfig) -> CommandResponse
 
-        # A get operation ..
-        if config.command == 'get':
-
-            # .. a single-key get
-            if not config.modifier:
-                raw_response = self._get(config.key)
-
-            # .. a multi-key get
-            else:
-                zzz
+        raw_response = self._request(config.command, config.key)
 
         response = loads(raw_response)
         response = bunchify(response)
