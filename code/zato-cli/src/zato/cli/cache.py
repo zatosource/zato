@@ -11,13 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import sys
 
-# Requests
-import requests
-
 # Zato
 from zato.cli import ManageCommand
 from zato.common import NotGiven
-from zato.common.util import get_client_from_server_conf
 from zato.common.util.cache import Client as CacheClient, CommandConfig
 
 # ################################################################################################################################

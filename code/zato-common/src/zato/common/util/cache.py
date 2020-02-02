@@ -9,14 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import os
-from json import dumps, loads
-
-# Bunch
-from bunch import bunchify
+from json import dumps
 
 # Requests
-import requests
 from requests import Session as RequestsSession
 
 # Zato
@@ -182,10 +177,13 @@ class Client(object):
     def run_command(self, config):
         # type: (CommandConfig) -> CommandResponse
 
-        if config.is_int_value:
-            value = int(config.value)
-        elif config.is_bool_value:
-            value = as_bool(config.value)
+        if config.value is not NotGiven:
+            if config.is_int_value:
+                value = int(config.value)
+            elif config.is_bool_value:
+                value = as_bool(config.value)
+            else:
+                value = config.value
         else:
             value = config.value
 
