@@ -78,19 +78,20 @@ class CommandResponse(object):
 class Client(object):
     """ An HTTP-based Zato cache client.
     """
-    __slots__ = 'address', 'username', 'password', 'session'
+    __slots__ = 'address', 'username', 'password', 'cache_name', 'session'
 
     def __init__(self):
-        self.address = None  # type: str
-        self.username = None # type: str
-        self.password = None # type: str
-        self.session = None  # type: RequestsSession
+        self.address = None    # type: str
+        self.username = None   # type: str
+        self.password = None   # type: str
+        self.cache_name = None # type: str
+        self.session = None    # type: RequestsSession
 
 # ################################################################################################################################
 
     @staticmethod
-    def from_server_conf(server_dir, is_https):
-        # type: (str, bool) -> Client
+    def from_server_conf(server_dir, cache_name, is_https):
+        # type: (str, str, bool) -> Client
         repo_dir = get_repo_dir_from_component_dir(server_dir)
         cm = ServerCryptoManager.from_repo_dir(None, repo_dir, None)
         secrets_conf = get_config(repo_dir, 'secrets.conf', needs_user_config=False)
@@ -123,6 +124,7 @@ class Client(object):
             'username': CACHE.API_USERNAME,
             'password': password,
             'address': config.main.gunicorn_bind,
+            'cache_name': cache_name,
             'is_https': is_https,
         })
 
@@ -135,6 +137,7 @@ class Client(object):
         client = Client()
         client.username = config['username']
         client.password = config['password']
+        client.cache_name = config['cache_name']
 
         if config['address'].startswith('http'):
             address = config['address']
@@ -162,7 +165,10 @@ class Client(object):
         # Get the HTTP verb to use in the request
         verb = op_verb_map[op] # type: str
 
-        data = {'return_prev': True}
+        data = {
+            'cache': self.cache_name,
+            'return_prev': True
+        }
 
         if value is not NotGiven:
             data['value'] = value
