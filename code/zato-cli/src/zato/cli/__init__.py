@@ -178,7 +178,6 @@ loggers:
         handlers: [stdout, notif_sql]
         qualname: zato_notif_sql
         propagate: false
-
 handlers:
     default:
         formatter: default
@@ -338,6 +337,9 @@ def run_command(args):
         ('ca_create_scheduler', 'zato.cli.ca_create_scheduler.Create'),
         ('ca_create_server', 'zato.cli.ca_create_server.Create'),
         ('ca_create_web_admin', 'zato.cli.ca_create_web_admin.Create'),
+        ('cache_delete', 'zato.cli.cache.CacheDelete'),
+        ('cache_get', 'zato.cli.cache.CacheGet'),
+        ('cache_set', 'zato.cli.cache.CacheSet'),
         ('check_config', 'zato.cli.check_config.CheckConfig'),
         ('component_version', 'zato.cli.component_version.ComponentVersion'),
         ('create_cluster', 'zato.cli.create_cluster.Create'),
@@ -428,6 +430,7 @@ class ZatoCommand(object):
         NOT_A_ZATO_WEB_ADMIN = 24
         NOT_A_ZATO_LB = 25
         NOT_A_ZATO_SCHEDULER = 26
+        CACHE_KEY_NOT_FOUND = 27
 
 # ################################################################################################################################
 
@@ -938,7 +941,6 @@ class ManageCommand(ZatoCommand):
 
         os.chdir(self.component_dir)
         return self._get_dispatch()[json_data['component']](args)
-
 
 # ################################################################################################################################
 
