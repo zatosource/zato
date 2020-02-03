@@ -66,10 +66,11 @@ class CacheCommand(ManageCommand):
                 'address': args.address,
                 'username': args.username,
                 'password': args.password,
+                'cache_name': args.cache,
                 'is_https': args.is_https,
             })
         else:
-            client = CacheClient.from_server_conf(self.component_dir, args.is_https)
+            client = CacheClient.from_server_conf(self.component_dir, args.cache, args.is_https)
 
         command = args.command
         command = command.replace('cache_', '') # type: str
