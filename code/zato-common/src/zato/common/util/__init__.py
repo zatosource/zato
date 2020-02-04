@@ -1398,6 +1398,12 @@ def get_client_from_server_conf(server_dir):
 
 # ################################################################################################################################
 
+def get_repo_dir_from_component_dir(component_dir):
+    # type: (str) -> str
+    return os.path.join(os.path.abspath(os.path.join(component_dir)), 'config', 'repo')
+
+# ################################################################################################################################
+
 django_sa_mappings = {
     'NAME': 'db_name',
     'HOST': 'host',
