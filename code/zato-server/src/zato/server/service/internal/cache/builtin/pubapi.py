@@ -17,14 +17,14 @@ from future.utils import iteritems
 # Zato
 from zato.common import ZATO_NOT_GIVEN
 from zato.common.exception import BadRequest, InternalServerError, NotFound
-from zato.server.service import Bool, Float, Service
+from zato.server.service import AsIs, Bool, Float, Service
 
 # ################################################################################################################################
 
-optional_keys = ('key', 'value', 'last_read', 'prev_read', 'last_write', 'prev_write', 'expiry', 'expires_at', 'hits', \
-    'position')
+optional_keys = AsIs('key'), AsIs('value'), 'last_read', 'prev_read', 'last_write', 'prev_write', 'expiry', 'expires_at', \
+                 'hits', 'position'
 
-datetime_keys = ('last_read', 'prev_read', 'last_write', 'prev_write', 'expires_at')
+datetime_keys = 'last_read', 'prev_read', 'last_write', 'prev_write', 'expires_at'
 
 # ################################################################################################################################
 
@@ -66,7 +66,7 @@ class SingleKeyService(_BaseService):
     """ Base class for cache services accepting a single key on input, except for Expiry which uses its own service.
     """
     class SimpleIO(_BaseService.SimpleIO):
-        input_optional = _BaseService.SimpleIO.input_optional + ('cache', 'value', 'details', Float('expiry'))
+        input_optional = _BaseService.SimpleIO.input_optional + ('cache', AsIs('value'), 'details', Float('expiry'))
         output_optional = _BaseService.SimpleIO.output_optional + ('prev_value',)
 
 # ################################################################################################################################
@@ -170,6 +170,9 @@ class _Multi(_BaseService):
 
 # ################################################################################################################################
 
+class _GetMulti(_Multi):
+    action = 'get'
+
 class _SetMulti(_Multi):
     action = 'set'
 
@@ -178,6 +181,36 @@ class _DeleteMulti(_Multi):
 
 class _ExpireMulti(_Multi):
     action = 'expire'
+
+# ################################################################################################################################
+
+class GetByPrefix(_GetMulti):
+    def _get_cache_func(self, cache):
+        return cache.get_by_prefix
+
+class GetBySuffix(_GetMulti):
+    def _get_cache_func(self, cache):
+        return cache.get_by_suffix
+
+class GetByRegex(_GetMulti):
+    def _get_cache_func(self, cache):
+        return cache.get_by_regex
+
+class GetContains(_GetMulti):
+    def _get_cache_func(self, cache):
+        return cache.get_contains
+
+class GetNotContains(_GetMulti):
+    def _get_cache_func(self, cache):
+        return cache.get_not_contains
+
+class GetContainsAll(_GetMulti):
+    def _get_cache_func(self, cache):
+        return cache.get_contains_all
+
+class GetContainsAny(_GetMulti):
+    def _get_cache_func(self, cache):
+        return cache.get_contains_any
 
 # ################################################################################################################################
 
