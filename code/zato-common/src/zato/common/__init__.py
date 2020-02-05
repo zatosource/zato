@@ -489,6 +489,8 @@ class SERVER_UP_STATUS(Attrs):
 
 class CACHE:
 
+    API_USERNAME = 'pub.zato.cache'
+
     class TYPE:
         BUILTIN = 'builtin'
         MEMCACHED = 'memcached'
