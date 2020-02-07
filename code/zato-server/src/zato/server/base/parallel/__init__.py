@@ -104,6 +104,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     """ Main server process.
     """
     def __init__(self):
+        self.logger = logger
         self.host = None
         self.port = None
         self.crypto_manager = None # type: ServerCryptoManager
