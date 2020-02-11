@@ -70,8 +70,8 @@ class APISpecTestCase(TestCase):
         }
 
         self.assertEquals(len(segments), 1)
-        segment = segments[0] # type: _DocstringSegment
-        self.assertDictEqual(segment.to_dict(), expected)
+        public = segments[0] # type: _DocstringSegment
+        self.assertDictEqual(public.to_dict(), expected)
 
 # ################################################################################################################################
 
@@ -96,8 +96,52 @@ class APISpecTestCase(TestCase):
         }
 
         self.assertEquals(len(segments), 1)
-        segment = segments[0] # type: _DocstringSegment
-        self.assertDictEqual(segment.to_dict(), expected)
+        public = segments[0] # type: _DocstringSegment
+        self.assertDictEqual(public.to_dict(), expected)
+
+# ################################################################################################################################
+
+    def xtest_extract_tags_multi_1(self):
+
+        class MyService:
+            """ This is a one-line summary.
+
+            This is public information
+            It is multiline
+
+            #internal
+
+            One-line summary for internal uses.
+
+            Internal
+            part.
+            """
+
+        tags = [APISPEC.DEFAULT_TAG, 'internal']
+        segments = ServiceInfo(service_name, MyService, sio_config, tags).extract_segments()
+
+        # There should be only one tag, the default, implicit one called 'public'
+        expected_public = {
+             'tag':         'public',
+             'description': 'This is public information\nIt is multiline',
+             'full':        'This is a one-line summary.\n\nThis is public information\nIt is multiline',
+             'summary':     'This is a one-line summary.'
+        }
+
+        expected_internal = {
+             'tag':         'internal',
+             'description': 'Internal\npart.',
+             'full':        'One-line summary for internal uses.\n\nInternal\npart.',
+             'summary':     'One-line summary for internal uses.'
+        }
+
+        self.assertEquals(len(segments), 2)
+
+        public = segments[0] # type: _DocstringSegment
+        self.assertDictEqual(public.to_dict(), expected_public)
+
+        internal = segments[1] # type: _DocstringSegment
+        self.assertDictEqual(internal.to_dict(), expected_internal)
 
 # ################################################################################################################################
 # ################################################################################################################################

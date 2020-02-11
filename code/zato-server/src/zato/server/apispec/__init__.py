@@ -234,7 +234,7 @@ class ServiceInfo(object):
             _doc.extend(split[1:])
             doc = '\n'.join(_doc)
         else:
-            doc = summary
+            doc = ''
 
         # This gives us the full docstring out of which we need to extract description alone.
         full_docstring = format_docstring('', '"{}"'.format(doc), post_description_blank=False)
@@ -293,6 +293,7 @@ class ServiceInfo(object):
         in_first_line = True
 
         for idx, line in enumerate(lines): # type: (int, str)
+
             line_stripped = line.strip()
             if line_stripped.startswith('#'):
                 if not in_first_line:
@@ -334,8 +335,6 @@ class ServiceInfo(object):
 
         # Contains all lines still to be processed - function self._get_next_split_segment will update it in place.
         current_lines = all_lines[:]
-
-        # Lines belonging to current tag
 
         for tag, tag_lines in self._get_next_split_segment(current_lines):
             segment = self._parse_split_segment(tag, tag_lines)
