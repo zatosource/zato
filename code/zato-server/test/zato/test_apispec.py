@@ -12,8 +12,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from unittest import main, TestCase
 
 # Zato
+from zato.common import APISPEC
 from zato.server.apispec import ServiceInfo
-#from zato.server.service import Service
+
+# ################################################################################################################################
+
+if 0:
+    from zato.server.apispec import _DocstringSegment
+
+    _DocstringSegment = _DocstringSegment
 
 # ################################################################################################################################
 
@@ -29,8 +36,6 @@ class APISpecTestCase(TestCase):
 
     def test_docstring_no_tags(self):
 
-        return
-
         class MyService:
             """ This is a one-line summary.
 
@@ -38,9 +43,9 @@ class APISpecTestCase(TestCase):
             It is multiline
             """
 
-        info = ServiceInfo(service_name, MyService, sio_config)
+        info = ServiceInfo(service_name, MyService, sio_config, 'public')
 
-        self.assertEquals(info.docstring.summary, 'This is a one-line summary')
+        self.assertEquals(info.docstring.summary, 'This is a one-line summary.')
         self.assertEquals(info.docstring.full, 'This is a one-line summary.\n\nThis is public information\nIt is multiline')
 
 # ################################################################################################################################
@@ -54,17 +59,45 @@ class APISpecTestCase(TestCase):
             It is multiline
             """
 
-        tags = ServiceInfo(service_name, MyService, sio_config).extract_tags()
+        segments = ServiceInfo(service_name, MyService, sio_config, APISPEC.DEFAULT_TAG).extract_segments()
 
         # There should be only one tag, the default, implicit one called 'public'
-        expected = {'public':
-            {'tag':         'public',
+        expected = {
+             'tag':         'public',
              'description': 'This is public information\nIt is multiline',
              'full':        'This is a one-line summary.\n\nThis is public information\nIt is multiline',
              'summary':     'This is a one-line summary.'
-        }}
+        }
 
-        #self.assertDictEqual(tags, expected)
+        self.assertEquals(len(segments), 1)
+        segment = segments[0] # type: _DocstringSegment
+        self.assertDictEqual(segment.to_dict(), expected)
+
+# ################################################################################################################################
+
+    def test_extract_tags_public_only_explicit(self):
+
+        class MyService:
+            """ #public
+            This is a one-line summary.
+
+            This is public information
+            It is multiline
+            """
+
+        segments = ServiceInfo(service_name, MyService, sio_config, APISPEC.DEFAULT_TAG).extract_segments()
+
+        # There should be only one tag, the explicitly named 'public' one.
+        expected = {
+             'tag':         'public',
+             'description': 'This is public information\nIt is multiline',
+             'full':        'This is a one-line summary.\n\nThis is public information\nIt is multiline',
+             'summary':     'This is a one-line summary.'
+        }
+
+        self.assertEquals(len(segments), 1)
+        segment = segments[0] # type: _DocstringSegment
+        self.assertDictEqual(segment.to_dict(), expected)
 
 # ################################################################################################################################
 # ################################################################################################################################
