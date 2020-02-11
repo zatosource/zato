@@ -54,10 +54,14 @@ class Config(object):
 # ################################################################################################################################
 
 class Docstring(object):
-    def __init__(self):
+    __slots__ = 'summary', 'description', 'full', 'tags', 'by_tag'
+
+    def __init__(self, tags):
+        # type: (list)
         self.summary = ''
         self.description = ''
         self.full = ''
+        self.tags = tags
         self.by_tag = {} # Keys are tags used, values are documentation for key
 
 # ################################################################################################################################
@@ -110,13 +114,14 @@ class SimpleIO(object):
 class ServiceInfo(object):
     """ Contains information about a service basing on which documentation is generated.
     """
-    def __init__(self, name, service_class, simple_io_config):
+    def __init__(self, name, service_class, simple_io_config, tags):
+        # type: (str, Service, SimpleIO, object)
         self.name = name
-        self.service_class = service_class       # type: Service
+        self.service_class = service_class
         self.simple_io_config = simple_io_config
         self.config = Config()
         self.simple_io = {}
-        self.docstring = Docstring()
+        self.docstring = Docstring(tags if isinstance(tags, list) else [tags])
         self.namespace = Namespace()
         self.invokes = []
         self.invoked_by = []
@@ -214,70 +219,6 @@ class ServiceInfo(object):
         self._add_services_from_invokes()
         self._add_ns_sio()
 
-        '''
-
-# ################################################################################################################################
-
-    def _parse_docstring(self, tag, doc):
-        # type: (str, str) -> _DocstringSegment
-
-        if not doc:
-            return
-
-        split = doc.strip().splitlines()
-        if not split:
-            return
-
-        summary = split[0]
-
-        # format_docstring expects an empty line between summary and description
-        if len(split) > 1:
-            _doc = []
-            _doc.append(split[0])
-            _doc.append('')
-            _doc.extend(split[1:])
-            doc = '\n'.join(_doc)
-
-        # This gives us the full docstring out of which we need to extract description alone.
-        full_docstring = format_docstring('', '"{}"'.format(doc), post_description_blank=False)
-        full_docstring = full_docstring.lstrip('"""').rstrip('"""')
-        description = full_docstring.splitlines()
-
-        # If there are multiple lines and the second one is empty this means it is an indicator of a summary to follow.
-        if len(description) > 1 and not description[1]:
-            description = '\n'.join(description[2:])
-        else:
-            description = ''
-
-        # docformatter.normalize_summary adds superfluous period at end docstring.
-        if full_docstring:
-            if description and full_docstring[-1] == '.' and full_docstring[-1] != description[-1]:
-                full_docstring = full_docstring[:-1]
-
-            if summary and full_docstring[-1] == '.' and full_docstring[-1] != summary[-1]:
-                full_docstring = full_docstring[:-1]
-
-        summary = summary.strip()
-        full_docstring = full_docstring.strip()
-
-        # If we don't have any summary but there is a docstring at all then it must be a single-line one
-        # and it becomes our summary.
-        if full_docstring and not summary:
-            summary = full_docstring
-
-        # If we don't have description but we have summary then summary becomes description
-        if summary and not description:
-            description = summary
-
-        out = _DocstringSegment()
-        out.tag = tag
-        out.summary = summary
-        out.description = description
-        out.full = full_docstring
-
-        return out
-        '''
-
 # ################################################################################################################################
 
     def _parse_split_segment(self, tag, split):
@@ -292,6 +233,8 @@ class ServiceInfo(object):
             _doc.append('')
             _doc.extend(split[1:])
             doc = '\n'.join(_doc)
+        else:
+            doc = summary
 
         # This gives us the full docstring out of which we need to extract description alone.
         full_docstring = format_docstring('', '"{}"'.format(doc), post_description_blank=False)
@@ -333,13 +276,47 @@ class ServiceInfo(object):
 
 # ################################################################################################################################
 
-    def extract_tags(self):
+    def _get_next_split_segment(self, lines):
+        # type: (list) -> (str, list)
+
+        current_lines = []
+        len_lines = len(lines) -1 # type: int # Substract one because enumerate counts from zero
+
+        # The very first line must contain tag name(s),
+        # otherwise we assume that it is the implicit name, called 'public'.
+        first_line = lines[0] # type: str
+        current_tag = first_line.strip().replace('#', '', 1) if first_line.startswith('#') else APISPEC.DEFAULT_TAG # type: str
+
+        # Indicates that we are currently processing the very first line,
+        # which is needed because if it starts with a tag name
+        # then we do not want to immediately yield to our caller.
+        in_first_line = True
+
+        for idx, line in enumerate(lines): # type: (int, str)
+            line_stripped = line.strip()
+            if line_stripped.startswith('#'):
+                if not in_first_line:
+                    yield current_tag, current_lines
+                    current_tag = line_stripped.replace('#', '', 1)
+                    current_lines[:] = []
+            else:
+                in_first_line = False
+                current_lines.append(line)
+                if idx == len_lines:
+                    yield current_tag, current_lines
+                    break
+        else:
+            yield current_tag, current_lines
+
+# ################################################################################################################################
+
+    def extract_segments(self):
         """ Makes a pass over the docstring to extract all of its tags and their text.
         """
-        # type: () -> dict
+        # type: () -> list
 
         # Response to produce
-        out = {}
+        out = []
 
         # Docstring to scan
         doc = self.service_class.__doc__ # type: str
@@ -355,40 +332,36 @@ class ServiceInfo(object):
         if not all_lines:
             return out
 
-        # The very first line must contain tag name(s),
-        # otherwise we assume that it is the implicit name, called 'public'.
-        first_line = all_lines[0] # type: str
-        current_tag = first_line if first_line.startswith('#') else APISPEC.DEFAULT_TAG
+        # Contains all lines still to be processed - function self._get_next_split_segment will update it in place.
+        current_lines = all_lines[:]
 
-        # Contains all lines belonging to current tag
-        current_lines = []
+        # Lines belonging to current tag
 
-        for line in all_lines:
-            print(111, line)
-
-        '''
-        print(all_lines)
-
-        segment = self._parse_split_segment('public', all_lines)
-
-        out[segment.tag] = segment.to_dict()
+        for tag, tag_lines in self._get_next_split_segment(current_lines):
+            segment = self._parse_split_segment(tag, tag_lines)
+            if segment.tag in self.docstring.tags:
+                out.append(segment)
 
         return out
-        '''
-
 
 # ################################################################################################################################
 
     def set_summary_desc(self):
 
-        return
+        segments = self.extract_segments()
 
-        info = self._parse_docstring('public', self.service_class.__doc__)
+        for segment in segments: # type: _DocstringSegment
 
-        if info:
-            self.docstring.summary = info.summary
-            self.docstring.description = info.description
-            self.docstring.full = info.full
+            # The very first summary found will set the whole docstring's summary
+            if segment.summary:
+                if not self.docstring.summary:
+                    self.docstring.summary = segment.summary
+
+            if segment.description:
+                self.docstring.description += segment.description
+
+            if segment.full:
+                self.docstring.full += segment.full
 
 # ################################################################################################################################
 
