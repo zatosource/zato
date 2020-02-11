@@ -28,7 +28,7 @@ from past.builtins import basestring
 
 # Zato
 from zato.common import APISPEC
-#from zato.server.service.reqresp.sio import AsIs, SIO_TYPE_MAP, is_bool, is_int
+from zato.server.service.reqresp.sio import AsIs, SIO_TYPE_MAP, is_bool, is_int
 
 # ################################################################################################################################
 
@@ -40,8 +40,7 @@ if 0:
 # ################################################################################################################################
 
 _sio_attrs = ('input_required', 'input_optional', 'output_required', 'output_optional')
-
-#_SIO_TYPE_MAP = SIO_TYPE_MAP()
+_SIO_TYPE_MAP = SIO_TYPE_MAP()
 
 # ################################################################################################################################
 
@@ -114,7 +113,7 @@ class SimpleIO(object):
 class ServiceInfo(object):
     """ Contains information about a service basing on which documentation is generated.
     """
-    def __init__(self, name, service_class, simple_io_config, tags):
+    def __init__(self, name, service_class, simple_io_config, tags='public'):
         # type: (str, Service, SimpleIO, object)
         self.name = name
         self.service_class = service_class

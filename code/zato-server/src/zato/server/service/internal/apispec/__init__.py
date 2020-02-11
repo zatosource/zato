@@ -28,12 +28,8 @@ from zato.common.util.json_ import dumps
 from zato.server.apispec import Generator
 from zato.server.service import Bool
 
-# ################################################################################################################################
-
-if 0:
-    from past.builtins import unicode
-
-    unicode = unicode
+# Python 2/3 compatibility
+from past.builtins import unicode
 
 # ################################################################################################################################
 
@@ -153,7 +149,7 @@ class GetSphinx(Service):
             summary = self._make_sphinx_safe(summary)
 
         return bunchify({
-            'ns': str(idx),
+            'ns': unicode(idx),
             'orig_name': name,
             'sphinx_name': name.replace('_', '\_'), # Needed for Sphinx to ignore undescores
             'name': name_fs_safe,
