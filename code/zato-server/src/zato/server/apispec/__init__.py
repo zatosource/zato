@@ -337,6 +337,7 @@ class ServiceInfo(object):
         current_lines = all_lines[:]
 
         for tag, tag_lines in self._get_next_split_segment(current_lines):
+            tag_lines = [elem for elem in tag_lines if elem.strip()]
             segment = self._parse_split_segment(tag, tag_lines)
             if segment.tag in self.docstring.tags:
                 out.append(segment)

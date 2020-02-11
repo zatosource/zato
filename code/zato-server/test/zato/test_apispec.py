@@ -34,7 +34,7 @@ class APISpecTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_docstring_no_tags(self):
+    def xtest_docstring_no_tags(self):
 
         class MyService:
             """ This is a one-line summary.
@@ -50,7 +50,7 @@ class APISpecTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_extract_tags_public_only_implicit(self):
+    def xtest_extract_tags_public_only_implicit(self):
 
         class MyService:
             """ This is a one-line summary.
@@ -75,7 +75,7 @@ class APISpecTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_extract_tags_public_only_explicit(self):
+    def xtest_extract_tags_public_only_explicit(self):
 
         class MyService:
             """ #public
@@ -101,7 +101,7 @@ class APISpecTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_extract_tags_multi_1(self):
+    def test_extract_tags_multi_1(self):
 
         class MyService:
             """ This is a one-line summary.
@@ -113,8 +113,9 @@ class APISpecTestCase(TestCase):
 
             One-line summary for internal uses.
 
-            Internal
-            part.
+            This part is internal,
+            it will not be visible
+            to public users.
             """
 
         tags = [APISPEC.DEFAULT_TAG, 'internal']
@@ -130,8 +131,8 @@ class APISpecTestCase(TestCase):
 
         expected_internal = {
              'tag':         'internal',
-             'description': 'Internal\npart.',
-             'full':        'One-line summary for internal uses.\n\nInternal\npart.',
+             'description': 'This part is internal,\nit will not be visible\nto public users.',
+             'full':        'One-line summary for internal uses.\n\nThis part is internal,\nit will not be visible\nto public users.',
              'summary':     'One-line summary for internal uses.'
         }
 
