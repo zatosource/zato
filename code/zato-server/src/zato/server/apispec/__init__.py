@@ -365,12 +365,13 @@ class ServiceInfo(object):
 # ################################################################################################################################
 
 class Generator(object):
-    def __init__(self, service_store_services, simple_io_config, include, exclude, query=None):
+    def __init__(self, service_store_services, simple_io_config, include, exclude, query=None, tags=None):
         self.service_store_services = service_store_services
         self.simple_io_config = simple_io_config
         self.include = include or []
         self.exclude = exclude or []
         self.query = query
+        self.tags = tags
         self.services = {}
 
         # Service name -> list of services this service invokes
@@ -466,7 +467,7 @@ class Generator(object):
             if (not _should_include) or _should_exclude:
                 continue
 
-            info = ServiceInfo(details.name, details.service_class, self.simple_io_config)
+            info = ServiceInfo(details.name, details.service_class, self.simple_io_config, self.tags)
             self.services[info.name] = info
 
         for name, info in iteritems(self.services):

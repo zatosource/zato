@@ -46,6 +46,8 @@ class APISpec(ZatoCommand):
         {'name':'--with-rest-channels', 'help':'If given, OpenAPI spec for individual REST endpoints will be generated',
          'action':'store_true'},
         {'name':'--api-invoke-path', 'help':'A comma-separated list of URL paths to invoke API services through'},
+        {'name':'--tags', 'help':'A comma-separated list of docstring tags to generate documentation for',
+            'default':'public'},
     ]
 
 # ################################################################################################################################
@@ -55,6 +57,9 @@ class APISpec(ZatoCommand):
 
         exclude = args.exclude.split(',') or []
         exclude = [elem.strip() for elem in exclude]
+
+        tags = args.tags.split(',')
+        tags = [elem.strip() for elem in tags]
 
         if args.with_internal:
             for item in internal_patterns:
@@ -69,6 +74,7 @@ class APISpec(ZatoCommand):
             'exclude': ','.join(exclude),
             'needs_api_invoke': args.with_api_invoke,
             'needs_rest_channels': args.with_rest_channels,
+            'tags': tags,
         }
 
         if args.with_api_invoke:
