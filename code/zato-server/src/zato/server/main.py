@@ -320,22 +320,14 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     dsn = sentry_config.pop('dsn', None)
     if dsn:
 
-        from raven import Client
-        from raven.handlers.logging import SentryHandler
+        import sentry_sdk
+        from sentry_sdk.integrations.logging import LoggingIntegration
 
-        handler_level = sentry_config.pop('level')
-        client = Client(dsn, **sentry_config)
-
-        handler = SentryHandler(client=client)
-        handler.setLevel(getattr(logging, handler_level))
-
-        logger = logging.getLogger('')
-        logger.addHandler(handler)
-
-        for name in logging.Logger.manager.loggerDict:
-            if name.startswith('zato'):
-                logger = logging.getLogger(name)
-                logger.addHandler(handler)
+        sentry_logging = LoggingIntegration(
+            level=logging.INFO,  # Capture info and above as breadcrumbs
+            event_level=logging.ERROR  # Send errors as events
+        )
+        sentry_sdk.init(dsn=dsn, integrations=[sentry_logging])
 
     if asbool(profiler_enabled):
         profiler_dir = os.path.abspath(os.path.join(base_dir, server_config.profiler.profiler_dir))

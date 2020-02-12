@@ -119,7 +119,7 @@ python-ntlm==1.0.1
 pytz==2018.9
 pyyaml==3.11
 pyzmq==17.0.0
-raven==5.1.1
+sentry-sdk==0.14.1
 redis==2.10.6
 regex==2016.11.21
 repoze.lru==0.6
