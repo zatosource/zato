@@ -26,7 +26,7 @@ from zato.server.service import List, Opaque, Service
 from zato.common.util import aslist, fs_safe_name
 from zato.common.util.json_ import dumps
 from zato.server.apispec import Generator
-from zato.server.service import Bool
+from zato.server.service import AsIs, Bool
 
 # Python 2/3 compatibility
 from past.builtins import unicode
@@ -44,9 +44,10 @@ class GetAPISpec(Service):
     """
     class SimpleIO:
         input_optional = ('cluster_id', 'query', Bool('return_internal'), 'include', 'exclude', 'needs_sphinx',
-            'needs_api_invoke', 'needs_rest_channels', 'api_invoke_path')
+            'needs_api_invoke', 'needs_rest_channels', 'api_invoke_path', AsIs('tags'))
 
     def handle(self):
+
         cluster_id = self.request.input.get('cluster_id')
 
         include = aslist(self.request.input.include, ',')
@@ -72,7 +73,7 @@ class GetAPISpec(Service):
             needs_sphinx = True
 
         data = Generator(self.server.service_store.services, self.server.sio_config,
-            include, exclude, self.request.input.query).get_info()
+            include, exclude, self.request.input.query, self.request.input.tags).get_info()
 
         if needs_sphinx:
             out = self.invoke(GetSphinx.get_name(), {
