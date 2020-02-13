@@ -316,6 +316,8 @@ def run(base_dir, start_gunicorn_app=True, options=None):
 
     # New in 2.0 so it's optional.
     sentry_config = server_config.get('sentry')
+    sentry_event_level = sentry_config.get('level', 'ERROR')
+    sentry_breadcrumbs_level = sentry_config.get('breadcrumbs_level', 'INFO')
 
     dsn = sentry_config.pop('dsn', None)
     if dsn:
@@ -324,8 +326,8 @@ def run(base_dir, start_gunicorn_app=True, options=None):
         from sentry_sdk.integrations.logging import LoggingIntegration
 
         sentry_logging = LoggingIntegration(
-            level=logging.INFO,  # Capture info and above as breadcrumbs
-            event_level=logging.ERROR  # Send errors as events
+            level=getattr(logging, sentry_breadcrumbs_level),
+            event_level=getattr(logging, sentry_event_level)
         )
         sentry_sdk.init(dsn=dsn, integrations=[sentry_logging])
 

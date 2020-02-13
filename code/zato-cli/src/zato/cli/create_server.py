@@ -189,8 +189,8 @@ log_level=
 
 [sentry]
 dsn=
-timeout=5
 level=WARN
+breadcrumbs_level=INFO
 
 [rbac]
 custom_auth_list_service=
