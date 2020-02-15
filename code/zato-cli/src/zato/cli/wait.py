@@ -37,7 +37,7 @@ class Wait(ZatoCommand):
         {'name':'--interval', 'help':'How often to check if the server is up, in seconds', 'default':'0.1'},
     ]
 
-    def execute(self, args):
+    def execute(self, args, needs_sys_exit=True):
         # type: (Namespace)
 
         # We need to have a local or remote server on input ..
@@ -63,7 +63,13 @@ class Wait(ZatoCommand):
         # We can now wait for the server to respond
         is_success = wait_for_zato(address, args.url_path, int(args.timeout), float(args.interval))
 
-        print(111, is_success)
+        if not is_success:
+            if needs_sys_exit:
+                sys.exit(self.SYS_ERROR.SERVER_TIMEOUT)
+            else:
+                raise Exception('No response from `{}{}` after {}s'.format(address, args.url_path, args.timeout))
+        else:
+            return True
 
 # ################################################################################################################################
 # ################################################################################################################################
