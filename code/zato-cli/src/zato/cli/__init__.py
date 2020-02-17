@@ -377,6 +377,7 @@ def run_command(args):
         ('start', 'zato.cli.start.Start'),
         ('stop', 'zato.cli.stop.Stop'),
         ('update_password', 'zato.cli.web_admin_auth.UpdatePassword'),
+        ('wait', 'zato.cli.wait.Wait'),
     )
     for k, v in command_imports:
         command_class[k] = import_string(v)
@@ -431,6 +432,7 @@ class ZatoCommand(object):
         NOT_A_ZATO_LB = 25
         NOT_A_ZATO_SCHEDULER = 26
         CACHE_KEY_NOT_FOUND = 27
+        SERVER_TIMEOUT = 28
 
 # ################################################################################################################################
 
