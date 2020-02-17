@@ -1406,7 +1406,7 @@ class MONGODB:
         POOL_SIZE_MIN    = 0
         POOL_SIZE_MAX    = 5
         SERVER_LIST      = '127.0.0.1:27017'
-        WRITE_TO_REPLICA = 0
+        WRITE_TO_REPLICA = ''
         WRITE_TIMEOUT    = 5
         ZLIB_LEVEL       = -1
 

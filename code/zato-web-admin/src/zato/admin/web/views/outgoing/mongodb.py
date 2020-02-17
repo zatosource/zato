@@ -84,8 +84,9 @@ class _CreateEdit(CreateEdit):
     def on_after_set_input(self):
         # Convert to integers, as expected by MongoDB driver
         for name in 'hb_frequency', 'max_idle_time', 'write_to_replica', 'read_pref_max_stale', 'zlib_level':
-            value = self.input[name]
-            self.input[name] = int(value)
+            value = self.input.get(name, None)
+            if value is not None:
+                self.input[name] = int(value)
 
     def success_message(self, item):
         return 'Successfully {} outgoing MongoDB connection `{}`'.format(self.verb, item.name)
