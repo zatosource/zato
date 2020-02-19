@@ -318,10 +318,10 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     sentry_config = server_config.get('sentry')
     sentry_event_level = sentry_config.get('level', 'ERROR')
     sentry_breadcrumbs_level = sentry_config.get('breadcrumbs_level', 'INFO')
+    sentry_max_breadcrumbs = sentry_config.get('max_breadcrumbs', 100)
 
     dsn = sentry_config.pop('dsn', None)
     if dsn:
-
         import sentry_sdk
         from sentry_sdk.integrations.logging import LoggingIntegration
 
@@ -329,7 +329,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
             level=getattr(logging, sentry_breadcrumbs_level),
             event_level=getattr(logging, sentry_event_level)
         )
-        sentry_sdk.init(dsn=dsn, integrations=[sentry_logging])
+        sentry_sdk.init(dsn=dsn, integrations=[sentry_logging], max_breadcrumbs=max_breadcrumbs)
 
     if asbool(profiler_enabled):
         profiler_dir = os.path.abspath(os.path.join(base_dir, server_config.profiler.profiler_dir))

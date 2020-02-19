@@ -191,6 +191,7 @@ log_level=
 dsn=
 level=WARN
 breadcrumbs_level=INFO
+max_breadcrumbs=100
 
 [rbac]
 custom_auth_list_service=
