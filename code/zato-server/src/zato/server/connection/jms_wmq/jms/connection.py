@@ -246,6 +246,7 @@ class WebSphereMQConnection(object):
 
             kwargs = {}
             cd = self.mq.cd()
+            cd.MaxMsgLength = 20971520
             cd.ChannelName = self.channel
             cd.ConnectionName = conn_name.encode('utf8')
             cd.ChannelType = self.CMQC.MQCHT_CLNTCONN
