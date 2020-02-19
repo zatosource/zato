@@ -192,6 +192,7 @@ dsn=
 level=WARN
 breadcrumbs_level=INFO
 max_breadcrumbs=100
+ignore_errors=
 
 [rbac]
 custom_auth_list_service=
