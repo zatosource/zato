@@ -320,12 +320,16 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     sentry_breadcrumbs_level = sentry_config.get('breadcrumbs_level', 'INFO')
     sentry_max_breadcrumbs = sentry_config.get('max_breadcrumbs', 100)
     sentry_debug = sentry_config.get('debug', False)
+    sentry_ignore_errors = sentry_config.get('ignore_errors', '').split(',')
 
     dsn = sentry_config.pop('dsn', None)
     if dsn:
         import sentry_sdk
         from sentry_sdk.integrations.logging import LoggingIntegration
-
+        def before_send(event, hint):
+            if 'log_record' in hint.keys() and hint['log_record'].name in sentry_ignore_errors:
+                return None
+            return event
         sentry_logging = LoggingIntegration(
             level=getattr(logging, sentry_breadcrumbs_level),
             event_level=getattr(logging, sentry_event_level)
