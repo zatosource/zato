@@ -13,6 +13,7 @@ from django import forms
 
 # Python 2/3 compatibility
 from future.utils import iteritems
+from past.builtins import basestring
 
 # Zato
 from zato.common import DELEGATED_TO_RBAC, RATE_LIMIT, SIMPLE_IO, TLS, ZATO_NONE, ZATO_SEC_USE_RBAC
@@ -55,7 +56,7 @@ def add_select(form, field_name, elems, needs_initial_select=True, skip=None):
 
     for elem in elems:
 
-        if isinstance(elem, str):
+        if isinstance(elem, basestring):
             id = elem
             name = elem
         else:
