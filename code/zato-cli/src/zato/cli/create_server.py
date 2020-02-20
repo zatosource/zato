@@ -189,6 +189,7 @@ log_level=
 
 [sentry]
 dsn=
+debug=False
 level=WARN
 breadcrumbs_level=INFO
 max_breadcrumbs=100
