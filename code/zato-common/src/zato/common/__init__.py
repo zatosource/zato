@@ -650,6 +650,7 @@ class CHANNEL(Attrs):
     INVOKE_ASYNC_CALLBACK = 'invoke-async-callback'
     IPC = 'ipc'
     JSON_RPC = 'json-rpc'
+    NEW_INSTANCE = 'new-instance'
     NOTIFIER_RUN = 'notifier-run'
     NOTIFIER_TARGET = 'notifier-target'
     PARALLEL_EXEC_CALL = 'parallel-exec-call'
