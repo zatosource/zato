@@ -1173,17 +1173,17 @@ class Service(object):
 
 # ################################################################################################################################
 
-    @classmethod
-    def instance(service_class, cid, server, channel_type=CHANNEL.NEW_INSTANCE, payload=''):
+    def new_instance(self, service_name, *args, **kwargs):
         """ Creates a new service instance without invoking its handle method.
         """
-        # type: (Service, ParallelServer, str, str, str) -> object
+        # type: (str, str, str) -> object
 
-        _instance = service_class() # type: Service
-        _instance.update(_instance, channel_type, server, broker_client=None, _ignored=None, cid=cid, payload=payload,
-            raw_request=None, wsgi_environ={})
+        service, ignored_is_active = self.server.service_store.new_instance_by_name(service_name, *args, **kwargs)
 
-        return _instance
+        service.update(service, CHANNEL.NEW_INSTANCE, self.server, broker_client=self.broker_client, _ignored=None,
+            cid=self.cid, payload=self.request.payload, raw_request=self.request.raw_request, wsgi_environ=self.wsgi_environ)
+
+        return service
 
 # ################################################################################################################################
 

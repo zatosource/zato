@@ -474,23 +474,23 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def new_instance(self, impl_name):
+    def new_instance(self, impl_name, *args, **kwargs):
         """ Returns a new instance of a service of the given impl name.
         """
         _info = self.services[impl_name]
-        return _info['service_class'](), _info['is_active']
+        return _info['service_class'](*args, **kwargs), _info['is_active']
 
 # ################################################################################################################################
 
-    def new_instance_by_id(self, service_id):
+    def new_instance_by_id(self, service_id, *args, **kwargs):
         impl_name = self.id_to_impl_name[service_id]
         return self.new_instance(impl_name)
 
 # ################################################################################################################################
 
-    def new_instance_by_name(self, name):
+    def new_instance_by_name(self, name, *args, **kwargs):
         impl_name = self.name_to_impl_name[name]
-        return self.new_instance(impl_name)
+        return self.new_instance(impl_name, *args, **kwargs)
 
 # ################################################################################################################################
 
