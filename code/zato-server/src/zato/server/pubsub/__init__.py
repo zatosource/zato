@@ -644,10 +644,11 @@ class PubSub(object):
         """ Deletes a subscription from the list of subscription. By default, it is not an error to call
         the method with an invalid sub_key. Must be invoked with self.lock held.
         """
-        sub = self.subscriptions_by_sub_key.pop(sub_key, _invalid)
+        sub = self.subscriptions_by_sub_key.pop(sub_key, _invalid) # type: Subscription
         if sub is _invalid and (not ignore_missing):
             raise KeyError('No such sub_key `%s`', sub_key)
         else:
+            logger.info('Deleted subscription object `%s` (%s)', sub.sub_key, sub.topic_name)
             return sub # Either valid or invalid but ignore_missing is True
 
 # ################################################################################################################################
@@ -777,16 +778,26 @@ class PubSub(object):
 # ################################################################################################################################
 
     def _delete_topic(self, topic_id, topic_name):
+        # type: (int, str) -> list
         del self.topic_name_to_id[topic_name]
-        self.subscriptions_by_topic.pop(topic_name, None) # May have no subscriptions hence .pop instead of del
+        subscriptions_by_topic = self.subscriptions_by_topic.pop(topic_name, [])
         del self.topics[topic_id]
+
+        logger.info('Deleted topic object `%s` (%s), subs:`%s`',
+            topic_name, topic_id, [elem.sub_key for elem in subscriptions_by_topic])
+
+        return subscriptions_by_topic
 
 # ################################################################################################################################
 
     def delete_topic(self, topic_id):
+        # type: (int) -> list
         with self.lock:
             topic_name = self.topics[topic_id].name
-            self._delete_topic(topic_id, topic_name)
+            subscriptions_by_topic = self._delete_topic(topic_id, topic_name) # type: list
+
+            for sub in subscriptions_by_topic: # type: Subscription
+                self._delete_subscription_by_sub_key(sub.sub_key)
 
 # ################################################################################################################################
 
