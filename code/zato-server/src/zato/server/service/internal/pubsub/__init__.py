@@ -32,6 +32,8 @@ from zato.server.service.internal import AdminService, AdminSIO
 if 0:
     from zato.server.pubsub.task import PubSubTool
 
+    PubSubTool = PubSubTool
+
 # ################################################################################################################################
 
 logger_pubsub = getLogger('zato_pubsub.srv')
