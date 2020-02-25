@@ -29,6 +29,11 @@ from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
 
+if 0:
+    from zato.server.pubsub.task import PubSubTool
+
+# ################################################################################################################################
+
 logger_pubsub = getLogger('zato_pubsub.srv')
 
 # ################################################################################################################################
@@ -246,7 +251,7 @@ class ResumeWSXSubscription(AdminService):
 
         # We now have environ in one way or another
         wsx = environ['web_socket']
-        pubsub_tool = wsx.pubsub_tool
+        pubsub_tool = wsx.pubsub_tool # type: PubSubTool
 
         # Need to confirm that our WebSocket previously created all the input sub_keys
         wsx_channel_id = environ['ws_channel_config'].id
