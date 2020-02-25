@@ -319,7 +319,6 @@ class PubSub(object):
                 self._write_log_sub_data(sub_data, out)
             else:
                 sorted_sub_data = sorted(sub_data)
-                len_sorted_sub_data = len(sorted_sub_data)
                 for item in sorted_sub_data:
                     if isinstance(item, Subscription):
                         self._write_log_sub_data(item, out)
