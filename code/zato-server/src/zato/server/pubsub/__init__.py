@@ -294,7 +294,10 @@ class PubSub(object):
 
     def _write_log_sub_data(self, sub, out):
         # type: (Subscription, StringIO)
-        for key, value in sorted(sub.to_dict().items()):
+        items = sorted(sub.to_dict().items())
+
+        out.write('\n')
+        for key, value in items:
             out.write(' - {} {}'.format(key, value))
             if key == 'creation_time':
                 out.write('\n - creation_time_utc {}'.format(datetime_from_ms(value)))
@@ -315,7 +318,9 @@ class PubSub(object):
             if isinstance(sub_data, Subscription):
                 self._write_log_sub_data(sub_data, out)
             else:
-                for item in sorted(sub_data):
+                sorted_sub_data = sorted(sub_data)
+                len_sorted_sub_data = len(sorted_sub_data)
+                for item in sorted_sub_data:
                     if isinstance(item, Subscription):
                         self._write_log_sub_data(item, out)
                     else:
