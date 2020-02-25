@@ -33,12 +33,13 @@ from zato.common import GENERIC, PUBSUB
 from zato.common.pubsub import PubSubMessage
 from zato.common.util import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
-from zato.server.pubsub import PubSub
 
 # ################################################################################################################################
 
-# For pyflakes
-PubSub = PubSub
+if 0:
+    from zato.server.pubsub import PubSub
+
+    PubSub = PubSub
 
 # ################################################################################################################################
 
@@ -81,6 +82,7 @@ class DeliveryTask(object):
     """
     def __init__(self, pubsub_tool, pubsub, sub_key, delivery_lock, delivery_list, deliver_pubsub_msg,
             confirm_pubsub_msg_delivered_cb, sub_config):
+        # type: (PubSubTool, PubSub, str, RLock, SortedList, object, object, Bunch)
         self.keep_running = True
         self.pubsub_tool = pubsub_tool
         self.pubsub = pubsub
@@ -464,6 +466,9 @@ class DeliveryTask(object):
         if self.keep_running:
             logger.info('Stopping delivery task for sub_key:`%s`', self.sub_key)
             self.keep_running = False
+
+            self.pubsub.log_subscriptions_by_sub_key('DeliveryTask.stop')
+            self.pubsub.log_subscriptions_by_topic_name('DeliveryTask.stop')
 
 # ################################################################################################################################
 
