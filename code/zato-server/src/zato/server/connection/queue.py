@@ -33,14 +33,17 @@ class _Connection(object):
     """ Meant to be used as a part of a 'with' block - returns a connection from its queue each time 'with' is entered
     assuming the queue isn't empty.
     """
-    def __init__(self, client_queue, conn_name):
+    def __init__(self, client_queue, conn_name, should_block=False, block_timeout=None):
+        # type: (Queue, str, bool, int)
         self.queue = client_queue
         self.conn_name = conn_name
-        self.client = None
+        self.should_block = should_block
+        self.block_timeout = block_timeout
+        self.client = None # type: object
 
     def __enter__(self):
         try:
-            self.client = self.queue.get(block=False)
+            self.client = self.queue.get(self.should_block, self.block_timeout)
         except Empty:
             self.client = None
             msg = 'No free connections to `{}`'.format(self.conn_name)
@@ -79,8 +82,9 @@ class ConnectionQueue(object):
 
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    def __call__(self):
-        return _Connection(self.queue, self.conn_name)
+    def __call__(self, should_block=False, block_timeout=None):
+        # type: (bool, int) -> _Connection
+        return _Connection(self.queue, self.conn_name, should_block, block_timeout)
 
     def put_client(self, client):
         with self.lock:
