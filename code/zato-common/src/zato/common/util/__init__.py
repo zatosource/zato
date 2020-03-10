@@ -119,7 +119,7 @@ from zato.common import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_de
 from zato.common.broker_message import SERVICE
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
-from zato.common.util.tcp import get_free_port, is_port_taken, wait_until_port_free, wait_until_port_taken
+from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_ping, wait_until_port_free, wait_until_port_taken
 
 # ################################################################################################################################
 
@@ -1392,9 +1392,26 @@ def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted):
                 password = security.password.replace(SECRETS.PREFIX, '')
                 return (security.username, cm.decrypt(password))
 
-def get_client_from_server_conf(server_dir):
+def get_client_from_server_conf(server_dir, require_server=True):
+
+    # Imports go here to avoid circular dependencies
     from zato.client import get_client_from_server_conf as client_get_client_from_server_conf
-    return client_get_client_from_server_conf(server_dir, get_server_client_auth, get_config)
+
+    # Get the client object ..
+    client = client_get_client_from_server_conf(server_dir, get_server_client_auth, get_config)
+
+    # .. make sure the server is available ..
+    if require_server:
+        wait_for_zato_ping(client.address)
+
+    # .. return the client to our caller now.
+    return client
+
+# ################################################################################################################################
+
+def get_repo_dir_from_component_dir(component_dir):
+    # type: (str) -> str
+    return os.path.join(os.path.abspath(os.path.join(component_dir)), 'config', 'repo')
 
 # ################################################################################################################################
 

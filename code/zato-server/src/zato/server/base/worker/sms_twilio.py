@@ -27,14 +27,18 @@ class SMSTwilio(WorkerImpl):
 # ################################################################################################################################
 
     def on_broker_msg_SMS_TWILIO_CREATE(self, msg):
+
+        msg.auth_token = self.server.decrypt(msg.auth_token)
         self.sms_twilio_api.create(msg.name, msg)
 
 # ################################################################################################################################
 
     def on_broker_msg_SMS_TWILIO_EDIT(self, msg):
+
         # It might be a rename
         old_name = msg.get('old_name')
         del_name = old_name if old_name else msg['name']
+        msg.auth_token = self.server.decrypt(msg.auth_token)
         self.sms_twilio_api.edit(del_name, msg)
 
 # ################################################################################################################################
