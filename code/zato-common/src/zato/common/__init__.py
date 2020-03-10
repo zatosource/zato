@@ -489,6 +489,8 @@ class SERVER_UP_STATUS(Attrs):
 
 class CACHE:
 
+    API_USERNAME = 'pub.zato.cache'
+
     class TYPE:
         BUILTIN = 'builtin'
         MEMCACHED = 'memcached'
@@ -648,6 +650,7 @@ class CHANNEL(Attrs):
     INVOKE_ASYNC_CALLBACK = 'invoke-async-callback'
     IPC = 'ipc'
     JSON_RPC = 'json-rpc'
+    NEW_INSTANCE = 'new-instance'
     NOTIFIER_RUN = 'notifier-run'
     NOTIFIER_TARGET = 'notifier-target'
     PARALLEL_EXEC_CALL = 'parallel-exec-call'
@@ -1404,7 +1407,7 @@ class MONGODB:
         POOL_SIZE_MIN    = 0
         POOL_SIZE_MAX    = 5
         SERVER_LIST      = '127.0.0.1:27017'
-        WRITE_TO_REPLICA = 0
+        WRITE_TO_REPLICA = ''
         WRITE_TIMEOUT    = 5
         ZLIB_LEVEL       = -1
 

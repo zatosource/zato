@@ -17,7 +17,7 @@ from datetime import datetime
 from functools import total_ordering
 from hashlib import sha256
 from importlib import import_module
-from inspect import getmodule, getmro, getsourcefile, isclass
+from inspect import getargspec, getmodule, getmro, getsourcefile, isclass
 from pickle import HIGHEST_PROTOCOL as highest_pickle_protocol
 from shutil import copy as shutil_copy
 from traceback import format_exc
@@ -55,16 +55,17 @@ from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 
-# Type checking
-import typing
+if 0:
 
-if typing.TYPE_CHECKING:
+    # stdlib
+    from inspect import ArgSpec
 
     # Zato
     from zato.common.odb.api import ODBManager
     from zato.server.base.parallel import ParallelServer
 
     # For pyflakes
+    ArgSpec = ArgSpec
     ConfigDict = ConfigDict
     ODBManager = ODBManager
     ParallelServer = ParallelServer
@@ -474,23 +475,23 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def new_instance(self, impl_name):
+    def new_instance(self, impl_name, *args, **kwargs):
         """ Returns a new instance of a service of the given impl name.
         """
         _info = self.services[impl_name]
-        return _info['service_class'](), _info['is_active']
+        return _info['service_class'](*args, **kwargs), _info['is_active']
 
 # ################################################################################################################################
 
-    def new_instance_by_id(self, service_id):
+    def new_instance_by_id(self, service_id, *args, **kwargs):
         impl_name = self.id_to_impl_name[service_id]
         return self.new_instance(impl_name)
 
 # ################################################################################################################################
 
-    def new_instance_by_name(self, name):
+    def new_instance_by_name(self, name, *args, **kwargs):
         impl_name = self.name_to_impl_name[name]
-        return self.new_instance(impl_name)
+        return self.new_instance(impl_name, *args, **kwargs)
 
 # ################################################################################################################################
 
@@ -646,7 +647,18 @@ class ServiceStore(object):
                 self.impl_name_to_id[item.impl_name] = service_id
                 self.name_to_impl_name[item.name] = item.impl_name
 
-                item.service_class.after_add_to_store(logger)
+                arg_spec = getargspec(item.service_class.after_add_to_store) # type: ArgSpec
+                args = arg_spec.args # type: list
+
+                # GH #1018 made server the argument that the hook receives ..
+                if len(args) == 1 and args[0] == 'server':
+                    hook_arg = self.server
+
+                # .. but for backward-compatibility we provide the hook with the logger object by default.
+                else:
+                    hook_arg = logger
+
+                item.service_class.after_add_to_store(hook_arg)
 
 # ################################################################################################################################
 
