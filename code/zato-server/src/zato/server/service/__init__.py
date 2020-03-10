@@ -1196,7 +1196,7 @@ class Service(object):
 
 # ################################################################################################################################
 
-    def new_instance(self, service_name, *args, **kwargs):
+    def instance(self, service_name, *args, **kwargs):
         """ Creates a new service instance without invoking its handle method.
         """
         # type: (str, str, str) -> object
