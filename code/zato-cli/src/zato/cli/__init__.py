@@ -337,6 +337,9 @@ def run_command(args):
         ('ca_create_scheduler', 'zato.cli.ca_create_scheduler.Create'),
         ('ca_create_server', 'zato.cli.ca_create_server.Create'),
         ('ca_create_web_admin', 'zato.cli.ca_create_web_admin.Create'),
+        ('cache_delete', 'zato.cli.cache.CacheDelete'),
+        ('cache_get', 'zato.cli.cache.CacheGet'),
+        ('cache_set', 'zato.cli.cache.CacheSet'),
         ('check_config', 'zato.cli.check_config.CheckConfig'),
         ('component_version', 'zato.cli.component_version.ComponentVersion'),
         ('create_cluster', 'zato.cli.create_cluster.Create'),
@@ -374,6 +377,7 @@ def run_command(args):
         ('start', 'zato.cli.start.Start'),
         ('stop', 'zato.cli.stop.Stop'),
         ('update_password', 'zato.cli.web_admin_auth.UpdatePassword'),
+        ('wait', 'zato.cli.wait.Wait'),
     )
     for k, v in command_imports:
         command_class[k] = import_string(v)
@@ -427,6 +431,8 @@ class ZatoCommand(object):
         NOT_A_ZATO_WEB_ADMIN = 24
         NOT_A_ZATO_LB = 25
         NOT_A_ZATO_SCHEDULER = 26
+        CACHE_KEY_NOT_FOUND = 27
+        SERVER_TIMEOUT = 28
 
 # ################################################################################################################################
 
@@ -937,7 +943,6 @@ class ManageCommand(ZatoCommand):
 
         os.chdir(self.component_dir)
         return self._get_dispatch()[json_data['component']](args)
-
 
 # ################################################################################################################################
 

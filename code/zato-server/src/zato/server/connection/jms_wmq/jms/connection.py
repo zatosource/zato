@@ -657,7 +657,7 @@ class WebSphereMQConnection(object):
             md.MsgId = message.jms_message_id
 
         if message.jms_correlation_id:
-            if message.jms_correlation_id.startswith(_WMQ_ID_PREFIX):
+            if message.jms_correlation_id.startswith(_WMQ_ID_PREFIX.encode('utf-8')):
                 md.CorrelId = unhexlify_wmq_id(message.jms_correlation_id)
             else:
                 md.CorrelId = message.jms_correlation_id.ljust(24)[:24]
