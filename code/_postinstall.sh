@@ -53,7 +53,8 @@ $PY_BINARY -m pip install \
     -e ./zato-server \
     -e ./zato-web-admin \
     -e ./zato-zmq \
-    -e ./zato-sso
+    -e ./zato-sso \
+    -e ./zato-testing
 
 # Emulate zc.buildout's split-out eggs directory for simpler local development.
 ln -fs $VIRTUAL_ENV/lib/python*/site-packages eggs
