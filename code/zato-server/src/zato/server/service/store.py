@@ -351,7 +351,6 @@ class ServiceStore(object):
 
     def set_up_class_attributes(self, class_, service_store=None, name=None):
         # type: (Service, ServiceStore, unicode)
-        class_.add_http_method_handlers()
 
         # Set up enforcement of what other services a given service can invoke
         try:
@@ -393,6 +392,7 @@ class ServiceStore(object):
 
             else:
 
+                class_.add_http_method_handlers()
                 class_._worker_store = service_store.server.worker_store
                 class_._enforce_service_invokes = service_store.server.enforce_service_invokes
                 class_.odb = service_store.server.odb
@@ -1172,7 +1172,7 @@ class ServiceStore(object):
             # .. get all parent classes of that ..
             service_mro = getmro(service_class)
 
-            # .. try to find the deployed service amount parents ..
+            # .. try to find the deployed service's parents ..
             for base_class in service_mro:
                 if issubclass(base_class, Service) and (not base_class is Service):
                     if base_class.get_name() == changed_service_name:
@@ -1211,7 +1211,12 @@ class ServiceStore(object):
                     item = getattr(mod, name)
 
                     if self._should_deploy(name, item, mod):
-                        if item.before_add_to_store(logger):
+                        if self.is_testing:
+                            before_add_to_store_result = True
+                        else:
+                            before_add_to_store_result = item.before_add_to_store(logger)
+
+                        if before_add_to_store_result:
                             to_process.append(self._visit_class(mod, item, fs_location, is_internal))
                         else:
                             logger.info('Skipping `%s` from `%s`', item, fs_location)

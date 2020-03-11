@@ -39,6 +39,7 @@ from zato.common.odb import get_ping_query, query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
      JWT, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, XPathSecurity, \
      WSSDefinition, VaultConnection
+from zato.common.odb.testing import UnittestEngine
 from zato.common.odb.query.pubsub import subscription as query_ps_subscription
 from zato.common.odb.query import generic as query_generic
 from zato.common.util import current_host, get_component_name, get_engine_url, new_cid, parse_extra_into_dict, \
