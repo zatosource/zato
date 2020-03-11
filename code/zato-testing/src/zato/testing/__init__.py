@@ -184,6 +184,12 @@ class ServiceTestCase(TestCase):
 
 # ################################################################################################################################
 
+    def add_outconn_sql(self, name):
+        # type: (str)
+        self.sql_pool_store.add_unittest_item(name)
+
+# ################################################################################################################################
+
     def import_services(self, item):
         # type: (object)
         self.service_store.import_services_from_anywhere(item, None, None, False)
