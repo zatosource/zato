@@ -143,7 +143,7 @@ class ServiceTestCase(TestCase):
         self.server.component_enabled.slow_response = False
         self.server.crypto_manager = self.crypto_manager
 
-        self.service_store = ServiceStore()
+        self.service_store = ServiceStore(is_testing=True)
         self.service_store.server = self.server
         self.service_store.services = {}
 
@@ -181,6 +181,12 @@ class ServiceTestCase(TestCase):
 
         # Callback methods for particular SQL queries
         self.sql_callback_by_idx = {}
+
+# ################################################################################################################################
+
+    def import_services(self, item):
+        # type: (object)
+        self.service_store.import_services_from_anywhere(item, None, None, False)
 
 # ################################################################################################################################
 
