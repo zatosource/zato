@@ -28,7 +28,7 @@ from zato.server.connection.vault import VaultConnAPI
 from zato.server.base.parallel import ParallelServer
 from zato.server.config import ConfigStore
 from zato.server.service.store import ServiceStore
-from zato.server.unittest_.requests_ import RequestsAdapter
+from zato.testing.requests_ import RequestsAdapter
 
 # ################################################################################################################################
 
@@ -181,12 +181,6 @@ class ServiceTestCase(TestCase):
 
         # Callback methods for particular SQL queries
         self.sql_callback_by_idx = {}
-
-# ################################################################################################################################
-
-    def add_outconn_sql(self, name):
-        # type: (str, object)
-        self.sql_pool_store.add_unittest_item(name)
 
 # ################################################################################################################################
 

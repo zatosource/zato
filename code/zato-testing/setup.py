@@ -20,7 +20,7 @@ execfile(_version_py, _locals)
 version = _locals['version']
 
 setup(
-      name = 'zato-server',
+      name = 'zato-testing',
       version = version,
 
       author = 'Zato Source s.r.o.',
