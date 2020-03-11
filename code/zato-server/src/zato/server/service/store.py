@@ -19,6 +19,7 @@ from hashlib import sha256
 from importlib import import_module
 from inspect import getargspec, getmodule, getmro, getsourcefile, isclass
 from pickle import HIGHEST_PROTOCOL as highest_pickle_protocol
+from random import randint
 from shutil import copy as shutil_copy
 from traceback import format_exc
 from typing import Any, List
@@ -52,6 +53,9 @@ from zato.server.config import ConfigDict
 from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, PubSubHook, Service, \
      WSXFacade
 from zato.server.service.internal import AdminService
+
+# Python 2/3 compatibility
+from past.builtins import basestring
 
 # ################################################################################################################################
 
@@ -89,6 +93,37 @@ _unsupported_pickle_protocol_msg = 'unsupported pickle protocol:'
 # ################################################################################################################################
 
 hook_methods = ('accept', 'get_request_hash') + before_handle_hooks + after_handle_hooks + before_job_hooks + after_job_hooks
+
+# ################################################################################################################################
+
+class _TestingWorkerStore(object):
+    sql_pool_store = None
+    stomp_outconn_api = None
+    outconn_wsx = None
+    vault_conn_api = None
+    outconn_ldap = None
+    outconn_mongodb = None
+    def_kafka = None
+    zmq_out_api = None
+    sms_twilio_api = None
+    cassandra_api = None
+    cassandra_query_api = None
+    email_smtp_api = None
+    email_imap_api = None
+    search_es_api = None
+    search_solr_api = None
+    cache_api = None
+
+    def __init__(self):
+        self.worker_config = None # type: _TestingWorkerConfig
+
+# ################################################################################################################################
+
+class _TestingWorkerConfig(object):
+    out_odoo = None
+    out_soap = None
+    out_sap = None
+    out_sftp = None
 
 # ################################################################################################################################
 
@@ -203,11 +238,12 @@ def get_batch_indexes(services, max_batch_size):
 class ServiceStore(object):
     """ A store of Zato services.
     """
-    def __init__(self, services=None, odb=None, server=None):
-        # type: (dict, ODBManager, ParallelServer)
+    def __init__(self, services=None, odb=None, server=None, is_testing=False):
+        # type: (dict, ODBManager, ParallelServer, bool)
         self.services = services
         self.odb = odb
         self.server = server
+        self.is_testing = is_testing
         self.max_batch_size = 0
         self.id_to_impl_name = {}
         self.impl_name_to_id = {}
@@ -216,6 +252,10 @@ class ServiceStore(object):
         self.update_lock = RLock()
         self.patterns_matcher = Matcher()
         self.needs_post_deploy_attr = 'needs_post_deploy'
+
+        if self.is_testing:
+            self._testing_worker_store =  _TestingWorkerStore()
+            self._testing_worker_store.worker_config = _TestingWorkerConfig()
 
 # ################################################################################################################################
 
@@ -330,45 +370,65 @@ class ServiceStore(object):
 
             # Set up all attributes that do not have to be assigned to each instance separately
             # and can be shared as class attributes.
-            class_._enforce_service_invokes = service_store.server.enforce_service_invokes
 
             class_.servers = service_store.server.servers
-            class_.odb = service_store.server.worker_store.server.odb
-            class_.kvdb = service_store.server.worker_store.kvdb
-            class_.pubsub = service_store.server.worker_store.pubsub
-            class_.cloud.openstack.swift = service_store.server.worker_store.worker_config.cloud_openstack_swift
-            class_.cloud.aws.s3 = service_store.server.worker_store.worker_config.cloud_aws_s3
-            class_._out_ftp = service_store.server.worker_store.worker_config.out_ftp
-            class_._out_plain_http = service_store.server.worker_store.worker_config.out_plain_http
-            class_.amqp.invoke = service_store.server.worker_store.amqp_invoke # .send is for pre-3.0 backward compat
-            class_.amqp.invoke_async = class_.amqp.send = service_store.server.worker_store.amqp_invoke_async
-
             class_.wsx = WSXFacade(service_store.server)
-            class_.definition.kafka = service_store.server.worker_store.def_kafka
-            class_.im.slack = service_store.server.worker_store.outconn_im_slack
-            class_.im.telegram = service_store.server.worker_store.outconn_im_telegram
 
-            class_._worker_store = service_store.server.worker_store
-            class_._worker_config = service_store.server.worker_store.worker_config
-            class_._msg_ns_store = service_store.server.worker_store.worker_config.msg_ns_store
-            class_._json_pointer_store = service_store.server.worker_store.worker_config.json_pointer_store
-            class_._xpath_store = service_store.server.worker_store.worker_config.xpath_store
+            if self.is_testing:
 
-            _req_resp_freq_key = '%s%s' % (KVDB.REQ_RESP_SAMPLE, name)
-            class_._req_resp_freq = int(service_store.server.kvdb.conn.hget(_req_resp_freq_key, 'freq') or 0)
+                class_._worker_store = self._testing_worker_store
+                class_._worker_config = self._testing_worker_store.worker_config
+                class_.component_enabled_cassandra = True
+                class_.component_enabled_email = True
+                class_.component_enabled_search = True
+                class_.component_enabled_msg_path = True
+                class_.component_enabled_ibm_mq = True
+                class_.component_enabled_odoo = True
+                class_.component_enabled_stomp = True
+                class_.component_enabled_zeromq = True
+                class_.component_enabled_patterns = True
+                class_.component_enabled_target_matcher = True
+                class_.component_enabled_invoke_matcher = True
+                class_.component_enabled_sms = True
 
-            class_.component_enabled_cassandra = service_store.server.fs_server_config.component_enabled.cassandra
-            class_.component_enabled_email = service_store.server.fs_server_config.component_enabled.email
-            class_.component_enabled_search = service_store.server.fs_server_config.component_enabled.search
-            class_.component_enabled_msg_path = service_store.server.fs_server_config.component_enabled.msg_path
-            class_.component_enabled_ibm_mq = service_store.server.fs_server_config.component_enabled.ibm_mq
-            class_.component_enabled_odoo = service_store.server.fs_server_config.component_enabled.odoo
-            class_.component_enabled_stomp = service_store.server.fs_server_config.component_enabled.stomp
-            class_.component_enabled_zeromq = service_store.server.fs_server_config.component_enabled.zeromq
-            class_.component_enabled_patterns = service_store.server.fs_server_config.component_enabled.patterns
-            class_.component_enabled_target_matcher = service_store.server.fs_server_config.component_enabled.target_matcher
-            class_.component_enabled_invoke_matcher = service_store.server.fs_server_config.component_enabled.invoke_matcher
-            class_.component_enabled_sms = service_store.server.fs_server_config.component_enabled.sms
+            else:
+
+                class_._worker_store = service_store.server.worker_store
+                class_._enforce_service_invokes = service_store.server.enforce_service_invokes
+                class_.odb = service_store.server.odb
+                class_.kvdb = service_store.server.worker_store.kvdb
+                class_.pubsub = service_store.server.worker_store.pubsub
+                class_.cloud.openstack.swift = service_store.server.worker_store.worker_config.cloud_openstack_swift
+                class_.cloud.aws.s3 = service_store.server.worker_store.worker_config.cloud_aws_s3
+                class_._out_ftp = service_store.server.worker_store.worker_config.out_ftp
+                class_._out_plain_http = service_store.server.worker_store.worker_config.out_plain_http
+                class_.amqp.invoke = service_store.server.worker_store.amqp_invoke # .send is for pre-3.0 backward compat
+                class_.amqp.invoke_async = class_.amqp.send = service_store.server.worker_store.amqp_invoke_async
+
+                class_.definition.kafka = service_store.server.worker_store.def_kafka
+                class_.im.slack = service_store.server.worker_store.outconn_im_slack
+                class_.im.telegram = service_store.server.worker_store.outconn_im_telegram
+
+                class_._worker_config = service_store.server.worker_store.worker_config
+                class_._msg_ns_store = service_store.server.worker_store.worker_config.msg_ns_store
+                class_._json_pointer_store = service_store.server.worker_store.worker_config.json_pointer_store
+                class_._xpath_store = service_store.server.worker_store.worker_config.xpath_store
+
+                _req_resp_freq_key = '%s%s' % (KVDB.REQ_RESP_SAMPLE, name)
+                class_._req_resp_freq = int(service_store.server.kvdb.conn.hget(_req_resp_freq_key, 'freq') or 0)
+
+                class_.component_enabled_cassandra = service_store.server.fs_server_config.component_enabled.cassandra
+                class_.component_enabled_email = service_store.server.fs_server_config.component_enabled.email
+                class_.component_enabled_search = service_store.server.fs_server_config.component_enabled.search
+                class_.component_enabled_msg_path = service_store.server.fs_server_config.component_enabled.msg_path
+                class_.component_enabled_ibm_mq = service_store.server.fs_server_config.component_enabled.ibm_mq
+                class_.component_enabled_odoo = service_store.server.fs_server_config.component_enabled.odoo
+                class_.component_enabled_stomp = service_store.server.fs_server_config.component_enabled.stomp
+                class_.component_enabled_zeromq = service_store.server.fs_server_config.component_enabled.zeromq
+                class_.component_enabled_patterns = service_store.server.fs_server_config.component_enabled.patterns
+                class_.component_enabled_target_matcher = service_store.server.fs_server_config.component_enabled.target_matcher
+                class_.component_enabled_invoke_matcher = service_store.server.fs_server_config.component_enabled.invoke_matcher
+                class_.component_enabled_sms = service_store.server.fs_server_config.component_enabled.sms
 
             # JSON Schema
             if class_.schema:
@@ -615,19 +675,29 @@ class ServiceStore(object):
 # ################################################################################################################################
 
     def _store_in_ram(self, session, to_process):
-        # type: (object, List[DeploymentInfo]) -> None
+        # type: (object, List[InRAMService]) -> None
 
-        # We need to look up all the services in ODB to be able to find their IDs
-        if session:
-            needs_new_session = False
+        if self.is_testing:
+            services = {}
+
+            for in_ram_service in to_process: # type: InRAMService
+                service_info = {}
+                service_info['id'] = randint(0, 1000000)
+                services[in_ram_service.name] = service_info
+
         else:
-            needs_new_session = True
-            session = self.odb.session()
-        try:
-            services = self.get_basic_data_services(session)
-        finally:
-            if needs_new_session and session:
-                session.close()
+
+            # We need to look up all the services in ODB to be able to find their IDs
+            if session:
+                needs_new_session = False
+            else:
+                needs_new_session = True
+                session = self.odb.session()
+            try:
+                services = self.get_basic_data_services(session)
+            finally:
+                if needs_new_session and session:
+                    session.close()
 
         with self.update_lock:
             for item in to_process: # type: InRAMService
@@ -843,7 +913,7 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def import_services_from_anywhere(self, items, base_dir, work_dir=None):
+    def import_services_from_anywhere(self, items, base_dir, work_dir=None, is_internal=None):
         """ Imports services from any of the supported sources, be it module names,
         individual files, directories or distutils2 packages (compressed or not).
         """
@@ -856,19 +926,22 @@ class ServiceStore(object):
             if has_debug:
                 logger.debug('About to import services from:`%s`', item)
 
-            is_internal = item.startswith('zato')
+            if is_internal is None:
+                is_internal = item.startswith('zato')
 
-            # A regular directory
-            if os.path.isdir(item):
-                to_process.extend(self.import_services_from_directory(item, base_dir))
+            if isinstance(item, basestring):
 
-            # .. a .py/.pyw
-            elif is_python_file(item):
-                to_process.extend(self.import_services_from_file(item, is_internal, base_dir))
+                # A regular directory
+                if os.path.isdir(item):
+                    to_process.extend(self.import_services_from_directory(item, base_dir))
+
+                # .. a .py/.pyw
+                elif is_python_file(item):
+                    to_process.extend(self.import_services_from_file(item, is_internal, base_dir))
 
             # .. must be a module object
             else:
-                to_process.extend(self.import_services_from_module(item, is_internal))
+                to_process.extend(self.import_services_from_module_object(item, is_internal))
 
         total_size = 0
 
@@ -883,18 +956,27 @@ class ServiceStore(object):
         info.total_size = total_size
         info.total_size_human = naturalsize(info.total_size)
 
-        with closing(self.odb.session()) as session:
+        if self.is_testing:
+            session = None
+        else:
+            session = self.odb.session()
 
-            # Save data to both ODB and RAM now
-            self._store_in_odb(session, info.to_process)
+        try:
+            # Save data to both ODB and RAM if we are not testing,
+            # otherwise, in RAM only.
+            if not self.is_testing:
+                self._store_in_odb(session, info.to_process)
             self._store_in_ram(session, info.to_process)
 
             # Postprocessing, like rate limiting which needs access to information that becomes
             # available only after a service is saved to ODB.
-            self.after_import(session, info)
+            if not self.is_testing:
+                self.after_import(session, info)
 
-            # Done with everything, we can commit it now
-            session.commit()
+        # Done with everything, we can commit it now, assuming we are not in a unittest
+        finally:
+            if session:
+                session.commit()
 
         # Done deploying, we can return
         return info
@@ -1001,10 +1083,15 @@ class ServiceStore(object):
                         if 'zato.sso' in service_name:
                             return False
 
-                    if self.patterns_matcher.is_allowed(service_name):
+                    # We may be embedded in a test server from zato-testing
+                    # in which case we deploy every service found.
+                    if self.is_testing:
                         return True
                     else:
-                        logger.info('Skipped disallowed `%s`', service_name)
+                        if self.patterns_matcher.is_allowed(service_name):
+                            return True
+                        else:
+                            logger.info('Skipped disallowed `%s`', service_name)
 
 # ################################################################################################################################
 
