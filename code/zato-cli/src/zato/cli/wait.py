@@ -9,8 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import json
-import os
 import sys
 
 # Zato
@@ -23,6 +21,8 @@ from zato.common.util.tcp import wait_for_zato
 if 0:
     # stdlib
     from argparse import Namespace
+
+    Namespace = Namespace
 
 # ################################################################################################################################
 # ################################################################################################################################
