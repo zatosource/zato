@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import inspect
 import logging
 import os
-from contextlib import closing
 from datetime import datetime
 from functools import total_ordering
 from hashlib import sha256
