@@ -10,7 +10,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import os
+from json import loads
 from unittest import TestCase
+
+# Bunch
+from bunch import bunchify
 
 # Cryptography
 from cryptography.fernet import Fernet
@@ -29,6 +33,9 @@ from zato.server.base.parallel import ParallelServer
 from zato.server.config import ConfigStore
 from zato.server.service.store import ServiceStore
 from zato.testing.requests_ import RequestsAdapter
+
+# Python 2/3 compatibility
+from past.builtins import basestring
 
 # ################################################################################################################################
 
@@ -233,6 +240,12 @@ class ServiceTestCase(TestCase):
         response = service.update_handle(
             self.request_handler._set_response_data, service, request, channel, data_format, transport,
             self.server, broker_client, self.worker_store, cid, simple_io_config, environ=kwargs.get('environ'))
+
+        if kwargs.get('as_bunch'):
+            if isinstance(response.payload, basestring):
+                payload = loads(response.payload)
+                payload = bunchify(payload)
+                response._payload = payload
 
         return response
 
