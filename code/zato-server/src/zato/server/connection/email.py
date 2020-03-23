@@ -58,6 +58,9 @@ class Imbox(_Imbox):
         message, data = self.connection.uid('fetch', uid, '(BODY.PEEK[])')
         raw_email = data[0][1]
 
+        if not isinstance(raw_email, unicode):
+            raw_email = raw_email.decode('utf8')
+
         email_object = parse_email(raw_email)
 
         return email_object

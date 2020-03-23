@@ -87,8 +87,8 @@ class Ping(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_email_imap_ping_request'
         response_elem = 'zato_email_imap_ping_response'
-        input_required = ('id',)
-        output_required = ('info',)
+        input_required = 'id'
+        output_optional = 'info'
 
     def handle(self):
 
