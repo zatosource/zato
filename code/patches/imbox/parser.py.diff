@@ -1,0 +1,21 @@
+--- imbox/parser.py.orig	2020-03-23 14:00:17.481326633 +0100
++++ imbox/parser.py	2020-03-23 14:00:31.137658926 +0100
+@@ -10,6 +10,8 @@
+ from email.header import decode_header
+ from imbox.utils import str_encode, str_decode
+ 
++# Python 2/3 compatibility
++from past.builtins import basestring, unicode
+ 
+ class Struct(object):
+     def __init__(self, **entries):
+@@ -84,6 +86,9 @@
+         if dispositions[0].lower() in ["attachment", "inline"]:
+             file_data = message_part.get_payload(decode=True)
+ 
++            if not isinstance(file_data, unicode):
++                file_data = file_data.decode('utf8')
++
+             attachment = {
+                 'content-type': message_part.get_content_type(),
+                 'size': len(file_data),
