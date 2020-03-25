@@ -537,6 +537,7 @@ class ServiceStore(object):
     def new_instance(self, impl_name, *args, **kwargs):
         """ Returns a new instance of a service of the given impl name.
         """
+        # type: (str, object, object) -> (Service, bool)
         _info = self.services[impl_name]
         return _info['service_class'](*args, **kwargs), _info['is_active']
 
