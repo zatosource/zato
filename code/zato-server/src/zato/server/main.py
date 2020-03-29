@@ -314,6 +314,14 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     # New in 2.0 so it's optional.
     profiler_enabled = server_config.get('profiler', {}).get('enabled', False)
 
+    pagerduty_config = server_config.get('pagerduty')
+    pagerduty_api_token = pagerduty_config.pop('api_token', None)
+
+    if pagerduty_api_token is not None:
+        import pdpyras
+
+        pdpyras_client = pdpyras.EventsAPISession(pagerduty_api_token)
+
     # New in 2.0 so it's optional.
     sentry_config = server_config.get('sentry')
 

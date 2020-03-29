@@ -81,6 +81,7 @@ parse==1.6.6
 passlib==1.7.1
 pathtools==0.1.2
 pbr==0.7.0
+pdpyras==4.0
 pep8==1.5.7
 portalocker==0.5.7
 posix-ipc==1.0.0
@@ -164,3 +165,4 @@ zato-vault-client==1.3
 gevent-inotifyx==0.1.1
 https://github.com/dsuch/inotifyx/archive/main.zip#egg=inotifyx
 https://github.com/dsuch/warlock/archive/main.zip#egg=warlock
+

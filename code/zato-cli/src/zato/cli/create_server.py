@@ -192,6 +192,10 @@ dsn=
 timeout=5
 level=WARN
 
+[pagerduty]
+api_token=
+level=WARN
+
 [rbac]
 custom_auth_list_service=
 
