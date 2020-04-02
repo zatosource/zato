@@ -11,6 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Zato - Cython
 from zato.simpleio import BoolConfig, IntConfig, SecretConfig, SIOServerConfig
 
+# Python 2/3 compatibility
+from past.builtins import basestring, unicode
+
 # ################################################################################################################################
 
 def c18n_sio_fs_config(sio_fs_config):
