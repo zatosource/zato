@@ -126,7 +126,7 @@ class JSONInputParsing(BaseTestCase):
 
         self.assertIsInstance(input.fff, datetime)
         self.assertEquals(input.fff.year, 1988)
-        self.assertEquals(input.fff.month, 01)
+        self.assertEquals(input.fff.month, 1)
         self.assertEquals(input.fff.day, 29)
 
 # ################################################################################################################################
@@ -229,7 +229,7 @@ class JSONInputParsing(BaseTestCase):
 
         self.assertIsInstance(input1.fff, datetime)
         self.assertEquals(input1.fff.year, 1988)
-        self.assertEquals(input1.fff.month, 01)
+        self.assertEquals(input1.fff.month, 1)
         self.assertEquals(input1.fff.day, 29)
         self.assertEquals(input1.fff.hour, 11)
         self.assertEquals(input1.fff.minute, 22)
@@ -247,7 +247,7 @@ class JSONInputParsing(BaseTestCase):
 
         self.assertIsInstance(input2.fff, datetime)
         self.assertEquals(input2.fff.year, 1977)
-        self.assertEquals(input2.fff.month, 01)
+        self.assertEquals(input2.fff.month, 1)
         self.assertEquals(input2.fff.day, 29)
         self.assertEquals(input2.fff.hour, 11)
         self.assertEquals(input2.fff.minute, 22)
