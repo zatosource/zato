@@ -1201,7 +1201,8 @@ class Service(object):
         """
         # type: (str, str, str) -> object
 
-        service, ignored_is_active = self.server.service_store.new_instance_by_name(service_name, *args, **kwargs)
+        service, ignored_is_active = \
+            self.server.service_store.new_instance_by_name(service_name, *args, **kwargs) # type: (Service, bool)
 
         service.update(service, CHANNEL.NEW_INSTANCE, self.server, broker_client=self.broker_client, _ignored=None,
             cid=self.cid, payload=self.request.payload, raw_request=self.request.raw_request, wsgi_environ=self.wsgi_environ)

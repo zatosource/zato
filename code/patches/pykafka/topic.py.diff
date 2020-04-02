@@ -1,0 +1,10 @@
+--- pykafka/topic.py.orig	2020-01-25 22:53:43.414137200 +0100
++++ pykafka/topic.py	2020-01-25 22:53:50.206212642 +0100
+@@ -45,7 +45,6 @@
+ except ImportError:
+     rdkafka = False
+     log.info("Could not load pykafka.rdkafka extension.")
+-    log.debug("Traceback:", exc_info=True)
+ 
+ 
+ class Topic(object):
