@@ -26,6 +26,9 @@ from zato.util_convert import to_bool
 # Zato - Cython
 from zato.bunch import Bunch, bunchify
 
+# Python 2/3 compatibility
+from past.builtins import basestring, str as past_str, unicode as past_unicode
+
 # ################################################################################################################################
 
 logger = getLogger('zato')
@@ -144,8 +147,8 @@ cdef enum ElemType:
     decimal       =  500
     dict_         =  600
     dict_list     =  700
-    float         =  800
-    int           =  900
+    float_         =  800
+    int_           =  900
     list_         = 1000
     opaque        = 1100
     text          = 1200
@@ -339,7 +342,7 @@ cdef class Date(Elem):
             return dt_parse(value)
         except ValueError as e:
             # This is the only way to learn about what kind of exception we caught
-            raise ValueError('Could not parse `{}` as a {} object ({})'.format(value, kwargs['class_name'], e.message))
+            raise ValueError('Could not parse `{}` as a {} object ({})'.format(value, kwargs['class_name'], e.args[0]))
 
     def from_json(self, value):
         return Date.from_json_static(value, class_name=self.__class__.__name__)
@@ -487,7 +490,7 @@ cdef class DictList(Dict):
 
 cdef class Float(Elem):
     def __cinit__(self):
-        self._type = ElemType.float
+        self._type = ElemType.float_
 
     @staticmethod
     def from_json_static(value, *args, **kwargs):
@@ -500,7 +503,7 @@ cdef class Float(Elem):
 
 cdef class Int(Elem):
     def __cinit__(self):
-        self._type = ElemType.int
+        self._type = ElemType.int_
 
     @staticmethod
     def from_json_static(value, *args, **kwargs):
@@ -553,7 +556,20 @@ cdef class Text(Elem):
 
     @staticmethod
     def from_json_static(value, *args, **kwargs):
-        return value if isinstance(value, basestring) else str(value).decode(kwargs['encoding'])
+        if isinstance(value, basestring):
+            return value
+        else:
+            if isinstance(value, past_unicode):
+                print()
+                print(111, value)
+                print()
+                return value
+            else:
+                if isinstance(value, past_str):
+                    encoding = kwargs.get('encoding') or 'utf8'
+                    return past_unicode(value, encoding)
+                else:
+                    return past_unicode(value)
 
     def from_json(self, value):
         return Text.from_json_static(value, encoding=self.encoding)
