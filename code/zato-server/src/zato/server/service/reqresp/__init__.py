@@ -41,7 +41,7 @@ from zato.common import NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, SIM
      ZATO_OK
 from zato.common.odb.api import WritableKeyedTuple
 from zato.common.util import make_repr
-from zato.server.service.reqresp.sio import AsIs, convert_param, ForceType, ServiceInput, SIOConverter
+from zato.server.service.reqresp.sio import AsIs, convert_param, SIOElem, ServiceInput, SIOConverter
 
 # ################################################################################################################################
 
@@ -378,7 +378,7 @@ class SimpleIOPayload(SIOConverter):
 
         self.zato_all_attrs = set()
         for name in chain(required_list, optional_list):
-            if isinstance(name, ForceType):
+            if isinstance(name, SIOElem):
                 name = name.name
             self.zato_all_attrs.add(name)
 
@@ -419,7 +419,7 @@ class SimpleIOPayload(SIOConverter):
         of an attribute will actually add data to self.zato_output.
         """
         for name in chain(required_list, optional_list):
-            if isinstance(name, ForceType):
+            if isinstance(name, SIOElem):
                 name = name.name
             setattr(self, name, '')
 
@@ -461,7 +461,7 @@ class SimpleIOPayload(SIOConverter):
         into account the differences between dictionaries and other formats
         as well as the type conversions.
         """
-        lookup_name = name.name if isinstance(name, ForceType) else name
+        lookup_name = name.name if isinstance(name, SIOElem) else name
 
         if is_sa_namedtuple or self._is_sqlalchemy(item):
             elem_value = getattr(item, lookup_name, '')
@@ -536,7 +536,7 @@ class SimpleIOPayload(SIOConverter):
                             if name not in self.zato_force_empty_keys:
                                 continue
 
-                    if isinstance(name, ForceType):
+                    if isinstance(name, SIOElem):
                         name = name.name
 
                     if isinstance(elem_value, bytes):

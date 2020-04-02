@@ -20,9 +20,3 @@ simpleio:
 simpleio-test:
 	$(MAKE) build
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/simpleio_/*.py -s
-
-rate-limit:
-	$(MAKE) build
-
-rate-limit-test:
-	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/rate_limit/*.py -s

@@ -79,12 +79,14 @@ if 0:
     from zato.common.odb.api import ODBManager
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
     from zato.server.service.store import ServiceStore
+    from zato.simpleio import SIOServerConfig
     from zato.sso.api import SSOAPI
 
     # For pyflakes
     ODBManager = ODBManager
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
+    SIOServerConfig = SIOServerConfig
     SSOAPI = SSOAPI
     SubprocessIPC = SubprocessIPC
 
@@ -132,8 +134,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.pickup_config = None # type: Bunch
         self.logging_config = None # type: Bunch
         self.logging_conf_path = None # type: unicode
-        self.sio_config = None # type: Bunch
-        self.sso_config = None # type: Bunch
+        self.sio_config = None # type: SIOServerConfig
+        self.sso_config = None
         self.connector_server_grace_time = None
         self.id = None # type: int
         self.name = None # type: unicode

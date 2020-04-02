@@ -293,8 +293,8 @@ class FakeServer(object):
 
 # ################################################################################################################################
 
-class ForceTypeWrapper(object):
-    """ Makes comparison between two ForceType elements use their names.
+class SIOElemWrapper(object):
+    """ Makes comparison between two SIOElem elements use their names.
     """
     def __init__(self, value):
         self.value = value
@@ -431,7 +431,7 @@ class ServiceTestCase(TestCase):
         self._check_sio_request_input(instance, request_data)
 
     def wrap_force_type(self, elem):
-        return ForceTypeWrapper(elem)
+        return SIOElemWrapper(elem)
 
 # ################################################################################################################################
 

@@ -53,6 +53,9 @@ from zato.server.service import after_handle_hooks, after_job_hooks, before_hand
      WSXFacade
 from zato.server.service.internal import AdminService
 
+# Zato - Cython
+from zato.simpleio import CySimpleIO
+
 # Python 2/3 compatibility
 from past.builtins import basestring
 
@@ -175,6 +178,103 @@ class DeploymentInfo(object):
         self.to_process = []      # type: List
         self.total_size = 0       # type: int
         self.total_size_human = 0 # type: text
+
+# ################################################################################################################################
+
+def set_up_class_attributes(class_, service_store=None, name=None):
+    # type: (Service, ServiceStore, unicode)
+    class_.add_http_method_handlers()
+
+    # Set up enforcement of what other services a given service can invoke
+    try:
+        class_.invokes
+    except AttributeError:
+        class_.invokes = []
+
+    try:
+        class_.SimpleIO
+        class_.has_sio = True
+    except AttributeError:
+        class_.has_sio = False
+
+    # May be None during unit-tests. Not every one will provide it because it's not always needed in a given test.
+    if service_store:
+
+        # Set up all attributes that do not have to be assigned to each instance separately
+        # and can be shared as class attributes.
+        class_._enforce_service_invokes = service_store.server.enforce_service_invokes
+
+        class_.servers = service_store.server.servers
+        class_.odb = service_store.server.worker_store.server.odb
+        class_.kvdb = service_store.server.worker_store.kvdb
+        class_.pubsub = service_store.server.worker_store.pubsub
+        class_.cloud.openstack.swift = service_store.server.worker_store.worker_config.cloud_openstack_swift
+        class_.cloud.aws.s3 = service_store.server.worker_store.worker_config.cloud_aws_s3
+        class_._out_ftp = service_store.server.worker_store.worker_config.out_ftp
+        class_._out_plain_http = service_store.server.worker_store.worker_config.out_plain_http
+        class_.amqp.invoke = service_store.server.worker_store.amqp_invoke # .send is for pre-3.0 backward compat
+        class_.amqp.invoke_async = class_.amqp.send = service_store.server.worker_store.amqp_invoke_async
+
+        class_.definition.kafka = service_store.server.worker_store.def_kafka
+        class_.im.slack = service_store.server.worker_store.outconn_im_slack
+        class_.im.telegram = service_store.server.worker_store.outconn_im_telegram
+
+        class_._worker_store = service_store.server.worker_store
+        class_._worker_config = service_store.server.worker_store.worker_config
+        class_._msg_ns_store = service_store.server.worker_store.worker_config.msg_ns_store
+        class_._json_pointer_store = service_store.server.worker_store.worker_config.json_pointer_store
+        class_._xpath_store = service_store.server.worker_store.worker_config.xpath_store
+
+        _req_resp_freq_key = '%s%s' % (KVDB.REQ_RESP_SAMPLE, name)
+        class_._req_resp_freq = int(service_store.server.kvdb.conn.hget(_req_resp_freq_key, 'freq') or 0)
+
+        class_.component_enabled_cassandra = service_store.server.fs_server_config.component_enabled.cassandra
+        class_.component_enabled_email = service_store.server.fs_server_config.component_enabled.email
+        class_.component_enabled_search = service_store.server.fs_server_config.component_enabled.search
+        class_.component_enabled_msg_path = service_store.server.fs_server_config.component_enabled.msg_path
+        class_.component_enabled_ibm_mq = service_store.server.fs_server_config.component_enabled.ibm_mq
+        class_.component_enabled_odoo = service_store.server.fs_server_config.component_enabled.odoo
+        class_.component_enabled_stomp = service_store.server.fs_server_config.component_enabled.stomp
+        class_.component_enabled_zeromq = service_store.server.fs_server_config.component_enabled.zeromq
+        class_.component_enabled_patterns = service_store.server.fs_server_config.component_enabled.patterns
+        class_.component_enabled_target_matcher = service_store.server.fs_server_config.component_enabled.target_matcher
+        class_.component_enabled_invoke_matcher = service_store.server.fs_server_config.component_enabled.invoke_matcher
+        class_.component_enabled_sms = service_store.server.fs_server_config.component_enabled.sms
+
+        # SimpleIO
+        CySimpleIO.attach_sio(service_store.server.sio_config, class_)
+
+        # User management and SSO
+        if service_store.server.is_sso_enabled:
+            class_.sso = service_store.server.sso_api
+
+        # Crypto operations
+        class_.crypto = service_store.server.crypto_manager
+
+        # Audit log
+        class_.audit_pii = service_store.server.audit_pii
+
+    class_._before_job_hooks = []
+    class_._after_job_hooks = []
+
+    # Override hook methods that have not been implemented by user
+    for func_name in hook_methods:
+        func = getattr(class_, func_name, None)
+        if func:
+            # Replace with None or use as-is depending on whether the hook was overridden by user.
+            impl = func if is_func_overridden(func) else None
+
+            # Assign to class either the replaced value or the original one.
+            setattr(class_, func_name, impl)
+
+            if impl and func_name in before_job_hooks:
+                class_._before_job_hooks.append(impl)
+
+            if impl and func_name in after_job_hooks:
+                class_._after_job_hooks.append(impl)
+
+    class_._has_before_job_hooks = bool(class_._before_job_hooks)
+    class_._has_after_job_hooks = bool(class_._after_job_hooks)
 
 # ################################################################################################################################
 
