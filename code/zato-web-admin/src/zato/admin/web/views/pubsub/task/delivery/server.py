@@ -49,8 +49,8 @@ class DeliveryServer(object):
 class Index(_Index):
     method_allowed = 'GET'
     url_name = 'pubsub-task-delivery-server'
-    template = 'zato/pubsub/task/delivery-server.html'
-    service_name = 'pubsub.task.delivery-server.get-list'
+    template = 'zato/pubsub/task/delivery/server.html'
+    service_name = 'zato.pubsub.task.delivery.server.get-list'
     output_class = DeliveryServer
     paginate = True
 

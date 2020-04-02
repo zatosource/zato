@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from base64 import b64decode
 from binascii import unhexlify
 from contextlib import closing
 from json import loads
@@ -232,6 +233,8 @@ class OnMessageReceived(AdminService):
 
         data = payload_from_request(self.cid, msg['text'], request['data_format'], None)
 
+        msg['mqmd'] = b64decode(msg['mqmd'])
+
         self.invoke(service_name, data, _channel, wmq_ctx={
             'msg_id': unhexlify(msg['msg_id']),
             'correlation_id': correlation_id,
@@ -241,7 +244,7 @@ class OnMessageReceived(AdminService):
             'expiration': expiration,
             'reply_to': msg['reply_to'],
             'data': data,
-            'mqmd': pickle_loads(msg['mqmd'].encode('utf8'))
+            'mqmd': pickle_loads(msg['mqmd'])
         })
 
 # ################################################################################################################################

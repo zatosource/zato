@@ -21,6 +21,7 @@ from traceback import format_exc
 
 # SQLAlchemy
 from sqlalchemy import and_, create_engine, event, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.orm.query import Query
 from sqlalchemy.pool import NullPool
@@ -32,15 +33,16 @@ from bunch import Bunch, bunchify
 
 # Zato
 from zato.common import DEPLOYMENT_STATUS, GENERIC, HTTP_SOAP, Inactive, MS_SQL, NotGiven, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, \
-     SERVER_UP_STATUS, ZATO_NONE, ZATO_ODB_POOL_NAME
+     SERVER_UP_STATUS, UNITTEST, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
 from zato.common.odb import get_ping_query, query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
      JWT, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, XPathSecurity, \
      WSSDefinition, VaultConnection
+from zato.common.odb.testing import UnittestEngine
 from zato.common.odb.query.pubsub import subscription as query_ps_subscription
 from zato.common.odb.query import generic as query_generic
-from zato.common.util import current_host, get_component_name, get_engine_url, parse_extra_into_dict, \
+from zato.common.util import current_host, get_component_name, get_engine_url, new_cid, parse_extra_into_dict, \
      parse_tls_channel_security_definition, spawn_greenlet
 from zato.common.util.sql import ElemsWithOpaqueMaker, elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
@@ -64,6 +66,12 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 rate_limit_keys = 'is_rate_limit_active', 'rate_limit_def', 'rate_limit_type', 'rate_limit_check_parent_def'
+
+unittest_fs_sql_config = {
+    UNITTEST.SQL_ENGINE: {
+        'ping_query': 'SELECT 1+1'
+    }
+}
 
 # ################################################################################################################################
 
@@ -221,7 +229,7 @@ class SQLConnectionPool(object):
         engine_url = get_engine_url(config)
         self.engine = self._create_engine(engine_url, config, _extra)
 
-        if self.engine and self._is_sa_engine(engine_url):
+        if self.engine and (not self._is_unittest_engine(engine_url)) and self._is_sa_engine(engine_url):
             event.listen(self.engine, 'checkin', self.on_checkin)
             event.listen(self.engine, 'checkout', self.on_checkout)
             event.listen(self.engine, 'connect', self.on_connect)
@@ -245,15 +253,32 @@ class SQLConnectionPool(object):
 # ################################################################################################################################
 
     def _is_sa_engine(self, engine_url):
+        # type: (str)
         return 'zato+mssql1' not in engine_url
 
 # ################################################################################################################################
 
-    def _create_engine(self, engine_url, config, extra):
-        if self._is_sa_engine(engine_url):
-            return create_engine(engine_url, **extra)
-        else:
+    def _is_unittest_engine(self, engine_url):
+        # type: (str)
+        return 'zato+unittest' in engine_url
 
+# ################################################################################################################################
+
+    def _create_unittest_engine(self, engine_url, config):
+        # type: (str, dict)
+        return UnittestEngine(engine_url, config)
+
+# ################################################################################################################################
+
+    def _create_engine(self, engine_url, config, extra):
+
+        if self._is_unittest_engine(engine_url):
+            return self._create_unittest_engine(engine_url, config)
+
+        elif self._is_sa_engine(engine_url):
+            return create_engine(engine_url, **extra)
+
+        else:
             # This is a direct MS SQL connection
             connect_kwargs = {
                 'dsn': config['host'],
@@ -306,6 +331,7 @@ class SQLConnectionPool(object):
     def ping(self, fs_sql_config):
         """ Pings the SQL database and returns the response time, in milliseconds.
         """
+        return
         if hasattr(self.engine, 'ping'):
             func = self.engine.ping
             query = self.engine.ping_query
@@ -388,7 +414,12 @@ class PoolStore(object):
             if name in self.wrappers:
                 del self[name]
 
-            config_no_sensitive = deepcopy(config)
+            config_no_sensitive = {}
+
+            for key in config:
+                if key != 'callback_func':
+                    config_no_sensitive[key] = config[key]
+
             config_no_sensitive['password'] = SECRET_SHADOW
             pool = self.sql_conn_class(name, config, config_no_sensitive)
 
@@ -396,6 +427,18 @@ class PoolStore(object):
             wrapper.init_session(name, config, pool)
 
             self.wrappers[name] = wrapper
+
+    set_item = __setitem__
+
+# ################################################################################################################################
+
+    def add_unittest_item(self, name, fs_sql_config=unittest_fs_sql_config):
+        self.set_item(name, {
+            'password': 'password.{}'.format(new_cid),
+            'engine': UNITTEST.SQL_ENGINE,
+            'fs_sql_config': fs_sql_config,
+            'is_active': True,
+        })
 
 # ################################################################################################################################
 
@@ -426,7 +469,10 @@ class PoolStore(object):
         password.
         """
         with self._lock:
-            self[name].pool.engine.dispose()
+            # Do not check if the connection is active when changing the password,
+            # sometimes it is desirable to change it even if it is Inactive.
+            item = self.get(name, enforce_is_active=False)
+            item.pool.engine.dispose()
             config = deepcopy(self.wrappers[name].pool.config)
             config['password'] = password
             self[name] = config
@@ -529,19 +575,19 @@ class ODBManager(SessionWrapper):
     def get_default_internal_pubsub_endpoint(self):
         with closing(self.session()) as session:
             return session.query(PubSubEndpoint).\
-                   filter(PubSubEndpoint.name==PUBSUB.DEFAULT.INTERNAL_ENDPOINT_NAME).\
-                   filter(PubSubEndpoint.endpoint_type==PUBSUB.ENDPOINT_TYPE.INTERNAL.id).\
-                   one()
+                filter(PubSubEndpoint.name==PUBSUB.DEFAULT.INTERNAL_ENDPOINT_NAME).\
+                filter(PubSubEndpoint.endpoint_type==PUBSUB.ENDPOINT_TYPE.INTERNAL.id).\
+                filter(PubSubEndpoint.cluster_id==self.cluster_id).\
+                one()
 
 # ################################################################################################################################
 
     def get_missing_services(self, server, locally_deployed):
         """ Returns services deployed on the server given on input that are not among locally_deployed.
         """
-        missing = []
+        missing = set()
 
         with closing(self.session()) as session:
-
             server_services = session.query(
                 Service.id, Service.name,
                 DeployedService.source_path, DeployedService.source).\
@@ -551,8 +597,8 @@ class ODBManager(SessionWrapper):
                 all()
 
             for item in server_services:
-                if item not in locally_deployed:
-                    missing.append(item)
+                if item.name not in locally_deployed:
+                    missing.add(item)
 
         return missing
 
@@ -742,6 +788,7 @@ class ODBManager(SessionWrapper):
 
             query = select([
                 ServiceTable.c.name,
+                DeployedServiceTable.c.source,
             ]).where(and_(
                 DeployedServiceTable.c.service_id==ServiceTable.c.id,
                 DeployedServiceTable.c.server_id==self.server_id
@@ -754,13 +801,27 @@ class ODBManager(SessionWrapper):
 
     def add_services(self, session, data):
         # type: (List[dict]) -> None
-        session.execute(ServiceTableInsert().values(data))
+        try:
+            session.execute(ServiceTableInsert().values(data))
+        except IntegrityError:
+            # This can be ignored because it is possible that there will be
+            # more than one server trying to insert rows related to services
+            # that are hot-deployed from web-admin or another source.
+            logger.debug('Ignoring IntegrityError with `%s`', data)
 
 # ################################################################################################################################
 
     def add_deployed_services(self, session, data):
         # type: (List[dict]) -> None
         session.execute(DeployedServiceInsert().values(data))
+
+# ################################################################################################################################
+
+    def drop_deployed_services_by_name(self, session, service_id_list):
+        session.execute(
+            DeployedServiceDelete().\
+            where(DeployedService.service_id.in_(service_id_list))
+        )
 
 # ################################################################################################################################
 
@@ -849,7 +910,7 @@ class ODBManager(SessionWrapper):
         """ Returns a list of jobs defined on the given cluster.
         """
         with closing(self.session()) as session:
-            return query.job_list(session, cluster_id, needs_columns)
+            return query.job_list(session, cluster_id, None, needs_columns)
 
 # ################################################################################################################################
 
@@ -1141,6 +1202,15 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
+    def get_channel_file_transfer_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of file transfer channels.
+        """
+        with closing(self.session()) as session:
+            return query_generic.connection_list(
+                session, cluster_id, GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER, needs_columns)
+
+# ################################################################################################################################
+
     def get_channel_web_socket(self, cluster_id, channel_id):
         """ Returns a particular WebSocket channel.
         """
@@ -1206,7 +1276,7 @@ class ODBManager(SessionWrapper):
 # ################################################################################################################################
 
     def get_out_sftp_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of outgoing SAP RFC connections.
+        """ Returns a list of outgoing SFTP connections.
         """
         with closing(self.session()) as session:
             return query_generic.connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, needs_columns)

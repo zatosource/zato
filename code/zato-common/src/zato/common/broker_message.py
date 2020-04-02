@@ -245,6 +245,15 @@ class CHANNEL(Constants):
     WEB_SOCKET_DELETE = ValueConstant('')
     WEB_SOCKET_BROADCAST = ValueConstant('')
 
+    FTP_CREATE = ValueConstant('')
+    FTP_EDIT = ValueConstant('')
+    FTP_DELETE = ValueConstant('')
+    FTP_PING = ValueConstant('')
+    FTP_USER_CREATE = ValueConstant('')
+    FTP_USER_EDIT = ValueConstant('')
+    FTP_USER_DELETE = ValueConstant('')
+    FTP_USER_CHANGE_PASSWORD = ValueConstant('')
+
 class AMQP_CONNECTOR(Constants):
     """ Since 3.0, this is not used anymore.
     """

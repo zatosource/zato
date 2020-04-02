@@ -60,6 +60,10 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
+SKIP_VALUE = 'zato.skip.value'
+
+# ################################################################################################################################
+
 def parse_response_data(response):
     """ Parses out data and metadata out an internal API call response.
     """
@@ -276,11 +280,19 @@ class _BaseView(object):
 
         for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional, default_attrs):
             if name != 'cluster_id':
-                value = \
-                    req.GET.get(name) or \
-                    req.GET.get(self.form_prefix + name) or \
-                    req.POST.get(self.form_prefix + name) or \
-                    req.zato.args.get(self.form_prefix + name)
+
+                value = req.GET.getlist(name)
+                if value:
+                    value = value if len(value) > 1 else value[0]
+
+                if not value:
+                    value = req.POST.getlist(self.form_prefix + name)
+                    if value:
+                        value = value if len(value) > 1 else value[0]
+
+                if not value:
+                    value = req.zato.args.get(self.form_prefix + name)
+
                 self.input[name] = value
 
         self.on_after_set_input()
@@ -472,7 +484,10 @@ class CreateEdit(_BaseView):
 
             for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
                 if name not in input_dict and name not in self.input_dict:
-                    input_dict[name] = self.input.get(name)
+                    value = self.input.get(name)
+                    value = self.pre_process_item(name, value)
+                    if value != SKIP_VALUE:
+                        input_dict[name] = value
 
             self.input_dict.update(input_dict)
 
@@ -516,6 +531,9 @@ class CreateEdit(_BaseView):
 
         except Exception:
             return HttpResponseServerError(format_exc())
+
+    def pre_process_item(self, name, value):
+        return value
 
     def success_message(self, item):
         raise NotImplementedError('Must be implemented by a subclass')

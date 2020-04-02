@@ -10,6 +10,7 @@ $.fn.zato.data_table.PubSubQueueMessage = new Class({
         return this.msg_id;
     }
 });
+z
 
 // /////////////////////////////////////////////////////////////////////////////
 

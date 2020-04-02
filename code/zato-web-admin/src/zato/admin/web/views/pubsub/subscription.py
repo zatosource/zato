@@ -21,6 +21,9 @@ from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_rever
 from zato.common import PUBSUB
 from zato.common.odb.model import PubSubEndpoint
 
+# Python 2/3 compatibility
+from six import PY2
+
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
@@ -64,13 +67,23 @@ class Index(_Index):
         edit_form = None
 
         for endpoint_type in PUBSUB.ENDPOINT_TYPE():
-            select_data_target[endpoint_type.id] = []
+            select_data_target[endpoint_type] = []
 
         if self.req.zato.cluster_id:
 
             for item in self.items:
                 targets = select_data_target[item.endpoint_type]
-                targets.append({b'id':item.id, b'name':item.endpoint_name.encode('utf8')})
+
+                if PY2:
+                    id_key = b'id'
+                    name_key = b'name'
+                    endpoint_name = item.endpoint_name.encode('utf8')
+                else:
+                    id_key = 'id'
+                    name_key = 'name'
+                    endpoint_name = item.endpoint_name
+
+                targets.append({id_key:item.id, name_key:endpoint_name})
 
             # Security definitions
             data_list.security_list = self.get_sec_def_list('basic_auth').def_items

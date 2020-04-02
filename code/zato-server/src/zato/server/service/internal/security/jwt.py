@@ -29,6 +29,9 @@ from zato.server.jwt import JWT as JWTBackend
 from zato.server.service import Boolean, Integer, Service
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
+# Python 2/3 compatibility
+from past.builtins import unicode
+
 # ################################################################################################################################
 
 class GetList(AdminService):
@@ -217,37 +220,63 @@ class LogIn(Service):
     """
     class SimpleIO:
         input_required = 'username', 'password'
+        input_optional = 'totp_code'
         output_optional = 'token',
-
-    def handle(self):
-        token = JWTBackend(self.kvdb, self.odb, self.server.decrypt, self.server.jwt_secret).authenticate(
-            self.request.input.username, self.server.decrypt(self.request.input.password))
-
-        if token:
-            self.response.payload = {'token': token}
-            self.response.headers['Authorization'] = token
-
-        else:
-            raise Unauthorized(self.cid, 'Invalid username or password', 'jwt')
 
 # ################################################################################################################################
 
-class LogOut(AdminService):
+    def _raise_unathorized(self):
+        raise Unauthorized(self.cid, 'Invalid credentials', 'jwt')
+
+# ################################################################################################################################
+
+    def handle(self, _sec_type=SEC_DEF_TYPE.JWT):
+
+        try:
+            auth_info = JWTBackend(self.kvdb, self.odb, self.server.decrypt, self.server.jwt_secret).authenticate(
+                self.request.input.username, self.server.decrypt(self.request.input.password))
+
+            if auth_info:
+
+                token = auth_info.token
+
+                # Checks if there is an SSO user related to that JWT account
+                # and logs that person in to SSO or resumes his or her session.
+                self.server.sso_tool.on_external_auth(
+                    _sec_type, auth_info.sec_def_id, auth_info.sec_def_username, self.cid, self.wsgi_environ,
+                    token, self.request.input.totp_code)
+
+                self.response.payload = {'token': auth_info.token}
+                self.response.headers['Authorization'] = auth_info.token
+
+            else:
+                self._raise_unathorized()
+
+        except Exception:
+            self.logger.warn(format_exc())
+            self._raise_unathorized()
+
+# ################################################################################################################################
+
+class LogOut(Service):
     """ Logs a user out of an existing JWT token.
     """
     class SimpleIO(AdminSIO):
-        response_elem = 'zato_security_jwt_log_out_response'
+        response_elem = None
         output_optional = 'result',
+        skip_empty_keys = True
 
     def handle(self):
         token = self.wsgi_environ.get('HTTP_AUTHORIZATION', '').replace('Bearer ', '')
+        if isinstance(token, unicode):
+            token = token.encode('utf8')
 
         if not token:
             self.response.status_code = BAD_REQUEST
             self.response.payload.result = 'No JWT found'
 
         try:
-            JWTBackend(self.kvdb, self.odb, self.server.jwt_secret).delete(token)
+            JWTBackend(self.kvdb, self.odb, self.server.decrypt, self.server.jwt_secret).delete(token)
         except Exception:
             self.logger.warn(format_exc())
             self.response.status_code = BAD_REQUEST

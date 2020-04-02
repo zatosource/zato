@@ -79,7 +79,7 @@ class Login(BaseService):
             input.remote_addr = wsgi_remote_addr
 
         out = self.sso.user.login(input.cid, input.username, input.password, input.current_app, input.remote_addr,
-            input.totp_code, user_agent, has_remote_addr, has_user_agent, input.new_password)
+            user_agent, has_remote_addr, has_user_agent, input.new_password, input.totp_code)
 
         if out:
             self.response.payload.ust = out.ust
@@ -119,7 +119,8 @@ class User(BaseRESTService):
         input_required = ('ust', 'current_app')
         input_optional = (AsIs('user_id'), 'username', 'password', Bool('password_must_change'), 'password_expiry',
             'display_name', 'first_name', 'middle_name', 'last_name', 'email', 'is_locked', 'sign_up_status',
-            'approval_status', 'is_rate_limit_active', 'rate_limit_def', 'is_totp_enabled', 'totp_key', 'totp_label')
+            'approval_status', 'is_rate_limit_active', 'rate_limit_def', 'is_totp_enabled', 'totp_key', 'totp_label',
+            Bool('auto_approve'))
 
         output_optional = BaseSIO.output_optional + (AsIs('user_id'), 'username', 'email', 'display_name', 'first_name',
             'middle_name', 'last_name', 'is_active', 'is_internal', 'is_super_user', 'is_approval_needed',
@@ -163,8 +164,13 @@ class User(BaseRESTService):
             if value != self.SimpleIO.default_value:
                 data[name] = value
 
+        auto_approve = self.request.input.auto_approve
+        if auto_approve == self.SimpleIO.default_value:
+            auto_approve = False
+
         # This will update 'data' in place ..
-        user_id = self.sso.user.create_user(self.cid, data, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
+        user_id = self.sso.user.create_user(
+            self.cid, data, ctx.input.ust, ctx.input.current_app, ctx.remote_addr, auto_approve=auto_approve)
 
         # .. and we can now assign it to response..
 

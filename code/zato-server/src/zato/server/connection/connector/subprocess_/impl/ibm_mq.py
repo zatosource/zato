@@ -295,6 +295,7 @@ class IBMMQConnectionContainer(BaseConnectionContainer):
                 )
 
                 conn.send(text_msg, msg.queue_name.encode('utf8'))
+
                 return Response(data=dumps(text_msg.to_dict(False)))
 
             except(self.pymqi.MQMIError, WebSphereMQException) as e:

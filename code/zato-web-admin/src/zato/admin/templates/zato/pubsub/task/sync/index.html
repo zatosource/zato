@@ -81,13 +81,13 @@
                         </td>
 
                         <td>
-                            <span title="Subscriptions by topic name">sub-t:<a href="{% url "pubsub-task-main-subscription-dict-keys" "subscriptions_by_topic" item.cluster_id item.server_name item.server_pid %}?key_url_name=pubsub-topic">{{ item.subscriptions_by_topic }}</a></span>,
-                            <span title="Subscriptions by sub_key">sub-sk:<a href="{% url "pubsub-task-main-subscription-dict-keys" "subscriptions_by_sub_key" item.cluster_id item.server_name item.server_pid %}">{{ item.subscriptions_by_sub_key }}</a></span>,
-                            <span title="Sub key servers by sub_key">sks:<a href="{% url "pubsub-task-main-subscription-dict-keys" "sub_key_servers" item.cluster_id item.server_name item.server_pid %}">{{ item.sub_key_servers }}</a></span>
+                            <span title="Subscriptions by topic name">sub-t:<a href="{% url "pubsub-task-sync-subscription-dict-keys" "subscriptions_by_topic" item.cluster_id item.server_name item.server_pid %}?key_url_name=pubsub-topic">{{ item.subscriptions_by_topic }}</a></span>,
+                            <span title="Subscriptions by sub_key">sub-sk:<a href="{% url "pubsub-task-sync-subscription-dict-keys" "subscriptions_by_sub_key" item.cluster_id item.server_name item.server_pid %}">{{ item.subscriptions_by_sub_key }}</a></span>,
+                            <span title="Sub key servers by sub_key">sks:<a href="{% url "pubsub-task-sync-subscription-dict-keys" "sub_key_servers" item.cluster_id item.server_name item.server_pid %}">{{ item.sub_key_servers }}</a></span>
                         </td>
                         <td>
-                            <span title="Endpoints by ID">endp:<a href="{% url "pubsub-task-main-subscription-dict-keys" "endpoints" item.cluster_id item.server_name item.server_pid %}">{{ item.endpoints }}</a></span>,
-                            <span title="Topics by ID">topics:<a href="{% url "pubsub-task-main-subscription-dict-keys" "topics" item.cluster_id item.server_name item.server_pid %}">{{ item.topics }}</a></span>,
+                            <span title="Endpoints by ID">endp:<a href="{% url "pubsub-task-sync-subscription-dict-keys" "endpoints" item.cluster_id item.server_name item.server_pid %}">{{ item.endpoints }}</a></span>,
+                            <span title="Topics by ID">topics:<a href="{% url "pubsub-task-sync-subscription-dict-keys" "topics" item.cluster_id item.server_name item.server_pid %}">{{ item.topics }}</a></span>,
                             <span title="Security definition ID to endpoint ID">sec-endp-id:<az href="#">{{ item.sec_id_to_endpoint_id }}</a></span>,
                             <span title="WSX channel ID to endpoint ID">wsx-endp-id:<az href="#">{{ item.ws_channel_id_to_endpoint_id }}</a></span>,
                             <span title="Service ID to endpoint ID">srv-endp-id:<az href="#">{{ item.service_id_to_endpoint_id }}</a></span>

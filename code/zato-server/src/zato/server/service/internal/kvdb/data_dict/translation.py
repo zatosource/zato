@@ -11,6 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from hashlib import sha1, sha256
 
+# Python 2/3 compatibility
+from past.builtins import unicode
+
 # Zato
 from zato.common import KVDB, ZatoException
 from zato.common.util import hexlify, multikeysort
@@ -169,11 +172,13 @@ class Translate(AdminService):
             self.request.input.system2, self.request.input.key2)
 
         if result:
-            self.response.payload.value2 = result.decode('utf-8')
+            result = result if isinstance(result, unicode) else result.decode('utf-8')
+            result_bytes = result.encode('utf8')
+            self.response.payload.value2 = result
             self.response.payload.repr = repr(result)
             self.response.payload.hex = hexlify(result)
-            self.response.payload.sha1 = sha1(result).hexdigest()
-            self.response.payload.sha256 = sha256(result).hexdigest()
+            self.response.payload.sha1 = sha1(result_bytes).hexdigest()
+            self.response.payload.sha256 = sha256(result_bytes).hexdigest()
 
 class GetLastID(AdminService):
     """ Returns the value of the last dictionary's ID or nothing at all if the key for holding its value doesn't exist.

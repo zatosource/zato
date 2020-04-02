@@ -224,8 +224,8 @@ class Ping(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_sql_ping_request'
         response_elem = 'zato_outgoing_sql_ping_response'
-        input_required = ('id',)
-        output_optional = ('response_time',)
+        input_required = 'id'
+        output_optional = 'id', 'response_time'
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -235,6 +235,8 @@ class Ping(AdminService):
                     one()
 
                 ping = self.outgoing.sql.get(item.name, False).pool.ping
+
+                self.response.payload.id = self.request.input.id
                 self.response.payload.response_time = str(ping(self.server.fs_sql_config))
 
             except Exception:

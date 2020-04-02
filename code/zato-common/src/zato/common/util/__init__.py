@@ -28,9 +28,9 @@ import sys
 import unicodedata
 from ast import literal_eval
 from base64 import b64decode
-from binascii import hexlify
+from binascii import hexlify as binascii_hexlify
 from contextlib import closing
-from datetime import datetime
+from datetime import datetime, timedelta
 from glob import glob
 from hashlib import sha256
 from inspect import isfunction, ismethod
@@ -119,7 +119,7 @@ from zato.common import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_de
 from zato.common.broker_message import SERVICE
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
-from zato.common.util.tcp import get_free_port, is_port_taken, wait_until_port_free, wait_until_port_taken
+from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_ping, wait_until_port_free, wait_until_port_taken
 
 # ################################################################################################################################
 
@@ -134,6 +134,8 @@ _epoch = datetime.utcfromtimestamp(0) # Start of UNIX epoch
 cid_symbols = '0123456789abcdefghjkmnpqrstvwxyz'
 encode_cid_symbols = {idx: elem for (idx, elem) in enumerate(cid_symbols)}
 cid_base = len(cid_symbols)
+
+_re_fs_safe_name = '[{}]'.format(string.punctuation + string.whitespace)
 
 # ################################################################################################################################
 
@@ -380,7 +382,7 @@ def tech_account_password(password_clear, salt):
 
 # ################################################################################################################################
 
-def new_cid(bytes=12, _random_bytes=random_bytes, _hexlify=hexlify):
+def new_cid(bytes=12, _random_bytes=random_bytes, _hexlify=binascii_hexlify):
     """ Returns a new 96-bit correlation identifier. It's *not* safe to use the ID
     for any cryptographical purposes, it's only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.
@@ -554,7 +556,7 @@ def is_python_file(name):
 # ################################################################################################################################
 
 def fs_safe_name(value):
-    return re.sub('[{}]'.format(string.punctuation + string.whitespace), '_', value)
+    return re.sub(_re_fs_safe_name, '_', value)
 
 # ################################################################################################################################
 
@@ -855,10 +857,11 @@ def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
 
 # ################################################################################################################################
 
-def hexlify(item):
+def hexlify(item, _hexlify=binascii_hexlify):
     """ Returns a nice hex version of a string given on input.
     """
-    return ' '.join([elem1+elem2 for (elem1, elem2) in grouper(2, item.encode('hex'))])
+    item = item if isinstance(item, unicode) else item.decode('utf8')
+    return ' '.join(hex(ord(elem)) for elem in item)
 
 # ################################################################################################################################
 
@@ -1116,13 +1119,14 @@ def alter_column_nullable_false(table_name, column_name, default_value, column_t
 
 def validate_tls_from_payload(payload, is_key=False):
     with NamedTemporaryFile(prefix='zato-tls-') as tf:
+        payload = payload.encode('utf8') if isinstance(payload, unicode) else payload
         tf.write(payload)
         tf.flush()
 
         pem = open(tf.name).read()
 
         cert_info = crypto.load_certificate(crypto.FILETYPE_PEM, pem)
-        cert_info = sorted(dict(iteritems(cert_info.get_subject().get_components())))
+        cert_info = sorted(cert_info.get_subject().get_components())
         cert_info = '; '.join('{}={}'.format(k, v) for k, v in cert_info)
 
         if is_key:
@@ -1388,9 +1392,26 @@ def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted):
                 password = security.password.replace(SECRETS.PREFIX, '')
                 return (security.username, cm.decrypt(password))
 
-def get_client_from_server_conf(server_dir):
+def get_client_from_server_conf(server_dir, require_server=True):
+
+    # Imports go here to avoid circular dependencies
     from zato.client import get_client_from_server_conf as client_get_client_from_server_conf
-    return client_get_client_from_server_conf(server_dir, get_server_client_auth, get_config)
+
+    # Get the client object ..
+    client = client_get_client_from_server_conf(server_dir, get_server_client_auth, get_config)
+
+    # .. make sure the server is available ..
+    if require_server:
+        wait_for_zato_ping(client.address)
+
+    # .. return the client to our caller now.
+    return client
+
+# ################################################################################################################################
+
+def get_repo_dir_from_component_dir(component_dir):
+    # type: (str) -> str
+    return os.path.join(os.path.abspath(os.path.join(component_dir)), 'config', 'repo')
 
 # ################################################################################################################################
 
@@ -1760,5 +1781,34 @@ def slugify(value, allow_unicode=False):
     value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
     value = re.sub('[^\w\s-]', '', value).strip().lower()
     return re.sub('[-\s]+', '_', value)
+
+# ################################################################################################################################
+
+def wait_for_predicate(predicate_func, timeout, interval, *args, **kwargs):
+    # type: (object, int, float, *object, **object) -> bool
+
+    is_fulfilled = predicate_func(*args, **kwargs)
+
+    if not is_fulfilled:
+        start = datetime.utcnow()
+        wait_until = start + timedelta(seconds=timeout)
+
+        while not is_fulfilled:
+            gevent_sleep(interval)
+            is_fulfilled = predicate_func(*args, **kwargs)
+            if datetime.utcnow() > wait_until:
+                break
+
+    return is_fulfilled
+
+# ################################################################################################################################
+
+def wait_for_dict_key(_dict, key, timeout=30, interval=0.01):
+    # type: (dict, object, int, float) -> bool
+
+    def _predicate_dict_key(*_ignored_args, **_ignored_kwargs):
+        return key in _dict
+
+    return wait_for_predicate(_predicate_dict_key, timeout, interval)
 
 # ################################################################################################################################

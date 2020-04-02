@@ -20,7 +20,7 @@ from imbox.imap import ImapTransport as _ImapTransport
 from imbox.parser import parse_email
 
 # Outbox
-from outbox import AnonymousOutbox, Attachment, Email, Outbox
+from zato.server.ext.outbox import AnonymousOutbox, Attachment, Email, Outbox
 
 # Python 2/3 compatibility
 from past.builtins import basestring, unicode
@@ -57,6 +57,9 @@ class Imbox(_Imbox):
     def fetch_by_uid(self, uid):
         message, data = self.connection.uid('fetch', uid, '(BODY.PEEK[])')
         raw_email = data[0][1]
+
+        if not isinstance(raw_email, unicode):
+            raw_email = raw_email.decode('utf8')
 
         email_object = parse_email(raw_email)
 
@@ -112,8 +115,8 @@ class SMTPConnection(_Connection):
 
         if config.username or config.password:
 
-            password = (self.config.password or '').encode('utf-8')
-            username = (self.config.username or '').encode('utf-8')
+            password = (self.config.password or '')
+            username = (self.config.username or '')
 
             self.conn_class = Outbox
 

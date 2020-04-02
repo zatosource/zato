@@ -10,13 +10,27 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import errno
+import logging
 import socket
 from datetime import datetime, timedelta
+from logging import getLogger, WARN
 from platform import system as platform_system
 from time import sleep
 
+# requests
+from requests import get
+
 # psutil
 import psutil
+
+# ################################################################################################################################
+
+logger = getLogger('zato')
+
+# ################################################################################################################################
+
+log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
+logging.basicConfig(level=WARN, format=log_format)
 
 # ################################################################################################################################
 
@@ -67,6 +81,34 @@ def _wait_for_port(port, timeout, interval, needs_taken):
                 break
 
     return port_ready
+
+# ################################################################################################################################
+
+def wait_for_zato(address, url_path, timeout=60, interval=0.1):
+    """ Waits until a Zato server responds.
+    """
+    # Imported here to avoid circular imports
+    from zato.common.util import wait_for_predicate
+
+    # Full URL to check a Zato server under
+    url = address + url_path
+
+    def _predicate_zato_ping(*ignored_args, **ignored_kwargs):
+        try:
+            get(url, timeout=interval)
+        except Exception as e:
+            logger.warn('Waiting for `%s` (%s)', url, e)
+        else:
+            return True
+
+    return wait_for_predicate(_predicate_zato_ping, timeout, interval, address)
+
+# ################################################################################################################################
+
+def wait_for_zato_ping(address, timeout=60, interval=0.1):
+    """ Waits for timeout seconds until address replies to a request sent to /zato/ping.
+    """
+    wait_for_zato(address, '/zato/ping', timeout, interval)
 
 # ################################################################################################################################
 

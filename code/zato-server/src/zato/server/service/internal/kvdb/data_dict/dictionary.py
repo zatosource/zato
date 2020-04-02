@@ -11,6 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import re
 
+# Python 2/3 compatibility
+from past.builtins import unicode
+
 # Zato
 from zato.common import KVDB, ZatoException
 from zato.common.util import dict_item_name
@@ -48,14 +51,15 @@ class _CreateEdit(DataDictService):
             if match and match.group() == name:
                 continue
             else:
-                msg = "System and key may contain only letters, digits and an underscore, failed to validate [{}] against the regular expression {}".format(
-                    name, self.NAME_PATTERN)
+                msg = 'System and key may contain only letters, digits and an underscore, failed to validate `{}` ' + \
+                       'against the regular expression {}'.format(name, self.NAME_PATTERN)
                 raise ZatoException(self.cid, msg)
 
         for item in self._get_dict_items():
             joined = KVDB.SEPARATOR.join((item['system'], item['key'], item['value']))
             if validate_item == joined and id != item['id']:
-                msg = 'The triple of system:[{}], key:[{}], value:[{}] already exists'.format(item['system'], item['key'], item['value'])
+                msg = 'The triple of system:`{}`, key:`{}`, value:`{}` already exists'.format(
+                    item['system'], item['key'], item['value'])
                 raise ZatoException(self.cid, msg)
 
         return True
@@ -104,9 +108,12 @@ class Edit(_CreateEdit):
             if item['id1'] == id or item['id2'] == id:
                 existing_name = self._name(item['system1'], item['key1'], item['value1'], item['system2'], item['key2'])
                 if item['id1'] == id:
-                    hash_name = self._name(self.request.input.system, self.request.input.key, self.request.input.value, item['system2'], item['key2'])
+                    hash_name = self._name(
+                        self.request.input.system, self.request.input.key, self.request.input.value,
+                        item['system2'], item['key2'])
                 else:
-                    hash_name = self._name(item['system1'], item['key1'], item['value1'], self.request.input.system, self.request.input.key)
+                    hash_name = self._name(
+                        item['system1'], item['key1'], item['value1'], self.request.input.system, self.request.input.key)
 
                 if existing_name == hash_name and item['value2'] == self.request.input:
                     continue
@@ -131,7 +138,8 @@ class Delete(DataDictService):
         self.server.kvdb.conn.hdel(KVDB.DICTIONARY_ITEM, id)
         for item in self._get_translations():
             if item['id1'] == id or item['id2'] == id:
-                self.server.kvdb.conn.delete(self._name(item['system1'], item['key1'], item['value1'], item['system2'], item['key2']))
+                self.server.kvdb.conn.delete(
+                    self._name(item['system1'], item['key1'], item['value1'], item['system2'], item['key2']))
 
         self.response.payload.id = self.request.input.id
 
@@ -140,7 +148,10 @@ class _DictionaryEntryService(DataDictService):
     """
     def get_data(self, needs_systems=False, by_system=None, by_key=None):
         for triple in self.server.kvdb.conn.hvals(KVDB.DICTIONARY_ITEM):
-            system, key, value = triple.decode('utf-8').split(KVDB.SEPARATOR)
+
+            triple = triple if isinstance(triple, unicode) else triple.decode('utf-8')
+            system, key, value = triple.split(KVDB.SEPARATOR)
+
             if needs_systems:
                 yield system
             elif by_system:
@@ -183,7 +194,8 @@ class GetValueList(_DictionaryEntryService):
         output_required = ('name',)
 
     def handle(self):
-        self.response.payload[:] = ({'name':elem} for elem in sorted(set(self.get_data(False, self.request.input.system, self.request.input.key))))
+        self.response.payload[:] = ({'name':elem} for elem in sorted(
+            set(self.get_data(False, self.request.input.system, self.request.input.key))))
 
 class GetLastID(AdminService):
     """ Returns the value of the last dictionary's ID or nothing at all if the key for holding its value doesn't exist.

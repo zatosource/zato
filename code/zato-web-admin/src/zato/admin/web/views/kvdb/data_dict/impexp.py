@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+import bz2
 import logging
 from base64 import b64encode
 from datetime import datetime
@@ -22,6 +23,9 @@ from django.template.response import TemplateResponse
 from zato.admin.web.views import method_allowed
 from zato.common.util import current_host, translation_name
 from zato.common.util.json_ import dumps
+
+# Python 2/3 compatibility
+from past.builtins import unicode
 
 logger = logging.getLogger(__name__)
 
@@ -39,10 +43,13 @@ def index(req):
 def import_(req, cluster_id):
     try:
         data = req.read()
-        data.decode('bz2') # A preliminary check to weed out files obviously incorrect
+        if isinstance(data, unicode):
+            data = data.encode('utf8')
+
+        bz2.decompress(data) # A preliminary check to weed out files obviously incorrect
         req.zato.client.invoke('zato.kvdb.data-dict.impexp.import', {'data':b64encode(data)})
     except Exception:
-        msg = 'Could not import the data dictionaries, e:[{}]'.format(format_exc())
+        msg = 'Could not import the data dictionaries, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
@@ -84,7 +91,13 @@ def export(req, cluster_id):
         return_data['data']['translation_list'].append(
             {translation_name(system1, key1, value1, system2, key2): {'id':id, 'value2':value2, 'id1':id1, 'id2':id2}})
 
-    response = HttpResponse(dumps(return_data, indent=4).encode('bz2'), content_type='application/x-bzip2')
+    data = dumps(return_data, indent=4)
+    if isinstance(data, unicode):
+        data = data.encode('utf8')
+
+    data = bz2.compress(data)
+
+    response = HttpResponse(data, content_type='application/x-bzip2')
     response['Content-Disposition'] = 'attachment; filename={}'.format('zato-data-dict-export.json.bz2')
 
     return response

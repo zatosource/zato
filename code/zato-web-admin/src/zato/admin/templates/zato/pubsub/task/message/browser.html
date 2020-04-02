@@ -1,0 +1,133 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Message browser{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/pubsub/message-browser.js"></script>
+    <script type="text/javascript" src="/static/js/pubsub/common.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+
+            '_recv_time',
+            'delivery_count',
+            '_msg_id',
+
+            'ext_client_id',
+            'published_by',
+            'msg_prefix',
+
+            '_delete',
+            'id',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">In-flight messages for
+    {{ server_name }}:{{ server_pid }},
+    endpoint
+    <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;query={{ task.endpoint_name }}">{{ task.endpoint_name }}</a>, topic
+    <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;query={{ task.topic_name }}">{{ task.topic_name }}</a>,
+    Python
+    {{ python_id }}
+
+    {% if ws_ext_client_id %}
+        <span class="form_hint">wsx: {{ ws_ext_client_id|default:'' }}</span>
+    {% endif %}
+
+    {% if ext_client_id %}
+        <span class="form_hint">ext: {{ ext_client_id|default:'' }}</span>
+    {% endif %}
+
+</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% include "zato/search-form.html" with page_prompt="Show messages"%}
+
+    {% if cluster_id %}
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th style="width:10px">&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th><a href="#">Recv time</a></th>
+                        <th><a href="#">DLVC</a></th>
+                        <th><a href="#">Msg ID</a></th>
+
+                        <th><a href="#">Published by</a></th>
+                        <th><a href="#">EXTCLI</a></th>
+                        <th style="width:32%"><a href="#">Msg prefix</a></th>
+
+                        <th style="width:5%">&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.msg_id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        <td style="width:16%">
+                            <a
+                                id="a_recv_time_{{ item.msg_id }}"
+                                href="javascript:$.fn.zato.toggle_time('recv_time_{{ item.msg_id }}', '{{ item.recv_time }}', '{{ item.recv_time_utc }}')">{{ item.recv_time }}
+                            </a>
+                        </td>
+                        <td>{{ item.delivery_count }}</td>
+
+                        <!--
+                        <td><a href="{% url "pubsub-message" cluster_id "queue" sub_id item.msg_id %}?has_gd={{ has_gd }}&amp;server_name={{ item.server_name }}&amp;server_pid={{ item.server_pid }}&amp;sub_key={{ item.sub_key }}">{{ item.msg_id }}</a></td>
+                        -->
+                        <td>{{ item.msg_id }}</td>
+
+                        <td><a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;query={{ item.published_by_name }}">{{ item.published_by_name }}</a></td>
+                        <td>{{ item.ext_client_id|default:"<span class='form_hint'>---</span>" }}</td>
+                        <td>{{ item.data_prefix_short }}</td>
+
+                        <td><!--<a href="javascript:$.fn.zato.pubsub.delete_message('queue', '', '{{ item.msg_id }}', '{{ item.sub_key|default:"" }}', '{% if has_gd %}1{% endif %}', '{% if not has_gd %}{{ item.server_name }}{% endif %}', '{% if not has_gd %}{{ item.server_pid }}{% endif %}')">Delete</a>--></td>
+                        <td class='ignore item_id_{{ item.msg_id }}'>{{ item.msg_id }}</td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='9'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

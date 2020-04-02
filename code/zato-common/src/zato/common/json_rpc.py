@@ -15,6 +15,7 @@ from traceback import format_exc
 # Zato
 from zato.common import NotGiven
 from zato.common.exception import BadRequest, InternalServerError
+from zato.common.rate_limiting.common import RateLimitReached as RateLimitReachedError
 
 # ################################################################################################################################
 
@@ -28,10 +29,14 @@ if typing.TYPE_CHECKING:
 
     # Zato
     from zato.common.json_schema import ValidationException as JSONSchemaValidationException
+    from zato.server.service import ChannelInfo
+    from zato.server.service.store import ServiceStore
 
     # For pyflakes
     Callable = Callable
+    ChannelInfo = ChannelInfo
     JSONSchemaValidationException = JSONSchemaValidationException
+    ServiceStore = ServiceStore
 
 # ################################################################################################################################
 
@@ -203,11 +208,14 @@ class JSONRPCItem(object):
 # ################################################################################################################################
 
 class JSONRPCHandler(object):
-    def __init__(self, config, invoke_func, JSONSchemaValidationException):
-        # type: (dict, Callable, JSONSchemaValidationException)
+    def __init__(self, service_store, wsgi_environ, config, invoke_func, channel_info, JSONSchemaValidationException):
+        # type: (ServiceStore, dict, dict, Callable, ChannelInfo, JSONSchemaValidationException)
 
+        self.service_store = service_store
+        self.wsgi_environ = wsgi_environ
         self.config = config
         self.invoke_func = invoke_func
+        self.channel_info = channel_info
 
         # Kept here and provided by the caller to remove circular imports between common/json_rpc.py and common/json_schema.py
         self.JSONSchemaValidationException = JSONSchemaValidationException
@@ -252,7 +260,9 @@ class JSONRPCHandler(object):
                 raise MethodNotFound(cid, 'Method not supported `{}` in `{}`'.format(item.method, orig_message.decode('utf8')))
 
             # Try to invoke the service ..
-            service_response = self.invoke_func(item.method, item.params, skip_response_elem=True)
+            skip_response_elem = self.service_store.has_sio(item.method)
+            service_response = self.invoke_func(item.method, item.params, channel_info=self.channel_info,
+                skip_response_elem=skip_response_elem, wsgi_environ=self.wsgi_environ)
 
             # .. no exception here = invocation was successful
             out.result = service_response
@@ -262,6 +272,7 @@ class JSONRPCHandler(object):
         except Exception as e:
 
             is_schema_error = isinstance(e, self.JSONSchemaValidationException)
+            is_rate_limit_error = isinstance(e, RateLimitReachedError)
             error_ctx = ErrorCtx()
             error_ctx.cid = cid
 
@@ -269,6 +280,9 @@ class JSONRPCHandler(object):
             if is_schema_error:
                 err_code = InvalidRequest.code
                 err_message = e.error_msg_details if e.needs_err_details else e.error_msg
+            elif is_rate_limit_error:
+                err_code = RateLimitReached.code
+                err_message = 'Too Many Requests'
             else:
                 # Any JSON-RPC error
                 if isinstance(e, JSONRPCException):

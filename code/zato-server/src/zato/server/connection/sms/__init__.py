@@ -8,6 +8,18 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# ################################################################################################################################
+
+if 0:
+    from zato.server.connection.sms.twilio import TwilioAPI
+
+    TwilioAPI = TwilioAPI
+
+# ################################################################################################################################
+
 class SMSAPI(object):
     def __init__(self, twilio):
+        # type: (TwilioAPI)
         self.twilio = twilio
+
+# ################################################################################################################################

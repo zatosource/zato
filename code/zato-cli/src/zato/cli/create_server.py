@@ -132,12 +132,11 @@ return_tracebacks=True
 default_error_message="An error has occurred"
 startup_callable=
 return_json_schema_errors=False
+sftp_genkey_command=dropbearkey
+posix_ipc_skip_platform=darwin
 
 [http]
 methods_allowed=GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS
-
-[ibm_mq]
-ipc_tcp_start_port=34567
 
 [stats]
 expire_after=168 # In hours, 168 = 7 days = 1 week
@@ -243,6 +242,7 @@ data_len=0
 
 [wsx]
 hook_service=
+json_library=rapidjson
 
 [content_type]
 json = {JSON}
@@ -274,6 +274,8 @@ size=0.1 # In MB
 
 [logging]
 http_access_log_ignore=
+
+[greenify]
 
 [os_environ]
 sample_key=sample_value
@@ -616,6 +618,8 @@ directories = (
     'config/repo/lua/user',
     'config/repo/schema',
     'config/repo/schema/json',
+    'config/repo/sftp',
+    'config/repo/sftp/channel',
     'config/repo/static',
     'config/repo/static/email',
     'config/repo/tls',
@@ -812,6 +816,9 @@ class Create(ZatoCommand):
             zato_misc_jwt_secret = getattr(args, 'jwt_secret', None)
             if not zato_misc_jwt_secret:
                 zato_misc_jwt_secret = Fernet.generate_key()
+
+            if not isinstance(zato_misc_jwt_secret, bytes):
+                zato_misc_jwt_secret = zato_misc_jwt_secret.encode('utf8')
 
             zato_misc_jwt_secret = fernet1.encrypt(zato_misc_jwt_secret)
 

@@ -90,18 +90,18 @@ class URLData(CyURLData, OAuthDataStore):
         super(URLData, self).__init__(channel_data)
         self.worker = worker # type: WorkerStore
         self.url_sec = url_sec
-        self.basic_auth_config = basic_auth_config
-        self.jwt_config = jwt_config
-        self.ntlm_config = ntlm_config
-        self.oauth_config = oauth_config
-        self.wss_config = wss_config
-        self.apikey_config = apikey_config
-        self.aws_config = aws_config
-        self.openstack_config = openstack_config
-        self.xpath_sec_config = xpath_sec_config
-        self.tls_channel_sec_config = tls_channel_sec_config
-        self.tls_key_cert_config = tls_key_cert_config
-        self.vault_conn_sec_config = vault_conn_sec_config
+        self.basic_auth_config = basic_auth_config # type: dict
+        self.jwt_config = jwt_config # type: dict
+        self.ntlm_config = ntlm_config # type: dict
+        self.oauth_config = oauth_config # type: dict
+        self.wss_config = wss_config # type: dict
+        self.apikey_config = apikey_config # type: dict
+        self.aws_config = aws_config # type: dict
+        self.openstack_config = openstack_config # type: dict
+        self.xpath_sec_config = xpath_sec_config # type: dict
+        self.tls_channel_sec_config = tls_channel_sec_config # type: dict
+        self.tls_key_cert_config = tls_key_cert_config # type: dict
+        self.vault_conn_sec_config = vault_conn_sec_config # type: dict
         self.kvdb = kvdb
         self.broker_client = broker_client
         self.odb = odb
@@ -197,7 +197,7 @@ class URLData(CyURLData, OAuthDataStore):
         """ Authenticates a WebSocket-based connection using HTTP Basic Auth credentials.
         """
         headers = initial_headers if initial_headers is not None else {}
-        headers['zato.ws.initial_http_wsgi_environ'] =initial_http_wsgi_environ
+        headers['zato.ws.initial_http_wsgi_environ'] = initial_http_wsgi_environ
 
         if sec_def_type == _basic_auth:
             auth_func = self._handle_security_basic_auth
@@ -316,7 +316,7 @@ class URLData(CyURLData, OAuthDataStore):
             else:
                 return False
 
-        return True
+        return result
 
 # ################################################################################################################################
 
@@ -529,7 +529,7 @@ class URLData(CyURLData, OAuthDataStore):
             #
             # 1.
             #
-            if sec_def_config['service_name']:
+            if sec_def_config.get('service_name'):
                 response = self.worker.invoke(sec_def_config['service_name'], {
                     'sec_def': sec_def,
                     'body': body,
@@ -570,9 +570,9 @@ class URLData(CyURLData, OAuthDataStore):
 # ################################################################################################################################
 
     def check_rbac_delegated_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store,
-            sep=MISC.SEPARATOR, plain_http=URL_TYPE.PLAIN_HTTP):
+            sep=MISC.SEPARATOR, plain_http=URL_TYPE.PLAIN_HTTP, _empty_client_def=tuple()):
 
-        is_allowed = False
+        auth_result = False
 
         http_method = wsgi_environ.get('REQUEST_METHOD')
         http_method_permission_id = worker_store.rbac.http_permissions.get(http_method)
@@ -583,11 +583,11 @@ class URLData(CyURLData, OAuthDataStore):
 
         for role_id, perm_id, resource_id in iterkeys(worker_store.rbac.registry._allowed):
 
-            if is_allowed:
-                break
+            if auth_result:
+                return auth_result
 
             if perm_id == http_method_permission_id and resource_id == channel_item['service_id']:
-                for client_def in worker_store.rbac.role_id_to_client_def[role_id]:
+                for client_def in worker_store.rbac.role_id_to_client_def.get(role_id, _empty_client_def):
 
                     _, sec_type, sec_name = client_def.split(sep)
 
@@ -597,14 +597,24 @@ class URLData(CyURLData, OAuthDataStore):
                     _sec.sec_use_rbac = False
                     _sec.sec_def = self.sec_config_getter[sec_type](sec_name)['config']
 
-                    is_allowed = self.check_security(
+                    auth_result = self.check_security(
                         _sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store, False)
 
-                    if is_allowed:
+                    if auth_result:
+
+                        # If input sec object is a dict/Bunch-like one, it means that we have just confirmed
+                        # credentials of the underlying security definition behind an RBAC one,
+                        # in which case we need to overwrite the sec object's sec_def attribute and make it
+                        # point to the one that we have just found. Otherwise, it would still point to ZATO_NONE.
+                        if hasattr(sec, 'keys'):
+                            sec.sec_def = _sec['sec_def']
+
                         self.enrich_with_sec_data(wsgi_environ, _sec.sec_def, sec_type)
                         break
 
-        if not is_allowed:
+        if auth_result:
+            return auth_result
+        else:
             logger.warn('None of RBAC definitions allowed request in, cid:`%s`', cid)
 
             # We need to return 401 Unauthorized but we need to send a challenge, i.e. authentication type
@@ -633,7 +643,8 @@ class URLData(CyURLData, OAuthDataStore):
         sec_def, sec_def_type = sec.sec_def, sec.sec_def['sec_type']
         handler_name = '_handle_security_%s' % sec_def_type.replace('-', '_')
 
-        if not getattr(self, handler_name)(cid, sec_def, path_info, payload, wsgi_environ, post_data, enforce_auth):
+        auth_result = getattr(self, handler_name)(cid, sec_def, path_info, payload, wsgi_environ, post_data, enforce_auth)
+        if not auth_result:
             return False
 
         # Ok, we now know that the credentials are valid so we can check RBAC permissions if need be.
@@ -650,7 +661,7 @@ class URLData(CyURLData, OAuthDataStore):
 
         self.enrich_with_sec_data(wsgi_environ, sec_def, sec_def_type)
 
-        return True
+        return auth_result
 
 # ################################################################################################################################
 
@@ -854,10 +865,10 @@ class URLData(CyURLData, OAuthDataStore):
             del self.basic_auth_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH, True)
 
-            # If this account was linked to an SSO user, delete that link,
+            # This will delete a link from this account an SSO user,
             # assuming that SSO is enabled (in which case it is not None).
             if self.worker.server.sso_api:
-                self.worker.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE(msg.id)
+                self.worker.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE(SEC_DEF_TYPE.BASIC_AUTH, msg.id)
 
     def on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an HTTP Basic Auth security definition.
@@ -916,7 +927,7 @@ class URLData(CyURLData, OAuthDataStore):
         """ Same as jwt_get but returns information by definition ID.
         """
         with self.url_sec_lock:
-            return self._get_sec_def_by_id(self.basic_auth_config, def_id)
+            return self._get_sec_def_by_id(self.jwt_config, def_id)
 
     def on_broker_msg_SECURITY_JWT_CREATE(self, msg, *args):
         """ Creates a new JWT security definition.
@@ -940,8 +951,10 @@ class URLData(CyURLData, OAuthDataStore):
             del self.jwt_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.JWT, True)
 
-            # If this account was linked to an SSO user, delete that link
-            self.worker.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE(msg.id)
+            # This will delete a link from this account an SSO user,
+            # assuming that SSO is enabled (in which case it is not None).
+            if self.worker.server.sso_api:
+                self.worker.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE(SEC_DEF_TYPE.JWT, msg.id)
 
     def on_broker_msg_SECURITY_JWT_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of a JWT security definition.

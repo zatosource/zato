@@ -72,6 +72,7 @@ class SubprocessIPC(object):
     def __init__(self, server):
         # type: (ParallelServer)
         self.server = server
+        self.ipc_tcp_port = None
 
 # ################################################################################################################################
 
@@ -100,7 +101,7 @@ class SubprocessIPC(object):
             self._check_enabled()
 
         self.ipc_tcp_port = get_free_port(ipc_tcp_start_port)
-        logger.info('Starting {} connector for server `%s` on `%s`'.format(self.connector_name),
+        logger.info('Starting {} connector for server `%s` on port `%s`'.format(self.connector_name),
             self.server.name, self.ipc_tcp_port)
 
         # Credentials for both servers and connectors
@@ -128,7 +129,7 @@ class SubprocessIPC(object):
 
         # Wait up to timeout seconds for the connector to start as indicated by its responding to a PING request
         now = datetime.utcnow()
-        warn_after = now + timedelta(seconds=3)
+        warn_after = now + timedelta(seconds=60)
         should_warn = False
         until = now + timedelta(seconds=timeout)
         is_ok = False

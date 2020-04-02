@@ -29,6 +29,13 @@ from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
 
+if 0:
+    from zato.server.pubsub.task import PubSubTool
+
+    PubSubTool = PubSubTool
+
+# ################################################################################################################################
+
 logger_pubsub = getLogger('zato_pubsub.srv')
 
 # ################################################################################################################################
@@ -160,14 +167,21 @@ class AfterPublish(AdminService):
                 # .. but if there are any errors, store them in RAM as though they were from not_found in the first place.
                 # Note that only non-GD messages go to RAM because the GD ones are still in the SQL database.
                 if notif_error_sub_keys:
-                    self._store_in_ram(cid, topic_id, topic_name, notif_error_sub_keys, non_gd_msg_list, _notify_error)
+
+                    # This will signal that non-GD messages should be retried
+                    if non_gd_msg_list:
+                        self._store_in_ram(cid, topic_id, topic_name, notif_error_sub_keys, non_gd_msg_list, _notify_error)
+
+                    # This will signal that GD messages should be retried
+                    if has_gd_msg_list:
+                        self.pubsub.after_gd_sync_error(topic_id, 'AfterPublish.gd_notif_error_sub_keys', pub_time_max)
 
         except Exception:
             self.logger.warn('Error in after_publish callback, e:`%s`', format_exc())
 
 # ################################################################################################################################
 
-    def _store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_error=False):
+    def _store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list, is_gd, from_error=False):
         """ Stores in RAM all input messages for all sub_keys.
         """
         self.pubsub.store_in_ram(cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_error)
@@ -239,7 +253,7 @@ class ResumeWSXSubscription(AdminService):
 
         # We now have environ in one way or another
         wsx = environ['web_socket']
-        pubsub_tool = wsx.pubsub_tool
+        pubsub_tool = wsx.pubsub_tool # type: PubSubTool
 
         # Need to confirm that our WebSocket previously created all the input sub_keys
         wsx_channel_id = environ['ws_channel_config'].id
@@ -361,7 +375,7 @@ class _BaseCleanup(AdminService):
                 # Log what was done
                 suffix = 's' if total > 1 else ''
                 if total:
-                    self.logger.info('GD. Deleted %s %s pub/sub message%s' % (total, kind, suffix))
+                    self.logger.info('GD. Deleted %s pub/sub message%s (%s)' % (total, suffix, kind))
 
                 # Actually commit on SQL level
                 session.commit()
