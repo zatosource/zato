@@ -32,8 +32,8 @@ logger = getLogger('zato')
 
 # ################################################################################################################################
 
-_builtin_float = types.FloatType
-_builtin_int = types.IntType
+_builtin_float = float
+_builtin_int = int
 _list_like = (list, tuple)
 
 # Default value added for backward-compatibility with SimpleIO definitions created before the rewrite in Cython.
