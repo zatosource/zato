@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from datetime import datetime, timedelta
+from time import sleep
 from traceback import format_exc
 
 # gevent
@@ -32,14 +33,17 @@ class _Connection(object):
     """ Meant to be used as a part of a 'with' block - returns a connection from its queue each time 'with' is entered
     assuming the queue isn't empty.
     """
-    def __init__(self, client_queue, conn_name):
+    def __init__(self, client_queue, conn_name, should_block=False, block_timeout=None):
+        # type: (Queue, str, bool, int)
         self.queue = client_queue
         self.conn_name = conn_name
-        self.client = None
+        self.should_block = should_block
+        self.block_timeout = block_timeout
+        self.client = None # type: object
 
     def __enter__(self):
         try:
-            self.client = self.queue.get(block=False)
+            self.client = self.queue.get(self.should_block, self.block_timeout)
         except Empty:
             self.client = None
             msg = 'No free connections to `{}`'.format(self.conn_name)
@@ -68,6 +72,8 @@ class ConnectionQueue(object):
         self.address = address
         self.add_client_func = add_client_func
         self.keep_connecting = True
+        self.is_building_conn_queue = False
+        self.queue_building_stopped = False
         self.lock = RLock()
 
         # How many add_client_func instances are running currently,
@@ -76,8 +82,9 @@ class ConnectionQueue(object):
 
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    def __call__(self):
-        return _Connection(self.queue, self.conn_name)
+    def __call__(self, should_block=False, block_timeout=None):
+        # type: (bool, int) -> _Connection
+        return _Connection(self.queue, self.conn_name, should_block, block_timeout)
 
     def put_client(self, client):
         with self.lock:
@@ -101,6 +108,7 @@ class ConnectionQueue(object):
         suffix = 's ' if self.queue.maxsize > 1 else ' '
 
         try:
+            self.is_building_conn_queue = True
             while self.keep_connecting and not self.queue.full():
                 gevent.sleep(5)
                 now = datetime.utcnow()
@@ -133,11 +141,14 @@ class ConnectionQueue(object):
                     self.address, self.conn_name)
             else:
                 self.logger.info('Skipped building a queue to `%s` for `%s`', self.address, self.conn_name)
+                self.queue_building_stopped = True
 
             # Ok, got all the connections
+            self.is_building_conn_queue = False
             return
         except KeyboardInterrupt:
             self.keep_connecting = False
+            self.queue_building_stopped = True
 
     def _spawn_add_client_func_no_lock(self, count):
         for x in range(count):
@@ -225,14 +236,26 @@ class Wrapper(object):
         """
         with self.update_lock:
 
+            # Tell the client that it is to stop connecting and that it will be deleted in a moment
             self.delete_requested = True
             self.client.keep_connecting = False
 
+            # Actuall delete all connections
             self.delete_queue_connections()
+
+            # In case the client was in the process of building a queue of connections,
+            # wait until it has stopped doing it.
+            if self.client.is_building_conn_queue:
+                while not self.client.queue_building_stopped:
+                    sleep(1)
+                    self.logger.info('Waiting for queue building stopped flag `%s` (%s %s)',
+                        self.client.address, self.client.conn_type, self.client.conn_name)
 
             # Reset flags that will allow this client to reconnect in the future
             self.delete_requested = False
             self.client.keep_connecting = True
+            self.client.queue_building_stopped = False
+            self.client.is_building_conn_queue = False
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -187,6 +187,7 @@ class _BaseCommand(AdminService):
 # ################################################################################################################################
 
     def _get_wsx_client(self, session):
+        # type: (object) -> WebSocketClient
         client = web_socket_client(session, self.request.input.cluster_id, self.request.input.id,
             self.request.input.pub_client_id)
         if not client:
@@ -204,8 +205,14 @@ class _BaseAPICommand(_BaseCommand):
             server_name = client.server_name
             server_proc_pid = client.server_proc_pid
 
+        self.logger.info(
+            'WSX API request: `%s` `%s` `%s` `%s` (%s %s:%s)', self.server_service, self.request.input,
+            client.pub_client_id, client.ext_client_id, self.cid, server_name, server_proc_pid)
+
         server_response = self.servers[server_name].invoke(
             self.server_service, self.request.input, pid=server_proc_pid, data_format=DATA_FORMAT.JSON)
+
+        self.logger.info('WSX API response: `%s` (%s)', server_response, self.cid)
 
         if server_response:
             response_data = server_response.get('response_data') or {}
@@ -255,6 +262,23 @@ class DisconnectConnectionServer(_BaseServerCommand):
 
     def _get_server_response(self, func, pub_client_id):
         func(self.cid, pub_client_id)
+
+# ################################################################################################################################
+
+class SubscribeWSX(_BaseAPICommand):
+    """ Subscribes a WebSocket, identified by pub_client_id, to a topic by its name
+    """
+    server_service = 'zato.channel.web-socket.server-subscribe-wsx'
+
+# ################################################################################################################################
+
+class ServerSubscribeWSX(_BaseServerCommand):
+    """ Low-level implementation of SubscribeWSX that is invoked on the same server a WSX is on.
+    """
+    func_name = 'subscribe_to_topic'
+
+    def _get_server_response(self, func, pub_client_id):
+        return func(self.cid, pub_client_id, self.request.input.request_data)
 
 # ################################################################################################################################
 

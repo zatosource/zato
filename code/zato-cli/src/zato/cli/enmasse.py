@@ -17,6 +17,7 @@ import os
 import re
 import sys
 from datetime import datetime
+from time import sleep
 
 # anyjson
 import anyjson
@@ -42,6 +43,7 @@ from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
 from zato.common import SECRETS
 from zato.common.util import get_client_from_server_conf
+from zato.common.util.tcp import wait_for_zato_ping
 
 # ################################################################################################################################
 
@@ -116,7 +118,7 @@ def populate_services_from_apispec(client, logger):
 
     by_prefix = {}  # { "zato.apispec": {"get-api-spec": { .. } } }
 
-    for service in sorted(response.data['namespaces']['']['services']):
+    for service in response.data['namespaces']['']['services']:
         prefix, _, name = service['name'].rpartition('.')
         methods = by_prefix.setdefault(prefix, {})
         methods[name] = service
@@ -280,6 +282,15 @@ SERVICES = [
     ),
     ServiceInfo(
         name='web_socket',
+        prefix='zato.channel.web-socket',
+        object_dependencies={
+            'sec_def': {
+                'dependent_type': 'def_sec',
+                'dependent_field': 'name',
+                'empty_value': ZATO_NO_SECURITY,
+                'id_field': 'security_id',
+            },
+        },
         service_dependencies={
             'service': {}
         },
@@ -534,14 +545,16 @@ class DependencyScanner(object):
 # ################################################################################################################################
 
     def scan_item(self, item_type, item, results):
-        """ Scan the data of a single item for required dependencies, recording any that are missing in :py:attr:`missing`.
-
-        :param item_type: ServiceInfo.name of the item's type.
-        :param item: dict describing the item.
+        """ Scan the data of a single item for required dependencies, recording any that are missing in self.missing.
         """
-        service_info = SERVICE_BY_NAME[item_type]
+        # type: (str, dict, Results)
+        service_info = SERVICE_BY_NAME[item_type] # type: ServiceInfo
+
         for dep_key, dep_info in iteritems(service_info.object_dependencies):
             if not test_item(item, dep_info.get('condition')):
+                continue
+
+            if item.get('security_id') == 'ZATO_SEC_USE_RBAC':
                 continue
 
             if dep_key not in item:
@@ -550,7 +563,6 @@ class DependencyScanner(object):
 
             value = item.get(dep_key)
             if value != dep_info.get('empty_value'):
-
 
                 dep = self.find(dep_info['dependent_type'], {dep_info['dependent_field']: value})
                 if dep is None:
@@ -579,8 +591,8 @@ class DependencyScanner(object):
         return results
 
 class ObjectImporter(object):
-    def __init__(self, client, logger, object_mgr, json, ignore_missing):
-        # type: (APIClient, Logger, ObjectManager, dict, bool)
+    def __init__(self, client, logger, object_mgr, json, ignore_missing, args):
+        # type: (APIClient, Logger, ObjectManager, dict, bool, object)
 
         # Zato client.
         self.client = client
@@ -595,6 +607,9 @@ class ObjectImporter(object):
 
         # JSON to import.
         self.json = bunchify(json)
+
+        # Command-line arguments
+        self.args = args
 
         self.ignore_missing = ignore_missing
 
@@ -619,7 +634,7 @@ class ObjectImporter(object):
 
     def validate_import_data(self):
         results = Results()
-        dep_scanner = DependencyScanner(self.json,ignore_missing=self.ignore_missing)
+        dep_scanner = DependencyScanner(self.json, ignore_missing=self.ignore_missing)
         scan_results = dep_scanner.scan()
 
         if not scan_results.ok:
@@ -651,20 +666,66 @@ class ObjectImporter(object):
 # ################################################################################################################################
 
     def should_skip_item(self, item_type, attrs, is_edit):
+
+        # Plain HTTP channels cannot create JSON-RPC ones
+        if item_type == 'http_soap' and attrs.name.startswith('json.rpc.channel'):
+            return True
+
         # Root RBAC role cannot be edited
-        if item_type == 'rbac_role' and attrs.name == 'Root':
+        elif item_type == 'rbac_role' and attrs.name == 'Root':
+            return True
+
+        # RBAC client roles cannot be edited
+        elif item_type == 'rbac_client_role' and is_edit:
             return True
 
 # ################################################################################################################################
 
+    def _set_generic_connection_secret(self, name, type_, secret):
+        response = self.client.invoke('zato.generic.connection.change-password', {
+            'name': name,
+            'type_': type_,
+            'password1': secret,
+            'password2': secret
+        })
+
+        if not response.ok:
+            raise Exception('Unexpected response; e:{}'.format(response))
+        else:
+            self.logger.info('Set password for generic connection `%s` (%s)', name, type_)
+
+# ################################################################################################################################
+
     def _import(self, item_type, attrs, is_edit):
+
         attrs_dict = dict(attrs)
+
+        # Generic connections cannot import their IDs during edits
+        if item_type == 'zato_generic_connection' and is_edit:
+            attrs_dict.pop('id', None)
+
+        # RBAC objects cannot refer to other objects by their IDs
+        elif item_type == 'rbac_role_permission':
+            attrs_dict.pop('id', None)
+            attrs_dict.pop('perm_id', None)
+            attrs_dict.pop('role_id', None)
+            attrs_dict.pop('service_id', None)
+
+        elif item_type == 'rbac_client_role':
+            attrs_dict.pop('id', None)
+            attrs_dict.pop('role_id', None)
+
+        elif item_type == 'rbac_role':
+            attrs_dict.pop('id', None)
+            attrs_dict.pop('parent_id', None)
+
         attrs.cluster_id = self.client.cluster_id
 
         response = self._import_object(item_type, attrs, is_edit)
         if response.ok:
-            object_id = response.data['id']
-            response = self._maybe_change_password(object_id, item_type, attrs)
+            if not (item_type == 'rbac_role_permission' and is_edit):
+                object_id = response.data['id']
+                response = self._maybe_change_password(object_id, item_type, attrs)
 
         # We quit on first error encountered
         if response and not response.ok:
@@ -674,10 +735,15 @@ class ObjectImporter(object):
                     is_edit, attrs.name, attrs_dict, item_type, response.details)
             return self.results
 
-        # It's been just imported so we don't want to create in next steps
+        # It's been just imported so we don't want to create it in next steps
         # (this in fact would result in an error as the object already exists).
         if is_edit:
             self.remove_from_import_list(item_type, attrs.name)
+
+        # If this is a generic connection and it has a secret set (e.g. MongoDB password),
+        # we need to explicitly set it for the connection we are editing.
+        if is_edit and item_type == 'zato_generic_connection' and attrs_dict.get('secret'):
+            self._set_generic_connection_secret(attrs_dict['name'], attrs_dict['type_'], attrs_dict['secret'])
 
         # We'll see how expensive this call is. Seems to be but let's see in practice if it's a burden.
         self.object_mgr.get_objects_by_type(item_type)
@@ -729,35 +795,59 @@ class ObjectImporter(object):
 # ################################################################################################################################
 
     def import_objects(self, already_existing):
+        # type: (Results)
+
+        rbac_sleep = float(self.args.rbac_sleep)
+
         existing_defs = []
+        existing_rbac_role = []
+        existing_rbac_role_permission = []
+        existing_rbac_client_role = []
         existing_other = []
 
-        # Definitions or other objects for which self.may_be_dependency returns True,
-        # as they are found in the input enmasse file - they do not exist in ODB yet.
         new_defs = []
-
-        # Objects other than the ones from new_defs that are found in the enmasse file
-        # and which do not exist in ODB yet.
+        new_rbac_role = []
+        new_rbac_role_permission = []
+        new_rbac_client_role = []
         new_other = []
 
         #
         # Update already existing objects first, definitions before any object that may depend on them ..
         #
+
         for w in already_existing.warnings:
             item_type, _ = w.value_raw
-            existing = existing_defs if 'def' in item_type else existing_other
+
+            if 'def' in item_type:
+                existing = existing_defs
+            elif item_type == 'rbac_role':
+                existing = existing_rbac_role
+            elif item_type == 'rbac_role_permission':
+                existing = existing_rbac_role_permission
+            elif item_type == 'rbac_client_role':
+                existing = existing_rbac_client_role
+            else:
+                existing = existing_other
             existing.append(w)
 
         #
         # .. actually invoke the updates now ..
         #
-        for w in existing_defs + existing_other:
+        existing_combined = existing_defs + existing_rbac_role + existing_rbac_role_permission + \
+            existing_rbac_client_role + existing_other
+
+        for w in existing_combined:
+
             item_type, attrs = w.value_raw
 
             if self.should_skip_item(item_type, attrs, True):
                 continue
 
             results = self._import(item_type, attrs, True)
+
+            if 'rbac' in item_type:
+                sleep(rbac_sleep)
+
             if results:
                 return results
 
@@ -766,14 +856,24 @@ class ObjectImporter(object):
         #
         for item_type, items in iteritems(self.json):
             if self.may_be_dependency(item_type):
-                new_defs.append({item_type: items})
+                if item_type == 'rbac_role':
+                    append_to = new_rbac_role
+                elif item_type == 'rbac_role_permission':
+                    append_to = new_rbac_role_permission
+                elif item_type == 'rbac_client_role':
+                    append_to = new_rbac_client_role
+                else:
+                    append_to = new_defs
             else:
-                new_other.append({item_type: items})
+                append_to = new_other
+            append_to.append({item_type: items})
 
         #
         # .. actually create the objects now.
         #
-        for elem in new_defs + new_other:
+        new_combined = new_defs + new_rbac_role + new_rbac_role_permission + new_rbac_client_role + new_other
+
+        for elem in new_combined:
             for item_type, attr_list in iteritems(elem):
                 for attrs in attr_list:
 
@@ -781,6 +881,10 @@ class ObjectImporter(object):
                         continue
 
                     results = self._import(item_type, attrs, False)
+
+                    if 'rbac' in item_type:
+                        sleep(rbac_sleep)
+
                     if results:
                         return results
 
@@ -818,6 +922,9 @@ class ObjectImporter(object):
 
         for field_name, info in iteritems(service_info.object_dependencies):
 
+            if item.get('security_id') == 'ZATO_SEC_USE_RBAC':
+                continue
+
             if item.get(field_name) != info.get('empty_value') and 'id_field' in info:
                 dep_obj = self.object_mgr.find(info['dependent_type'], {
                     info['dependent_field']: item[field_name]
@@ -850,6 +957,14 @@ class ObjectImporter(object):
 
         if response.ok:
             self.logger.info("Updated password for '{}' ({})".format(attrs.name, service_name))
+
+            # Wait for a moment before continuing to let AMQP connectors change their passwords.
+            # This is needed because we may want to create channels right after the password
+            # has been changed and this requires valid credentials, including the very
+            # which is being changed here.
+            if item_type == 'def_amqp':
+                sleep(5)
+
         return response
 
 class ObjectManager(object):
@@ -867,7 +982,6 @@ class ObjectManager(object):
         # This probably isn't necessary any more:
         item_type = item_type.replace('-', '_')
         objects_by_type = self.objects.get(item_type, ())
-
         return find_first(objects_by_type, lambda item: dict_match(item, fields))
 
 # ################################################################################################################################
@@ -896,7 +1010,7 @@ class ObjectManager(object):
         })
 
         if not response.ok:
-            raise Exception('Unexpected response from Zato; e:{}'.format(response))
+            raise Exception('Unexpected response; e:{}'.format(response))
 
         if response.has_data:
             self.services = {
@@ -913,6 +1027,14 @@ class ObjectManager(object):
         """
         normalize_service_name(item)
         service_info = SERVICE_BY_NAME[item_type]
+
+        if item_type in ('json_rpc', 'http_soap'):
+
+            if item['sec_use_rbac'] is True:
+                item['security_id'] = 'ZATO_SEC_USE_RBAC'
+
+            elif item_type == 'json_rpc' and item['security_id'] is None:
+                item['security_id'] = 'ZATO_NONE'
 
         for field_name, info in iteritems(service_info.object_dependencies):
 
@@ -933,11 +1055,17 @@ class ObjectManager(object):
 
             dep = self.find(info['dependent_type'], {'id': dep_id})
 
-            if not dep:
-                raise Exception('Dependency not found, name:`{}`, field_name:`{}`, type:`{}`, dep_id:`{}`, dep:`{}`, ' \
-                    'item:`{}`'.format(service_info.name, field_name, info['dependent_type'], dep_id, dep, item))
-            else:
-                item[field_name] = dep[info['dependent_field']]
+            if dep_id != 'ZATO_SEC_USE_RBAC':
+                if not dep:
+                    raise Exception('Dependency not found, name:`{}`, field_name:`{}`, type:`{}`, dep_id:`{}`, dep:`{}`, ' \
+                        'item:`{}`'.format(service_info.name, field_name, info['dependent_type'], dep_id, dep, item))
+                else:
+                    item[field_name] = dep[info['dependent_field']]
+
+            # JSON-RPC channels cannot have empty security definitions on exports
+            if item_type == 'http_soap' and item['name'].startswith('json.rpc.channel'):
+                if not item['security_id']:
+                    item['security_id'] = 'ZATO_NONE'
 
         return item
 
@@ -948,11 +1076,18 @@ class ObjectManager(object):
         'pubapi',
     )
 
-    def is_ignored_name(self, item):
+    def is_ignored_name(self, item_type, item):
         if 'name' not in item:
             return False
+
         name = item.name.lower()
-        return 'zato' in name or name in self.IGNORED_NAMES
+
+        # Special-case scheduler jobs that can be overridden by users
+        if name.startswith('zato.wsx.cleanup'):
+            return False
+
+        if item_type != 'rbac_role_permission':
+            return 'zato' in name or name in self.IGNORED_NAMES
 
 # ################################################################################################################################
 
@@ -1013,9 +1148,11 @@ class ObjectManager(object):
             data = response.data
 
         for item in map(Bunch, data):
+
             if any(getattr(item, key, None) == value for key, value in iteritems(service_info.export_filter)):
                 continue
-            if self.is_ignored_name(item):
+
+            if self.is_ignored_name(item_type, item):
                 continue
 
             # Passwords are always exported in an encrypted form so we need to decrypt them ourselves
@@ -1204,7 +1341,8 @@ class Enmasse(ManageCommand):
         {'name':'--ignore-missing-defs', 'help':'Ignore missing definitions when exporting to file', 'action':'store_true'},
         {'name':'--replace-odb-objects', 'help':'Force replacing objects already existing in ODB during import', 'action':'store_true'},
         {'name':'--input', 'help':'Path to input file with objects to import'},
-        {'name':'--cols_width', 'help':'A list of columns width to use for the table output, default: {}'.format(DEFAULT_COLS_WIDTH), 'action':'store_true'},
+        {'name':'--rbac-sleep', 'help':'How many seconds to sleep for after creating an RBAC object', 'default':'1'},
+        {'name':'--cols-width', 'help':'A list of columns width to use for the table output, default: {}'.format(DEFAULT_COLS_WIDTH), 'action':'store_true'},
     ]
 
     CODEC_BY_EXTENSION = {
@@ -1253,8 +1391,19 @@ class Enmasse(ManageCommand):
         #    4b) override whatever is found in ODB with values from JSON (--replace-odb-objects)
         #
 
-        # Get client and issue a sanity check as quickly as possible
+        # Get the client object ..
         self.client = get_client_from_server_conf(self.component_dir)
+
+        # .. make sure /zato/ping replies which means the server is started
+        wait_for_zato_ping(self.client.address, 300)
+
+        # .. just to be on the safe side, optionally wait a bit more
+        initial_wait_time = os.environ.get('ZATO_ENMASSE_INITIAL_WAIT_TIME')
+        if initial_wait_time:
+            initial_wait_time = int(initial_wait_time)
+            self.logger.warn('Sleeping for %s s', initial_wait_time)
+            sleep(initial_wait_time)
+
         self.object_mgr = ObjectManager(self.client, self.logger)
         self.client.invoke('zato.ping')
         populate_services_from_apispec(self.client, self.logger)
@@ -1481,15 +1630,13 @@ class Enmasse(ManageCommand):
     def run_import(self):
         self.object_mgr.refresh()
 
-        importer = ObjectImporter(self.client, self.logger,
-            self.object_mgr, self.json,
-            ignore_missing=self.args.ignore_missing_defs)
+        importer = ObjectImporter(self.client, self.logger, self.object_mgr, self.json,
+            ignore_missing=self.args.ignore_missing_defs, args=self.args)
 
         # Find channels and jobs that require services that don't exist
         results = importer.validate_import_data()
         if not results.ok:
             return [results]
-
 
         already_existing = importer.find_already_existing_odb_objects()
         if not already_existing.ok and not self.args.replace_odb_objects:

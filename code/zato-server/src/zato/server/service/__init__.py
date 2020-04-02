@@ -80,36 +80,49 @@ UUID = UUID
 
 # ################################################################################################################################
 
-# Type checking
-import typing
-
-if typing.TYPE_CHECKING:
+if 0:
 
     # stdlib
+    from datetime import timedelta
     from typing import Callable
 
     # Zato
-    from zato.broker.client import BrokerClient
+    from zato.broker.client import BrokerClient, BrokerClientAPI
     from zato.common.audit import AuditPII
     from zato.common.crypto import ServerCryptoManager
     from zato.common.json_schema import Validator as JSONSchemaValidator
     from zato.common.odb.api import ODBManager
+    from zato.server.connection.ftp import FTPStore
     from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
+    from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.server import Servers
+    from zato.server.connection.cassandra import CassandraAPI
+    from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
+    from zato.server.query import CassandraQueryAPI
     from zato.sso.api import SSOAPI
 
     # For pyflakes
     AuditPII = AuditPII
     BrokerClient = BrokerClient
+    BrokerClientAPI = BrokerClientAPI
     Callable = Callable
+    ConfigDict = ConfigDict
+    ConfigStore = ConfigStore
+    CassandraAPI = CassandraAPI
+    CassandraQueryAPI = CassandraQueryAPI
+    FTPStore = FTPStore
+    JSONPointerStore = JSONPointerStore
     JSONSchemaValidator = JSONSchemaValidator
+    NamespaceStore = NamespaceStore
     ODBManager = ODBManager
     ParallelServer = ParallelServer
     ServerCryptoManager = ServerCryptoManager
     Servers = Servers
     SSOAPI = SSOAPI
+    timedelta = timedelta
     WorkerStore = WorkerStore
+    XPathStore = XPathStore
 
 # ################################################################################################################################
 
@@ -133,6 +146,10 @@ Unicode = Text
 
 # For code completion
 PubSub = PubSub
+
+# ################################################################################################################################
+
+_wsgi_channels = (CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC)
 
 # ################################################################################################################################
 
@@ -193,11 +210,24 @@ class ChannelSecurityInfo(object):
     __slots__ = ('id', 'name', 'type', 'username', 'impl')
 
     def __init__(self, id, name, type, username, impl):
-        self.id = id
-        self.name = name
-        self.type = type
-        self.username = username
-        self.impl = impl
+        self.id = id     # type: int
+        self.name = name # type: str
+        self.type = type # type: str
+        self.username = username # type: str
+        self.impl = impl # type: dict
+
+    def to_dict(self, needs_impl=False):
+        out = {
+            'id': self.id,
+            'name': self.name,
+            'type': self.type,
+            'username': self.username,
+        }
+
+        if needs_impl:
+            out['impl'] = self.impl
+
+        return out
 
 # ################################################################################################################################
 
@@ -299,30 +329,29 @@ class Service(object):
     cloud = Cloud()
     definition = Definition()
     im = InstantMessaging()
-    odb = None # type: ODBManager
-    kvdb = None # type: KVDB
+    odb = None    # type: ODBManager
+    kvdb = None   # type: KVDB
     pubsub = None # type: PubSub
-    cassandra_conn = None
-    cassandra_query = None
-    email = None
-    search = None
+    cassandra_conn = None  # type: CassandraAPI
+    cassandra_query = None # type: CassandraQueryAPI
+    email = None  # type: EMailAPI
+    search = None # type: SearchAPI
     amqp = AMQPFacade()
 
     # For WebSockets
     wsx = None # type: WSXFacade
 
     _worker_store = None  # type: WorkerStore
-    _worker_config = None
-    _msg_ns_store = None
-    _ns_store = None
-    _json_pointer_store = None
-    _xpath_store = None
-    _out_ftp = None
-    _out_plain_http = None
+    _worker_config = None # type: ConfigStore
+    _msg_ns_store = None  # type: NamespaceStore
+    _json_pointer_store = None # type: JSONPointerStore
+    _xpath_store = None   # type: XPathStore
+    _out_ftp = None       # type: FTPStore
+    _out_plain_http = None # type: ConfigDict
 
     _req_resp_freq = 0
-    _has_before_job_hooks = None
-    _has_after_job_hooks = None
+    _has_before_job_hooks = None # type: bool
+    _has_after_job_hooks = None  # type: bool
     _before_job_hooks = []
     _after_job_hooks = []
 
@@ -356,24 +385,19 @@ class Service(object):
         self.name = self.__class__.__service_name # Will be set through .get_name by Service Store
         self.impl_name = self.__class__.__service_impl_name # Ditto
         self.logger = _get_logger(self.name)
-        self.server = None         # type: ParallelServer
-        self.broker_client = None
-        self.channel = None
-        self.cid = None
-        self.in_reply_to = None
-        self.data_format = None
-        self.transport = None
-        self.wsgi_environ = None
-        self.job_type = None
+        self.server = None        # type: ParallelServer
+        self.broker_client = None # type: BrokerClientAPI
+        self.channel = None # type: ChannelInfo
+        self.chan = self.channel
+        self.cid = None          # type: str
+        self.in_reply_to = None  # type: str
+        self.data_format = None  # type: str
+        self.transport = None    # type: str
+        self.wsgi_environ = None # type: dict
+        self.job_type = None     # type: str
         self.environ = _Bunch()
         self.request = _Request(self.logger)
         self.response = _Response(self.logger)
-        self.invocation_time = None # When was the service invoked
-        self.handle_return_time = None # When did its 'handle' method finished processing the request
-        self.processing_time_raw = None # A timedelta object with the processing time up to microseconds
-        self.processing_time = None # Processing time in milliseconds
-        self.usage = 0 # How many times the service has been invoked
-        self.slow_threshold = maxint # After how many ms to consider the response came too late
         self.msg = None
         self.time = None
         self.patterns = None
@@ -383,6 +407,21 @@ class Service(object):
         self.has_validate_input = False
         self.has_validate_output = False
         self.cache = None
+
+        # When was the service invoked
+        self.invocation_time = None # type: datetime
+
+        # When did our 'handle' method finished processing the request
+        self.handle_return_time = None # type: datetime
+
+        # # A timedelta object with the processing time up to microseconds
+        self.processing_time_raw = None # type: timedelta
+
+        # Processing time in milliseconds
+        self.processing_time = None # type: int
+
+        self.usage = 0 # How many times the service has been invoked
+        self.slow_threshold = maxint # After how many ms to consider the response came too late
 
         self.out = self.outgoing = _Outgoing(
             self.amqp,
@@ -477,6 +516,7 @@ class Service(object):
         if self.component_enabled_search:
             if not Service.search:
                 Service.search = SearchAPI(self._worker_store.search_es_api, self._worker_store.search_solr_api)
+
         if self.component_enabled_msg_path:
             self.msg = MessageFacade(
                 self._json_pointer_store, self._xpath_store, self._msg_ns_store, self.request.payload, self.time)
@@ -559,7 +599,7 @@ class Service(object):
         set_response_func, # type: Callable
         service,       # type: Service
         raw_request,   # type: object
-        channel,       # type: ChannelInfo
+        channel,       # type: unicode
         data_format,   # type: unicode
         transport,     # type: unicode
         server,        # type: ParallelServer
@@ -594,7 +634,7 @@ class Service(object):
             job_type=job_type, channel_params=channel_params,
             merge_channel_params=merge_channel_params, params_priority=params_priority,
             in_reply_to=wsgi_environ.get('zato.request_ctx.in_reply_to', None), environ=kwargs.get('environ'),
-            wmq_ctx=kwargs.get('wmq_ctx'))
+            wmq_ctx=kwargs.get('wmq_ctx'), channel_info=kwargs.get('channel_info'))
 
         # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
         # if ServiceStore replaces self.accept with None in the most common case of this method's not being
@@ -606,9 +646,12 @@ class Service(object):
 
             try:
 
-                # Check rate limiting first
-                if self._has_rate_limiting:
-                    self.server.rate_limiting.check_limit(self.cid, _CHANNEL_SERVICE, self.name,
+                # Check rate limiting first - note the usage of 'service' rather than 'self',
+                # in case self is a gateway service such as an JSON-RPC one in which case
+                # we are in fact interested in checking the target service's rate limit,
+                # not our own.
+                if service._has_rate_limiting:
+                    self.server.rate_limiting.check_limit(self.cid, _CHANNEL_SERVICE, service.name,
                         self.wsgi_environ['zato.http.remote_addr'])
 
                 if service.server.component_enabled.stats:
@@ -1090,12 +1133,33 @@ class Service(object):
 # ################################################################################################################################
 
     @staticmethod
-    def update(service, channel_type, server, broker_client, _ignored, cid, payload, raw_request, transport=None,
-        simple_io_config=None, data_format=None, wsgi_environ={}, job_type=None, channel_params=None, merge_channel_params=True,
-        params_priority=None, in_reply_to=None, environ=None, init=True, wmq_ctx=None,
-        _wsgi_channels=(CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC), _AMQP=CHANNEL.AMQP, _WMQ=CHANNEL.WEBSPHERE_MQ):
-        """ Takes a service instance and updates it with the current request's
-        context data.
+    def update(
+             service,               # type: Service
+             channel_type,          # type: str
+             server,                # type: ParallelServer
+             broker_client,         # type: object
+             _ignored,              # type: object
+             cid,                   # type: str
+             payload,               # type: object
+             raw_request,           # type: object
+             transport=None,        # type: str
+             simple_io_config=None, # type: object
+             data_format=None,      # type: str
+             wsgi_environ=None,     # type: dict
+             job_type=None,         # type: str
+             channel_params=None,   # type: object
+             merge_channel_params=True, # type: object
+             params_priority=None,  # type: object
+             in_reply_to=None,      # type: str
+             environ=None,          # type: object
+             init=True,             # type: bool
+             wmq_ctx=None,          # type: object
+             channel_info=None,     # type: ChannelInfo
+             _wsgi_channels=_wsgi_channels, # type: object
+             _AMQP=CHANNEL.AMQP,       # type: str
+             _WMQ=CHANNEL.WEBSPHERE_MQ # type: str
+             ):
+        """ Takes a service instance and updates it with the current request's context data.
         """
         service.server = server
         service.broker_client = broker_client # type: BrokerClient
@@ -1106,7 +1170,7 @@ class Service(object):
         service.request.simple_io_config = simple_io_config
         service.response.simple_io_config = simple_io_config
         service.data_format = data_format
-        service.wsgi_environ = wsgi_environ
+        service.wsgi_environ = wsgi_environ or {}
         service.job_type = job_type
         service.translate = server.kvdb.translate
         service.user_config = server.user_config
@@ -1129,7 +1193,7 @@ class Service(object):
         elif channel_type == _WMQ:
             service.request.wmq = service.request.ibm_mq = IBMMQRequestData(wmq_ctx)
 
-        service.channel = service.chan = ChannelInfo(
+        service.channel = service.chan = channel_info or ChannelInfo(
             channel_item.get('id'), channel_item.get('name'), channel_type,
             channel_item.get('data_format'), channel_item.get('is_internal'), channel_item.get('match_target'),
             ChannelSecurityInfo(sec_def_info.get('id'), sec_def_info.get('name'), sec_def_info.get('type'),
@@ -1137,6 +1201,21 @@ class Service(object):
 
         if init:
             service._init(channel_type in _wsgi_channels)
+
+# ################################################################################################################################
+
+    def new_instance(self, service_name, *args, **kwargs):
+        """ Creates a new service instance without invoking its handle method.
+        """
+        # type: (str, str, str) -> object
+
+        service, ignored_is_active = \
+            self.server.service_store.new_instance_by_name(service_name, *args, **kwargs) # type: (Service, bool)
+
+        service.update(service, CHANNEL.NEW_INSTANCE, self.server, broker_client=self.broker_client, _ignored=None,
+            cid=self.cid, payload=self.request.payload, raw_request=self.request.raw_request, wsgi_environ=self.wsgi_environ)
+
+        return service
 
 # ################################################################################################################################
 
@@ -1204,8 +1283,15 @@ class WSXHook(_Hook):
         """ Invoked each time a response to a previous pub/sub message arrives.
         """
 
+    def on_vault_mount_point_needed(self, _zato_no_op_marker=zato_no_op_marker):
+        """ Invoked each time there is need to discover the name of a Vault mount point
+        that a particular WSX channel is secured ultimately with, i.e. the mount point
+        where the incoming user's credentials are stored in.
+        """
+
 WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_CONNECTED] = 'on_connected'
 WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_DISCONNECTED] = 'on_disconnected'
 WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_PUBSUB_RESPONSE] = 'on_pubsub_response'
+WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_VAULT_MOUNT_POINT_NEEDED] = 'on_vault_mount_point_needed'
 
 # ################################################################################################################################

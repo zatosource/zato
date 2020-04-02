@@ -49,7 +49,7 @@ class Config:
     username_prefix = 'test.{}+{}'
     random_prefix = 'rand.{}+{}'
 
-    server_location = os.path.expanduser('~/env/z31sqlite/server1')
+    server_location = os.path.expanduser('~/env/sso.test/server1')
     server_address  = 'http://localhost:17010{}'
 
 class NotGiven:
@@ -169,9 +169,9 @@ class BaseTest(TestCase):
 
 # ################################################################################################################################
 
-    def _assert_default_user_data(self, response, now):
+    def _assert_default_user_data(self, response, now, approval_status=None):
 
-        self.assertEquals(response.approval_status, const.approval_status.before_decision)
+        self.assertEquals(response.approval_status, approval_status or const.approval_status.before_decision)
         self.assertEquals(response.sign_up_status, const.signup_status.final)
 
         self.assertTrue(response.is_active)
@@ -190,11 +190,13 @@ class BaseTest(TestCase):
 
     def _assert_user_dates(self, response, now, is_default_user=False):
 
+        now = now.isoformat()
+
         func = self.assertGreater if is_default_user else self.assertLess
-        func(now, dt_parse(response.approval_status_mod_time))
-        func(now, dt_parse(response.password_last_set))
-        func(now, dt_parse(response.sign_up_time))
-        self.assertLess(now, dt_parse(response.password_expiry))
+        func(now, dt_parse(response.approval_status_mod_time).isoformat() + '.999999')
+        func(now, dt_parse(response.password_last_set).isoformat() + '.999999')
+        func(now, dt_parse(response.sign_up_time).isoformat() + '.999999')
+        self.assertLess(now, dt_parse(response.password_expiry).isoformat() + '.999999')
 
 # ################################################################################################################################
 

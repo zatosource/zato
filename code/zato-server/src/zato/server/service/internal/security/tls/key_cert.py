@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Python 2/3 compatibility
+from past.builtins import unicode
 from six import add_metaclass
 
 # Zato
@@ -59,11 +60,14 @@ def response_hook(self, input, instance, attrs, service_type):
 
     elif service_type == 'get_list':
         for elem in self.response.payload:
+            if not isinstance(elem.auth_data, unicode):
+                elem.auth_data = elem.auth_data.decode('utf8')
             elem.auth_data = self.server.decrypt(elem.auth_data)
 
 # ################################################################################################################################
 
 def broker_message_hook(self, input, instance, attrs, service_type):
+    input.sec_type = SEC_DEF_TYPE.TLS_KEY_CERT
     if service_type == 'delete':
         input.auth_data = instance.auth_data
 

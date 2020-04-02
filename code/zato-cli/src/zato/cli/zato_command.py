@@ -23,13 +23,13 @@ cloghandler = cloghandler # For pyflakes
 # Zato
 from zato.cli import apispec as apispec_mod, ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_create_lb_agent_mod, \
      ca_create_scheduler as ca_create_scheduler_mod, ca_create_server as ca_create_server_mod, \
-     ca_create_web_admin as ca_create_web_admin_mod, check_config as check_config_mod, \
+     ca_create_web_admin as ca_create_web_admin_mod, cache as cache_mod, check_config as check_config_mod, \
      component_version as component_version_mod, create_cluster as create_cluster_mod, \
      create_lb as create_lb_mod, create_odb as create_odb_mod, create_scheduler as create_scheduler_mod, \
      create_server as create_server_mod, create_web_admin as create_web_admin_mod, crypto as crypto_mod, \
      delete_odb as delete_odb_mod, enmasse as enmasse_mod, FromConfig, info as info_mod, migrate as migrate_mod, \
      quickstart as quickstart_mod, run_command, service as service_mod, sso as sso_mod, start as start_mod, \
-     stop as stop_mod, web_admin_auth as web_admin_auth_mod
+     stop as stop_mod, wait as wait_mod, web_admin_auth as web_admin_auth_mod
 from zato.common import get_version
 
 def add_opts(parser, opts):
@@ -101,6 +101,24 @@ def get_parser():
     ca_create_web_admin.set_defaults(command='ca_create_web_admin')
     ca_create_web_admin.add_argument('path', help='Path to a CA directory')
     add_opts(ca_create_web_admin, ca_create_web_admin_mod.Create.opts)
+
+    #
+    # cache
+    #
+    cache = subs.add_parser('cache', description='Cache keys - get, set, delete or expire keys and more', parents=[base_parser])
+    cache_subs = cache.add_subparsers()
+
+    cache_get = cache_subs.add_parser('get', description=cache_mod.CacheGet.__doc__, parents=[base_parser])
+    cache_get.set_defaults(command='cache_get')
+    add_opts(cache_get, cache_mod.CacheGet.opts)
+
+    cache_set = cache_subs.add_parser('set', description=cache_mod.CacheSet.__doc__, parents=[base_parser])
+    cache_set.set_defaults(command='cache_set')
+    add_opts(cache_set, cache_mod.CacheSet.opts)
+
+    cache_delete = cache_subs.add_parser('delete', description=cache_mod.CacheDelete.__doc__, parents=[base_parser])
+    cache_delete.set_defaults(command='cache_delete')
+    add_opts(cache_delete, cache_mod.CacheDelete.opts)
 
     #
     # check-config
@@ -317,6 +335,22 @@ def get_parser():
     add_opts(sso_lock_user, sso_mod.LockUser.opts)
 
     #
+    # login
+    #
+    sso_login = sso_subs.add_parser('login', description=sso_mod.Login.__doc__, parents=[base_parser])
+    sso_login.add_argument('path', help='Path to a Zato server')
+    sso_login.set_defaults(command='sso_login')
+    add_opts(sso_login, sso_mod.Login.opts)
+
+    #
+    # logout
+    #
+    sso_logout = sso_subs.add_parser('logout', description=sso_mod.Logout.__doc__, parents=[base_parser])
+    sso_logout.add_argument('path', help='Path to a Zato server')
+    sso_logout.set_defaults(command='sso_logout')
+    add_opts(sso_logout, sso_mod.Logout.opts)
+
+    #
     # unlock-user
     #
     sso_unlock_user = sso_subs.add_parser('unlock-user', description=sso_mod.UnlockUser.__doc__, parents=[base_parser])
@@ -389,13 +423,6 @@ def get_parser():
     update = subs.add_parser('update', description='Updates Zato components and users')
     update_subs = update.add_subparsers()
 
-    # .. update crypto
-
-    update_crypto = update_subs.add_parser('crypto', description=crypto_mod.UpdateCrypto.__doc__, parents=[base_parser])
-    update_crypto.add_argument('path', help='Path to a Zato component')
-    update_crypto.set_defaults(command='update_crypto')
-    add_opts(update_crypto, crypto_mod.UpdateCrypto.opts)
-
     # .. update password
 
     update_password = update_subs.add_parser(
@@ -403,6 +430,13 @@ def get_parser():
     update_password.add_argument('path', help='Path to a web admin directory')
     update_password.set_defaults(command='update_password')
     add_opts(update_password, web_admin_auth_mod.UpdatePassword.opts)
+
+    #
+    # wait
+    #
+    wait = subs.add_parser('wait', description=wait_mod.Wait.__doc__, parents=[base_parser])
+    wait.set_defaults(command='wait')
+    add_opts(wait, wait_mod.Wait.opts)
 
     return parser
 

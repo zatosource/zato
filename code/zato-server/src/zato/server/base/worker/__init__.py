@@ -77,6 +77,7 @@ from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channe
 from zato.server.connection.web_socket import ChannelWebSocket
 from zato.server.connection.vault import VaultConnAPI
 from zato.server.ext.zunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
+from zato.server.generic.api.channel_file_transfer import ChannelFileTransferWrapper
 from zato.server.generic.api.def_kafka import DefKafkaWrapper
 from zato.server.generic.api.outconn_im_slack import OutconnIMSlackWrapper
 from zato.server.generic.api.outconn_im_telegram import OutconnIMTelegramWrapper
@@ -84,6 +85,7 @@ from zato.server.generic.api.outconn_ldap import OutconnLDAPWrapper
 from zato.server.generic.api.outconn_mongodb import OutconnMongoDBWrapper
 from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper
 from zato.server.pubsub import PubSub
+from zato.server.pubsub.task import PubSubTool
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
 from zato.server.rbac_ import RBAC
 from zato.server.stats import MaintenanceTool
@@ -158,7 +160,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     """ Dispatches work between different pieces of configuration of an individual gunicorn worker.
     """
     def __init__(self, worker_config=None, server=None):
-        # type: (ConfigStore, ParallelServer) -> None
+        # type: (ConfigStore, ParallelServer)
 
         self.logger = logging.getLogger(self.__class__.__name__)
         self.is_ready = False
@@ -180,6 +182,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # To expedite look-ups
         self._simple_types = simple_types
 
+        # Generic connections - FTP channels
+        self.channel_file_transfer = {}
+
         # Generic connections - Kafka definitions
         self.def_kafka = {}
 
@@ -194,7 +199,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Generic connections - IM Slack
         self.outconn_im_slack = {}
-
 
         # Generic connections - IM Telegram
         self.outconn_im_telegram = {}
@@ -250,6 +254,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
+            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER: self.channel_file_transfer,
             COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: self.def_kafka,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK: self.outconn_im_slack,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_TELEGRAM: self.outconn_im_telegram,
@@ -259,6 +264,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         }
 
         self._generic_conn_handler = {
+            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER: ChannelFileTransferWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: DefKafkaWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK: OutconnIMSlackWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_TELEGRAM: OutconnIMTelegramWrapper,
@@ -447,8 +453,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
             if sec_config['sec_type'] == SEC_DEF_TYPE.TLS_KEY_CERT:
                 tls = self.request_dispatcher.url_data.tls_key_cert_get(security_name)
+                auth_data = self.server.decrypt(tls.config.auth_data)
                 sec_config['tls_key_cert_full_path'] = get_tls_key_cert_full_path(
-                    self.server.tls_dir, get_tls_from_payload(tls.config.value, True))
+                    self.server.tls_dir, get_tls_from_payload(auth_data, True))
 
         wrapper_config = {'id':config.id,
             'is_active':config.is_active, 'method':config.method,
@@ -510,13 +517,12 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             self.sql_pool_store[pool_name] = config
 
     def init_ftp(self):
-        """ Initializes FTP connetions. The method replaces whatever value self.out_ftp
+        """ Initializes FTP connections. The method replaces whatever value self.out_ftp
         previously had (initially this would be a ConfigDict of connection definitions).
         """
         config_list = self.worker_config.out_ftp.get_config_list()
         self.worker_config.out_ftp = FTPStore()
         self.worker_config.out_ftp.add_params(config_list)
-
 
     def init_sftp(self):
         """ Each outgoing SFTP connection requires a connection handle to be attached here,
@@ -859,19 +865,37 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def init_pubsub(self):
+    def init_pubsub(self, _srv=PUBSUB.ENDPOINT_TYPE.SERVICE.id):
         """ Sets up all pub/sub endpoints, subscriptions and topics. Also, configures pubsub with getters for each endpoint type.
         """
+
+        # This is a pub/sub tool for delivery of Zato services within this server
+        service_pubsub_tool = PubSubTool(self.pubsub, self.server, _srv, True)
+        self.pubsub.service_pubsub_tool = service_pubsub_tool
+
         for value in self.worker_config.pubsub_endpoint.values():
             self.pubsub.create_endpoint(bunchify(value['config']))
 
         for value in self.worker_config.pubsub_subscription.values():
+
             config = bunchify(value['config'])
             config.add_subscription = True # We don't create WSX subscriptions here so it is always True
-            self.pubsub._subscribe(config)
+
+            self.pubsub.create_subscription_object(config)
+
+            # Special-case delivery of messages to services
+            if config.sub_key.startswith('zpsk.srv'):
+                service_pubsub_tool.add_sub_key(config['sub_key'])
+                self.pubsub.set_sub_key_server({
+                    'sub_key': config.sub_key,
+                    'cluster_id': self.server.cluster_id,
+                    'server_name': self.server.name,
+                    'server_pid': self.server.pid,
+                    'endpoint_type': _srv
+                })
 
         for value in self.worker_config.pubsub_topic.values():
-            self.pubsub.create_topic(bunchify(value['config']))
+            self.pubsub.create_topic_object(bunchify(value['config']))
 
         self.pubsub.endpoint_impl_getter[PUBSUB.ENDPOINT_TYPE.AMQP.id] = None # Not used for now
         self.pubsub.endpoint_impl_getter[PUBSUB.ENDPOINT_TYPE.REST.id] = self.worker_config.out_plain_http.get_by_id
@@ -969,6 +993,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def init_generic_connections_config(self):
 
         # Local aliases
+        channel_file_transfer_map = self.generic_impl_func_map.setdefault(
+            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER, {})
         def_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA, {})
         outconn_im_slack_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK, {})
         outconn_im_telegram_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_TELEGRAM, {})
@@ -979,6 +1005,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # These generic connections are regular - they use common API methods for such connections
         regular_maps = [
+            channel_file_transfer_map,
             def_kafka_map,
             outconn_im_slack_map,
             outconn_im_telegram_map,
@@ -1002,7 +1029,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         for password_item in password_maps:
             password_item[_generic_msg.change_password] = self._change_password_generic_connection
 
-        # Outgoing SFTP connections require for a different API to be called (provided by ParallelServer)
+        # Some generic connections require different admin APIs
         outconn_sftp_map[_generic_msg.create] = self._on_outconn_sftp_create
         outconn_sftp_map[_generic_msg.edit]   = self._on_outconn_sftp_edit
         outconn_sftp_map[_generic_msg.delete] = self._on_outconn_sftp_delete
@@ -1209,10 +1236,12 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_broker_msg_VAULT_CONNECTION_CREATE(self, msg):
+        msg.token = self.server.decrypt(msg.token)
         self.vault_conn_api.create(msg)
         dispatcher.notify(broker_message.VAULT.CONNECTION_CREATE.value, msg)
 
     def on_broker_msg_VAULT_CONNECTION_EDIT(self, msg):
+        msg.token = self.server.decrypt(msg.token)
         self.vault_conn_api.edit(msg)
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.VAULT,
                 self._visit_wrapper_edit, keys=('username', 'name'))

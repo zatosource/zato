@@ -178,7 +178,6 @@ loggers:
         handlers: [stdout, notif_sql]
         qualname: zato_notif_sql
         propagate: false
-
 handlers:
     default:
         formatter: default
@@ -338,6 +337,9 @@ def run_command(args):
         ('ca_create_scheduler', 'zato.cli.ca_create_scheduler.Create'),
         ('ca_create_server', 'zato.cli.ca_create_server.Create'),
         ('ca_create_web_admin', 'zato.cli.ca_create_web_admin.Create'),
+        ('cache_delete', 'zato.cli.cache.CacheDelete'),
+        ('cache_get', 'zato.cli.cache.CacheGet'),
+        ('cache_set', 'zato.cli.cache.CacheSet'),
         ('check_config', 'zato.cli.check_config.CheckConfig'),
         ('component_version', 'zato.cli.component_version.ComponentVersion'),
         ('create_cluster', 'zato.cli.create_cluster.Create'),
@@ -360,13 +362,14 @@ def run_command(args):
         ('reset_totp_key', 'zato.cli.web_admin_auth.ResetTOTPKey'),
         ('quickstart_create', 'zato.cli.quickstart.Create'),
         ('service_invoke', 'zato.cli.service.Invoke'),
-        ('update_crypto', 'zato.cli.crypto.UpdateCrypto'),
         ('set_admin_invoke_password', 'zato.cli.web_admin_auth.SetAdminInvokePassword'),
         ('sso_change_user_password', 'zato.cli.sso.ChangeUserPassword'),
         ('sso_create_odb', 'zato.cli.sso.CreateODB'),
         ('sso_create_user', 'zato.cli.sso.CreateUser'),
         ('sso_create_super_user', 'zato.cli.sso.CreateSuperUser'),
         ('sso_delete_user', 'zato.cli.sso.DeleteUser'),
+        ('sso_login', 'zato.cli.sso.Login'),
+        ('sso_logout', 'zato.cli.sso.Logout'),
         ('sso_lock_user', 'zato.cli.sso.LockUser'),
         ('sso_reset_totp_key', 'zato.cli.sso.ResetTOTPKey'),
         ('sso_reset_user_password', 'zato.cli.sso.ResetUserPassword'),
@@ -374,6 +377,7 @@ def run_command(args):
         ('start', 'zato.cli.start.Start'),
         ('stop', 'zato.cli.stop.Stop'),
         ('update_password', 'zato.cli.web_admin_auth.UpdatePassword'),
+        ('wait', 'zato.cli.wait.Wait'),
     )
     for k, v in command_imports:
         command_class[k] = import_string(v)
@@ -427,6 +431,8 @@ class ZatoCommand(object):
         NOT_A_ZATO_WEB_ADMIN = 24
         NOT_A_ZATO_LB = 25
         NOT_A_ZATO_SCHEDULER = 26
+        CACHE_KEY_NOT_FOUND = 27
+        SERVER_TIMEOUT = 28
 
 # ################################################################################################################################
 
@@ -938,13 +944,18 @@ class ManageCommand(ZatoCommand):
         os.chdir(self.component_dir)
         return self._get_dispatch()[json_data['component']](args)
 
-
 # ################################################################################################################################
 
-def is_arg_given(args, arg_name):
-    try:
-        return args.get(arg_name)
-    except AttributeError:
-        return getattr(args, arg_name, None)
+def is_arg_given(args, *arg_names):
+
+    for arg_name in arg_names:
+        try:
+            result = args.get(arg_name)
+            if result:
+                return True
+        except AttributeError:
+            result = getattr(args, arg_name, None)
+            if result:
+                return True
 
 # ################################################################################################################################

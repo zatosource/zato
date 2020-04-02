@@ -202,6 +202,9 @@ class Edit(AdminService):
                 if class_.schema:
                     self.server.service_store.set_up_class_json_schema(class_, input)
 
+                # Set up rate-limiting each time an object was edited
+                self.server.service_store.set_up_rate_limiting(service.name)
+
                 session.add(service)
                 session.commit()
 
@@ -306,7 +309,7 @@ class Invoke(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_invoke_request'
         response_elem = 'zato_service_invoke_response'
-        input_optional = ('id', 'name', 'payload', 'channel', 'data_format', 'transport', Boolean('async'),
+        input_optional = ('id', 'name', 'payload', 'channel', 'data_format', 'transport', Boolean('is_async'),
             Integer('expiration'), Integer('pid'), Boolean('all_pids'), Integer('timeout'))
         output_optional = ('response',)
 
@@ -331,7 +334,7 @@ class Invoke(AdminService):
         if name and id:
             raise ZatoException('Cannot accept both id:`{}` and name:`{}`'.format(id, name))
 
-        if self.request.input.get('async'):
+        if self.request.input.get('is_async'):
 
             if id:
                 impl_name = self.server.service_store.id_to_impl_name[id]
@@ -344,7 +347,7 @@ class Invoke(AdminService):
                 response = self.invoke_async(name, payload, channel, data_format, transport, expiration)
 
         else:
-            # This branch the same as above in async branch, except in async there was no all_pids
+            # This branch the same as above in is_async branch, except in is_async there was no all_pids
 
             # It is possible that we were given the all_pids flag on input but we know
             # ourselves that there is only one process, the current one, so we can just

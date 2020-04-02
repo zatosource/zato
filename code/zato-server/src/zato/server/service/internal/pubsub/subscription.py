@@ -566,6 +566,16 @@ class SubscribeAMQP(SubscribeServiceImpl):
 
 # ################################################################################################################################
 
+class SubscribeService(SubscribeServiceImpl):
+    """ Handles pub/sub subscriptions for Zato services.
+    """
+    endpoint_type = PUBSUB.ENDPOINT_TYPE.SERVICE.id
+
+    def _handle_subscription(self, ctx):
+        self._subscribe_impl(ctx)
+
+# ################################################################################################################################
+
 class Create(_Subscribe):
     """ Creates a new pub/sub subscription by invoking a subscription service specific to input endpoint_type.
     """
@@ -643,8 +653,21 @@ class DeleteAll(AdminService):
 
 # ################################################################################################################################
 
+class CreateWSXSubscriptionForCurrent(AdminService):
+    """ A high-level, simplified, service for creating subscriptions for a WSX. Calls CreateWSXSubscription ultimately.
+    """
+    class SimpleIO:
+        input_required = 'topic_name'
+        output_optional = 'sub_key'
+
+    def handle(self):
+        self.response.payload.sub_key = self.pubsub.subscribe(
+            self.request.input.topic_name, use_current_wsx=True, service=self)
+
+# ################################################################################################################################
+
 class CreateWSXSubscription(AdminService):
-    """ Creates a new pub/sub subscription for current WebSocket connection.
+    """ Low-level interface for creating a new pub/sub subscription for current WebSocket connection.
     """
     class SimpleIO:
         input_optional = 'topic_name', List('topic_name_list'), Bool('wrap_one_msg_in_list'), Int('delivery_batch_size')

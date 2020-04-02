@@ -30,6 +30,15 @@ from six import add_metaclass
 
 # ################################################################################################################################
 
+if 0:
+    from bunch import Bunch
+    from zato.server.service import Service
+
+    Bunch = Bunch
+    Service = Service
+
+# ################################################################################################################################
+
 elem = 'generic_connection'
 model = ModelGenericConn
 label = 'a generic connection'
@@ -37,6 +46,17 @@ broker_message = GENERIC
 broker_message_prefix = 'CONNECTION_'
 list_func = None
 extra_delete_attrs = ['type_']
+
+# ################################################################################################################################
+
+hook = {}
+
+# ################################################################################################################################
+
+config_dict_id_name_outconnn = {
+    'ftp_source': 'out_ftp',
+    'sftp_source': 'out_sftp',
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,6 +74,8 @@ class _CreateEditSIO(AdminSIO):
 class _CreateEdit(_BaseService):
     """ Creates a new or updates an existing generic connection in ODB.
     """
+    is_edit = None
+
     class SimpleIO(_CreateEditSIO):
         output_required = ('id', 'name')
         default_value = None
@@ -93,6 +115,10 @@ class _CreateEdit(_BaseService):
                 if key == 'secret':
                     continue
                 setattr(model, key, value)
+
+            hook_func = hook.get(data.type_)
+            if hook_func:
+                hook_func(self, data, model, old_name)
 
             session.add(model)
             session.commit()
@@ -137,7 +163,7 @@ class Delete(AdminService):
 class GetList(AdminService):
     """ Returns a list of generic connections by their type; includes pagination.
     """
-    _filter_by = GenericConnection.name,
+    _filter_by = ModelGenericConn.name,
 
     class SimpleIO(GetListAdminSIO):
         input_required = ('cluster_id',)
@@ -151,20 +177,38 @@ class GetList(AdminService):
 # ################################################################################################################################
 
     def _enrich_conn_dict(self, conn_dict):
-        for key, service_id in conn_dict.items():
-            if service_id:
+        # type: (dict)
+
+        # New items that will be potentially added to conn_dict
+        to_add = {}
+
+        for key, value in conn_dict.items():
+
+            if value:
+
                 if key.endswith('_service_id'):
                     prefix = key.split('_service_id')[0]
                     service_attr = prefix + '_service_name'
                     try:
                         service_name = self.invoke('zato.service.get-by-id', {
                             'cluster_id': self.request.input.cluster_id,
-                            'id': service_id,
+                            'id': value,
                         })['zato_service_get_by_name_response']['name']
                     except Exception:
                         pass
                     else:
                         conn_dict[service_attr] = service_name
+
+                else:
+                    for id_name_base, out_name in config_dict_id_name_outconnn.items():
+                        item_id = '{}_id'.format(id_name_base)
+                        if key == item_id:
+                            config_dict = self.server.config.get_config_by_item_id(out_name, value)
+                            item_name = '{}_name'.format(id_name_base)
+                            to_add[item_name] = config_dict['name']
+
+        if to_add:
+            conn_dict.update(to_add)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -197,9 +241,20 @@ class ChangePassword(ChangePasswordBase):
         response_elem = None
 
     def handle(self):
+
         def _auth(instance, secret):
             instance.secret = secret
-        return self._handle(ModelGenericConn, _auth, GENERIC.CONNECTION_CHANGE_PASSWORD.value,
+
+        if self.request.input.id:
+            instance_id = self.request.input.id
+        else:
+            with closing(self.odb.session()) as session:
+                instance_id = session.query(ModelGenericConn).\
+                    filter(ModelGenericConn.name==self.request.input.name).\
+                    filter(ModelGenericConn.type_==self.request.input.type_).\
+                    one().id
+
+        return self._handle(ModelGenericConn, _auth, GENERIC.CONNECTION_CHANGE_PASSWORD.value, instance_id=instance_id,
             publish_instance_attrs=['type_'])
 
 # ################################################################################################################################

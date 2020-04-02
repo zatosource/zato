@@ -21,6 +21,7 @@ from bunch import bunchify
 
 # SQLAlchemy
 from sqlalchemy import Boolean, Integer
+from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.common import ZATO_NOT_GIVEN
@@ -29,14 +30,31 @@ from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import AsIs, Bool as BoolSIO, Int as IntSIO
 from zato.server.service.internal import AdminSIO, GetListAdminSIO
 
+# ################################################################################################################################
+
+# Type checking
+if 0:
+    from zato.server.service import Service
+
+    # For pyflakes
+    Service = Service
+
+# ################################################################################################################################
+
 logger = getLogger(__name__)
 
+# ################################################################################################################################
+
 singleton = object()
+
+# ################################################################################################################################
 
 sa_to_sio = {
     Boolean: BoolSIO,
     Integer: IntSIO
 }
+
+# ################################################################################################################################
 
 req_resp = {
     'Create': 'create',
@@ -46,8 +64,12 @@ req_resp = {
     'Ping': 'ping',
 }
 
+# ################################################################################################################################
+
 def _is_column_required(column):
     return not (bool(column.nullable) is True)
+
+# ################################################################################################################################
 
 def get_columns_to_visit(columns, is_required):
     out = []
@@ -72,7 +94,9 @@ def get_columns_to_visit(columns, is_required):
 
     return out
 
-def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_cluster_id, class_=None):
+# ################################################################################################################################
+
+def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_cluster_id):
 
     # This can be either a list or an SQLAlchemy object
     elems = attrs.get(elems_name) or []
@@ -124,6 +148,8 @@ def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_
 
     return columns
 
+# ################################################################################################################################
+
 def update_attrs(cls, name, attrs):
 
     attrs = bunchify(attrs)
@@ -139,6 +165,7 @@ def update_attrs(cls, name, attrs):
     attrs.initial_input = getattr(mod, 'initial_input', {})
     attrs.skip_input_params = getattr(mod, 'skip_input_params', [])
     attrs.skip_output_params = getattr(mod, 'skip_output_params', [])
+    attrs.pre_opaque_attrs_hook = getattr(mod, 'pre_opaque_attrs_hook', None)
     attrs.instance_hook = getattr(mod, 'instance_hook', None)
     attrs.response_hook = getattr(mod, 'response_hook', None)
     attrs.delete_hook = getattr(mod, 'delete_hook', None)
@@ -153,6 +180,7 @@ def update_attrs(cls, name, attrs):
     attrs.sio_default_value = getattr(mod, 'sio_default_value', None)
     attrs.get_list_docs = getattr(mod, 'get_list_docs', None)
     attrs.delete_require_instance = getattr(mod, 'delete_require_instance', True)
+    attrs.skip_create_integrity_error = getattr(mod, 'skip_create_integrity_error', False)
     attrs._meta_session = None
 
     attrs.is_create = False
@@ -181,6 +209,9 @@ def update_attrs(cls, name, attrs):
             attrs.is_delete = True
 
     return attrs
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class AdminServiceMeta(type):
 
@@ -241,6 +272,9 @@ class AdminServiceMeta(type):
 
         return SimpleIO
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class GetListMeta(AdminServiceMeta):
     """ A metaclass customizing the creation of services returning lists of objects.
     """
@@ -255,12 +289,15 @@ class GetListMeta(AdminServiceMeta):
     @staticmethod
     def get_data(get_data_func):
         def get_data_impl(self, session):
+            # type: (Service, object)
             return self._search(get_data_func, session, self.request.input.cluster_id, False)
         return get_data_impl
 
     @staticmethod
     def handle(attrs):
         def handle_impl(self):
+            # type: (Service)
+
             with closing(self.odb.session()) as session:
                 self.response.payload[:] = elems_with_opaque(self.get_data(session))
 
@@ -268,6 +305,9 @@ class GetListMeta(AdminServiceMeta):
                 attrs.response_hook(self, self.request.input, None, attrs, 'get_list')
 
         return handle_impl
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class CreateEditMeta(AdminServiceMeta):
     is_create = False
@@ -284,10 +324,13 @@ class CreateEditMeta(AdminServiceMeta):
     @staticmethod
     def handle(attrs):
         def handle_impl(self):
+            # type: (Service)
+
             input = self.request.input
             input.update(attrs.initial_input)
             verb = 'edit' if attrs.is_edit else 'create'
             old_name = None
+            has_integrity_error = False
 
             with closing(self.odb.session()) as session:
                 try:
@@ -324,6 +367,11 @@ class CreateEditMeta(AdminServiceMeta):
                     # set skip_input_params = ['...'] to ignore such input parameters.
                     instance.fromdict(input, exclude=['password'], allow_pk=True)
 
+                    # Invoke a hook that will set any additional opaque attrs
+                    # that are required but were possibly not given on input.
+                    if attrs.pre_opaque_attrs_hook:
+                        attrs.pre_opaque_attrs_hook(self, input, instance, attrs)
+
                     # Populate all the opaque attrs now
                     set_instance_opaque_attrs(instance, input)
 
@@ -334,7 +382,14 @@ class CreateEditMeta(AdminServiceMeta):
                         attrs.instance_hook(self, input, instance, attrs)
 
                     session.add(instance)
-                    session.commit()
+
+                    try:
+                        session.commit()
+                    except IntegrityError:
+                        if not attrs.skip_create_integrity_error:
+                            raise
+                        else:
+                            has_integrity_error = True
 
                 except Exception:
                     msg = 'Could not {} the object, e:`%s`'.format(verb)
@@ -355,7 +410,8 @@ class CreateEditMeta(AdminServiceMeta):
                     if attrs.broker_message_hook:
                         attrs.broker_message_hook(self, input, instance, attrs, 'create_edit')
 
-                    self.broker_client.publish(input)
+                    if not has_integrity_error:
+                        self.broker_client.publish(input)
 
                     for name in chain(attrs.create_edit_rewrite, self.SimpleIO.output_required):
                         value = getattr(instance, name, singleton)
@@ -369,6 +425,9 @@ class CreateEditMeta(AdminServiceMeta):
 
         return handle_impl
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class DeleteMeta(AdminServiceMeta):
     def __init__(cls, name, bases, attrs):
         attrs = update_attrs(cls, name, attrs)
@@ -380,6 +439,8 @@ class DeleteMeta(AdminServiceMeta):
     @staticmethod
     def handle(attrs):
         def handle_impl(self):
+            # type: (Service)
+
             input = self.request.input
             with closing(self.odb.session()) as session:
                 attrs._meta_session = session
@@ -429,16 +490,21 @@ class DeleteMeta(AdminServiceMeta):
 
         return handle_impl
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class PingMeta(AdminServiceMeta):
     def __init__(cls, name, bases, attrs):
         attrs = update_attrs(cls, name, attrs)
-        cls.SimpleIO = PingMeta.get_sio(attrs, name, ['id'], ['info'])
+        cls.SimpleIO = PingMeta.get_sio(attrs, name, ['id'], ['info', 'id'])
         cls.handle = PingMeta.handle(attrs)
         return super(PingMeta, cls).__init__(cls)
 
     @staticmethod
     def handle(attrs):
         def handle_impl(self):
+            # type: (Service)
+
             with closing(self.odb.session()) as session:
                 config = session.query(attrs.model).\
                     filter(attrs.model.id==self.request.input.id).\
@@ -448,7 +514,14 @@ class PingMeta(AdminServiceMeta):
                 self.ping(config)
                 response_time = time() - start_time
 
+                # Always return ID of the object we pinged
+                self.response.payload.id = self.request.input.id
+
+                # Return ping details
                 self.response.payload.info = 'Ping issued in {0:03.4f} s, check server logs for details, if any.'.format(
                     response_time)
 
         return handle_impl
+
+# ################################################################################################################################
+# ################################################################################################################################

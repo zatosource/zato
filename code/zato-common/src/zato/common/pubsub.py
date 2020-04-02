@@ -53,8 +53,9 @@ def new_msg_id(_new_cid=new_cid, _prefix=MSG_PREFIX.MSG_ID):
 
 # ################################################################################################################################
 
-def new_sub_key(endpoint_type, ext_client_id='zeci', _new_cid=new_cid, _prefix=MSG_PREFIX.SUB_KEY):
-    return '%s.%s.%s.%s' % (_prefix, endpoint_type, ext_client_id, _new_cid(3))
+def new_sub_key(endpoint_type, ext_client_id='', _new_cid=new_cid, _prefix=MSG_PREFIX.SUB_KEY):
+    _ext_client_id = '.%s' % (ext_client_id,) if ext_client_id else (ext_client_id or '')
+    return '%s.%s%s.%s' % (_prefix, endpoint_type, _ext_client_id, _new_cid(3))
 
 # ################################################################################################################################
 

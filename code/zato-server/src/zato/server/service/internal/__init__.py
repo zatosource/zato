@@ -22,7 +22,7 @@ from zato.common.broker_message import MESSAGE_TYPE
 from zato.common.odb.model import Cluster
 from zato.common.util import get_response_value, replace_private_key
 from zato.common.util.sql import search as sql_search
-from zato.server.service import Bool, Int, Service
+from zato.server.service import AsIs, Bool, Int, Service
 from zato.server.service.reqresp.sio import convert_sio
 
 # ################################################################################################################################
@@ -212,9 +212,14 @@ class ChangePasswordBase(AdminService):
     password_required = True
 
     class SimpleIO(AdminSIO):
-        input_required = (Int('id'), 'password1', 'password2')
+        input_required = 'password1', 'password2'
+        input_optional = Int('id'), 'name', 'type_'
+        output_required = AsIs('id')
 
-    def _handle(self, class_, auth_func, action, name_func=None, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL, *args, **kwargs):
+    def _handle(self, class_, auth_func, action, name_func=None, instance_id=None, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL,
+        *args, **kwargs):
+
+        instance_id = instance_id or self.request.input.id
 
         with closing(self.odb.session()) as session:
             password1 = self.request.input.get('password1', '')
@@ -235,7 +240,7 @@ class ChangePasswordBase(AdminService):
                     raise Exception('Passwords need to be the same')
 
                 instance = session.query(class_).\
-                    filter(class_.id==self.request.input.id).\
+                    filter(class_.id==instance_id).\
                     one()
 
                 auth_func(instance, password1)
@@ -246,10 +251,14 @@ class ChangePasswordBase(AdminService):
                 if msg_type:
                     name = name_func(instance) if name_func else instance.name
 
+                    self.request.input.id = instance_id
                     self.request.input.action = action
                     self.request.input.name = name
                     self.request.input.password = password1_decrypted
                     self.request.input.salt = kwargs.get('salt')
+
+                    # Always return ID of the object whose password we changed
+                    self.response.payload.id = instance_id
 
                     for attr in kwargs.get('publish_instance_attrs', []):
                         self.request.input[attr] = getattr(instance, attr, ZATO_NONE)

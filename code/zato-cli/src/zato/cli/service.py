@@ -36,7 +36,7 @@ class Invoke(ZatoCommand):
             DEFAULT_MAX_CID_REPR, CID_NO_CLIP), 'default':DEFAULT_MAX_CID_REPR},
         {'name':'--max-response-repr', 'help':'How many characters of a response to print out in verbose mode, defaults to {}'.format(
             DEFAULT_MAX_RESPONSE_REPR), 'default':DEFAULT_MAX_RESPONSE_REPR},
-        {'name':'--async', 'help':'If given, the service will be invoked asynchronously', 'action':'store_true'},
+        {'name':'--is-async', 'help':'If given, the service will be invoked asynchronously', 'action':'store_true'},
         {'name':'--expiration', 'help':'In async mode, after how many seconds the message should expire, defaults to {} seconds'.format(
             BROKER.DEFAULT_EXPIRATION), 'default':BROKER.DEFAULT_EXPIRATION},
     ]
@@ -56,7 +56,7 @@ class Invoke(ZatoCommand):
         # Prevents attempts to convert/escape XML into JSON
         to_json = True if args.data_format == DATA_FORMAT.JSON else False
 
-        func = client.invoke_async if args.async else client.invoke
+        func = client.invoke_async if args.is_async else client.invoke
         response = func(args.name, args.payload, headers, args.channel, args.data_format, args.transport, to_json=to_json)
 
         if response.ok:

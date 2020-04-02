@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-import os
 from base64 import b64decode, b64encode
 from datetime import datetime
 from http.client import OK
@@ -25,6 +24,9 @@ from lxml import objectify
 
 # requests
 import requests
+
+# urllib3 - need for requests
+from urllib3.util.retry import Retry
 
 # Python 2/3 compatibility
 from builtins import str as text
@@ -50,7 +52,7 @@ mod_logger = logging.getLogger(__name__)
 # Version
 # ################################################################################################################################
 
-version = '3.0.0'
+version = '3.1'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -380,6 +382,11 @@ class _Client(object):
         self.address = address
         self.service_address = '{}{}'.format(address, path)
         self.session = session or requests.session()
+
+        for adapter in self.session.adapters.values():
+            retry = Retry(connect=4, backoff_factor=0.1)
+            adapter.max_retries = retry
+
         self.to_bunch = to_bunch
         self.max_response_repr = max_response_repr
         self.max_cid_repr = max_cid_repr
@@ -389,7 +396,7 @@ class _Client(object):
         if not self.session.auth:
             self.session.auth = auth
 
-    def inner_invoke(self, request, response_class, async, headers, output_repeated=False):
+    def inner_invoke(self, request, response_class, is_async, headers, output_repeated=False):
         """ Actually invokes a service through HTTP and returns its response.
         """
         raw_response = self.session.post(self.service_address, request, headers=headers, verify=self.tls_verify)
@@ -401,16 +408,16 @@ class _Client(object):
             request = request.decode('utf-8')
 
         if self.logger.isEnabledFor(logging.DEBUG):
-            msg = 'request:[%s]\nresponse_class:[%s]\nasync:[%s]\nheaders:[%s]\n text:[%s]\ndata:[%s]'
-            self.logger.debug(msg, request, response_class, async, headers, raw_response.text, response.data)
+            msg = 'request:[%s]\nresponse_class:[%s]\nis_async:[%s]\nheaders:[%s]\n text:[%s]\ndata:[%s]'
+            self.logger.debug(msg, request, response_class, is_async, headers, raw_response.text, response.data)
 
         return response
 
-    def invoke(self, request, response_class, async=False, headers=None, output_repeated=False):
+    def invoke(self, request, response_class, is_async=False, headers=None, output_repeated=False):
         """ Input parameters are like when invoking a service directly.
         """
         headers = headers or {}
-        return self.inner_invoke(request, response_class, async, headers)
+        return self.inner_invoke(request, response_class, is_async, headers)
 
 # ################################################################################################################################
 
@@ -450,7 +457,7 @@ class AnyServiceInvoker(_Client):
     to be exposed over HTTP.
     """
     def _invoke(self, name=None, payload='', headers=None, channel='invoke', data_format='json',
-                transport=None, async=False, expiration=BROKER.DEFAULT_EXPIRATION, id=None,
+                transport=None, is_async=False, expiration=BROKER.DEFAULT_EXPIRATION, id=None,
                 to_json=True, output_repeated=ZATO_NOT_GIVEN, pid=None, all_pids=False, timeout=None):
 
         if not(name or id):
@@ -470,7 +477,7 @@ class AnyServiceInvoker(_Client):
             'channel': channel,
             'data_format': data_format,
             'transport': transport,
-            'async': async,
+            'is_async': is_async,
             'expiration':expiration,
             'pid':pid,
             'all_pids': all_pids,
@@ -478,13 +485,13 @@ class AnyServiceInvoker(_Client):
         }
 
         return super(AnyServiceInvoker, self).invoke(dumps(request, default=default_json_handler),
-            ServiceInvokeResponse, async, headers, output_repeated)
+            ServiceInvokeResponse, is_async, headers, output_repeated)
 
     def invoke(self, *args, **kwargs):
-        return self._invoke(async=False, *args, **kwargs)
+        return self._invoke(is_async=False, *args, **kwargs)
 
     def invoke_async(self, *args, **kwargs):
-        return self._invoke(async=True, *args, **kwargs)
+        return self._invoke(is_async=True, *args, **kwargs)
 
 # ################################################################################################################################
 
@@ -515,7 +522,7 @@ def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, s
 
     # To avoid circular references
     from zato.common.crypto import ServerCryptoManager
-    from zato.common.util import get_odb_session_from_server_config
+    from zato.common.util import get_odb_session_from_server_config, get_repo_dir_from_component_dir
 
     class ZatoClient(AnyServiceInvoker):
         def __init__(self, *args, **kwargs):
@@ -523,7 +530,7 @@ def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, s
             self.cluster_id = None
             self.odb_session = None
 
-    repo_dir = os.path.join(os.path.abspath(os.path.join(server_dir)), 'config', 'repo')
+    repo_dir = get_repo_dir_from_component_dir(server_dir)
     cm = ServerCryptoManager.from_repo_dir(None, repo_dir, None)
 
     secrets_conf = get_config_func(repo_dir, 'secrets.conf', needs_user_config=False)

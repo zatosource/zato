@@ -25,6 +25,7 @@ from zato.cli import common_odb_opts, is_arg_given, ZatoCommand
 from zato.common import CACHE, CONNECTION, DATA_FORMAT, IPC, MISC, PUBSUB, SIMPLE_IO, URL_TYPE
 from zato.common.odb.model import CacheBuiltin, Cluster, HTTPBasicAuth, HTTPSOAP, PubSubEndpoint, \
      PubSubSubscription, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, Service, WSSDefinition
+from zato.common.odb.post_process import ODBPostProcess
 from zato.common.pubsub import new_sub_key
 from zato.common.util import get_http_json_channel, get_http_soap_channel
 from zato.common.util.json_ import dumps
@@ -475,12 +476,13 @@ class Create(ZatoCommand):
         session = self._get_session(engine)
 
         if engine.dialect.has_table(engine.connect(), 'install_state'):
-            if is_arg_given(args, 'skip-if-exists'):
+            if is_arg_given(args, 'skip-if-exists', 'skip_if_exists'):
                 if show_output:
                     if self.verbose:
                         self.logger.debug('Cluster already exists, skipped its creation')
                     else:
                         self.logger.info('OK')
+                return
 
         with session.no_autoflush:
 
@@ -493,6 +495,9 @@ class Create(ZatoCommand):
                   'broker_host', 'broker_port', 'lb_host', 'lb_port', 'lb_agent_port'):
                 setattr(cluster, name, getattr(args, name))
             session.add(cluster)
+
+            # With a cluster object in place, we can construct the ODB post-processor
+            odb_post_process = ODBPostProcess(session, cluster, None)
 
             # admin.invoke user's password may be possibly in one of these attributes,
             # but if it is now, generate a new one.
@@ -539,8 +544,14 @@ class Create(ZatoCommand):
             # SFTP connections / connectors
             self.add_sftp_credentials(session, cluster)
 
+            # Account to access cache services with
+            self.add_cache_credentials(session, cluster)
+
             # SSO
             self.add_sso_endpoints(session, cluster)
+
+            # Run ODB post-processing tasks
+            odb_post_process.run()
 
         try:
             session.commit()
@@ -565,7 +576,8 @@ class Create(ZatoCommand):
 
     def add_api_invoke(self, session, cluster, service, pubapi_sec):
         channel = HTTPSOAP(None, '/zato/api/invoke', True, True, 'channel', 'plain_http',
-            None, '/zato/api/invoke/{service_name}', None, '', None, None, merge_url_params_req=True, service=service,
+            None, '/zato/api/invoke/{service_name}', None, '', None, None,
+            merge_url_params_req=True, service=service, security=pubapi_sec,
             cluster=cluster)
         session.add(channel)
 
@@ -842,6 +854,24 @@ class Create(ZatoCommand):
             # For single keys
             'zato.cache.builtin.pubapi.single-key-service':  '/zato/cache/{key}',
 
+            # Multi-key get
+            'zato.cache.builtin.pubapi.get-by-prefix':       '/zato/cache/get/by-prefix/{key}',
+            'zato.cache.builtin.pubapi.get-by-regex':        '/zato/cache/get/by-regex/{key}',
+            'zato.cache.builtin.pubapi.get-by-suffix':       '/zato/cache/get/by-suffix/{key}',
+            'zato.cache.builtin.pubapi.get-contains':        '/zato/cache/get/contains/{key}',
+            'zato.cache.builtin.pubapi.get-not-contains':    '/zato/cache/get/not-contains/{key}',
+            'zato.cache.builtin.pubapi.get-contains-all':    '/zato/cache/get/contains-all',
+            'zato.cache.builtin.pubapi.get-contains-any':    '/zato/cache/get/contains-any',
+
+            # Multi-key set
+            'zato.cache.builtin.pubapi.set-by-prefix':       '/zato/cache/set/by-prefix/{key}',
+            'zato.cache.builtin.pubapi.set-by-regex':        '/zato/cache/set/by-regex/{key}',
+            'zato.cache.builtin.pubapi.set-by-suffix':       '/zato/cache/set/by-suffix/{key}',
+            'zato.cache.builtin.pubapi.set-contains':        '/zato/cache/set/contains/{key}',
+            'zato.cache.builtin.pubapi.set-not-contains':    '/zato/cache/set/not-contains/{key}',
+            'zato.cache.builtin.pubapi.set-contains-all':    '/zato/cache/set/contains-all',
+            'zato.cache.builtin.pubapi.set-contains-any':    '/zato/cache/set/contains-any',
+
             # Multi-key delete
             'zato.cache.builtin.pubapi.delete-by-prefix':    '/zato/cache/delete/by-prefix/{key}',
             'zato.cache.builtin.pubapi.delete-by-regex':     '/zato/cache/delete/by-regex/{key}',
@@ -853,27 +883,37 @@ class Create(ZatoCommand):
 
             # Multi-key expire
             'zato.cache.builtin.pubapi.expire-by-prefix':    '/zato/cache/expire/by-prefix/{key}',
-            'zato.cache.builtin.pubapi.expire-by-regex':     '/zato/cache/expire/by-prefix/{key}',
+            'zato.cache.builtin.pubapi.expire-by-regex':     '/zato/cache/expire/by-regex/{key}',
             'zato.cache.builtin.pubapi.expire-by-suffix':    '/zato/cache/expire/by-suffix/{key}',
             'zato.cache.builtin.pubapi.expire-contains':     '/zato/cache/expire/contains/{key}',
             'zato.cache.builtin.pubapi.expire-not-contains': '/zato/cache/expire/not-contains/{key}',
             'zato.cache.builtin.pubapi.expire-contains-all': '/zato/cache/expire/contains-all',
             'zato.cache.builtin.pubapi.expire-contains-any': '/zato/cache/expire/contains-any',
 
-            # Multi-key set
-            'zato.cache.builtin.pubapi.set-by-prefix':       '/zato/cache/set/by-prefix/{key}',
-            'zato.cache.builtin.pubapi.set-by-regex':        '/zato/cache/set/by-regex/{key}',
-            'zato.cache.builtin.pubapi.set-by-suffix':       '/zato/cache/set/by-suffix/{key}',
-            'zato.cache.builtin.pubapi.set-contains':        '/zato/cache/set/contains/{key}',
-            'zato.cache.builtin.pubapi.set-not-contains':    '/zato/cache/set/not-contains/{key}',
-            'zato.cache.builtin.pubapi.set-contains-all':    '/zato/cache/set/contains-all',
-            'zato.cache.builtin.pubapi.set-contains-any':    '/zato/cache/set/contains-any',
         }
 
         service_to_impl = {
 
             # For single keys
             'zato.cache.builtin.pubapi.single-key-service':  'zato.server.service.internal.cache.builtin.pubapi.SingleKeyService',
+
+            # Multi-key get
+            'zato.cache.builtin.pubapi.get-by-prefix':       'zato.server.service.internal.cache.builtin.pubapi.GetByPrefix',
+            'zato.cache.builtin.pubapi.get-by-regex':        'zato.server.service.internal.cache.builtin.pubapi.GetByRegex',
+            'zato.cache.builtin.pubapi.get-by-suffix':       'zato.server.service.internal.cache.builtin.pubapi.GetBySuffix',
+            'zato.cache.builtin.pubapi.get-contains':        'zato.server.service.internal.cache.builtin.pubapi.GetContains',
+            'zato.cache.builtin.pubapi.get-not-contains':    'zato.server.service.internal.cache.builtin.pubapi.GetNotContains',
+            'zato.cache.builtin.pubapi.get-contains-all':    'zato.server.service.internal.cache.builtin.pubapi.GetContainsAll',
+            'zato.cache.builtin.pubapi.get-contains-any':    'zato.server.service.internal.cache.builtin.pubapi.GetContainsAny',
+
+            # Multi-key set
+            'zato.cache.builtin.pubapi.set-by-prefix':       'zato.server.service.internal.cache.builtin.pubapi.SetByPrefix',
+            'zato.cache.builtin.pubapi.set-by-regex':        'zato.server.service.internal.cache.builtin.pubapi.SetByRegex',
+            'zato.cache.builtin.pubapi.set-by-suffix':       'zato.server.service.internal.cache.builtin.pubapi.SetBySuffix',
+            'zato.cache.builtin.pubapi.set-contains':        'zato.server.service.internal.cache.builtin.pubapi.SetContains',
+            'zato.cache.builtin.pubapi.set-not-contains':    'zato.server.service.internal.cache.builtin.pubapi.SetNotContains',
+            'zato.cache.builtin.pubapi.set-contains-all':    'zato.server.service.internal.cache.builtin.pubapi.SetContainsAll',
+            'zato.cache.builtin.pubapi.set-contains-any':    'zato.server.service.internal.cache.builtin.pubapi.SetContainsAny',
 
             # Multi-key delete
             'zato.cache.builtin.pubapi.delete-by-prefix':    'zato.server.service.internal.cache.builtin.pubapi.DeleteByPrefix',
@@ -893,14 +933,6 @@ class Create(ZatoCommand):
             'zato.cache.builtin.pubapi.expire-contains-all': 'zato.server.service.internal.cache.builtin.pubapi.ExpireContainsAll',
             'zato.cache.builtin.pubapi.expire-contains-any': 'zato.server.service.internal.cache.builtin.pubapi.ExpireContainsAny',
 
-            # Multi-key set
-            'zato.cache.builtin.pubapi.set-by-prefix':       'zato.server.service.internal.cache.builtin.pubapi.SetByPrefix',
-            'zato.cache.builtin.pubapi.set-by-regex':        'zato.server.service.internal.cache.builtin.pubapi.SetByRegex',
-            'zato.cache.builtin.pubapi.set-by-suffix':       'zato.server.service.internal.cache.builtin.pubapi.SetBySuffix',
-            'zato.cache.builtin.pubapi.set-contains':        'zato.server.service.internal.cache.builtin.pubapi.SetContains',
-            'zato.cache.builtin.pubapi.set-not-contains':    'zato.server.service.internal.cache.builtin.pubapi.SetNotContains',
-            'zato.cache.builtin.pubapi.set-contains-all':    'zato.server.service.internal.cache.builtin.pubapi.SetContainsAll',
-            'zato.cache.builtin.pubapi.set-contains-any':    'zato.server.service.internal.cache.builtin.pubapi.SetContainsAny',
         }
 
         sec = HTTPBasicAuth(None, 'zato.default.cache.client', True, 'zato.cache', 'Zato cache', new_password(), cluster)
@@ -1082,7 +1114,13 @@ class Create(ZatoCommand):
     def add_sftp_credentials(self, session, cluster):
         username = IPC.CONNECTOR.USERNAME.SFTP
         sec = HTTPBasicAuth(None, username, True, username, 'Zato SFTP', new_password(), cluster)
+        session.add(sec)
 
+# ################################################################################################################################
+
+    def add_cache_credentials(self, session, cluster):
+        username = CACHE.API_USERNAME
+        sec = HTTPBasicAuth(None, username, True, username, 'Zato Cache', new_password(), cluster)
         session.add(sec)
 
 # ################################################################################################################################

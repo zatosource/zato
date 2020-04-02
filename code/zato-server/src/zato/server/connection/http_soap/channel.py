@@ -46,15 +46,16 @@ stack_format = None
 
 # ################################################################################################################################
 
-# Type checking
-import typing
-
-if typing.TYPE_CHECKING:
+if 0:
+    from zato.server.service import Service
+    from zato.server.service.reqresp import Response
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.http_soap.url_data import URLData
 
     # For pyflakes
     ParallelServer = ParallelServer
+    Response = Response
+    Service = Service
     URLData = URLData
 
 # ################################################################################################################################
@@ -81,8 +82,9 @@ _status_too_many_requests = '{} {}'.format(TOO_MANY_REQUESTS, HTTP_RESPONSES[TOO
 
 # ################################################################################################################################
 
-# Definitions of these security types may be linked to SSO users and their rate limiting definitions
-_sec_def_sso_rate_limit = SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.JWT
+_basic_auth = SEC_DEF_TYPE.BASIC_AUTH
+_jwt = SEC_DEF_TYPE.JWT
+_sso_ext_auth = _basic_auth, _jwt
 
 # ################################################################################################################################
 
@@ -236,8 +238,8 @@ class RequestDispatcher(object):
         no_url_match=(None, False), _response_404=response_404, _has_debug=_has_debug,
         _http_soap_action='HTTP_SOAPACTION', _stringio=StringIO, _gzipfile=GzipFile, _accept_any_http=accept_any_http,
         _accept_any_internal=accept_any_internal, _rate_limit_type_http=RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP,
-        _rate_limit_type_sso_user=RATE_LIMIT.OBJECT_TYPE.SSO_USER, _stack_format=stack_format,
-        _exc_sep='*' * 80, _sec_def_sso_rate_limit=_sec_def_sso_rate_limit, _basic_auth=SEC_DEF_TYPE.BASIC_AUTH):
+        _rate_limit_type_sso_user=RATE_LIMIT.OBJECT_TYPE.SSO_USER, _stack_format=stack_format, _exc_sep='*' * 80,
+        _jwt=_jwt, _sso_ext_auth=_sso_ext_auth):
 
         # Needed as one of the first steps
         http_method = wsgi_environ['REQUEST_METHOD']
@@ -311,7 +313,7 @@ class RequestDispatcher(object):
                                 cid, payload, channel_item.data_format, channel_item.transport)
 
                     # Will raise an exception on any security violation
-                    self.url_data.check_security(
+                    auth_result = self.url_data.check_security(
                         sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store)
 
                 # Check rate limiting now - this could not have been done earlier because we wanted
@@ -330,42 +332,21 @@ class RequestDispatcher(object):
 
                     # Not all sec_def types may have associated SSO users
                     if sec.sec_def != ZATO_NONE:
-                        if sec.sec_def.sec_type in _sec_def_sso_rate_limit:
 
-                            # Do we have an SSO user related to this sec_def?
-                            auth_id_link_map = self._sso_api_user.auth_id_link_map['zato.{}'.format(
-                                sec.sec_def.sec_type)] # type: dict
+                        if sec.sec_def.sec_type in _sso_ext_auth:
 
-                            sso_user_id = auth_id_link_map.get(sec.sec_def.id)
+                            # JWT comes with external sessions whereas Basic Auth does not
+                            if sec.sec_def.sec_type == _jwt:
+                                ext_session_id = auth_result.raw_token
+                            else:
+                                ext_session_id = None
 
-                            if sso_user_id:
-
-                                # At this point we have an SSO user and we know that credentials
-                                # from the request were valid so we may check rate-limiting
-                                # first and then create or extend the user's associated SSO session.
-                                # In other words, we can already act as though the user was already
-                                # logged in because in fact he or she is logged in, just using
-                                # a security definition from sec_def.
-
-                                # Check rate-limiting
-                                self.server.rate_limiting.check_limit(cid, _rate_limit_type_sso_user,
-                                    sso_user_id, wsgi_environ['zato.http.remote_addr'], False)
-
-                                # Rate-limiting went fine, we can now create or extend
-                                # the person's SSO session linked to credentials from the request.
-
-                                current_app = wsgi_environ.get(self.server.sso_config.apps.http_header) or \
-                                    self.server.sso_config.apps.default
-
-                                self.server.sso_api.user.session.on_external_auth_succeeded(
-                                    cid,
-                                    sec.sec_def,
-                                    sso_user_id,
-                                    sec.sec_def if sec.sec_def.sec_type == _basic_auth else wsgi_environ['HTTP_AUTHORIZATION'],
-                                    current_app,
-                                    wsgi_environ['zato.http.remote_addr'].decode('utf8'),
-                                    wsgi_environ.get('HTTP_USER_AGENT'),
-                                )
+                            # Try to log in the user to SSO by that account's external credentials.
+                            self.server.sso_tool.on_external_auth(
+                                sec.sec_def.sec_type, sec.sec_def.id, sec.sec_def.username, cid,
+                                wsgi_environ, ext_session_id)
+                        else:
+                            raise Exception('Unexpected sec_type `{}`'.format(sec.sec_def.sec_type))
 
                 # This is handy if someone invoked URLData's OAuth API manually
                 wsgi_environ['zato.oauth.post_data'] = post_data
@@ -494,13 +475,14 @@ class RequestHandler(object):
     """ Handles individual HTTP requests to a given service.
     """
     def __init__(self, server=None):
-        self.server = server # A ParallelServer instance
-        self.use_soap_envelope = asbool(self.server.fs_server_config.misc.use_soap_envelope)
+        # type: (ParallelServer)
+        self.server = server
+        self.use_soap_envelope = asbool(self.server.fs_server_config.misc.use_soap_envelope) # type: bool
 
 # ################################################################################################################################
 
     def _set_response_data(self, service, **kwargs):
-        """ A callback invoked by the services after it's done producing the response.
+        """ A callback invoked by the services after it is done producing the response.
         """
         data_format = kwargs.get('data_format')
         transport = kwargs.get('transport')
@@ -581,7 +563,7 @@ class RequestHandler(object):
         else:
             query_string = str(sorted(channel_params.items()))
             data = '%s%s%s%s' % (wsgi_environ['REQUEST_METHOD'], wsgi_environ['PATH_INFO'], query_string, raw_request)
-            hash_value = _sha256(data).hexdigest()
+            hash_value = _sha256(data.encode('utf8')).hexdigest()
             hash_value = '-'.join(split_re(hash_value))
 
         # No matter if hash value is default or from service, always prefix it with channel's type and ID
@@ -600,14 +582,14 @@ class RequestHandler(object):
 
 # ################################################################################################################################
 
-    def set_response_in_cache(self, channel_item, key, response, _dumps=dumps):
+    def set_response_in_cache(self, channel_item, key, response, _dumps=dumps, _py3=PY3):
         """ Caches responses from this channel's invocation for as long as the cache is configured to keep it.
         """
         self.server.set_in_cache(channel_item['cache_type'], channel_item['cache_name'], key, _dumps({
             'payload': response.payload,
             'content_type': response.content_type,
             'headers': response.headers,
-            'status_code': response.status_code,
+            'status_code': response.status_code.value if _py3 else response.status_code,
         }))
 
 # ################################################################################################################################
@@ -658,7 +640,7 @@ class RequestHandler(object):
         if payload:
             data=payload.getvalue()
         else:
-            data=b"""<{response_elem} xmlns="{namespace}">
+            data="""<{response_elem} xmlns="{namespace}">
                 <zato_env>
                   <cid>{cid}</cid>
                   <result>{result}</result>
@@ -673,10 +655,11 @@ class RequestHandler(object):
 # ################################################################################################################################
 
     def set_payload(self, response, data_format, transport, service_instance):
-        """ Sets the actual payload to represent the service's response out of
-        whatever the service produced. This includes converting dictionaries into
-        JSON, adding Zato metadata and wrapping the mesasge in SOAP if need be.
+        """ Sets the actual payload to represent the service's response out of what the service produced.
+        This includes converting dictionaries into JSON, adding Zato metadata and wrapping the mesasge in SOAP if need be.
         """
+        # type: (Response, str, str, Service)
+
         if isinstance(service_instance, AdminService):
             if data_format == SIMPLE_IO.FORMAT.JSON:
                 zato_env = {'zato_env':{'result':response.result, 'cid':service_instance.cid, 'details':response.result_details}}
@@ -713,10 +696,12 @@ class RequestHandler(object):
 
 # ################################################################################################################################
 
-    def set_content_type(self, response, data_format, transport, url_match, channel_item):
+    def set_content_type(self, response, data_format, transport, ignored_url_match, channel_item):
         """ Sets a response's content type if one hasn't been supplied by the user.
         """
-        # A user provided their own content type ..
+        # type: (Response, str, str, object, object)
+
+        # A user provided his or her own content type ..
         if response.content_type_changed:
             content_type = response.content_type
         else:

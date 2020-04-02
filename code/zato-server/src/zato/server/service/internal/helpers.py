@@ -29,6 +29,15 @@ if not settings.configured:
 
 # ################################################################################################################################
 
+default_services_allowed = (
+    'zato.pubsub.pubapi.publish-message',
+    'zato.pubsub.pubapi.subscribe-wsx',
+    'zato.pubsub.pubapi.unsubscribe',
+    'zato.pubsub.resume-wsx-subscription',
+)
+
+# ################################################################################################################################
+
 class Echo(Service):
     """ Copies request over to response.
     """
@@ -171,34 +180,39 @@ class WebSocketsGateway(Service):
     """ Dispatches incoming WebSocket requests to target services.
     """
     name = 'helpers.web-sockets-gateway'
+    services_allowed = []
 
     class SimpleIO:
         input_required = 'service',
         input_optional = AsIs('request'),
         output_optional = 'sub_key',
+        skip_empty_keys = True
 
-    def handle(self, _pubsub_prefix='zato.pubsub.pubapi'):
+    def handle(self, _pubsub_prefix='zato.pubsub.pubapi', _default_allowed=default_services_allowed):
 
         # Local aliases
         input = self.request.input
         service = input.service
 
-        # We need to special-case requests related to pub/sub
-        # because they will require calling self.pubsub on behalf of the current WSX connection.
-        if service.startswith(_pubsub_prefix):
-            action = service.replace(_pubsub_prefix, '')
-            action = action.split('.')[1]
+        if service \
+           and service not in _default_allowed \
+           and service not in self.services_allowed:
+                self.logger.warn('Service `%s` is not among %s', service, self.services_allowed)
+                raise Forbidden(self.cid)
 
-            if action == 'subscribe-wsx':
-                topic_name = input.request['topic_name']
-                unsub_on_wsx_close = input.request.get('unsub_on_wsx_close', True)
-                sub_key = self.pubsub.subscribe(
-                    topic_name, use_current_wsx=True, unsub_on_wsx_close=unsub_on_wsx_close, service=self)
-                self.response.payload.sub_key = sub_key
+        # We need to special-pub/sub subscriptions
+        # because they will require calling self.pubsub on behalf of the current WSX connection.
+        if service == 'zato.pubsub.pubapi.subscribe-wsx':
+            topic_name = input.request['topic_name']
+            unsub_on_wsx_close = input.request.get('unsub_on_wsx_close', True)
+            sub_key = self.pubsub.subscribe(
+                topic_name, use_current_wsx=True, unsub_on_wsx_close=unsub_on_wsx_close, service=self)
+            self.response.payload.sub_key = sub_key
 
         else:
             self.wsgi_environ['zato.orig_channel'] = self.channel
-            self.response.payload = self.invoke(service, self.request.input.request, wsgi_environ=self.wsgi_environ)
+            response = self.invoke(service, self.request.input.request, wsgi_environ=self.wsgi_environ)
+            self.response.payload = response
 
 # ################################################################################################################################
 
@@ -228,3 +242,12 @@ class ServiceGateway(Invoke):
     """ Service to invoke other services through.
     """
     name = 'helpers.service-gateway'
+
+# ################################################################################################################################
+
+class ChannelFileTransfer(Service):
+    """ A no-op marker service uses by file transfer channels.
+    """
+    name = 'pub.zato.channel.file.transfer'
+
+# ################################################################################################################################
