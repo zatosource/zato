@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from sys import maxint
 from tempfile import NamedTemporaryFile
 from unittest import TestCase
 
@@ -21,10 +20,14 @@ from configobj import ConfigObj
 
 # Zato
 from zato.cli.create_server import get_bytes_to_str_encoding, simple_io_conf_contents
+from zato.common.py23_ import maxint
 from zato.common.util.simpleio import get_sio_server_config
 
 # Zato - Cython
 from zato.simpleio import CySimpleIO
+
+# Python 2/3 compatibility
+from past.builtins import unicode
 
 # ################################################################################################################################
 
@@ -45,7 +48,10 @@ class BaseTestCase(TestCase):
     def get_server_config(self):
 
         with NamedTemporaryFile() as f:
-            f.write(simple_io_conf_contents.format(bytes_to_str_encoding=get_bytes_to_str_encoding()))
+            contents = simple_io_conf_contents.format(bytes_to_str_encoding=get_bytes_to_str_encoding())
+            if isinstance(contents, unicode):
+                contents = contents.encode('utf8')
+            f.write(contents)
             f.flush()
 
             sio_fs_config = ConfigObj(f.name)
