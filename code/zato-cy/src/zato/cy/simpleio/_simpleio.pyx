@@ -200,6 +200,12 @@ cdef class Elem(object):
         self.is_required = is_required
         self.user_default_value = self.default_value = kwargs.get('default', NotGiven)
 
+    def __lt__(self, other):
+        if isinstance(other, Elem):
+            return self.name < other.name
+        else:
+            return self.name < other
+
     @property
     def name(self):
         return self._name
