@@ -560,9 +560,6 @@ cdef class Text(Elem):
             return value
         else:
             if isinstance(value, past_unicode):
-                print()
-                print(111, value)
-                print()
                 return value
             else:
                 if isinstance(value, past_str):
