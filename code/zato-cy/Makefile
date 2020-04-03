@@ -19,4 +19,4 @@ simpleio:
 
 simpleio-test:
 	$(MAKE) build
-	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/simpleio_/test_parsing_input_json.py -s
+	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/simpleio_/test_*.py -s
