@@ -44,8 +44,8 @@ class InputPlainParsingTestCase(BaseTestCase):
         with self.assertRaises(ValueError) as ctx:
             self.get_sio(SimpleIO, test_class_name)
 
-        expected = "Elements in input_required and input_optional cannot be shared, found:`['abc', 'zxc']` in `<my-test-class>`"
-        self.assertEquals(ctx.exception.message, expected)
+        expected = "Elements in input_required and input_optional cannot be shared, found:`[b'abc', b'zxc']` in `<my-test-class>`"
+        self.assertEquals(ctx.exception.args[0], expected)
 
 # ################################################################################################################################
 
