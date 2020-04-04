@@ -14,6 +14,9 @@ from zato.server.service import Service
 # Zato - Cython
 from test.zato.cy.simpleio_ import BaseTestCase, CySimpleIO, test_class_name
 
+# Python 2/3 compatibility
+from past.builtins import unicode
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -44,7 +47,11 @@ class InputPlainParsingTestCase(BaseTestCase):
         with self.assertRaises(ValueError) as ctx:
             self.get_sio(SimpleIO, test_class_name)
 
-        expected = "Elements in input_required and input_optional cannot be shared, found:`[b'abc', b'zxc']` in `<my-test-class>`"
+        elem1 = repr(unicode('abc'))
+        elem2 = repr(unicode('zxc'))
+
+        expected = "Elements in input_required and input_optional cannot be shared, found:`[{}, {}]` in `<my-test-class>`".\
+            format(elem1, elem2)
         self.assertEquals(ctx.exception.args[0], expected)
 
 # ################################################################################################################################
