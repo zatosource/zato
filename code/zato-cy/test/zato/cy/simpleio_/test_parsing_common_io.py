@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from test.zato.cy.simpleio_ import BaseTestCase, test_class_name
 
 # Python 2/3 compatibility
-from past.builtins import str as past_str, unicode
+from past.builtins import unicode
 
 # ################################################################################################################################
 # ################################################################################################################################
