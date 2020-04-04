@@ -11,6 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Zato
 from test.zato.cy.simpleio_ import BaseTestCase, test_class_name
 
+# Python 2/3 compatibility
+from past.builtins import str as past_str, unicode
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -36,8 +39,11 @@ class InputOutputParsingTestCase(BaseTestCase):
         with self.assertRaises(ValueError) as ctx:
             self.get_sio(SimpleIO, test_class_name)
 
+        elem1 = repr(unicode('aaa'))
+        elem2 = repr(unicode('bbb'))
+
         expected = "Cannot provide input_required if input is given, input:`qwerty`, " \
-            "input_required:`('aaa', 'bbb')`, input_optional:`[]`"
+            "input_required:`({}, {})`, input_optional:`[]`".format(elem1, elem2)
 
         self.assertEquals(ctx.exception.args[0], expected)
 
@@ -53,8 +59,11 @@ class InputOutputParsingTestCase(BaseTestCase):
         with self.assertRaises(ValueError) as ctx:
             self.get_sio(SimpleIO, test_class_name)
 
+        elem1 = repr(unicode('aaa'))
+        elem2 = repr(unicode('bbb'))
+
         expected = "Cannot provide input_optional if input is given, input:`qwerty`, " \
-            "input_required:`[]`, input_optional:`('aaa', 'bbb')`"
+            "input_required:`[]`, input_optional:`({}, {})`".format(elem1, elem2)
 
         self.assertEquals(ctx.exception.args[0], expected)
 
@@ -71,8 +80,14 @@ class InputOutputParsingTestCase(BaseTestCase):
         with self.assertRaises(ValueError) as ctx:
             self.get_sio(SimpleIO, test_class_name)
 
+        elem1 = repr(unicode('123'))
+        elem2 = repr(unicode('456'))
+
+        elem3 = repr(unicode('aaa'))
+        elem4 = repr(unicode('bbb'))
+
         expected = "Cannot provide input_required/input_optional if input is given, input:`qwerty`, " \
-            "input_required:`('123', '456')`, input_optional:`('aaa', 'bbb')`"
+            "input_required:`({}, {})`, input_optional:`({}, {})`".format(elem1, elem2, elem3, elem4)
 
         self.assertEquals(ctx.exception.args[0], expected)
 
@@ -88,8 +103,11 @@ class InputOutputParsingTestCase(BaseTestCase):
         with self.assertRaises(ValueError) as ctx:
             self.get_sio(SimpleIO, test_class_name)
 
+        elem1 = repr(unicode('aaa'))
+        elem2 = repr(unicode('bbb'))
+
         expected = "Cannot provide output_required if output is given, output:`qwerty`, " \
-            "output_required:`('aaa', 'bbb')`, output_optional:`[]`"
+            "output_required:`({}, {})`, output_optional:`[]`".format(elem1, elem2)
 
         self.assertEquals(ctx.exception.args[0], expected)
 
@@ -105,8 +123,11 @@ class InputOutputParsingTestCase(BaseTestCase):
         with self.assertRaises(ValueError) as ctx:
             self.get_sio(SimpleIO, test_class_name)
 
+        elem1 = repr(unicode('aaa'))
+        elem2 = repr(unicode('bbb'))
+
         expected = "Cannot provide output_optional if output is given, output:`qwerty`, " \
-            "output_required:`[]`, output_optional:`('aaa', 'bbb')`"
+            "output_required:`[]`, output_optional:`({}, {})`".format(elem1, elem2)
 
         self.assertEquals(ctx.exception.args[0], expected)
 
@@ -123,14 +144,20 @@ class InputOutputParsingTestCase(BaseTestCase):
         with self.assertRaises(ValueError) as ctx:
             self.get_sio(SimpleIO, test_class_name)
 
+        elem1 = repr(unicode('123'))
+        elem2 = repr(unicode('456'))
+
+        elem3 = repr(unicode('aaa'))
+        elem4 = repr(unicode('bbb'))
+
         expected = "Cannot provide output_required/output_optional if output is given, output:`qwerty`, " \
-            "output_required:`('123', '456')`, output_optional:`('aaa', 'bbb')`"
+            "output_required:`({}, {})`, output_optional:`({}, {})`".format(elem1, elem2, elem3, elem4)
 
         self.assertEquals(ctx.exception.args[0], expected)
 
 # ################################################################################################################################
 
-    def xtest_elem_sharing_not_allowed(self):
+    def test_elem_sharing_not_allowed(self):
 
         class SimpleIO:
             input_required = 'abc', 'zxc', 'qwe'
@@ -139,7 +166,12 @@ class InputOutputParsingTestCase(BaseTestCase):
         with self.assertRaises(ValueError) as ctx:
             self.get_sio(SimpleIO, test_class_name)
 
-        expected = "Elements in input_required and input_optional cannot be shared, found:`[u'abc', u'zxc']` in `<my-test-class>`"
+        elem1 = repr(unicode('abc'))
+        elem2 = repr(unicode('zxc'))
+
+        expected = "Elements in input_required and input_optional cannot be shared, found:`[{}, {}]` in `<my-test-class>`".\
+            format(elem1, elem2)
+
         self.assertEquals(ctx.exception.args[0], expected)
 
 # ################################################################################################################################
@@ -153,7 +185,12 @@ class InputOutputParsingTestCase(BaseTestCase):
         with self.assertRaises(ValueError) as ctx:
             self.get_sio(SimpleIO, test_class_name)
 
-        expected = "Elements in input_required and input_optional cannot be shared, found:`[b'abc', b'zxc']` in `<my-test-class>`"
+        elem1 = repr(unicode('abc'))
+        elem2 = repr(unicode('zxc'))
+
+        expected = "Elements in input_required and input_optional cannot be shared, found:`[{}, {}]` in `<my-test-class>`".\
+            format(elem1, elem2)
+
         self.assertEquals(ctx.exception.args[0], expected)
 
 # ################################################################################################################################
