@@ -20,11 +20,11 @@ def c18n_sio_fs_config(sio_fs_config):
 
     for name in 'bool', 'int', 'secret':
         config_entry = sio_fs_config[name]
-        config_entry.exact = set(config_entry.exact)
-        config_entry.prefix = set(config_entry.prefix)
-        config_entry.suffix = set(config_entry.suffix)
+        config_entry.exact = set(config_entry.get('exact', []))
+        config_entry.prefix = set(config_entry.get('prefix', []))
+        config_entry.suffix = set(config_entry.get('suffix', []))
 
-    for key, value in sio_fs_config.default.items():
+    for key, value in sio_fs_config.get('default', {}).items():
         if isinstance(value, basestring):
             if not isinstance(value, unicode):
                 value = value.decode('utf8')
@@ -56,33 +56,53 @@ def get_sio_server_config(sio_fs_config):
     sio_server_config.int_config = int_config
     sio_server_config.secret_config = secret_config
 
-    sio_server_config.input_required_name = sio_fs_config.default.input_required_name
-    sio_server_config.input_optional_name = sio_fs_config.default.input_optional_name
-    sio_server_config.output_required_name = sio_fs_config.default.output_required_name
-    sio_server_config.output_optional_name = sio_fs_config.default.output_optional_name
-    sio_server_config.default_value = sio_fs_config.default.default_value
-    sio_server_config.default_input_value = sio_fs_config.default.default_input_value
-    sio_server_config.default_output_value = sio_fs_config.default.default_output_value
+    sio_fs_config_default = sio_fs_config.get('default')
 
-    sio_server_config.response_elem = sio_fs_config.default.response_elem
+    if sio_fs_config_default:
 
-    sio_server_config.skip_empty_keys = sio_fs_config.default.skip_empty_keys
-    sio_server_config.skip_empty_request_keys = sio_fs_config.default.skip_empty_request_keys
-    sio_server_config.skip_empty_response_keys = sio_fs_config.default.skip_empty_response_keys
+        sio_server_config.input_required_name = sio_fs_config.default.input_required_name
+        sio_server_config.input_optional_name = sio_fs_config.default.input_optional_name
+        sio_server_config.output_required_name = sio_fs_config.default.output_required_name
+        sio_server_config.output_optional_name = sio_fs_config.default.output_optional_name
+        sio_server_config.default_value = sio_fs_config.default.default_value
+        sio_server_config.default_input_value = sio_fs_config.default.default_input_value
+        sio_server_config.default_output_value = sio_fs_config.default.default_output_value
 
-    sio_server_config.prefix_as_is = sio_fs_config.default.prefix_as_is
-    sio_server_config.prefix_bool = sio_fs_config.default.prefix_bool
-    sio_server_config.prefix_csv = sio_fs_config.default.prefix_csv
-    sio_server_config.prefix_date = sio_fs_config.default.prefix_date
-    sio_server_config.prefix_date_time = sio_fs_config.default.prefix_date_time
-    sio_server_config.prefix_dict = sio_fs_config.default.prefix_dict
-    sio_server_config.prefix_dict_list = sio_fs_config.default.prefix_dict_list
-    sio_server_config.prefix_float = sio_fs_config.default.prefix_float
-    sio_server_config.prefix_int = sio_fs_config.default.prefix_int
-    sio_server_config.prefix_list = sio_fs_config.default.prefix_list
-    sio_server_config.prefix_opaque = sio_fs_config.default.prefix_opaque
-    sio_server_config.prefix_text = sio_fs_config.default.prefix_text
-    sio_server_config.prefix_uuid = sio_fs_config.default.prefix_uuid
+        sio_server_config.response_elem = sio_fs_config.default.response_elem
+
+        sio_server_config.skip_empty_keys = sio_fs_config.default.skip_empty_keys
+        sio_server_config.skip_empty_request_keys = sio_fs_config.default.skip_empty_request_keys
+        sio_server_config.skip_empty_response_keys = sio_fs_config.default.skip_empty_response_keys
+
+        sio_server_config.prefix_as_is = sio_fs_config.default.prefix_as_is
+        sio_server_config.prefix_bool = sio_fs_config.default.prefix_bool
+        sio_server_config.prefix_csv = sio_fs_config.default.prefix_csv
+        sio_server_config.prefix_date = sio_fs_config.default.prefix_date
+        sio_server_config.prefix_date_time = sio_fs_config.default.prefix_date_time
+        sio_server_config.prefix_dict = sio_fs_config.default.prefix_dict
+        sio_server_config.prefix_dict_list = sio_fs_config.default.prefix_dict_list
+        sio_server_config.prefix_float = sio_fs_config.default.prefix_float
+        sio_server_config.prefix_int = sio_fs_config.default.prefix_int
+        sio_server_config.prefix_list = sio_fs_config.default.prefix_list
+        sio_server_config.prefix_opaque = sio_fs_config.default.prefix_opaque
+        sio_server_config.prefix_text = sio_fs_config.default.prefix_text
+        sio_server_config.prefix_uuid = sio_fs_config.default.prefix_uuid
+
+    else:
+
+        sio_server_config.input_required_name = 'input_required'
+        sio_server_config.input_optional_name = 'input_optional'
+        sio_server_config.output_required_name = 'output_required'
+        sio_server_config.output_optional_name = 'output_optional'
+        sio_server_config.default_value = 'default_value'
+        sio_server_config.default_input_value = 'default_input_value'
+        sio_server_config.default_output_value = 'default_output_value'
+
+        sio_server_config.response_elem = 'response'
+
+        sio_server_config.skip_empty_keys = 'skip_empty_keys'
+        sio_server_config.skip_empty_request_keys = 'skip_empty_request_keys'
+        sio_server_config.skip_empty_response_keys = 'skip_empty_response_keys'
 
     bytes_to_str_encoding = sio_fs_config.bytes_to_str.encoding
     if not isinstance(bytes_to_str_encoding, unicode):

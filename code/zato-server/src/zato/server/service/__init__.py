@@ -527,7 +527,7 @@ class Service(object):
         if may_have_wsgi_environ:
             self.request.http.init(self.wsgi_environ)
 
-        # self.is_sio attribute is set by ServiceStore during deployment
+        # self.has_sio attribute is set by ServiceStore during deployment
         if self.has_sio:
             self.request.init(True, self.cid, self.SimpleIO, self.data_format, self.transport, self.wsgi_environ,
                 self.server.encrypt)
