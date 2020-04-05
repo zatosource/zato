@@ -18,8 +18,8 @@ env:
   - MODE=packaging IMAGE=debian:8 PY_VERSION=python3
   - MODE=packaging IMAGE=debian:9
   - MODE=packaging IMAGE=debian:9 PY_VERSION=python3
-  - MODE=packaging IMAGE=alpine:3.9
-  - MODE=packaging IMAGE=alpine:3.9 PY_VERSION=python3
+  - MODE=packaging IMAGE=alpine:3.11
+  - MODE=packaging IMAGE=alpine:3.11 PY_VERSION=python3
 
 # List of operating systems to test under (second dimension)
 # https://docs.travis-ci.com/user/reference/overview/
