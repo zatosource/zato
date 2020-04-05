@@ -19,6 +19,9 @@ from uuid import UUID as uuid_UUID
 # datetutil
 from dateutil.parser import parse as dt_parse
 
+# lxml
+from lxml.etree import _Element as EtreeElement, XPath
+
 # Zato
 from zato.common import DATA_FORMAT
 from zato.util_convert import to_bool
@@ -147,8 +150,8 @@ cdef enum ElemType:
     decimal       =  500
     dict_         =  600
     dict_list     =  700
-    float_         =  800
-    int_           =  900
+    float_        =  800
+    int_          =  900
     list_         = 1000
     opaque        = 1100
     text          = 1200
@@ -164,6 +167,7 @@ cdef class Elem(object):
     cdef:
         ElemType _type
         unicode _name
+        object _xpath
         public object user_default_value
         public object default_value
         public bint is_required
@@ -200,11 +204,15 @@ cdef class Elem(object):
         self.is_required = is_required
         self.user_default_value = self.default_value = kwargs.get('default', NotGiven)
 
+# ################################################################################################################################
+
     def __lt__(self, other):
         if isinstance(other, Elem):
             return self.name < other.name
         else:
             return self.name < other
+
+# ################################################################################################################################
 
     @property
     def name(self):
@@ -272,8 +280,18 @@ cdef class Elem(object):
 
 # ################################################################################################################################
 
+    @property
+    def xpath(self):
+        return self._xpath
+
+    @xpath.setter
+    def xpath(self, value):
+        self._xpath = value
+
+# ################################################################################################################################
+
     @staticmethod
-    def _not_implemented():
+    def _not_implemented(*args, **kwargs):
         raise NotImplementedError()
 
     from_json = _not_implemented
@@ -284,6 +302,12 @@ cdef class Elem(object):
 
     from_csv  = _not_implemented
     to_csv    = _not_implemented
+
+    from_post  = _not_implemented
+    to_post    = _not_implemented
+
+    from_http  = _not_implemented
+    to_http    = _not_implemented
 
 # ################################################################################################################################
 
@@ -298,7 +322,15 @@ cdef class AsIs(Elem):
     def from_json(self, value):
         return AsIs.from_json_static(value)
 
+    @staticmethod
+    def from_xml_static(value, *args, **kwargs):
+        return value
+
+    def from_xml(self, value):
+        return AsIs.from_xml_static(value)
+
     to_json = from_json
+    to_xml  = from_xml
 
 # ################################################################################################################################
 
@@ -328,11 +360,10 @@ cdef class CSV(Elem):
     def from_json(self, value):
         return CSV.from_json_static(value)
 
-    from_xml = from_json
-
     def to_json(self, value, *ignored):
         return ','.join(value) if isinstance(value, (list, tuple)) else value
 
+    from_xml = from_json
     to_xml = to_json
 
 # ################################################################################################################################
@@ -353,6 +384,8 @@ cdef class Date(Elem):
     def from_json(self, value):
         return Date.from_json_static(value, class_name=self.__class__.__name__)
 
+    from_xml = from_json
+
 # ################################################################################################################################
 
 cdef class DateTime(Date):
@@ -371,6 +404,8 @@ cdef class Decimal(Elem):
 
     def from_json(self, value):
         return Decimal.from_json_static(value)
+
+    from_xml = from_json
 
 # ################################################################################################################################
 
@@ -478,6 +513,10 @@ cdef class Dict(Elem):
 
 # ################################################################################################################################
 
+    from_xml = from_json
+
+# ################################################################################################################################
+
 cdef class DictList(Dict):
     def __cinit__(self):
         self._type = ElemType.dict_list
@@ -494,6 +533,10 @@ cdef class DictList(Dict):
 
 # ################################################################################################################################
 
+    from_xml = from_json
+
+# ################################################################################################################################
+
 cdef class Float(Elem):
     def __cinit__(self):
         self._type = ElemType.float_
@@ -504,6 +547,8 @@ cdef class Float(Elem):
 
     def from_json(self, value):
         return Float.from_json_static(value)
+
+    from_xml = from_json
 
 # ################################################################################################################################
 
@@ -518,6 +563,8 @@ cdef class Int(Elem):
     def from_json(self, value):
         return Int.from_json_static(value)
 
+    from_xml = from_json
+
 # ################################################################################################################################
 
 cdef class List(Elem):
@@ -530,6 +577,8 @@ cdef class List(Elem):
 
     def from_json(self, value):
         return List.from_json_static(value)
+
+    from_xml = from_json
 
 # ################################################################################################################################
 
@@ -544,7 +593,7 @@ cdef class Opaque(Elem):
     def from_json(self, value):
         return Opaque.from_json_static(value)
 
-    from_xml = to_xml = from_json
+    from_xml = from_json
 
 # ################################################################################################################################
 
@@ -561,7 +610,7 @@ cdef class Text(Elem):
         self.encoding = kwargs.get('encoding', 'utf8')
 
     @staticmethod
-    def from_json_static(value, *args, **kwargs):
+    def _from_value_static(value, *args, **kwargs):
         if isinstance(value, basestring):
             return value
         else:
@@ -574,8 +623,14 @@ cdef class Text(Elem):
                 else:
                     return past_unicode(value)
 
+    @staticmethod
+    def from_json_static(value, *args, **kwargs):
+        return Text._from_value_static(value, *args, **kwargs)
+
     def from_json(self, value):
         return Text.from_json_static(value, encoding=self.encoding)
+
+    from_xml = from_json
 
 # ################################################################################################################################
 
@@ -590,7 +645,7 @@ cdef class UTC(Elem):
     def from_json(self, value):
         return Opaque.from_json_static(value)
 
-    from_xml = to_xml = from_json
+    from_xml = from_json
 
 # ################################################################################################################################
 
@@ -605,6 +660,8 @@ cdef class UUID(Elem):
 
     def from_json(self, value):
         return UUID.from_json_static(value)
+
+    from_xml = from_json
 
 # ################################################################################################################################
 
@@ -1056,20 +1113,49 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cdef dict _parse_input_elem(self, elem, unicode data_format):
+    cdef object _parse_input_elem(self, object elem, unicode data_format):
 
-        if not isinstance(elem, dict):
-            raise ValueError('Expected a dict instead of `{!r}` ({})'.format(elem, type(elem).__name__))
+        cdef bint is_dict = isinstance(elem, dict)
+        cdef bint is_xml = isinstance(elem, EtreeElement)
+
+        if not (is_dict or is_xml):
+            raise ValueError('Expected a dict or EtreeElement instead of `{!r}` ({})'.format(elem, type(elem).__name__))
 
         cdef dict out = {}
 
         for sio_item in chain(self.definition._input_required, self.definition._input_optional):
-            input_value = elem.get(sio_item.name, InternalNotGiven)
 
-            # We do not have such a key on input so an exception needs to be raised if this is a require one
+            # Parse the input dictionary
+            if is_dict:
+                input_value = elem.get(sio_item.name, InternalNotGiven)
+
+            # Parse the input XML document
+            elif is_xml:
+
+                # This will not be populated the first time around we are parsing an input document
+                # in which case we create this XPath expression here and make use of it going forward.
+                if not sio_item.xpath:
+                    sio_item.xpath = XPath('*[local-name() = "{}"]'.format(sio_item.name))
+
+                # Here, elem is the root of an XML document
+                input_value = sio_item.xpath.evaluate(elem)
+
+                if input_value:
+                    input_value = input_value[0].text
+                else:
+                    input_value = InternalNotGiven
+
+            # Otherwise, refuse to continue
+            else:
+                raise Exception('Invalid input, neither is_dict nor is_xml')
+
+            # We do not have such a elem on input so an exception needs to be raised if this is a require one
             if input_value is InternalNotGiven:
                 if sio_item.is_required:
-                    raise ValueError('No such key `{}` among `{}` in `{}`'.format(sio_item.name, elem.keys(), elem))
+
+                    all_elems = elem.keys() if is_dict else elem.getchildren()
+
+                    raise ValueError('No such elem `{}` among `{}` in `{}`'.format(sio_item.name, all_elems, elem))
                 else:
                     if self._should_skip_on_input(self.definition, sio_item, input_value):
                         # Continue to the next sio_item
@@ -1087,7 +1173,7 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cpdef parse_input(self, data, data_format):
+    cpdef object parse_input(self, data, data_format):
 
         if isinstance(data, list):
             out = []
