@@ -11,10 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from datetime import datetime
 from decimal import Decimal as decimal_Decimal
-from uuid import UUID as uuid_UUID, uuid4
-
-# dateutil
-from dateutil.parser import parse as dt_parse
+from uuid import UUID as uuid_UUID
 
 # lxml
 from lxml.etree import fromstring as lxml_fromstring, tostring as lxml_tostring
@@ -23,7 +20,7 @@ from lxml.etree import fromstring as lxml_fromstring, tostring as lxml_tostring
 from zato.common import DATA_FORMAT
 from zato.server.service import Service
 from zato.simpleio import backward_compat_default_value, AsIs, Bool, CSV, CySimpleIO, Date, DateTime, Decimal, \
-     Dict, DictList, Float, Int, List, NotGiven, Opaque, Text, UUID
+     Float, Int, Opaque, Text, UUID
 
 # Zato - Cython
 from test.zato.cy.simpleio_ import BaseTestCase
@@ -137,6 +134,13 @@ class XMLInputParsing(BaseTestCase):
         self.assertEquals(input.fff.year, 1988)
         self.assertEquals(input.fff.month, 1)
         self.assertEquals(input.fff.day, 29)
+
+        self.assertEquals(input.ggg, decimal_Decimal(ggg))
+        self.assertEquals(input.jjj, float(jjj))
+        self.assertEquals(input.mmm, int(mmm))
+        self.assertEquals(input.ooo, ooo)
+        self.assertEquals(input.ppp, ppp)
+        self.assertEquals(input.qqq, uuid_UUID(qqq))
 
 # ################################################################################################################################
 # ################################################################################################################################
