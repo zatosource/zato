@@ -65,7 +65,7 @@ ldap3==2.5.2
 lxml==3.7.3
 Mako==0.9.0
 markdown==2.6.7
-MarkupSafe==1.0
+MarkupSafe==1.1.1
 mccabe==0.2.1
 mock==3.0.5
 ndg-httpsclient==0.4.0
