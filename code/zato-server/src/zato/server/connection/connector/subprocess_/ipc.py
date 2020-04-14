@@ -125,7 +125,7 @@ class SubprocessIPC(object):
         start_python_process('{} connector'.format(self.connector_name), False, self.connector_module, '', extra_options={
             'deployment_key': self.server.deployment_key,
             'shmem_size': self.server.shmem_size
-        })
+        }, stderr_path=self.server.stderr_path)
 
         # Wait up to timeout seconds for the connector to start as indicated by its responding to a PING request
         now = datetime.utcnow()
