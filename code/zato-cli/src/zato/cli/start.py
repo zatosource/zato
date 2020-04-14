@@ -50,7 +50,8 @@ Examples:
     opts = [
         {'name':'--fg', 'help':'If given, the component will run in foreground', 'action':'store_true'},
         {'name':'--sync-internal', 'help':"Whether to synchronize component's internal state with ODB", 'action':'store_true'},
-        {'name':'--secret-key', 'help':"Component's secret key", 'action':'store'}
+        {'name':'--secret-key', 'help':"Component's secret key", 'action':'store'},
+        {'name':'--stderr-path', 'help':"Where to redirect stderr", 'action':'store'}
     ]
 
 # ################################################################################################################################
@@ -98,8 +99,11 @@ Examples:
         start_python_process(
             name, self.args.fg, py_path, program_dir, on_keyboard_interrupt, self.SYS_ERROR.FAILED_TO_START, {
                 'sync_internal': self.args.sync_internal,
-                'secret_key': self.args.secret_key or ''
-            }, stdin_data=self.stdin_data)
+                'secret_key': self.args.secret_key or '',
+                'stderr_path': self.args.stderr_path,
+            },
+            stderr_path=self.args.stderr_path,
+            stdin_data=self.stdin_data)
 
         if self.show_output:
             if not self.args.fg and self.verbose:
