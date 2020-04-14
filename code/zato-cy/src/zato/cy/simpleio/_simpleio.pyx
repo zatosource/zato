@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import types
+from csv import reader as csv_reader
 from decimal import Decimal as decimal_Decimal
 from itertools import chain
 from logging import getLogger
@@ -322,15 +323,7 @@ cdef class AsIs(Elem):
     def from_json(self, value):
         return AsIs.from_json_static(value)
 
-    @staticmethod
-    def from_xml_static(value, *args, **kwargs):
-        return value
-
-    def from_xml(self, value):
-        return AsIs.from_xml_static(value)
-
-    to_json = from_json
-    to_xml  = from_xml
+    to_xml = from_xml = to_json = from_json
 
 # ################################################################################################################################
 
@@ -345,7 +338,7 @@ cdef class Bool(Elem):
     def from_json(self, value):
         return Bool.from_json_static(value)
 
-    from_xml = to_json = to_xml = from_json
+    to_xml = from_xml = to_json = from_json
 
 # ################################################################################################################################
 
@@ -363,8 +356,7 @@ cdef class CSV(Elem):
     def to_json(self, value, *ignored):
         return ','.join(value) if isinstance(value, (list, tuple)) else value
 
-    from_xml = from_json
-    to_xml = to_json
+    to_xml = from_xml = to_json = from_json
 
 # ################################################################################################################################
 
@@ -384,7 +376,7 @@ cdef class Date(Elem):
     def from_json(self, value):
         return Date.from_json_static(value, class_name=self.__class__.__name__)
 
-    from_xml = from_json
+    from_csv = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -405,7 +397,7 @@ cdef class Decimal(Elem):
     def from_json(self, value):
         return Decimal.from_json_static(value)
 
-    from_xml = from_json
+    from_csv = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -513,7 +505,7 @@ cdef class Dict(Elem):
 
 # ################################################################################################################################
 
-    to_xml = from_xml = Elem._not_implemented
+    from_csv = to_csv = to_xml = from_xml = Elem._not_implemented
 
 # ################################################################################################################################
 
@@ -533,7 +525,7 @@ cdef class DictList(Dict):
 
 # ################################################################################################################################
 
-    to_xml = from_xml = Elem._not_implemented
+    from_csv = to_csv = to_xml = from_xml = Elem._not_implemented
 
 # ################################################################################################################################
 
@@ -548,7 +540,7 @@ cdef class Float(Elem):
     def from_json(self, value):
         return Float.from_json_static(value)
 
-    from_xml = from_json
+    from_csv = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -563,7 +555,7 @@ cdef class Int(Elem):
     def from_json(self, value):
         return Int.from_json_static(value)
 
-    from_xml = from_json
+    from_csv = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -578,7 +570,7 @@ cdef class List(Elem):
     def from_json(self, value):
         return List.from_json_static(value)
 
-    from_xml = from_json
+    from_csv = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -593,7 +585,7 @@ cdef class Opaque(Elem):
     def from_json(self, value):
         return Opaque.from_json_static(value)
 
-    from_xml = from_json
+    from_csv = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -630,7 +622,7 @@ cdef class Text(Elem):
     def from_json(self, value):
         return Text.from_json_static(value, encoding=self.encoding)
 
-    from_xml = from_json
+    from_csv = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -645,7 +637,7 @@ cdef class UTC(Elem):
     def from_json(self, value):
         return Opaque.from_json_static(value)
 
-    from_xml = from_json
+    from_csv = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -661,7 +653,7 @@ cdef class UUID(Elem):
     def from_json(self, value):
         return UUID.from_json_static(value)
 
-    from_xml = from_json
+    from_csv = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -1113,17 +1105,17 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cdef object _parse_input_elem(self, object elem, unicode data_format):
+    cdef object _parse_input_elem(self, object elem, unicode data_format, bint is_csv=False):
 
         cdef bint is_dict = isinstance(elem, dict)
         cdef bint is_xml = isinstance(elem, EtreeElement)
 
-        if not (is_dict or is_xml):
-            raise ValueError('Expected a dict or EtreeElement instead of `{!r}` ({})'.format(elem, type(elem).__name__))
+        if not (is_dict or is_csv or is_xml):
+            raise ValueError('Expected a dict, CSV or EtreeElement instead of `{!r}` ({})'.format(elem, type(elem).__name__))
 
         cdef dict out = {}
 
-        for sio_item in chain(self.definition._input_required, self.definition._input_optional):
+        for idx, sio_item in enumerate(chain(self.definition._input_required, self.definition._input_optional)):
 
             # Parse the input dictionary
             if is_dict:
@@ -1145,15 +1137,31 @@ cdef class CySimpleIO(object):
                 else:
                     input_value = InternalNotGiven
 
-            # Otherwise, refuse to continue
             else:
-                raise Exception('Invalid input, neither is_dict nor is_xml')
+
+                # It still may be CSV ..
+                if is_csv:
+
+                    print()
+                    print(111, idx, sio_item, elem)
+                    print()
+
+                    input_value = elem[idx]
+
+                # Otherwise, refuse to continue
+                else:
+                    raise Exception('Invalid input, none of is_dict, is_str nor is_xml')
 
             # We do not have such a elem on input so an exception needs to be raised if this is a require one
             if input_value is InternalNotGiven:
                 if sio_item.is_required:
 
-                    all_elems = elem.keys() if is_dict else elem.getchildren()
+                    if is_dict:
+                        all_elems = elem.keys()
+                    elif is_xml:
+                        all_elems = elem.getchildren()
+                    elif is_csv:
+                        all_elems = elem
 
                     raise ValueError('No such elem `{}` among `{}` in `{}`'.format(sio_item.name, all_elems, elem))
                 else:
@@ -1173,16 +1181,27 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
+    cdef object _parse_input_list(self, data, data_format, bint is_csv):
+        out = []
+        for elem in data:
+            converted = self._parse_input_elem(elem, data_format, is_csv)
+            out.append(bunchify(converted))
+        return out
+
+# ################################################################################################################################
+
     cpdef object parse_input(self, data, data_format):
 
+        cdef bint is_csv = data_format == DATA_FORMAT.CSV and isinstance(data, basestring)
+
         if isinstance(data, list):
-            out = []
-            for elem in data:
-                converted = self._parse_input_elem(elem, data_format)
-                out.append(bunchify(converted))
-            return out
+            return self._parse_input_list(data, data_format, is_csv)
         else:
-            out = self._parse_input_elem(data, data_format)
+            if is_csv:
+                csv_data = csv_reader([data])
+                return self._parse_input_list(csv_data, data_format, is_csv)
+            else:
+                out = self._parse_input_elem(data, data_format)
             return bunchify(out)
 
 # ################################################################################################################################
