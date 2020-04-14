@@ -939,6 +939,10 @@ class ServiceStore(object):
                 elif is_python_file(item):
                     to_process.extend(self.import_services_from_file(item, is_internal, base_dir))
 
+                # .. a named module
+                else:
+                    to_process.extend(self.import_services_from_module(item, is_internal))
+
             # .. must be a module object
             else:
                 to_process.extend(self.import_services_from_module_object(item, is_internal))
