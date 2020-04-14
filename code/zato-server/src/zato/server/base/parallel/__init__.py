@@ -186,6 +186,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.platform_system = platform_system().lower() # type: unicode
         self.has_posix_ipc = True
         self.user_config = Bunch()
+        self.stderr_path = None # type: str
 
         # Our arbiter may potentially call the cleanup procedure multiple times
         # and this will be set to True the first time around.

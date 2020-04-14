@@ -124,6 +124,7 @@ class ZatoGunicornApplication(Application):
 # ################################################################################################################################
 
 def run(base_dir, start_gunicorn_app=True, options=None):
+    # type: (str, bool, dict)
     options = options or {}
 
     # Store a pidfile before doing anything else
@@ -265,6 +266,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server.sql_pool_store = sql_pool_store
     server.service_modules = []
     server.kvdb = kvdb
+    server.stderr_path = options.get('stderr_path')
 
     # Assigned here because it is a circular dependency
     odb_manager.parallel_server = server
