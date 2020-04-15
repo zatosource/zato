@@ -63,8 +63,6 @@ class CSVInputParsing(BaseTestCase):
 
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
 
-        import csv
-
         aaa = 'aaa-111'
         bbb = '222'
         ccc = 'ccc-ccc-ccc'
@@ -74,7 +72,6 @@ class CSVInputParsing(BaseTestCase):
         data = '{},{},{},,{}'.format(aaa, bbb, ccc, eee)
 
         input = MyService._sio.parse_input(data, DATA_FORMAT.CSV)
-
         self.assertIsInstance(input, list)
 
         input = input[0]
@@ -86,19 +83,62 @@ class CSVInputParsing(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_all_elem_types_non_list(self):
+    def test_parse_multiline(self):
 
         class MyService(Service):
             class SimpleIO:
-                input = 'aaa', AsIs('bbb'), Bool('ccc'), CSV('ddd'), Date('eee'), DateTime('fff'), Decimal('ggg'), \
+                input = 'aaa', Int('bbb'), Opaque('ccc'), '-ddd', '-eee'
+
+        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+
+        aaa1 = 'aaa-111-1'
+        bbb1 = '2221'
+        ccc1 = 'ccc-ccc-ccc-1'
+        eee1 = 'eee-444-1'
+
+        aaa2 = 'aaa-111-2'
+        bbb2 = '2222'
+        ccc2 = 'ccc-ccc-ccc-2'
+        eee2 = 'eee-444-2'
+
+        # Note that 'ddd' is optional and we are free to skip it
+        data  = '{},{},{},,{}'.format(aaa1, bbb1, ccc1, eee1)
+        data += '\n'
+        data += '{},{},{},,{}'.format(aaa2, bbb2, ccc2, eee2)
+
+        input = MyService._sio.parse_input(data, DATA_FORMAT.CSV)
+        self.assertIsInstance(input, list)
+
+        input1 = input[0]
+        input2 = input[1]
+
+        self.assertEquals(input1.aaa, aaa1)
+        self.assertEquals(input1.bbb, int(bbb1))
+        self.assertEquals(input1.ccc, ccc1)
+        self.assertEquals(input1.ddd, backward_compat_default_value)
+        self.assertEquals(input1.eee, eee1)
+
+        self.assertEquals(input2.aaa, aaa2)
+        self.assertEquals(input2.bbb, int(bbb2))
+        self.assertEquals(input2.ccc, ccc2)
+        self.assertEquals(input2.ddd, backward_compat_default_value)
+        self.assertEquals(input2.eee, eee2)
+
+# ################################################################################################################################
+
+    def test_parse_all_elem_types(self):
+
+        class MyService(Service):
+            class SimpleIO:
+                input = 'aaa', AsIs('bbb'), Bool('ccc'), 'ddd', Date('eee'), DateTime('fff'), Decimal('ggg'), \
                     Float('jjj'), Int('mmm'), Opaque('ooo'), Text('ppp'), UUID('qqq')
 
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
 
         aaa = 'aaa-111'
         bbb = 'bbb-222-bbb'
-        ccc = True
-        ddd = '1,2,3,4'
+        ccc = 'True'
+        ddd = ''
         eee = '1999-12-31'
         fff = '1988-01-29T11:22:33.0000Z'
         ggg = '123.456'
@@ -111,31 +151,18 @@ class CSVInputParsing(BaseTestCase):
         qqq = 'd011d054-db4b-4320-9e24-7f4c217af673'
 
         # Note that 'ddd' is optional and we are free to skip it
-        data = lxml_fromstring("""<?xml version="1.0"?><root>
-            <aaa>{}</aaa>
-            <bbb>{}</bbb>
-            <ccc>{}</ccc>
-            <ddd>{}</ddd>
-            <eee>{}</eee>
-            <fff>{}</fff>
-            <ggg>{}</ggg>
-            <jjj>{}</jjj>
-            <mmm>{}</mmm>
-            <ooo>{}</ooo>
-            <ppp>{}</ppp>
-            <qqq>{}</qqq>
-        </root>
-        """.format(
+        data = ','.join([
             aaa, bbb, ccc, ddd, eee, fff, ggg, jjj, mmm, ooo, ppp, qqq
-        ))
+        ])
 
-        input = MyService._sio.parse_input(data, DATA_FORMAT.XML)
-        self.assertIsInstance(input, Bunch)
+        input = MyService._sio.parse_input(data, DATA_FORMAT.CSV)
+        self.assertIsInstance(input, list)
+        input = input[0]
 
         self.assertEquals(input.aaa, aaa)
         self.assertEquals(input.bbb, bbb)
         self.assertTrue(input.ccc)
-        self.assertListEqual(input.ddd, ['1', '2', '3', '4'])
+        self.assertEquals(input.ddd, '')
 
         self.assertIsInstance(input.eee, datetime)
         self.assertEquals(input.eee.year, 1999)

@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import types
 from csv import reader as csv_reader
 from decimal import Decimal as decimal_Decimal
+from io import StringIO
 from itertools import chain
 from logging import getLogger
 from traceback import format_exc
@@ -213,6 +214,12 @@ cdef class Elem(object):
         else:
             return self.name < other
 
+    def __gt__(self, other):
+        if isinstance(other, Elem):
+            return self.name > other.name
+        else:
+            return self.name > other
+
 # ################################################################################################################################
 
     @property
@@ -323,7 +330,7 @@ cdef class AsIs(Elem):
     def from_json(self, value):
         return AsIs.from_json_static(value)
 
-    to_xml = from_xml = to_json = from_json
+    to_csv = from_csv = to_xml = from_xml = to_json = from_json
 
 # ################################################################################################################################
 
@@ -338,7 +345,7 @@ cdef class Bool(Elem):
     def from_json(self, value):
         return Bool.from_json_static(value)
 
-    to_xml = from_xml = to_json = from_json
+    to_csv = from_csv = to_xml = from_xml = to_json = from_json
 
 # ################################################################################################################################
 
@@ -1014,6 +1021,7 @@ cdef class CySimpleIO(object):
                     required.append(elem if is_sio_elem else elem_name)
 
         # So that in runtime elements are always checked in the same order
+
         required = sorted(required)
         optional = sorted(optional)
 
@@ -1141,11 +1149,6 @@ cdef class CySimpleIO(object):
 
                 # It still may be CSV ..
                 if is_csv:
-
-                    print()
-                    print(111, idx, sio_item, elem)
-                    print()
-
                     input_value = elem[idx]
 
                 # Otherwise, refuse to continue
@@ -1198,7 +1201,8 @@ cdef class CySimpleIO(object):
             return self._parse_input_list(data, data_format, is_csv)
         else:
             if is_csv:
-                csv_data = csv_reader([data])
+                data = StringIO(data)
+                csv_data = csv_reader(data)
                 return self._parse_input_list(csv_data, data_format, is_csv)
             else:
                 out = self._parse_input_elem(data, data_format)
