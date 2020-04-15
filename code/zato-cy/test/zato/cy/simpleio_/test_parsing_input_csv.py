@@ -16,12 +16,11 @@ from uuid import UUID as uuid_UUID
 # Zato
 from zato.common import DATA_FORMAT
 from zato.server.service import Service
-from zato.simpleio import backward_compat_default_value, AsIs, Bool, CSV, CySimpleIO, Date, DateTime, Decimal, \
+from zato.simpleio import backward_compat_default_value, AsIs, Bool, CySimpleIO, Date, DateTime, Decimal, \
      Float, Int, Opaque, Text, UUID
 
 # Zato - Cython
 from test.zato.cy.simpleio_ import BaseTestCase
-from zato.bunch import Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,33 +32,8 @@ class CSVInputParsing(BaseTestCase):
     def test_parse_basic_request(self):
 
         class MyService(Service):
-
             class SimpleIO:
-
                 input = 'aaa', Int('bbb'), Opaque('ccc'), '-ddd', '-eee'
-
-                '''
-                csv_dialect = ''
-                csv_delimiter = ''
-                csv_double_quote = ''
-                csv_escape_char = ''
-                csv_line_terminator = ''
-                csv_quote_char = ''
-                csv_quoting = ''
-                csv_skip_initial_space = ''
-                csv_strict = False
-                '''
-
-                class CSV:
-                    dialect = ''
-                    delimiter = ''
-                    double_quote = ''
-                    escape_char = ''
-                    line_terminator = ''
-                    quote_char = ''
-                    quoting = ''
-                    skip_initial_space = ''
-                    strict = False
 
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
 
@@ -70,6 +44,35 @@ class CSVInputParsing(BaseTestCase):
 
         # Note that 'ddd' is optional and we are free to skip it
         data = '{},{},{},,{}'.format(aaa, bbb, ccc, eee)
+
+        input = MyService._sio.parse_input(data, DATA_FORMAT.CSV)
+        self.assertIsInstance(input, list)
+
+        input = input[0]
+        self.assertEquals(input.aaa, aaa)
+        self.assertEquals(input.bbb, int(bbb))
+        self.assertEquals(input.ccc, ccc)
+        self.assertEquals(input.ddd, backward_compat_default_value)
+        self.assertEquals(input.eee, eee)
+
+# ################################################################################################################################
+
+    def test_csv_config(self):
+
+        class MyService(Service):
+            class SimpleIO:
+                input = 'aaa', Int('bbb'), Opaque('ccc'), '-ddd', '-eee'
+                csv_delimiter = '|'
+
+        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+
+        aaa = 'aaa-111'
+        bbb = '222'
+        ccc = 'ccc-ccc-ccc'
+        eee = 'eee-444'
+
+        # Note that 'ddd' is optional and we are free to skip it
+        data = '{}|{}|{}||{}'.format(aaa, bbb, ccc, eee)
 
         input = MyService._sio.parse_input(data, DATA_FORMAT.CSV)
         self.assertIsInstance(input, list)
@@ -180,6 +183,29 @@ class CSVInputParsing(BaseTestCase):
         self.assertEquals(input.ooo, ooo)
         self.assertEquals(input.ppp, ppp)
         self.assertEquals(input.qqq, uuid_UUID(qqq))
+
+# ################################################################################################################################
+
+    def test_parse_invalid_input(self):
+
+        class MyService(Service):
+            class SimpleIO:
+                input = 'aaa', 'bbb'
+
+        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+
+        aaa = 'aaa-111'
+        bbb = '222'
+        ccc = '333'
+
+        # Note that we are using an unexpected separator so that the expected values cannot be found
+        data = '{}^{}^{}'.format(aaa, bbb, ccc)
+
+        with self.assertRaises(ValueError) as ctx:
+            MyService._sio.parse_input(data, DATA_FORMAT.CSV)
+
+        e = ctx.exception # type: ValueError
+        self.assertEquals(e.args[0], "Could not find value at index `1` in `['aaa-111^222^333']` (dialect:excel, config:{})")
 
 # ################################################################################################################################
 # ################################################################################################################################
