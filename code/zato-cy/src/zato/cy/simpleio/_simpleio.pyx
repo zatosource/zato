@@ -49,6 +49,19 @@ backward_compat_default_value = ''
 
 prefix_optional = '-'
 
+# Maps our own CSV parameters to stdlib's ones
+cdef dict _csv_attr_map = {
+    'dialect': 'dialect',
+    'delimiter': 'delimiter',
+    'needs_double_quote': 'doublequote',
+    'escape_char': 'escapechar',
+    'line_terminator': 'lineterminator',
+    'quote_char': 'quotechar',
+    'quoting': 'quoting',
+    'should_skip_initial_space': 'skipinitialspace',
+    'is_strict': 'strict',
+}
+
 # ################################################################################################################################
 
 cdef class _ForceEmptyKeyMarker(object):
@@ -60,7 +73,7 @@ cdef class _NotGiven(object):
     """ Indicates that a particular value was not provided on input or output.
     """
     def __str__(self):
-        return '<NotGiven>'
+        return '<_NotGiven>'
 
     def __bool__(self):
         return False # Always evaluates to a boolean False
@@ -68,6 +81,8 @@ cdef class _NotGiven(object):
 cdef class _InternalNotGiven(_NotGiven):
     """ Like _NotGiven but used only internally.
     """
+    def __str__(self):
+        return '<_InternalNotGiven>'
 
 # ################################################################################################################################
 
@@ -773,6 +788,19 @@ cdef class SIOList(object):
 
 # ################################################################################################################################
 
+cdef class CSVConfig(object):
+    """ Represents CSV configuration that a particular SimpleIO definition uses.
+    """
+    cdef:
+        public unicode dialect
+        public dict config
+
+    def __cinit__(self):
+        self.dialect = 'excel'
+        self.config = {}
+
+# ################################################################################################################################
+
 cdef class SIODefinition(object):
     """ A single SimpleIO definition attached to a service.
     """
@@ -793,8 +821,11 @@ cdef class SIODefinition(object):
         # Default values to use for optional elements, unless overridden on a per-element basis
         public SIODefault sio_default
 
-        # Which empty values should not be prodcued from input / sent on output, unless overridden by each element
+        # Which empty values should not be produced from input / sent on output, unless overridden by each element
         public SIOSkipEmpty skip_empty
+
+        # CSV configuration for that definition
+        public CSVConfig _csv_config
 
         # Name of the service this definition is for
         unicode _service_name
@@ -807,6 +838,7 @@ cdef class SIODefinition(object):
         self._input_optional = SIOList()
         self._output_required = SIOList()
         self._output_optional = SIOList()
+        self._csv_config = CSVConfig()
 
     def __init__(self, SIODefault sio_default, SIOSkipEmpty skip_empty):
         self.sio_default = sio_default
@@ -831,6 +863,10 @@ cdef class SIODefinition(object):
 
     cdef unicode get_output_pretty(self):
         return self.get_elems_pretty(self._output_required, self._output_optional)
+
+    cdef set_csv_config(self, unicode dialect, dict config):
+        self._csv_config.dialect = dialect
+        self._csv_config.config.update(config)
 
     def __str__(self):
         return '<{} at {}, input:`{}`, output:`{}`>'.format(self.__class__.__name__, hex(id(self)),
@@ -931,6 +967,34 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
+    cdef _set_up_csv_config(self):
+        cdef unicode csv_dialect = 'excel'
+        cdef dict csv_config = {}
+        cdef object csv_sio_class = getattr(self.user_declaration, 'CSV', InternalNotGiven)
+        cdef bint has_csv_sio_class = csv_sio_class is not InternalNotGiven
+        cdef cy_attr, stdlib_attr, value
+
+        for cy_attr, stdlib_attr in _csv_attr_map.items():
+            if has_csv_sio_class:
+                value = getattr(csv_sio_class, cy_attr)
+            else:
+                value = InternalNotGiven
+
+            if value is InternalNotGiven:
+                value = getattr(self.user_declaration, 'csv_' + cy_attr, InternalNotGiven)
+
+            if cy_attr == 'dialect':
+                if value is not InternalNotGiven:
+                    csv_dialect = value
+            else:
+                if value is not InternalNotGiven:
+                    csv_config[stdlib_attr] = value
+
+        # Assign for later use
+        self.definition.set_csv_config(csv_dialect, csv_config)
+
+# ################################################################################################################################
+
     cpdef build(self, object class_):
         """ Parses a user-defined SimpleIO declaration (currently, a Python class)
         and populates all the internal structures as needed.
@@ -942,6 +1006,9 @@ cdef class CySimpleIO(object):
         # we need to turn the _ForceEmptyKeyMarker into an acutal list of elements to force into empty keys.
         if self.has_bool_force_empty_keys:
             self._resolve_bool_force_empty_keys()
+
+        # Set up CSV configuration
+        self._set_up_csv_config()
 
 # ################################################################################################################################
 
@@ -1149,7 +1216,11 @@ cdef class CySimpleIO(object):
 
                 # It still may be CSV ..
                 if is_csv:
-                    input_value = elem[idx]
+                    try:
+                        input_value = elem[idx]
+                    except IndexError:
+                        raise ValueError('Could not find value at index `{}` in `{}` (dialect:{}, config:{})'.format(
+                            idx, elem, self.definition._csv_config.dialect, self.definition._csv_config.config))
 
                 # Otherwise, refuse to continue
                 else:
@@ -1202,7 +1273,7 @@ cdef class CySimpleIO(object):
         else:
             if is_csv:
                 data = StringIO(data)
-                csv_data = csv_reader(data)
+                csv_data = csv_reader(data, self.definition._csv_config.dialect, **self.definition._csv_config.config)
                 return self._parse_input_list(csv_data, data_format, is_csv)
             else:
                 out = self._parse_input_elem(data, data_format)
