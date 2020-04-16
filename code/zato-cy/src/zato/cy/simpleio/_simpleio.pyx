@@ -15,6 +15,7 @@ from datetime import date as stdlib_date, datetime as stdlib_datetime
 from decimal import Decimal as decimal_Decimal
 from io import StringIO
 from itertools import chain
+from json import dumps as json_dumps
 from logging import getLogger
 from traceback import format_exc
 from uuid import UUID as uuid_UUID
@@ -374,7 +375,14 @@ cdef class Bool(Elem):
     def from_json(self, value):
         return Bool.from_json_static(value)
 
-    to_csv = from_csv = to_xml = from_xml = to_json = from_json
+    @staticmethod
+    def to_json_static(value, *args, **kwargs):
+        return 'true' if value else 'false'
+
+    def to_json(self, value):
+        return Bool.to_json_static(value)
+
+    to_csv = to_xml = from_csv = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -457,7 +465,15 @@ cdef class Decimal(Elem):
     def from_json(self, value):
         return Decimal.from_json_static(value)
 
-    to_csv = from_csv = to_xml = from_xml = from_json
+    @staticmethod
+    def to_json_static(value, *args, **kwargs):
+        return str(value)
+
+    def to_json(self, value):
+        return Decimal.to_json_static(value)
+
+    to_csv   = to_xml   = to_json
+    from_csv = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -692,7 +708,18 @@ cdef class UUID(Elem):
     def from_json(self, value):
         return UUID.from_json_static(value)
 
-    to_csv = from_csv = to_xml = from_xml = from_json
+    @staticmethod
+    def to_json_static(value, *args, **kwargs):
+        if isinstance(value, uuid_UUID):
+            return value.hex
+        else:
+            return value
+
+    def to_json(self, value):
+        return UUID.to_json_static(value)
+
+    to_csv   = to_xml   = to_json
+    from_csv = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -1347,14 +1374,6 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cdef unicode _serialise_json(self, object data):
-        print()
-        print(222, data)
-        print()
-        return '222-a'
-
-# ################################################################################################################################
-
     cdef unicode _serialise_xml(self, object data):
         print()
         print(333, data)
@@ -1371,9 +1390,8 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cdef unicode _serialise_csv(self, object data):
+    def _yield_data_dicts(self, object data):
 
-        cdef unicode out
         cdef dict required_elems = self.definition._output_required.elems_by_name
         cdef dict optional_elems = self.definition._output_optional.elems_by_name
 
@@ -1381,9 +1399,8 @@ cdef class CySimpleIO(object):
         field_names.extend(list(required_elems.keys()))
         field_names.extend(list(optional_elems.keys()))
 
-        # No reason to continue if no SimpleIO output is declared
-        if not field_names:
-            return ''
+        # First yield - return only field names
+        yield field_names
 
         if not isinstance(data, dict):
             if not isinstance(data, list):
@@ -1398,38 +1415,87 @@ cdef class CySimpleIO(object):
             (False, optional_elems),
         ]
 
-        cdef buff = StringIO()
-        cdef writer = DictWriter(buff, field_names, **self.definition._csv_config.writer_config)
-
-        if self.definition._csv_config.should_write_header:
-            writer.writeheader()
-
         cdef bint is_required
         cdef dict current_elems
         cdef unicode current_elem_name
         cdef Elem current_elem
         cdef object value
 
-        for row in data:
+        for data_dict in data:
             for is_required, current_elems in all_elems:
                 for current_elem_name, current_elem in current_elems.items():
-                    value = row.get(current_elem_name, InternalNotGiven)
+                    value = data_dict.get(current_elem_name, InternalNotGiven)
                     if value is InternalNotGiven:
                         if is_required:
-                            raise SerialisationError('Required element `{}` missing in `{}`'.format(current_elem_name, row))
+                            raise SerialisationError('Required element `{}` missing in `{}`'.format(current_elem_name, data_dict))
                     else:
                         try:
                             value = current_elem.to_csv(value)
-                            row[current_elem_name] = value
+                            data_dict[current_elem_name] = value
                         except Exception as e:
-                            raise SerialisationError('Exception `{}` while serialising `{}`'.format(e, row))
+                            raise SerialisationError('Exception `{}` while serialising `{}`'.format(e, data_dict))
 
-            writer.writerow(row)
+            # More yields - to actually return data
+            yield data_dict
 
-        out = buff.getvalue()
-        buff.close()
+# ################################################################################################################################
 
-        return out
+    cdef unicode _serialise_csv(self, object data):
+
+        # No reason to continue if no SimpleIO output is declared
+        if not (self.definition._output_required or self.definition._output_optional):
+            return ''
+
+        gen = self._yield_data_dicts(data)
+
+        # First, get the field names
+        cdef list field_names = next(gen)
+
+        cdef unicode out
+        cdef buff = StringIO()
+        cdef writer = DictWriter(buff, field_names, **self.definition._csv_config.writer_config)
+
+        if self.definition._csv_config.should_write_header:
+            writer.writeheader()
+
+        try:
+            while True:
+                data_dict = next(gen)
+                writer.writerow(data_dict)
+        except StopIteration:
+            out = buff.getvalue()
+            buff.close()
+            return out
+
+# ################################################################################################################################
+
+    cdef unicode _serialise_json(self, object data):
+
+        # No reason to continue if no SimpleIO output is declared
+        if not (self.definition._output_required or self.definition._output_optional):
+            return ''
+
+        # Needed to find out if we are producing a list or a single element
+        cdef int  current_idx = 0
+        cdef bint is_list
+        cdef list out = []
+
+        if isinstance(data, (list, tuple)):
+            is_list = True
+        else:
+            is_list = False
+
+        gen = self._yield_data_dicts(data)
+
+        # Ignore field names, not needed in JSON serialisation
+        next(gen)
+
+        try:
+            while True:
+                data_dict = next(gen)
+                out.append(data_dict)
+        except StopIteration:
+            return json_dumps(out) if is_list else json_dumps(out[0])
 
 # ################################################################################################################################
 
