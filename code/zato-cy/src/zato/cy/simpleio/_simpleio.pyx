@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import types
-from csv import reader as csv_reader
+from csv import DictWriter, reader as csv_reader
 from decimal import Decimal as decimal_Decimal
 from io import StringIO
 from itertools import chain
@@ -49,8 +49,8 @@ backward_compat_default_value = ''
 
 prefix_optional = '-'
 
-# Maps our own CSV parameters to stdlib's ones
-cdef dict _csv_attr_map = {
+# Dictionaries that map our own CSV parameters to stdlib's ones
+cdef dict _csv_common_attr_map = {
     'dialect': 'dialect',
     'delimiter': 'delimiter',
     'needs_double_quote': 'doublequote',
@@ -60,6 +60,11 @@ cdef dict _csv_attr_map = {
     'quoting': 'quoting',
     'should_skip_initial_space': 'skipinitialspace',
     'is_strict': 'strict',
+}
+
+cdef dict _csv_writer_attr_map = {
+    'on_missing': 'restval',
+    'on_extra': 'extrasaction',
 }
 
 # ################################################################################################################################
@@ -347,6 +352,9 @@ cdef class AsIs(Elem):
 
     to_csv = from_csv = to_xml = from_xml = to_json = from_json
 
+# Defined only for backward compatibility
+Opaque = AsIs
+
 # ################################################################################################################################
 
 cdef class Bool(Elem):
@@ -596,21 +604,6 @@ cdef class List(Elem):
 
 # ################################################################################################################################
 
-cdef class Opaque(Elem):
-    def __cinit__(self):
-        self._type = ElemType.opaque
-
-    @staticmethod
-    def from_json_static(value, *args, **kwargs):
-        return value
-
-    def from_json(self, value):
-        return Opaque.from_json_static(value)
-
-    from_csv = from_xml = from_json
-
-# ################################################################################################################################
-
 cdef class Text(Elem):
 
     cdef:
@@ -793,11 +786,15 @@ cdef class CSVConfig(object):
     """
     cdef:
         public unicode dialect
-        public dict config
+        public dict common_config
+        public dict writer_config
+        public bint should_write_header
 
     def __cinit__(self):
         self.dialect = 'excel'
-        self.config = {}
+        self.common_config = {}
+        self.writer_config = {}
+        self.should_write_header = True
 
 # ################################################################################################################################
 
@@ -864,9 +861,11 @@ cdef class SIODefinition(object):
     cdef unicode get_output_pretty(self):
         return self.get_elems_pretty(self._output_required, self._output_optional)
 
-    cdef set_csv_config(self, unicode dialect, dict config):
+    cdef set_csv_config(self, unicode dialect, dict common_config, dict writer_config, bint should_write_header):
         self._csv_config.dialect = dialect
-        self._csv_config.config.update(config)
+        self._csv_config.common_config.update(common_config)
+        self._csv_config.writer_config.update(writer_config)
+        self._csv_config.should_write_header = should_write_header
 
     def __str__(self):
         return '<{} at {}, input:`{}`, output:`{}`>'.format(self.__class__.__name__, hex(id(self)),
@@ -929,7 +928,7 @@ cdef class CySimpleIO(object):
         else:
             empty_output_value = getattr(class_skip_empty, 'empty_output_value', InternalNotGiven)
 
-            # We cannot have NotGiven as the default output value, it cannot be serialized in a meaningful way
+            # We cannot have NotGiven as the default output value, it cannot be serialised in a meaningful way
             if empty_output_value is NotGiven:
                 raise ValueError('NotGiven cannot be used as empty_output_value')
 
@@ -969,29 +968,53 @@ cdef class CySimpleIO(object):
 
     cdef _set_up_csv_config(self):
         cdef unicode csv_dialect = 'excel'
-        cdef dict csv_config = {}
+        cdef dict csv_common_config = {}
+        cdef dict csv_writer_config = {}
         cdef object csv_sio_class = getattr(self.user_declaration, 'CSV', InternalNotGiven)
         cdef bint has_csv_sio_class = csv_sio_class is not InternalNotGiven
+        cdef should_write_header
         cdef cy_attr, stdlib_attr, value
+        cdef dict attr_map, target_config
 
-        for cy_attr, stdlib_attr in _csv_attr_map.items():
-            if has_csv_sio_class:
-                value = getattr(csv_sio_class, cy_attr)
-            else:
-                value = InternalNotGiven
+        cdef to_process = [
+            (_csv_common_attr_map, csv_common_config),
+            (_csv_writer_attr_map, csv_writer_config),
+        ]
 
-            if value is InternalNotGiven:
-                value = getattr(self.user_declaration, 'csv_' + cy_attr, InternalNotGiven)
+        for attr_map, target_config in to_process:
+            for cy_attr, stdlib_attr in attr_map.items():
+                if has_csv_sio_class:
+                    value = getattr(csv_sio_class, cy_attr, InternalNotGiven)
+                else:
+                    value = InternalNotGiven
 
-            if cy_attr == 'dialect':
-                if value is not InternalNotGiven:
-                    csv_dialect = value
-            else:
-                if value is not InternalNotGiven:
-                    csv_config[stdlib_attr] = value
+                if value is InternalNotGiven:
+                    value = getattr(self.user_declaration, 'csv_' + cy_attr, InternalNotGiven)
+
+                if cy_attr == 'dialect':
+                    if value is not InternalNotGiven:
+                        csv_dialect = value
+                else:
+                    if value is not InternalNotGiven:
+                        target_config[stdlib_attr] = value
+
+        # Unlike the stdlib, we default to ignoring any extra elements found in CSV serialisation
+        if 'extrasaction' not in csv_writer_config:
+            csv_writer_config['extrasaction'] = 'ignore'
+
+        # Merge common options to writer ones
+        csv_writer_config.update(csv_common_config)
+
+        if has_csv_sio_class:
+            should_write_header = getattr(csv_sio_class, 'should_write_header', InternalNotGiven)
+        else:
+            should_write_header = getattr(self.user_declaration, 'csv_should_write_header', InternalNotGiven)
+
+        if should_write_header is InternalNotGiven:
+            should_write_header = True
 
         # Assign for later use
-        self.definition.set_csv_config(csv_dialect, csv_config)
+        self.definition.set_csv_config(csv_dialect, csv_common_config, csv_writer_config, should_write_header)
 
 # ################################################################################################################################
 
@@ -1220,7 +1243,7 @@ cdef class CySimpleIO(object):
                         input_value = elem[idx]
                     except IndexError:
                         raise ValueError('Could not find value at index `{}` in `{}` (dialect:{}, config:{})'.format(
-                            idx, elem, self.definition._csv_config.dialect, self.definition._csv_config.config))
+                            idx, elem, self.definition._csv_config.dialect, self.definition._csv_config.common_config))
 
                 # Otherwise, refuse to continue
                 else:
@@ -1273,11 +1296,91 @@ cdef class CySimpleIO(object):
         else:
             if is_csv:
                 data = StringIO(data)
-                csv_data = csv_reader(data, self.definition._csv_config.dialect, **self.definition._csv_config.config)
+                csv_data = csv_reader(data, self.definition._csv_config.dialect, **self.definition._csv_config.common_config)
                 return self._parse_input_list(csv_data, data_format, is_csv)
             else:
                 out = self._parse_input_elem(data, data_format)
             return bunchify(out)
+
+# ################################################################################################################################
+
+    cdef unicode _build_serialisation_dict(self, object data):
+        print()
+        print(555, data)
+        print()
+        return '555-a'
+
+# ################################################################################################################################
+
+    cdef unicode _serialise_json(self, object data):
+        print()
+        print(222, data)
+        print()
+        return '222-a'
+
+# ################################################################################################################################
+
+    cdef unicode _serialise_xml(self, object data):
+        print()
+        print(333, data)
+        print()
+        return '333-a'
+
+# ################################################################################################################################
+
+    cdef unicode _serialise_post(self, object data):
+        print()
+        print(444, data)
+        print()
+        return '444-a'
+
+# ################################################################################################################################
+
+    cdef unicode _serialise_csv(self, object data):
+
+        cdef unicode out
+
+        if not isinstance(data, dict):
+            data = self._build_serialisation_dict(data)
+
+        data = [data]
+
+        cdef field_names = []
+        field_names.extend(self.definition._output_required.get_elem_names())
+        field_names.extend(self.definition._output_optional.get_elem_names())
+
+        cdef buff = StringIO()
+        cdef writer = DictWriter(buff, field_names, **self.definition._csv_config.writer_config)
+
+        if self.definition._csv_config.should_write_header:
+            writer.writeheader()
+
+        for row in data:
+            writer.writerow(row)
+
+        out = buff.getvalue()
+        buff.close()
+
+        return out
+
+# ################################################################################################################################
+
+    cpdef unicode serialise(self, object data, unicode data_format):
+
+        if data_format == DATA_FORMAT.JSON:
+            return self._serialise_json(data)
+
+        elif data_format == DATA_FORMAT.XML:
+            return self._serialise_csv(data)
+
+        elif data_format == DATA_FORMAT.POST:
+            return self._serialise_post(data)
+
+        elif data_format == DATA_FORMAT.CSV:
+            return self._serialise_csv(data)
+
+        else:
+            raise ValueError('Unrecognised serialisation data format `{}`'.format(data_format))
 
 # ################################################################################################################################
 

@@ -251,7 +251,7 @@ class AdminServiceMeta(type):
                 sio_elem = getattr(SimpleIO, _name)
                 has_cluster_id = 'cluster_id' in sio_elem
                 sio_to_add = get_io(
-                    attrs, _name, attrs.get('is_edit'), is_required, is_output, is_get_list, has_cluster_id, class_=class_)
+                    attrs, _name, attrs.get('is_edit'), is_required, is_output, is_get_list, has_cluster_id)
                 sio_elem.extend(sio_to_add)
 
                 if attrs.is_create_edit and is_required:
