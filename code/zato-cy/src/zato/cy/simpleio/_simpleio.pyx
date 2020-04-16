@@ -163,6 +163,11 @@ cdef class ParsingError(Exception):
 
 # ################################################################################################################################
 
+cdef class SerialisationError(Exception):
+    pass
+
+# ################################################################################################################################
+
 cdef enum ElemType:
     as_is         =  100
     bool          =  200
@@ -320,7 +325,7 @@ cdef class Elem(object):
 
     @staticmethod
     def _not_implemented(*args, **kwargs):
-        raise NotImplementedError()
+        raise NotImplementedError('Elem._not_implemented - operation not implemented')
 
     from_json = _not_implemented
     to_json   = _not_implemented
@@ -386,7 +391,7 @@ cdef class CSV(Elem):
     def to_json(self, value, *ignored):
         return ','.join(value) if isinstance(value, (list, tuple)) else value
 
-    to_xml = from_xml = to_json = from_json
+    to_csv = from_csv = to_xml = from_xml = Elem._not_implemented
 
 # ################################################################################################################################
 
@@ -406,7 +411,15 @@ cdef class Date(Elem):
     def from_json(self, value):
         return Date.from_json_static(value, class_name=self.__class__.__name__)
 
+    @staticmethod
+    def to_json_static(value, *args, **kwargs):
+        return value
+
+    def to_json(self, value):
+        return Date.to_json_static(value, class_name=self.__class__.__name__)
+
     from_csv = from_xml = from_json
+    to_csv   = to_xml   = to_json
 
 # ################################################################################################################################
 
@@ -427,7 +440,7 @@ cdef class Decimal(Elem):
     def from_json(self, value):
         return Decimal.from_json_static(value)
 
-    from_csv = from_xml = from_json
+    to_csv = from_csv = to_xml = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -528,14 +541,10 @@ cdef class Dict(Elem):
         else:
             return data
 
-# ################################################################################################################################
-
     def from_json(self, value):
         return Dict.from_json_static(value, self._keys_required, self._keys_optional, self.default_value)
 
-# ################################################################################################################################
-
-    from_csv = to_csv = to_xml = from_xml = Elem._not_implemented
+    to_csv = from_csv = to_xml = from_xml = Elem._not_implemented
 
 # ################################################################################################################################
 
@@ -553,9 +562,7 @@ cdef class DictList(Dict):
     def from_json(self, value):
         return DictList.from_json_static(value, self._keys_required, self._keys_optional, self.default_value)
 
-# ################################################################################################################################
-
-    from_csv = to_csv = to_xml = from_xml = Elem._not_implemented
+    to_csv = from_csv = to_xml = from_xml = Elem._not_implemented
 
 # ################################################################################################################################
 
@@ -570,7 +577,7 @@ cdef class Float(Elem):
     def from_json(self, value):
         return Float.from_json_static(value)
 
-    from_csv = from_xml = from_json
+    to_csv = from_csv = to_xml = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -585,7 +592,7 @@ cdef class Int(Elem):
     def from_json(self, value):
         return Int.from_json_static(value)
 
-    from_csv = from_xml = from_json
+    to_csv = from_csv = to_xml = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -600,7 +607,7 @@ cdef class List(Elem):
     def from_json(self, value):
         return List.from_json_static(value)
 
-    from_csv = from_xml = from_json
+    to_csv = from_csv = to_xml = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -637,7 +644,7 @@ cdef class Text(Elem):
     def from_json(self, value):
         return Text.from_json_static(value, encoding=self.encoding)
 
-    from_csv = from_xml = from_json
+    to_csv = from_csv = to_xml = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -652,7 +659,7 @@ cdef class UTC(Elem):
     def from_json(self, value):
         return Opaque.from_json_static(value)
 
-    from_csv = from_xml = from_json
+    to_csv = from_csv = to_xml = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -668,7 +675,7 @@ cdef class UUID(Elem):
     def from_json(self, value):
         return UUID.from_json_static(value)
 
-    from_csv = from_xml = from_json
+    to_csv = from_csv = to_xml = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -765,15 +772,22 @@ cdef class SIOList(object):
     """
     cdef:
         list elems
+        dict elems_by_name
 
     def __cinit__(self):
         self.elems = []
+        self.elems_by_name = {}
 
     def __iter__(self):
         return iter(self.elems)
 
     def set_elems(self, elems):
         self.elems[:] = elems
+        for elem in self.elems:
+            self.elems_by_name[elem.name] = elem
+
+    def get_elem_by_name(self, unicode name):
+        return self.elems_by_name[name]
 
     def get_elem_names(self, use_sorted=False):
         out = [elem.name for elem in self.elems]
@@ -1339,15 +1353,29 @@ cdef class CySimpleIO(object):
     cdef unicode _serialise_csv(self, object data):
 
         cdef unicode out
+        cdef dict required_elems = self.definition._output_required.elems_by_name
+        cdef dict optional_elems = self.definition._output_optional.elems_by_name
+
+        cdef list field_names = []
+        field_names.extend(list(required_elems.keys()))
+        field_names.extend(list(optional_elems.keys()))
+
+        # No reason to continue if no SimpleIO output is declared
+        if not field_names:
+            return ''
 
         if not isinstance(data, dict):
-            data = self._build_serialisation_dict(data)
+            if not isinstance(data, list):
+                data = self._build_serialisation_dict(data)
 
-        data = [data]
+        data = data if isinstance(data, (list, tuple)) else [data]
 
-        cdef field_names = []
-        field_names.extend(self.definition._output_required.get_elem_names())
-        field_names.extend(self.definition._output_optional.get_elem_names())
+        # 1st item = is_required
+        # 2nd item = elems dict
+        cdef list all_elems = [
+            (True, required_elems),
+            (False, optional_elems),
+        ]
 
         cdef buff = StringIO()
         cdef writer = DictWriter(buff, field_names, **self.definition._csv_config.writer_config)
@@ -1355,7 +1383,26 @@ cdef class CySimpleIO(object):
         if self.definition._csv_config.should_write_header:
             writer.writeheader()
 
+        cdef bint is_required
+        cdef dict current_elems
+        cdef unicode current_elem_name
+        cdef Elem current_elem
+        cdef object value
+
         for row in data:
+            for is_required, current_elems in all_elems:
+                for current_elem_name, current_elem in current_elems.items():
+                    value = row.get(current_elem_name, InternalNotGiven)
+                    if value is InternalNotGiven:
+                        if is_required:
+                            raise SerialisationError('Required element `{}` missing in `{}`'.format(current_elem_name, row))
+                    else:
+                        try:
+                            value = current_elem.to_csv(value)
+                            row[current_elem_name] = value
+                        except Exception as e:
+                            raise SerialisationError('Exception `{}` while serialising `{}`'.format(e, row))
+
             writer.writerow(row)
 
         out = buff.getvalue()
