@@ -13,6 +13,9 @@ from datetime import datetime
 from decimal import Decimal as decimal_Decimal
 from uuid import UUID as uuid_UUID
 
+# dateparser
+from dateparser import parse as dt_parse
+
 # Zato
 from zato.common import DATA_FORMAT
 from zato.server.service import Service
@@ -106,7 +109,7 @@ class CSVResponse(BaseTestCase):
         bbb = 'bbb-222-bbb'
         ccc = 'True'
         ddd = ''
-        eee = '1999-12-31'
+        eee = dt_parse('1999-12-31')
         fff = '1988-01-29T11:22:33.0000Z'
         ggg = '123.456'
 
@@ -137,12 +140,12 @@ class CSVResponse(BaseTestCase):
         lines = result.splitlines()
 
         self.assertEquals(lines[0], 'aaa,bbb,ccc,ddd,eee,fff,ggg,jjj,mmm,ooo,ppp,qqq')
-        self.assertEquals(lines[1], 'aaa-111,bbb-222-bbb,True,,1999-12-31,1988-01-29T11:22:33.0000Z,123.456,111.222,9090,' \
+        self.assertEquals(lines[1], 'aaa-111,bbb-222-bbb,True,,1999-12-31,1988-01-29T11:22:33+00:00,123.456,111.222,9090,' \
             'ZZZ-ZZZ-ZZZ,mytext,d011d054-db4b-4320-9e24-7f4c217af673')
 
 # ################################################################################################################################
 
-    def xtest_response_invalid_input(self):
+    def test_response_invalid_input(self):
 
         class MyService(Service):
             class SimpleIO:

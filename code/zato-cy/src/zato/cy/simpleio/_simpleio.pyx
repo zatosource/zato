@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import types
 from csv import DictWriter, reader as csv_reader
+from datetime import date as stdlib_date, datetime as stdlib_datetime
 from decimal import Decimal as decimal_Decimal
 from io import StringIO
 from itertools import chain
@@ -397,6 +398,8 @@ cdef class CSV(Elem):
 
 cdef class Date(Elem):
 
+    stdlib_type = stdlib_date
+
     def __cinit__(self):
         self._type = ElemType.date
 
@@ -412,11 +415,20 @@ cdef class Date(Elem):
         return Date.from_json_static(value, class_name=self.__class__.__name__)
 
     @staticmethod
-    def to_json_static(value, *args, **kwargs):
-        return value
+    def to_json_static(value, stdlib_type, *args, **kwargs):
+
+        if not isinstance(value, (stdlib_date, stdlib_datetime)):
+            value = dt_parse(value)
+
+        if stdlib_type is stdlib_date:
+            return str(value.date())
+        elif stdlib_type is stdlib_datetime:
+            return value.isoformat()
+        else:
+            return value
 
     def to_json(self, value):
-        return Date.to_json_static(value, class_name=self.__class__.__name__)
+        return Date.to_json_static(value, self.stdlib_type, class_name=self.__class__.__name__)
 
     from_csv = from_xml = from_json
     to_csv   = to_xml   = to_json
@@ -424,6 +436,9 @@ cdef class Date(Elem):
 # ################################################################################################################################
 
 cdef class DateTime(Date):
+
+    stdlib_type = stdlib_datetime
+
     def __cinit__(self):
         self._type = ElemType.date_time
 
