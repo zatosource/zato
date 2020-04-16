@@ -392,7 +392,9 @@ cdef class CSV(Elem):
     def to_json(self, value, *ignored):
         return ','.join(value) if isinstance(value, (list, tuple)) else value
 
-    to_csv = from_csv = to_xml = from_xml = Elem._not_implemented
+    to_xml   = to_json
+    from_xml = from_json
+    to_csv   = from_csv = Elem._not_implemented
 
 # ################################################################################################################################
 
@@ -1298,7 +1300,11 @@ cdef class CySimpleIO(object):
                         value = sio_item.default_value
             else:
                 parse_func = sio_item.parse_from[data_format]
-                value = parse_func(input_value)
+
+                try:
+                    value = parse_func(input_value)
+                except NotImplementedError:
+                    raise NotImplementedError('No parser for `{}` ({})'.format(input_value, data_format))
 
             # We get here only if should_skip is not True
             out[sio_item.name] = value
