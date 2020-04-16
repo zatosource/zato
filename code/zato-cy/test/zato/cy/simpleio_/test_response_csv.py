@@ -17,7 +17,7 @@ from uuid import UUID as uuid_UUID
 from zato.common import DATA_FORMAT
 from zato.server.service import Service
 from zato.simpleio import backward_compat_default_value, AsIs, Bool, CySimpleIO, Date, DateTime, Decimal, \
-     Float, Int, Opaque, Text, UUID
+     Float, Int, Opaque, SerialisationError, Text, UUID
 
 # Zato - Cython
 from test.zato.cy.simpleio_ import BaseTestCase
@@ -51,9 +51,6 @@ class CSVResponse(BaseTestCase):
             'eee': eee,
         }
 
-        # Again, 'ddd' was optional
-        expected = '{},{},{},,{}'.format(aaa, bbb, ccc, eee)
-
         result = MyService._sio.serialise(data, DATA_FORMAT.CSV)
         lines = result.splitlines()
 
@@ -62,40 +59,12 @@ class CSVResponse(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_response_config(self):
+    def test_response_multiline(self):
 
         class MyService(Service):
             class SimpleIO:
-                input = 'aaa', Int('bbb'), Opaque('ccc'), '-ddd', '-eee'
-                csv_delimiter = '|'
-
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
-
-        aaa = 'aaa-111'
-        bbb = '222'
-        ccc = 'ccc-ccc-ccc'
-        eee = 'eee-444'
-
-        # Note that 'ddd' is optional and we are free to skip it
-        data = '{}|{}|{}||{}'.format(aaa, bbb, ccc, eee)
-
-        input = MyService._sio.parse_input(data, DATA_FORMAT.CSV)
-        self.assertIsInstance(input, list)
-
-        input = input[0]
-        self.assertEquals(input.aaa, aaa)
-        self.assertEquals(input.bbb, int(bbb))
-        self.assertEquals(input.ccc, ccc)
-        self.assertEquals(input.ddd, backward_compat_default_value)
-        self.assertEquals(input.eee, eee)
-
-# ################################################################################################################################
-
-    def xtest_response_multiline(self):
-
-        class MyService(Service):
-            class SimpleIO:
-                input = 'aaa', Int('bbb'), Opaque('ccc'), '-ddd', '-eee'
+                output = 'aaa', Int('bbb'), Opaque('ccc'), '-ddd', '-eee'
+                csv_delimiter = ':'
 
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
 
@@ -110,35 +79,25 @@ class CSVResponse(BaseTestCase):
         eee2 = 'eee-444-2'
 
         # Note that 'ddd' is optional and we are free to skip it
-        data  = '{},{},{},,{}'.format(aaa1, bbb1, ccc1, eee1)
-        data += '\n'
-        data += '{},{},{},,{}'.format(aaa2, bbb2, ccc2, eee2)
+        data1 = {'aaa': aaa1, 'bbb': bbb1, 'ccc': ccc1, 'eee': eee1}
+        data2 = {'aaa': aaa2, 'bbb': bbb2, 'ccc': ccc2, 'eee': eee2}
 
-        input = MyService._sio.parse_input(data, DATA_FORMAT.CSV)
-        self.assertIsInstance(input, list)
+        data = [data1, data2]
 
-        input1 = input[0]
-        input2 = input[1]
+        result = MyService._sio.serialise(data, DATA_FORMAT.CSV)
+        lines = result.splitlines()
 
-        self.assertEquals(input1.aaa, aaa1)
-        self.assertEquals(input1.bbb, int(bbb1))
-        self.assertEquals(input1.ccc, ccc1)
-        self.assertEquals(input1.ddd, backward_compat_default_value)
-        self.assertEquals(input1.eee, eee1)
-
-        self.assertEquals(input2.aaa, aaa2)
-        self.assertEquals(input2.bbb, int(bbb2))
-        self.assertEquals(input2.ccc, ccc2)
-        self.assertEquals(input2.ddd, backward_compat_default_value)
-        self.assertEquals(input2.eee, eee2)
+        self.assertEquals(lines[0], 'aaa:bbb:ccc:ddd:eee')
+        self.assertEquals(lines[1], 'aaa-111-1:2221:ccc-ccc-ccc-1::eee-444-1')
+        self.assertEquals(lines[2], 'aaa-111-2:2222:ccc-ccc-ccc-2::eee-444-2')
 
 # ################################################################################################################################
 
-    def xtest_response_all_elem_types(self):
+    def test_response_all_elem_types(self):
 
         class MyService(Service):
             class SimpleIO:
-                input = 'aaa', AsIs('bbb'), Bool('ccc'), 'ddd', Date('eee'), DateTime('fff'), Decimal('ggg'), \
+                output = 'aaa', AsIs('bbb'), Bool('ccc'), 'ddd', Date('eee'), DateTime('fff'), Decimal('ggg'), \
                     Float('jjj'), Int('mmm'), Opaque('ooo'), Text('ppp'), UUID('qqq')
 
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
@@ -159,35 +118,27 @@ class CSVResponse(BaseTestCase):
         qqq = 'd011d054-db4b-4320-9e24-7f4c217af673'
 
         # Note that 'ddd' is optional and we are free to skip it
-        data = ','.join([
-            aaa, bbb, ccc, ddd, eee, fff, ggg, jjj, mmm, ooo, ppp, qqq
-        ])
+        data = {
+            'aaa': aaa,
+            'bbb': bbb,
+            'ccc': ccc,
+            'ddd': ddd,
+            'eee': eee,
+            'fff': fff,
+            'ggg': ggg,
+            'jjj': jjj,
+            'mmm': mmm,
+            'ooo': ooo,
+            'ppp': ppp,
+            'qqq': qqq
+        }
 
-        input = MyService._sio.parse_input(data, DATA_FORMAT.CSV)
-        self.assertIsInstance(input, list)
-        input = input[0]
+        result = MyService._sio.serialise(data, DATA_FORMAT.CSV)
+        lines = result.splitlines()
 
-        self.assertEquals(input.aaa, aaa)
-        self.assertEquals(input.bbb, bbb)
-        self.assertTrue(input.ccc)
-        self.assertEquals(input.ddd, '')
-
-        self.assertIsInstance(input.eee, datetime)
-        self.assertEquals(input.eee.year, 1999)
-        self.assertEquals(input.eee.month, 12)
-        self.assertEquals(input.eee.day, 31)
-
-        self.assertIsInstance(input.fff, datetime)
-        self.assertEquals(input.fff.year, 1988)
-        self.assertEquals(input.fff.month, 1)
-        self.assertEquals(input.fff.day, 29)
-
-        self.assertEquals(input.ggg, decimal_Decimal(ggg))
-        self.assertEquals(input.jjj, float(jjj))
-        self.assertEquals(input.mmm, int(mmm))
-        self.assertEquals(input.ooo, ooo)
-        self.assertEquals(input.ppp, ppp)
-        self.assertEquals(input.qqq, uuid_UUID(qqq))
+        self.assertEquals(lines[0], 'aaa,bbb,ccc,ddd,eee,fff,ggg,jjj,mmm,ooo,ppp,qqq')
+        self.assertEquals(lines[1], 'aaa-111,bbb-222-bbb,True,,1999-12-31,1988-01-29T11:22:33.0000Z,123.456,111.222,9090,' \
+            'ZZZ-ZZZ-ZZZ,mytext,d011d054-db4b-4320-9e24-7f4c217af673')
 
 # ################################################################################################################################
 
@@ -195,22 +146,25 @@ class CSVResponse(BaseTestCase):
 
         class MyService(Service):
             class SimpleIO:
-                input = 'aaa', 'bbb'
+                output = Int('aaa'), 'bbb'
 
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
 
-        aaa = 'aaa-111'
+        aaa = 'aaa'
         bbb = '222'
-        ccc = '333'
 
-        # Note that we are using an unexpected separator so that the expected values cannot be found
-        data = '{}^{}^{}'.format(aaa, bbb, ccc)
+        # Note that the value of 'aaa' is not an integer
+        data = {
+            'aaa': aaa,
+            'bbb': bbb
+        }
 
-        with self.assertRaises(ValueError) as ctx:
-            MyService._sio.parse_input(data, DATA_FORMAT.CSV)
+        with self.assertRaises(SerialisationError) as ctx:
+            result = MyService._sio.serialise(data, DATA_FORMAT.CSV)
 
-        e = ctx.exception # type: ValueError
-        self.assertEquals(e.args[0], "Could not find value at index `1` in `['aaa-111^222^333']` (dialect:excel, config:{})")
+        e = ctx.exception # type: SerialisationError
+        self.assertEquals(e.args[0], "Exception `invalid literal for int() with base 10: 'aaa'` while serialising " \
+            "`{'aaa': 'aaa', 'bbb': '222'}`")
 
 # ################################################################################################################################
 # ################################################################################################################################
