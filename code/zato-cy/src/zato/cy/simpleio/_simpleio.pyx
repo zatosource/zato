@@ -1447,14 +1447,13 @@ cdef class CySimpleIO(object):
         if self.definition._csv_config.should_write_header:
             writer.writeheader()
 
-        try:
-            while True:
-                data_dict = next(gen)
-                writer.writerow(data_dict)
-        except StopIteration:
-            out = buff.getvalue()
-            buff.close()
-            return out
+        for data_dict in iter(gen):
+            writer.writerow(data_dict)
+
+        out = buff.getvalue()
+        buff.close()
+
+        return out
 
 # ################################################################################################################################
 
@@ -1479,13 +1478,10 @@ cdef class CySimpleIO(object):
         # Ignore field names, not needed in JSON serialisation
         next(gen)
 
-        try:
-            while True:
-                data_dict = next(gen)
-                out.append(data_dict)
-        except StopIteration:
-            return json_dumps(out) if is_list else json_dumps(out[0])
+        for data_dict in iter(gen):
+            out.append(data_dict)
 
+        return json_dumps(out) if is_list else json_dumps(out[0])
 
 # ################################################################################################################################
 
