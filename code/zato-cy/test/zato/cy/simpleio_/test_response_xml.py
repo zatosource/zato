@@ -14,9 +14,6 @@ from decimal import Decimal as decimal_Decimal
 from json import dumps as json_dumps, loads as json_loads
 from uuid import UUID as uuid_UUID
 
-# Bunch
-from bunch import bunchify
-
 # dateparser
 from dateparser import parse as dt_parse
 
@@ -32,11 +29,11 @@ from test.zato.cy.simpleio_ import BaseTestCase
 # ################################################################################################################################
 # ################################################################################################################################
 
-class JSONResponse(BaseTestCase):
+class XMLResponse(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_response_basic(self):
+    def test_response_basic(self):
 
         class MyService(Service):
             class SimpleIO:
@@ -57,52 +54,18 @@ class JSONResponse(BaseTestCase):
             'eee': eee,
         }
 
-        result = MyService._sio.serialise(data, DATA_FORMAT.JSON)
-        json_data = json_loads(result)
-
-        self.assertEquals(json_data['aaa'], aaa)
-        self.assertEquals(json_data['bbb'], int(bbb))
-        self.assertEquals(json_data['ccc'], ccc)
-        self.assertEquals(json_data['eee'], eee)
-
-# ################################################################################################################################
-
-    def test_response_with_response_elem(self):
-
-        class MyService(Service):
-            class SimpleIO:
-                output = 'aaa', Int('bbb'), Opaque('ccc'), '-ddd', '-eee'
-                response_elem = 'my_response_elem'
-
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
-
-        aaa = 'aaa-111'
-        bbb = '222'
-        ccc = 'ccc-ccc-ccc'
-        eee = 'eee-444'
-
-        # Note that 'ddd' is optional and we are free to skip it
-        data = {
-            'aaa': aaa,
-            'bbb': bbb,
-            'ccc': ccc,
-            'eee': eee,
-        }
-
-        result = MyService._sio.serialise(data, DATA_FORMAT.JSON)
+        result = MyService._sio.serialise(data, DATA_FORMAT.XML)
 
         print()
         print(111, result)
         print()
 
-        json_data = json_loads(result)
-        json_data = bunchify(json_data)
-
         '''
-        self.assertEquals(json_data.aaa, aaa)
-        self.assertEquals(json_data.bbb, int(bbb))
-        self.assertEquals(json_data.ccc, ccc)
-        self.assertEquals(json_data.eee, eee)
+        json_data = json_loads(result)
+        self.assertEquals(json_data['aaa'], aaa)
+        self.assertEquals(json_data['bbb'], int(bbb))
+        self.assertEquals(json_data['ccc'], ccc)
+        self.assertEquals(json_data['eee'], eee)
         '''
 
 # ################################################################################################################################
