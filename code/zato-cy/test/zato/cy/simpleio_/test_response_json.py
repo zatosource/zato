@@ -107,7 +107,7 @@ class JSONResponse(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_response_multiline(self):
+    def test_response_multiline(self):
 
         class MyService(Service):
             class SimpleIO:
