@@ -1074,8 +1074,7 @@ cdef class CySimpleIO(object):
 # ################################################################################################################################
 
     cpdef build(self, object class_):
-        """ Parses a user-defined SimpleIO declaration (currently, a Python class)
-        and populates all the internal structures as needed.
+        """ Parses a user-defined SimpleIO declaration (a Python class) and populates all the internal structures as needed.
         """
         self._build_io_elems('input', class_)
         self._build_io_elems('output', class_)
@@ -1084,6 +1083,16 @@ cdef class CySimpleIO(object):
         # we need to turn the _ForceEmptyKeyMarker into an acutal list of elements to force into empty keys.
         if self.has_bool_force_empty_keys:
             self._resolve_bool_force_empty_keys()
+
+        response_elem = getattr(self.user_declaration, 'response_elem', InternalNotGiven)
+
+        if response_elem is InternalNotGiven:
+            response_elem = getattr(self.server_config, 'response_elem', InternalNotGiven)
+
+        if (not response_elem) or (response_elem is InternalNotGiven):
+            response_elem = None
+
+        self.definition._response_elem = response_elem
 
         # Set up CSV configuration
         self._set_up_csv_config()
@@ -1447,7 +1456,7 @@ cdef class CySimpleIO(object):
         if self.definition._csv_config.should_write_header:
             writer.writeheader()
 
-        for data_dict in iter(gen):
+        for data_dict in gen:
             writer.writerow(data_dict)
 
         out = buff.getvalue()
@@ -1466,7 +1475,7 @@ cdef class CySimpleIO(object):
         # Needed to find out if we are producing a list or a single element
         cdef int  current_idx = 0
         cdef bint is_list
-        cdef list out = []
+        cdef list out_elems = []
 
         if isinstance(data, (list, tuple)):
             is_list = True
@@ -1478,10 +1487,20 @@ cdef class CySimpleIO(object):
         # Ignore field names, not needed in JSON serialisation
         next(gen)
 
-        for data_dict in iter(gen):
-            out.append(data_dict)
+        for data_dict in gen:
+            out_elems.append(data_dict)
 
-        return json_dumps(out) if is_list else json_dumps(out[0])
+
+        # Return a full list or a single element, depending on what is needed
+        out = out_elems if is_list else out_elems[0]
+
+        # Wrap the response in a top-level element if needed
+        if self.definition._response_elem:
+            out = {
+                self.definition._response_elem: out
+            }
+
+        return json_dumps(out)
 
 # ################################################################################################################################
 
