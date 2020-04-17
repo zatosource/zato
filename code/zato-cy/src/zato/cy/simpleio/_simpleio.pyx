@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2020, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -340,9 +340,6 @@ cdef class Elem(object):
 
     from_post  = _not_implemented
     to_post    = _not_implemented
-
-    from_http  = _not_implemented
-    to_http    = _not_implemented
 
 # ################################################################################################################################
 
@@ -1374,14 +1371,6 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cdef unicode _serialise_xml(self, object data):
-        print()
-        print(333, data)
-        print()
-        return '333-a'
-
-# ################################################################################################################################
-
     cdef unicode _serialise_post(self, object data):
         print()
         print(444, data)
@@ -1496,6 +1485,15 @@ cdef class CySimpleIO(object):
                 out.append(data_dict)
         except StopIteration:
             return json_dumps(out) if is_list else json_dumps(out[0])
+
+
+# ################################################################################################################################
+
+    cdef unicode _serialise_xml(self, object data):
+        print()
+        print(333, data)
+        print()
+        return '333-a'
 
 # ################################################################################################################################
 
