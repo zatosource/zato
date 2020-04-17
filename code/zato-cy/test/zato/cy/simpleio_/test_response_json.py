@@ -36,7 +36,7 @@ class JSONResponse(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_response_basic(self):
+    def test_response_basic(self):
 
         class MyService(Service):
             class SimpleIO:
@@ -91,19 +91,13 @@ class JSONResponse(BaseTestCase):
 
         result = MyService._sio.serialise(data, DATA_FORMAT.JSON)
 
-        print()
-        print(111, result)
-        print()
-
         json_data = json_loads(result)
         json_data = bunchify(json_data)
 
-        '''
-        self.assertEquals(json_data.aaa, aaa)
-        self.assertEquals(json_data.bbb, int(bbb))
-        self.assertEquals(json_data.ccc, ccc)
-        self.assertEquals(json_data.eee, eee)
-        '''
+        self.assertEquals(json_data.my_response_elem.aaa, aaa)
+        self.assertEquals(json_data.my_response_elem.bbb, int(bbb))
+        self.assertEquals(json_data.my_response_elem.ccc, ccc)
+        self.assertEquals(json_data.my_response_elem.eee, eee)
 
 # ################################################################################################################################
 
@@ -146,7 +140,7 @@ class JSONResponse(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_response_all_elem_types(self):
+    def test_response_all_elem_types(self):
 
         class MyService(Service):
             class SimpleIO:
@@ -203,7 +197,7 @@ class JSONResponse(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_response_invalid_input(self):
+    def test_response_invalid_input(self):
 
         class MyService(Service):
             class SimpleIO:
