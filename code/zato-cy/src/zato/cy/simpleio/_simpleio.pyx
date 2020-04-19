@@ -865,10 +865,14 @@ cdef class XMLConfig(object):
     """
     cdef:
         public object namespace
+        public unicode encoding
+        public bint declaration
         public bint pretty_print
 
     def __cinit__(self):
         self.namespace = InternalNotGiven
+        self.encoding = 'UTF-8'
+        self.declaration = True
         self.pretty_print = InternalNotGiven
 
 # ################################################################################################################################
@@ -946,9 +950,11 @@ cdef class SIODefinition(object):
         self._csv_config.writer_config.update(writer_config)
         self._csv_config.should_write_header = should_write_header
 
-    cdef set_xml_config(self, object namespace, bint pretty_print):
+    cdef set_xml_config(self, object namespace, bint pretty_print, unicode encoding, bint declaration):
         self._xml_config.namespace = namespace
         self._xml_config.pretty_print = pretty_print
+        self._xml_config.encoding = encoding
+        self._xml_config.declaration = declaration
 
     def __str__(self):
         return '<{} at {}, input:`{}`, output:`{}`>'.format(self.__class__.__name__, hex(id(self)),
@@ -1103,11 +1109,13 @@ cdef class CySimpleIO(object):
 
     cdef _set_up_xml_config(self):
 
-        cdef list attrs = ['namespace', 'pretty_print']
+        cdef list attrs = ['namespace', 'pretty_print', 'encoding', 'declaration']
         cdef unicode attr
         cdef dict attr_values = {}
         cdef object namespace
         cdef object pretty_print
+        cdef object encoding
+        cdef object declaration
         cdef object value = InternalNotGiven
         cdef object xml_sio_class = getattr(self.user_declaration, 'XML', InternalNotGiven)
         cdef bint has_xml_sio_class = xml_sio_class is not InternalNotGiven
@@ -1132,8 +1140,15 @@ cdef class CySimpleIO(object):
         if pretty_print is InternalNotGiven:
             pretty_print = True
 
-        xml_namespace = getattr(self.user_declaration, 'xml_namespace', InternalNotGiven)
-        self.definition.set_xml_config(namespace, pretty_print)
+        encoding = attr_values['encoding']
+        if encoding is InternalNotGiven:
+            encoding = 'UTF-8'
+
+        declaration = attr_values['declaration']
+        if declaration is InternalNotGiven:
+            declaration = True
+
+        self.definition.set_xml_config(namespace, pretty_print, encoding, declaration)
 
 # ################################################################################################################################
 
@@ -1599,7 +1614,11 @@ cdef class CySimpleIO(object):
         else:
             self._serialise_dict_to_xml(root_elem, namespace, dict_items)
 
-        xml_serialised = etree_to_string(root_elem, pretty_print=self.definition._xml_config.pretty_print)
+        xml_serialised = etree_to_string(root_elem,
+            xml_declaration=self.definition._xml_config.declaration,
+            encoding=self.definition._xml_config.encoding,
+            pretty_print=self.definition._xml_config.pretty_print
+        )
         out = xml_serialised.decode('utf8')
 
         return out
