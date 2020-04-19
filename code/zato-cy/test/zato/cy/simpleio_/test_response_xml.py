@@ -40,6 +40,7 @@ class XMLResponse(BaseTestCase):
                 output = 'aaa', Int('bbb'), Opaque('ccc'), '-ddd', '-eee'
                 xml_namespace = 'https://myns.zato.io'
                 xml_pretty_print = False
+                xml_declaration = False
                 response_elem = 'my_response'
 
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
@@ -64,12 +65,47 @@ class XMLResponse(BaseTestCase):
 
 # ################################################################################################################################
 
+    def test_response_basic_with_declaration_and_encoding(self):
+
+        class MyService(Service):
+            class SimpleIO:
+                output = 'aaa', Int('bbb'), Opaque('ccc'), '-ddd', '-eee'
+                xml_namespace = 'https://myns.zato.io'
+                xml_pretty_print = False
+                xml_declaration = True
+                xml_encoding = 'ASCII'
+                response_elem = 'my_response'
+
+        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+
+        aaa = 'aaa-111'
+        bbb = '222'
+        ccc = 'ccc-ccc-ccc'
+        eee = 'eee-444'
+
+        # Note that 'ddd' is optional and we are free to skip it
+        data = {
+            'aaa': aaa,
+            'bbb': bbb,
+            'ccc': ccc,
+            'eee': eee,
+        }
+
+        result = MyService._sio.serialise(data, DATA_FORMAT.XML)
+
+        self.assertEquals(repr(result), repr("""<?xml version=\'1.0\' encoding=\'ASCII\'?>\n<ns0:my_response """ \
+            """xmlns:ns0="https://myns.zato.io"><ns0:aaa>aaa-111</ns0:aaa><ns0:bbb>222</ns0:bbb><ns0:ccc>ccc-ccc-ccc""" \
+            """</ns0:ccc><ns0:eee>eee-444</ns0:eee></ns0:my_response>"""))
+
+# ################################################################################################################################
+
     def test_response_multiline(self):
 
         class MyService(Service):
             class SimpleIO:
                 output = 'aaa', Int('bbb'), Opaque('ccc'), '-ddd', '-eee'
                 xml_pretty_print = False
+                xml_declaration = False
 
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
 
@@ -100,6 +136,7 @@ class XMLResponse(BaseTestCase):
         class MyService(Service):
             class SimpleIO:
                 xml_pretty_print = False
+                xml_declaration = False
                 output = 'aaa', AsIs('bbb'), Bool('ccc'), 'ddd', Date('eee'), DateTime('fff'), Decimal('ggg'), \
                     Float('jjj'), Int('mmm'), Opaque('ooo'), Text('ppp'), UUID('qqq')
 
