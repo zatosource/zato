@@ -24,7 +24,7 @@ from uuid import UUID as uuid_UUID
 from dateutil.parser import parse as dt_parse
 
 # lxml
-from lxml.etree import _Element as EtreeElement, XPath
+from lxml.etree import _Element as EtreeElementClass, Element, SubElement, tostring as etree_to_string, XPath
 
 # Zato
 from zato.common import DATA_FORMAT
@@ -68,6 +68,13 @@ cdef dict _csv_writer_attr_map = {
     'on_missing': 'restval',
     'on_extra': 'extrasaction',
 }
+
+# ################################################################################################################################
+
+cdef unicode DATA_FORMAT_CSV  = DATA_FORMAT.CSV
+cdef unicode DATA_FORMAT_JSON = DATA_FORMAT.JSON
+cdef unicode DATA_FORMAT_POST = DATA_FORMAT.POST
+cdef unicode DATA_FORMAT_XML  = DATA_FORMAT.XML
 
 # ################################################################################################################################
 
@@ -211,13 +218,13 @@ cdef class Elem(object):
         self.parse_from = {}
         self.parse_to = {}
 
-        self.parse_from[DATA_FORMAT.JSON] = self.from_json
-        self.parse_from[DATA_FORMAT.XML] = self.from_xml
-        self.parse_from[DATA_FORMAT.CSV] = self.from_csv
+        self.parse_from[DATA_FORMAT_JSON] = self.from_json
+        self.parse_from[DATA_FORMAT_XML] = self.from_xml
+        self.parse_from[DATA_FORMAT_CSV] = self.from_csv
 
-        self.parse_to[DATA_FORMAT.JSON] = self.to_json
-        self.parse_to[DATA_FORMAT.XML] = self.to_xml
-        self.parse_to[DATA_FORMAT.CSV] = self.to_csv
+        self.parse_to[DATA_FORMAT_JSON] = self.to_json
+        self.parse_to[DATA_FORMAT_XML] = self.to_xml
+        self.parse_to[DATA_FORMAT_CSV] = self.to_csv
 
 # ################################################################################################################################
 
@@ -853,6 +860,19 @@ cdef class CSVConfig(object):
 
 # ################################################################################################################################
 
+cdef class XMLConfig(object):
+    """ Represents XML configuration that a particular SimpleIO definition uses.
+    """
+    cdef:
+        public object namespace
+        public bint pretty_print
+
+    def __cinit__(self):
+        self.namespace = InternalNotGiven
+        self.pretty_print = InternalNotGiven
+
+# ################################################################################################################################
+
 cdef class SIODefinition(object):
     """ A single SimpleIO definition attached to a service.
     """
@@ -876,8 +896,11 @@ cdef class SIODefinition(object):
         # Which empty values should not be produced from input / sent on output, unless overridden by each element
         public SIOSkipEmpty skip_empty
 
-        # CSV configuration for that definition
+        # CSV configuration for the definition
         public CSVConfig _csv_config
+
+        # XML configuration for the definition
+        public XMLConfig _xml_config
 
         # Name of the service this definition is for
         unicode _service_name
@@ -891,6 +914,7 @@ cdef class SIODefinition(object):
         self._output_required = SIOList()
         self._output_optional = SIOList()
         self._csv_config = CSVConfig()
+        self._xml_config = XMLConfig()
 
     def __init__(self, SIODefault sio_default, SIOSkipEmpty skip_empty):
         self.sio_default = sio_default
@@ -921,6 +945,10 @@ cdef class SIODefinition(object):
         self._csv_config.common_config.update(common_config)
         self._csv_config.writer_config.update(writer_config)
         self._csv_config.should_write_header = should_write_header
+
+    cdef set_xml_config(self, object namespace, bint pretty_print):
+        self._xml_config.namespace = namespace
+        self._xml_config.pretty_print = pretty_print
 
     def __str__(self):
         return '<{} at {}, input:`{}`, output:`{}`>'.format(self.__class__.__name__, hex(id(self)),
@@ -1073,6 +1101,42 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
+    cdef _set_up_xml_config(self):
+
+        cdef list attrs = ['namespace', 'pretty_print']
+        cdef unicode attr
+        cdef dict attr_values = {}
+        cdef object namespace
+        cdef object pretty_print
+        cdef object value = InternalNotGiven
+        cdef object xml_sio_class = getattr(self.user_declaration, 'XML', InternalNotGiven)
+        cdef bint has_xml_sio_class = xml_sio_class is not InternalNotGiven
+
+        for attr_name in attrs:
+
+            value = InternalNotGiven
+
+            if has_xml_sio_class:
+                value = getattr(xml_sio_class, attr_name, InternalNotGiven)
+
+            if value is InternalNotGiven:
+                value = getattr(self.user_declaration, 'xml_'+ attr_name, InternalNotGiven)
+
+            attr_values[attr_name] = value
+
+        namespace = attr_values['namespace']
+        if namespace is InternalNotGiven:
+            namespace = ''
+
+        pretty_print = attr_values['pretty_print']
+        if pretty_print is InternalNotGiven:
+            pretty_print = True
+
+        xml_namespace = getattr(self.user_declaration, 'xml_namespace', InternalNotGiven)
+        self.definition.set_xml_config(namespace, pretty_print)
+
+# ################################################################################################################################
+
     cpdef build(self, object class_):
         """ Parses a user-defined SimpleIO declaration (a Python class) and populates all the internal structures as needed.
         """
@@ -1096,6 +1160,9 @@ cdef class CySimpleIO(object):
 
         # Set up CSV configuration
         self._set_up_csv_config()
+
+        # Set up XML configuration
+        self._set_up_xml_config()
 
 # ################################################################################################################################
 
@@ -1270,10 +1337,10 @@ cdef class CySimpleIO(object):
     cdef object _parse_input_elem(self, object elem, unicode data_format, bint is_csv=False):
 
         cdef bint is_dict = isinstance(elem, dict)
-        cdef bint is_xml = isinstance(elem, EtreeElement)
+        cdef bint is_xml = isinstance(elem, EtreeElementClass)
 
         if not (is_dict or is_csv or is_xml):
-            raise ValueError('Expected a dict, CSV or EtreeElement instead of `{!r}` ({})'.format(elem, type(elem).__name__))
+            raise ValueError('Expected a dict, CSV or EtreeElementClass instead of `{!r}` ({})'.format(elem, type(elem).__name__))
 
         cdef dict out = {}
 
@@ -1357,7 +1424,7 @@ cdef class CySimpleIO(object):
 
     cpdef object parse_input(self, data, data_format):
 
-        cdef bint is_csv = data_format == DATA_FORMAT.CSV and isinstance(data, basestring)
+        cdef bint is_csv = data_format == DATA_FORMAT_CSV and isinstance(data, basestring)
 
         if isinstance(data, list):
             return self._parse_input_list(data, data_format, is_csv)
@@ -1369,14 +1436,6 @@ cdef class CySimpleIO(object):
             else:
                 out = self._parse_input_elem(data, data_format)
             return bunchify(out)
-
-# ################################################################################################################################
-
-    cdef unicode _build_serialisation_dict(self, object data):
-        print()
-        print(555, data)
-        print()
-        return '555-a'
 
 # ################################################################################################################################
 
@@ -1466,7 +1525,7 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cdef unicode _serialise_json(self, object data):
+    cdef object _serialise_to_dicts(self, object data, unicode data_format):
 
         # No reason to continue if no SimpleIO output is declared
         if not (self.definition._output_required or self.definition._output_optional):
@@ -1484,46 +1543,81 @@ cdef class CySimpleIO(object):
 
         gen = self._yield_data_dicts(data)
 
-        # Ignore field names, not needed in JSON serialisation
+        # Ignore field names, not needed in JSON nor XML serialisation
         next(gen)
 
         for data_dict in gen:
             out_elems.append(data_dict)
 
-
         # Return a full list or a single element, depending on what is needed
-        out = out_elems if is_list else out_elems[0]
+        cdef object out = out_elems if is_list else out_elems[0]
 
         # Wrap the response in a top-level element if needed
-        if self.definition._response_elem:
-            out = {
-                self.definition._response_elem: out
-            }
+        if data_format == DATA_FORMAT_JSON:
+            if self.definition._response_elem:
+                out = {
+                    self.definition._response_elem: out
+                }
 
+        return out
+
+# ################################################################################################################################
+
+    cdef unicode _serialise_json(self, object data):
+        cdef object out = self._serialise_to_dicts(data, DATA_FORMAT_JSON)
         return json_dumps(out)
 
 # ################################################################################################################################
 
+    def _serialise_dict_to_xml(self, object parent, unicode namespace, dict dict_elem):
+        cdef object key, value
+
+        for key, value in dict_elem.items():
+            xml_elem = SubElement(parent, '{}{}'.format(namespace, key))
+            xml_elem.text = str(value)
+
+# ################################################################################################################################
+
     cdef unicode _serialise_xml(self, object data):
-        print()
-        print(333, data)
-        print()
-        return '333-a'
+        cdef object dict_items = self._serialise_to_dicts(data, DATA_FORMAT_XML)
+        cdef bytes xml_serialised
+        cdef unicode out
+        cdef dict dict_item
+        cdef xml_sub_elem, xml_item
+
+        cdef unicode root = self.definition._response_elem or 'response'
+        cdef unicode namespace = self.definition._xml_config.namespace or ''
+        if namespace:
+            namespace = '{'+ namespace + '}'
+
+        cdef object root_elem = Element('{}{}'.format(namespace, root))
+
+        if isinstance(dict_items, list):
+            for dict_item in dict_items:
+                xml_item = SubElement(root_elem, '{}{}'.format(namespace, 'item'))
+                self._serialise_dict_to_xml(xml_item, namespace, dict_item)
+        else:
+            self._serialise_dict_to_xml(root_elem, namespace, dict_items)
+
+        xml_serialised = etree_to_string(root_elem, pretty_print=self.definition._xml_config.pretty_print)
+        out = xml_serialised.decode('utf8')
+
+        return out
 
 # ################################################################################################################################
 
     cpdef unicode serialise(self, object data, unicode data_format):
 
-        if data_format == DATA_FORMAT.JSON:
+        if data_format == DATA_FORMAT_JSON:
             return self._serialise_json(data)
 
-        elif data_format == DATA_FORMAT.XML:
-            return self._serialise_csv(data)
+        elif data_format == DATA_FORMAT_XML:
+            return self._serialise_xml(data)
 
-        elif data_format == DATA_FORMAT.POST:
+        elif data_format == DATA_FORMAT_POST:
             return self._serialise_post(data)
 
-        elif data_format == DATA_FORMAT.CSV:
+        elif data_format == DATA_FORMAT_CSV:
             return self._serialise_csv(data)
 
         else:
