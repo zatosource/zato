@@ -39,8 +39,8 @@ class XMLResponse(BaseTestCase):
             class SimpleIO:
                 output = 'aaa', Int('bbb'), Opaque('ccc'), '-ddd', '-eee'
                 xml_namespace = 'https://myns.zato.io'
-                response_elem = 'my_response'
                 xml_pretty_print = False
+                response_elem = 'my_response'
 
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
 
@@ -64,12 +64,12 @@ class XMLResponse(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_response_multiline(self):
+    def test_response_multiline(self):
 
         class MyService(Service):
             class SimpleIO:
                 output = 'aaa', Int('bbb'), Opaque('ccc'), '-ddd', '-eee'
-                csv_delimiter = ':'
+                xml_pretty_print = False
 
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
 
@@ -88,25 +88,18 @@ class XMLResponse(BaseTestCase):
         data2 = {'aaa': aaa2, 'bbb': bbb2, 'ccc': ccc2, 'eee': eee2}
         data = [data1, data2]
 
-        result = MyService._sio.serialise(data, DATA_FORMAT.JSON)
-        json_data = json_loads(result)
-
-        self.assertEquals(json_data[0]['aaa'], aaa1)
-        self.assertEquals(json_data[0]['bbb'], int(bbb1))
-        self.assertEquals(json_data[0]['ccc'], ccc1)
-        self.assertEquals(json_data[0]['eee'], eee1)
-
-        self.assertEquals(json_data[1]['aaa'], aaa2)
-        self.assertEquals(json_data[1]['bbb'], int(bbb2))
-        self.assertEquals(json_data[1]['ccc'], ccc2)
-        self.assertEquals(json_data[1]['eee'], eee2)
+        result = MyService._sio.serialise(data, DATA_FORMAT.XML)
+        self.assertEquals(result, '<response><item><aaa>aaa-111-1</aaa><bbb>2221</bbb><ccc>ccc-ccc-ccc-1</ccc>' \
+            '<eee>eee-444-1</eee></item><item><aaa>aaa-111-2</aaa><bbb>2222</bbb><ccc>ccc-ccc-ccc-2</ccc>' \
+            '<eee>eee-444-2</eee></item></response>')
 
 # ################################################################################################################################
 
-    def xtest_response_all_elem_types(self):
+    def test_response_all_elem_types(self):
 
         class MyService(Service):
             class SimpleIO:
+                xml_pretty_print = False
                 output = 'aaa', AsIs('bbb'), Bool('ccc'), 'ddd', Date('eee'), DateTime('fff'), Decimal('ggg'), \
                     Float('jjj'), Int('mmm'), Opaque('ooo'), Text('ppp'), UUID('qqq')
 
@@ -143,24 +136,15 @@ class XMLResponse(BaseTestCase):
             'qqq': qqq
         }
 
-        result = MyService._sio.serialise(data, DATA_FORMAT.JSON)
-        json_data = json_loads(result)
-
-        self.assertEquals(json_data['aaa'], aaa)
-        self.assertEquals(json_data['bbb'], bbb)
-        self.assertEquals(json_data['ccc'], ccc)
-        self.assertEquals(json_data['eee'], '1999-12-31')
-        self.assertEquals(json_data['fff'], '1988-01-29T11:22:33+00:00')
-        self.assertEquals(json_data['ggg'], ggg)
-        self.assertEquals(json_data['jjj'], float(jjj))
-        self.assertEquals(json_data['mmm'], int(mmm))
-        self.assertEquals(json_data['ooo'], ooo)
-        self.assertEquals(json_data['ppp'], ppp)
-        self.assertEquals(json_data['qqq'], qqq.hex)
+        result = MyService._sio.serialise(data, DATA_FORMAT.XML)
+        self.assertEquals(result, '<response><aaa>aaa-111</aaa><bbb>bbb-222-bbb</bbb><ccc>True</ccc>' \
+            '<ddd></ddd><eee>1999-12-31</eee><fff>1988-01-29T11:22:33+00:00</fff>' \
+            '<ggg>123.456</ggg><jjj>111.222</jjj><mmm>9090</mmm><ooo>ZZZ-ZZZ-ZZZ</ooo>' \
+            '<ppp>mytext</ppp><qqq>d011d054db4b43209e247f4c217af673</qqq></response>')
 
 # ################################################################################################################################
 
-    def xtest_response_invalid_input(self):
+    def test_response_invalid_input(self):
 
         class MyService(Service):
             class SimpleIO:
@@ -178,7 +162,7 @@ class XMLResponse(BaseTestCase):
         }
 
         with self.assertRaises(SerialisationError) as ctx:
-            result = MyService._sio.serialise(data, DATA_FORMAT.JSON)
+            result = MyService._sio.serialise(data, DATA_FORMAT.XML)
 
         e = ctx.exception # type: SerialisationError
         self.assertEquals(e.args[0], "Exception `invalid literal for int() with base 10: 'aaa'` while serialising " \
