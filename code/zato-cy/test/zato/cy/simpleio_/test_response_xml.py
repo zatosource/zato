@@ -38,6 +38,9 @@ class XMLResponse(BaseTestCase):
         class MyService(Service):
             class SimpleIO:
                 output = 'aaa', Int('bbb'), Opaque('ccc'), '-ddd', '-eee'
+                xml_namespace = 'https://myns.zato.io'
+                response_elem = 'my_response'
+                xml_pretty_print = False
 
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
 
@@ -55,18 +58,9 @@ class XMLResponse(BaseTestCase):
         }
 
         result = MyService._sio.serialise(data, DATA_FORMAT.XML)
-
-        print()
-        print(111, result)
-        print()
-
-        '''
-        json_data = json_loads(result)
-        self.assertEquals(json_data['aaa'], aaa)
-        self.assertEquals(json_data['bbb'], int(bbb))
-        self.assertEquals(json_data['ccc'], ccc)
-        self.assertEquals(json_data['eee'], eee)
-        '''
+        self.assertEquals(result, '<ns0:my_response xmlns:ns0="https://myns.zato.io">' \
+            '<ns0:aaa>aaa-111</ns0:aaa><ns0:bbb>222</ns0:bbb><ns0:ccc>ccc-ccc-ccc</ns0:ccc>' \
+            '<ns0:eee>eee-444</ns0:eee></ns0:my_response>')
 
 # ################################################################################################################################
 
