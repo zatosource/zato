@@ -1223,7 +1223,7 @@ class ServiceStore(object):
 
         except Exception:
             logger.error(
-                'Exception while visiting mod:`%s`, is_internal:`%s`, fs_location:`%s`, e:`%s`',
+                'Exception while visiting module:`%s`, is_internal:`%s`, fs_location:`%s`, e:`%s`',
                 mod, is_internal, fs_location, format_exc())
         finally:
             return to_process
