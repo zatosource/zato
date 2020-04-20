@@ -142,6 +142,8 @@ cdef class SIOSkipEmpty(object):
         if input_def is not NotGiven:
             if input_def is True:
                 skip_all_empty_input = True
+            elif input_def is False:
+                skip_all_empty_input = False
             else:
                 skip_input_set.update(set(input_def))
 
@@ -150,6 +152,8 @@ cdef class SIOSkipEmpty(object):
         if output_def is not NotGiven:
             if output_def is True:
                 skip_all_empty_output = True
+            elif output_def is False:
+                skip_all_empty_output = False
             else:
                 skip_output_set.update(set(output_def))
 
@@ -977,7 +981,7 @@ cdef class CySimpleIO(object):
         object user_declaration
 
         # Kept for backward compatibility with 3.0
-        bint has_bool_force_empty_keys
+        public bint has_bool_force_empty_keys
 
 # ################################################################################################################################
 
@@ -989,7 +993,7 @@ cdef class CySimpleIO(object):
 
         cpdef SIODefault sio_default = SIODefault(input_value, output_value, default_value)
 
-        raw_skip_empty = getattr(user_declaration, 'skip_empty_keys', NotGiven)
+        raw_skip_empty = getattr(user_declaration, 'skip_empty_keys', NotGiven) # For backward compatibility
         class_skip_empty = getattr(user_declaration, 'SkipEmpty', NotGiven)
 
         # Quick input validation - we cannot have both kinds of configuration
@@ -997,7 +1001,7 @@ cdef class CySimpleIO(object):
             raise ValueError('Cannot specify both skip_empty_input and SkipEmpty in a SimpleIO definition')
 
         # Note that to retain backward compatibility, it is force_empty_keys instead of force_empty_output_set
-        raw_force_empty_output_set = getattr(user_declaration, 'force_empty_keys', NotGiven)
+        raw_force_empty_output_set = getattr(user_declaration, 'force_empty_keys', NotGiven) # For backward compatibility
         if raw_force_empty_output_set in (True, False):
             self.has_bool_force_empty_keys = True
         else:
