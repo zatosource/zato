@@ -1291,12 +1291,27 @@ cdef class CySimpleIO(object):
         required = _required
         optional = _optional
 
-        # Confirm that required elements do not overlap with optional ones
+        # If there are elements shared by required and optional lists, the ones from the optional list
+        # need to be removed, the required ones take priority. The reason for that is that it is common
+        # to have a base SimpleIO class with optional elements that are made mandatory in a child class.
         shared_elems = set(elem.name for elem in required) & set(elem.name for elem in optional)
 
         if shared_elems:
-            raise ValueError('Elements in {}_required and {}_optional cannot be shared, found:`{}` in `{}`'.format(
-                    container, container, sorted(elem for elem in shared_elems), class_))
+
+            # Iterate through all the shared elements found, take note of what is shared ..
+            to_remove = []
+            for shared_name in shared_elems:
+                for elem in optional:
+                    if elem.name == shared_name:
+                        to_remove.append(elem)
+
+            # .. remove them from the optional list ..
+            for shared_elem in to_remove:
+                optional.remove(shared_elem)
+
+            # .. and let the user know about it.
+            logger.info('Shared elements found; {}_required will take priority, `{}`, `{}`'.format(
+                container, sorted(elem for elem in shared_elems), class_))
 
         # Everything is validated, we can actually set the lists of elements now
 

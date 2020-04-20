@@ -38,24 +38,6 @@ class InputPlainParsingTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def test_elem_sharing_not_allowed_plain(self):
-
-        class SimpleIO:
-            input_required = 'abc', 'zxc', 'qwe', '-zxc', '-abc', '-rty'
-            input_optional = 'zxc', 'abc', 'rty'
-
-        with self.assertRaises(ValueError) as ctx:
-            self.get_sio(SimpleIO, test_class_name)
-
-        elem1 = repr(unicode('abc'))
-        elem2 = repr(unicode('zxc'))
-
-        expected = "Elements in input_required and input_optional cannot be shared, found:`[{}, {}]` in `<my-test-class>`".\
-            format(elem1, elem2)
-        self.assertEquals(ctx.exception.args[0], expected)
-
-# ################################################################################################################################
-
     def test_elem_required_minus_is_insignificant(self):
 
         class MyService(Service):

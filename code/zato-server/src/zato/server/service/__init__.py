@@ -529,9 +529,16 @@ class Service(object):
 
         # self.has_sio attribute is set by ServiceStore during deployment
         if self.has_sio:
-            self.request.init(True, self.cid, self.SimpleIO, self.data_format, self.transport, self.wsgi_environ,
+
+            print()
+            print(222, self._sio)
+            print(333, getattr(self, 'SimpleIO', 'ZZZ'))
+            print()
+            print()
+
+            self.request.init(True, self.cid, self._sio, self.data_format, self.transport, self.wsgi_environ,
                 self.server.encrypt)
-            self.response.init(self.cid, self.SimpleIO, self.data_format)
+            self.response.init(self.cid, self._sio, self.data_format)
 
         # Cache is always enabled
         self.cache = self._worker_store.cache_api
