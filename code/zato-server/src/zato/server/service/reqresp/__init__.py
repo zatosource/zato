@@ -179,6 +179,12 @@ WebSphereMQRequestData = IBMMQRequestData
 class Request(SIOConverter):
     """ Wraps a service request and adds some useful meta-data.
     """
+    '''
+    __slots__ = ('logger', 'payload', 'raw_request', 'input', 'cid', 'has_simple_io_config',
+        'simple_io_config', 'bool_parameter_prefixes', 'int_parameters',
+        'int_parameter_suffixes', 'is_xml', 'data_format', 'transport',
+        '_wsgi_environ', 'channel_params', 'merge_channel_params', 'http', 'amqp', 'wmq', 'ibm_mq', 'enforce_string_encoding')
+    '''
     __slots__ = ('logger', 'payload', 'raw_request', 'input', 'cid', 'has_simple_io_config',
         'simple_io_config', 'bool_parameter_prefixes', 'int_parameters',
         'int_parameter_suffixes', 'is_xml', 'data_format', 'transport',
@@ -190,12 +196,12 @@ class Request(SIOConverter):
         self.raw_request = ''
         self.input = {} # Will be overwritten in self.init if necessary
         self.cid = None # type: str
-        self.simple_io_config = simple_io_config or {}
-        self.has_simple_io_config = False
-        self.bool_parameter_prefixes = self.simple_io_config.get('bool_parameter_prefixes', []) # type: list
-        self.int_parameters = self.simple_io_config.get('int_parameters', [])                   # type: list
-        self.int_parameter_suffixes = self.simple_io_config.get('int_parameter_suffixes', [])   # type: list
-        self.is_xml = None # type: bool
+        #self.simple_io_config = simple_io_config or {}
+        #self.has_simple_io_config = False
+        #self.bool_parameter_prefixes = self.simple_io_config.get('bool_parameter_prefixes', []) # type: list
+        #self.int_parameters = self.simple_io_config.get('int_parameters', [])                   # type: list
+        #self.int_parameter_suffixes = self.simple_io_config.get('int_parameter_suffixes', [])   # type: list
+        #self.is_xml = None # type: bool
         self.data_format = data_format # type: str
         self.transport = transport # type: str
         self.http = HTTPRequestData()
@@ -218,9 +224,16 @@ class Request(SIOConverter):
         self.encrypt_func = encrypt_func
 
         if is_sio:
+
+            #print()
+            #print(111, sioz)
+            #print()
+
+            '''
             required_list = getattr(sio, 'input_required', [])
             required_list = [required_list] if isinstance(required_list, basestring) else required_list
             self.init_flat_sio(cid, sio, data_format, transport, wsgi_environ, required_list)
+            '''
 
         # We merge channel params in if requested even if it's not SIO
         else:
@@ -255,6 +268,7 @@ class Request(SIOConverter):
         else:
             self.payload = self.raw_request
 
+        '''
         required_params = {}
 
         if required_list:
@@ -276,6 +290,7 @@ class Request(SIOConverter):
 
         self.input.update(required_params)
         self.input.update(optional_params)
+        '''
 
         for param, value in iteritems(self.channel_params):
             if param not in self.input:

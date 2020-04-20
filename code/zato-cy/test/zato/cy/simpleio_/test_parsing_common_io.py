@@ -157,41 +157,19 @@ class InputOutputParsingTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def test_elem_sharing_not_allowed(self):
+    def test_elem_sharing_required_precedence(self):
 
         class SimpleIO:
             input_required = 'abc', 'zxc', 'qwe'
             input_optional = 'zxc', 'abc', 'rty'
 
-        with self.assertRaises(ValueError) as ctx:
-            self.get_sio(SimpleIO, test_class_name)
+        result = self.get_sio(SimpleIO, test_class_name)
 
-        elem1 = repr(unicode('abc'))
-        elem2 = repr(unicode('zxc'))
+        required_elems = result.definition._input_required.get_elem_names()
+        optional_elems = result.definition._input_optional.get_elem_names()
 
-        expected = "Elements in input_required and input_optional cannot be shared, found:`[{}, {}]` in `<my-test-class>`".\
-            format(elem1, elem2)
-
-        self.assertEquals(ctx.exception.args[0], expected)
-
-# ################################################################################################################################
-
-    def test_default_input_value(self):
-
-        class SimpleIO:
-            input_required = 'abc', 'zxc', 'qwe'
-            input_optional = 'zxc', 'abc', 'rty'
-
-        with self.assertRaises(ValueError) as ctx:
-            self.get_sio(SimpleIO, test_class_name)
-
-        elem1 = repr(unicode('abc'))
-        elem2 = repr(unicode('zxc'))
-
-        expected = "Elements in input_required and input_optional cannot be shared, found:`[{}, {}]` in `<my-test-class>`".\
-            format(elem1, elem2)
-
-        self.assertEquals(ctx.exception.args[0], expected)
+        self.assertListEqual(required_elems, ['abc', 'qwe', 'zxc'])
+        self.assertListEqual(optional_elems, ['rty'])
 
 # ################################################################################################################################
 # ################################################################################################################################
