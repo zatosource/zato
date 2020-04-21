@@ -106,6 +106,9 @@ class SkipEmptyTestCase(BaseTestCase):
 
         result = self.get_sio(SimpleIO, test_class_name)
         self.assertTrue(result.has_bool_force_empty_keys)
+        self.assertEquals(list(result.definition.skip_empty.skip_output_set), [])
+        self.assertEquals(list(result.definition.skip_empty.force_empty_output_set), [])
+        self.assertFalse(result.definition.skip_empty.skip_all_empty_output)
 
 # ################################################################################################################################
 
@@ -116,6 +119,9 @@ class SkipEmptyTestCase(BaseTestCase):
 
         result = self.get_sio(SimpleIO, test_class_name)
         self.assertTrue(result.has_bool_force_empty_keys)
+        self.assertEquals(list(result.definition.skip_empty.skip_output_set), [])
+        self.assertEquals(list(result.definition.skip_empty.force_empty_output_set), [])
+        self.assertFalse(result.definition.skip_empty.skip_all_empty_output)
 
 # ################################################################################################################################
 
@@ -128,6 +134,9 @@ class SkipEmptyTestCase(BaseTestCase):
 
         result = self.get_sio(SimpleIO, test_class_name)
         self.assertFalse(result.has_bool_force_empty_keys)
+        self.assertEquals(list(result.definition.skip_empty.skip_output_set), [])
+        self.assertEquals(list(result.definition.skip_empty.force_empty_output_set), [])
+        self.assertFalse(result.definition.skip_empty.skip_all_empty_output)
 
 # ################################################################################################################################
 # ################################################################################################################################
