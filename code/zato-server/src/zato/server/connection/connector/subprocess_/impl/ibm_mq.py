@@ -27,7 +27,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 from logging import DEBUG
-from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_ACCEPTABLE, OK, responses, SERVICE_UNAVAILABLE
+from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_ACCEPTABLE, OK, responses, \
+    SERVICE_UNAVAILABLE
 from time import sleep
 from traceback import format_exc
 
@@ -58,9 +59,12 @@ _path_api = '/api'
 _path_ping = '/ping'
 _paths = (_path_api, _path_ping)
 
-_cc_failed         = 2    # pymqi.CMQC.MQCC_FAILED
-_rc_conn_broken    = 2009 # pymqi.CMQC.MQRC_CONNECTION_BROKEN
-_rc_not_authorized = 2035 # pymqi.CMQC.MQRC_NOT_AUTHORIZED
+_cc_failed = 2  # pymqi.CMQC.MQCC_FAILED
+_rc_conn_broken = 2009  # pymqi.CMQC.MQRC_CONNECTION_BROKEN
+_rc_not_authorized = 2035  # pymqi.CMQC.MQRC_NOT_AUTHORIZED
+_rc_q_mgr_quiescing = 2161  # pymqi.CMQC.MQRC_Q_MGR_QUIESCING
+_rc_host_not_available = 2538  # pymqi.CMQC.MQRC_HOST_NOT_AVAILABLE
+
 
 # ################################################################################################################################
 
@@ -74,11 +78,13 @@ class _MessageCtx(object):
         self.service_name = service_name
         self.data_format = data_format
 
+
 # ################################################################################################################################
 
 class IBMMQChannel(object):
     """ A process to listen for messages from IBM MQ queue managers.
     """
+
     def __init__(self, conn, channel_id, queue_name, service_name, data_format, on_message_callback, logger):
         self.conn = conn
         self.id = channel_id
@@ -94,12 +100,12 @@ class IBMMQChannel(object):
         import pymqi
         self.pymqi = pymqi
 
-# ################################################################################################################################
+    # ################################################################################################################################
 
     def _get_destination_info(self):
         return 'destination:`%s`, %s' % (self.queue_name, self.conn.get_connection_info())
 
-# ################################################################################################################################
+    # ################################################################################################################################
 
     def start(self, sleep_on_error=3, _connection_closing='zato.connection.closing'):
         """ Runs a background queue listener in its own  thread.
@@ -121,7 +127,7 @@ class IBMMQChannel(object):
 
                     if msg == _connection_closing:
                         self.logger.info('Received request to quit, closing channel for queue `%s` (%s)',
-                            self.queue_name, self.conn.get_connection_info())
+                                         self.queue_name, self.conn.get_connection_info())
                         self.keep_running = False
                         return
 
@@ -136,7 +142,8 @@ class IBMMQChannel(object):
 
                 except self.pymqi.MQMIError as e:
                     if e.reason == self.pymqi.CMQC.MQRC_UNKNOWN_OBJECT_NAME:
-                        self.logger.warn('No such queue `%s` found for %s', self.queue_name, self.conn.get_connection_info())
+                        self.logger.warn('No such queue `%s` found for %s', self.queue_name,
+                                         self.conn.get_connection_info())
                     else:
                         self.logger.warn('%s in run, reason_code:`%s`, comp_code:`%s`' % (
                             e.__class__.__name__, e.reason, e.comp))
@@ -147,15 +154,30 @@ class IBMMQChannel(object):
                     sleep(sleep_on_error)
 
                 except WebSphereMQException as e:
-                    # If current connection is broken we may try to re-estalish it.
                     sleep(sleep_on_error)
-
-                    if e.completion_code == _cc_failed and e.reason_code == _rc_conn_broken:
-                        self.logger.warn('Caught MQRC_CONNECTION_BROKEN in receive, will try to reconnect connection to %s ',
-                            self.conn.get_connection_info())
-                        self.conn.reconnect()
-                        self.conn.ping()
+                    # if connection broken or host is not available
+                    # or qmgr restart try to reconnect else write error to ibm_logger and stop channel
+                    while self.keep_running and e.completion_code == _cc_failed \
+                            and e.reason_code in [_rc_conn_broken, _rc_q_mgr_quiescing, _rc_host_not_available]:
+                        try:
+                            self.logger.warn(
+                                'Reconnect channel because caught MQRC error with reason code: `%s` ,comp_code: `%s`. channel: %s',
+                                e.reason_code, e.completion_code, self.conn.get_connection_info())
+                            self.conn.reconnect()
+                            self.conn.ping()
+                            break
+                        except WebSphereMQException as exc:
+                            e = exc
+                            sleep(60)
+                        except Exception as e:
+                            self.logger.error('Channel stopped. Exception in the reconnect to channel %r %s %s', e.args,
+                                              type(e),
+                                              format_exc())
+                            raise
                     else:
+                        self.logger.error(
+                            'Channel stopped. Caught MQRC error with reason code: `%s` ,comp_code: `%s`:  %s',
+                            e.reason_code, e.completion_code, self.conn.get_connection_info())
                         raise
 
                 except Exception as e:
@@ -165,16 +187,16 @@ class IBMMQChannel(object):
         # Start listener in a thread
         start_new_thread(_impl, ())
 
-# ################################################################################################################################
+    # ################################################################################################################################
 
     def stop(self):
         self.keep_running = False
+
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class IBMMQConnectionContainer(BaseConnectionContainer):
-
     connection_class = WebSphereMQConnection
     ipc_name = 'ibm-mq'
     conn_type = 'ibm_mq'
@@ -193,7 +215,7 @@ class IBMMQConnectionContainer(BaseConnectionContainer):
         # Call our parent to initialize everything
         super(IBMMQConnectionContainer, self).__init__()
 
-# ################################################################################################################################
+    # ################################################################################################################################
 
     def on_mq_message_received(self, msg_ctx):
         return self._post({
@@ -202,9 +224,9 @@ class IBMMQConnectionContainer(BaseConnectionContainer):
             'queue_name': msg_ctx.queue_name,
             'service_name': msg_ctx.service_name,
             'data_format': msg_ctx.data_format,
-            })
+        })
 
-# ################################################################################################################################
+    # ################################################################################################################################
 
     def _on_DEFINITION_WMQ_CREATE(self, msg):
         """ Creates a new connection to IBM MQ.
@@ -216,52 +238,52 @@ class IBMMQConnectionContainer(BaseConnectionContainer):
         # Call our parent which will actually create the definition
         return super(IBMMQConnectionContainer, self).on_definition_create(msg)
 
-# ################################################################################################################################
+    # ################################################################################################################################
 
     def _on_DEFINITION_WMQ_EDIT(self, msg):
         return super(IBMMQConnectionContainer, self).on_definition_edit(msg)
 
-# ################################################################################################################################
+    # ################################################################################################################################
 
     def _on_DEFINITION_WMQ_DELETE(self, msg):
         return super(IBMMQConnectionContainer, self).on_definition_delete(msg)
 
-# ################################################################################################################################
+    # ################################################################################################################################
 
     def _on_DEFINITION_WMQ_CHANGE_PASSWORD(self, msg):
         return super(IBMMQConnectionContainer, self).on_definition_change_password(msg)
 
-# ################################################################################################################################
+    # ################################################################################################################################
 
     def _on_DEFINITION_WMQ_PING(self, msg):
         return super(IBMMQConnectionContainer, self).on_definition_ping(msg)
 
-# ################################################################################################################################
+    # ################################################################################################################################
 
     def _on_OUTGOING_WMQ_DELETE(self, msg):
         return super(IBMMQConnectionContainer, self).on_outgoing_delete(msg)
 
-# ################################################################################################################################
+    # ################################################################################################################################
 
     def _on_OUTGOING_WMQ_CREATE(self, msg):
         return super(IBMMQConnectionContainer, self).on_outgoing_create(msg)
 
-# ################################################################################################################################
+    # ################################################################################################################################
 
     def _on_OUTGOING_WMQ_EDIT(self, msg):
         return super(IBMMQConnectionContainer, self).on_outgoing_edit(msg)
 
-# ################################################################################################################################
+    # ################################################################################################################################
 
     def _on_CHANNEL_WMQ_CREATE(self, msg):
         return super(IBMMQConnectionContainer, self).on_channel_create(msg)
 
-# ################################################################################################################################
+    # ################################################################################################################################
 
     def _on_CHANNEL_WMQ_DELETE(self, msg):
         return super(IBMMQConnectionContainer, self).on_channel_delete(msg)
 
-# ################################################################################################################################
+    # ################################################################################################################################
 
     def _on_OUTGOING_WMQ_SEND(self, msg, is_reconnect=False):
         """ Sends a message to a remote IBM MQ queue - note that the functionality is specific to IBM MQ
@@ -285,13 +307,13 @@ class IBMMQConnectionContainer(BaseConnectionContainer):
                 expiration = msg.expiration or outconn.expiration
 
                 text_msg = TextMessage(
-                    text = msg.data,
-                    jms_delivery_mode = delivery_mode,
-                    jms_priority = priority,
-                    jms_expiration = expiration,
-                    jms_correlation_id = msg.get('correlation_id', '').encode('utf8'),
-                    jms_message_id = msg.get('msg_id', '').encode('utf8'),
-                    jms_reply_to = msg.get('reply_to', '').encode('utf8'),
+                    text=msg.data,
+                    jms_delivery_mode=delivery_mode,
+                    jms_priority=priority,
+                    jms_expiration=expiration,
+                    jms_correlation_id=msg.get('correlation_id', '').encode('utf8'),
+                    jms_message_id=msg.get('msg_id', '').encode('utf8'),
+                    jms_reply_to=msg.get('reply_to', '').encode('utf8'),
                 )
 
                 conn.send(text_msg, msg.queue_name.encode('utf8'))
@@ -310,7 +332,7 @@ class IBMMQConnectionContainer(BaseConnectionContainer):
                 # Try to reconnect if the connection is broken but only if we have not tried to already
                 if (not is_reconnect) and cc_code == _cc_failed and reason_code == _rc_conn_broken:
                     self.logger.warn('Caught MQRC_CONNECTION_BROKEN in send, will try to reconnect connection to %s ',
-                        conn.get_connection_info())
+                                     conn.get_connection_info())
 
                     # Sleep for a while before reconnecting
                     sleep(1)
@@ -329,13 +351,13 @@ class IBMMQConnectionContainer(BaseConnectionContainer):
             except Exception as e:
                 return self._on_send_exception()
 
-# ################################################################################################################################
+    # ################################################################################################################################
 
     def _create_channel_impl(self, conn, msg):
         return IBMMQChannel(conn, msg.id, msg.queue.encode('utf8'), msg.service_name, msg.data_format,
-            self.on_mq_message_received, self.logger)
+                            self.on_mq_message_received, self.logger)
 
-# ################################################################################################################################
+    # ################################################################################################################################
 
     def _on_CHANNEL_WMQ_EDIT(self, msg):
         """ Updates an IBM MQ MQ channel by stopping it and starting again with a new configuration.
@@ -351,12 +373,11 @@ class IBMMQConnectionContainer(BaseConnectionContainer):
 
             return Response()
 
+
 # ################################################################################################################################
 
 if __name__ == '__main__':
-
     container = IBMMQConnectionContainer()
     container.run()
 
 # ################################################################################################################################
-
