@@ -58,9 +58,12 @@ _path_api = '/api'
 _path_ping = '/ping'
 _paths = (_path_api, _path_ping)
 
-_cc_failed         = 2    # pymqi.CMQC.MQCC_FAILED
-_rc_conn_broken    = 2009 # pymqi.CMQC.MQRC_CONNECTION_BROKEN
-_rc_not_authorized = 2035 # pymqi.CMQC.MQRC_NOT_AUTHORIZED
+_cc_failed = 2  # pymqi.CMQC.MQCC_FAILED
+_rc_conn_broken = 2009  # pymqi.CMQC.MQRC_CONNECTION_BROKEN
+_rc_not_authorized = 2035  # pymqi.CMQC.MQRC_NOT_AUTHORIZED
+_rc_q_mgr_quiescing = 2161  # pymqi.CMQC.MQRC_Q_MGR_QUIESCING
+_rc_host_not_available = 2538  # pymqi.CMQC.MQRC_HOST_NOT_AVAILABLE
+
 
 # ################################################################################################################################
 
@@ -147,15 +150,30 @@ class IBMMQChannel(object):
                     sleep(sleep_on_error)
 
                 except WebSphereMQException as e:
-                    # If current connection is broken we may try to re-estalish it.
                     sleep(sleep_on_error)
-
-                    if e.completion_code == _cc_failed and e.reason_code == _rc_conn_broken:
-                        self.logger.warn('Caught MQRC_CONNECTION_BROKEN in receive, will try to reconnect connection to %s ',
-                            self.conn.get_connection_info())
-                        self.conn.reconnect()
-                        self.conn.ping()
+                    # if connection broken or host is not available
+                    # or qmgr restart try to reconnect else write error to ibm_logger and stop channel
+                    while self.keep_running and e.completion_code == _cc_failed \
+                            and e.reason_code in [_rc_conn_broken, _rc_q_mgr_quiescing, _rc_host_not_available]:
+                        try:
+                            self.logger.warn(
+                                'Reconnect channel because caught MQRC error with reason code: `%s` ,comp_code: `%s`. channel: %s',
+                                e.reason_code, e.completion_code, self.conn.get_connection_info())
+                            self.conn.reconnect()
+                            self.conn.ping()
+                            break
+                        except WebSphereMQException as exc:
+                            e = exc
+                            sleep(60)
+                        except Exception as e:
+                            self.logger.error('Channel stopped. Exception in the reconnect to channel %r %s %s', e.args,
+                                              type(e),
+                                              format_exc())
+                            raise
                     else:
+                        self.logger.error(
+                            'Channel stopped. Caught MQRC error with reason code: `%s` ,comp_code: `%s`:  %s',
+                            e.reason_code, e.completion_code, self.conn.get_connection_info())
                         raise
 
                 except Exception as e:
