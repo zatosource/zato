@@ -225,9 +225,15 @@ class Request(SIOConverter):
 
         if is_sio:
 
-            #print()
-            #print(111, sioz)
-            #print()
+            print()
+            print(111, sio)
+            print(222, data_format)
+            print(333, transport)
+
+            input = sio.parse_input(self.payload, data_format)
+
+            print(444, input)
+            print()
 
             '''
             required_list = getattr(sio, 'input_required', [])
