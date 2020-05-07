@@ -123,6 +123,8 @@ class DeleteByServer(AdminService):
 
     def handle(self):
 
+        self.logger.warn('QQQ %s', self.request.input)
+
         with closing(self.odb.session()) as session:
             server_pid = self.server.pid if self.request.input.needs_pid else None
             clients = web_socket_clients_by_server_id(session, self.server.id, server_pid)
