@@ -529,13 +529,6 @@ class Service(object):
 
         # self.has_sio attribute is set by ServiceStore during deployment
         if self.has_sio:
-
-            print()
-            print(222, self._sio)
-            print(333, getattr(self, 'SimpleIO', 'ZZZ'))
-            print()
-            print()
-
             self.request.init(True, self.cid, self._sio, self.data_format, self.transport, self.wsgi_environ,
                 self.server.encrypt)
             self.response.init(self.cid, self._sio, self.data_format)
@@ -1174,8 +1167,8 @@ class Service(object):
         service.request.payload = payload
         service.request.raw_request = raw_request
         service.transport = transport
-        service.request.simple_io_config = simple_io_config
-        service.response.simple_io_config = simple_io_config
+        #service.request.simple_io_config = simple_io_config
+        #service.response.simple_io_config = simple_io_config
         service.data_format = data_format
         service.wsgi_environ = wsgi_environ or {}
         service.job_type = job_type
@@ -1188,7 +1181,7 @@ class Service(object):
             service.request.channel_params.update(channel_params)
 
         service.request.merge_channel_params = merge_channel_params
-        service.request.params_priority = params_priority
+        #service.request.params_priority = params_priority
         service.in_reply_to = in_reply_to
         service.environ = environ or {}
 

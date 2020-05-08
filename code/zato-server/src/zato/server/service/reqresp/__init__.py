@@ -41,7 +41,11 @@ from zato.common import NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, SIM
      ZATO_OK
 from zato.common.odb.api import WritableKeyedTuple
 from zato.common.util import make_repr
-from zato.server.service.reqresp.sio import AsIs, convert_param, SIOElem, ServiceInput, SIOConverter
+#from zato.server.service.reqresp.sio import AsIs, convert_param, SIOElem, ServiceInput, SIOConverter
+from zato.server.service.reqresp.sio import SIOConverter
+
+# Zato - Cython
+from zato.simpleio import ServiceInput
 
 # ################################################################################################################################
 
@@ -176,19 +180,12 @@ WebSphereMQRequestData = IBMMQRequestData
 
 # ################################################################################################################################
 
-class Request(SIOConverter):
+class Request(object):
     """ Wraps a service request and adds some useful meta-data.
     """
-    '''
-    __slots__ = ('logger', 'payload', 'raw_request', 'input', 'cid', 'has_simple_io_config',
-        'simple_io_config', 'bool_parameter_prefixes', 'int_parameters',
-        'int_parameter_suffixes', 'is_xml', 'data_format', 'transport',
-        '_wsgi_environ', 'channel_params', 'merge_channel_params', 'http', 'amqp', 'wmq', 'ibm_mq', 'enforce_string_encoding')
-    '''
-    __slots__ = ('logger', 'payload', 'raw_request', 'input', 'cid', 'has_simple_io_config',
-        'simple_io_config', 'bool_parameter_prefixes', 'int_parameters',
-        'int_parameter_suffixes', 'is_xml', 'data_format', 'transport',
-        '_wsgi_environ', 'channel_params', 'merge_channel_params', 'http', 'amqp', 'wmq', 'ibm_mq', 'enforce_string_encoding')
+    __slots__ = ('logger', 'payload', 'raw_request', 'input', 'cid', 'data_format', 'transport',
+        'encrypt_func', 'encrypt_secrets', 'bytes_to_str_encoding', '_wsgi_environ', 'channel_params',
+        'merge_channel_params', 'http', 'amqp', 'wmq', 'ibm_mq', 'enforce_string_encoding')
 
     def __init__(self, logger, simple_io_config=None, data_format=None, transport=None):
         self.logger = logger
@@ -196,19 +193,12 @@ class Request(SIOConverter):
         self.raw_request = ''
         self.input = {} # Will be overwritten in self.init if necessary
         self.cid = None # type: str
-        #self.simple_io_config = simple_io_config or {}
-        #self.has_simple_io_config = False
-        #self.bool_parameter_prefixes = self.simple_io_config.get('bool_parameter_prefixes', []) # type: list
-        #self.int_parameters = self.simple_io_config.get('int_parameters', [])                   # type: list
-        #self.int_parameter_suffixes = self.simple_io_config.get('int_parameter_suffixes', [])   # type: list
-        #self.is_xml = None # type: bool
         self.data_format = data_format # type: str
         self.transport = transport # type: str
         self.http = HTTPRequestData()
         self._wsgi_environ = None # type: dict
         self.channel_params = {}
         self.merge_channel_params = True
-        self.params_priority = PARAMS_PRIORITY.DEFAULT # type: str
         self.amqp = None # type: AMQPRequestData
         self.wmq = self.ibm_mq = None # type: IBMMQRequestData
         self.encrypt_func = None
@@ -225,112 +215,18 @@ class Request(SIOConverter):
 
         if is_sio:
 
-            print()
-            print(111, sio)
-            print(222, data_format)
-            print(333, transport)
+            if self.payload:
+                parsed = sio.parse_input(self.payload, data_format)
+                self.input.update(parsed)
 
-            input = sio.parse_input(self.payload, data_format)
-
-            print(444, input)
-            print()
-
-            '''
-            required_list = getattr(sio, 'input_required', [])
-            required_list = [required_list] if isinstance(required_list, basestring) else required_list
-            self.init_flat_sio(cid, sio, data_format, transport, wsgi_environ, required_list)
-            '''
+            for param, value in iteritems(self.channel_params):
+                if param not in self.input:
+                    self.input[param] = value
 
         # We merge channel params in if requested even if it's not SIO
         else:
             if self.merge_channel_params:
                 self.input.update(self.channel_params)
-
-# ################################################################################################################################
-
-    def init_flat_sio(self, cid, sio, data_format, transport, wsgi_environ, required_list, _sio_container=(tuple, list)):
-        """ Initializes flat SIO requests, i.e. not list ones.
-        """
-        self.is_xml = data_format == SIMPLE_IO.FORMAT.XML
-        self.data_format = data_format
-        self.transport = transport
-        self._wsgi_environ = wsgi_environ
-
-        optional_list = getattr(sio, 'input_optional', [])
-        optional_list = optional_list if isinstance(optional_list, _sio_container) else [optional_list]
-
-        path_prefix = getattr(sio, 'request_elem', 'request')
-        default_value = getattr(sio, 'default_value', NO_DEFAULT_VALUE)
-        use_text = getattr(sio, 'use_text', True)
-        use_channel_params_only = getattr(sio, 'use_channel_params_only', False)
-        self.encrypt_secrets = getattr(sio, 'encrypt_secrets', True)
-
-        if self.simple_io_config:
-            self.has_simple_io_config = True
-            self.bool_parameter_prefixes = self.simple_io_config.get('bool_parameter_prefixes', [])
-            self.int_parameters = self.simple_io_config.get('int_parameters', [])
-            self.int_parameter_suffixes = self.simple_io_config.get('int_parameter_suffixes', [])
-            self.bytes_to_str_encoding = self.simple_io_config['bytes_to_str']['encoding']
-        else:
-            self.payload = self.raw_request
-
-        '''
-        required_params = {}
-
-        if required_list:
-
-            required_list = required_list if isinstance(required_list, _sio_container) else [required_list]
-
-            # Needs to check for this exact default value to prevent a FutureWarning in 'if not self.payload'
-            if self.payload == '' and not self.channel_params:
-                raise ZatoException(cid, 'Missing input')
-
-            required_params.update(self.get_params(
-                required_list, use_channel_params_only, path_prefix, default_value, use_text))
-
-        if optional_list:
-            optional_params = self.get_params(
-                optional_list, use_channel_params_only, path_prefix, default_value, use_text, False)
-        else:
-            optional_params = {}
-
-        self.input.update(required_params)
-        self.input.update(optional_params)
-        '''
-
-        for param, value in iteritems(self.channel_params):
-            if param not in self.input:
-                self.input[param] = value
-
-# ################################################################################################################################
-
-    def get_params(self, params_to_visit, use_channel_params_only, path_prefix='', default_value=NO_DEFAULT_VALUE,
-            use_text=True, is_required=True):
-        """ Gets all requested parameters from a message. Will raise ParsingException if any is missing.
-        """
-        params = {}
-
-        for param in params_to_visit:
-            try:
-
-                param_name, value = convert_param(
-                    self.cid, '' if use_channel_params_only else self.payload, param, self.data_format, is_required,
-                    default_value, path_prefix, use_text, self.channel_params, self.has_simple_io_config,
-                    self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes,
-                    True, self.encrypt_func, self.encrypt_secrets, self.params_priority)
-
-                if self.bytes_to_str_encoding and isinstance(value, bytes):
-                    value = value.decode(self.bytes_to_str_encoding)
-
-                params[param_name] = value
-
-            except Exception:
-                msg = 'Caught an exception, param:`{}`, params_to_visit:`{}`, has_simple_io_config:`{}`, e:`{}`'.format(
-                    param, params_to_visit, self.has_simple_io_config, format_exc())
-                self.logger.error(msg)
-                raise ParsingException(msg)
-
-        return params
 
 # ################################################################################################################################
 
@@ -389,11 +285,11 @@ class SimpleIOPayload(SIOConverter):
         self.zato_force_empty_keys = ignore_skip_empty
         self.zato_allow_empty_required = allow_empty_required
         self.zato_meta = {}
-        self.zato_bytes_to_str_encoding = simple_io_config['bytes_to_str']['encoding']
-        self.bool_parameter_prefixes = simple_io_config.get('bool_parameter_prefixes', [])
-        self.int_parameters = simple_io_config.get('int_parameters', [])
-        self.int_parameter_suffixes = simple_io_config.get('int_parameter_suffixes', [])
-        self.date_time_format = simple_io_config.get('date_time_format', 'YYYY-MM-DDTHH:MM:SS.mmmmmm+HH:MM')
+        #self.zato_bytes_to_str_encoding = simple_io_config['bytes_to_str']['encoding']
+        #self.bool_parameter_prefixes = simple_io_config.get('bool_parameter_prefixes', [])
+        #self.int_parameters = simple_io_config.get('int_parameters', [])
+        #self.int_parameter_suffixes = simple_io_config.get('int_parameter_suffixes', [])
+        #self.date_time_format = simple_io_config.get('date_time_format', 'YYYY-MM-DDTHH:MM:SS.mmmmmm+HH:MM')
         self.response_elem = response_elem
         self.namespace = namespace
 
