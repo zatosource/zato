@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import types
+from copy import deepcopy
 from csv import DictWriter, reader as csv_reader
 from datetime import date as stdlib_date, datetime as stdlib_datetime
 from decimal import Decimal as decimal_Decimal
@@ -72,6 +73,7 @@ cdef dict _csv_writer_attr_map = {
 # ################################################################################################################################
 
 cdef unicode DATA_FORMAT_CSV  = DATA_FORMAT.CSV
+cdef unicode DATA_FORMAT_DICT  = DATA_FORMAT.DICT
 cdef unicode DATA_FORMAT_JSON = DATA_FORMAT.JSON
 cdef unicode DATA_FORMAT_POST = DATA_FORMAT.POST
 cdef unicode DATA_FORMAT_XML  = DATA_FORMAT.XML
@@ -97,6 +99,21 @@ cdef class _InternalNotGiven(_NotGiven):
     """
     def __str__(self):
         return '<_InternalNotGiven>'
+
+# ################################################################################################################################
+
+class ServiceInput(Bunch):
+    """ A Bunch holding input data for a service.
+    """
+    def deepcopy(self):
+        return deepcopy(self)
+
+    def require_any(self, *elems):
+        for name in elems:
+            if self.get(name):
+                break
+        else:
+            raise ValueError('At least one of `{}` is required'.format(', '.join(elems)))
 
 # ################################################################################################################################
 
@@ -225,10 +242,12 @@ cdef class Elem(object):
         self.parse_from[DATA_FORMAT_JSON] = self.from_json
         self.parse_from[DATA_FORMAT_XML] = self.from_xml
         self.parse_from[DATA_FORMAT_CSV] = self.from_csv
+        self.parse_from[DATA_FORMAT_DICT] = self.from_dict
 
         self.parse_to[DATA_FORMAT_JSON] = self.to_json
         self.parse_to[DATA_FORMAT_XML] = self.to_xml
         self.parse_to[DATA_FORMAT_CSV] = self.to_csv
+        self.parse_to[DATA_FORMAT_DICT] = self.to_dict
 
 # ################################################################################################################################
 
@@ -352,6 +371,9 @@ cdef class Elem(object):
     from_post  = _not_implemented
     to_post    = _not_implemented
 
+    from_dict  = _not_implemented
+    to_dict    = _not_implemented
+
 # ################################################################################################################################
 
 cdef class AsIs(Elem):
@@ -365,7 +387,7 @@ cdef class AsIs(Elem):
     def from_json(self, value):
         return AsIs.from_json_static(value)
 
-    to_csv = from_csv = to_xml = from_xml = to_json = from_json
+    to_dict = from_dict = to_csv = from_csv = to_xml = from_xml = to_json = from_json
 
 # Defined only for backward compatibility
 Opaque = AsIs
@@ -390,7 +412,7 @@ cdef class Bool(Elem):
     def to_json(self, value):
         return Bool.to_json_static(value)
 
-    to_csv = to_xml = from_csv = from_xml = from_json
+    to_dict = from_dict = to_csv = to_xml = from_csv = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -408,9 +430,11 @@ cdef class CSV(Elem):
     def to_json(self, value, *ignored):
         return ','.join(value) if isinstance(value, (list, tuple)) else value
 
-    to_xml   = to_json
-    from_xml = from_json
-    to_csv   = from_csv = Elem._not_implemented
+    to_xml    = to_json
+    from_xml  = from_json
+    to_dict   = to_json
+    from_dict = from_json
+    to_csv    = from_csv = Elem._not_implemented
 
 # ################################################################################################################################
 
@@ -448,8 +472,8 @@ cdef class Date(Elem):
     def to_json(self, value):
         return Date.to_json_static(value, self.stdlib_type, class_name=self.__class__.__name__)
 
-    from_csv = from_xml = from_json
-    to_csv   = to_xml   = to_json
+    from_dict = from_csv = from_xml = from_json
+    to_dict   = to_csv   = to_xml   = to_json
 
 # ################################################################################################################################
 
@@ -480,8 +504,8 @@ cdef class Decimal(Elem):
     def to_json(self, value):
         return Decimal.to_json_static(value)
 
-    to_csv   = to_xml   = to_json
-    from_csv = from_xml = from_json
+    to_dict   = to_csv   = to_xml   = to_json
+    from_dict = from_csv = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -585,6 +609,7 @@ cdef class Dict(Elem):
     def from_json(self, value):
         return Dict.from_json_static(value, self._keys_required, self._keys_optional, self.default_value)
 
+    from_dict = from_json
     to_csv = from_csv = to_xml = from_xml = Elem._not_implemented
 
 # ################################################################################################################################
@@ -603,6 +628,7 @@ cdef class DictList(Dict):
     def from_json(self, value):
         return DictList.from_json_static(value, self._keys_required, self._keys_optional, self.default_value)
 
+    from_dict = from_json
     to_csv = from_csv = to_xml = from_xml = Elem._not_implemented
 
 # ################################################################################################################################
@@ -618,7 +644,7 @@ cdef class Float(Elem):
     def from_json(self, value):
         return Float.from_json_static(value)
 
-    to_csv = from_csv = to_xml = from_xml = from_json
+    to_dict = from_dict = to_csv = from_csv = to_xml = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -633,7 +659,7 @@ cdef class Int(Elem):
     def from_json(self, value):
         return Int.from_json_static(value)
 
-    to_csv = from_csv = to_xml = from_xml = from_json
+    to_dict = from_dict = to_csv = from_csv = to_xml = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -648,7 +674,7 @@ cdef class List(Elem):
     def from_json(self, value):
         return List.from_json_static(value)
 
-    to_csv = from_csv = to_xml = from_xml = from_json
+    to_dict = from_dict = to_csv = from_csv = to_xml = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -685,7 +711,7 @@ cdef class Text(Elem):
     def from_json(self, value):
         return Text.from_json_static(value, encoding=self.encoding)
 
-    to_csv = from_csv = to_xml = from_xml = from_json
+    to_dict = from_dict = to_csv = from_csv = to_xml = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -700,7 +726,7 @@ cdef class UTC(Elem):
     def from_json(self, value):
         return Opaque.from_json_static(value)
 
-    to_csv = from_csv = to_xml = from_xml = from_json
+    to_dict = from_dict = to_csv = from_csv = to_xml = from_xml = from_json
 
 # ################################################################################################################################
 
@@ -726,8 +752,8 @@ cdef class UUID(Elem):
     def to_json(self, value):
         return UUID.to_json_static(value)
 
-    to_csv   = to_xml   = to_json
-    from_csv = from_xml = from_json
+    to_dict   = to_csv   = to_xml   = to_json
+    from_dict = from_csv = from_xml = from_json
 
 # ################################################################################################################################
 

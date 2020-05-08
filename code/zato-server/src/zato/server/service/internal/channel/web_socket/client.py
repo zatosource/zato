@@ -35,8 +35,8 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         input_required = (AsIs('pub_client_id'), AsIs('ext_client_id'), 'is_internal', 'local_address', 'peer_address',
             'peer_fqdn', 'connection_time', 'last_seen', 'channel_name')
-        input_optional = ('ext_client_name', 'peer_forwarded_for', 'peer_forwarded_for_fqdn')
-        output_optional = ('ws_client_id',)
+        input_optional = 'ext_client_name', 'peer_forwarded_for', 'peer_forwarded_for_fqdn'
+        output_optional = 'ws_client_id'
 
     def handle(self):
         req = self.request.input
@@ -49,6 +49,8 @@ class Create(AdminService):
                 filter(Cluster.id==self.server.cluster_id).\
                 filter(ChannelWebSocket.name==req.channel_name).\
                 one()
+
+            self.logger.warn('QQQ %r', req)
 
             client.is_internal = req.is_internal
             client.pub_client_id = req.pub_client_id
