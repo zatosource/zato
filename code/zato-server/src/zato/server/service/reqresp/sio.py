@@ -363,21 +363,6 @@ class DateTime(SIOElem):
 
 # ################################################################################################################################
 
-class ServiceInput(Bunch):
-    """ A Bunch holding the input to the service.
-    """
-    def deepcopy(self):
-        return deepcopy(self)
-
-    def require_any(self, *elems):
-        for name in elems:
-            if self.get(name):
-                break
-        else:
-            raise ValueError('At least one of `{}` is required'.format(', '.join(elems)))
-
-# ################################################################################################################################
-
 COMPLEX_VALUE = (AsIs, Dict, List, ListOfDicts, Nested)
 
 # ################################################################################################################################

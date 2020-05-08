@@ -54,7 +54,7 @@ class JSONInputParsing(BaseTestCase):
             'eee': eee,
         }
 
-        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+        input = MyService._sio.parse_input(data, DATA_FORMAT.DICT)
 
         self.assertIsInstance(input, Bunch)
 
@@ -111,7 +111,7 @@ class JSONInputParsing(BaseTestCase):
             'qqq': qqq,
         }
 
-        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+        input = MyService._sio.parse_input(data, DATA_FORMAT.DICT)
         self.assertIsInstance(input, Bunch)
 
         self.assertEquals(input.aaa, aaa)
@@ -209,7 +209,7 @@ class JSONInputParsing(BaseTestCase):
             'qqq': qqq2,
         }]
 
-        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+        input = MyService._sio.parse_input(data, DATA_FORMAT.DICT)
 
         self.assertIsInstance(input, list)
         self.assertEquals(len(input), 2)
@@ -280,7 +280,7 @@ class JSONInputParsing(BaseTestCase):
             'eee': eee,
         }
 
-        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+        input = MyService._sio.parse_input(data, DATA_FORMAT.DICT)
         self.assertIsInstance(input, Bunch)
 
         self.assertEquals(input.aaa, aaa)
@@ -315,7 +315,7 @@ class JSONInputParsing(BaseTestCase):
             'eee': eee,
         }
 
-        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+        input = MyService._sio.parse_input(data, DATA_FORMAT.DICT)
         self.assertIsInstance(input, Bunch)
 
         self.assertEquals(input.aaa, aaa)
@@ -352,7 +352,7 @@ class JSONInputParsing(BaseTestCase):
             'eee': eee,
         }
 
-        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+        input = MyService._sio.parse_input(data, DATA_FORMAT.DICT)
         self.assertIsInstance(input, Bunch)
 
         self.assertEquals(input.aaa, aaa)
@@ -392,7 +392,7 @@ class JSONInputParsing(BaseTestCase):
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
 
         # Note that the input document is empty
-        input = MyService._sio.parse_input({}, DATA_FORMAT.JSON)
+        input = MyService._sio.parse_input({}, DATA_FORMAT.DICT)
         self.assertIsInstance(input, Bunch)
 
         self.assertEquals(input.aaa, backward_compat_default_value)
@@ -443,7 +443,7 @@ class JSONInputParsing(BaseTestCase):
             }
         }
 
-        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+        input = MyService._sio.parse_input(data, DATA_FORMAT.DICT)
         self.assertIsInstance(input, Bunch)
 
         self.assertEquals(input.aaa.bbb, 'bbb-111')
@@ -481,7 +481,7 @@ class JSONInputParsing(BaseTestCase):
         data.customer.address.locality.type = 'my-type'
         data.customer.address.locality.name = 'my-name'
 
-        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+        input = MyService._sio.parse_input(data, DATA_FORMAT.DICT)
         self.assertIsInstance(input, Bunch)
 
         self.assertEquals(input.customer.name, data.customer.name)
@@ -520,7 +520,7 @@ class JSONInputParsing(BaseTestCase):
         data.customer.address.street = 'my-street'
         data.customer.address.locality = Bunch()
 
-        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+        input = MyService._sio.parse_input(data, DATA_FORMAT.DICT)
         self.assertIsInstance(input, Bunch)
 
         self.assertEquals(input.customer.name, data.customer.name)
@@ -561,7 +561,7 @@ class JSONInputParsing(BaseTestCase):
         data.customer.address = Bunch()
         data.customer.address.locality = Bunch()
 
-        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+        input = MyService._sio.parse_input(data, DATA_FORMAT.DICT)
         self.assertIsInstance(input, Bunch)
 
         self.assertEquals(input.customer.name, data.customer.name)
@@ -607,7 +607,7 @@ class JSONInputParsing(BaseTestCase):
         data.customer.address.types = ['a', 'b', 'c', 'd']
         data.customer.address.opaque1 = object()
 
-        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+        input = MyService._sio.parse_input(data, DATA_FORMAT.DICT)
         self.assertIsInstance(input, Bunch)
 
         self.assertEquals(input.customer.name, data.customer.name)
@@ -673,7 +673,7 @@ class JSONInputParsing(BaseTestCase):
         data.customer.address.types = ['a', 'b', 'c', 'd']
         data.customer.address.opaque1 = object()
 
-        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+        input = MyService._sio.parse_input(data, DATA_FORMAT.DICT)
         self.assertIsInstance(input, Bunch)
 
         self.assertEquals(input.customer.name, data.customer.name)
@@ -713,7 +713,7 @@ class JSONInputParsing(BaseTestCase):
         data.aaa = 'aaa'
         data.bbb = 'bbb'
 
-        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+        input = MyService._sio.parse_input(data, DATA_FORMAT.DICT)
         self.assertIsInstance(input, Bunch)
         self.assertDictEqual(input, {
             'aaa': 'aaa',
@@ -735,7 +735,7 @@ class JSONInputParsing(BaseTestCase):
         data.aaa = 'aaa'
         data.bbb = 'bbb'
 
-        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+        input = MyService._sio.parse_input(data, DATA_FORMAT.DICT)
         self.assertIsInstance(input, Bunch)
         self.assertDictEqual(input, {
             'aaa': 'aaa',
@@ -760,7 +760,7 @@ class JSONInputParsing(BaseTestCase):
         data.aaa = 'aaa'
         data.bbb = 'bbb'
 
-        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+        input = MyService._sio.parse_input(data, DATA_FORMAT.DICT)
         self.assertIsInstance(input, Bunch)
         self.assertDictEqual(input, {
             'aaa': 'aaa',
@@ -786,7 +786,7 @@ class JSONInputParsing(BaseTestCase):
         data.aaa = 'aaa'
         data.bbb = 'bbb'
 
-        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+        input = MyService._sio.parse_input(data, DATA_FORMAT.DICT)
         self.assertIsInstance(input, Bunch)
         self.assertDictEqual(input, {
             'aaa': 'aaa',
@@ -813,7 +813,7 @@ class JSONInputParsing(BaseTestCase):
         data.aaa = 'aaa'
         data.bbb = 'bbb'
 
-        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+        input = MyService._sio.parse_input(data, DATA_FORMAT.DICT)
 
         self.assertIsInstance(input, Bunch)
         self.assertDictEqual(input, {
@@ -842,7 +842,7 @@ class JSONInputParsing(BaseTestCase):
         data.aaa = 'aaa'
         data.bbb = 'bbb'
 
-        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+        input = MyService._sio.parse_input(data, DATA_FORMAT.DICT)
 
         self.assertIsInstance(input, Bunch)
         self.assertDictEqual(input, {
