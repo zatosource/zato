@@ -9,30 +9,24 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.server.service import Service
+from zato.common import simple_io_conf_contents
+from zato.common.util import get_config_from_string
 
 # Zato - Cython
 from test.zato.cy.simpleio_ import BaseTestCase
-from zato.simpleio import CySimpleIO
+from zato.bunch import Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class AttachSIOTestCase(BaseTestCase):
-    def test_attach_sio(self):
+class SimpleIOConfig(BaseTestCase):
 
-        class MyService(Service):
-            class SimpleIO:
-                input = 'aaa', 'bbb', 'ccc', '-ddd', '-eee'
-                output = 'qqq', 'www', '-eee', '-fff'
+# ################################################################################################################################
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+    def test_default_config(self):
+        config = get_config_from_string(simple_io_conf_contents)
 
-        self.assertEquals(MyService._sio.definition._input_required.get_elem_names(), ['aaa', 'bbb', 'ccc'])
-        self.assertEquals(MyService._sio.definition._input_optional.get_elem_names(), ['ddd', 'eee'])
-
-        self.assertEquals(MyService._sio.definition._output_required.get_elem_names(), ['qqq', 'www'])
-        self.assertEquals(MyService._sio.definition._output_optional.get_elem_names(), ['eee', 'fff'])
+        print(111, config)
 
 # ################################################################################################################################
 # ################################################################################################################################
