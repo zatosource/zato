@@ -9,12 +9,15 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
+from zato.common import DATA_FORMAT
 from zato.common.simpleio_ import get_sio_server_config, simple_io_conf_contents
 from zato.common.util import get_config_from_string
+from zato.server.service import Service
 
 # Zato - Cython
 from test.zato.cy.simpleio_ import BaseTestCase
 from zato.bunch import Bunch
+from zato.simpleio import CySimpleIO
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -76,7 +79,7 @@ class SimpleIOConfig(BaseTestCase):
 
 # ################################################################################################################################
 
-    def test_default_config_object(self):
+    def xtest_default_config_object(self):
 
         test_encoding = 'abcdef'
 
@@ -141,6 +144,77 @@ class SimpleIOConfig(BaseTestCase):
         self.assertEquals(config.prefix_list, 'l')
         self.assertEquals(config.prefix_text, 't')
         self.assertEquals(config.prefix_uuid, 'u')
+
+# ################################################################################################################################
+
+    def xtest_parse_as_is(self):
+        pass
+
+# ################################################################################################################################
+
+    def test_parse_bool(self):
+
+        class MyService(Service):
+            class SimpleIO:
+                input = 'is_ready'
+
+        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+
+        input = MyService._sio.parse_input({
+            'is_ready': 'true',
+        }, DATA_FORMAT.DICT)
+
+        print(111, input)
+
+# ################################################################################################################################
+
+    def xtest_parse_csv(self):
+        pass
+
+# ################################################################################################################################
+
+    def xtest_parse_date(self):
+        pass
+
+# ################################################################################################################################
+
+    def xtest_parse_date_time(self):
+        pass
+
+# ################################################################################################################################
+
+    def xtest_parse_dict(self):
+        pass
+
+# ################################################################################################################################
+
+    def xtest_parse_dict_list(self):
+        pass
+
+# ################################################################################################################################
+
+    def xtest_parse_float(self):
+        pass
+
+# ################################################################################################################################
+
+    def xtest_parse_int(self):
+        pass
+
+# ################################################################################################################################
+
+    def xtest_parse_list(self):
+        pass
+
+# ################################################################################################################################
+
+    def xtest_parse_text(self):
+        pass
+
+# ################################################################################################################################
+
+    def xtest_parse_uuid(self):
+        pass
 
 # ################################################################################################################################
 # ################################################################################################################################
