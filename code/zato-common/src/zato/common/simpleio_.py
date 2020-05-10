@@ -13,6 +13,65 @@ from zato.simpleio import BoolConfig, IntConfig, SecretConfig, SIOServerConfig
 
 # Python 2/3 compatibility
 from past.builtins import basestring, unicode
+from six import PY3
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_bytes_to_str_encoding():
+    return 'utf8' if PY3 else ''
+
+# ################################################################################################################################
+
+simple_io_conf_contents = """
+[bool]
+exact=
+prefix=by_, has_, is_, may_, needs_, should_
+suffix=
+
+[int]
+exact=id
+prefix=
+suffix=_count, _id, _size, _size_min, _size_max, _timeout
+
+[secret]
+exact=auth_data, auth_token, password, password1, password2, secret_key, tls_pem_passphrase, token
+prefix=
+suffix=
+
+[bytes_to_str]
+encoding={bytes_to_str_encoding}
+
+[default]
+default_value=
+default_input_value=
+default_output_value=
+response_elem=
+
+skip_empty_keys = False
+skip_empty_request_keys = False
+skip_empty_response_keys = False
+
+# Configuration below is reserved for future use
+
+input_required_name  = "input_required"
+input_optional_name  = "input_optional"
+output_required_name = "output_required"
+output_optional_name = "output_optional"
+
+prefix_as_is     = "a"
+prefix_bool      = "b"
+prefix_csv       = "c"
+prefix_date      = "date"
+prefix_date_time = "dt"
+prefix_dict      = "d"
+prefix_dict_list = "dl"
+prefix_float     = "f"
+prefix_int       = "i"
+prefix_list      = "l"
+prefix_text      = "t"
+prefix_uuid      = "u"
+""".lstrip()
 
 # ################################################################################################################################
 
@@ -20,9 +79,19 @@ def c18n_sio_fs_config(sio_fs_config):
 
     for name in 'bool', 'int', 'secret':
         config_entry = sio_fs_config[name]
-        config_entry.exact = set(config_entry.get('exact', []))
-        config_entry.prefix = set(config_entry.get('prefix', []))
-        config_entry.suffix = set(config_entry.get('suffix', []))
+
+        exact = config_entry.get('exact') or []
+        exact = exact if isinstance(exact, list) else [exact]
+
+        prefix = config_entry.get('prefix') or []
+        prefix = prefix if isinstance(prefix, list) else [prefix]
+
+        suffix = config_entry.get('suffix') or []
+        suffix = suffix if isinstance(suffix, list) else [suffix]
+
+        config_entry.exact = set(exact)
+        config_entry.prefix = set(prefix)
+        config_entry.suffix = set(suffix)
 
     for key, value in sio_fs_config.get('default', {}).items():
         if isinstance(value, basestring):
@@ -84,7 +153,6 @@ def get_sio_server_config(sio_fs_config):
         sio_server_config.prefix_float = sio_fs_config.default.prefix_float
         sio_server_config.prefix_int = sio_fs_config.default.prefix_int
         sio_server_config.prefix_list = sio_fs_config.default.prefix_list
-        sio_server_config.prefix_opaque = sio_fs_config.default.prefix_opaque
         sio_server_config.prefix_text = sio_fs_config.default.prefix_text
         sio_server_config.prefix_uuid = sio_fs_config.default.prefix_uuid
 
@@ -109,6 +177,11 @@ def get_sio_server_config(sio_fs_config):
         bytes_to_str_encoding = bytes_to_str_encoding.decode('utf8')
 
     sio_server_config.bytes_to_str_encoding = bytes_to_str_encoding
+
+    print()
+    print(111, bytes_to_str_encoding)
+    print(222, sio_fs_config.bytes_to_str.encoding)
+    print()
 
     return sio_server_config
 
