@@ -2027,7 +2027,6 @@ prefix_dict_list = "dl"
 prefix_float     = "f"
 prefix_int       = "i"
 prefix_list      = "l"
-prefix_opaque    = "o"
 prefix_text      = "t"
 prefix_uuid      = "u"
 """.lstrip()
