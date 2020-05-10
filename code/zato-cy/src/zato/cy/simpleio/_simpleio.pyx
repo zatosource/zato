@@ -210,10 +210,9 @@ cdef enum ElemType:
     float_        =  800
     int_          =  900
     list_         = 1000
-    opaque        = 1100
-    text          = 1200
-    utc           = 1250 # Deprecated, do not use
-    uuid          = 1300
+    text          = 1100
+    utc           = 1150 # Deprecated, do not use
+    uuid          = 1200
     user_defined  = 1_000_000
 
 # ################################################################################################################################
@@ -724,7 +723,7 @@ cdef class UTC(Elem):
         return value.replace('+00:00', '')
 
     def from_json(self, value):
-        return Opaque.from_json_static(value)
+        return UTC.from_json_static(value)
 
     to_dict = from_dict = to_csv = from_csv = to_xml = from_xml = from_json
 
@@ -819,7 +818,6 @@ cdef class SIOServerConfig(object):
         public unicode prefix_float     # f
         public unicode prefix_int       # i
         public unicode prefix_list      # l
-        public unicode prefix_opaque    # o
         public unicode prefix_text      # t
         public unicode prefix_uuid      # u
 
