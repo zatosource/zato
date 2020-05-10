@@ -1212,7 +1212,7 @@ cdef class CySimpleIO(object):
     cdef Elem _convert_to_elem_instance(self, elem, container, is_required):
 
         # By default, we always return Text instances for elements that do not specify an SIO type
-        cdef Text _elem
+        cdef Elem _elem
 
         _elem = Text(elem)
         _elem.name = elem
@@ -1310,6 +1310,8 @@ cdef class CySimpleIO(object):
                     self.definition.sio_default.output_value
 
                 elem.set_default_value(sio_default_value)
+
+                print(222, elem)
 
                 if is_required:
                     _required.append(elem)

@@ -178,11 +178,6 @@ def get_sio_server_config(sio_fs_config):
 
     sio_server_config.bytes_to_str_encoding = bytes_to_str_encoding
 
-    print()
-    print(111, bytes_to_str_encoding)
-    print(222, sio_fs_config.bytes_to_str.encoding)
-    print()
-
     return sio_server_config
 
 # ################################################################################################################################
