@@ -26,10 +26,15 @@ from six import PY3
 # Zato
 from zato.cli import ZatoCommand, common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents
 from zato.cli._apispec_default import apispec_files
-from zato.common import CONTENT_TYPE, default_internal_modules, SERVER_JOIN_STATUS
+from zato.common import CONTENT_TYPE, default_internal_modules, SERVER_JOIN_STATUS, simple_io_conf_contents
 from zato.common.crypto import well_known_data
 from zato.common.defaults import http_plain_server_port
 from zato.common.odb.model import Cluster, Server
+
+# ################################################################################################################################
+
+# For pyflakes
+simple_io_conf_contents = simple_io_conf_contents
 
 # ################################################################################################################################
 
@@ -508,59 +513,6 @@ server_conf.main.token={zato_main_token}
 server_conf.misc.jwt_secret={zato_misc_jwt_secret}
 server_conf.odb.password={zato_odb_password}
 """
-
-# ################################################################################################################################
-
-simple_io_conf_contents = """
-[bool]
-exact=
-prefix=by_, has_, is_, may_, needs_, should_
-suffix=
-
-[int]
-exact=id
-prefix=
-suffix=_count, _id, _size, _size_min, _size_max, _timeout
-
-[secret]
-exact=auth_data, auth_token, password, password1, password2, secret_key, tls_pem_passphrase, token
-prefix=
-suffix=
-
-[bytes_to_str]
-encoding={bytes_to_str_encoding}
-
-[default]
-default_value=
-default_input_value=
-default_output_value=
-response_elem=
-
-skip_empty_keys = False
-skip_empty_request_keys = False
-skip_empty_response_keys = False
-
-# Configuration below is reserved for future use
-
-input_required_name  = "input_required"
-input_optional_name  = "input_optional"
-output_required_name = "output_required"
-output_optional_name = "output_optional"
-
-prefix_as_is     = "a"
-prefix_bool      = "b"
-prefix_csv       = "c"
-prefix_date      = "date"
-prefix_date_time = "dt"
-prefix_dict      = "d"
-prefix_dict_list = "dl"
-prefix_float     = "f"
-prefix_int       = "i"
-prefix_list      = "l"
-prefix_opaque    = "o"
-prefix_text      = "t"
-prefix_uuid      = "u"
-""".lstrip()
 
 # ################################################################################################################################
 
