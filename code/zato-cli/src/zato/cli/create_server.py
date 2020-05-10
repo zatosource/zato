@@ -26,10 +26,11 @@ from six import PY3
 # Zato
 from zato.cli import ZatoCommand, common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents
 from zato.cli._apispec_default import apispec_files
-from zato.common import CONTENT_TYPE, default_internal_modules, SERVER_JOIN_STATUS, simple_io_conf_contents
+from zato.common import CONTENT_TYPE, default_internal_modules, SERVER_JOIN_STATUS
 from zato.common.crypto import well_known_data
 from zato.common.defaults import http_plain_server_port
 from zato.common.odb.model import Cluster, Server
+from zato.common.simpleio_ import get_bytes_to_str_encoding, simple_io_conf_contents
 
 # ################################################################################################################################
 
@@ -594,11 +595,6 @@ files = {
 
 priv_key_location = './config/repo/config-priv.pem'
 priv_key_location = './config/repo/config-pub.pem'
-
-# ################################################################################################################################
-
-def get_bytes_to_str_encoding():
-    return 'utf8' if PY3 else ''
 
 # ################################################################################################################################
 # ################################################################################################################################

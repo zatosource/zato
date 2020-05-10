@@ -34,7 +34,9 @@ from lxml.objectify import ObjectPath as _ObjectPath
 
 # Python 2/3 compatibility
 from past.builtins import basestring, execfile
+from six import PY3
 from zato.common.py23_ import maxint
+
 
 # Zato
 from zato.vault.client import VAULT
@@ -1977,59 +1979,3 @@ default_internal_modules = {
     'zato.server.service.internal.stats.trends': True,
     'zato.server.service.internal.updates': True,
 }
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-simple_io_conf_contents = """
-[bool]
-exact=
-prefix=by_, has_, is_, may_, needs_, should_
-suffix=
-
-[int]
-exact=id
-prefix=
-suffix=_count, _id, _size, _size_min, _size_max, _timeout
-
-[secret]
-exact=auth_data, auth_token, password, password1, password2, secret_key, tls_pem_passphrase, token
-prefix=
-suffix=
-
-[bytes_to_str]
-encoding={bytes_to_str_encoding}
-
-[default]
-default_value=
-default_input_value=
-default_output_value=
-response_elem=
-
-skip_empty_keys = False
-skip_empty_request_keys = False
-skip_empty_response_keys = False
-
-# Configuration below is reserved for future use
-
-input_required_name  = "input_required"
-input_optional_name  = "input_optional"
-output_required_name = "output_required"
-output_optional_name = "output_optional"
-
-prefix_as_is     = "a"
-prefix_bool      = "b"
-prefix_csv       = "c"
-prefix_date      = "date"
-prefix_date_time = "dt"
-prefix_dict      = "d"
-prefix_dict_list = "dl"
-prefix_float     = "f"
-prefix_int       = "i"
-prefix_list      = "l"
-prefix_text      = "t"
-prefix_uuid      = "u"
-""".lstrip()
-
-# ################################################################################################################################
-# ################################################################################################################################
