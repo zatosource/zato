@@ -156,12 +156,13 @@ class SimpleIOConfig(BaseTestCase):
 
         class MyService(Service):
             class SimpleIO:
-                input = 'is_ready'
+                input = 'is_ready', 'abc_timeout'
 
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
 
         input = MyService._sio.parse_input({
             'is_ready': 'true',
+            'abc_timeout': '123'
         }, DATA_FORMAT.DICT)
 
         print(111, input)

@@ -199,20 +199,21 @@ cdef class SerialisationError(Exception):
 # ################################################################################################################################
 
 cdef enum ElemType:
-    as_is         =  100
-    bool          =  200
-    csv           =  300
-    date          =  400
-    date_time     =  500
-    decimal       =  500
-    dict_         =  600
-    dict_list     =  700
-    float_        =  800
-    int_          =  900
-    list_         = 1000
-    text          = 1100
-    utc           = 1150 # Deprecated, do not use
-    uuid          = 1200
+    as_is         =  1000
+    bool          =  2000
+    csv           =  3000
+    date          =  4000
+    date_time     =  5000
+    decimal       =  5000
+    dict_         =  6000
+    dict_list     =  7000
+    float_        =  8000
+    int_          =  9000
+    list_         = 10000
+    secret        = 11000
+    text          = 12000
+    utc           = 13000 # Deprecated, do not use
+    uuid          = 14000
     user_defined  = 1_000_000
 
 # ################################################################################################################################
@@ -681,6 +682,7 @@ cdef class Text(Elem):
 
     cdef:
         public str encoding
+        public bint is_secret
 
     def __cinit__(self):
         self._type = ElemType.text
@@ -688,6 +690,7 @@ cdef class Text(Elem):
     def __init__(self, name, **kwargs):
         super(Text, self).__init__(name, **kwargs)
         self.encoding = kwargs.get('encoding', 'utf8')
+        self.is_secret = False
 
     @staticmethod
     def _from_value_static(value, *args, **kwargs):
@@ -711,6 +714,11 @@ cdef class Text(Elem):
         return Text.from_json_static(value, encoding=self.encoding)
 
     to_dict = from_dict = to_csv = from_csv = to_xml = from_xml = from_json
+
+cdef class Secret(Text):
+    def __init__(self, *args, **kwargs):
+        super(Secret, self).__init__(*args, **kwargs)
+        self.is_secret = True
 
 # ################################################################################################################################
 
@@ -1209,13 +1217,64 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cdef Elem _convert_to_elem_instance(self, elem, container, is_required):
+    cdef Elem _convert_to_elem_instance(self, unicode elem_name, bint is_required):
 
-        # By default, we always return Text instances for elements that do not specify an SIO type
+        # The element we return, at this point we do not know what its exact subtype will be
         cdef Elem _elem
 
-        _elem = Text(elem)
-        _elem.name = elem
+        cdef set exact
+        cdef set prefixes
+        cdef set suffixes
+        cdef unicode config_elem
+        cdef bint keep_running = True
+
+        cdef ConfigItem config_item
+
+        cdef tuple config_item_to_type = (
+            (Bool,   self.server_config.bool_config),
+            (Int,    self.server_config.int_config),
+            (Secret, self.server_config.secret_config),
+        )
+
+        for (ElemClass, config_item) in config_item_to_type:
+
+            if not keep_running:
+                break
+
+            exact = config_item.exact
+            prefixes = config_item.prefixes
+            suffixes = config_item.suffixes
+
+            # Try an exact match first ..
+            for config_elem in exact:
+                if elem_name == config_elem:
+                    _elem = ElemClass(elem_name)
+                    _elem.name = elem_name
+                    _elem.is_required = is_required
+                    return _elem
+
+            # .. try prefix matching then ..
+            for config_elem in prefixes:
+                if elem_name.startswith(config_elem):
+                    _elem = ElemClass(elem_name)
+                    _elem.name = elem_name
+                    _elem.is_required = is_required
+                    return _elem
+
+            # .. finally, try suffix matching.
+            for config_elem in suffixes:
+                if elem_name.endswith(config_elem):
+                    _elem = ElemClass(elem_name)
+                    _elem.name = elem_name
+                    _elem.is_required = is_required
+                    return _elem
+
+        # If we get here, it means that none of the configuration objects above
+        # matched our input, i.e. none of exact, prefix or suffix elements,
+        # so we can just return a Text one.
+
+        _elem = Text(elem_name)
+        _elem.name = elem_name
         _elem.is_required = is_required
 
         return _elem
@@ -1303,7 +1362,7 @@ cdef class CySimpleIO(object):
 
                 # All of our elements are always SimpleIO objects
                 if not isinstance(elem, Elem):
-                    elem = self._convert_to_elem_instance(elem, container, is_required)
+                    elem = self._convert_to_elem_instance(elem, is_required)
 
                 # Make sure all elements have a default value, either a user-defined one or the SimpleIO-level configured one
                 sio_default_value = self.definition.sio_default.input_value if container == 'input' else \
