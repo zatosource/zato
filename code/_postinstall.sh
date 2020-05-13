@@ -53,7 +53,8 @@ $PY_BINARY -m pip install \
     -e ./zato-server \
     -e ./zato-web-admin \
     -e ./zato-zmq \
-    -e ./zato-sso
+    -e ./zato-sso \
+    -e ./zato-testing
 
 # Emulate zc.buildout's split-out eggs directory for simpler local development.
 ln -fs $VIRTUAL_ENV/lib/python*/site-packages eggs
@@ -75,6 +76,7 @@ echo "$(pwd)/zato_extra_paths" >> eggs/easy-install.pth
 patch -p0 -d eggs < patches/butler/__init__.py.diff
 patch -p0 -d eggs < patches/configobj.py.diff
 patch -p0 -d eggs < patches/psycopg2/__init__.py.diff --forward || true
+patch -p0 -d eggs < patches/pykafka/topic.py.diff
 patch -p0 -d eggs < patches/redis/redis/connection.py.diff
 patch -p0 -d eggs < patches/requests/models.py.diff
 patch -p0 -d eggs < patches/requests/sessions.py.diff
