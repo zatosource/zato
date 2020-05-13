@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 from contextlib import closing
 from datetime import datetime, timedelta
+from io import StringIO
 from json import dumps
 from operator import attrgetter
 from traceback import format_exc
@@ -41,7 +42,7 @@ from zato.common.util import fs_safe_name, new_cid, spawn_greenlet
 from zato.common.util.event import EventLog
 from zato.common.util.hook import HookTool
 from zato.common.util.python_ import get_current_stack
-from zato.common.util.time_ import utcnow_as_ms
+from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.common.util.wsx import find_wsx_environ
 from zato.server.pubsub.model import Endpoint, EventType, HookCtx, Subscription, SubKeyServer, Topic
 from zato.server.pubsub.sync import InRAMSync
@@ -215,6 +216,7 @@ class PubSub(object):
 
     @property
     def subscriptions_by_sub_key(self):
+        # type: () -> dict
         self.emit_about_to_access_sub_sk({'sub_sk':sorted(self._subscriptions_by_sub_key), 'stack':get_current_stack()})
         return self._subscriptions_by_sub_key
 
@@ -287,6 +289,61 @@ class PubSub(object):
             for sub in itervalues(self.subscriptions_by_sub_key):
                 if sub.ext_client_id == ext_client_id:
                     return sub
+
+# ################################################################################################################################
+
+    def _write_log_sub_data(self, sub, out):
+        # type: (Subscription, StringIO)
+        items = sorted(sub.to_dict().items())
+
+        out.write('\n')
+        for key, value in items:
+            out.write(' - {} {}'.format(key, value))
+            if key == 'creation_time':
+                out.write('\n - creation_time_utc {}'.format(datetime_from_ms(value)))
+            out.write('\n')
+
+# ################################################################################################################################
+
+    def _log_subscriptions_dict(self, attr_name, prefix, title):
+        # type: (str, str, str)
+        out = StringIO()
+        out.write('\n')
+
+        attr = getattr(self, attr_name) # type: dict
+
+        for sub_key, sub_data in sorted(attr.items()): # type: (str, object)
+            out.write('* {}\n'.format(sub_key))
+
+            if isinstance(sub_data, Subscription):
+                self._write_log_sub_data(sub_data, out)
+            else:
+                sorted_sub_data = sorted(sub_data)
+                for item in sorted_sub_data:
+                    if isinstance(item, Subscription):
+                        self._write_log_sub_data(item, out)
+                    else:
+                        out.write(' - {}'.format(item))
+                        out.write('\n')
+
+            out.write('\n')
+
+        logger_zato.info('\n === %s (%s) ===\n %s', prefix, title, out.getvalue())
+        out.close()
+
+# ################################################################################################################################
+
+    def log_subscriptions_by_sub_key(self, title, prefix='PubSub.subscriptions_by_sub_key'):
+        # type: (str, str)
+        with self.lock:
+            self._log_subscriptions_dict('subscriptions_by_sub_key', prefix, title)
+
+# ################################################################################################################################
+
+    def log_subscriptions_by_topic_name(self, title, prefix='PubSub.subscriptions_by_topic'):
+        # type: (str, str)
+        with self.lock:
+            self._log_subscriptions_dict('subscriptions_by_topic', prefix, title)
 
 # ################################################################################################################################
 
@@ -591,10 +648,11 @@ class PubSub(object):
         """ Deletes a subscription from the list of subscription. By default, it is not an error to call
         the method with an invalid sub_key. Must be invoked with self.lock held.
         """
-        sub = self.subscriptions_by_sub_key.pop(sub_key, _invalid)
+        sub = self.subscriptions_by_sub_key.pop(sub_key, _invalid) # type: Subscription
         if sub is _invalid and (not ignore_missing):
             raise KeyError('No such sub_key `%s`', sub_key)
         else:
+            logger.info('Deleted subscription object `%s` (%s)', sub.sub_key, sub.topic_name)
             return sub # Either valid or invalid but ignore_missing is True
 
 # ################################################################################################################################
@@ -724,16 +782,26 @@ class PubSub(object):
 # ################################################################################################################################
 
     def _delete_topic(self, topic_id, topic_name):
+        # type: (int, str) -> list
         del self.topic_name_to_id[topic_name]
-        self.subscriptions_by_topic.pop(topic_name, None) # May have no subscriptions hence .pop instead of del
+        subscriptions_by_topic = self.subscriptions_by_topic.pop(topic_name, [])
         del self.topics[topic_id]
+
+        logger.info('Deleted topic object `%s` (%s), subs:`%s`',
+            topic_name, topic_id, [elem.sub_key for elem in subscriptions_by_topic])
+
+        return subscriptions_by_topic
 
 # ################################################################################################################################
 
     def delete_topic(self, topic_id):
+        # type: (int) -> list
         with self.lock:
             topic_name = self.topics[topic_id].name
-            self._delete_topic(topic_id, topic_name)
+            subscriptions_by_topic = self._delete_topic(topic_id, topic_name) # type: list
+
+            for sub in subscriptions_by_topic: # type: Subscription
+                self._delete_subscription_by_sub_key(sub.sub_key)
 
 # ################################################################################################################################
 

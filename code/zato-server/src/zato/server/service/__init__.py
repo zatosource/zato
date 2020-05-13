@@ -1128,12 +1128,13 @@ class Service(object):
     def update(
              service,               # type: Service
              channel_type,          # type: str
-             server, broker_client, # type: object
+             server,                # type: ParallelServer
+             broker_client,         # type: object
              _ignored,              # type: object
-             cid,
+             cid,                   # type: str
              payload,               # type: object
              raw_request,           # type: object
-             transport=None,
+             transport=None,        # type: str
              simple_io_config=None, # type: object
              data_format=None,      # type: str
              wsgi_environ=None,     # type: dict
@@ -1192,6 +1193,21 @@ class Service(object):
 
         if init:
             service._init(channel_type in _wsgi_channels)
+
+# ################################################################################################################################
+
+    def new_instance(self, service_name, *args, **kwargs):
+        """ Creates a new service instance without invoking its handle method.
+        """
+        # type: (str, str, str) -> object
+
+        service, ignored_is_active = \
+            self.server.service_store.new_instance_by_name(service_name, *args, **kwargs) # type: (Service, bool)
+
+        service.update(service, CHANNEL.NEW_INSTANCE, self.server, broker_client=self.broker_client, _ignored=None,
+            cid=self.cid, payload=self.request.payload, raw_request=self.request.raw_request, wsgi_environ=self.wsgi_environ)
+
+        return service
 
 # ################################################################################################################################
 
