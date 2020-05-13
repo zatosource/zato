@@ -70,8 +70,8 @@ cdef class Matcher(object):
         self.pattern = pattern
         self.matcher = None
         self.is_static = True
-        self._brace_pattern = re_compile('\{[\w \$.\-|=~^\/]+\}', stdlib_re.UNICODE)
-        self._elem_re_template = r'(?P<{}>[\w \$.\-|=~^'+ slash_pattern +']+)'
+        self._brace_pattern = re_compile('\{[\w \$.\-:|=~^\/]+\}', stdlib_re.UNICODE)
+        self._elem_re_template = r'(?P<{}>[\w \$.\-:|=~^'+ slash_pattern +']+)'
         self._set_up_matcher(self.pattern)
 
 # ################################################################################################################################

@@ -411,21 +411,27 @@ class Subscription(ToDictBase):
     _to_dict_keys = dict_keys.subscription
 
     def __init__(self, config):
-        self.config = config
-        self.id = config.id
-        self.creation_time = config.creation_time * 1000.0
-        self.sub_key = config.sub_key
-        self.endpoint_id = config.endpoint_id
-        self.topic_id = config.topic_id
-        self.topic_name = config.topic_name
-        self.sub_pattern_matched = config.sub_pattern_matched
-        self.task_delivery_interval = config.task_delivery_interval
-        self.unsub_on_wsx_close = config.get('unsub_on_wsx_close')
-        self.ext_client_id = config.ext_client_id
+        self.config = config # type: Bunch
+        self.id = config.id  # type: int
+        self.creation_time = config.creation_time * 1000.0 # type: float
+        self.sub_key = config.sub_key # type: str
+        self.endpoint_id = config.endpoint_id # type: int
+        self.topic_id = config.topic_id # type: int
+        self.topic_name = config.topic_name # type: str
+        self.sub_pattern_matched = config.sub_pattern_matched # type: str
+        self.task_delivery_interval = config.task_delivery_interval # type: int
+        self.unsub_on_wsx_close = config.get('unsub_on_wsx_close') # type: bool
+        self.ext_client_id = config.ext_client_id # type: str
 
         # Object ws_channel_id is an ID of a WSX channel this subscription potentially belongs to,
         # otherwise it is None.
         self.is_wsx = bool(self.config.ws_channel_id)
+
+# ################################################################################################################################
+
+    def __lt__(self, other):
+        # type: (Subscription)
+        return self.sub_key < other.sub_key
 
 # ################################################################################################################################
 
