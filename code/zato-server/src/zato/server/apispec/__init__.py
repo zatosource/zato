@@ -24,7 +24,7 @@ from markdown import markdown
 
 # Python 2/3 compatibility
 from future.utils import iteritems
-from past.builtins import basestring
+from past.builtins import basestring, unicode
 
 # Zato
 from zato.common import APISPEC
@@ -92,7 +92,11 @@ class _DocstringSegment(object):
 # ################################################################################################################################
 
 class SimpleIO(object):
-    def __init__(self, api_spec_info):
+    __slots__ = 'input_required', 'output_required', 'input_optional', 'output_optional', 'request_elem', 'response_elem', \
+        'spec_name', 'description'
+
+    def __init__(self, api_spec_info, description):
+        # type: (Bunch, SimpleIODescription)
         self.input_required = api_spec_info.param_list.input_required
         self.output_required = api_spec_info.param_list.output_required
         self.input_optional = api_spec_info.param_list.input_optional
@@ -100,13 +104,25 @@ class SimpleIO(object):
         self.request_elem = api_spec_info.request_elem
         self.response_elem = api_spec_info.response_elem
         self.spec_name = api_spec_info.name
+        self.description = description
 
     def to_bunch(self):
         out = Bunch()
+        out.description = self.description
         for name in _sio_attrs + ('request_elem', 'response_elem', 'spec_name'):
             out[name] = getattr(self, name)
 
+
         return out
+
+# ################################################################################################################################
+
+class SimpleIODescription(object):
+    __slots__ = 'input', 'output'
+
+    def __init__(self):
+        self.input = {}
+        self.output = {}
 
 # ################################################################################################################################
 
@@ -171,6 +187,10 @@ class ServiceInfo(object):
         sio = getattr(self.service_class, 'SimpleIO', None)
 
         if sio:
+
+            # This can be reused across all the output data formats
+            sio_desc = self.get_sio_desc(sio)
+
             for api_spec_info in _SIO_TYPE_MAP:
 
                 _api_spec_info = Bunch()
@@ -210,7 +230,7 @@ class ServiceInfo(object):
 
                     _api_spec_info.param_list[param_list_name] = _param_list
 
-                self.simple_io[_api_spec_info.name] = SimpleIO(_api_spec_info).to_bunch()
+                self.simple_io[_api_spec_info.name] = SimpleIO(_api_spec_info, sio_desc).to_bunch()
 
 # ################################################################################################################################
 
@@ -262,9 +282,10 @@ class ServiceInfo(object):
         if full_docstring and not summary:
             summary = full_docstring
 
-        # If we don't have description but we have summary then summary becomes description
+        # If we don't have description but we have summary then summary becomes description and full docstring as well
         if summary and not description:
             description = summary
+            full_docstring = summary
 
         out = _DocstringSegment()
         out.tag = tag
@@ -310,16 +331,13 @@ class ServiceInfo(object):
 
 # ################################################################################################################################
 
-    def extract_segments(self):
+    def extract_segments(self, doc):
         """ Makes a pass over the docstring to extract all of its tags and their text.
         """
-        # type: () -> list
+        # type: (str) -> list
 
         # Response to produce
         out = []
-
-        # Docstring to scan
-        doc = self.service_class.__doc__ # type: str
 
         # Nothing to parse
         if not doc:
@@ -347,7 +365,7 @@ class ServiceInfo(object):
 
     def set_summary_desc(self):
 
-        segments = self.extract_segments()
+        segments = self.extract_segments(self.service_class.__doc__)
 
         for segment in segments: # type: _DocstringSegment
 
@@ -361,6 +379,151 @@ class ServiceInfo(object):
 
             if segment.full:
                 self.docstring.full += segment.full
+
+# ################################################################################################################################
+
+    def get_sio_desc(self, sio, io_separator='/', new_elem_marker='*'):
+        # type: (object) -> SimpleIODescription
+
+        # No description to parse
+        if not sio.__doc__:
+            return
+
+        doc = sio.__doc__.strip() # type: str
+
+        lines = []
+
+        # Strip leading whitespace but only from lines containing element names
+        for line in doc.splitlines(): # type: str
+            orig_line = line
+            line = line.lstrip()
+            if line.startswith(new_elem_marker):
+                lines.append(line)
+            else:
+                lines.append(orig_line)
+
+        # Now, replace all the leading whitespace left with endline characters,
+        # but instead of replacing them in place, they will be appending to the preceding line.
+
+        # This will contain all lines with whitespace replaced with newlines
+        with_new_lines = []
+
+        for idx, line in enumerate(lines):
+
+            # By default, assume that do not need to append the new line
+            append_new_line = False
+
+            # An empty line is interpreted as a new line marker
+            if not line:
+                append_new_line = True
+
+            if line.startswith(' '):
+                line = line.lstrip()
+
+            with_new_lines.append(line)
+
+            # Alright, this line started with whitespace which we removed above,
+            # so now we need to append the new line character. But first we need to
+            # find an index of any previous line that is not empty in case there
+            # are multiple empty lines in succession in the input string.
+            if append_new_line:
+
+                line_found = False
+                line_idx = idx
+
+                while not line_found or (idx == 0):
+                    line_idx -= 1
+                    current_line = with_new_lines[line_idx]
+                    if current_line.strip():
+                        break
+
+                with_new_lines[line_idx] += '\n'
+
+        # We may still have some empty lines left over which we remove now
+        lines = [elem for elem in with_new_lines[:] if elem]
+
+        input_lines = []
+        output_lines = []
+
+        # If there is no empty line, the docstring will describe either input or output (we do not know yet).
+        # If there is only one empty line, it constitutes a separator between input and output.
+        # If there is more than one empty line, we need to look up the separator marker instead.
+        # If the separator is not found, it again means that the docstring describes either input or output.
+        empty_line_count = 0
+
+        # Line that separates input from output in the list of arguments
+        input_output_sep_idx = None
+
+        # To indicate whether we have found a separator in the docstring
+        has_separator = False
+
+        for idx, line in enumerate(lines):
+            if not line:
+                empty_line_count += 1
+                input_output_sep_idx = idx
+
+            if line == io_separator:
+                has_separator = True
+                input_output_sep_idx = idx
+
+        # No empty line separator = we do not know if it is input or output so we need to populate both structures ..
+        if empty_line_count == 0:
+            input_lines[:] = lines[:]
+            output_lines[:] = lines[:]
+
+        # .. a single empty line separator = we know where input and output are.
+        elif empty_line_count == 1:
+            input_lines[:] = lines[:input_output_sep_idx]
+            output_lines[:] = lines[input_output_sep_idx+1:]
+
+        else:
+            # If we have a separator, this is what indicates where input and output are ..
+            if has_separator:
+                input_lines[:] = lines[:input_output_sep_idx-1]
+                output_lines[:] = lines[input_output_sep_idx-1:]
+
+            # .. otherwise, we treat it as a list of arguments and we do not know if it is input or output.
+            else:
+                input_lines[:] = lines[:]
+                output_lines[:] = lines[:]
+
+        input_lines = [elem for elem in input_lines if elem and elem != io_separator]
+        output_lines = [elem for elem in output_lines if elem and elem != io_separator]
+
+        out = SimpleIODescription()
+        out.input.update(self._parse_sio_desc_lines(input_lines))
+        out.output.update(self._parse_sio_desc_lines(output_lines))
+
+        return out
+
+# ################################################################################################################################
+
+    def _parse_sio_desc_lines(self, lines, new_elem_marker='*'):
+        # type: (list) -> dict
+        out = {}
+        current_elem = None
+
+        for line in lines: # type: str
+            if line.startswith(new_elem_marker):
+
+                # We will need it later below
+                orig_line = line
+
+                # Remove whitespace, skip the new element marker and the first string left over will be the element name.
+                line = [elem for elem in line.split()]
+                line.remove(new_elem_marker)
+                current_elem = line[0]
+
+                # We have the element name so we can now remove it from the full line
+                to_remove = '{} {} - '.format(new_elem_marker, current_elem)
+                after_removal = orig_line.replace(to_remove, '', 1)
+                out[current_elem] = [after_removal]
+
+            else:
+                if current_elem:
+                    out[current_elem].append(line)
+
+        return out
 
 # ################################################################################################################################
 
