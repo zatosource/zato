@@ -101,9 +101,6 @@ class APISpec(ZatoCommand):
         response = client.invoke('zato.apispec.get-api-spec', request)
         data = response.data['response']['data']
 
-        #print(111, data)
-        #return
-
         for file_path, contents in data.items():
             full_file_path = os.path.join(out_dir, file_path)
             file_dir = os.path.abspath(os.path.dirname(full_file_path))

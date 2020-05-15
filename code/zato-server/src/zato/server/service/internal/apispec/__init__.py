@@ -206,16 +206,6 @@ class GetSphinx(Service):
         )
         new_line_with_indent = '\n\n' + description_indent
 
-        print()
-        print(111, len_table_indent)
-        print(222, longest_name)
-        print(333, 1)
-        print(444, longest_datatype)
-        print(555, 1)
-        print(666, longest_required)
-        print(777, 1)
-        print()
-
         for elem in chain(input, output):
 
             elem.description = elem.description.replace('\n', new_line_with_indent)

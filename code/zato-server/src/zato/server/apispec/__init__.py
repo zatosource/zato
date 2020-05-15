@@ -24,7 +24,7 @@ from markdown import markdown
 
 # Python 2/3 compatibility
 from future.utils import iteritems
-from past.builtins import basestring, unicode
+from past.builtins import basestring
 
 # Zato
 from zato.common import APISPEC
