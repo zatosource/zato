@@ -108,7 +108,6 @@ class SimpleIO(object):
 
     def to_bunch(self):
         out = Bunch()
-        out.description = self.description
         for name in _sio_attrs + ('request_elem', 'response_elem', 'spec_name'):
             out[name] = getattr(self, name)
 
@@ -123,17 +122,12 @@ class SimpleIODescription(object):
         self.input = {}
         self.output = {}
 
-# ################################################################################################################################
+    def to_bunch(self):
+        out = Bunch()
+        out.input = self.input
+        out.output = self.output
 
-class _ParamInfo(object):
-    __slots__ = 'name', 'is_required', 'type', 'subtype', 'description'
-
-    def __init__(self):
-        self.name = None
-        self.is_required = None
-        self.description = None
-        self.type = None
-        self.subtype = None
+        return out
 
 # ################################################################################################################################
 
@@ -224,14 +218,10 @@ class ServiceInfo(object):
                         desc_dict = sio_desc.input if param_list_name.startswith('input') else sio_desc.output
 
                         # Parameter details object
-                        _param_info = _ParamInfo()
+                        _param_info = Bunch()
                         _param_info.name = param_name
                         _param_info.is_required = 'required' in param_list_name
                         _param_info.description = desc_dict.get(param_name)
-
-                        #print()
-                        #print(111, param_name, _param_info.description)
-                        #print()
 
                         if isinstance(param, AsIs):
                             type_info = api_spec_info.DEFAULT
@@ -408,9 +398,11 @@ class ServiceInfo(object):
     def get_sio_desc(self, sio, io_separator='/', new_elem_marker='*'):
         # type: (object) -> SimpleIODescription
 
+        out = SimpleIODescription()
+
         # No description to parse
         if not sio.__doc__:
-            return
+            return out
 
         doc = sio.__doc__.strip() # type: str
 
@@ -513,7 +505,6 @@ class ServiceInfo(object):
         input_lines = [elem for elem in input_lines if elem and elem != io_separator]
         output_lines = [elem for elem in output_lines if elem and elem != io_separator]
 
-        out = SimpleIODescription()
         out.input.update(self._parse_sio_desc_lines(input_lines))
         out.output.update(self._parse_sio_desc_lines(output_lines))
 
@@ -627,6 +618,10 @@ class Generator(object):
             item.invokes = sorted(info.invokes)
             item.invoked_by = sorted(info.invoked_by)
             item.simple_io = info.simple_io
+
+            print()
+            print(222, item.name, item.simple_io)
+            print()
 
             item.docs = Bunch()
             item.docs.summary = info.docstring.summary
