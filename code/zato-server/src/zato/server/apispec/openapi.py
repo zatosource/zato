@@ -48,11 +48,11 @@ class OpenAPIGenerator(object):
 
             response_name = self._get_response_name(item.name)
             out[response_name] = {
-                b'title': 'Response object for {}'.format(item.name),
-                b'type': b'object',
+                'title': 'Response object for {}'.format(item.name),
+                'type': 'object',
             }
             properties = {}
-            out[response_name][b'properties'] = properties
+            out[response_name]['properties'] = properties
 
             if 'openapi_v3' not in item.simple_io:
                 continue
@@ -65,12 +65,12 @@ class OpenAPIGenerator(object):
             if output_required or output_optional:
                 for sio_elem in chain(output_required, output_optional):
                     properties[sio_elem.name.encode('utf8')] = {
-                        b'type': sio_elem.type.encode('utf8'),
-                        b'format': sio_elem.subtype.encode('utf8'),
+                        'type': sio_elem.type.encode('utf8'),
+                        'format': sio_elem.subtype.encode('utf8'),
                     }
 
                 if output_required_names:
-                    out[response_name][b'required'] = output_required_names
+                    out[response_name]['required'] = output_required_names
 
         return out
 
@@ -89,11 +89,11 @@ class OpenAPIGenerator(object):
         op_name = service_name[-1]
 
         if op_name.startswith('get'):
-            return b'get'
+            return 'get'
         elif op_name.startswith('delete'):
-            return b'delete'
+            return 'delete'
         else:
-            return b'post'
+            return 'post'
 
 # ################################################################################################################################
 
@@ -106,12 +106,12 @@ class OpenAPIGenerator(object):
     def generate(self):
         # Basic information, always available
         out = Bunch()
-        out.openapi = b'3.0.0'
+        out.openapi = '3.0.0'
         out.info = {
-            b'title': b'API spec',
-            b'version': b'1.0',
+            'title': 'API spec',
+            'version': '1.0',
         }
-        out.servers = [{b'url': b'http://localhost:11223'}]
+        out.servers = [{'url': 'http://localhost:11223'}]
 
         # Responses to refer to in paths
         out.components = Bunch()
@@ -156,26 +156,26 @@ class OpenAPIGenerator(object):
                         is_required = True if is_in_path else sio_elem.is_required
 
                         channel_params.append({
-                            b'name': sio_elem.name.encode('utf8'),
-                            b'description': b'',
-                            b'in': b'path' if is_in_path else b'query',
-                            b'required': is_required,
-                            b'schema': {
-                                b'type': sio_elem.type.encode('utf8'),
-                                b'format': sio_elem.subtype.encode('utf8'),
+                            'name': sio_elem.name.encode('utf8'),
+                            'description': '',
+                            'in': 'path' if is_in_path else 'query',
+                            'required': is_required,
+                            'schema': {
+                                'type': sio_elem.type.encode('utf8'),
+                                'format': sio_elem.subtype.encode('utf8'),
                             }
                         })
 
                 out.paths[url_path] = {}
                 out.paths[url_path][path_operation] = {}
-                out.paths[url_path][path_operation][b'parameters'] = channel_params
-                out.paths[url_path][path_operation][b'responses'] = {
-                    b'200': {
-                        b'description': b'',
-                        b'content': {
-                            b'application/json': {
-                                b'schema': {
-                                    b'$ref': b'#/components/schemas/{}'.format(response_name),
+                out.paths[url_path][path_operation]['parameters'] = channel_params
+                out.paths[url_path][path_operation]['responses'] = {
+                    '200': {
+                        'description': '',
+                        'content': {
+                            'application/json': {
+                                'schema': {
+                                    '$ref': '#/components/schemas/{}'.format(response_name),
                                 }
                             }
                         }
