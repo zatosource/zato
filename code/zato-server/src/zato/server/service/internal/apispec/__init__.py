@@ -26,14 +26,10 @@ from zato.server.service import List, Opaque, Service
 from zato.common.util import aslist, fs_safe_name
 from zato.common.util.json_ import dumps
 from zato.server.apispec import Generator
-from zato.server.service import Bool
+from zato.server.service import AsIs, Bool
 
-# ################################################################################################################################
-
-if 0:
-    from past.builtins import unicode
-
-    unicode = unicode
+# Python 2/3 compatibility
+from past.builtins import unicode
 
 # ################################################################################################################################
 
@@ -48,9 +44,10 @@ class GetAPISpec(Service):
     """
     class SimpleIO:
         input_optional = ('cluster_id', 'query', Bool('return_internal'), 'include', 'exclude', 'needs_sphinx',
-            'needs_api_invoke', 'needs_rest_channels', 'api_invoke_path')
+            'needs_api_invoke', 'needs_rest_channels', 'api_invoke_path', AsIs('tags'))
 
     def handle(self):
+
         cluster_id = self.request.input.get('cluster_id')
 
         include = aslist(self.request.input.include, ',')
@@ -76,7 +73,7 @@ class GetAPISpec(Service):
             needs_sphinx = True
 
         data = Generator(self.server.service_store.services, self.server.sio_config,
-            include, exclude, self.request.input.query).get_info()
+            include, exclude, self.request.input.query, self.request.input.tags).get_info()
 
         if needs_sphinx:
             out = self.invoke(GetSphinx.get_name(), {
@@ -153,7 +150,7 @@ class GetSphinx(Service):
             summary = self._make_sphinx_safe(summary)
 
         return bunchify({
-            'ns': str(idx),
+            'ns': unicode(idx),
             'orig_name': name,
             'sphinx_name': name.replace('_', '\_'), # Needed for Sphinx to ignore undescores
             'name': name_fs_safe,
@@ -166,37 +163,59 @@ class GetSphinx(Service):
 
 # ################################################################################################################################
 
-    def write_separators(self, buff, border1, border2, border3):
-        buff.write(border1)
-        buff.write(col_sep)
+    def write_separators(self, buff, *borders):
 
-        buff.write(border2)
-        buff.write(col_sep)
-
-        buff.write(border3)
-        buff.write(col_sep)
+        for border in borders:
+            buff.write(border)
+            buff.write(col_sep)
 
         buff.write('\n')
 
 # ################################################################################################################################
 
-    def write_sio(self, buff, elems):
+    def write_sio(self, buff, input, output):
 
         sio_lines = []
-        longest_name = 4     # len('Name')
-        longest_datatype = 8 # len('Datatype')
-        longest_required = 8 # len('Required')
+        longest_name        = 4  # len('Name')
+        longest_datatype    = 8  # len('Datatype')
+        longest_required    = 8  # len('Required')
+        longest_description = 11 # len('Description')
 
-        for elem in elems:
-            elem_name = elem.name.replace('_', '\_') # Sphinx treats _ as hyperlinks
-            longest_name = max(longest_name, len(elem_name))
+        # The table is within a 'table' block which is why it needs to be indented
+        len_table_indent = 3
+
+        # Find the longest elements for each column
+        for elem in chain(input, output):
+            elem.name_sphinx = elem.name.replace('_', '\_') # Sphinx treats _ as hyperlinks
+            longest_name = max(longest_name, len(elem.name_sphinx))
             longest_datatype = max(longest_datatype, len(elem.subtype))
+            longest_description = max(longest_description, len(elem.description))
+
+        # We need to know how much to indent multi-line descriptions,
+        # this includes all the preceding headers and 1 for each single space.
+        description_indent    = ' ' * (
+            len_table_indent + \
+            longest_name     + \
+            len_col_sep      + \
+            1                + \
+            longest_datatype + \
+            len_col_sep      + \
+            1                + \
+            longest_required + \
+            1
+        )
+        new_line_with_indent = '\n\n' + description_indent
+
+        for elem in chain(input, output):
+
+            elem.description = elem.description.replace('\n', new_line_with_indent)
 
             sio_lines.append(bunchify({
-                'name': elem_name,
+                'name': elem.name_sphinx,
                 'datatype': elem.subtype,
                 'is_required': elem.is_required,
                 'is_required_str': 'Yes' if elem.is_required else no_value,
+                'description': elem.description,
             }))
 
         longest_name += len_col_sep
@@ -205,9 +224,9 @@ class GetSphinx(Service):
         name_border = '=' * longest_name
         datatype_border = '=' * longest_datatype
         required_border = '=' * longest_required
+        description_border = '=' * longest_description
 
-        # The table is within a 'table' block which is why it needs to be indented
-        table_indent = ' ' * 3
+        table_indent = ' ' * len_table_indent
 
         # Left-align the table
         buff.write('.. table::\n')
@@ -215,7 +234,7 @@ class GetSphinx(Service):
         buff.write(':align: left\n\n')
 
         buff.write(table_indent)
-        self.write_separators(buff, name_border, datatype_border, required_border)
+        self.write_separators(buff, name_border, datatype_border, required_border, description_border)
 
         buff.write(table_indent)
         buff.write('Name'.ljust(longest_name))
@@ -226,10 +245,13 @@ class GetSphinx(Service):
 
         buff.write('Required'.ljust(longest_required))
         buff.write(col_sep)
+
+        buff.write('Description'.ljust(longest_description))
+        buff.write(col_sep)
         buff.write('\n')
 
         buff.write(table_indent)
-        self.write_separators(buff, name_border, datatype_border, required_border)
+        self.write_separators(buff, name_border, datatype_border, required_border, description_border)
 
         for item in sio_lines:
 
@@ -245,10 +267,13 @@ class GetSphinx(Service):
             buff.write(item.is_required_str.ljust(longest_required))
             buff.write(col_sep)
 
+            buff.write(item.description.ljust(longest_description))
+            buff.write(col_sep)
+
             buff.write('\n')
 
         buff.write(table_indent)
-        self.write_separators(buff, name_border, datatype_border, required_border)
+        self.write_separators(buff, name_border, datatype_border, required_border, description_border)
         buff.write('\n')
 
 # ################################################################################################################################
@@ -291,7 +316,7 @@ class GetSphinx(Service):
         buff.write('\n' * 2)
 
         if input_required or input_optional:
-            self.write_sio(buff, chain(input_required, input_optional))
+            self.write_sio(buff, input_required, input_optional)
         else:
             buff.write('(None)')
             buff.write('\n')
@@ -304,7 +329,7 @@ class GetSphinx(Service):
         buff.write('\n' * 2)
 
         if output_required or output_optional:
-            self.write_sio(buff, chain(output_required, output_optional))
+            self.write_sio(buff, output_required, output_optional)
         else:
             buff.write('(None)')
             buff.write('\n')
