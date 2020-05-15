@@ -619,10 +619,6 @@ class Generator(object):
             item.invoked_by = sorted(info.invoked_by)
             item.simple_io = info.simple_io
 
-            print()
-            print(222, item.name, item.simple_io)
-            print()
-
             item.docs = Bunch()
             item.docs.summary = info.docstring.summary
             item.docs.summary_html = self.to_html(info.docstring.summary)
