@@ -108,6 +108,7 @@ class SimpleIO(object):
 
     def to_bunch(self):
         out = Bunch()
+        out.description = self.description
         for name in _sio_attrs + ('request_elem', 'response_elem', 'spec_name'):
             out[name] = getattr(self, name)
 
