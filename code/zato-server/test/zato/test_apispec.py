@@ -56,14 +56,14 @@ class APISpecSIODescription(TestCase):
         class MyService:
             class SimpleIO:
                 """
-                * user_id - a111 a222
+                * user_id - This is the first line.
 
-                a333
+                Here is another.
 
-                a444
-                a555
-                a666
-                a777 a888 a99
+                This
+                description
+                is split
+                into multiple lines.
 
                 * user_name - b111
 
@@ -84,6 +84,7 @@ class APISpecSIODescription(TestCase):
         # There are multiple lines and no I/O separator
         # so input and output descriptions will be the same.
 
+
         input_user_id      = description.input['user_id']
         input_user_name    = description.input['user_name']
         input_address_id   = description.input['address_id']
@@ -94,19 +95,20 @@ class APISpecSIODescription(TestCase):
         output_address_id   = description.output['address_id']
         output_address_name = description.output['address_name']
 
-        self.assertListEqual(input_user_id, output_user_id)
-        self.assertListEqual(input_user_name, output_user_name)
-        self.assertListEqual(input_address_id, output_address_id)
-        self.assertListEqual(input_address_name, output_address_name)
+        self.assertEqual(input_user_id, output_user_id)
+        self.assertEqual(input_user_name, output_user_name)
+        self.assertEqual(input_address_id, output_address_id)
+        self.assertEqual(input_address_name, output_address_name)
 
-        print(111, description.input)
+        self.assertEqual(input_user_id, 'This is the first line.\nHere is another.\nThis description is split into multiple lines.')
+        self.assertEqual(input_user_name, 'b111')
+        self.assertEqual(input_address_id, 'c111 c222 c333 c444')
+        self.assertEqual(input_address_name, 'd111\nd222')
 
-        '''
-        'user_id':      ['a111 a222\n', 'a333\n', 'a444', 'a555', 'a666', 'a777 a888 a99\n']
-        'user_name':    ['b111\n']
-        'address_id':   ['c111 c222 c333 c444\n']
-        'address_name': ['d111\n', 'd222']}
-        '''
+        self.assertEqual(output_user_id, 'This is the first line.\nHere is another.\nThis description is split into multiple lines.')
+        self.assertEqual(output_user_name, 'b111')
+        self.assertEqual(output_address_id, 'c111 c222 c333 c444')
+        self.assertEqual(output_address_name, 'd111\nd222')
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -112,7 +112,6 @@ class SimpleIO(object):
         for name in _sio_attrs + ('request_elem', 'response_elem', 'spec_name'):
             out[name] = getattr(self, name)
 
-
         return out
 
 # ################################################################################################################################
@@ -123,6 +122,18 @@ class SimpleIODescription(object):
     def __init__(self):
         self.input = {}
         self.output = {}
+
+# ################################################################################################################################
+
+class _ParamInfo(object):
+    __slots__ = 'name', 'is_required', 'type', 'subtype', 'description'
+
+    def __init__(self):
+        self.name = None
+        self.is_required = None
+        self.description = None
+        self.type = None
+        self.subtype = None
 
 # ################################################################################################################################
 
@@ -205,10 +216,22 @@ class ServiceInfo(object):
                     param_list = param_list if isinstance(param_list, (tuple, list)) else [param_list]
 
                     for param in param_list:
+
+                        # Actual parameter name
                         param_name = param if isinstance(param, basestring) else param.name
-                        _param_info = Bunch()
+
+                        # To look up description based on parameter's name
+                        desc_dict = sio_desc.input if param_list_name.startswith('input') else sio_desc.output
+
+                        # Parameter details object
+                        _param_info = _ParamInfo()
                         _param_info.name = param_name
                         _param_info.is_required = 'required' in param_list_name
+                        _param_info.description = desc_dict.get(param_name)
+
+                        #print()
+                        #print(111, param_name, _param_info.description)
+                        #print()
 
                         if isinstance(param, AsIs):
                             type_info = api_spec_info.DEFAULT
@@ -522,6 +545,30 @@ class ServiceInfo(object):
             else:
                 if current_elem:
                     out[current_elem].append(line)
+
+        # Joing all the lines into a single string, preprocessing them along the way.
+        for key, value in out.items():
+
+            # We need to strip the trailing new line characters from the last element  in the list of lines
+            # because it is redundant and our callers would not want to render it anyway.
+            last = value[-1]
+            last = last.rstrip()
+            value[-1] = last
+
+            # Joing the lines now, honouring new line characters. Also, append whitespace
+            # but only to elements that are not the last in the list because they end a sentence.
+            new_value = []
+            len_value = len(value)
+            for idx, elem in enumerate(value, 1): # type: str
+                if idx != len_value and not elem.endswith('\n'):
+                    elem += ' '
+                new_value.append(elem)
+
+            # Everything is preprocesses so we can create a new string now ..
+            new_value = ''.join(new_value)
+
+            # .. and set it for that key.
+            out[key] = new_value
 
         return out
 
