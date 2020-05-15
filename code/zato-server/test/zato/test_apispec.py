@@ -117,7 +117,7 @@ class APISpecDocstringParsing(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_docstring_summary_only(self):
+    def test_docstring_summary_only(self):
 
         class MyService:
             """ This is a one-line summary.
@@ -134,7 +134,7 @@ class APISpecDocstringParsing(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_docstring_multiline(self):
+    def test_docstring_multiline(self):
 
         class MyService:
             """ This is a one-line summary.
@@ -150,7 +150,7 @@ class APISpecDocstringParsing(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_extract_tags_public_only_implicit(self):
+    def test_extract_tags_public_only_implicit(self):
 
         class MyService:
             """ This is a one-line summary.
@@ -175,7 +175,7 @@ class APISpecDocstringParsing(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_extract_tags_public_only_explicit(self):
+    def test_extract_tags_public_only_explicit(self):
 
         class MyService:
             """ #public
@@ -201,7 +201,7 @@ class APISpecDocstringParsing(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_extract_tags_multi_1(self):
+    def test_extract_tags_multi_1(self):
 
         class MyService:
             """ This is a one-line summary.
