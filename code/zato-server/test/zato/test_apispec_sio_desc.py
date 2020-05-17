@@ -17,6 +17,7 @@ from bunch import Bunch
 # Zato
 from zato.common import APISPEC
 from zato.server.apispec import ServiceInfo
+from common import MyService, service_name, sio_config
 
 # ################################################################################################################################
 
@@ -28,63 +29,21 @@ if 0:
     SimpleIODescription = SimpleIODescription
 
 # ################################################################################################################################
-
-service_name = 'my.service'
-
-sio_config = Bunch()
-
-sio_config.int = Bunch()
-sio_config.bool = Bunch()
-sio_config.secret = Bunch()
-sio_config.bytes_to_str = Bunch()
-
-sio_config.int.prefix = set()
-sio_config.int.exact = set()
-sio_config.int.suffix = set()
-
-sio_config.bool.prefix = set()
-sio_config.bool.exact = set()
-sio_config.bool.suffix = set()
-
-class MyService:
-    class SimpleIO:
-        """
-        * user_id - This is the first line.
-
-        Here is another.
-
-        This
-        description
-        is split
-        into multiple lines.
-
-        * user_name - b111
-
-        * address_id - c111 c222 c333 c444
-
-        * address_name - d111
-
-          d222
-        """
-        input_required = 'user_id'
-        input_optional = 'user_name'
-        output_required = 'address_id'
-        output_optional = 'address_name'
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 class OpenAPI(TestCase):
 
     def test_generate_open_api(self):
-        pass
+
+        info = ServiceInfo(service_name, MyService, sio_config, 'public')
+        description = info.simple_io['zato'].description # type: SimpleIODescription
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class APISpecSIODescription(TestCase):
 
-    def xtest_get_sio_desc_multiline_no_separator(self):
+    def test_get_sio_desc_multiline_no_separator(self):
 
         info = ServiceInfo(service_name, MyService, sio_config, 'public')
         description = info.simple_io['zato'].description # type: SimpleIODescription
@@ -124,7 +83,7 @@ class APISpecDocstringParsing(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_docstring_summary_only(self):
+    def test_docstring_summary_only(self):
 
         class MyService:
             """ This is a one-line summary.
@@ -141,7 +100,7 @@ class APISpecDocstringParsing(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_docstring_multiline(self):
+    def test_docstring_multiline(self):
 
         class MyService:
             """ This is a one-line summary.
@@ -157,7 +116,7 @@ class APISpecDocstringParsing(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_extract_tags_public_only_implicit(self):
+    def test_extract_tags_public_only_implicit(self):
 
         class MyService:
             """ This is a one-line summary.
@@ -182,7 +141,7 @@ class APISpecDocstringParsing(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_extract_tags_public_only_explicit(self):
+    def test_extract_tags_public_only_explicit(self):
 
         class MyService:
             """ #public
@@ -208,7 +167,7 @@ class APISpecDocstringParsing(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_extract_tags_multi_1(self):
+    def test_extract_tags_multi_1(self):
 
         class MyService:
             """ This is a one-line summary.
