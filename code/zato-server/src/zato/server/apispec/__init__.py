@@ -93,9 +93,9 @@ class _DocstringSegment(object):
 
 class SimpleIO(object):
     __slots__ = 'input_required', 'output_required', 'input_optional', 'output_optional', 'request_elem', 'response_elem', \
-        'spec_name', 'description'
+        'spec_name', 'description', 'needs_sio_desc'
 
-    def __init__(self, api_spec_info, description):
+    def __init__(self, api_spec_info, description, needs_sio_desc=True):
         # type: (Bunch, SimpleIODescription)
         self.input_required = api_spec_info.param_list.input_required
         self.output_required = api_spec_info.param_list.output_required
@@ -105,12 +105,15 @@ class SimpleIO(object):
         self.response_elem = api_spec_info.response_elem
         self.spec_name = api_spec_info.name
         self.description = description
+        self.needs_sio_desc = needs_sio_desc
 
     def to_bunch(self):
         out = Bunch()
-        out.description = self.description
         for name in _sio_attrs + ('request_elem', 'response_elem', 'spec_name'):
             out[name] = getattr(self, name)
+
+        if self.needs_sio_desc:
+            out.description = self.description
 
         return out
 
@@ -135,8 +138,8 @@ class SimpleIODescription(object):
 class ServiceInfo(object):
     """ Contains information about a service basing on which documentation is generated.
     """
-    def __init__(self, name, service_class, simple_io_config, tags='public'):
-        # type: (str, Service, SimpleIO, object)
+    def __init__(self, name, service_class, simple_io_config, tags='public', needs_sio_desc=True):
+        # type: (str, Service, SimpleIO, object, bool)
         self.name = name
         self.service_class = service_class
         self.simple_io_config = simple_io_config
@@ -146,6 +149,7 @@ class ServiceInfo(object):
         self.namespace = Namespace()
         self.invokes = []
         self.invoked_by = []
+        self.needs_sio_desc = needs_sio_desc
         self.parse()
 
 # ################################################################################################################################
@@ -244,7 +248,7 @@ class ServiceInfo(object):
 
                     _api_spec_info.param_list[param_list_name] = _param_list
 
-                self.simple_io[_api_spec_info.name] = SimpleIO(_api_spec_info, sio_desc).to_bunch()
+                self.simple_io[_api_spec_info.name] = SimpleIO(_api_spec_info, sio_desc, self.needs_sio_desc).to_bunch()
 
 # ################################################################################################################################
 
@@ -567,13 +571,14 @@ class ServiceInfo(object):
 # ################################################################################################################################
 
 class Generator(object):
-    def __init__(self, service_store_services, simple_io_config, include, exclude, query=None, tags=None):
+    def __init__(self, service_store_services, simple_io_config, include, exclude, query=None, tags=None, needs_sio_desc=True):
         self.service_store_services = service_store_services
         self.simple_io_config = simple_io_config
         self.include = include or []
         self.exclude = exclude or []
         self.query = query
         self.tags = tags
+        self.needs_sio_desc = needs_sio_desc
         self.services = {}
 
         # Service name -> list of services this service invokes
@@ -669,7 +674,7 @@ class Generator(object):
             if (not _should_include) or _should_exclude:
                 continue
 
-            info = ServiceInfo(details.name, details.service_class, self.simple_io_config, self.tags)
+            info = ServiceInfo(details.name, details.service_class, self.simple_io_config, self.tags, self.needs_sio_desc)
             self.services[info.name] = info
 
         for name, info in iteritems(self.services):

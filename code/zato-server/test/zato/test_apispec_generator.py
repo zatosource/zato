@@ -13,27 +13,32 @@ from unittest import main, TestCase
 
 
 # Zato
-from zato.server.apispec import ServiceInfo
-from zato.server.apispec.openapi import OpenAPIGenerator
+from zato.server.apispec import Generator
 from common import MyService, service_name, sio_config
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class OpenAPITestCase(TestCase):
+class GeneratorTestCase(TestCase):
 
-    def test_generate_open_api(self):
+    def test_generator_get_info(self):
 
-        info = ServiceInfo(service_name, MyService, sio_config, 'public')
-        channel_data = []
-        needs_api_invoke = True
-        needs_rest_channels = True
-        api_invoke_path = '/my.api_invoke_path'
+        service_store_services = {
+            'my.impl.name': {
+                'name': 'my.name',
+                'service_class': MyService,
+            }
+        }
+        include = ['*']
+        exclude = []
+        query   = ''
+        tags    = ''
 
-        generator = OpenAPIGenerator(info, channel_data, needs_api_invoke, needs_rest_channels, api_invoke_path)
-        result = generator.generate()
+        generator = Generator(service_store_services, sio_config, include, exclude, query, tags, needs_sio_desc=False)
+        info = generator.get_info()
 
-        print(111, result)
+        from pprint import pprint
+        pprint(info)
 
 # ################################################################################################################################
 # ################################################################################################################################
