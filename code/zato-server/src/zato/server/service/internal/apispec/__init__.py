@@ -128,6 +128,15 @@ class GetSphinx(Service):
 # ################################################################################################################################
 
     def get_openapi_spec(self, data, needs_api_invoke, needs_rest_channels, api_invoke_path):
+
+        print()
+        print(111, data.toDict())
+        print()
+
+        #print()
+        #print(222, self.server.worker_store.request_dispatcher.url_data.channel_data)
+        #print()
+
         data = bunchify(data)
         channel_data = self.server.worker_store.request_dispatcher.url_data.channel_data
         generator = OpenAPIGenerator(data, channel_data, needs_api_invoke, needs_rest_channels, api_invoke_path)
