@@ -31,7 +31,13 @@ class OpenAPIGenerator(object):
         self.channel_data = channel_data
         self.needs_api_invoke = needs_api_invoke
         self.needs_rest_channels = needs_rest_channels
-        self.api_invoke_path = api_invoke_path or []
+
+        if api_invoke_path:
+            api_invoke_path = api_invoke_path if isinstance(api_invoke_path, list) else [api_invoke_path]
+        else:
+            api_invoke_path = []
+
+        self.api_invoke_path = api_invoke_path
 
 # ################################################################################################################################
 
@@ -57,16 +63,16 @@ class OpenAPIGenerator(object):
             if 'openapi_v3' not in item.simple_io:
                 continue
 
-            output_required_names = [elem.name.encode('utf8') for elem in item.simple_io.openapi_v3.output_required]
+            output_required_names = [elem.name for elem in item.simple_io.openapi_v3.output_required]
 
             output_required = item.simple_io.openapi_v3.output_required
             output_optional = item.simple_io.openapi_v3.output_optional
 
             if output_required or output_optional:
                 for sio_elem in chain(output_required, output_optional):
-                    properties[sio_elem.name.encode('utf8')] = {
-                        'type': sio_elem.type.encode('utf8'),
-                        'format': sio_elem.subtype.encode('utf8'),
+                    properties[sio_elem.name] = {
+                        'type': sio_elem.type,
+                        'format': sio_elem.subtype,
                     }
 
                 if output_required_names:
@@ -132,7 +138,7 @@ class OpenAPIGenerator(object):
             # Generic API invoker, e.g. /zato/api/invoke/{service_name}
             if self.needs_api_invoke and self.api_invoke_path:
                 for path in self.api_invoke_path:
-                    url_paths.append(path.format(service_name=item.name).encode('utf8'))
+                    url_paths.append(path.format(service_name=item.name))
 
             # Per-service specific REST channel
             if self.needs_rest_channels:
@@ -141,6 +147,7 @@ class OpenAPIGenerator(object):
                     url_paths.append(rest_channel.url_path)
 
             for url_path in url_paths:
+
                 channel_params = []
                 response_name = self._get_response_name(item.name)
                 path_operation = self.get_path_operation(item.name)
@@ -156,13 +163,13 @@ class OpenAPIGenerator(object):
                         is_required = True if is_in_path else sio_elem.is_required
 
                         channel_params.append({
-                            'name': sio_elem.name.encode('utf8'),
+                            'name': sio_elem.name,
                             'description': '',
                             'in': 'path' if is_in_path else 'query',
                             'required': is_required,
                             'schema': {
-                                'type': sio_elem.type.encode('utf8'),
-                                'format': sio_elem.subtype.encode('utf8'),
+                                'type': sio_elem.type,
+                                'format': sio_elem.subtype,
                             }
                         })
 
