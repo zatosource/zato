@@ -72,6 +72,65 @@ class GeneratorTestCase(TestCase):
         self.assertEqual(service_docs.summary, 'This is my service.')
         self.assertEqual(service_docs.summary_html, 'This is my service.')
 
+        self.assertListEqual(service_invoked_by, [])
+        self.assertListEqual(service_invokes, ['abc.def', 'qwe.rty'])
+
+        self.assertEqual(service_namespace_name, '')
+
+        sio_openapi_v3 = service_simple_io.openapi_v3 # type: Bunch
+        sio_soap_12    = service_simple_io.soap_12    # type: Bunch
+        sio_zato       = service_simple_io.zato       # type: Bunch
+
+        self.assertEqual(len(sio_openapi_v3.input_required), 2)
+
+        # OpenAPI
+
+        sio_openapi_v3_input_required_0 = sio_openapi_v3.input_required[0] # type: Bunch
+        sio_openapi_v3_input_required_1 = sio_openapi_v3.input_required[1] # type: Bunch
+
+        self.assertEqual(sio_openapi_v3_input_required_0.name, 'user_id')
+        self.assertEqual(sio_openapi_v3_input_required_0.description,
+            'This is the first line.\nHere is another.\nThis description is split into multiple lines.')
+        self.assertEqual(sio_openapi_v3_input_required_0.type, 'integer')
+        self.assertEqual(sio_openapi_v3_input_required_0.subtype, 'int32')
+
+        self.assertEqual(sio_openapi_v3_input_required_1.name, 'customer_id')
+        self.assertIsNone(sio_openapi_v3_input_required_1.description)
+        self.assertEqual(sio_openapi_v3_input_required_1.type, 'integer')
+        self.assertEqual(sio_openapi_v3_input_required_1.subtype, 'int32')
+
+        # SOAP 1.2
+
+        sio_soap_12_input_required_0 = sio_soap_12.input_required[0] # type: Bunch
+        sio_soap_12_input_required_1 = sio_soap_12.input_required[1] # type: Bunch
+
+        self.assertEqual(sio_soap_12_input_required_0.name, 'user_id')
+        self.assertEqual(sio_soap_12_input_required_0.description,
+            'This is the first line.\nHere is another.\nThis description is split into multiple lines.')
+        self.assertEqual(sio_soap_12_input_required_0.type, 'integer')
+        self.assertEqual(sio_soap_12_input_required_0.subtype, 'xsd:integer')
+
+        self.assertEqual(sio_soap_12_input_required_1.name, 'customer_id')
+        self.assertIsNone(sio_soap_12_input_required_1.description)
+        self.assertEqual(sio_soap_12_input_required_1.type, 'integer')
+        self.assertEqual(sio_soap_12_input_required_1.subtype, 'xsd:integer')
+
+        # Zato
+
+        sio_zato_input_required_0 = sio_zato.input_required[0] # type: Bunch
+        sio_zato_input_required_1 = sio_zato.input_required[1] # type: Bunch
+
+        self.assertEqual(sio_zato_input_required_0.name, 'user_id')
+        self.assertEqual(sio_zato_input_required_0.description,
+            'This is the first line.\nHere is another.\nThis description is split into multiple lines.')
+        self.assertEqual(sio_zato_input_required_0.type, 'integer')
+        self.assertEqual(sio_zato_input_required_0.subtype, 'integer')
+
+        self.assertEqual(sio_zato_input_required_1.name, 'customer_id')
+        self.assertIsNone(sio_zato_input_required_1.description)
+        self.assertEqual(sio_zato_input_required_1.type, 'integer')
+        self.assertEqual(sio_zato_input_required_1.subtype, 'integer')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
