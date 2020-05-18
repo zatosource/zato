@@ -25,7 +25,7 @@ sio_config.bytes_to_str = Bunch()
 
 sio_config.int.prefix = set()
 sio_config.int.exact = set()
-sio_config.int.suffix = set()
+sio_config.int.suffix = set(['_id'])
 
 sio_config.bool.prefix = set()
 sio_config.bool.exact = set()
@@ -63,10 +63,10 @@ class MyService(Service):
 
           d222
         """
-        input_required = 'user_id'
-        input_optional = 'user_name'
-        output_required = 'address_id'
-        output_optional = 'address_name'
+        input_required = 'user_id', 'customer_id'
+        input_optional = 'user_name', 'customer_name'
+        output_required = 'address_id', 'address_name'
+        output_optional = 'address_type', 'address_subtype'
 
 # ################################################################################################################################
 # ################################################################################################################################
