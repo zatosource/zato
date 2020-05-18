@@ -146,6 +146,7 @@ class ServiceInfo(object):
         self.config = Config()
         self.simple_io = {}
         self.docstring = Docstring(tags if isinstance(tags, list) else [tags])
+
         self.namespace = Namespace()
         self.invokes = []
         self.invoked_by = []

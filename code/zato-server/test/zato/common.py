@@ -11,6 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Bunch
 from bunch import Bunch
 
+# Zato
+from zato.server.service import Service
+
 # ################################################################################################################################
 
 sio_config = Bunch()
@@ -33,7 +36,13 @@ service_name = 'my.service'
 # ################################################################################################################################
 # ################################################################################################################################
 
-class MyService:
+class MyService(Service):
+    """ This is my service.
+
+    It has a docstring.
+    """
+
+    invokes = ['abc.def', 'qwe.rty']
 
     class SimpleIO:
         """
