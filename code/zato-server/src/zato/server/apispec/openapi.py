@@ -164,7 +164,7 @@ class OpenAPIGenerator(object):
 
                         channel_params.append({
                             'name': sio_elem.name,
-                            'description': '',
+                            'description': sio_elem.description,
                             'in': 'path' if is_in_path else 'query',
                             'required': is_required,
                             'schema': {

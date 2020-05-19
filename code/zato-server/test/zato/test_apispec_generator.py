@@ -90,7 +90,7 @@ class GeneratorTestCase(TestCase):
 
         self.assertEqual(sio_openapi_v3_input_required_0.name, 'user_id')
         self.assertEqual(sio_openapi_v3_input_required_0.description,
-            'This is the first line.\nHere is another.\nThis description is split into multiple lines.')
+            'This is the first line.\nHere is another.\nAnd here are some more lines.')
         self.assertEqual(sio_openapi_v3_input_required_0.type, 'integer')
         self.assertEqual(sio_openapi_v3_input_required_0.subtype, 'int32')
 
@@ -106,7 +106,7 @@ class GeneratorTestCase(TestCase):
 
         self.assertEqual(sio_soap_12_input_required_0.name, 'user_id')
         self.assertEqual(sio_soap_12_input_required_0.description,
-            'This is the first line.\nHere is another.\nThis description is split into multiple lines.')
+            'This is the first line.\nHere is another.\nAnd here are some more lines.')
         self.assertEqual(sio_soap_12_input_required_0.type, 'integer')
         self.assertEqual(sio_soap_12_input_required_0.subtype, 'xsd:integer')
 
@@ -122,7 +122,7 @@ class GeneratorTestCase(TestCase):
 
         self.assertEqual(sio_zato_input_required_0.name, 'user_id')
         self.assertEqual(sio_zato_input_required_0.description,
-            'This is the first line.\nHere is another.\nThis description is split into multiple lines.')
+            'This is the first line.\nHere is another.\nAnd here are some more lines.')
         self.assertEqual(sio_zato_input_required_0.type, 'integer')
         self.assertEqual(sio_zato_input_required_0.subtype, 'integer')
 

@@ -66,12 +66,12 @@ class APISpecSIODescription(TestCase):
         self.assertEqual(input_address_id, output_address_id)
         self.assertEqual(input_address_name, output_address_name)
 
-        self.assertEqual(input_user_id, 'This is the first line.\nHere is another.\nThis description is split into multiple lines.')
+        self.assertEqual(input_user_id, 'This is the first line.\nHere is another.\nAnd here are some more lines.')
         self.assertEqual(input_user_name, 'b111')
         self.assertEqual(input_address_id, 'c111 c222 c333 c444')
         self.assertEqual(input_address_name, 'd111\nd222')
 
-        self.assertEqual(output_user_id, 'This is the first line.\nHere is another.\nThis description is split into multiple lines.')
+        self.assertEqual(output_user_id, 'This is the first line.\nHere is another.\nAnd here are some more lines.')
         self.assertEqual(output_user_name, 'b111')
         self.assertEqual(output_address_id, 'c111 c222 c333 c444')
         self.assertEqual(output_address_name, 'd111\nd222')
