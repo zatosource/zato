@@ -50,10 +50,9 @@ class MyService(Service):
 
         Here is another.
 
-        This
-        description
-        is split
-        into multiple lines.
+        And here
+        are some
+        more lines.
 
         * user_name - b111
 
