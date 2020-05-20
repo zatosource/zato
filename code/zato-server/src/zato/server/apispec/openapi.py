@@ -192,3 +192,56 @@ class OpenAPIGenerator(object):
         return yaml_dump(out.toDict(), Dumper=YAMLDumper, default_flow_style=False)
 
 # ################################################################################################################################
+
+'''
+openapi: 3.0.0
+info:
+    title: API spec
+    version: '1.0'
+components:
+  schemas:
+    request_api_my_service_1:
+      title: Request object for api.my.service.1
+      type: object
+      properties:
+        user_id:
+          type: integer
+          format: int32
+        user_name:
+          format: string
+          type: string
+      required:
+      - user_id
+      - user_name
+    response_api_my_service_1:
+      title: Response object for api.my.service.1
+      type: object
+      properties:
+        customer_id:
+          type: integer
+          format: int32
+      required:
+      - customer_id
+paths:
+    /zato/api/invoke/api.my.service.1:
+        post:
+            operationId: post_api_my_service_1
+            consumes:
+                - application/json
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/request_api_my_service_1'
+            responses:
+              '200':
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/response_api_my_service_1'
+                description: ''
+
+servers:
+- url: http://localhost:11223
+'''
