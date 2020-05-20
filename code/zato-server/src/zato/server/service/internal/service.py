@@ -684,6 +684,18 @@ class ServiceInvoker(AdminService):
         # Service name is given in URL path
         service_name = self.request.http.params.service_name
 
+        # Are we invoking a Zato built-in service or a user-defined one?
+        is_internal = service_name.startswith(_internal) # type: bool
+
+        # Before invoking a service that is potentially internal we need to confirm
+        # that our channel can be used for such invocations.
+        if is_internal:
+            if self.channel.name not in self.server.fs_server_config.misc.service_invoker_allow_internal:
+                self.logger.warn('Service `%s` could not be invoked; channel `%s` not among `%s` (service_invoker_allow_internal)',
+                    service_name, self.channel.name, self.server.fs_server_config.misc.service_invoker_allow_internal)
+                self.response.data_format = 'text/plain'
+                raise BadRequest(self.cid, 'No such service `{}`'.format(service_name))
+
         # Make sure the service exists
         if self.server.service_store.has_service(service_name):
 
@@ -697,11 +709,10 @@ class ServiceInvoker(AdminService):
             # Invoke the service now
             response = self.invoke(service_name, payload, wsgi_environ={'HTTP_METHOD':self.request.http.method})
 
-            # All internal services wrap their responses in top-level elements that we need to shed here.
-            if service_name.startswith(_internal):
-                if response:
-                    top_level = list(iterkeys(response))[0]
-                    response = response[top_level]
+            # All internal services wrap their responses in top-level elements that we need to shed here ..
+            if is_internal and response:
+                top_level = list(iterkeys(response))[0]
+                response = response[top_level]
 
             # Assign response to outgoing payload
             self.response.payload = dumps(response)
