@@ -42,7 +42,7 @@ greenify==0.3.2
 greenlet==0.4.14
 hiredis==0.2.0
 httpagentparser==1.7.9
-httplib2==0.8
+httplib2==0.18.0
 https://bitbucket.org/dsuch/suds/get/fb304981931b.zip#egg=suds-ovnicraft
 https://github.com/dsuch/dpath-python/archive/66a2f5ab.zip#egg=dpath
 globre==0.1.5
