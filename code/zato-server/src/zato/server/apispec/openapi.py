@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from itertools import chain
+from logging import getLogger
 
 # Bunch
 from bunch import Bunch, bunchify
@@ -20,6 +21,10 @@ from yaml import dump as yaml_dump, Dumper as YAMLDumper
 # Zato
 from zato.common import URL_TYPE
 from zato.common.util import fs_safe_name
+
+# ################################################################################################################################
+
+logger = getLogger('zato')
 
 # ################################################################################################################################
 
@@ -161,7 +166,12 @@ class OpenAPIGenerator(object):
             # Container for all the URL paths found for this item (service)
             url_paths = []
 
-            # First, collect all the paths that the spec will contain ..
+            # Parameters carried in URL paths, e.g. /user/{username}/{lang_code},
+            # all of them will be treated as required and all of them will be string ones.
+            channel_params = []
+            channel_param_names = []
+
+            # Now, collect all the paths that the spec will contain ..
 
             # .. generic API invoker, e.g. /zato/api/invoke/{service_name} ..
             if self.needs_api_invoke and self.api_invoke_path:
@@ -171,13 +181,34 @@ class OpenAPIGenerator(object):
             # .. per-service specific REST channels.
             if self.needs_rest_channels:
                 rest_channel = self.get_rest_channel(item.name)
+
                 if rest_channel:
+
+                    # This is always needed, whether path parameters exist or not
                     url_paths.append(rest_channel.url_path)
+
+                    # Path parameters
+                    group_names = rest_channel.match_target_compiled.group_names
+                    if group_names:
+
+                        # Populate details of path parameters
+                        for channel_param_name in sorted(group_names): # type: str
+                            channel_params.append({
+                                'name': channel_param_name,
+                                'description': '',
+                                'in': 'path',
+                                'required': True,
+                                'schema': {
+                                    'type': 'string',
+                                    'format': 'string',
+                                }
+                            })
 
             # Translate the service name into a normalised form
             service_name_fs = fs_safe_name(item.name)
 
             for url_path in url_paths:
+
                 out_path = out.paths.setdefault(url_path, Bunch()) # type: Bunch
                 post = out_path.setdefault('post', Bunch()) # type: Bunch
 
@@ -207,61 +238,8 @@ class OpenAPIGenerator(object):
                 post['requestBody'] = request_body
                 post['responses']   = responses
 
-            '''
-            # Generic API invoker, e.g. /zato/api/invoke/{service_name}
-            if self.needs_api_invoke and self.api_invoke_path:
-                for path in self.api_invoke_path:
-                    url_paths.append(path.format(service_name=item.name))
-
-            # Per-service specific REST channel
-            if self.needs_rest_channels:
-                rest_channel = self.get_rest_channel(item.name)
-                if rest_channel:
-                    url_paths.append(rest_channel.url_path)
-
-            for url_path in url_paths:
-
-                channel_params = []
-                response_name = self._get_response_name(item.name)
-                path_operation = self.get_path_operation(item.name)
-                out.components.schemas[response_name] = schemas.get(response_name)
-
-                if 'openapi_v3' in item.simple_io:
-                    input_required = item.simple_io.openapi_v3.input_required
-                    input_optional = item.simple_io.openapi_v3.input_optional
-
-                    for sio_elem in chain(input_required, input_optional):
-
-                        is_in_path = self.has_path_elem(url_path, sio_elem.name)
-                        is_required = True if is_in_path else sio_elem.is_required
-
-                        channel_params.append({
-                            'name': sio_elem.name,
-                            'description': sio_elem.description,
-                            'in': 'path' if is_in_path else 'query',
-                            'required': is_required,
-                            'schema': {
-                                'type': sio_elem.type,
-                                'format': sio_elem.subtype,
-                            }
-                        })
-
-                out.paths[url_path] = {}
-                out.paths[url_path][path_operation] = {}
-                out.paths[url_path][path_operation]['parameters'] = channel_params
-                out.paths[url_path][path_operation]['responses'] = {
-                    '200': {
-                        'description': '',
-                        'content': {
-                            'application/json': {
-                                'schema': {
-                                    '$ref': '#/components/schemas/{}'.format(response_name),
-                                }
-                            }
-                        }
-                    }
-                }
-                '''
+                if channel_params:
+                    post['parameters'] = channel_params
 
         return yaml_dump(out.toDict(), Dumper=YAMLDumper, default_flow_style=False)
 
