@@ -61,6 +61,11 @@ class OpenAPITestCase(TestCase):
         open_api_generator = OpenAPIGenerator(info, channel_data, needs_api_invoke, needs_rest_channels, api_invoke_path)
 
         result = open_api_generator.generate()
+
+        print(result)
+
+        return
+
         result = yaml_load(result)
         result = bunchify(result)
 
