@@ -41,42 +41,61 @@ class OpenAPIGenerator(object):
 
 # ################################################################################################################################
 
+    def _get_request_name(self, service_name):
+        return 'request_{}'.format(fs_safe_name(service_name))
+
+# ################################################################################################################################
+
     def _get_response_name(self, service_name):
         return 'response_{}'.format(fs_safe_name(service_name))
 
 # ################################################################################################################################
 
-    def _get_response_schemas(self, data):
+    def _get_message_schemas(self, data, is_request):
+        # type: (Bunch, bool) -> Bunch
+
+        if is_request:
+            name_func = self._get_request_name
+            msg_name = 'Request'
+            sio_elems_required_attr = 'input_required'
+            sio_elems_optional_attr = 'input_optional'
+        else:
+            name_func = self._get_response_name
+            msg_name = 'Response'
+            sio_elems_required_attr = 'output_required'
+            sio_elems_optional_attr = 'input_optional'
 
         out = Bunch()
 
         for item in data.services:
 
-            response_name = self._get_response_name(item.name)
-            out[response_name] = {
-                'title': 'Response object for {}'.format(item.name),
+            message_name = name_func(item.name)
+
+            out[message_name] = {
+                'title': '{} object for {}'.format(msg_name, item.name),
                 'type': 'object',
             }
             properties = {}
-            out[response_name]['properties'] = properties
+            out[message_name]['properties'] = properties
 
             if 'openapi_v3' not in item.simple_io:
                 continue
 
-            output_required_names = [elem.name for elem in item.simple_io.openapi_v3.output_required]
+            elems_required_names = [elem.name for elem in getattr(item.simple_io.openapi_v3, sio_elems_required_attr)]
 
-            output_required = item.simple_io.openapi_v3.output_required
-            output_optional = item.simple_io.openapi_v3.output_optional
+            sio_elems_required = getattr(item.simple_io.openapi_v3, sio_elems_required_attr)
+            sio_elems_optional = getattr(item.simple_io.openapi_v3, sio_elems_optional_attr)
 
-            if output_required or output_optional:
-                for sio_elem in chain(output_required, output_optional):
+            if sio_elems_required or sio_elems_optional:
+                for sio_elem in chain(sio_elems_required, sio_elems_optional):
                     properties[sio_elem.name] = {
                         'type': sio_elem.type,
                         'format': sio_elem.subtype,
+                        'description': sio_elem.description
                     }
 
-                if output_required_names:
-                    out[response_name]['required'] = output_required_names
+                if elems_required_names:
+                    out[message_name]['required'] = elems_required_names
 
         return out
 
@@ -128,13 +147,67 @@ class OpenAPIGenerator(object):
 
         # Schemas for all services - it is possible that not all of them will be output,
         # for instance, if a service is not exposed through any REST channel.
-        schemas = self._get_response_schemas(self.data)
+        request_schemas  = self._get_message_schemas(self.data, True)
+        response_schemas = self._get_message_schemas(self.data, False)
+
+        schemas = {}
+        schemas.update(request_schemas)
+        schemas.update(response_schemas)
+
+        out.components.schemas.update(schemas)
 
         for item in self.data.services:
 
             # Container for all the URL paths found for this item (service)
             url_paths = []
 
+            # First, collect all the paths that the spec will contain ..
+
+            # .. generic API invoker, e.g. /zato/api/invoke/{service_name} ..
+            if self.needs_api_invoke and self.api_invoke_path:
+                for path in self.api_invoke_path:
+                    url_paths.append(path.format(service_name=item.name))
+
+            # .. per-service specific REST channels.
+            if self.needs_rest_channels:
+                rest_channel = self.get_rest_channel(item.name)
+                if rest_channel:
+                    url_paths.append(rest_channel.url_path)
+
+            # Translate the service name into a normalised form
+            service_name_fs = fs_safe_name(item.name)
+
+            for url_path in url_paths:
+                out_path = out.paths.setdefault(url_path, Bunch()) # type: Bunch
+                post = out_path.setdefault('post', Bunch()) # type: Bunch
+
+                operation_id = 'post_{}'.format(service_name_fs)
+                consumes = ['application/json']
+
+                request_ref  = '#/components/schemas/{}'.format(self._get_request_name(service_name_fs))
+                response_ref = '#/components/schemas/{}'.format(self._get_response_name(service_name_fs))
+
+                request_body = Bunch()
+                request_body.required = True
+
+                request_body.content = Bunch()
+                request_body.content['application/json'] = Bunch()
+                request_body.content['application/json'].schema = Bunch()
+                request_body.content['application/json'].schema['$ref'] = request_ref
+
+                responses = Bunch()
+                responses['200'] = Bunch()
+                responses['200'].content = Bunch()
+                responses['200'].content['application/json'] = Bunch()
+                responses['200'].content['application/json'].schema = Bunch()
+                responses['200'].content['application/json'].schema['$ref'] = response_ref
+
+                post['operationId'] = operation_id
+                post['consumes']    = consumes
+                post['requestBody'] = request_body
+                post['responses']   = responses
+
+            '''
             # Generic API invoker, e.g. /zato/api/invoke/{service_name}
             if self.needs_api_invoke and self.api_invoke_path:
                 for path in self.api_invoke_path:
@@ -188,60 +261,8 @@ class OpenAPIGenerator(object):
                         }
                     }
                 }
+                '''
 
         return yaml_dump(out.toDict(), Dumper=YAMLDumper, default_flow_style=False)
 
 # ################################################################################################################################
-
-'''
-openapi: 3.0.0
-info:
-    title: API spec
-    version: '1.0'
-components:
-  schemas:
-    request_api_my_service_1:
-      title: Request object for api.my.service.1
-      type: object
-      properties:
-        user_id:
-          type: integer
-          format: int32
-        user_name:
-          format: string
-          type: string
-      required:
-      - user_id
-      - user_name
-    response_api_my_service_1:
-      title: Response object for api.my.service.1
-      type: object
-      properties:
-        customer_id:
-          type: integer
-          format: int32
-      required:
-      - customer_id
-paths:
-    /zato/api/invoke/api.my.service.1:
-        post:
-            operationId: post_api_my_service_1
-            consumes:
-                - application/json
-            requestBody:
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: '#/components/schemas/request_api_my_service_1'
-            responses:
-              '200':
-                content:
-                  application/json:
-                    schema:
-                      $ref: '#/components/schemas/response_api_my_service_1'
-                description: ''
-
-servers:
-- url: http://localhost:11223
-'''
