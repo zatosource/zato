@@ -212,7 +212,7 @@ class OpenAPIGenerator(object):
                 out_path = out.paths.setdefault(url_path, Bunch()) # type: Bunch
                 post = out_path.setdefault('post', Bunch()) # type: Bunch
 
-                operation_id = 'post_{}'.format(service_name_fs)
+                operation_id = 'post_{}'.format(fs_safe_name(url_path))
                 consumes = ['application/json']
 
                 request_ref  = '#/components/schemas/{}'.format(self._get_request_name(service_name_fs))
