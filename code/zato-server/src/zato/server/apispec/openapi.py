@@ -63,7 +63,7 @@ class OpenAPIGenerator(object):
             name_func = self._get_response_name
             msg_name = 'Response'
             sio_elems_required_attr = 'output_required'
-            sio_elems_optional_attr = 'input_optional'
+            sio_elems_optional_attr = 'output_optional'
 
         out = Bunch()
 
