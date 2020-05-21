@@ -46,7 +46,7 @@ class MyService(Service):
 
     class SimpleIO:
         """
-        * user_id - This is the first line.
+        * input_req_user_id - This is the first line.
 
         Here is another.
 
@@ -54,18 +54,18 @@ class MyService(Service):
         are some
         more lines.
 
-        * user_name - b111
+        * input_opt_user_name - b111
 
-        * address_id - c111 c222 c333 c444
+        * output_req_address_id - c111 c222 c333 c444
 
-        * address_name - d111
+        * output_opt_address_name - d111
 
           d222
         """
-        input_required = 'user_id', 'customer_id'
-        input_optional = 'user_name', 'customer_name'
-        output_required = 'address_id', 'address_name'
-        output_optional = 'address_type', 'address_subtype'
+        input_required = 'input_req_user_id', 'input_req_customer_id'
+        input_optional = 'input_opt_user_name', 'input_opt_customer_name'
+        output_required = 'output_req_address_id', 'output_req_address_name'
+        output_optional = 'output_opt_address_type', 'output_opt_address_subtype'
 
 # ################################################################################################################################
 # ################################################################################################################################
