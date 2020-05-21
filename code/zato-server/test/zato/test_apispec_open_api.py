@@ -64,8 +64,6 @@ class OpenAPITestCase(TestCase):
 
         print(result)
 
-        return
-
         result = yaml_load(result)
         result = bunchify(result)
 
@@ -75,84 +73,62 @@ class OpenAPITestCase(TestCase):
         result_paths      = result.paths      # type: Bunch
         result_servers    = result.servers    # type: Bunch
 
-        self.assertEqual(len(result_components.schemas), 1)
+        localhost = result_servers[0]
+        self.assertEqual(localhost.url, 'http://localhost:11223')
+
+        self.assertEqual(result_info.title, 'API spec')
+        self.assertEqual(result_info.version, '1.0')
+        self.assertEqual(result_openapi, '3.0.0')
+
+        self.assertEqual(len(result_components.schemas), 2)
+
+        request_my_service_properties = result_components.schemas.request_my_service.properties
+        request_my_service_required   = result_components.schemas.request_my_service.required
+        request_my_service_title      = result_components.schemas.request_my_service.title
+        request_my_service_type       = result_components.schemas.request_my_service.type
 
         response_my_service_properties = result_components.schemas.response_my_service.properties
         response_my_service_required   = result_components.schemas.response_my_service.required
         response_my_service_title      = result_components.schemas.response_my_service.title
         response_my_service_type       = result_components.schemas.response_my_service.type
 
-        self.assertEqual(response_my_service_properties.address_id.type, 'integer')
-        self.assertEqual(response_my_service_properties.address_id.format, 'int32')
-
-        self.assertEqual(response_my_service_properties.address_name.type, 'string')
-        self.assertEqual(response_my_service_properties.address_name.format, 'string')
-
-        self.assertEqual(response_my_service_properties.address_subtype.type, 'string')
-        self.assertEqual(response_my_service_properties.address_subtype.format, 'string')
-
-        self.assertEqual(response_my_service_properties.address_type.type, 'string')
-        self.assertEqual(response_my_service_properties.address_type.format, 'string')
-
-        self.assertListEqual(response_my_service_required, ['address_id', 'address_name'])
+        self.assertEqual(request_my_service_title, 'Request object for my.service')
         self.assertEqual(response_my_service_title, 'Response object for my.service')
+
+        self.assertEqual(request_my_service_type, 'object')
         self.assertEqual(response_my_service_type, 'object')
 
-        self.assertEqual(result_info.title, 'API spec')
-        self.assertEqual(result_info.version, '1.0')
-        self.assertEqual(result_openapi, '3.0.0')
+        self.assertListEqual(sorted(request_my_service_required), ['input_req_customer_id', 'input_req_user_id'])
+        self.assertListEqual(sorted(response_my_service_required), ['output_req_address_id', 'output_req_address_name'])
+
+        self.assertEqual(request_my_service_properties.input_req_user_id.type, 'integer')
+        self.assertEqual(request_my_service_properties.input_req_user_id.format, 'int32')
+        self.assertEqual(request_my_service_properties.input_req_user_id.description,
+            'This is the first line.\nHere is another.\nAnd here are some more lines.')
+
+        self.assertEqual(request_my_service_properties.input_req_customer_id.type, 'integer')
+        self.assertEqual(request_my_service_properties.input_req_customer_id.format, 'int32')
+        self.assertEqual(request_my_service_properties.input_req_customer_id.description, '')
+
+        self.assertEqual(request_my_service_properties.input_opt_user_name.type, 'string')
+        self.assertEqual(request_my_service_properties.input_opt_user_name.format, 'string')
+        self.assertEqual(request_my_service_properties.input_opt_user_name.description, 'b111')
+
+        self.assertEqual(request_my_service_properties.input_opt_customer_name.type, 'string')
+        self.assertEqual(request_my_service_properties.input_opt_customer_name.format, 'string')
+        self.assertEqual(request_my_service_properties.input_opt_customer_name.description, '')
 
         self.assertEqual(len(result_paths), 1)
 
-        path_my_name = result_paths[APISPEC.GENERIC_INVOKE_PATH.format(service_name=service_name)]
+        my_service_path = result_paths['/zato/api/invoke/my.service'] # type: Bunch
+        post = my_service_path.post
 
-        post            = path_my_name.post
-        post_parameters = post.parameters
-        post_responses  = post.responses
-
-        user_id       = post_parameters[0] # type: Bunch
-        customer_id   = post_parameters[1] # type: Bunch
-        user_name     = post_parameters[2] # type: Bunch
-        customer_name = post_parameters[3] # type: Bunch
-
-        self.assertEqual(user_id.description, 'This is the first line.\nHere is another.\nAnd here are some more lines.')
-        self.assertEqual(user_id['in'], 'query')
-        self.assertEqual(user_id.name, 'user_id')
-        self.assertTrue(user_id.required)
-        self.assertEqual(user_id.schema.type, 'integer')
-        self.assertEqual(user_id.schema.format, 'int32')
-
-        self.assertIsNone(customer_id.description)
-        self.assertEqual(customer_id['in'], 'query')
-        self.assertEqual(customer_id.name, 'customer_id')
-        self.assertTrue(customer_id.required)
-        self.assertEqual(customer_id.schema.type, 'integer')
-        self.assertEqual(customer_id.schema.format, 'int32')
-
-        self.assertEqual(user_name.description, 'b111')
-        self.assertEqual(user_name['in'], 'query')
-        self.assertEqual(user_name.name, 'user_name')
-        self.assertFalse(user_name.required)
-        self.assertEqual(user_name.schema.type, 'string')
-        self.assertEqual(user_name.schema.format, 'string')
-
-        self.assertIsNone(customer_name.description, 'b111')
-        self.assertEqual(customer_name['in'], 'query')
-        self.assertEqual(customer_name.name, 'customer_name')
-        self.assertFalse(customer_name.required)
-        self.assertEqual(customer_name.schema.type, 'string')
-        self.assertEqual(customer_name.schema.format, 'string')
-
-        self.assertEqual(len(post_responses), 1)
-        response_200 = post_responses['200']
-
-        self.assertEqual(response_200.description, '')
-        self.assertEqual(response_200.content['application/json'].schema['$ref'], '#/components/schemas/response_my_service')
-
-        self.assertEqual(len(result_servers), 1)
-
-        localhost = result_servers[0]
-        self.assertEqual(localhost.url, 'http://localhost:11223')
+        self.assertListEqual(post.consumes, ['application/json'])
+        self.assertEqual(post.operationId, 'post_my_service')
+        self.assertTrue(post.requestBody.required)
+        self.assertEqual(post.requestBody.content['application/json'].schema['$ref'], '#/components/schemas/request_my_service')
+        self.assertEqual(
+            post.responses['200'].content['application/json'].schema['$ref'], '#/components/schemas/response_my_service')
 
 # ################################################################################################################################
 # ################################################################################################################################
