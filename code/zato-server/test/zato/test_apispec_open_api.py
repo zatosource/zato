@@ -19,7 +19,8 @@ from yaml import load as yaml_load
 
 # Zato
 from common import MyService, service_name, sio_config
-from zato.common import APISPEC
+from zato.common import APISPEC, URL_TYPE
+from zato.common.util import fs_safe_name
 from zato.server.apispec import Generator, ServiceInfo
 from zato.server.apispec.openapi import OpenAPIGenerator
 
@@ -29,6 +30,11 @@ if 0:
     from bunch import Bunch
 
     Bunch = Bunch
+
+# ################################################################################################################################
+
+class _MatchTestCompiled:
+    group_names = ['phone_number']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,7 +59,12 @@ class OpenAPITestCase(TestCase):
         info = generator.get_info()
         info = bunchify(info)
 
-        channel_data = []
+        channel_data = [{
+            'service_name': service_name,
+            'transport':    URL_TYPE.PLAIN_HTTP,
+            'url_path':     '/test/{phone_number}',
+            'match_target_compiled': _MatchTestCompiled()
+        }]
         needs_api_invoke = True
         needs_rest_channels = True
         api_invoke_path = APISPEC.GENERIC_INVOKE_PATH
@@ -61,9 +72,6 @@ class OpenAPITestCase(TestCase):
         open_api_generator = OpenAPIGenerator(info, channel_data, needs_api_invoke, needs_rest_channels, api_invoke_path)
 
         result = open_api_generator.generate()
-
-        print(result)
-
         result = yaml_load(result)
         result = bunchify(result)
 
@@ -118,17 +126,20 @@ class OpenAPITestCase(TestCase):
         self.assertEqual(request_my_service_properties.input_opt_customer_name.format, 'string')
         self.assertEqual(request_my_service_properties.input_opt_customer_name.description, '')
 
-        self.assertEqual(len(result_paths), 1)
+        self.assertEqual(len(result_paths), 2)
 
-        my_service_path = result_paths['/zato/api/invoke/my.service'] # type: Bunch
-        post = my_service_path.post
+        for url_path in ['/test/{phone_number}', '/zato/api/invoke/my.service']:
 
-        self.assertListEqual(post.consumes, ['application/json'])
-        self.assertEqual(post.operationId, 'post_my_service')
-        self.assertTrue(post.requestBody.required)
-        self.assertEqual(post.requestBody.content['application/json'].schema['$ref'], '#/components/schemas/request_my_service')
-        self.assertEqual(
-            post.responses['200'].content['application/json'].schema['$ref'], '#/components/schemas/response_my_service')
+            my_service_path = result_paths[url_path] # type: Bunch
+            post = my_service_path.post
+
+            self.assertListEqual(post.consumes, ['application/json'])
+            self.assertEqual(post.operationId, 'post_{}'.format(fs_safe_name(url_path)))
+            self.assertTrue(post.requestBody.required)
+            self.assertEqual(
+                post.requestBody.content['application/json'].schema['$ref'], '#/components/schemas/request_my_service')
+            self.assertEqual(
+                post.responses['200'].content['application/json'].schema['$ref'], '#/components/schemas/response_my_service')
 
 # ################################################################################################################################
 # ################################################################################################################################
