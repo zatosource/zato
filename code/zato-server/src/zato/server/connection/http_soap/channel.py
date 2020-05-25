@@ -230,7 +230,7 @@ class RequestDispatcher(object):
         if soap_action[0] == '"' and soap_action[-1] == '"':
             soap_action = soap_action[1:-1]
 
-        return soap_action.decode('utf-8')
+        return soap_action if isinstance(soap_action, unicode) else soap_action.decode('utf-8')
 
 # ################################################################################################################################
 
