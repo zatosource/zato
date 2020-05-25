@@ -1265,7 +1265,8 @@ class APISPEC:
     SOAP_12 = 'soap_12'
     NAMESPACE_NULL = ''
     DEFAULT_TAG = 'public'
-    GENERIC_INVOKE_PATH = '/zato/api/invoke/{service_name}'
+    GENERIC_INVOKE_PATH = '/zato/api/invoke/{service_name}' # OpenAPI
+    SOAP_INVOKE_PATH    = '/zato/api/soap/invoke'           # SOAP
 
 # ################################################################################################################################
 # ################################################################################################################################
