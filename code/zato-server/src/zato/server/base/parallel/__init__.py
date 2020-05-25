@@ -403,6 +403,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if not self.fs_server_config.misc.get('sftp_genkey_command'):
             self.fs_server_config.misc.sftp_genkey_command = 'dropbearkey'
 
+        # New in 3.2, may be missing in the config file
+        allow_internal = self.fs_server_config.misc.get('service_invoker_allow_internal', [])
+        allow_internal = allow_internal if isinstance(allow_internal, list) else [allow_internal]
+        self.fs_server_config.misc.service_invoker_allow_internal = allow_internal
+
         # Lua programs, both internal and user defined ones.
         for name, program in self.get_lua_programs():
             self.kvdb.lua_container.add_lua_program(name, program)

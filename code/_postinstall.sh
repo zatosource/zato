@@ -59,8 +59,7 @@ $PY_BINARY -m pip install \
 # Emulate zc.buildout's split-out eggs directory for simpler local development.
 ln -fs $VIRTUAL_ENV/lib/python*/site-packages eggs
 
-# Emulate zc.buildout's (now redundant) py script. Wrap rather than symlink to
-# ensure argv[0] is correct.
+# Emulate zc.buildout's py script. Wrap rather than symlink to ensure argv[0] is correct.
 cat > $VIRTUAL_ENV/bin/py <<-EOF
 #!/bin/sh
 exec "$(pwd)/bin/python" "\$@"
@@ -71,6 +70,9 @@ chmod +x $VIRTUAL_ENV/bin/py
 # Create and add zato_extra_paths to the virtualenv's sys.path.
 mkdir zato_extra_paths
 echo "$(pwd)/zato_extra_paths" >> eggs/easy-install.pth
+
+# Create a symlink to zato_extra_paths to make it easier to type it out
+ln -fs $VIRTUAL_ENV/zato_extra_paths extlib
 
 # Apply patches.
 patch -p0 -d eggs < patches/butler/__init__.py.diff
