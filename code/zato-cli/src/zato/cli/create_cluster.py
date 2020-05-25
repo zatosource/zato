@@ -22,7 +22,7 @@ from future.utils import iteritems
 
 # Zato
 from zato.cli import common_odb_opts, is_arg_given, ZatoCommand
-from zato.common import CACHE, CONNECTION, DATA_FORMAT, IPC, MISC, PUBSUB, SIMPLE_IO, URL_TYPE
+from zato.common import APISPEC, CACHE, CONNECTION, DATA_FORMAT, IPC, MISC, PUBSUB, SIMPLE_IO, URL_TYPE
 from zato.common.odb.model import CacheBuiltin, Cluster, HTTPBasicAuth, HTTPSOAP, PubSubEndpoint, \
      PubSubSubscription, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, Service, WSSDefinition
 from zato.common.odb.post_process import ODBPostProcess
@@ -576,7 +576,7 @@ class Create(ZatoCommand):
 
     def add_api_invoke(self, session, cluster, service, pubapi_sec):
         channel = HTTPSOAP(None, '/zato/api/invoke', True, True, 'channel', 'plain_http',
-            None, '/zato/api/invoke/{service_name}', None, '', None, None,
+            None, APISPEC.GENERIC_INVOKE_PATH, None, '', None, None,
             merge_url_params_req=True, service=service, security=pubapi_sec,
             cluster=cluster)
         session.add(channel)
