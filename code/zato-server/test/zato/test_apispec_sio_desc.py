@@ -11,9 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from unittest import main, TestCase
 
-# Bunch
-from bunch import Bunch
-
 # Zato
 from zato.common import APISPEC
 from zato.server.apispec import ServiceInfo
@@ -31,16 +28,6 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class OpenAPI(TestCase):
-
-    def test_generate_open_api(self):
-
-        info = ServiceInfo(service_name, MyService, sio_config, 'public')
-        description = info.simple_io['zato'].description # type: SimpleIODescription
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class APISpecSIODescription(TestCase):
 
     def test_get_sio_desc_multiline_no_separator(self):
@@ -51,15 +38,15 @@ class APISpecSIODescription(TestCase):
         # There are multiple lines and no I/O separator
         # so input and output descriptions will be the same.
 
-        input_user_id      = description.input['user_id']
-        input_user_name    = description.input['user_name']
-        input_address_id   = description.input['address_id']
-        input_address_name = description.input['address_name']
+        input_user_id      = description.input['input_req_user_id']
+        input_user_name    = description.input['input_opt_user_name']
+        input_address_id   = description.input['output_req_address_id']
+        input_address_name = description.input['output_opt_address_name']
 
-        output_user_id      = description.output['user_id']
-        output_user_name    = description.output['user_name']
-        output_address_id   = description.output['address_id']
-        output_address_name = description.output['address_name']
+        output_user_id      = description.output['input_req_user_id']
+        output_user_name    = description.output['input_opt_user_name']
+        output_address_id   = description.output['output_req_address_id']
+        output_address_name = description.output['output_opt_address_name']
 
         self.assertEqual(input_user_id, output_user_id)
         self.assertEqual(input_user_name, output_user_name)

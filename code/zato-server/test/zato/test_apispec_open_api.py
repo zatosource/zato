@@ -21,7 +21,7 @@ from yaml import load as yaml_load
 from common import MyService, service_name, sio_config
 from zato.common import APISPEC, URL_TYPE
 from zato.common.util import fs_safe_name
-from zato.server.apispec import Generator, ServiceInfo
+from zato.server.apispec import Generator
 from zato.server.apispec.openapi import OpenAPIGenerator
 
 # ################################################################################################################################
@@ -95,7 +95,6 @@ class OpenAPITestCase(TestCase):
         request_my_service_title      = result_components.schemas.request_my_service.title
         request_my_service_type       = result_components.schemas.request_my_service.type
 
-        response_my_service_properties = result_components.schemas.response_my_service.properties
         response_my_service_required   = result_components.schemas.response_my_service.required
         response_my_service_title      = result_components.schemas.response_my_service.title
         response_my_service_type       = result_components.schemas.response_my_service.type
