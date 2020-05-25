@@ -169,7 +169,6 @@ class OpenAPIGenerator(object):
             # Parameters carried in URL paths, e.g. /user/{username}/{lang_code},
             # all of them will be treated as required and all of them will be string ones.
             channel_params = []
-            channel_param_names = []
 
             # Now, collect all the paths that the spec will contain ..
 
