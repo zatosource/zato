@@ -16,7 +16,7 @@ from bunch import bunchify
 
 # Zato
 from zato.server.apispec import Generator
-from common import MyService, service_name, sio_config
+from common import MyService, sio_config
 
 # ################################################################################################################################
 
@@ -51,8 +51,6 @@ class GeneratorTestCase(TestCase):
         services   = info.services   # type: Bunch
         self.assertEqual(len(services), 1)
 
-        namespaces = info.namespaces # type: Bunch
-
         service = services[0] # type: Bunch
         service_keys = sorted(service)
 
@@ -61,7 +59,6 @@ class GeneratorTestCase(TestCase):
         service_docs           = service.docs       # type: Bunch
         service_invoked_by     = service.invoked_by
         service_invokes        = service.invokes
-        service_name           = service.name
         service_namespace_name = service.namespace_name
         service_simple_io      = service.simple_io
 
@@ -88,14 +85,14 @@ class GeneratorTestCase(TestCase):
         sio_openapi_v3_input_required_0 = sio_openapi_v3.input_required[0] # type: Bunch
         sio_openapi_v3_input_required_1 = sio_openapi_v3.input_required[1] # type: Bunch
 
-        self.assertEqual(sio_openapi_v3_input_required_0.name, 'user_id')
+        self.assertEqual(sio_openapi_v3_input_required_0.name, 'input_req_user_id')
         self.assertEqual(sio_openapi_v3_input_required_0.description,
             'This is the first line.\nHere is another.\nAnd here are some more lines.')
         self.assertEqual(sio_openapi_v3_input_required_0.type, 'integer')
         self.assertEqual(sio_openapi_v3_input_required_0.subtype, 'int32')
 
-        self.assertEqual(sio_openapi_v3_input_required_1.name, 'customer_id')
-        self.assertIsNone(sio_openapi_v3_input_required_1.description)
+        self.assertEqual(sio_openapi_v3_input_required_1.name, 'input_req_customer_id')
+        self.assertEqual(sio_openapi_v3_input_required_1.description, '')
         self.assertEqual(sio_openapi_v3_input_required_1.type, 'integer')
         self.assertEqual(sio_openapi_v3_input_required_1.subtype, 'int32')
 
@@ -104,14 +101,14 @@ class GeneratorTestCase(TestCase):
         sio_soap_12_input_required_0 = sio_soap_12.input_required[0] # type: Bunch
         sio_soap_12_input_required_1 = sio_soap_12.input_required[1] # type: Bunch
 
-        self.assertEqual(sio_soap_12_input_required_0.name, 'user_id')
+        self.assertEqual(sio_soap_12_input_required_0.name, 'input_req_user_id')
         self.assertEqual(sio_soap_12_input_required_0.description,
             'This is the first line.\nHere is another.\nAnd here are some more lines.')
         self.assertEqual(sio_soap_12_input_required_0.type, 'integer')
         self.assertEqual(sio_soap_12_input_required_0.subtype, 'xsd:integer')
 
-        self.assertEqual(sio_soap_12_input_required_1.name, 'customer_id')
-        self.assertIsNone(sio_soap_12_input_required_1.description)
+        self.assertEqual(sio_soap_12_input_required_1.name, 'input_req_customer_id')
+        self.assertEqual(sio_soap_12_input_required_1.description, '')
         self.assertEqual(sio_soap_12_input_required_1.type, 'integer')
         self.assertEqual(sio_soap_12_input_required_1.subtype, 'xsd:integer')
 
@@ -120,14 +117,14 @@ class GeneratorTestCase(TestCase):
         sio_zato_input_required_0 = sio_zato.input_required[0] # type: Bunch
         sio_zato_input_required_1 = sio_zato.input_required[1] # type: Bunch
 
-        self.assertEqual(sio_zato_input_required_0.name, 'user_id')
+        self.assertEqual(sio_zato_input_required_0.name, 'input_req_user_id')
         self.assertEqual(sio_zato_input_required_0.description,
             'This is the first line.\nHere is another.\nAnd here are some more lines.')
         self.assertEqual(sio_zato_input_required_0.type, 'integer')
         self.assertEqual(sio_zato_input_required_0.subtype, 'integer')
 
-        self.assertEqual(sio_zato_input_required_1.name, 'customer_id')
-        self.assertIsNone(sio_zato_input_required_1.description)
+        self.assertEqual(sio_zato_input_required_1.name, 'input_req_customer_id')
+        self.assertEqual(sio_zato_input_required_1.description, '')
         self.assertEqual(sio_zato_input_required_1.type, 'integer')
         self.assertEqual(sio_zato_input_required_1.subtype, 'integer')
 
