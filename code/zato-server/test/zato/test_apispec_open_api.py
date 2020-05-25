@@ -86,7 +86,7 @@ class OpenAPITestCase(TestCase):
 
         self.assertEqual(result_info.title, 'API spec')
         self.assertEqual(result_info.version, '1.0')
-        self.assertEqual(result_openapi, '3.0.0')
+        self.assertEqual(result_openapi, '3.0.2')
 
         self.assertEqual(len(result_components.schemas), 2)
 

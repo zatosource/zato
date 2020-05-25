@@ -136,7 +136,7 @@ class OpenAPIGenerator(object):
     def generate(self):
         # Basic information, always available
         out = Bunch()
-        out.openapi = '3.0.0'
+        out.openapi = '3.0.2'
         out.info = {
             'title': 'API spec',
             'version': '1.0',
