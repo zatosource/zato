@@ -42,10 +42,12 @@ class APISpec(ZatoCommand):
         {'name':'--dir', 'help':'Directory to save the output to', 'default':''},
         {'name':'--delete-dir', 'help':'If given, --dir will be deleted before the output is saved', 'action':'store_true'},
         {'name':'--with-api-invoke', 'help':'If given, OpenAPI spec for --api-invoke-path endpoints will be generated',
-         'action':'store_true'},
+         'action':'store_true', 'default':True},
         {'name':'--with-rest-channels', 'help':'If given, OpenAPI spec for individual REST endpoints will be generated',
-         'action':'store_true'},
+         'action':'store_true', 'default':True},
         {'name':'--api-invoke-path', 'help':'A comma-separated list of URL paths to invoke API services through'},
+        {'name':'--tags', 'help':'A comma-separated list of docstring tags to generate documentation for',
+            'default':'public'},
     ]
 
 # ################################################################################################################################
@@ -55,6 +57,9 @@ class APISpec(ZatoCommand):
 
         exclude = args.exclude.split(',') or []
         exclude = [elem.strip() for elem in exclude]
+
+        tags = args.tags.split(',')
+        tags = [elem.strip() for elem in tags]
 
         if args.with_internal:
             for item in internal_patterns:
@@ -69,6 +74,7 @@ class APISpec(ZatoCommand):
             'exclude': ','.join(exclude),
             'needs_api_invoke': args.with_api_invoke,
             'needs_rest_channels': args.with_rest_channels,
+            'tags': tags,
         }
 
         if args.with_api_invoke:
