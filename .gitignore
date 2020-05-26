@@ -6,6 +6,7 @@ code/docs/*
 code/downloads/*
 code/eggs
 code/env-zato
+code/extlib
 code/get-pip.py
 code/include/*
 code/lib/*
