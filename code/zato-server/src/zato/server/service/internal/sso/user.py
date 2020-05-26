@@ -276,7 +276,33 @@ class TOTP(BaseRESTService):
             self.cid, ctx.input.ust, ctx.input.user_id,
             ctx.input.totp_key,
             ctx.input.totp_label,
-            ctx.input.current_app, ctx.remote_addr)
+            ctx.input.current_app,
+            ctx.remote_addr)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Lock(BaseRESTService):
+    """ Locks or unlocks a user account.
+    """
+    name = 'zato.server.service.internal.sso.user.lock'
+
+    class SimpleIO(BaseSIO):
+        input_required = 'ust', 'current_app', AsIs('user_id')
+
+# ################################################################################################################################
+
+    def _handle_sso_POST(self, ctx):
+        """ Locks a user account.
+        """
+        self.sso.user.lock_user(self.cid, ctx.input.user_id, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
+
+# ################################################################################################################################
+
+    def _handle_sso_DELETE(self, ctx):
+        """ Unlocks a user account.
+        """
+        self.sso.user.unlock_user(self.cid, ctx.input.user_id, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
 
 # ################################################################################################################################
 # ################################################################################################################################

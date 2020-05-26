@@ -1142,6 +1142,7 @@ class Create(ZatoCommand):
             ['zato.sso.user.password', 'zato.server.service.internal.sso.user.Password', '/zato/sso/user/password'],
             ['zato.sso.user.search', 'zato.server.service.internal.sso.user.Search', '/zato/sso/user/search'],
             ['zato.sso.user.totp', 'zato.server.service.internal.sso.user.TOTP', '/zato/sso/user/totp'],
+            ['zato.sso.user.lock', 'zato.server.service.internal.sso.user.Lock', '/zato/sso/user/lock'],
 
             # Linked accounts
             ['zato.sso.user.linked-auth', 'zato.server.service.internal.sso.user.LinkedAuth', '/zato/sso/user/linked'],
