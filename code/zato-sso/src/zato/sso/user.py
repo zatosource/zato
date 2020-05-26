@@ -801,7 +801,7 @@ class UserAPI(object):
         """
         with closing(self.odb_session_func()) as session:
             session.execute(
-                update(UserModelTable).\
+                sql_update(UserModelTable).\
                 values({
                     'is_locked': is_locked,
                     }).\
@@ -814,14 +814,14 @@ class UserAPI(object):
     def lock_user_cli(self, user_id):
         """ Locks a user account. Does not check any permissions.
         """
-        self._lock_user(user_id, True)
+        self._lock_user_cli(user_id, True)
 
 # ################################################################################################################################
 
     def unlock_user_cli(self, user_id):
         """ Unlocks a user account. Does not check any permissions.
         """
-        self._lock_user(user_id, False)
+        self._lock_user_cli(user_id, False)
 
 # ################################################################################################################################
 
