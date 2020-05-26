@@ -31,6 +31,7 @@ from base64 import b64decode
 from binascii import hexlify as binascii_hexlify
 from contextlib import closing
 from datetime import datetime, timedelta
+from getpass import getuser as getpass_getuser
 from glob import glob
 from hashlib import sha256
 from inspect import isfunction, ismethod
@@ -230,6 +231,11 @@ def absolutize(path, base=''):
 
 def current_host():
     return _current_host
+
+# ################################################################################################################################
+
+def current_user(_getpass_getuser=getpass_getuser):
+    return _getpass_getuser()
 
 # ################################################################################################################################
 
