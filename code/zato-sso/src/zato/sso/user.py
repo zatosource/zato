@@ -799,7 +799,8 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def lock_user(self, cid, user_id, ust=None, current_app=None, remote_addr=None, require_super_user=True, current_user=None):
+    def lock_user(self, cid, user_id, current_ust=None, current_app=None, remote_addr=None, require_super_user=True,
+        current_user=None):
         """ Locks an existing user. It is acceptable to lock an already lock user.
         """
         # type: (str, str, str, str, str, bool, str)
@@ -807,11 +808,12 @@ class UserAPI(object):
         # PII audit comes first
         audit_pii.info(cid, 'user.lock_user', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
-        return self._lock_user(user_id, True, cid, ust, current_app, remote_addr, require_super_user, current_user)
+        return self._lock_user(user_id, True, cid, current_ust, current_app, remote_addr, require_super_user, current_user)
 
 # ################################################################################################################################
 
-    def unlock_user(self, cid, user_id, ust=None, current_app=None, remote_addr=None, require_super_user=True, current_user=None):
+    def unlock_user(self, cid, user_id, current_ust=None, current_app=None, remote_addr=None, require_super_user=True,
+        current_user=None):
         """ Unlocks an existing user. It is acceptable to unlock a user that is not locked.
         """
         # type: (str, str, str, str, str, bool, str)
@@ -819,17 +821,17 @@ class UserAPI(object):
         # PII audit comes first
         audit_pii.info(cid, 'user.lock_user', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
-        return self._lock_user(user_id, False, cid, ust, current_app, remote_addr, require_super_user, current_user)
+        return self._lock_user(user_id, False, cid, current_ust, current_app, remote_addr, require_super_user, current_user)
 
 # ################################################################################################################################
 
-    def _lock_user(self, user_id, is_locked, cid=None, ust=None, current_app=None, remote_addr=None, require_super_user=True,
-        current_user=None):
+    def _lock_user(self, user_id, is_locked, cid=None, current_ust=None, current_app=None, remote_addr=None,
+        require_super_user=True, current_user=None):
         """ An internal method to lock or unlock users.
         """
         # type: (str, bool, str, str, str, str, bool, str)
         if require_super_user:
-            current_session = self._require_super_user(cid, ust, current_app, remote_addr)
+            current_session = self._require_super_user(cid, current_ust, current_app, remote_addr)
             current_user = current_session.user_id
         else:
             current_user = current_user if current_user else 'auto'
