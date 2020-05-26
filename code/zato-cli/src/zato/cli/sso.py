@@ -19,7 +19,7 @@ from zato.cli import ZatoCommand, common_odb_opts, common_totp_opts
 from zato.cli.util import get_totp_info_from_args
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model.sso import _SSOAttr, _SSOSession, _SSOUser, Base as SSOModelBase
-from zato.common.util import asbool, get_config, current_host
+from zato.common.util import asbool, get_config, current_host, current_user
 from zato.sso import ValidationError
 from zato.sso.api import UserAPI
 from zato.sso.util import new_user_id, normalize_password_reject_list
@@ -50,6 +50,7 @@ if typing.TYPE_CHECKING:
 _current_app = 'zato-cli'
 _current_host = current_host()
 _cid = 'cli'
+_cli_user = '{}@{}'.format(current_user(), _current_host)
 
 # ################################################################################################################################
 
@@ -217,7 +218,7 @@ class LockUser(SSOCommand):
     def _on_sso_command(self, args, user, user_api):
         # type: (Namespace, SSOUser, UserAPI)
 
-        user_api.cli_lock_user(user.user_id)
+        user_api.lock_user(_cid, user.user_id, None, _current_app, _current_host, False, _cli_user)
         self.logger.info('Locked user account `%s`', args.username)
 
 # ################################################################################################################################
@@ -232,7 +233,7 @@ class UnlockUser(SSOCommand):
     def _on_sso_command(self, args, user, user_api):
         # type: (Namespace, SSOUser, UserAPI)
 
-        user_api.cli_unlock_user(user.user_id)
+        user_api.unlock_user(_cid, user.user_id, None, _current_app, _current_host, False, _cli_user)
         self.logger.info('Unlocked user account `%s`', args.username)
 
 # ################################################################################################################################
