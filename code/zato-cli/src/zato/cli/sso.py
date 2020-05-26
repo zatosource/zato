@@ -217,7 +217,7 @@ class LockUser(SSOCommand):
     def _on_sso_command(self, args, user, user_api):
         # type: (Namespace, SSOUser, UserAPI)
 
-        user_api.lock_user_cli(user.user_id)
+        user_api.cli_lock_user(user.user_id)
         self.logger.info('Locked user account `%s`', args.username)
 
 # ################################################################################################################################
@@ -230,7 +230,9 @@ class UnlockUser(SSOCommand):
     ]
 
     def _on_sso_command(self, args, user, user_api):
-        user_api.lock_user_cli(user.user_id)
+        # type: (Namespace, SSOUser, UserAPI)
+
+        user_api.cli_unlock_user(user.user_id)
         self.logger.info('Unlocked user account `%s`', args.username)
 
 # ################################################################################################################################
