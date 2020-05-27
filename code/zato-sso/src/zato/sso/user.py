@@ -631,9 +631,6 @@ class UserAPI(object):
             if queries_current_session:
                 info = current_session
             else:
-                print()
-                print(111, query_criteria)
-                print()
                 info = func(session, query_criteria, _utcnow())
 
             # Input UST is invalid for any reason (perhaps has just expired), raise an exception in that case
