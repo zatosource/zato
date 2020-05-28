@@ -157,7 +157,7 @@ class _CreateUser(SSOCommand):
         data.middle_name = args.middle_name or b''
         data.last_name = args.last_name or b''
         data.password = args.password
-        data.sign_up_confirm_token = 'cli.{}'.format(CryptoManager.generate_secret())
+        data.sign_up_confirm_token = 'cli.{}'.format(CryptoManager.generate_secret().decode('utf8'))
         data.is_rate_limit_active = False
         data.rate_limit_def = None
         data.rate_limit_type = None
