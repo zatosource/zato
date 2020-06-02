@@ -120,6 +120,10 @@ table.docutils tbody tr td:first-child {
   padding-right:7px
 }
 
+table.docutils tbody tr td {
+  vertical-align:top;
+}
+
 #services table.docutils thead tr th:first-child {
   color:transparent;
 }
