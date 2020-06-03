@@ -296,6 +296,30 @@ class ServiceInfo(object):
         summary = summary.strip()
         full_docstring = full_docstring.strip()
 
+        has_dash_list = False
+        full_docstring_split = full_docstring.splitlines() # type: list
+        full_docstring_list = []
+
+        for line in full_docstring_split: # type: str
+
+            if line.startswith('-'):
+                # We are in a list now
+                has_dash_list = True
+            else:
+                # We are no longer in a list in case we were in one previously so we just need
+                # to prepend a newline to mark an end of the list and set the flag to True.
+                if has_dash_list:
+                    line = '\n' + line
+                    has_dash_list = False
+
+            if has_dash_list:
+                # Prepend a new line because we are in a list
+                line = '\n' + line
+
+            full_docstring_list.append(line)
+
+        full_docstring = '\n'.join(full_docstring_list)
+
         # If we don't have any summary but there is a docstring at all then it must be a single-line one
         # and it becomes our summary.
         if full_docstring and not summary:
