@@ -17,7 +17,7 @@ apispec_files['_static/custom.css'] = """
     font-size:0.99em;
 }
 
-body {
+body, html {
     background-color:#111 !important;
 }
 
@@ -72,7 +72,12 @@ a.headerlink {
 
 h4, p.topless a, .nav-item, .nav-item a, li.right a {
     color:#e6e6e6 !important;
-    text-shadow: 1px 1px 1px #222;
+     text-shadow: 1px 1px 1px #222;
+}
+
+table.align-default {
+    width:100% !important;
+    margin:none !important;
 }
 
 table.docutils td {
@@ -80,7 +85,7 @@ table.docutils td {
     padding-bottom:2px;
     padding-left:0px;
     padding-right:0px;
-      border-bottom:1px solid #f3f3e3;
+    border-bottom:1px solid #f3f3e3;
 }
 
 table.docutils th.head {
@@ -124,7 +129,7 @@ table.docutils thead tr th:first-child {
 
 table.docutils tbody tr td {
     vertical-align:middle;
-    border-bottom:2px dotted #333 !important;
+  border-bottom:2px dotted #333 !important;
 }
 
 table.docutils tbody tr td:first-child {
