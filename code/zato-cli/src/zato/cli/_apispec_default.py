@@ -140,6 +140,10 @@ table.docutils tbody tr td:first-child {
     text-shadow: 2px 2px 1px #000;
 }
 
+li table.docutils tbody tr td:first-child {
+    color: #fff !important;
+}
+
 div.body {
     background-color: #232221;
     color:#fff;
@@ -637,7 +641,7 @@ texinfo_documents = [
 # -- Extension configuration -------------------------------------------------
 
 def setup(app):
-    app.add_stylesheet('custom.css')
+    app.add_css_file('custom.css')
 """.lstrip()
 
 # Main file
