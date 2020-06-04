@@ -300,9 +300,17 @@ class ServiceInfo(object):
         full_docstring_split = full_docstring.splitlines() # type: list
         full_docstring_list = []
 
+        # Incremented for each row that begins and ends with '=', which is a table boundary indicator.
+        # For each table the index will go to exactly 3 at which point we will know
+        # that we have just finished processing an individual table and we will then suffix it with a newline character.
+        row_boundary_idx = 0
+
         for line in full_docstring_split: # type: str
 
-            if line.startswith('-'):
+            # To make it easier to process tables
+            line_stripped = line.strip()
+
+            if line_stripped.startswith('-'):
                 # We are in a list now
                 has_dash_list = True
             else:
@@ -315,6 +323,12 @@ class ServiceInfo(object):
             if has_dash_list:
                 # Prepend a new line because we are in a list
                 line = '\n' + line
+
+            if line_stripped.startswith('=') and line_stripped.endswith('='):
+                row_boundary_idx += 1
+                if row_boundary_idx == 3:
+                    line += '\n'
+                    row_boundary_idx = 0
 
             full_docstring_list.append(line)
 
@@ -339,7 +353,7 @@ class ServiceInfo(object):
 
 # ################################################################################################################################
 
-    def _get_next_split_segment(self, lines):
+    def _get_next_split_segment(self, lines, tag_indicator='@'):
         # type: (list) -> (str, list)
 
         current_lines = []
@@ -348,7 +362,8 @@ class ServiceInfo(object):
         # The very first line must contain tag name(s),
         # otherwise we assume that it is the implicit name, called 'public'.
         first_line = lines[0] # type: str
-        current_tag = first_line.strip().replace('#', '', 1) if first_line.startswith('#') else APISPEC.DEFAULT_TAG # type: str
+        current_tag = first_line.strip().replace(tag_indicator, '', 1) if \
+            first_line.startswith(tag_indicator) else APISPEC.DEFAULT_TAG # type: str
 
         # Indicates that we are currently processing the very first line,
         # which is needed because if it starts with a tag name
@@ -358,10 +373,10 @@ class ServiceInfo(object):
         for idx, line in enumerate(lines): # type: (int, str)
 
             line_stripped = line.strip()
-            if line_stripped.startswith('#'):
+            if line_stripped.startswith(tag_indicator):
                 if not in_first_line:
                     yield current_tag, current_lines
-                    current_tag = line_stripped.replace('#', '', 1)
+                    current_tag = line_stripped.replace(tag_indicator, '', 1)
                     current_lines[:] = []
             else:
                 in_first_line = False
