@@ -310,7 +310,6 @@ class ServiceInfo(object):
             # To make it easier to process tables
             line_stripped = line.strip()
 
-            '''
             if line_stripped.startswith('-'):
                 # We are in a list now
                 has_dash_list = True
@@ -331,7 +330,6 @@ class ServiceInfo(object):
                 if row_boundary_idx == 3:
                     line += '\n'
                     row_boundary_idx = 0
-            '''
 
             full_docstring_list.append(line)
 
