@@ -17,7 +17,7 @@ clean:
 simpleio:
 	$(MAKE) build
 
-simpleio-test:
+run-tests:
 	$(MAKE) build
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/simpleio_/*.py -s
 
