@@ -29,7 +29,7 @@ davis==0.1
 decorator==3.4.0
 dictalchemy==0.1.2.6
 dill==0.2.5
-Django==1.9.7
+Django==1.11.29
 docformatter==0.8
 elasticsearch==7.0.0
 ephem==3.7.6.0
