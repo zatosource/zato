@@ -3,7 +3,7 @@
 
 PY_DIR=$(CURDIR)/../bin
 
-server-test:
+run-tests:
 	$(PY_DIR)/py $(CURDIR)/test/zato/test_apispec_generator.py && \
 	$(PY_DIR)/py $(CURDIR)/test/zato/test_apispec_open_api.py  && \
 	$(PY_DIR)/py $(CURDIR)/test/zato/test_apispec_sio_desc.py

@@ -131,7 +131,7 @@ class APISpecDocstringParsing(TestCase):
     def test_extract_tags_public_only_explicit(self):
 
         class MyService:
-            """ #public
+            """ @public
             This is a one-line summary.
 
             This is public information
@@ -162,7 +162,7 @@ class APISpecDocstringParsing(TestCase):
             This is public information
             It is multiline
 
-            #internal
+            @internal
 
             One-line summary for internal uses.
 
