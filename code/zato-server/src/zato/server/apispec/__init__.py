@@ -260,7 +260,7 @@ class ServiceInfo(object):
 # ################################################################################################################################
 
     def _parse_split_segment(self, tag, split):
-        # type: (tags, list) -> _DocstringSegment
+        # type: (str, list) -> _DocstringSegment
 
         # For implicit tags (e.g. public), the summary will be under index 0,
         # but for tags named explicitly, index 0 may be an empty element
@@ -374,6 +374,7 @@ class ServiceInfo(object):
         current_lines = all_lines[:]
 
         for tag, tag_lines in self._get_next_split_segment(current_lines):
+
             segment = self._parse_split_segment(tag, tag_lines)
             if segment.tag in self.docstring.tags:
                 out.append(segment)
