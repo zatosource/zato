@@ -259,8 +259,8 @@ class ServiceInfo(object):
 
 # ################################################################################################################################
 
-    def _parse_split_segment(self, tag, split):
-        # type: (str, list) -> _DocstringSegment
+    def _parse_split_segment(self, tag, split, prefix_with_tag):
+        # type: (str, list, bool) -> _DocstringSegment
 
         # For implicit tags (e.g. public), the summary will be under index 0,
         # but for tags named explicitly, index 0 may be an empty element
@@ -306,9 +306,16 @@ class ServiceInfo(object):
             description = summary
             full_docstring = summary
 
+        summary = summary.lstrip()
+
+        if prefix_with_tag:
+            summary = '\n{}\n\n{}'.format(tag, summary)
+            description = '\n\n{}\n{}'.format(tag, description)
+            full_docstring = '\n{}\n\n{}'.format(tag, full_docstring)
+
         out = _DocstringSegment()
-        out.tag = tag
-        out.summary = summary.lstrip()
+        out.tag = tag.replace('@', '', 1)
+        out.summary = summary
         out.description = description
         out.full = full_docstring
         return out
@@ -338,7 +345,7 @@ class ServiceInfo(object):
             if line_stripped.startswith(tag_indicator):
                 if not in_first_line:
                     yield current_tag, current_lines
-                    current_tag = line_stripped.replace(tag_indicator, '', 1)
+                    current_tag = line.strip()#line_stripped.replace(tag_indicator, '', 1)
                     current_lines[:] = []
             else:
                 in_first_line = False
@@ -375,7 +382,9 @@ class ServiceInfo(object):
 
         for tag, tag_lines in self._get_next_split_segment(current_lines):
 
-            segment = self._parse_split_segment(tag, tag_lines)
+            prefix_with_tag = tag != 'public'
+            segment = self._parse_split_segment(tag, tag_lines, prefix_with_tag)
+
             if segment.tag in self.docstring.tags:
                 out.append(segment)
 
