@@ -262,7 +262,10 @@ class ServiceInfo(object):
     def _parse_split_segment(self, tag, split):
         # type: (tags, list) -> _DocstringSegment
 
-        summary = split[0]
+        # For implicit tags (e.g. public), the summary will be under index 0,
+        # but for tags named explicitly, index 0 may be an empty element
+        # and the summary will be under index 1.
+        summary = split[0] or split[1]
 
         # format_docstring expects an empty line between summary and description
         if len(split) > 1:
@@ -293,48 +296,6 @@ class ServiceInfo(object):
             if summary and full_docstring[-1] == '.' and full_docstring[-1] != summary[-1]:
                 full_docstring = full_docstring[:-1]
 
-        summary = summary.strip()
-        full_docstring = full_docstring.strip()
-
-        has_dash_list = False
-        full_docstring_split = full_docstring.splitlines() # type: list
-        full_docstring_list = []
-
-        # Incremented for each row that begins and ends with '=', which is a table boundary indicator.
-        # For each table the index will go to exactly 3 at which point we will know
-        # that we have just finished processing an individual table and we will then suffix it with a newline character.
-        row_boundary_idx = 0
-
-        for line in full_docstring_split: # type: str
-
-            # To make it easier to process tables
-            line_stripped = line.strip()
-
-            if line_stripped.startswith('-'):
-                # We are in a list now
-                has_dash_list = True
-            else:
-                # We are no longer in a list in case we were in one previously so we just need
-                # to prepend a newline to mark an end of the list and set the flag to True.
-                if has_dash_list:
-                    line = '\n' + line
-                    has_dash_list = False
-
-            if has_dash_list:
-                # Prepend a new line because we are in a list
-                line = '\n' + line
-
-
-            if line_stripped.startswith('=') and line_stripped.endswith('='):
-                row_boundary_idx += 1
-                if row_boundary_idx == 3:
-                    line += '\n'
-                    row_boundary_idx = 0
-
-            full_docstring_list.append(line)
-
-        full_docstring = '\n'.join(full_docstring_list)
-
         # If we don't have any summary but there is a docstring at all then it must be a single-line one
         # and it becomes our summary.
         if full_docstring and not summary:
@@ -347,7 +308,7 @@ class ServiceInfo(object):
 
         out = _DocstringSegment()
         out.tag = tag
-        out.summary = summary
+        out.summary = summary.lstrip()
         out.description = description
         out.full = full_docstring
         return out
@@ -413,7 +374,6 @@ class ServiceInfo(object):
         current_lines = all_lines[:]
 
         for tag, tag_lines in self._get_next_split_segment(current_lines):
-            tag_lines = [elem for elem in tag_lines if elem.strip()]
             segment = self._parse_split_segment(tag, tag_lines)
             if segment.tag in self.docstring.tags:
                 out.append(segment)
