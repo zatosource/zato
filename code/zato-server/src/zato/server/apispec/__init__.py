@@ -49,7 +49,10 @@ tag_html_internal = """
 .. raw:: html
 
     <span class="zato-tag-name-highlight">{}</span>
-""".strip()
+
+"""
+
+not_public = 'INFORMATION IN THIS SECTION IS NOT PUBLIC'
 
 # ################################################################################################################################
 
@@ -324,19 +327,27 @@ class ServiceInfo(object):
 
         for name in tag_internal:
             if name in tag:
-                tag_html = tag_html_internal.format(tag)
+                is_tag_internal = True
                 break
+        else:
+            is_tag_internal = False
+
+        if is_tag_internal:
+            tag_html = tag_html_internal.format(tag)
+        else:
+            tag_html = tag
 
         if prefix_with_tag:
-            summary = '\n{}\n\n{}'.format(tag_html, summary)
             description = '\n\n{}\n{}'.format(tag_html, description)
             full_docstring = '\n{}\n\n{}'.format(tag_html, full_docstring)
+            summary = not_public if is_tag_internal else '\n{}\n\n{}'.format(tag_html, summary)
 
         out = _DocstringSegment()
         out.tag = tag.replace('@', '', 1)
         out.summary = summary
         out.description = description
         out.full = full_docstring
+
         return out
 
 # ################################################################################################################################
