@@ -796,32 +796,57 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def _lock_user_cli(self, user_id, is_locked):
-        """ Locks or unlocks a user account. Used by CLI, does not check any permissions.
+    def lock_user(self, cid, user_id, current_ust=None, current_app=None, remote_addr=None, require_super_user=True,
+        current_user=None):
+        """ Locks an existing user. It is acceptable to lock an already lock user.
         """
+        # type: (str, str, str, str, str, bool, str)
+
+        # PII audit comes first
+        audit_pii.info(cid, 'user.lock_user', extra={'current_app':current_app, 'remote_addr':remote_addr})
+
+        return self._lock_user(user_id, True, cid, current_ust, current_app, remote_addr, require_super_user, current_user)
+
+# ################################################################################################################################
+
+    def unlock_user(self, cid, user_id, current_ust=None, current_app=None, remote_addr=None, require_super_user=True,
+        current_user=None):
+        """ Unlocks an existing user. It is acceptable to unlock a user that is not locked.
+        """
+        # type: (str, str, str, str, str, bool, str)
+
+        # PII audit comes first
+        audit_pii.info(cid, 'user.lock_user', extra={'current_app':current_app, 'remote_addr':remote_addr})
+
+        return self._lock_user(user_id, False, cid, current_ust, current_app, remote_addr, require_super_user, current_user)
+
+# ################################################################################################################################
+
+    def _lock_user(self, user_id, is_locked, cid=None, current_ust=None, current_app=None, remote_addr=None,
+        require_super_user=True, current_user=None):
+        """ An internal method to lock or unlock users.
+        """
+        # type: (str, bool, str, str, str, str, bool, str)
+        if require_super_user:
+            current_session = self._require_super_user(cid, current_ust, current_app, remote_addr)
+            current_user = current_session.user_id
+        else:
+            current_user = current_user if current_user else 'auto'
+
+        # We have all that is needed to so we can actually issue the SQL call.
+        # Note that we always populate locked_time and locked_by even if is_locked is False
+        # to keep track of both who locked and unlocked the user.
         with closing(self.odb_session_func()) as session:
             session.execute(
-                update(UserModelTable).\
+                sql_update(UserModelTable).\
                 values({
                     'is_locked': is_locked,
+                    'locked_time': datetime.utcnow(),
+                    'locked_by': current_user,
                     }).\
                 where(UserModelTable.c.user_id==user_id)
             )
             session.commit()
-
-# ################################################################################################################################
-
-    def lock_user_cli(self, user_id):
-        """ Locks a user account. Does not check any permissions.
-        """
-        self._lock_user(user_id, True)
-
-# ################################################################################################################################
-
-    def unlock_user_cli(self, user_id):
-        """ Unlocks a user account. Does not check any permissions.
-        """
-        self._lock_user(user_id, False)
 
 # ################################################################################################################################
 

@@ -457,7 +457,7 @@ def convert_sio(cid, param, param_name, value, has_simple_io_config, is_xml, boo
             raise
         else:
             msg = 'Conversion error, param:`{}`, param_name:`{}`, repr:`{}`, type:`{}`, e:`{}`'.format(
-                param, param_name, repr(value), type(value), format_exc(e))
+                param, param_name, repr(value), type(value), format_exc())
             logger.error(msg)
 
             raise ZatoException(msg=msg)
