@@ -44,6 +44,15 @@ _SIO_TYPE_MAP = SIO_TYPE_MAP()
 
 # ################################################################################################################################
 
+tag_internal = ('@classified', '@confidential', '@internal', '@private', '@restricted', '@secret')
+tag_html_internal = """
+.. raw:: html
+
+    <span class="zato-tag-name-highlight">{}</span>
+""".strip()
+
+# ################################################################################################################################
+
 class Config(object):
     def __init__(self):
         self.is_module_level = True
@@ -93,9 +102,9 @@ class _DocstringSegment(object):
 
 class SimpleIO(object):
     __slots__ = 'input_required', 'output_required', 'input_optional', 'output_optional', 'request_elem', 'response_elem', \
-        'spec_name', 'description'
+        'spec_name', 'description', 'needs_sio_desc'
 
-    def __init__(self, api_spec_info, description):
+    def __init__(self, api_spec_info, description, needs_sio_desc=True):
         # type: (Bunch, SimpleIODescription)
         self.input_required = api_spec_info.param_list.input_required
         self.output_required = api_spec_info.param_list.output_required
@@ -105,11 +114,15 @@ class SimpleIO(object):
         self.response_elem = api_spec_info.response_elem
         self.spec_name = api_spec_info.name
         self.description = description
+        self.needs_sio_desc = needs_sio_desc
 
     def to_bunch(self):
         out = Bunch()
         for name in _sio_attrs + ('request_elem', 'response_elem', 'spec_name'):
             out[name] = getattr(self, name)
+
+        if self.needs_sio_desc:
+            out.description = self.description
 
         return out
 
@@ -134,17 +147,19 @@ class SimpleIODescription(object):
 class ServiceInfo(object):
     """ Contains information about a service basing on which documentation is generated.
     """
-    def __init__(self, name, service_class, simple_io_config, tags='public'):
-        # type: (str, Service, SimpleIO, object)
+    def __init__(self, name, service_class, simple_io_config, tags='public', needs_sio_desc=True):
+        # type: (str, Service, SimpleIO, object, bool)
         self.name = name
         self.service_class = service_class
         self.simple_io_config = simple_io_config
         self.config = Config()
         self.simple_io = {}
         self.docstring = Docstring(tags if isinstance(tags, list) else [tags])
+
         self.namespace = Namespace()
         self.invokes = []
         self.invoked_by = []
+        self.needs_sio_desc = needs_sio_desc
         self.parse()
 
 # ################################################################################################################################
@@ -221,7 +236,7 @@ class ServiceInfo(object):
                         _param_info = Bunch()
                         _param_info.name = param_name
                         _param_info.is_required = 'required' in param_list_name
-                        _param_info.description = desc_dict.get(param_name)
+                        _param_info.description = desc_dict.get(param_name) or '' # Always use a string, even if an empty one
 
                         if isinstance(param, AsIs):
                             type_info = api_spec_info.DEFAULT
@@ -243,7 +258,7 @@ class ServiceInfo(object):
 
                     _api_spec_info.param_list[param_list_name] = _param_list
 
-                self.simple_io[_api_spec_info.name] = SimpleIO(_api_spec_info, sio_desc).to_bunch()
+                self.simple_io[_api_spec_info.name] = SimpleIO(_api_spec_info, sio_desc, self.needs_sio_desc).to_bunch()
 
 # ################################################################################################################################
 
@@ -253,10 +268,13 @@ class ServiceInfo(object):
 
 # ################################################################################################################################
 
-    def _parse_split_segment(self, tag, split):
-        # type: (tags, list) -> _DocstringSegment
+    def _parse_split_segment(self, tag, split, prefix_with_tag):
+        # type: (str, list, bool) -> _DocstringSegment
 
-        summary = split[0]
+        # For implicit tags (e.g. public), the summary will be under index 0,
+        # but for tags named explicitly, index 0 may be an empty element
+        # and the summary will be under index 1.
+        summary = split[0] or split[1]
 
         # format_docstring expects an empty line between summary and description
         if len(split) > 1:
@@ -287,9 +305,6 @@ class ServiceInfo(object):
             if summary and full_docstring[-1] == '.' and full_docstring[-1] != summary[-1]:
                 full_docstring = full_docstring[:-1]
 
-        summary = summary.strip()
-        full_docstring = full_docstring.strip()
-
         # If we don't have any summary but there is a docstring at all then it must be a single-line one
         # and it becomes our summary.
         if full_docstring and not summary:
@@ -300,8 +315,25 @@ class ServiceInfo(object):
             description = summary
             full_docstring = summary
 
+        summary = summary.lstrip()
+
+        # This is needed in case we have one of the tags
+        # that need a highlight because they contain information
+        # that is internal to users generating the specification.
+        tag_html = tag
+
+        for name in tag_internal:
+            if name in tag:
+                tag_html = tag_html_internal.format(tag)
+                break
+
+        if prefix_with_tag:
+            summary = '\n{}\n\n{}'.format(tag_html, summary)
+            description = '\n\n{}\n{}'.format(tag_html, description)
+            full_docstring = '\n{}\n\n{}'.format(tag_html, full_docstring)
+
         out = _DocstringSegment()
-        out.tag = tag
+        out.tag = tag.replace('@', '', 1)
         out.summary = summary
         out.description = description
         out.full = full_docstring
@@ -309,7 +341,7 @@ class ServiceInfo(object):
 
 # ################################################################################################################################
 
-    def _get_next_split_segment(self, lines):
+    def _get_next_split_segment(self, lines, tag_indicator='@'):
         # type: (list) -> (str, list)
 
         current_lines = []
@@ -318,7 +350,8 @@ class ServiceInfo(object):
         # The very first line must contain tag name(s),
         # otherwise we assume that it is the implicit name, called 'public'.
         first_line = lines[0] # type: str
-        current_tag = first_line.strip().replace('#', '', 1) if first_line.startswith('#') else APISPEC.DEFAULT_TAG # type: str
+        current_tag = first_line.strip().replace(tag_indicator, '', 1) if \
+            first_line.startswith(tag_indicator) else APISPEC.DEFAULT_TAG # type: str
 
         # Indicates that we are currently processing the very first line,
         # which is needed because if it starts with a tag name
@@ -328,10 +361,10 @@ class ServiceInfo(object):
         for idx, line in enumerate(lines): # type: (int, str)
 
             line_stripped = line.strip()
-            if line_stripped.startswith('#'):
+            if line_stripped.startswith(tag_indicator):
                 if not in_first_line:
                     yield current_tag, current_lines
-                    current_tag = line_stripped.replace('#', '', 1)
+                    current_tag = line.strip()#line_stripped.replace(tag_indicator, '', 1)
                     current_lines[:] = []
             else:
                 in_first_line = False
@@ -367,8 +400,10 @@ class ServiceInfo(object):
         current_lines = all_lines[:]
 
         for tag, tag_lines in self._get_next_split_segment(current_lines):
-            tag_lines = [elem for elem in tag_lines if elem.strip()]
-            segment = self._parse_split_segment(tag, tag_lines)
+
+            prefix_with_tag = tag != 'public'
+            segment = self._parse_split_segment(tag, tag_lines, prefix_with_tag)
+
             if segment.tag in self.docstring.tags:
                 out.append(segment)
 
@@ -566,13 +601,14 @@ class ServiceInfo(object):
 # ################################################################################################################################
 
 class Generator(object):
-    def __init__(self, service_store_services, simple_io_config, include, exclude, query=None, tags=None):
+    def __init__(self, service_store_services, simple_io_config, include, exclude, query=None, tags=None, needs_sio_desc=True):
         self.service_store_services = service_store_services
         self.simple_io_config = simple_io_config
         self.include = include or []
         self.exclude = exclude or []
         self.query = query
         self.tags = tags
+        self.needs_sio_desc = needs_sio_desc
         self.services = {}
 
         # Service name -> list of services this service invokes
@@ -618,10 +654,6 @@ class Generator(object):
             item.invokes = sorted(info.invokes)
             item.invoked_by = sorted(info.invoked_by)
             item.simple_io = info.simple_io
-
-            print()
-            print(222, item.name, item.simple_io)
-            print()
 
             item.docs = Bunch()
             item.docs.summary = info.docstring.summary
@@ -672,7 +704,7 @@ class Generator(object):
             if (not _should_include) or _should_exclude:
                 continue
 
-            info = ServiceInfo(details.name, details.service_class, self.simple_io_config, self.tags)
+            info = ServiceInfo(details.name, details.service_class, self.simple_io_config, self.tags, self.needs_sio_desc)
             self.services[info.name] = info
 
         for name, info in iteritems(self.services):

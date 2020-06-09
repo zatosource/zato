@@ -22,7 +22,7 @@ from future.utils import iteritems
 
 # Zato
 from zato.cli import common_odb_opts, is_arg_given, ZatoCommand
-from zato.common import CACHE, CONNECTION, DATA_FORMAT, IPC, MISC, PUBSUB, SIMPLE_IO, URL_TYPE
+from zato.common import APISPEC, CACHE, CONNECTION, DATA_FORMAT, IPC, MISC, PUBSUB, SIMPLE_IO, URL_TYPE
 from zato.common.odb.model import CacheBuiltin, Cluster, HTTPBasicAuth, HTTPSOAP, PubSubEndpoint, \
      PubSubSubscription, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, Service, WSSDefinition
 from zato.common.odb.post_process import ODBPostProcess
@@ -575,11 +575,13 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
     def add_api_invoke(self, session, cluster, service, pubapi_sec):
-        channel = HTTPSOAP(None, '/zato/api/invoke', True, True, 'channel', 'plain_http',
-            None, '/zato/api/invoke/{service_name}', None, '', None, None,
-            merge_url_params_req=True, service=service, security=pubapi_sec,
-            cluster=cluster)
-        session.add(channel)
+
+        for url_path in (APISPEC.GENERIC_INVOKE_PATH, APISPEC.SOAP_INVOKE_PATH):
+            channel = HTTPSOAP(None, url_path, True, True, 'channel', 'plain_http',
+                None, url_path, None, '', None, None,
+                merge_url_params_req=True, service=service, security=pubapi_sec,
+                cluster=cluster)
+            session.add(channel)
 
 # ################################################################################################################################
 
@@ -1140,6 +1142,7 @@ class Create(ZatoCommand):
             ['zato.sso.user.password', 'zato.server.service.internal.sso.user.Password', '/zato/sso/user/password'],
             ['zato.sso.user.search', 'zato.server.service.internal.sso.user.Search', '/zato/sso/user/search'],
             ['zato.sso.user.totp', 'zato.server.service.internal.sso.user.TOTP', '/zato/sso/user/totp'],
+            ['zato.sso.user.lock', 'zato.server.service.internal.sso.user.Lock', '/zato/sso/user/lock'],
 
             # Linked accounts
             ['zato.sso.user.linked-auth', 'zato.server.service.internal.sso.user.LinkedAuth', '/zato/sso/user/linked'],
