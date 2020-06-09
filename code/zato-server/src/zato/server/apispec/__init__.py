@@ -44,6 +44,15 @@ _SIO_TYPE_MAP = SIO_TYPE_MAP()
 
 # ################################################################################################################################
 
+tag_internal = ('@classified', '@confidential', '@internal', '@private', '@restricted', '@secret')
+tag_html_internal = """
+.. raw:: html
+
+    <span class="zato-tag-name-highlight">{}</span>
+""".strip()
+
+# ################################################################################################################################
+
 class Config(object):
     def __init__(self):
         self.is_module_level = True
@@ -308,10 +317,20 @@ class ServiceInfo(object):
 
         summary = summary.lstrip()
 
+        # This is needed in case we have one of the tags
+        # that need a highlight because they contain information
+        # that is internal to users generating the specification.
+        tag_html = tag
+
+        for name in tag_internal:
+            if name in tag:
+                tag_html = tag_html_internal.format(tag)
+                break
+
         if prefix_with_tag:
-            summary = '\n{}\n\n{}'.format(tag, summary)
-            description = '\n\n{}\n{}'.format(tag, description)
-            full_docstring = '\n{}\n\n{}'.format(tag, full_docstring)
+            summary = '\n{}\n\n{}'.format(tag_html, summary)
+            description = '\n\n{}\n{}'.format(tag_html, description)
+            full_docstring = '\n{}\n\n{}'.format(tag_html, full_docstring)
 
         out = _DocstringSegment()
         out.tag = tag.replace('@', '', 1)
