@@ -44,6 +44,15 @@ _SIO_TYPE_MAP = SIO_TYPE_MAP()
 
 # ################################################################################################################################
 
+tag_internal = ('@classified', '@confidential', '@internal', '@private', '@restricted', '@secret')
+tag_html_internal = """
+.. raw:: html
+
+    <span class="zato-tag-name-highlight">{}</span>
+""".strip()
+
+# ################################################################################################################################
+
 class Config(object):
     def __init__(self):
         self.is_module_level = True
@@ -259,10 +268,13 @@ class ServiceInfo(object):
 
 # ################################################################################################################################
 
-    def _parse_split_segment(self, tag, split):
-        # type: (tags, list) -> _DocstringSegment
+    def _parse_split_segment(self, tag, split, prefix_with_tag):
+        # type: (str, list, bool) -> _DocstringSegment
 
-        summary = split[0]
+        # For implicit tags (e.g. public), the summary will be under index 0,
+        # but for tags named explicitly, index 0 may be an empty element
+        # and the summary will be under index 1.
+        summary = split[0] or split[1]
 
         # format_docstring expects an empty line between summary and description
         if len(split) > 1:
@@ -293,33 +305,6 @@ class ServiceInfo(object):
             if summary and full_docstring[-1] == '.' and full_docstring[-1] != summary[-1]:
                 full_docstring = full_docstring[:-1]
 
-        summary = summary.strip()
-        full_docstring = full_docstring.strip()
-
-        has_dash_list = False
-        full_docstring_split = full_docstring.splitlines() # type: list
-        full_docstring_list = []
-
-        for line in full_docstring_split: # type: str
-
-            if line.startswith('-'):
-                # We are in a list now
-                has_dash_list = True
-            else:
-                # We are no longer in a list in case we were in one previously so we just need
-                # to prepend a newline to mark an end of the list and set the flag to True.
-                if has_dash_list:
-                    line = '\n' + line
-                    has_dash_list = False
-
-            if has_dash_list:
-                # Prepend a new line because we are in a list
-                line = '\n' + line
-
-            full_docstring_list.append(line)
-
-        full_docstring = '\n'.join(full_docstring_list)
-
         # If we don't have any summary but there is a docstring at all then it must be a single-line one
         # and it becomes our summary.
         if full_docstring and not summary:
@@ -330,8 +315,25 @@ class ServiceInfo(object):
             description = summary
             full_docstring = summary
 
+        summary = summary.lstrip()
+
+        # This is needed in case we have one of the tags
+        # that need a highlight because they contain information
+        # that is internal to users generating the specification.
+        tag_html = tag
+
+        for name in tag_internal:
+            if name in tag:
+                tag_html = tag_html_internal.format(tag)
+                break
+
+        if prefix_with_tag:
+            summary = '\n{}\n\n{}'.format(tag_html, summary)
+            description = '\n\n{}\n{}'.format(tag_html, description)
+            full_docstring = '\n{}\n\n{}'.format(tag_html, full_docstring)
+
         out = _DocstringSegment()
-        out.tag = tag
+        out.tag = tag.replace('@', '', 1)
         out.summary = summary
         out.description = description
         out.full = full_docstring
@@ -339,7 +341,7 @@ class ServiceInfo(object):
 
 # ################################################################################################################################
 
-    def _get_next_split_segment(self, lines):
+    def _get_next_split_segment(self, lines, tag_indicator='@'):
         # type: (list) -> (str, list)
 
         current_lines = []
@@ -348,7 +350,8 @@ class ServiceInfo(object):
         # The very first line must contain tag name(s),
         # otherwise we assume that it is the implicit name, called 'public'.
         first_line = lines[0] # type: str
-        current_tag = first_line.strip().replace('#', '', 1) if first_line.startswith('#') else APISPEC.DEFAULT_TAG # type: str
+        current_tag = first_line.strip().replace(tag_indicator, '', 1) if \
+            first_line.startswith(tag_indicator) else APISPEC.DEFAULT_TAG # type: str
 
         # Indicates that we are currently processing the very first line,
         # which is needed because if it starts with a tag name
@@ -358,10 +361,10 @@ class ServiceInfo(object):
         for idx, line in enumerate(lines): # type: (int, str)
 
             line_stripped = line.strip()
-            if line_stripped.startswith('#'):
+            if line_stripped.startswith(tag_indicator):
                 if not in_first_line:
                     yield current_tag, current_lines
-                    current_tag = line_stripped.replace('#', '', 1)
+                    current_tag = line.strip()#line_stripped.replace(tag_indicator, '', 1)
                     current_lines[:] = []
             else:
                 in_first_line = False
@@ -397,8 +400,10 @@ class ServiceInfo(object):
         current_lines = all_lines[:]
 
         for tag, tag_lines in self._get_next_split_segment(current_lines):
-            tag_lines = [elem for elem in tag_lines if elem.strip()]
-            segment = self._parse_split_segment(tag, tag_lines)
+
+            prefix_with_tag = tag != 'public'
+            segment = self._parse_split_segment(tag, tag_lines, prefix_with_tag)
+
             if segment.tag in self.docstring.tags:
                 out.append(segment)
 

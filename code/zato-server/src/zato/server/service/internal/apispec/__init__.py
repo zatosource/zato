@@ -138,7 +138,9 @@ class GetSphinx(Service):
 
     def _make_sphinx_safe(self, data):
         # type: (unicode) -> unicode
-        return data.replace('*', '\*')
+
+        # This is a no-op currently
+        return data
 
 # ################################################################################################################################
 

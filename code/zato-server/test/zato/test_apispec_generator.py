@@ -64,7 +64,7 @@ class GeneratorTestCase(TestCase):
 
         self.assertEqual(service_docs.description, 'It has a docstring.')
         self.assertEqual(service_docs.description_html, 'It has a docstring.')
-        self.assertEqual(service_docs.full, 'This is my service.\n\nIt has a docstring.')
+        self.assertEqual(service_docs.full, 'This is my service.\n\nIt has a docstring.\n')
         self.assertEqual(service_docs.full_html, 'This is my service.</p>\n<p>It has a docstring.')
         self.assertEqual(service_docs.summary, 'This is my service.')
         self.assertEqual(service_docs.summary_html, 'This is my service.')
