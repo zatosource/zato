@@ -14,15 +14,20 @@ clean:
 	find $(CURDIR) -type f -name '*.so' -delete
 	find $(CURDIR) -name '*.egg-info' -exec rm -rf {} +
 
-simpleio:
-	$(MAKE) build
-
-simpleio-test:
-	$(MAKE) build
-	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/simpleio_/*.py -s
-
 rate-limit:
 	$(MAKE) build
 
-rate-limit-test:
+simpleio:
+	$(MAKE) build
+
+rate-limit-tests:
+	$(MAKE) build
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/rate_limit/*.py -s
+
+simpleio-tests:
+	$(MAKE) build
+	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/simpleio_/*.py -s
+
+run-tests:
+	# No tests to run for now
+	echo
