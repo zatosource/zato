@@ -129,7 +129,7 @@ table.docutils thead tr th:first-child {
 
 table.docutils tbody tr td {
     vertical-align:middle;
-  border-bottom:2px dotted #333 !important;
+    border-bottom:2px dotted #333 !important;
 }
 
 table.docutils tbody tr td:first-child {
@@ -168,6 +168,15 @@ div.last_updated {
     color:#eee;
     padding-top:10px;
     text-shadow: 2px 2px 1px #222;
+}
+
+span.zato-tag-name-highlight {
+    color: white;
+    background-color: #885606;
+    padding: 8px;
+    font-weight: 600;
+    border-radius: 8px;
+    text-shadow: 2px 1px 1px #333;
 }
 """.lstrip()
 
