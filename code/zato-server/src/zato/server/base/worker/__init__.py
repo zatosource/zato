@@ -343,10 +343,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Create all the expected connections and objects
         self.init_sql()
-        self.init_ftp()
-
         self.init_http_soap()
-
         self.init_cloud()
         self.init_notifiers()
 
@@ -359,6 +356,13 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # All set, whoever is waiting for us, if anyone at all, can now proceed
         self.is_ready = True
+
+# ################################################################################################################################
+
+    def early_init(self):
+        """ Initialises these parts of our configuration that are needed earlier than others.
+        """
+        self.init_ftp()
 
 # ################################################################################################################################
 
