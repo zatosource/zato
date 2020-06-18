@@ -580,6 +580,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Rate limiting for SSO
         self.set_up_sso_rate_limiting()
 
+        # Some parts of the worker store's configuration are required during the deployment of services
+        # which is why we are doing it here, before worker_store.init() is called.
+        self.worker_store.early_init()
+
         # Deploys services
         is_first, locally_deployed = self._after_init_common(server)
 
