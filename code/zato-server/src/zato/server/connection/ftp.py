@@ -20,6 +20,9 @@ from fs.ftpfs import FTPFS
 # Zato
 from zato.common import Inactive, SECRET_SHADOW, TRACE1
 
+# Python2/3 compatibility
+from future.utils import PY2
+
 logger = logging.getLogger(__name__)
 
 class FTPFacade(FTPFS):
@@ -67,8 +70,16 @@ class FTPStore(object):
             params = self.conn_params[name]
             if params.is_active:
                 timeout = float(params.timeout) if params.timeout else 180
-                return FTPFacade(params.host, params.user, params.get('password'), params.acct, timeout,
-                    int(params.port), params.dircache)
+
+                # Python 2 vs. Python 3 builds of Zato have different versions
+                # of the 'fs' dependency which in turn has a different API to its __init__ method
+                # which is why 'dircache' cannot be used with Python 3.
+                init_params = [params.host, params.user, params.get('password'), params.acct, timeout, int(params.port)]
+
+                if PY2:
+                    init_params.append(params.dircache)
+
+                return FTPFacade(*init_params)
             else:
                 raise Inactive(params.name)
 
