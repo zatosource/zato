@@ -81,6 +81,7 @@ if typing.TYPE_CHECKING:
     from zato.common.odb.api import ODBManager
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
     from zato.server.service.store import ServiceStore
+    from zato.server.startup_callable import StartupCallableTool
     from zato.sso.api import SSOAPI
 
     # For pyflakes
@@ -88,6 +89,7 @@ if typing.TYPE_CHECKING:
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
     SSOAPI = SSOAPI
+    StartupCallableTool = StartupCallableTool
     SubprocessIPC = SubprocessIPC
 
 # ################################################################################################################################
@@ -175,7 +177,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.is_sso_enabled = False
         self.audit_pii = audit_pii
         self.has_fg = False
-        self.startup_callable_tool = None
+        self.startup_callable_tool = None # type: StartupCallableTool
         self.default_internal_pubsub_endpoint_id = None
         self.rate_limiting = None # type: RateLimiting
         self.jwt_secret = None # type: bytes
@@ -651,7 +653,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             logger.info('First worker of `%s` is %s', self.name, self.pid)
 
             self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_FIRST, kwargs={
-                'parallel_server': self,
+                'server': self,
             })
 
             # Clean up any old WSX connections possibly registered for this server
@@ -669,7 +671,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         else:
             self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_OTHER, kwargs={
-                'parallel_server': self,
+                'server': self,
             })
 
             if self.has_posix_ipc:
@@ -682,7 +684,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         spawn_greenlet(self.ipc_api.run)
 
         self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.AFTER_STARTED, kwargs={
-            'parallel_server': self,
+            'server': self,
         })
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
