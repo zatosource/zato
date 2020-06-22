@@ -48,6 +48,38 @@ log_level_map = {
 # ################################################################################################################################
 # ################################################################################################################################
 
+class PasswordHandler(object):
+    """ Listens to the contents of stdout and submits an SSH password when the remote server asks for it.
+    Used with SFTP connections that prefer passwords over public keys.
+    """
+    __slots__ = 'password', 'password_prompt', 'current_stdout'
+
+    def __init__(self, password='', password_prompt='password: '):
+        # type: (str, str)
+        self.password = password
+        self.password_prompt = password_prompt
+        self.current_stdout = ''
+
+        '''
+        args = [
+    '-o', 'PreferredAuthentications=password',
+    '-o', 'PubkeyAuthentication=no',
+    '-o', 'BatchMode=no',
+    '-B', 32768, '-l', 80000, '-p', '-P', 22, '-b', '/path/to/commands.txt'
+    ]
+    '''
+
+    def __call__(self, char, stdin):
+        # type: (str, object)
+        sys.stdout.write(char)
+        sys.stdout.flush()
+        self.current_stdout += char.lower()
+        if self.current_stdout.endswith(self.password_prompt):
+            stdin.put(self.password + '\n')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class SFTPConnection(object):
     """ Wraps access to SFTP commands via command line.
     """
@@ -309,48 +341,3 @@ if __name__ == '__main__':
     container.run()
 
 # ################################################################################################################################
-
-'''
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-# stdlib
-import sys
-
-# sh
-from sh import Command
-
-sftp_command = 'sftp'
-args = ['-o', 'PreferredAuthentications=keyboard-interactive',
-        '-o', 'PubkeyAuthentication=no',
-        '-o', 'BatchMode=no',
-        '-B', 32768, '-l', 80000, '-p', '-P', 22, '-b', 'commands.txt']
-
-command = Command(sftp_command)
-command = command.bake(*args)
-
-class PasswordHandler(object):
-    """ Listens to the contents of stdout and submits an SSH password when the remote server asks for it.
-    """
-    __slots__ = 'password', 'current_stdout'
-
-    def __init__(self, password='', password_prompt='password: '):
-        # type: (str, str)
-        self.password = password
-        self.password_prompt = password_prompt
-        self.current_stdout = ''
-
-aggregated = ''
-def ssh_interact(char, stdin):
-    global aggregated
-    print(222, repr(aggregated))
-    sys.stdout.write(char)#.encode())
-    sys.stdout.flush()
-    aggregated += char
-    if aggregated.lower().endswith('password: '):
-        stdin.put('qwerty\n')
-
-result = command('qwerty@192.168.1.232', _out=ssh_interact, _out_bufsize=0, _tty_in=True, _unify_ttys=True)
-print(111, result)
-'''

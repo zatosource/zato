@@ -52,6 +52,7 @@ $.fn.zato.outgoing.sftp.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', item.identity_file ? item.identity_file : $.fn.zato.empty_value);
     row += String.format('<td>{0}</td>', item.bandwidth_limit);
 
+    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password({0})'>Change password</a>", item.id));
     row += String.format('<td>{0}</td>',
         String.format("<a href=\"./command-shell/{0}/cluster/{1}/{2}/?name={3}\">Command shell</a>",
         item.id, item.cluster_id, data.name_slug, item.name));
