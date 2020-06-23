@@ -27,6 +27,13 @@ from zato.server.connection.connector.subprocess_.base import BaseConnectionCont
 
 # ################################################################################################################################
 
+if 0:
+    from logging import Logger
+
+    Logger = Logger
+
+# ################################################################################################################################
+
 # One megabyte = eight thousand kilobits
 mb_to_kbit = 8000
 
@@ -60,15 +67,6 @@ class PasswordHandler(object):
         self.password_prompt = password_prompt
         self.current_stdout = ''
 
-        '''
-        args = [
-    '-o', 'PreferredAuthentications=password',
-    '-o', 'PubkeyAuthentication=no',
-    '-o', 'BatchMode=no',
-    '-B', 32768, '-l', 80000, '-p', '-P', 22, '-b', '/path/to/commands.txt'
-    ]
-    '''
-
     def __call__(self, char, stdin):
         # type: (str, object)
         sys.stdout.write(char)
@@ -86,8 +84,8 @@ class SFTPConnection(object):
     command_no = 0
 
     def __init__(self, logger, **config):
-        self.logger = logger
-        self.config = bunchify(config)     # type: Bunch
+        self.logger = logger           # type: Logger
+        self.config = bunchify(config) # type: Bunch
 
         # Reject unknown IP types
         if self.config.force_ip_type:
@@ -102,6 +100,7 @@ class SFTPConnection(object):
         self.id = self.config.id                # type: int
         self.name = self.config.name            # type: str
         self.is_active = self.config.is_active  # type: str
+        self.password = self.config.secret      # type: str
 
         self.host = self.config.host or ''      # type: str
         self.port = self.config.port or None    # type: int
@@ -128,7 +127,6 @@ class SFTPConnection(object):
 
         # Added for API completeness
         self.is_connected = True
-        self.password = 'dummy-password'
 
         # Create the reusable command object
         self.command = self.get_command()
@@ -170,22 +168,33 @@ class SFTPConnection(object):
             args.append('-P')
             args.append(self.port)
 
-        # Identity file is optional
-        if self.identity_file:
-            args.append('-i')
-            args.append(self.identity_file)
-
         # SSH config file is optional
         if self.ssh_config_file:
             args.append('-F')
             args.append(self.ssh_config_file)
 
+        # Additional options in case we have a password
+        if self.password:
+
+            args.append('-o')
+            args.append('PreferredAuthentications=password')
+
+            args.append('-o')
+            args.append('PubkeyAuthentication=no')
+
+            args.append('-o')
+            args.append('BatchMode=no')
+
+        else:
+
+            # Identity file is optional and we will set it only if we do not have a password
+            if self.identity_file:
+                args.append('-i')
+                args.append(self.identity_file)
+
         # Base command to build additional arguments into
         command = Command(self.sftp_command)
         command = command.bake(*args)
-
-        self.logger.warn('QQQ %s', command)
-        self.logger.warn('WWW %s', args)
 
         return command
 
@@ -224,12 +233,21 @@ class SFTPConnection(object):
                 else:
                     args.append(self.host)
 
+            # If we have a password, additional keyword arguments are needed
+            kwargs = {}
+
+            if self.password:
+                kwargs['_out'] = PasswordHandler(self.password)
+                kwargs['_out_bufsize'] = 0
+                kwargs['_tty_in'] = True
+                kwargs['_unify_ttys'] = True
+
             out = SFTPOutput(cid, self.command_no)
             result = None
 
             try:
                 # Finally, execute all the commands
-                result = self.command(*args)
+                result = self.command(*args, **kwargs)
             except Exception:
                 out.is_ok = False
                 out.details = format_exc()
