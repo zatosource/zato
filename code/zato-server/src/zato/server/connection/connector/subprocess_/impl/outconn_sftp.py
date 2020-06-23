@@ -285,9 +285,14 @@ class SFTPConnection(object):
     def ping(self, _utcnow=datetime.utcnow):
         now = _utcnow().isoformat()
         out = self.execute('ping-{}'.format(now), self.ping_command)
-        msg = 'Ping response (%s), is_ok:`%s`, details:`%s`, command:`%s`, stdout:`%s`, stderr:`%s`'
-        self.logger.info(msg, now, out.is_ok, out.details, out.command, out.stdout, out.stderr)
-        return out
+        msg = 'Ping response ({}), is_ok:`{}`, details:`{}`, command:`{}`, stdout:`{}`, stderr:`{}`'.format(
+            now, out.is_ok, out.details, out.command, out.stdout, out.stderr)
+
+        if out.is_ok:
+            self.logger.info(msg)
+            return out
+        else:
+            raise Exception(msg)
 
 # ################################################################################################################################
 # ################################################################################################################################
