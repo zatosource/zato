@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import sys
 from datetime import datetime
 from tempfile import NamedTemporaryFile
 from traceback import format_exc
@@ -59,10 +60,11 @@ class PasswordHandler(object):
     """ Listens to the contents of stdout and submits an SSH password when the remote server asks for it.
     Used with SFTP connections that prefer passwords over public keys.
     """
-    __slots__ = 'password', 'password_prompt', 'current_stdout'
+    __slots__ = 'logger', 'password', 'password_prompt', 'current_stdout'
 
-    def __init__(self, password='', password_prompt='password: '):
-        # type: (str, str)
+    def __init__(self, logger, password='', password_prompt='password:'):
+        # type: (Logger, str, str)
+        self.logger = logger
         self.password = password
         self.password_prompt = password_prompt
         self.current_stdout = ''
@@ -71,7 +73,7 @@ class PasswordHandler(object):
         # type: (str, object)
         sys.stdout.write(char)
         sys.stdout.flush()
-        self.current_stdout += char.lower()
+        self.current_stdout += char.strip().lower()
         if self.current_stdout.endswith(self.password_prompt):
             stdin.put(self.password + '\n')
 
@@ -237,7 +239,7 @@ class SFTPConnection(object):
             kwargs = {}
 
             if self.password:
-                kwargs['_out'] = PasswordHandler(self.password)
+                kwargs['_out'] = PasswordHandler(self.logger, self.password)
                 kwargs['_out_bufsize'] = 0
                 kwargs['_tty_in'] = True
                 kwargs['_unify_ttys'] = True
@@ -281,7 +283,11 @@ class SFTPConnection(object):
 # ################################################################################################################################
 
     def ping(self, _utcnow=datetime.utcnow):
-        return self.execute('ping-{}'.format(_utcnow().isoformat()), self.ping_command)
+        now = _utcnow().isoformat()
+        out = self.execute('ping-{}'.format(now), self.ping_command)
+        msg = 'Ping response (%s), is_ok:`%s`, details:`%s`, command:`%s`, stdout:`%s`, stderr:`%s`'
+        self.logger.info(msg, now, out.is_ok, out.details, out.command, out.stdout, out.stderr)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
