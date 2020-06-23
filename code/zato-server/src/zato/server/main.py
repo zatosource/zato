@@ -223,6 +223,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
         'pickup_config': pickup_config,
         'sio_config': sio_config,
         'sso_config': sso_config,
+        'base_dir': base_dir,
     })
 
     # New in 2.0 - Start monitoring as soon as possible
