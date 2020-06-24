@@ -396,8 +396,8 @@ class URLData(CyURLData, OAuthDataStore):
             self._oauth_server.verify_request(oauth_request)
         except Exception as e:
             if enforce_auth:
-                msg = 'Signature verification failed, wsgi_environ:`%r`, e:`%s`, e.message:`%s`'
-                logger.error(msg, wsgi_environ, format_exc(e), e.message)
+                msg = 'Signature verification failed, wsgi_environ:`%r`, e:`%s`, e.args[0]:`%s`'
+                logger.error(msg, wsgi_environ, format_exc(e), e.args[0])
                 raise Unauthorized(cid, 'Signature verification failed', 'OAuth')
             else:
                 return False
