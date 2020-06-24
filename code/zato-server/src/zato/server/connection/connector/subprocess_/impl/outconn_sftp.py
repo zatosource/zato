@@ -250,13 +250,25 @@ class SFTPConnection(object):
             try:
                 # Finally, execute all the commands
                 result = self.command(*args, **kwargs)
-            except Exception:
+            except Exception as e:
                 out.is_ok = False
                 out.details = format_exc()
+
+                if hasattr(e, 'stdout'):
+                    out.stdout = e.stdout
+
+                if hasattr(e, 'stderr'):
+                    out.stderr = e.stderr
+
                 if result:
                     out.command = result.cmd
-                    out.stdout = result.stdout
-                    out.stderr = result.stderr
+
+                    if not out.stdout:
+                        out.stdout = result.stdout
+
+                    if not out.stderr:
+                        out.stderr = result.stderr
+
             else:
                 out.is_ok = True
                 out.command = result.cmd
