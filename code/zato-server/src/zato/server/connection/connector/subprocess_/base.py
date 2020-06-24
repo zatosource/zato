@@ -446,7 +446,7 @@ class BaseConnectionContainer(object):
         try:
             self.connections[msg.id].ping()
         except Exception as e:
-            return Response(_http_503, str(e.message), 'text/plain')
+            return Response(_http_503, str(e.args[0]), 'text/plain')
         else:
             return Response()
 
@@ -463,7 +463,7 @@ class BaseConnectionContainer(object):
                 conn.connect()
             except Exception as e:
                 self.logger.warn(format_exc())
-                return Response(_http_503, str(e.message), 'text/plain')
+                return Response(_http_503, str(e.args[0]), 'text/plain')
             else:
                 return Response()
 

@@ -265,7 +265,7 @@ class Ping(_BaseService):
     """
     class SimpleIO(AdminSIO):
         input_required = 'id',
-        output_required = 'info',
+        output_optional = 'info',
         response_elem = None
 
     def handle(self):
