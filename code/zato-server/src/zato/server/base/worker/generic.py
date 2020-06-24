@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from bunch import Bunch
 
 # Zato
-from zato.common import LDAP
+from zato.common import GENERIC as COMMON_GENERIC,  LDAP
 from zato.common.broker_message import GENERIC
 from zato.common.util import as_bool, parse_simple_type
 from zato.server.base.worker.common import WorkerImpl
@@ -140,9 +140,26 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
+    def _generic_change_password_sftp(self, msg):
+        # type: (Bunch)
+        password = self.server.decrypt(msg.password)
+        self._on_outconn_sftp_change_password(msg.name, password)
+
+# ################################################################################################################################
+
     def on_broker_msg_GENERIC_CONNECTION_CREATE(self, msg, *args, **kwargs):
-        func = self._get_generic_impl_func(msg)
-        func(msg)
+        # type: (Bunch)
+
+        is_sftp = msg.type_ == COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP          # type: bool
+        is_password_change = msg.action == GENERIC.CONNECTION_CHANGE_PASSWORD.value # type: bool
+
+        # SFTP password changes are handled on their own
+        if is_sftp and is_password_change:
+            self._generic_change_password_sftp(msg)
+        else:
+
+            func = self._get_generic_impl_func(msg)
+            func(msg)
 
     on_broker_msg_GENERIC_CONNECTION_EDIT            = on_broker_msg_GENERIC_CONNECTION_CREATE
     on_broker_msg_GENERIC_CONNECTION_DELETE          = on_broker_msg_GENERIC_CONNECTION_CREATE

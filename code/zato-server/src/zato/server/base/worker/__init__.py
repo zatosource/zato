@@ -1023,6 +1023,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             outconn_im_telegram_map,
             outconn_ldap_map,
             outconn_mongodb_map,
+            outconn_sftp_map,
         ]
 
         for regular_item in regular_maps:
@@ -1062,8 +1063,19 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def _on_outconn_sftp_change_password(self, msg):
-        raise NotImplementedError('No password for SFTP connections can be set')
+    def _on_outconn_sftp_change_password(self, name, password):
+
+        connector_msg = self.worker_config.out_sftp[name]
+        connector_msg.pop('conn', None)
+
+        if 'config' in connector_msg:
+            connector_msg = connector_msg['config']
+
+        connector_msg = deepcopy(connector_msg)
+        connector_msg.old_name = connector_msg.name
+        connector_msg.password = password
+        connector_msg.secret = password
+        self._on_outconn_sftp_edit(connector_msg)
 
 # ################################################################################################################################
 
