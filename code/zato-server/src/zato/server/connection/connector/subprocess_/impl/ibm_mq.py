@@ -64,6 +64,8 @@ _rc_not_authorized = 2035  # pymqi.CMQC.MQRC_NOT_AUTHORIZED
 _rc_q_mgr_quiescing = 2161  # pymqi.CMQC.MQRC_Q_MGR_QUIESCING
 _rc_host_not_available = 2538  # pymqi.CMQC.MQRC_HOST_NOT_AVAILABLE
 
+# A list of reason codes upon which we will try to reconnect
+_rc_reconnect_list = [_rc_conn_broken, _rc_q_mgr_quiescing, _rc_host_not_available]
 
 # ################################################################################################################################
 
@@ -150,30 +152,28 @@ class IBMMQChannel(object):
                     sleep(sleep_on_error)
 
                 except WebSphereMQException as e:
+
                     sleep(sleep_on_error)
-                    # if connection broken or host is not available
-                    # or qmgr restart try to reconnect else write error to ibm_logger and stop channel
-                    while self.keep_running and e.completion_code == _cc_failed \
-                            and e.reason_code in [_rc_conn_broken, _rc_q_mgr_quiescing, _rc_host_not_available]:
+                    conn_info = self.conn.get_connection_info()
+
+                    # Try to reconnect if the reason code points to one that is of a transient nature
+                    while self.keep_running and e.completion_code == _cc_failed and e.reason_code in _rc_reconnect_list:
                         try:
-                            self.logger.warn(
-                                'Reconnect channel because caught MQRC error with reason code: `%s` ,comp_code: `%s`. channel: %s',
-                                e.reason_code, e.completion_code, self.conn.get_connection_info())
+                            self.logger.warn('Reconnecting channel `%s` due to MQRC `%s` and MQCC `%s`',
+                                conn_info, e.reason_code, e.completion_code)
                             self.conn.reconnect()
                             self.conn.ping()
                             break
                         except WebSphereMQException as exc:
                             e = exc
-                            sleep(60)
+                            sleep(sleep_on_error)
                         except Exception as e:
-                            self.logger.error('Channel stopped. Exception in the reconnect to channel %r %s %s', e.args,
-                                              type(e),
-                                              format_exc())
+                            self.logger.error('Stopping channel `%s` due to `%s`', conn_info, format_exc())
                             raise
                     else:
                         self.logger.error(
-                            'Channel stopped. Caught MQRC error with reason code: `%s` ,comp_code: `%s`:  %s',
-                            e.reason_code, e.completion_code, self.conn.get_connection_info())
+                            'Stopped channel `%s` due to MQRC `%s` and MQCC `%s`',
+                            conn_info, e.reason_code, e.completion_code)
                         raise
 
                 except Exception as e:
