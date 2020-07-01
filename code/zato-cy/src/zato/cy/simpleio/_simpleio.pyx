@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import types
+from builtins import bool as stdlib_bool
 from copy import deepcopy
 from csv import DictWriter, reader as csv_reader
 from datetime import date as stdlib_date, datetime as stdlib_datetime
@@ -865,6 +866,9 @@ cdef class SIOList(object):
     def __iter__(self):
         return iter(self.elems)
 
+    def __len__(self):
+        return len(self.elems)
+
     def set_elems(self, elems):
         self.elems[:] = elems
         for elem in self.elems:
@@ -941,6 +945,12 @@ cdef class SIODefinition(object):
 
         # XML configuration for the definition
         public XMLConfig _xml_config
+
+        # To indicate whether I/O particular definitions exist or not
+        public bint has_input_required
+        public bint has_input_optional
+        public bint has_output_required
+        public bint has_output_optional
 
         # Name of the service this definition is for
         unicode _service_name
@@ -1209,6 +1219,12 @@ cdef class CySimpleIO(object):
 
         self.definition._response_elem = response_elem
 
+        self.definition.has_input_required = stdlib_bool(len(self.definition._input_required))
+        self.definition.has_input_optional = stdlib_bool(len(self.definition._input_optional))
+
+        self.definition.has_output_required = stdlib_bool(len(self.definition._output_required))
+        self.definition.has_output_optional = stdlib_bool(len(self.definition._output_optional))
+
         # Set up CSV configuration
         self._set_up_csv_config()
 
@@ -1369,8 +1385,6 @@ cdef class CySimpleIO(object):
                     self.definition.sio_default.output_value
 
                 elem.set_default_value(sio_default_value)
-
-                print(222, elem)
 
                 if is_required:
                     _required.append(elem)
@@ -1619,7 +1633,7 @@ cdef class CySimpleIO(object):
     cdef unicode _serialise_csv(self, object data):
 
         # No reason to continue if no SimpleIO output is declared
-        if not (self.definition._output_required or self.definition._output_optional):
+        if not (self.definition.has_output_required or self.definition.has_output_optional):
             return ''
 
         gen = self._yield_data_dicts(data)
@@ -1647,7 +1661,7 @@ cdef class CySimpleIO(object):
     cdef object _serialise_to_dicts(self, object data, unicode data_format):
 
         # No reason to continue if no SimpleIO output is declared
-        if not (self.definition._output_required or self.definition._output_optional):
+        if not (self.definition.has_output_required or self.definition.has_output_optional):
             return ''
 
         # Needed to find out if we are producing a list or a single element
