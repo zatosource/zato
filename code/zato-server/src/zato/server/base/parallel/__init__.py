@@ -80,6 +80,7 @@ if 0:
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
     from zato.server.service.store import ServiceStore
     from zato.simpleio import SIOServerConfig
+    from zato.server.startup_callable import StartupCallableTool
     from zato.sso.api import SSOAPI
 
     # For pyflakes
@@ -88,6 +89,7 @@ if 0:
     ServiceStore = ServiceStore
     SIOServerConfig = SIOServerConfig
     SSOAPI = SSOAPI
+    StartupCallableTool = StartupCallableTool
     SubprocessIPC = SubprocessIPC
 
 # ################################################################################################################################
@@ -177,7 +179,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.is_sso_enabled = False
         self.audit_pii = audit_pii
         self.has_fg = False
-        self.startup_callable_tool = None
+        self.startup_callable_tool = None # type: StartupCallableTool
         self.default_internal_pubsub_endpoint_id = None
         self.rate_limiting = None # type: RateLimiting
         self.jwt_secret = None # type: bytes
@@ -582,6 +584,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Rate limiting for SSO
         self.set_up_sso_rate_limiting()
 
+        # Some parts of the worker store's configuration are required during the deployment of services
+        # which is why we are doing it here, before worker_store.init() is called.
+        self.worker_store.early_init()
+
         # Deploys services
         is_first, locally_deployed = self._after_init_common(server)
 
@@ -661,7 +667,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             logger.info('First worker of `%s` is %s', self.name, self.pid)
 
             self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_FIRST, kwargs={
-                'parallel_server': self,
+                'server': self,
             })
 
             # Clean up any old WSX connections possibly registered for this server
@@ -683,7 +689,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         else:
             self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_OTHER, kwargs={
-                'parallel_server': self,
+                'server': self,
             })
 
             if self.has_posix_ipc:
@@ -696,7 +702,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         spawn_greenlet(self.ipc_api.run)
 
         self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.AFTER_STARTED, kwargs={
-            'parallel_server': self,
+            'server': self,
         })
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)

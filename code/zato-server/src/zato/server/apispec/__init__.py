@@ -49,7 +49,9 @@ tag_html_internal = """
 .. raw:: html
 
     <span class="zato-tag-name-highlight">{}</span>
-""".strip()
+"""
+
+not_public = 'INFORMATION IN THIS SECTION IS NOT PUBLIC'
 
 # ################################################################################################################################
 
@@ -268,8 +270,11 @@ class ServiceInfo(object):
 
 # ################################################################################################################################
 
-    def _parse_split_segment(self, tag, split, prefix_with_tag):
-        # type: (str, list, bool) -> _DocstringSegment
+    def _parse_split_segment(self, tag, split, is_tag_internal, prefix_with_tag):
+        # type: (str, list, bool, bool) -> _DocstringSegment
+
+        if is_tag_internal:
+            split.insert(0, not_public)
 
         # For implicit tags (e.g. public), the summary will be under index 0,
         # but for tags named explicitly, index 0 may be an empty element
@@ -322,13 +327,12 @@ class ServiceInfo(object):
         # that is internal to users generating the specification.
         tag_html = tag
 
-        for name in tag_internal:
-            if name in tag:
-                tag_html = tag_html_internal.format(tag)
-                break
+        if is_tag_internal:
+            tag_html = tag_html_internal.format(tag)
+        else:
+            tag_html = tag
 
         if prefix_with_tag:
-            summary = '\n{}\n\n{}'.format(tag_html, summary)
             description = '\n\n{}\n{}'.format(tag_html, description)
             full_docstring = '\n{}\n\n{}'.format(tag_html, full_docstring)
 
@@ -337,6 +341,7 @@ class ServiceInfo(object):
         out.summary = summary
         out.description = description
         out.full = full_docstring
+
         return out
 
 # ################################################################################################################################
@@ -364,7 +369,7 @@ class ServiceInfo(object):
             if line_stripped.startswith(tag_indicator):
                 if not in_first_line:
                     yield current_tag, current_lines
-                    current_tag = line.strip()#line_stripped.replace(tag_indicator, '', 1)
+                    current_tag = line_stripped
                     current_lines[:] = []
             else:
                 in_first_line = False
@@ -401,8 +406,19 @@ class ServiceInfo(object):
 
         for tag, tag_lines in self._get_next_split_segment(current_lines):
 
+            # All non-public tags are shown explicitly
             prefix_with_tag = tag != 'public'
-            segment = self._parse_split_segment(tag, tag_lines, prefix_with_tag)
+
+            # A flag indicating whether we are processing a public or an internal tag,
+            # e.g. public vs. @internal or @confidential.
+            for name in tag_internal:
+                if name in tag:
+                    is_tag_internal = True
+                    break
+            else:
+                is_tag_internal = False
+
+            segment = self._parse_split_segment(tag, tag_lines, is_tag_internal, prefix_with_tag)
 
             if segment.tag in self.docstring.tags:
                 out.append(segment)
