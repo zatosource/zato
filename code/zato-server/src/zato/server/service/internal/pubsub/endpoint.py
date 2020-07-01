@@ -23,7 +23,7 @@ from zato.common.odb.query.pubsub.endpoint import pubsub_endpoint_summary, pubsu
 from zato.common.odb.query.pubsub.subscription import pubsub_subscription_list_by_endpoint_id
 from zato.common.pubsub import msg_pub_attrs
 from zato.common.util.pubsub import get_topic_sub_keys_from_sub_keys, make_short_msg_copy_from_msg
-from zato.common.util.simpleio import drop_sio_elems
+from zato.common.simpleio_ import drop_sio_elems
 from zato.common.util.time_ import datetime_from_ms
 from zato.server.service import AsIs, Bool, Int, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
