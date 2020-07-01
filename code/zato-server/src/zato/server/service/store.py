@@ -579,6 +579,18 @@ class ServiceStore(object):
         """
         cache_file_path = os.path.join(base_dir, 'config', 'repo', 'internal-cache.dat')
 
+        # It is possible that the cache file exists but it is of size zero.
+        # This will happen if the process of writing data out to the file
+        # was interrupted for any reason the last time the server was starting up.
+        # In that case, we need to delete the file altogether and let it recreate.
+
+        if os.path.exists(cache_file_path):
+            stat = os.stat(cache_file_path)
+
+            if stat.st_size == 0:
+                logger.info('Deleting empty `%s` file', cache_file_path)
+                os.remove(cache_file_path)
+
         sql_services = {}
         for item in self.odb.get_sql_internal_service_list(self.server.cluster_id):
             sql_services[item.impl_name] = {

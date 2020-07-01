@@ -11,6 +11,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from importlib import import_module
 from logging import getLogger
+from traceback import format_exc
+
+# ################################################################################################################################
+
+if 0:
+    from bunch import Bunch
+
+    Bunch = Bunch
 
 # ################################################################################################################################
 
@@ -22,9 +30,10 @@ class PhaseCtx(object):
     """ Describes a particular phase of a server startup process.
     """
     def __init__(self, phase, args, kwargs):
+        # type: (str, list, dict)
         self.phase = phase
-        self.args = args or []
-        self.kwargs = kwargs or {}
+        self.args = args or [] # type: list
+        self.kwargs = kwargs or {} # type: dict
 
 # ################################################################################################################################
 
@@ -32,8 +41,10 @@ class StartupCallableTool(object):
     """ Handles logic related to server startup callables.
     """
     def __init__(self, server_config):
-        self._callable_names = server_config.misc.startup_callable
-        self._callable_names = self._callable_names if isinstance(self._callable_names, list) else [self._callable_names]
+        # type: (Bunch)
+        self._callable_names = server_config.misc.startup_callable # type: list
+        self._callable_names = self._callable_names if isinstance(self._callable_names, list) else \
+            [self._callable_names] # type: list
         self.callable_list = []
 
         self.init()
@@ -54,15 +65,20 @@ class StartupCallableTool(object):
                     logger.warn('Could not import startup callable `%s`, e:`%s`', item, e)
 
     def invoke(self, phase, args=None, kwargs=None):
+        # type: (PhaseCtx, list, dict)
         ctx = PhaseCtx(phase, args, kwargs)
-        for callable in self.callable_list:
-            callable(ctx)
+        for callable_object in self.callable_list:
+            try:
+                callable_object(ctx)
+            except Exception:
+                logger.warn('Could not invoke `%s`, e:`%s`', callable_object, format_exc())
 
 # ################################################################################################################################
 
 def default_callable(ctx):
     """ Default startup callable added for demonstration purposes.
     """
+    # type: (PhaseCtx)
     logger.info('Default startup callable entering phase `%s`', ctx.phase)
 
 # ################################################################################################################################

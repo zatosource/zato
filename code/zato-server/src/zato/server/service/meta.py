@@ -181,6 +181,8 @@ def update_attrs(cls, name, attrs):
     attrs.get_list_docs = getattr(mod, 'get_list_docs', None)
     attrs.delete_require_instance = getattr(mod, 'delete_require_instance', True)
     attrs.skip_create_integrity_error = getattr(mod, 'skip_create_integrity_error', False)
+    attrs.skip_if_exists = getattr(mod, 'skip_if_exists', False)
+    attrs.skip_if_missing = getattr(mod, 'skip_if_missing', False)
     attrs._meta_session = None
 
     attrs.is_create = False
@@ -351,9 +353,19 @@ class CreateEditMeta(AdminServiceMeta):
 
                         existing_one = existing_one.first()
 
-                        if existing_one and not attrs.is_edit:
-                            raise Exception('{} `{}` already exists in this cluster'.format(
-                                attrs.label[0].upper() + attrs.label[1:], input.name))
+                        if existing_one:
+                            if attrs.is_create:
+                                if attrs.skip_if_exists:
+                                    pass # Ignore it explicitly
+                                else:
+                                    raise Exception('{} `{}` already exists in this cluster'.format(
+                                        attrs.label[0].upper() + attrs.label[1:], input.name))
+                            else:
+                                if attrs.skip_if_missing:
+                                    pass # Ignore it explicitly
+                                else:
+                                    raise Exception('No such {} `{}` in this cluster'.format(
+                                        attrs.label[0].upper() + attrs.label[1:], input.name))
 
                     if attrs.is_edit:
                         instance = session.query(attrs.model).filter_by(id=input.id).one()
