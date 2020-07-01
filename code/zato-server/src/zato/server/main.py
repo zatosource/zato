@@ -59,7 +59,7 @@ from zato.common.repo import RepoManager
 from zato.common.util import absjoin, asbool, clear_locks, get_config, get_kvdb_config_for_log, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
 from zato.common.util.cli import read_stdin_data
-from zato.common.util.simpleio import get_sio_server_config
+from zato.common.simpleio_ import get_sio_server_config
 from zato.server.base.parallel import ParallelServer
 from zato.server.ext import zunicorn
 from zato.server.ext.zunicorn.app.base import Application
