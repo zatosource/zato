@@ -51,6 +51,9 @@ from zato.simpleio import ServiceInput
 
 if 0:
 
+    # stdlib
+    from logging import Logger
+
     # Arrow
     from arrow import Arrow
 
@@ -77,6 +80,7 @@ if 0:
     EMailAPI = EMailAPI
     FTPStore = FTPStore
     KombuAMQPMessage = KombuAMQPMessage
+    Logger = Logger
     PoolStore = PoolStore
     SearchAPI = SearchAPI
     SMSAPI = SMSAPI
@@ -588,7 +592,8 @@ class Response(object):
 
     def __init__(self, logger, result=ZATO_OK, result_details='', payload='',
             _content_type='text/plain', content_encoding=None, data_format=None, headers=None,
-            status_code=OK, status_message='OK', simple_io_config={}):
+            status_code=OK, status_message='OK', simple_io_config=None):
+        # type: (Logger, str, str, str, str, str, str, dict, int, str, dict)
         self.logger = logger
         self.result = ZATO_OK
         self.result_details = result_details # type: str
@@ -602,7 +607,7 @@ class Response(object):
         self.headers = headers or Bunch()
         self.status_code = status_code # type: int
 
-        self.simple_io_config = simple_io_config # type: dict
+        self.simple_io_config = simple_io_config
         self.outgoing_declared = False
 
 # ################################################################################################################################
@@ -664,6 +669,8 @@ class Response(object):
         skip_empty_keys = getattr(io, 'skip_empty_keys', False)
         force_empty_keys = getattr(io, 'force_empty_keys', [])
         allow_empty_required = getattr(io, 'allow_empty_required', False)
+
+        self.logger.warn('ZZZ %s', io)
 
         if required_list or optional_list:
             self._payload = SimpleIOPayload(cid, data_format, required_list, optional_list, self.simple_io_config,

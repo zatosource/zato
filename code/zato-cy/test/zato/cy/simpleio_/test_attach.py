@@ -34,5 +34,11 @@ class AttachSIOTestCase(BaseTestCase):
         self.assertEquals(MyService._sio.definition._output_required.get_elem_names(), ['qqq', 'www'])
         self.assertEquals(MyService._sio.definition._output_optional.get_elem_names(), ['eee', 'fff'])
 
+        self.assertTrue(MyService._sio.definition.has_input_required)
+        self.assertTrue(MyService._sio.definition.has_input_optional)
+
+        self.assertTrue(MyService._sio.definition.has_output_required)
+        self.assertTrue(MyService._sio.definition.has_output_optional)
+
 # ################################################################################################################################
 # ################################################################################################################################
