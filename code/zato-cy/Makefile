@@ -23,6 +23,9 @@ simpleio:
 rate-limit-tests:
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/rate_limit/*.py -s
 
+reqresp-tests:
+	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/reqresp/test_*.py -s
+
 simpleio-tests:
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/simpleio_/test_*.py -s
 

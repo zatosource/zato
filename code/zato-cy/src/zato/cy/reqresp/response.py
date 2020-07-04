@@ -55,19 +55,20 @@ class Response(object):
     """ A response from a service's invocation.
     """
     # Public attributes
-    result           = cy.declare(cy.unicode, visibility='public') # type: past_unicode
-    result_details   = cy.declare(cy.unicode, visibility='public') # type: past_unicode
+    result           = cy.declare(cy.unicode, visibility='public')  # type: past_unicode
+    result_details   = cy.declare(cy.unicode, visibility='public')  # type: past_unicode
     _payload          = cy.declare(cy.unicode, visibility='public') # type: past_unicode
-    content_encoding = cy.declare(cy.unicode, visibility='public') # type: past_unicode
-    cid              = cy.declare(cy.unicode, visibility='public') # type: past_unicode
-    data_format      = cy.declare(cy.unicode, visibility='public') # type: past_unicode
-    headers          = cy.declare(cy.dict, visibility='public')    # type: dict
-    status_code      = cy.declare(cy.int, visibility='public')     # type: int
-    status_message   = cy.declare(cy.unicode, visibility='public') # type: past_unicode
+    content_encoding = cy.declare(cy.unicode, visibility='public')  # type: past_unicode
+    cid              = cy.declare(cy.unicode, visibility='public')  # type: past_unicode
+    data_format      = cy.declare(cy.unicode, visibility='public')  # type: past_unicode
+    headers          = cy.declare(cy.dict, visibility='public')     # type: dict
+    status_code      = cy.declare(cy.int, visibility='public')      # type: int
+    status_message   = cy.declare(cy.unicode, visibility='public')  # type: past_unicode
     sio_config:SIODefinition = None
 
     # Private-use attributes (still declared as public)
-    _content_type     = cy.declare(cy.unicode, visibility='public') # type: past_unicode
+    _content_type        = cy.declare(cy.unicode, visibility='public') # type: past_unicode
+    content_type_changed = cy.declare(cy.bint, visibility='public')    # type: bool
 
     def __cinit__(self):
         self.result = ZATO_OK
@@ -102,7 +103,7 @@ class Response(object):
         self._content_type = value
         self.content_type_changed = True
 
-    content_type = property(_get_content_type, _set_content_type)
+    content_type = property(_get_content_type, _set_content_type) # type: past_unicode
 
 # ################################################################################################################################
 
@@ -142,7 +143,7 @@ class Response(object):
                 else:
                     raise Exception('Cannot serialise value without SimpleIO ouput declaration ({})'.format(value))
 
-    payload = property(_get_payload, _set_payload)
+    payload = property(_get_payload, _set_payload) # type: object
 
 # ################################################################################################################################
 # ################################################################################################################################
