@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+#cython: auto_pickle=False
+
 """
 Copyright (C) 2020, Zato Source s.r.o. https://zato.io
 
@@ -41,18 +43,6 @@ from zato.bunch import Bunch, bunchify
 
 # Python 2/3 compatibility
 from past.builtins import basestring, str as past_str, unicode as past_unicode
-
-# ################################################################################################################################
-
-# For Cython
-bint = cy.bint
-'''
-cpdef   = cy.ccall
-cclass  = cy.cclass
-cdef    = cy.cfunc
-declare = cy.declare
-returns = cy.returns
-'''
 
 # ################################################################################################################################
 
@@ -140,8 +130,8 @@ class ServiceInput(Bunch):
 @cy.cclass
 class SIODefault(object):
 
-    input_value:object
-    output_value:object
+    input_value = cy.declare(cy.object, visibility='public') # type: object
+    output_value = cy.declare(cy.object, visibility='public') # type: object
 
     def __init__(self, input_value, output_value, default_value):
 
@@ -159,13 +149,13 @@ class SIODefault(object):
 @cy.cclass
 class SIOSkipEmpty(object):
 
-    empty_output_value:object
-    skip_input_set:set
-    skip_output_set:set
-    force_empty_input_set:set
-    force_empty_output_set:set
-    skip_all_empty_input:bool
-    skip_all_empty_output:bool
+    empty_output_value     = cy.declare(cy.object, visibility='public') # type: object
+    skip_input_set         = cy.declare(cy.set, visibility='public')    # type: set
+    skip_output_set        = cy.declare(cy.set, visibility='public')    # type: set
+    force_empty_input_set  = cy.declare(cy.set, visibility='public')    # type: set
+    force_empty_output_set = cy.declare(cy.set, visibility='public')    # type: set
+    skip_all_empty_input   = cy.declare(cy.bint, visibility='public')   # type: bool
+    skip_all_empty_output  = cy.declare(cy.bint, visibility='public')   # type: bool
 
     def __init__(self, input_def, output_def, force_empty_input_set, force_empty_output_set, empty_output_value):
 
@@ -245,16 +235,19 @@ class ElemType:
 class Elem(object):
     """ An individual input or output element. May be a ForceType instance or not.
     """
-    _type:ElemType
-    _name:unicode
-    _xpath:object
+    _type  = cy.declare(cy.int, visibility='public')     # type: int
+    _name  = cy.declare(cy.unicode, visibility='public') # type: past_unicode
+    _xpath = cy.declare(cy.object, visibility='public')  # type: object
 
-    user_default_value:object
-    default_value:object
-    is_required:bool
+    user_default_value = cy.declare(cy.object, visibility='public') # type: object
+    default_value      = cy.declare(cy.object, visibility='public') # type: object
+    is_required        = cy.declare(cy.bint, visibility='public')   # type: bool
 
-    parse_from:dict # From external formats to Python objects
-    parse_to:dict   # From Python objects to external formats
+    # From external formats to Python objects
+    parse_from = cy.declare(cy.dict, visibility='public') # type: dict
+
+    # From Python objects to external formats
+    parse_to   = cy.declare(cy.dict, visibility='public') # type: dict
 
 # ################################################################################################################################
 
@@ -315,11 +308,11 @@ class Elem(object):
 
     @cy.cfunc
     @cy.returns(unicode)
-    def _get_unicode_name(self, name:object):
+    def _get_unicode_name(self, name:object) -> past_unicode:
         if name:
             if not isinstance(name, basestring):
                 logger.warn('Name `%s` should be a str/bytes/unicode object rather than `%s`', name, type(name))
-            if not isinstance(name, unicode):
+            if not isinstance(name, past_unicode):
                 name = name.decode('utf8')
 
         return name
@@ -544,9 +537,9 @@ class Decimal(Elem):
 @cy.cclass
 class Dict(Elem):
 
-    _keys_required:set
-    _keys_optional:set
-    skip_empty:SIOSkipEmpty
+    _keys_required = cy.declare(cy.set, visibility='public') # type: set
+    _keys_optional = cy.declare(cy.set, visibility='public') # type: set
+    skip_empty = cy.declare(SIOSkipEmpty, visibility='public') # type: SIOSkipEmpty
 
     def __cinit__(self):
         self._type = ElemType.dict_
@@ -717,8 +710,8 @@ class List(Elem):
 @cy.cclass
 class Text(Elem):
 
-    encoding:str
-    is_secret:bool
+    encoding = cy.declare(cy.unicode, visibility='public') # type: past_unicode
+    is_secret = cy.declare(cy.bint, visibility='public') # type: bool
 
     def __cinit__(self):
         self._type = ElemType.text
@@ -810,9 +803,9 @@ class ConfigItem(object):
     """ An individual instance of server-wide SimpleIO configuration. Each subclass covers
     a particular set of exact values, prefixes or suffixes.
     """
-    exact:set
-    prefixes:set
-    suffixes:set
+    exact    = cy.declare(cy.set, visibility='public') # type: set
+    prefixes = cy.declare(cy.set, visibility='public') # type: set
+    suffixes = cy.declare(cy.set, visibility='public') # type: set
 
     def __str__(self):
         return '<{} at {} e:{}, p:{}, s:{}>'.format(self.__class__.__name__, hex(id(self)),
@@ -846,56 +839,57 @@ class SIOServerConfig(object):
     """ Contains global SIO configuration. Each service's _sio attribute
     will refer to this object so as to have only one place where all the global configuration is kept.
     """
-    bool_config:BoolConfig
-    int_config:IntConfig
-    secret_config:SecretConfig
+    bool_config = cy.declare(BoolConfig, visibility='public')     # type: BoolConfig
+    int_config = cy.declare(IntConfig, visibility='public')       # type: IntConfig
+    secret_config = cy.declare(SecretConfig, visibility='public') # type: SecretConfig
 
     # Names in SimpleIO declarations that can be overridden by users
-    input_required_name:unicode
-    input_optional_name:unicode
-    output_required_name:unicode
-    output_optional_name:unicode
-    default_value:unicode
-    default_input_value:unicode
-    default_output_value:unicode
-    response_elem:unicode
 
-    prefix_as_is:unicode     # a
-    prefix_bool:unicode      # b
-    prefix_csv:unicode       # c
-    prefix_date:unicode      # dt
-    prefix_date_time:unicode # dtm
-    prefix_dict:unicode      # d
-    prefix_dict_list:unicode # dl
-    prefix_float:unicode     # f
-    prefix_int:unicode       # i
-    prefix_list:unicode      # l
-    prefix_text:unicode      # t
-    prefix_uuid:unicode      # u
+    input_required_name = cy.declare(cy.str, visibility='public')  # type: past_unicode
+    input_optional_name = cy.declare(cy.str, visibility='public')  # type: past_unicode
+    output_required_name = cy.declare(cy.str, visibility='public') # type: past_unicode
+    output_optional_name = cy.declare(cy.str, visibility='public') # type: past_unicode
+    default_value = cy.declare(cy.str, visibility='public')        # type: past_unicode
+    default_input_value = cy.declare(cy.str, visibility='public')  # type: past_unicode
+    default_output_value = cy.declare(cy.str, visibility='public') # type: past_unicode
+    response_elem = cy.declare(cy.str, visibility='public')        # type: past_unicode
+
+    prefix_as_is = cy.declare(cy.str, visibility='public')     # type: past_unicode # a
+    prefix_bool = cy.declare(cy.str, visibility='public')      # type: past_unicode # b
+    prefix_csv = cy.declare(cy.str, visibility='public')       # type: past_unicode # c
+    prefix_date = cy.declare(cy.str, visibility='public')      # type: past_unicode # dt
+    prefix_date_time = cy.declare(cy.str, visibility='public') # type: past_unicode # dtm
+    prefix_dict = cy.declare(cy.str, visibility='public')      # type: past_unicode # d
+    prefix_dict_list = cy.declare(cy.str, visibility='public') # type: past_unicode # dl
+    prefix_float = cy.declare(cy.str, visibility='public')     # type: past_unicode # f
+    prefix_int = cy.declare(cy.str, visibility='public')       # type: past_unicode # i
+    prefix_list = cy.declare(cy.str, visibility='public')      # type: past_unicode # l
+    prefix_text = cy.declare(cy.str, visibility='public')      # type: past_unicode # t
+    prefix_uuid = cy.declare(cy.str, visibility='public')      # type: past_unicode # u
 
     # Python 2/3 compatibility
-    bytes_to_str_encoding:unicode
+    bytes_to_str_encoding = cy.declare(cy.str, visibility='public') # type: past_unicode
 
     # Global variables, can be always overridden on a per-declaration basis
-    skip_empty_keys:object
-    skip_empty_request_keys:object
-    skip_empty_response_keys:object
+    skip_empty_keys = cy.declare(cy.object, visibility='public')          # type: object
+    skip_empty_request_keys = cy.declare(cy.object, visibility='public')  # type: object
+    skip_empty_response_keys = cy.declare(cy.object, visibility='public') # type: object
 
     @cy.cfunc
-    @cy.returns(bint)
-    def is_int(self, name):
+    @cy.returns(cy.bint)
+    def is_int(self, name) -> bool:
         """ Returns True if input name should be treated like ElemType.int.
         """
 
     @cy.cfunc
-    @cy.returns(bint)
-    def is_bool(self, name):
+    @cy.returns(cy.bint)
+    def is_bool(self, name) -> bool:
         """ Returns True if input name should be treated like ElemType.bool.
         """
 
     @cy.cfunc
-    @cy.returns(bint)
-    def is_secret(self, name):
+    @cy.returns(cy.bint)
+    def is_secret(self, name) -> bool:
         """ Returns True if input name should be treated like ElemType.secret.
         """
 
@@ -905,8 +899,8 @@ class SIOServerConfig(object):
 class SIOList(object):
     """ Represents one of input/output required/optional.
     """
-    elems:list
-    elems_by_name:dict
+    elems         = cy.declare(cy.list, visibility='public') # type: list
+    elems_by_name = cy.declare(cy.dict, visibility='public') # type: dict
 
     def __cinit__(self):
         self.elems = []
@@ -936,10 +930,10 @@ class SIOList(object):
 class CSVConfig(object):
     """ Represents CSV configuration that a particular SimpleIO definition uses.
     """
-    dialect:unicode
-    common_config:dict
-    writer_config:dict
-    should_write_header:bool
+    dialect             = cy.declare(cy.unicode, visibility='public') # type: past_unicode
+    common_config       = cy.declare(cy.dict, visibility='public')    # type: dict
+    writer_config       = cy.declare(cy.dict, visibility='public')    # type: dict
+    should_write_header = cy.declare(cy.bint, visibility='public')    # type: bool
 
     def __cinit__(self):
         self.dialect = 'excel'
@@ -953,10 +947,10 @@ class CSVConfig(object):
 class XMLConfig(object):
     """ Represents XML configuration that a particular SimpleIO definition uses.
     """
-    namespace:object
-    encoding:unicode
-    declaration:bool
-    pretty_print:bool
+    namespace    = cy.declare(cy.object, visibility='public')  # type: object
+    encoding     = cy.declare(cy.unicode, visibility='public') # type: past_unicode
+    declaration  = cy.declare(cy.bint, visibility='public')    # type: bool
+    pretty_print = cy.declare(cy.bint, visibility='public')    # type: bool
 
     def __cinit__(self):
         self.namespace = InternalNotGiven
@@ -971,40 +965,40 @@ class SIODefinition(object):
     """ A single SimpleIO definition attached to a service.
     """
     # A list of Elem items required on input
-    _input_required:SIOList
+    _input_required = cy.declare(SIOList, visibility='public') # type: SIOList
 
     # A list of Elem items optional on input
-    _input_optional:SIOList
+    _input_optional = cy.declare(SIOList, visibility='public') # type: SIOList
 
     # A list of Elem items required on output
-    _output_required:SIOList
+    _output_required = cy.declare(SIOList, visibility='public') # type: _output_required
 
     # A list of Elem items optional on output
-    _output_optional:SIOList
+    _output_optional = cy.declare(SIOList, visibility='public') # type: SIOList
 
     # Default values to use for optional elements, unless overridden on a per-element basis
-    sio_default:SIODefault
+    sio_default = cy.declare(SIODefault, visibility='public') # type: SIODefault
 
     # Which empty values should not be produced from input / sent on output, unless overridden by each element
-    skip_empty:SIOSkipEmpty
+    skip_empty = cy.declare(SIOSkipEmpty, visibility='public') # type: SIOSkipEmpty
 
     # CSV configuration for the definition
-    _csv_config:CSVConfig
+    _csv_config = cy.declare(CSVConfig, visibility='public') # type: CSVConfig
 
     # XML configuration for the definition
-    _xml_config:XMLConfig
+    _xml_config = cy.declare(XMLConfig, visibility='public') # type: XMLConfig
 
     # To indicate whether I/O particular definitions exist or not
-    has_input_required:bool
-    has_input_optional:bool
-    has_output_required:bool
-    has_output_optional:bool
+    has_input_required = cy.declare(cy.bint, visibility='public') # type: bool
+    has_input_optional = cy.declare(cy.bint, visibility='public') # type: bool
+    has_output_required = cy.declare(cy.bint, visibility='public') # type: bool
+    has_output_optional = cy.declare(cy.bint, visibility='public') # type: bool
 
     # Name of the service this definition is for
-    _service_name:unicode
+    _service_name = cy.declare(cy.unicode, visibility='public') # type: past_unicode
 
     # Name of the response element, or None if there should be no top-level one
-    _response_elem:object
+    _response_elem = cy.declare(cy.object, visibility='public') # type: object
 
     def __cinit__(self):
         self._input_required = SIOList()
@@ -1020,7 +1014,7 @@ class SIODefinition(object):
 
     @cy.cfunc
     @cy.returns(unicode)
-    def get_elems_pretty(self, required_list:SIOList, optional_list:SIOList):
+    def get_elems_pretty(self, required_list:SIOList, optional_list:SIOList) -> past_unicode:
         out:unicode = ''
 
         if required_list.elems:
@@ -1036,12 +1030,12 @@ class SIODefinition(object):
 
     @cy.cfunc
     @cy.returns(unicode)
-    def get_input_pretty(self):
+    def get_input_pretty(self) -> past_unicode:
         return self.get_elems_pretty(self._input_required, self._input_optional)
 
     @cy.cfunc
     @cy.returns(unicode)
-    def get_output_pretty(self):
+    def get_output_pretty(self) -> past_unicode:
         return self.get_elems_pretty(self._output_required, self._output_optional)
 
     @cy.cfunc
@@ -1070,16 +1064,16 @@ class CySimpleIO(object):
     based on the service's SimpleIO attribute. The _sio one will be an instance of this Cython class.
     """
     # Server-wide configuration
-    server_config:SIOServerConfig
+    server_config = cy.declare(SIOServerConfig, visibility='public') # type: SIOServerConfig
 
     # Current service's configuration, after parsing
-    definition:SIODefinition
+    definition = cy.declare(SIODefinition, visibility='public') # type: SIODefinition
 
     # User-provided SimpleIO declaration, before parsing. This is parsed into self.definition.
-    user_declaration:object
+    user_declaration = cy.declare(object, visibility='public') # type: object
 
     # Kept for backward compatibility with 3.0
-    has_bool_force_empty_keys:bool
+    has_bool_force_empty_keys = cy.declare(cy.bint, visibility='public') # type: bool
 
 # ################################################################################################################################
 
@@ -1164,7 +1158,7 @@ class CySimpleIO(object):
         csv_common_config:dict  = {}
         csv_writer_config:dict  = {}
         csv_sio_class:object  = getattr(self.user_declaration, 'CSV', InternalNotGiven)
-        has_csv_sio_class:bint  = csv_sio_class is not InternalNotGiven
+        has_csv_sio_class:cy.bint  = csv_sio_class is not InternalNotGiven
         should_write_header:object
         cy_attr:object
         stdlib_attr:object
@@ -1298,7 +1292,7 @@ class CySimpleIO(object):
 
     @cy.cfunc
     @cy.returns(Elem)
-    def _convert_to_elem_instance(self, elem_name:unicode, is_required:bool):
+    def _convert_to_elem_instance(self, elem_name:unicode, is_required:bool) -> Elem:
 
         # The element we return, at this point we do not know what its exact subtype will be
         _elem:Elem
@@ -1521,7 +1515,7 @@ class CySimpleIO(object):
     @cy.cfunc
     @cy.returns(cy.bint)
     @cy.exceptval(-1)
-    def _should_skip_on_input(self, definition:SIODefinition, sio_item:Elem, input_value:object):
+    def _should_skip_on_input(self, definition:SIODefinition, sio_item:Elem, input_value:object) -> bool:
         should_skip:bool = False
 
         # Should we skip this value ..
@@ -1538,7 +1532,7 @@ class CySimpleIO(object):
 
     @cy.cfunc
     @cy.returns(object)
-    def _parse_input_elem(self, elem:object, data_format:unicode, is_csv:bool=False):
+    def _parse_input_elem(self, elem:object, data_format:unicode, is_csv:bool=False) -> object:
 
         is_dict:bool = isinstance(elem, dict)
         is_xml:bool = isinstance(elem, EtreeElementClass)
@@ -1619,7 +1613,7 @@ class CySimpleIO(object):
 
     @cy.cfunc
     @cy.returns(object)
-    def _parse_input_list(self, data:object, data_format:unicode, is_csv:bool):
+    def _parse_input_list(self, data:object, data_format:unicode, is_csv:bool) -> object:
         out = []
         for elem in data:
             converted = self._parse_input_elem(elem, data_format, is_csv)
@@ -1630,7 +1624,7 @@ class CySimpleIO(object):
 
     @cy.ccall
     @cy.returns(object)
-    def parse_input(self, data:object, data_format:unicode):
+    def parse_input(self, data:object, data_format:unicode) -> object:
 
         is_csv:bool = data_format == DATA_FORMAT_CSV and isinstance(data, basestring)
 
@@ -1649,7 +1643,7 @@ class CySimpleIO(object):
 
     @cy.cfunc
     @cy.returns(unicode)
-    def _serialise_post(self, data:object):
+    def _serialise_post(self, data:object) -> past_unicode:
         print()
         print(444, data)
         print()
@@ -1709,7 +1703,7 @@ class CySimpleIO(object):
 
     @cy.cfunc
     @cy.returns(unicode)
-    def _serialise_csv(self, data:object):
+    def _serialise_csv(self, data:object) -> past_unicode:
 
         # No reason to continue if no SimpleIO output is declared
         if not (self.definition.has_output_required or self.definition.has_output_optional):
@@ -1739,7 +1733,7 @@ class CySimpleIO(object):
 
     @cy.cfunc
     @cy.returns(object)
-    def _serialise_to_dicts(self, data:object, data_format:unicode):
+    def _serialise_to_dicts(self, data:object, data_format:unicode) -> object:
 
         # No reason to continue if no SimpleIO output is declared
         if not (self.definition.has_output_required or self.definition.has_output_optional):
@@ -1779,7 +1773,7 @@ class CySimpleIO(object):
 
     @cy.cfunc
     @cy.returns(unicode)
-    def _serialise_json(self, data:object):
+    def _serialise_json(self, data:object) -> past_unicode:
         out:object = self._serialise_to_dicts(data, DATA_FORMAT_JSON)
         return json_dumps(out)
 
@@ -1798,7 +1792,7 @@ class CySimpleIO(object):
 
     @cy.cfunc
     @cy.returns(unicode)
-    def _serialise_xml(self, data:object):
+    def _serialise_xml(self, data:object) -> past_unicode:
         dict_items:object = self._serialise_to_dicts(data, DATA_FORMAT_XML)
         xml_serialised:bytes
         out:unicode
@@ -1833,7 +1827,7 @@ class CySimpleIO(object):
 
     @cy.ccall
     @cy.returns(unicode)
-    def serialise(self, data:object, data_format:unicode):
+    def serialise(self, data:object, data_format:unicode) -> past_unicode:
 
         if data_format == DATA_FORMAT_JSON:
             return self._serialise_json(data)
