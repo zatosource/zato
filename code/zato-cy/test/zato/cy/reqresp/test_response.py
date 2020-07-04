@@ -13,10 +13,13 @@ from http.client import OK
 
 # Zato
 from zato.common import DATA_FORMAT, ZATO_OK
+from zato.server.service import Service
 
 # Zato - Cython
 from test.zato.cy.simpleio_ import BaseTestCase
+from zato.cy.reqresp.payload import SimpleIOPayload
 from zato.cy.reqresp.response import Response
+from zato.simpleio import CySimpleIO
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -61,8 +64,26 @@ class ResponseTestCase(BaseTestCase):
         response = Response()
         response.init('abc', DATA_FORMAT.CSV)
 
-        self.assertEquals(response.cid, 'abc')
-        self.assertEquals(response.data_format, DATA_FORMAT.CSV)
+        self.assertEqual(response.cid, 'abc')
+        self.assertEqual(response.data_format, DATA_FORMAT.CSV)
+        self.assertEqual(response.payload, '')
+
+# ################################################################################################################################
+
+    def test_init_with_sio(self):
+
+        class MyService(Service):
+            class SimpleIO:
+                input = 'aaa', 'bbb', 'ccc', '-ddd', '-eee'
+                output = 'qqq', 'www', '-eee', '-fff'
+
+        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+
+        response = Response()
+        response.sio_config = MyService._sio.definition
+        response.init('abc', DATA_FORMAT.CSV)
+
+        self.assertIsInstance(response.payload, SimpleIOPayload)
 
 # ################################################################################################################################
 # ################################################################################################################################
