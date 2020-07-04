@@ -25,7 +25,6 @@ from traceback import format_exc
 from uuid import UUID as uuid_UUID
 
 # Cython
-import cython
 import cython as cy
 
 # datetutil
