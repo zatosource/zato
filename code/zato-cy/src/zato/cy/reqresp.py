@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+# cython: auto_pickle=False
+
 """
 Copyright (C) 2020, Zato Source s.r.o. https://zato.io
 
@@ -12,9 +14,20 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from http.client import OK
 from logging import getLogger
 
+# Cython
+import cython as cy
+
+
 # Zato
 from zato.common import ZATO_OK
-cimport src.zato.cy.simpleio._simpleio as sio
+
+# Python 2/3 compatibility
+from past.builtins import unicode as past_unicode
+
+# ################################################################################################################################
+
+if 0:
+    from zato.cy.simpleio import SIODefinition
 
 # ################################################################################################################################
 
@@ -23,32 +36,29 @@ logger = getLogger('zato')
 # ################################################################################################################################
 # ################################################################################################################################
 
-cdef class SimpleIOPayload(object):
+@cy.cclass
+class SimpleIOPayload(object):
     """ Represents a payload, i.e. individual response elements, set via SimpleIO.
     """
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-cdef class Response(object):
+@cy.cclass
+class Response(object):
     """ A response from a service's invocation.
     """
+    # Public attributes
+    result           = cy.declare(cy.unicode, visibility='public') # type: past_unicode
+    result_details   = cy.declare(cy.unicode, visibility='public') # type: past_unicode
+    payload          = cy.declare(cy.unicode, visibility='public') # type: past_unicode
+    content_encoding = cy.declare(cy.unicode, visibility='public') # type: past_unicode
+    data_format      = cy.declare(cy.unicode, visibility='public') # type: past_unicode
+    headers          = cy.declare(cy.dict, visibility='public')    # type: dict
+    sio_config:SIODefinition = None
 
-    cdef:
-        # Public attributes
-        public str result
-        public str result_details
-        public str payload
-        public str content_encoding
-        public str data_format
-        public dict headers
-        public int status_code
-        public str status_message
-        public sio.SIODefinition sio_config
-
-        # Private attributes
-        bint outgoing_declared
-        str _content_type
+    outgoing_declared = cy.declare(cy.bint, visibility='public')    # type: bool
+    _content_type     = cy.declare(cy.unicode, visibility='public') # type: past_unicode
 
     def __cinit__(self):
         self.result = ZATO_OK
@@ -63,7 +73,8 @@ cdef class Response(object):
         self.outgoing_declared = False
         self._content_type = 'text/plain'
 
-        print(111, self.sio_config.zzz)
+        print(111, self.sio_config.has_input_required)
+        print(222, self.headers['aaa'])
 
 # ################################################################################################################################
 # ################################################################################################################################
