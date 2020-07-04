@@ -14,6 +14,7 @@ from logging import getLogger
 
 # Zato
 from zato.common import ZATO_OK
+cimport src.zato.cy.simpleio._simpleio as sio
 
 # ################################################################################################################################
 
@@ -43,7 +44,7 @@ cdef class Response(object):
         public dict headers
         public int status_code
         public str status_message
-        public object sio_config
+        public sio.SIODefinition sio_config
 
         # Private attributes
         bint outgoing_declared
@@ -61,6 +62,8 @@ cdef class Response(object):
         self.simple_io_config = None
         self.outgoing_declared = False
         self._content_type = 'text/plain'
+
+        print(111, self.sio_config.zzz)
 
 # ################################################################################################################################
 # ################################################################################################################################
