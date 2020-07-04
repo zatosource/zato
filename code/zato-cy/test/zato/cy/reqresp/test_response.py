@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from http.client import OK
 
 # Zato
-from zato.common import ZATO_OK
+from zato.common import DATA_FORMAT, ZATO_OK
 
 # Zato - Cython
 from test.zato.cy.simpleio_ import BaseTestCase
@@ -37,6 +37,32 @@ class ResponseTestCase(BaseTestCase):
         self.assertEqual(response.result_details, '')
         self.assertEqual(response.status_code, OK)
         self.assertEqual(response.status_message, 'OK')
+
+# ################################################################################################################################
+
+    def test_len(self):
+        response = Response()
+        response._payload = 'abcdef'
+
+        self.assertEqual(len(response), 6)
+
+# ################################################################################################################################
+
+    def test_content_type(self):
+        response = Response()
+        response.content_type = 'abc'
+
+        self.assertTrue(response.content_type_changed)
+        self.assertEqual(response.content_type, 'abc')
+
+# ################################################################################################################################
+
+    def test_init_no_sio(self):
+        response = Response()
+        response.init('abc', DATA_FORMAT.CSV)
+
+        self.assertEquals(response.cid, 'abc')
+        self.assertEquals(response.data_format, DATA_FORMAT.CSV)
 
 # ################################################################################################################################
 # ################################################################################################################################
