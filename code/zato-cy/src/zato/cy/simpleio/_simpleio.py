@@ -23,6 +23,7 @@ from traceback import format_exc
 from uuid import UUID as uuid_UUID
 
 # Cython
+import cython
 import cython as cy
 
 # datetutil
@@ -44,10 +45,14 @@ from past.builtins import basestring, str as past_str, unicode as past_unicode
 # ################################################################################################################################
 
 # For Cython
+bint = cy.bint
+'''
+cpdef   = cy.ccall
 cclass  = cy.cclass
-cfunc   = cy.cfunc
+cdef    = cy.cfunc
 declare = cy.declare
 returns = cy.returns
+'''
 
 # ################################################################################################################################
 
@@ -92,13 +97,13 @@ DATA_FORMAT_XML:unicode  = DATA_FORMAT.XML
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class _ForceEmptyKeyMarker(object):
     pass
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class _NotGiven(object):
     """ Indicates that a particular value was not provided on input or output.
     """
@@ -108,7 +113,7 @@ class _NotGiven(object):
     def __bool__(self):
         return False # Always evaluates to a boolean False
 
-@cclass
+@cy.cclass
 class _InternalNotGiven(_NotGiven):
     """ Like _NotGiven but used only internally.
     """
@@ -132,7 +137,7 @@ class ServiceInput(Bunch):
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class SIODefault(object):
 
     input_value:object
@@ -151,7 +156,7 @@ class SIODefault(object):
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class SIOSkipEmpty(object):
 
     empty_output_value:object
@@ -203,19 +208,19 @@ class SIOSkipEmpty(object):
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class ParsingError(Exception):
     pass
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class SerialisationError(Exception):
     pass
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class ElemType:
     as_is:int         =  1000
     bool:int          =  2000
@@ -236,13 +241,13 @@ class ElemType:
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class Elem(object):
     """ An individual input or output element. May be a ForceType instance or not.
     """
-    declare(_type=ElemType, visibility='private')
-    declare(_name=unicode, visibility='private')
-    declare(_xpath=object, visibility='private')
+    _type:ElemType
+    _name:unicode
+    _xpath:object
 
     user_default_value:object
     default_value:object
@@ -308,8 +313,8 @@ class Elem(object):
 
 # ################################################################################################################################
 
-    @cfunc
-    @returns(unicode)
+    @cy.cfunc
+    @cy.returns(unicode)
     def _get_unicode_name(self, name:object):
         if name:
             if not isinstance(name, basestring):
@@ -397,7 +402,7 @@ class Elem(object):
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class AsIs(Elem):
     def __cinit__(self):
         self._type = ElemType.as_is
@@ -416,7 +421,7 @@ Opaque = AsIs
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class Bool(Elem):
     def __cinit__(self):
         self._type = ElemType.bool
@@ -439,7 +444,7 @@ class Bool(Elem):
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class CSV(Elem):
     def __cinit__(self):
         self._type = ElemType.csv
@@ -462,7 +467,7 @@ class CSV(Elem):
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class Date(Elem):
 
     stdlib_type = stdlib_date
@@ -502,7 +507,7 @@ class Date(Elem):
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class DateTime(Date):
 
     stdlib_type = stdlib_datetime
@@ -512,7 +517,7 @@ class DateTime(Date):
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class Decimal(Elem):
     def __cinit__(self):
         self._type = ElemType.decimal
@@ -536,7 +541,7 @@ class Decimal(Elem):
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class Dict(Elem):
 
     _keys_required:set
@@ -641,7 +646,7 @@ class Dict(Elem):
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class DictList(Dict):
     def __cinit__(self):
         self._type = ElemType.dict_list
@@ -661,7 +666,7 @@ class DictList(Dict):
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class Float(Elem):
     def __cinit__(self):
         self._type = ElemType.float_
@@ -677,7 +682,7 @@ class Float(Elem):
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class Int(Elem):
     def __cinit__(self):
         self._type = ElemType.int_
@@ -693,7 +698,7 @@ class Int(Elem):
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class List(Elem):
     def __cinit__(self):
         self._type = ElemType.list_
@@ -709,7 +714,7 @@ class List(Elem):
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class Text(Elem):
 
     encoding:str
@@ -748,7 +753,7 @@ class Text(Elem):
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class Secret(Text):
     def __init__(self, *args, **kwargs):
         super(Secret, self).__init__(*args, **kwargs)
@@ -756,7 +761,7 @@ class Secret(Text):
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class UTC(Elem):
     def __cinit__(self):
         self._type = ElemType.utc
@@ -772,7 +777,7 @@ class UTC(Elem):
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class UUID(Elem):
 
     def __cinit__(self):
@@ -800,15 +805,14 @@ class UUID(Elem):
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class ConfigItem(object):
     """ An individual instance of server-wide SimpleIO configuration. Each subclass covers
     a particular set of exact values, prefixes or suffixes.
     """
-    cdef:
-        public set exact
-        public set prefixes
-        public set suffixes
+    exact:set
+    prefixes:set
+    suffixes:set
 
     def __str__(self):
         return '<{} at {} e:{}, p:{}, s:{}>'.format(self.__class__.__name__, hex(id(self)),
@@ -816,88 +820,93 @@ class ConfigItem(object):
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class BoolConfig(ConfigItem):
     """ SIO configuration for boolean values.
     """
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class IntConfig(ConfigItem):
     """ SIO configuration for integer values.
     """
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class SecretConfig(ConfigItem):
     """ SIO configuration for secret values, passwords, tokens, API keys etc.
     """
 
 # ################################################################################################################################
 
-@cclass
+@cy.cclass
 class SIOServerConfig(object):
     """ Contains global SIO configuration. Each service's _sio attribute
     will refer to this object so as to have only one place where all the global configuration is kept.
     """
-    cdef:
-        public BoolConfig bool_config
-        public IntConfig int_config
-        public SecretConfig secret_config
+    bool_config:BoolConfig
+    int_config:IntConfig
+    secret_config:SecretConfig
 
-        # Names in SimpleIO declarations that can be overridden by users
-        public unicode input_required_name
-        public unicode input_optional_name
-        public unicode output_required_name
-        public unicode output_optional_name
-        public unicode default_value
-        public unicode default_input_value
-        public unicode default_output_value
-        public unicode response_elem
+    # Names in SimpleIO declarations that can be overridden by users
+    input_required_name:unicode
+    input_optional_name:unicode
+    output_required_name:unicode
+    output_optional_name:unicode
+    default_value:unicode
+    default_input_value:unicode
+    default_output_value:unicode
+    response_elem:unicode
 
-        public unicode prefix_as_is     # a
-        public unicode prefix_bool      # b
-        public unicode prefix_csv       # c
-        public unicode prefix_date      # dt
-        public unicode prefix_date_time # dtm
-        public unicode prefix_dict      # d
-        public unicode prefix_dict_list # dl
-        public unicode prefix_float     # f
-        public unicode prefix_int       # i
-        public unicode prefix_list      # l
-        public unicode prefix_text      # t
-        public unicode prefix_uuid      # u
+    prefix_as_is:unicode     # a
+    prefix_bool:unicode      # b
+    prefix_csv:unicode       # c
+    prefix_date:unicode      # dt
+    prefix_date_time:unicode # dtm
+    prefix_dict:unicode      # d
+    prefix_dict_list:unicode # dl
+    prefix_float:unicode     # f
+    prefix_int:unicode       # i
+    prefix_list:unicode      # l
+    prefix_text:unicode      # t
+    prefix_uuid:unicode      # u
 
-        # Python 2/3 compatibility
-        public unicode bytes_to_str_encoding
+    # Python 2/3 compatibility
+    bytes_to_str_encoding:unicode
 
-        # Global variables, can be always overridden on a per-declaration basis
-        public object skip_empty_keys
-        public object skip_empty_request_keys
-        public object skip_empty_response_keys
+    # Global variables, can be always overridden on a per-declaration basis
+    skip_empty_keys:object
+    skip_empty_request_keys:object
+    skip_empty_response_keys:object
 
-    cdef bint is_int(self, name):
+    @cy.cfunc
+    @cy.returns(bint)
+    def is_int(self, name):
         """ Returns True if input name should be treated like ElemType.int.
         """
 
-    cdef bint is_bool(self, name):
+    @cy.cfunc
+    @cy.returns(bint)
+    def is_bool(self, name):
         """ Returns True if input name should be treated like ElemType.bool.
         """
 
-    cdef bint is_secret(self, name):
+    @cy.cfunc
+    @cy.returns(bint)
+    def is_secret(self, name):
         """ Returns True if input name should be treated like ElemType.secret.
         """
 
 # ################################################################################################################################
 
-cdef class SIOList(object):
+@cy.cclass
+class SIOList(object):
     """ Represents one of input/output required/optional.
     """
-    cdef:
-        list elems
-        dict elems_by_name
+    elems:list
+    elems_by_name:dict
 
     def __cinit__(self):
         self.elems = []
@@ -914,7 +923,7 @@ cdef class SIOList(object):
         for elem in self.elems:
             self.elems_by_name[elem.name] = elem
 
-    def get_elem_by_name(self, unicode name):
+    def get_elem_by_name(self, name:unicode):
         return self.elems_by_name[name]
 
     def get_elem_names(self, use_sorted=False):
@@ -923,14 +932,14 @@ cdef class SIOList(object):
 
 # ################################################################################################################################
 
-cdef class CSVConfig(object):
+@cy.cclass
+class CSVConfig(object):
     """ Represents CSV configuration that a particular SimpleIO definition uses.
     """
-    cdef:
-        public unicode dialect
-        public dict common_config
-        public dict writer_config
-        public bint should_write_header
+    dialect:unicode
+    common_config:dict
+    writer_config:dict
+    should_write_header:bool
 
     def __cinit__(self):
         self.dialect = 'excel'
@@ -940,14 +949,14 @@ cdef class CSVConfig(object):
 
 # ################################################################################################################################
 
-cdef class XMLConfig(object):
+@cy.cclass
+class XMLConfig(object):
     """ Represents XML configuration that a particular SimpleIO definition uses.
     """
-    cdef:
-        public object namespace
-        public unicode encoding
-        public bint declaration
-        public bint pretty_print
+    namespace:object
+    encoding:unicode
+    declaration:bool
+    pretty_print:bool
 
     def __cinit__(self):
         self.namespace = InternalNotGiven
@@ -957,46 +966,45 @@ cdef class XMLConfig(object):
 
 # ################################################################################################################################
 
-cdef class SIODefinition(object):
+@cy.cclass
+class SIODefinition(object):
     """ A single SimpleIO definition attached to a service.
     """
-    cdef:
+    # A list of Elem items required on input
+    _input_required:SIOList
 
-        # A list of Elem items required on input
-        public SIOList _input_required
+    # A list of Elem items optional on input
+    _input_optional:SIOList
 
-        # A list of Elem items optional on input
-        public SIOList _input_optional
+    # A list of Elem items required on output
+    _output_required:SIOList
 
-        # A list of Elem items required on output
-        public SIOList _output_required
+    # A list of Elem items optional on output
+    _output_optional:SIOList
 
-        # A list of Elem items optional on output
-        public SIOList _output_optional
+    # Default values to use for optional elements, unless overridden on a per-element basis
+    sio_default:SIODefault
 
-        # Default values to use for optional elements, unless overridden on a per-element basis
-        public SIODefault sio_default
+    # Which empty values should not be produced from input / sent on output, unless overridden by each element
+    skip_empty:SIOSkipEmpty
 
-        # Which empty values should not be produced from input / sent on output, unless overridden by each element
-        public SIOSkipEmpty skip_empty
+    # CSV configuration for the definition
+    _csv_config:CSVConfig
 
-        # CSV configuration for the definition
-        public CSVConfig _csv_config
+    # XML configuration for the definition
+    _xml_config:XMLConfig
 
-        # XML configuration for the definition
-        public XMLConfig _xml_config
+    # To indicate whether I/O particular definitions exist or not
+    has_input_required:bool
+    has_input_optional:bool
+    has_output_required:bool
+    has_output_optional:bool
 
-        # To indicate whether I/O particular definitions exist or not
-        public bint has_input_required
-        public bint has_input_optional
-        public bint has_output_required
-        public bint has_output_optional
+    # Name of the service this definition is for
+    _service_name:unicode
 
-        # Name of the service this definition is for
-        unicode _service_name
-
-        # Name of the response element, or None if there should be no top-level one
-        object _response_elem
+    # Name of the response element, or None if there should be no top-level one
+    _response_elem:object
 
     def __cinit__(self):
         self._input_required = SIOList()
@@ -1006,12 +1014,14 @@ cdef class SIODefinition(object):
         self._csv_config = CSVConfig()
         self._xml_config = XMLConfig()
 
-    def __init__(self, SIODefault sio_default, SIOSkipEmpty skip_empty):
+    def __init__(self, sio_default:SIODefault, skip_empty:SIOSkipEmpty):
         self.sio_default = sio_default
         self.skip_empty = skip_empty
 
-    cdef unicode get_elems_pretty(self, SIOList required_list, SIOList optional_list):
-        cdef unicode out = ''
+    @cy.cfunc
+    @cy.returns(unicode)
+    def get_elems_pretty(self, required_list:SIOList, optional_list:SIOList):
+        out:unicode = ''
 
         if required_list.elems:
             out += ', '.join(required_list.get_elem_names())
@@ -1024,19 +1034,25 @@ cdef class SIODefinition(object):
 
         return out
 
-    cdef unicode get_input_pretty(self):
+    @cy.cfunc
+    @cy.returns(unicode)
+    def get_input_pretty(self):
         return self.get_elems_pretty(self._input_required, self._input_optional)
 
-    cdef unicode get_output_pretty(self):
+    @cy.cfunc
+    @cy.returns(unicode)
+    def get_output_pretty(self):
         return self.get_elems_pretty(self._output_required, self._output_optional)
 
-    cdef set_csv_config(self, unicode dialect, dict common_config, dict writer_config, bint should_write_header):
+    @cy.cfunc
+    def set_csv_config(self, dialect:unicode, common_config:dict, writer_config:dict, should_write_header:bool):
         self._csv_config.dialect = dialect
         self._csv_config.common_config.update(common_config)
         self._csv_config.writer_config.update(writer_config)
         self._csv_config.should_write_header = should_write_header
 
-    cdef set_xml_config(self, object namespace, bint pretty_print, unicode encoding, bint declaration):
+    @cy.cfunc
+    def set_xml_config(self, namespace:object, pretty_print:bool, encoding:unicode, declaration:bool):
         self._xml_config.namespace = namespace
         self._xml_config.pretty_print = pretty_print
         self._xml_config.encoding = encoding
@@ -1048,32 +1064,32 @@ cdef class SIODefinition(object):
 
 # ################################################################################################################################
 
-cdef class CySimpleIO(object):
+@cy.cclass
+class CySimpleIO(object):
     """ If a service uses SimpleIO then, during deployment, its class will receive an attribute called _sio
     based on the service's SimpleIO attribute. The _sio one will be an instance of this Cython class.
     """
-    cdef:
-        # Server-wide configuration
-        SIOServerConfig server_config
+    # Server-wide configuration
+    server_config:SIOServerConfig
 
-        # Current service's configuration, after parsing
-        public SIODefinition definition
+    # Current service's configuration, after parsing
+    definition:SIODefinition
 
-        # User-provided SimpleIO declaration, before parsing. This is parsed into self.definition.
-        object user_declaration
+    # User-provided SimpleIO declaration, before parsing. This is parsed into self.definition.
+    user_declaration:object
 
-        # Kept for backward compatibility with 3.0
-        public bint has_bool_force_empty_keys
+    # Kept for backward compatibility with 3.0
+    has_bool_force_empty_keys:bool
 
 # ################################################################################################################################
 
-    def __cinit__(self, SIOServerConfig server_config, object user_declaration):
+    def __cinit__(self, server_config:SIOServerConfig, user_declaration:object):
 
         input_value = getattr(user_declaration, 'default_input_value', InternalNotGiven)
         output_value = getattr(user_declaration, 'default_output_value', InternalNotGiven)
         default_value = getattr(user_declaration, 'default_value', InternalNotGiven)
 
-        cpdef SIODefault sio_default = SIODefault(input_value, output_value, default_value)
+        sio_default:SIODefault = SIODefault(input_value, output_value, default_value)
 
         raw_skip_empty = getattr(user_declaration, 'skip_empty_keys', NotGiven) # For backward compatibility
         class_skip_empty = getattr(user_declaration, 'SkipEmpty', NotGiven)
@@ -1127,7 +1143,7 @@ cdef class CySimpleIO(object):
         elif self.has_bool_force_empty_keys:
             force_empty_output_set = [_ForceEmptyKeyMarker()]
 
-        cpdef SIOSkipEmpty sio_skip_empty = SIOSkipEmpty(input_def, output_def, force_empty_input_set,
+        sio_skip_empty:SIOSkipEmpty  = SIOSkipEmpty(input_def, output_def, force_empty_input_set,
             force_empty_output_set, empty_output_value)
 
         self.definition = SIODefinition(sio_default, sio_skip_empty)
@@ -1136,22 +1152,27 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cdef _resolve_bool_force_empty_keys(self):
+    @cy.cfunc
+    def _resolve_bool_force_empty_keys(self):
         self.definition.skip_empty.force_empty_output_set = set(self.definition._output_optional.get_elem_names())
 
 # ################################################################################################################################
 
-    cdef _set_up_csv_config(self):
-        cdef unicode csv_dialect = 'excel'
-        cdef dict csv_common_config = {}
-        cdef dict csv_writer_config = {}
-        cdef object csv_sio_class = getattr(self.user_declaration, 'CSV', InternalNotGiven)
-        cdef bint has_csv_sio_class = csv_sio_class is not InternalNotGiven
-        cdef should_write_header
-        cdef cy_attr, stdlib_attr, value
-        cdef dict attr_map, target_config
+    @cy.cfunc
+    def _set_up_csv_config(self):
+        csv_dialect:unicode  = 'excel'
+        csv_common_config:dict  = {}
+        csv_writer_config:dict  = {}
+        csv_sio_class:object  = getattr(self.user_declaration, 'CSV', InternalNotGiven)
+        has_csv_sio_class:bint  = csv_sio_class is not InternalNotGiven
+        should_write_header:object
+        cy_attr:object
+        stdlib_attr:object
+        value:object
+        attr_map:dict
+        target_config:dict
 
-        cdef to_process = [
+        to_process:list = [
             (_csv_common_attr_map, csv_common_config),
             (_csv_writer_attr_map, csv_writer_config),
         ]
@@ -1193,18 +1214,19 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cdef _set_up_xml_config(self):
+    @cy.cfunc
+    def _set_up_xml_config(self):
 
-        cdef list attrs = ['namespace', 'pretty_print', 'encoding', 'declaration']
-        cdef unicode attr
-        cdef dict attr_values = {}
-        cdef object namespace
-        cdef object pretty_print
-        cdef object encoding
-        cdef object declaration
-        cdef object value = InternalNotGiven
-        cdef object xml_sio_class = getattr(self.user_declaration, 'XML', InternalNotGiven)
-        cdef bint has_xml_sio_class = xml_sio_class is not InternalNotGiven
+        attrs:list  = ['namespace', 'pretty_print', 'encoding', 'declaration']
+        attr:unicode
+        attr_values:dict  = {}
+        namespace:object
+        pretty_print:object
+        encoding:object
+        declaration:object
+        value:object  = InternalNotGiven
+        xml_sio_class:object  = getattr(self.user_declaration, 'XML', InternalNotGiven)
+        has_xml_sio_class:bool = xml_sio_class is not InternalNotGiven
 
         for attr_name in attrs:
 
@@ -1238,7 +1260,8 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cpdef build(self, object class_):
+    @cy.ccall
+    def build(self, class_:object):
         """ Parses a user-defined SimpleIO declaration (a Python class) and populates all the internal structures as needed.
         """
         self._build_io_elems('input', class_)
@@ -1273,20 +1296,22 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cdef Elem _convert_to_elem_instance(self, unicode elem_name, bint is_required):
+    @cy.cfunc
+    @cy.returns(Elem)
+    def _convert_to_elem_instance(self, elem_name:unicode, is_required:bool):
 
         # The element we return, at this point we do not know what its exact subtype will be
-        cdef Elem _elem
+        _elem:Elem
 
-        cdef set exact
-        cdef set prefixes
-        cdef set suffixes
-        cdef unicode config_elem
-        cdef bint keep_running = True
+        exact:set
+        prefixes:set
+        suffixes:set
+        config_elem:unicode
+        keep_running:bool = True
 
-        cdef ConfigItem config_item
+        config_item:ConfigItem
 
-        cdef tuple config_item_to_type = (
+        config_item_to_type:tuple = (
             (Bool,   self.server_config.bool_config),
             (Int,    self.server_config.int_config),
             (Secret, self.server_config.secret_config),
@@ -1337,7 +1362,8 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cdef _build_io_elems(self, container, class_):
+    @cy.cfunc
+    def _build_io_elems(self, container, class_):
         """ Returns I/O elems, e.g. input or input_required but first ensures that only correct elements are given in SimpleIO,
         e.g. if input is on input then input_required or input_optional cannot be.
         """
@@ -1469,7 +1495,7 @@ cdef class CySimpleIO(object):
 # ################################################################################################################################
 
     @staticmethod
-    def attach_sio(server_config, class_):
+    def attach_sio(server_config:object, class_:object):
         """ Given a service class, the method extracts its user-defined SimpleIO definition
         and attaches the Cython-based one to the class's _sio attribute.
         """
@@ -1492,8 +1518,11 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cdef bint _should_skip_on_input(self, SIODefinition definition, Elem sio_item, input_value) except -1:
-        cdef bint should_skip = False
+    @cy.cfunc
+    @cy.returns(cy.bint)
+    @cy.exceptval(-1)
+    def _should_skip_on_input(self, definition:SIODefinition, sio_item:Elem, input_value:object):
+        should_skip:bool = False
 
         # Should we skip this value ..
         if definition.skip_empty.skip_all_empty_input or sio_item.name in definition.skip_empty.skip_input_set:
@@ -1507,15 +1536,17 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cdef object _parse_input_elem(self, object elem, unicode data_format, bint is_csv=False):
+    @cy.cfunc
+    @cy.returns(object)
+    def _parse_input_elem(self, elem:object, data_format:unicode, is_csv:bool=False):
 
-        cdef bint is_dict = isinstance(elem, dict)
-        cdef bint is_xml = isinstance(elem, EtreeElementClass)
+        is_dict:bool = isinstance(elem, dict)
+        is_xml:bool = isinstance(elem, EtreeElementClass)
 
         if not (is_dict or is_csv or is_xml):
             raise ValueError('Expected a dict, CSV or EtreeElementClass instead of `{!r}` ({})'.format(elem, type(elem).__name__))
 
-        cdef dict out = {}
+        out:dict = {}
 
         for idx, sio_item in enumerate(chain(self.definition._input_required, self.definition._input_optional)):
 
@@ -1586,7 +1617,9 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cdef object _parse_input_list(self, data, data_format, bint is_csv):
+    @cy.cfunc
+    @cy.returns(object)
+    def _parse_input_list(self, data:object, data_format:unicode, is_csv:bool):
         out = []
         for elem in data:
             converted = self._parse_input_elem(elem, data_format, is_csv)
@@ -1595,9 +1628,11 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cpdef object parse_input(self, data, data_format):
+    @cy.ccall
+    @cy.returns(object)
+    def parse_input(self, data:object, data_format:unicode):
 
-        cdef bint is_csv = data_format == DATA_FORMAT_CSV and isinstance(data, basestring)
+        is_csv:bool = data_format == DATA_FORMAT_CSV and isinstance(data, basestring)
 
         if isinstance(data, list):
             return self._parse_input_list(data, data_format, is_csv)
@@ -1612,7 +1647,9 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cdef unicode _serialise_post(self, object data):
+    @cy.cfunc
+    @cy.returns(unicode)
+    def _serialise_post(self, data:object):
         print()
         print(444, data)
         print()
@@ -1620,12 +1657,12 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    def _yield_data_dicts(self, object data):
+    def _yield_data_dicts(self, data:object):
 
-        cdef dict required_elems = self.definition._output_required.elems_by_name
-        cdef dict optional_elems = self.definition._output_optional.elems_by_name
+        required_elems:dict = self.definition._output_required.elems_by_name
+        optional_elems:dict = self.definition._output_optional.elems_by_name
 
-        cdef list field_names = []
+        field_names:list = []
         field_names.extend(list(required_elems.keys()))
         field_names.extend(list(optional_elems.keys()))
 
@@ -1640,16 +1677,16 @@ cdef class CySimpleIO(object):
 
         # 1st item = is_required
         # 2nd item = elems dict
-        cdef list all_elems = [
+        all_elems:list = [
             (True, required_elems),
             (False, optional_elems),
         ]
 
-        cdef bint is_required
-        cdef dict current_elems
-        cdef unicode current_elem_name
-        cdef Elem current_elem
-        cdef object value
+        is_required:bool
+        current_elems:dict
+        current_elem_name:unicode
+        current_elem:Elem
+        value:object
 
         for data_dict in data:
             for is_required, current_elems in all_elems:
@@ -1670,7 +1707,9 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cdef unicode _serialise_csv(self, object data):
+    @cy.cfunc
+    @cy.returns(unicode)
+    def _serialise_csv(self, data:object):
 
         # No reason to continue if no SimpleIO output is declared
         if not (self.definition.has_output_required or self.definition.has_output_optional):
@@ -1679,11 +1718,11 @@ cdef class CySimpleIO(object):
         gen = self._yield_data_dicts(data)
 
         # First, get the field names
-        cdef list field_names = next(gen)
+        field_names:list = next(gen)
 
-        cdef unicode out
-        cdef buff = StringIO()
-        cdef writer = DictWriter(buff, field_names, **self.definition._csv_config.writer_config)
+        out:unicode
+        buff:StringIO = StringIO()
+        writer:DictWriter = DictWriter(buff, field_names, **self.definition._csv_config.writer_config)
 
         if self.definition._csv_config.should_write_header:
             writer.writeheader()
@@ -1698,16 +1737,18 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cdef object _serialise_to_dicts(self, object data, unicode data_format):
+    @cy.cfunc
+    @cy.returns(object)
+    def _serialise_to_dicts(self, data:object, data_format:unicode):
 
         # No reason to continue if no SimpleIO output is declared
         if not (self.definition.has_output_required or self.definition.has_output_optional):
             return ''
 
         # Needed to find out if we are producing a list or a single element
-        cdef int  current_idx = 0
-        cdef bint is_list
-        cdef list out_elems = []
+        current_idx:int = 0
+        is_list:bool
+        out_elems:list = []
 
         if isinstance(data, (list, tuple)):
             is_list = True
@@ -1723,7 +1764,7 @@ cdef class CySimpleIO(object):
             out_elems.append(data_dict)
 
         # Return a full list or a single element, depending on what is needed
-        cdef object out = out_elems if is_list else out_elems[0]
+        out:object = out_elems if is_list else out_elems[0]
 
         # Wrap the response in a top-level element if needed
         if data_format == DATA_FORMAT_JSON:
@@ -1736,14 +1777,18 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cdef unicode _serialise_json(self, object data):
-        cdef object out = self._serialise_to_dicts(data, DATA_FORMAT_JSON)
+    @cy.cfunc
+    @cy.returns(unicode)
+    def _serialise_json(self, data:object):
+        out:object = self._serialise_to_dicts(data, DATA_FORMAT_JSON)
         return json_dumps(out)
 
 # ################################################################################################################################
 
-    def _serialise_dict_to_xml(self, object parent, unicode namespace, dict dict_elem):
-        cdef object key, value
+    @cy.cfunc
+    def _serialise_dict_to_xml(self, parent:object, namespace:unicode, dict_elem:dict):
+        key:object
+        value:object
 
         for key, value in dict_elem.items():
             xml_elem = SubElement(parent, '{}{}'.format(namespace, key))
@@ -1751,19 +1796,22 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cdef unicode _serialise_xml(self, object data):
-        cdef object dict_items = self._serialise_to_dicts(data, DATA_FORMAT_XML)
-        cdef bytes xml_serialised
-        cdef unicode out
-        cdef dict dict_item
-        cdef xml_sub_elem, xml_item
+    @cy.cfunc
+    @cy.returns(unicode)
+    def _serialise_xml(self, data:object):
+        dict_items:object = self._serialise_to_dicts(data, DATA_FORMAT_XML)
+        xml_serialised:bytes
+        out:unicode
+        dict_item:dict
+        xml_sub_elem:object
+        xml_item:object
 
-        cdef unicode root = self.definition._response_elem or 'response'
-        cdef unicode namespace = self.definition._xml_config.namespace or ''
+        root:unicode = self.definition._response_elem or 'response'
+        namespace:unicode = self.definition._xml_config.namespace or ''
         if namespace:
             namespace = '{'+ namespace + '}'
 
-        cdef object root_elem = Element('{}{}'.format(namespace, root))
+        root_elem:object = Element('{}{}'.format(namespace, root))
 
         if isinstance(dict_items, list):
             for dict_item in dict_items:
@@ -1783,7 +1831,9 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cpdef unicode serialise(self, object data, unicode data_format):
+    @cy.ccall
+    @cy.returns(unicode)
+    def serialise(self, data:object, data_format:unicode):
 
         if data_format == DATA_FORMAT_JSON:
             return self._serialise_json(data)
