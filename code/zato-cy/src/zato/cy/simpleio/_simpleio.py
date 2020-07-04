@@ -22,6 +22,9 @@ from logging import getLogger
 from traceback import format_exc
 from uuid import UUID as uuid_UUID
 
+# Cython
+import cython as cy
+
 # datetutil
 from dateutil.parser import parse as dt_parse
 
@@ -40,6 +43,14 @@ from past.builtins import basestring, str as past_str, unicode as past_unicode
 
 # ################################################################################################################################
 
+# For Cython
+cclass  = cy.cclass
+cfunc   = cy.cfunc
+declare = cy.declare
+returns = cy.returns
+
+# ################################################################################################################################
+
 logger = getLogger('zato')
 
 # ################################################################################################################################
@@ -54,7 +65,7 @@ backward_compat_default_value = ''
 prefix_optional = '-'
 
 # Dictionaries that map our own CSV parameters to stdlib's ones
-cdef dict _csv_common_attr_map = {
+_csv_common_attr_map:dict = {
     'dialect': 'dialect',
     'delimiter': 'delimiter',
     'needs_double_quote': 'doublequote',
@@ -66,27 +77,29 @@ cdef dict _csv_common_attr_map = {
     'is_strict': 'strict',
 }
 
-cdef dict _csv_writer_attr_map = {
+_csv_writer_attr_map:dict = {
     'on_missing': 'restval',
     'on_extra': 'extrasaction',
 }
 
 # ################################################################################################################################
 
-cdef unicode DATA_FORMAT_CSV  = DATA_FORMAT.CSV
-cdef unicode DATA_FORMAT_DICT  = DATA_FORMAT.DICT
-cdef unicode DATA_FORMAT_JSON = DATA_FORMAT.JSON
-cdef unicode DATA_FORMAT_POST = DATA_FORMAT.POST
-cdef unicode DATA_FORMAT_XML  = DATA_FORMAT.XML
+DATA_FORMAT_CSV:unicode  = DATA_FORMAT.CSV
+DATA_FORMAT_DICT:unicode = DATA_FORMAT.DICT
+DATA_FORMAT_JSON:unicode = DATA_FORMAT.JSON
+DATA_FORMAT_POST:unicode = DATA_FORMAT.POST
+DATA_FORMAT_XML:unicode  = DATA_FORMAT.XML
 
 # ################################################################################################################################
 
-cdef class _ForceEmptyKeyMarker(object):
+@cclass
+class _ForceEmptyKeyMarker(object):
     pass
 
 # ################################################################################################################################
 
-cdef class _NotGiven(object):
+@cclass
+class _NotGiven(object):
     """ Indicates that a particular value was not provided on input or output.
     """
     def __str__(self):
@@ -95,7 +108,8 @@ cdef class _NotGiven(object):
     def __bool__(self):
         return False # Always evaluates to a boolean False
 
-cdef class _InternalNotGiven(_NotGiven):
+@cclass
+class _InternalNotGiven(_NotGiven):
     """ Like _NotGiven but used only internally.
     """
     def __str__(self):
@@ -118,11 +132,11 @@ class ServiceInput(Bunch):
 
 # ################################################################################################################################
 
-cdef class SIODefault(object):
+@cclass
+class SIODefault(object):
 
-    cdef:
-        public input_value
-        public output_value
+    input_value:object
+    output_value:object
 
     def __init__(self, input_value, output_value, default_value):
 
@@ -137,23 +151,23 @@ cdef class SIODefault(object):
 
 # ################################################################################################################################
 
-cdef class SIOSkipEmpty(object):
+@cclass
+class SIOSkipEmpty(object):
 
-    cdef:
-        public empty_output_value
-        public set skip_input_set
-        public set skip_output_set
-        public set force_empty_input_set
-        public set force_empty_output_set
-        public bint skip_all_empty_input
-        public bint skip_all_empty_output
+    empty_output_value:object
+    skip_input_set:set
+    skip_output_set:set
+    force_empty_input_set:set
+    force_empty_output_set:set
+    skip_all_empty_input:bool
+    skip_all_empty_output:bool
 
     def __init__(self, input_def, output_def, force_empty_input_set, force_empty_output_set, empty_output_value):
 
-        cdef bint skip_all_empty_input = False
-        cdef bint skip_all_empty_output = False
-        cdef set skip_input_set = set()
-        cdef set skip_output_set = set()
+        skip_all_empty_input:bool = False
+        skip_all_empty_output:bool = False
+        skip_input_set:set = set()
+        skip_output_set:set = set()
 
         # Construct configuration for empty input values
 
@@ -189,49 +203,53 @@ cdef class SIOSkipEmpty(object):
 
 # ################################################################################################################################
 
-cdef class ParsingError(Exception):
+@cclass
+class ParsingError(Exception):
     pass
 
 # ################################################################################################################################
 
-cdef class SerialisationError(Exception):
+@cclass
+class SerialisationError(Exception):
     pass
 
 # ################################################################################################################################
 
-cdef enum ElemType:
-    as_is         =  1000
-    bool          =  2000
-    csv           =  3000
-    date          =  4000
-    date_time     =  5000
-    decimal       =  5000
-    dict_         =  6000
-    dict_list     =  7000
-    float_        =  8000
-    int_          =  9000
-    list_         = 10000
-    secret        = 11000
-    text          = 12000
-    utc           = 13000 # Deprecated, do not use
-    uuid          = 14000
-    user_defined  = 1_000_000
+@cclass
+class ElemType:
+    as_is:int         =  1000
+    bool:int          =  2000
+    csv:int           =  3000
+    date:int          =  4000
+    date_time:int     =  5000
+    decimal:int       =  5000
+    dict_:int         =  6000
+    dict_list:int     =  7000
+    float_:int        =  8000
+    int_:int          =  9000
+    list_:int         = 10000
+    secret:int        = 11000
+    text:int          = 12000
+    utc:int           = 13000 # Deprecated, do not use
+    uuid:int          = 14000
+    user_defined:int  = 1_000_000
 
 # ################################################################################################################################
 
-cdef class Elem(object):
+@cclass
+class Elem(object):
     """ An individual input or output element. May be a ForceType instance or not.
     """
-    cdef:
-        ElemType _type
-        unicode _name
-        object _xpath
-        public object user_default_value
-        public object default_value
-        public bint is_required
+    declare(_type=ElemType, visibility='private')
+    declare(_name=unicode, visibility='private')
+    declare(_xpath=object, visibility='private')
 
-        public dict parse_from # From external formats to Python objects
-        public dict parse_to   # From Python objects to external formats
+    user_default_value:object
+    default_value:object
+    is_required:bool
+
+    parse_from:dict # From external formats to Python objects
+    parse_to:dict   # From Python objects to external formats
 
 # ################################################################################################################################
 
@@ -290,7 +308,9 @@ cdef class Elem(object):
 
 # ################################################################################################################################
 
-    cdef unicode _get_unicode_name(self, object name):
+    @cfunc
+    @returns(unicode)
+    def _get_unicode_name(self, name:object):
         if name:
             if not isinstance(name, basestring):
                 logger.warn('Name `%s` should be a str/bytes/unicode object rather than `%s`', name, type(name))
@@ -377,7 +397,8 @@ cdef class Elem(object):
 
 # ################################################################################################################################
 
-cdef class AsIs(Elem):
+@cclass
+class AsIs(Elem):
     def __cinit__(self):
         self._type = ElemType.as_is
 
@@ -395,7 +416,8 @@ Opaque = AsIs
 
 # ################################################################################################################################
 
-cdef class Bool(Elem):
+@cclass
+class Bool(Elem):
     def __cinit__(self):
         self._type = ElemType.bool
 
@@ -417,7 +439,8 @@ cdef class Bool(Elem):
 
 # ################################################################################################################################
 
-cdef class CSV(Elem):
+@cclass
+class CSV(Elem):
     def __cinit__(self):
         self._type = ElemType.csv
 
@@ -439,7 +462,8 @@ cdef class CSV(Elem):
 
 # ################################################################################################################################
 
-cdef class Date(Elem):
+@cclass
+class Date(Elem):
 
     stdlib_type = stdlib_date
 
@@ -478,7 +502,8 @@ cdef class Date(Elem):
 
 # ################################################################################################################################
 
-cdef class DateTime(Date):
+@cclass
+class DateTime(Date):
 
     stdlib_type = stdlib_datetime
 
@@ -487,7 +512,8 @@ cdef class DateTime(Date):
 
 # ################################################################################################################################
 
-cdef class Decimal(Elem):
+@cclass
+class Decimal(Elem):
     def __cinit__(self):
         self._type = ElemType.decimal
 
@@ -510,12 +536,12 @@ cdef class Decimal(Elem):
 
 # ################################################################################################################################
 
-cdef class Dict(Elem):
+@cclass
+class Dict(Elem):
 
-    cdef:
-        public set _keys_required
-        public set _keys_optional
-        public SIOSkipEmpty skip_empty
+    _keys_required:set
+    _keys_optional:set
+    skip_empty:SIOSkipEmpty
 
     def __cinit__(self):
         self._type = ElemType.dict_
@@ -615,7 +641,8 @@ cdef class Dict(Elem):
 
 # ################################################################################################################################
 
-cdef class DictList(Dict):
+@cclass
+class DictList(Dict):
     def __cinit__(self):
         self._type = ElemType.dict_list
 
@@ -634,7 +661,8 @@ cdef class DictList(Dict):
 
 # ################################################################################################################################
 
-cdef class Float(Elem):
+@cclass
+class Float(Elem):
     def __cinit__(self):
         self._type = ElemType.float_
 
@@ -649,7 +677,8 @@ cdef class Float(Elem):
 
 # ################################################################################################################################
 
-cdef class Int(Elem):
+@cclass
+class Int(Elem):
     def __cinit__(self):
         self._type = ElemType.int_
 
@@ -664,7 +693,8 @@ cdef class Int(Elem):
 
 # ################################################################################################################################
 
-cdef class List(Elem):
+@cclass
+class List(Elem):
     def __cinit__(self):
         self._type = ElemType.list_
 
@@ -679,11 +709,11 @@ cdef class List(Elem):
 
 # ################################################################################################################################
 
-cdef class Text(Elem):
+@cclass
+class Text(Elem):
 
-    cdef:
-        public str encoding
-        public bint is_secret
+    encoding:str
+    is_secret:bool
 
     def __cinit__(self):
         self._type = ElemType.text
@@ -716,14 +746,18 @@ cdef class Text(Elem):
 
     to_dict = from_dict = to_csv = from_csv = to_xml = from_xml = from_json
 
-cdef class Secret(Text):
+# ################################################################################################################################
+
+@cclass
+class Secret(Text):
     def __init__(self, *args, **kwargs):
         super(Secret, self).__init__(*args, **kwargs)
         self.is_secret = True
 
 # ################################################################################################################################
 
-cdef class UTC(Elem):
+@cclass
+class UTC(Elem):
     def __cinit__(self):
         self._type = ElemType.utc
 
@@ -738,7 +772,8 @@ cdef class UTC(Elem):
 
 # ################################################################################################################################
 
-cdef class UUID(Elem):
+@cclass
+class UUID(Elem):
 
     def __cinit__(self):
         self._type = ElemType.uuid
@@ -765,7 +800,8 @@ cdef class UUID(Elem):
 
 # ################################################################################################################################
 
-cdef class ConfigItem(object):
+@cclass
+class ConfigItem(object):
     """ An individual instance of server-wide SimpleIO configuration. Each subclass covers
     a particular set of exact values, prefixes or suffixes.
     """
@@ -780,25 +816,29 @@ cdef class ConfigItem(object):
 
 # ################################################################################################################################
 
-cdef class BoolConfig(ConfigItem):
+@cclass
+class BoolConfig(ConfigItem):
     """ SIO configuration for boolean values.
     """
 
 # ################################################################################################################################
 
-cdef class IntConfig(ConfigItem):
+@cclass
+class IntConfig(ConfigItem):
     """ SIO configuration for integer values.
     """
 
 # ################################################################################################################################
 
-cdef class SecretConfig(ConfigItem):
+@cclass
+class SecretConfig(ConfigItem):
     """ SIO configuration for secret values, passwords, tokens, API keys etc.
     """
 
 # ################################################################################################################################
 
-cdef class SIOServerConfig(object):
+@cclass
+class SIOServerConfig(object):
     """ Contains global SIO configuration. Each service's _sio attribute
     will refer to this object so as to have only one place where all the global configuration is kept.
     """
