@@ -57,14 +57,14 @@ class Response(object):
     # Public attributes
     result           = cy.declare(cy.unicode, visibility='public')  # type: past_unicode
     result_details   = cy.declare(cy.unicode, visibility='public')  # type: past_unicode
-    _payload          = cy.declare(cy.unicode, visibility='public') # type: past_unicode
+    _payload          = cy.declare(cy.object, visibility='public')  # type: object
     content_encoding = cy.declare(cy.unicode, visibility='public')  # type: past_unicode
     cid              = cy.declare(cy.unicode, visibility='public')  # type: past_unicode
     data_format      = cy.declare(cy.unicode, visibility='public')  # type: past_unicode
     headers          = cy.declare(cy.dict, visibility='public')     # type: dict
     status_code      = cy.declare(cy.int, visibility='public')      # type: int
     status_message   = cy.declare(cy.unicode, visibility='public')  # type: past_unicode
-    sio_config:SIODefinition = None
+    sio_config       = cy.declare(cy.object, visibility='public')   # type: SIODefinition
 
     # Private-use attributes (still declared as public)
     _content_type        = cy.declare(cy.unicode, visibility='public') # type: past_unicode
