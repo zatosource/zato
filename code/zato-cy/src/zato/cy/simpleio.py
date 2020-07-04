@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-#cython: auto_pickle=False
+# cython: auto_pickle=False
 
 """
 Copyright (C) 2020, Zato Source s.r.o. https://zato.io
