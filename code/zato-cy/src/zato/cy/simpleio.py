@@ -990,8 +990,11 @@ class SIODefinition(object):
     # To indicate whether I/O particular definitions exist or not
     has_input_required = cy.declare(cy.bint, visibility='public') # type: bool
     has_input_optional = cy.declare(cy.bint, visibility='public') # type: bool
+    has_input_declared = cy.declare(cy.bint, visibility='public') # type: bool
+
     has_output_required = cy.declare(cy.bint, visibility='public') # type: bool
     has_output_optional = cy.declare(cy.bint, visibility='public') # type: bool
+    has_output_declared = cy.declare(cy.bint, visibility='public') # type: bool
 
     # Name of the service this definition is for
     _service_name = cy.declare(cy.unicode, visibility='public') # type: past_unicode
@@ -1277,9 +1280,11 @@ class CySimpleIO(object):
 
         self.definition.has_input_required = stdlib_bool(len(self.definition._input_required))
         self.definition.has_input_optional = stdlib_bool(len(self.definition._input_optional))
+        self.definition.has_input_declared = self.definition.has_input_required or self.definition.has_input_optional
 
         self.definition.has_output_required = stdlib_bool(len(self.definition._output_required))
         self.definition.has_output_optional = stdlib_bool(len(self.definition._output_optional))
+        self.definition.has_output_declared = self.definition.has_output_required or self.definition.has_output_optional
 
         # Set up CSV configuration
         self._set_up_csv_config()
