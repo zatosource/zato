@@ -68,6 +68,7 @@ class Response(object):
 
     # Private-use attributes (still declared as public)
     _content_type        = cy.declare(cy.unicode, visibility='public') # type: past_unicode
+    _has_sio_output      = cy.declare(cy.bint, visibility='public')    # type: bool
     content_type_changed = cy.declare(cy.bint, visibility='public')    # type: bool
 
     def __cinit__(self):
@@ -80,7 +81,9 @@ class Response(object):
         self.headers = None
         self.status_code = OK
         self.status_message = 'OK'
+        self.sio_config = None
         self._content_type = 'text/plain'
+        self._has_sio_output = False
 
     def __len__(self):
         return len(self._payload)
@@ -93,6 +96,7 @@ class Response(object):
 
         if self.sio_config and self.sio_config.has_output_declared:
             self._payload = SimpleIOPayload(self.cid, self.data_format)
+            self._has_sio_output = True
 
 # ################################################################################################################################
 
@@ -115,29 +119,38 @@ class Response(object):
         the dicts are matched and transformed according to the SIO definition.
         """
 
+        # 1)
         # This covers dict and subclasses, e.g. Bunch
         if isinstance(value, dict):
 
+            # 1a)
             # If we are using SimpleIO, extract elements from that dict ..
-            if self.sio_config.has_output_declared:
+            if self._has_sio_output:
                 self._payload.set_payload_attrs(value)
 
+            # 1b)
             # .. otherwise, assign the dict as-is.
             else:
                 self._payload = value
+
+        # 2)
         else:
 
+            # 2a)
             # Must be an object of a type that we do not serialise ourselves ..
             if isinstance(value, direct_payload) and not isinstance(value, KeyedTuple):
                 self._payload = value
 
+            # 2b)
             # .. otherwise, we will try to serialise it ..
             else:
 
+                # 2b1)
                 # .. if using SimpleIO ..
-                if self.sio_config.has_output_declared:
+                if self._has_sio_output:
                     self._payload.set_payload_attrs(value)
 
+                # 2b2)
                 # .. someone assigns to self.response.payload an object that needs
                 # serialisation but we do not know how to do it.
                 else:
