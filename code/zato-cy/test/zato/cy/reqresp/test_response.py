@@ -11,6 +11,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from http.client import OK
 
+# lxml
+from lxml.etree import _Element as EtreeElement
+from lxml.objectify import ObjectifiedElement
+
 # Zato
 from zato.common import DATA_FORMAT, ZATO_OK
 from zato.server.service import Service
@@ -87,28 +91,54 @@ class ResponseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def test_set_payload_dict_no_sio(self):
+    def xtest_set_payload_dict_has_sio_case_1a(self):
         pass
 
 # ################################################################################################################################
 
-    def test_set_payload_dict_has_sio(self):
-        pass
+    def xtest_set_payload_dict_no_sio_case_1b(self):
+
+        response = Response()
+        response.init('abc', DATA_FORMAT.CSV)
+
+        data = {'a':'aa', 'b':'bb'}
+        response.payload = data
+
+        self.assertDictEqual(response.payload, data)
 
 # ################################################################################################################################
 
-    def test_set_payload_direct_payload(self):
+    def test_set_payload_direct_payload_case_2a(self):
         # basestring, dict, list, tuple, bool, Number + (EtreeElement, ObjectifiedElement)
+
+        data_01 = b'abc'
+        data_02 = u'def'
+        data_03 = [1, 2, 3]
+        data_04 = (5, 6, 7)
+        data_05 = True
+        data_06 = False
+        data_07 = 1
+        data_08 = 2.0
+        data_09 = EtreeElement()
+        data_10 = ObjectifiedElement()
+
+        elems = [data_01, data_02, data_03, data_04, data_05, data_06, data_07, data_08, data_09, data_10]
+
+        response = Response()
+        response.init('abc', DATA_FORMAT.CSV)
+
+        for elem in elems:
+            response.payload = elem
+            self.assertIs(response.payload, elem)
+
+# ################################################################################################################################
+
+    def xtest_set_payload_not_direct_payload_no_sio_case_2b1(self):
         pass
 
 # ################################################################################################################################
 
-    def test_set_payload_not_direct_payload_no_sio(self):
-        pass
-
-# ################################################################################################################################
-
-    def test_set_payload_not_direct_payload_has_sio(self):
+    def xtest_set_payload_not_direct_payload_has_sio_case_2b2(self):
         pass
 
 # ################################################################################################################################
