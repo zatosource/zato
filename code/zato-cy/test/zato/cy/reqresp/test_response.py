@@ -30,7 +30,7 @@ from zato.simpleio import CySimpleIO
 
 class ResponseTestCase(BaseTestCase):
 
-    def xtest_defaults(self):
+    def test_defaults(self):
         response = Response()
 
         self.assertIsNone(response.cid)
@@ -47,7 +47,7 @@ class ResponseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_len(self):
+    def test_len(self):
         response = Response()
         response._payload = 'abcdef'
 
@@ -55,7 +55,7 @@ class ResponseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_content_type(self):
+    def test_content_type(self):
         response = Response()
         response.content_type = 'abc'
 
@@ -64,7 +64,7 @@ class ResponseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_init_no_sio(self):
+    def test_init_no_sio(self):
         response = Response()
         response.init('abc', DATA_FORMAT.CSV)
 
@@ -74,7 +74,7 @@ class ResponseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_init_has_sio(self):
+    def test_init_has_sio(self):
 
         class MyService(Service):
             class SimpleIO:
@@ -91,12 +91,12 @@ class ResponseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_set_payload_dict_has_sio_case_1a(self):
+    def test_set_payload_dict_has_sio_case_1a(self):
         pass
 
 # ################################################################################################################################
 
-    def xtest_set_payload_dict_no_sio_case_1b(self):
+    def test_set_payload_dict_no_sio_case_1b(self):
 
         response = Response()
         response.init('abc', DATA_FORMAT.CSV)
@@ -131,15 +131,30 @@ class ResponseTestCase(BaseTestCase):
             response.payload = elem
             self.assertIs(response.payload, elem)
 
+
 # ################################################################################################################################
 
-    def xtest_set_payload_not_direct_payload_no_sio_case_2b1(self):
+    def test_set_payload_not_direct_payload_has_sio_case_2b1(self):
+        # ZZZ: Remember about KeyedTuple here
         pass
 
 # ################################################################################################################################
 
-    def xtest_set_payload_not_direct_payload_has_sio_case_2b2(self):
-        pass
+    def test_set_payload_not_direct_payload_no_sio_case_2b2(self):
+
+        class MyCustomPayloadType:
+            def __repr__(self):
+                return '<MyCustomPayloadType>'
+
+        response = Response()
+        response.init('abc', DATA_FORMAT.CSV)
+
+        try:
+            response.payload = MyCustomPayloadType()
+        except Exception as e:
+            self.assertEqual(e.args[0], 'Cannot serialise value without SimpleIO ouput declaration (<MyCustomPayloadType>)')
+        else:
+            self.fail('Expected for an exception to be raised')
 
 # ################################################################################################################################
 # ################################################################################################################################
