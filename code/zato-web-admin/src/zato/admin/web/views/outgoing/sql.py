@@ -146,8 +146,12 @@ def ping(req, cluster_id, id):
         response = req.zato.client.invoke('zato.outgoing.sql.ping', {'id':id})
 
         if response.ok:
-            return TemplateResponse(req, 'zato/outgoing/sql-ping-ok.html',
-                {'response_time':'%.3f' % float(response.data.response_time)})
+
+            if not response.data.response_time:
+                return HttpResponseServerError('No response time received')
+            else:
+                return TemplateResponse(req, 'zato/outgoing/sql-ping-ok.html',
+                    {'response_time':'%.3f' % float(response.data.response_time)})
         else:
             return HttpResponseServerError(response.details)
     except Exception:
