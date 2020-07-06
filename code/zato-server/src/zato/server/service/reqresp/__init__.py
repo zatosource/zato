@@ -350,8 +350,10 @@ class SimpleIOPayload(SIOConverter):
         """ Called when the user wants to set the payload to a bunch of attributes.
         """
         names = None
+
         if isinstance(attrs, _keyed):
             names = attrs.keys()
+
         elif self._is_sqlalchemy(attrs):
             names = [elem[0] for elem in attrs._sa_class_manager._all_sqla_attributes()]
 
@@ -669,8 +671,6 @@ class Response(object):
         skip_empty_keys = getattr(io, 'skip_empty_keys', False)
         force_empty_keys = getattr(io, 'force_empty_keys', [])
         allow_empty_required = getattr(io, 'allow_empty_required', False)
-
-        self.logger.warn('ZZZ %s', io)
 
         if required_list or optional_list:
             self._payload = SimpleIOPayload(cid, data_format, required_list, optional_list, self.simple_io_config,
