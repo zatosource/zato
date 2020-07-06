@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from copy import deepcopy
 from http.client import OK
 
 # lxml
@@ -24,6 +25,11 @@ from test.zato.cy.simpleio_ import BaseTestCase
 from zato.cy.reqresp.payload import SimpleIOPayload
 from zato.cy.reqresp.response import Response
 from zato.simpleio import CySimpleIO
+
+class MyBaseService(Service):
+    class SimpleIO:
+        input = 'aaa', 'bbb', 'ccc', '-ddd', '-eee'
+        output = 'qqq', 'www', '-eee', '-fff'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -76,11 +82,7 @@ class ResponseTestCase(BaseTestCase):
 
     def test_init_has_sio(self):
 
-        class MyService(Service):
-            class SimpleIO:
-                input = 'aaa', 'bbb', 'ccc', '-ddd', '-eee'
-                output = 'qqq', 'www', '-eee', '-fff'
-
+        MyService = deepcopy(MyBaseService)
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
 
         response = Response()
@@ -92,7 +94,18 @@ class ResponseTestCase(BaseTestCase):
 # ################################################################################################################################
 
     def test_set_payload_dict_has_sio_case_1a(self):
-        pass
+
+        MyService = deepcopy(MyBaseService)
+        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+
+        response = Response()
+        response.sio_config = MyService._sio.definition
+        response.init('abc', DATA_FORMAT.CSV)
+
+        # Note that 'ddd' is optional so it can be missing
+        # and that 'fff' is not in SIO so it should be ignored.
+        data = {'aaa':'111', 'bbb':'222', 'ccc':'333', 'eee':'555', 'fff':'666'}
+        response.payload = data
 
 # ################################################################################################################################
 
@@ -131,11 +144,12 @@ class ResponseTestCase(BaseTestCase):
             response.payload = elem
             self.assertIs(response.payload, elem)
 
-
 # ################################################################################################################################
 
     def test_set_payload_not_direct_payload_has_sio_case_2b1(self):
+        #
         # ZZZ: Remember about KeyedTuple here
+        # ZZZ: Remember about __setslice__, i.e. self.response.payload[:] = data
         pass
 
 # ################################################################################################################################
