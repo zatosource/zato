@@ -95,7 +95,7 @@ class Response(object):
         self.data_format = data_format
 
         if self.sio_config and self.sio_config.has_output_declared:
-            self._payload = SimpleIOPayload(self.cid, self.data_format)
+            self._payload = SimpleIOPayload(self.sio_config.all_output_elem_names, self.cid, self.data_format)
             self._has_sio_output = True
 
 # ################################################################################################################################
