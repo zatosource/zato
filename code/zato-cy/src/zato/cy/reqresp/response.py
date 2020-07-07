@@ -34,10 +34,10 @@ from past.builtins import unicode as past_unicode
 # ################################################################################################################################
 
 if 0:
-    from zato.cy.simpleio import SIODefinition
+    from zato.cy.simpleio import CySimpleIO
 
+    CySimpleIO = CySimpleIO
     past_unicode = past_unicode
-    SIODefinition = SIODefinition
 
 # ################################################################################################################################
 
@@ -57,14 +57,14 @@ class Response(object):
     # Public attributes
     result           = cy.declare(cy.unicode, visibility='public')  # type: past_unicode
     result_details   = cy.declare(cy.unicode, visibility='public')  # type: past_unicode
-    _payload          = cy.declare(cy.object, visibility='public')  # type: object
+    _payload         = cy.declare(cy.object, visibility='public')   # type: object
     content_encoding = cy.declare(cy.unicode, visibility='public')  # type: past_unicode
     cid              = cy.declare(cy.unicode, visibility='public')  # type: past_unicode
     data_format      = cy.declare(cy.unicode, visibility='public')  # type: past_unicode
     headers          = cy.declare(cy.dict, visibility='public')     # type: dict
     status_code      = cy.declare(cy.int, visibility='public')      # type: int
     status_message   = cy.declare(cy.unicode, visibility='public')  # type: past_unicode
-    sio_config       = cy.declare(cy.object, visibility='public')   # type: SIODefinition
+    sio              = cy.declare(object, visibility='public')      # type: CySimpleIO
 
     # Private-use attributes (still declared as public)
     _content_type        = cy.declare(cy.unicode, visibility='public') # type: past_unicode
@@ -81,7 +81,7 @@ class Response(object):
         self.headers = None
         self.status_code = OK
         self.status_message = 'OK'
-        self.sio_config = None
+        self.sio = None
         self._content_type = 'text/plain'
         self._has_sio_output = False
 
@@ -94,8 +94,8 @@ class Response(object):
         self.cid = cid
         self.data_format = data_format
 
-        if self.sio_config and self.sio_config.has_output_declared:
-            self._payload = SimpleIOPayload(self.sio_config.all_output_elem_names, self.cid, self.data_format)
+        if self.sio and self.sio.definition.has_output_declared:
+            self._payload = SimpleIOPayload(self.sio, self.sio.definition.all_output_elem_names, self.cid, self.data_format)
             self._has_sio_output = True
 
 # ################################################################################################################################
