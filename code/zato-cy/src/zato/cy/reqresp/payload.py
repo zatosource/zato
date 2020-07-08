@@ -58,7 +58,7 @@ class SimpleIOPayload(object):
     data_format = cy.declare(str, visibility='public') # type: past_unicode
 
     # One of the two will be used to produce a response
-    user_attrs_dict = cy.declare(dict, visibility='public') # type: dict
+    user_attrs_dict = cy.declare(dict, visibility='public')  # type: dict
     user_attrs_list  = cy.declare(list, visibility='public') # type: list
 
 # ################################################################################################################################
@@ -129,6 +129,20 @@ class SimpleIOPayload(object):
 
         # Return serialised or not
         return self.sio.serialise(value, self.data_format) if serialise else value
+
+# ################################################################################################################################
+
+    def __setitem__(self, key, value):
+        if isinstance(key, slice):
+            self.__setslice__(key.start, key.stop, value)
+        else:
+            setattr(self, key, value)
+
+    def __setattr__(self, key, value):
+        self.user_attrs_dict[key] = value
+
+    def __getattr__(self, key):
+        return self.user_attrs_dict[key]
 
 # ################################################################################################################################
 # ################################################################################################################################

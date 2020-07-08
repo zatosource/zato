@@ -78,7 +78,7 @@ class Response(object):
         self.content_encoding = None
         self.cid = None
         self.data_format = None
-        self.headers = None
+        self.headers = {}
         self.status_code = OK
         self.status_message = 'OK'
         self.sio = None
@@ -90,8 +90,9 @@ class Response(object):
 
 # ################################################################################################################################
 
-    def init(self, cid:str, data_format:str):
+    def init(self, cid:str, sio:object, data_format:str):
         self.cid = cid
+        self.sio = sio # type: CySimpleIO
         self.data_format = data_format
 
         if self.sio and self.sio.definition.has_output_declared:
