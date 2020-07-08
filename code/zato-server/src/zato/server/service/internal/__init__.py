@@ -177,7 +177,6 @@ class Ping(AdminService):
         response_elem = 'zato_ping_response'
 
     def handle(self):
-        self.logger.warn('EEE %r', self.response.payload)
         self.response.payload.pong = 'zato'
 
     def after_handle(self):
