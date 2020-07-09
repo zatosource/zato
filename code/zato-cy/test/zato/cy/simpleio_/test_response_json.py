@@ -57,7 +57,7 @@ class JSONResponse(BaseTestCase):
             'eee': eee,
         }
 
-        result = MyService._sio.serialise(data, DATA_FORMAT.JSON)
+        result = MyService._sio.get_output(data, DATA_FORMAT.JSON)
         json_data = json_loads(result)
 
         self.assertEquals(json_data['aaa'], aaa)
@@ -89,7 +89,7 @@ class JSONResponse(BaseTestCase):
             'eee': eee,
         }
 
-        result = MyService._sio.serialise(data, DATA_FORMAT.JSON)
+        result = MyService._sio.get_output(data, DATA_FORMAT.JSON)
 
         json_data = json_loads(result)
         json_data = bunchify(json_data)
@@ -125,7 +125,7 @@ class JSONResponse(BaseTestCase):
         data2 = {'aaa': aaa2, 'bbb': bbb2, 'ccc': ccc2, 'eee': eee2}
         data = [data1, data2]
 
-        result = MyService._sio.serialise(data, DATA_FORMAT.JSON)
+        result = MyService._sio.get_output(data, DATA_FORMAT.JSON)
         json_data = json_loads(result)
 
         self.assertEquals(json_data[0]['aaa'], aaa1)
@@ -180,7 +180,7 @@ class JSONResponse(BaseTestCase):
             'qqq': qqq
         }
 
-        result = MyService._sio.serialise(data, DATA_FORMAT.JSON)
+        result = MyService._sio.get_output(data, DATA_FORMAT.JSON)
         json_data = json_loads(result)
 
         self.assertEquals(json_data['aaa'], aaa)
@@ -215,11 +215,12 @@ class JSONResponse(BaseTestCase):
         }
 
         with self.assertRaises(SerialisationError) as ctx:
-            result = MyService._sio.serialise(data, DATA_FORMAT.JSON)
+            result = MyService._sio.get_output(data, DATA_FORMAT.JSON)
 
         e = ctx.exception # type: SerialisationError
         self.assertEquals(e.args[0], "Exception `invalid literal for int() with base 10: 'aaa'` while serialising " \
-            "`{'aaa': 'aaa', 'bbb': '222'}`")
+            "`{'aaa': 'aaa', 'bbb': '222'}` " \
+            "(<class 'test.zato.cy.simpleio_.test_response_json.JSONResponse.test_response_invalid_input.<locals>.MyService'>)")
 
 # ################################################################################################################################
 # ################################################################################################################################
