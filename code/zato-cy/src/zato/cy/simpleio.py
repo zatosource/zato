@@ -34,7 +34,7 @@ from dateutil.parser import parse as dt_parse
 from lxml.etree import _Element as EtreeElementClass, Element, SubElement, tostring as etree_to_string, XPath
 
 # Zato
-from zato.common import DATA_FORMAT
+from zato.common import APISPEC, DATA_FORMAT
 from zato.util_convert import to_bool
 
 # Zato - Cython
@@ -794,6 +794,93 @@ class UUID(Elem):
 
     to_dict   = to_csv   = to_xml   = to_json
     from_dict = from_csv = from_xml = from_json
+
+# ################################################################################################################################
+
+# For backward compatibility
+Boolean     = Bool
+Integer     = Int
+ListOfDicts = DictList
+Unicode     = Text
+
+# ################################################################################################################################
+
+class SIO_TYPE_MAP:
+
+# ################################################################################################################################
+
+    class OPEN_API_V3:
+
+        name = APISPEC.OPEN_API_V3
+        STRING = ('string', 'string')
+        DEFAULT = STRING
+        INTEGER = ('integer', 'int32')
+        BOOLEAN = ('boolean', 'boolean')
+
+        map = {
+            AsIs: STRING,
+            Bool: BOOLEAN,
+            CSV: STRING,
+            Dict: ('string', 'binary'),
+            Float: ('number', 'float'),
+            Int: INTEGER,
+            List: ('string', 'binary'),
+            DictList: ('string', 'binary'),
+            Opaque: ('string', 'binary'),
+            Text: STRING,
+            UTC: ('string', 'date-time'),
+        }
+
+    class SOAP_12:
+
+        name = APISPEC.SOAP_12
+        STRING = ('string', 'xsd:string')
+        DEFAULT = STRING
+        INTEGER = ('integer', 'xsd:integer')
+        BOOLEAN = ('boolean', 'xsd:boolean')
+
+        map = {
+            AsIs: STRING,
+            Bool: BOOLEAN,
+            CSV: STRING,
+            Dict: ('dict', 'zato:dict'),
+            Float: ('number', 'float'),
+            Int: INTEGER,
+            List: ('list', 'zato:list'),
+            DictList: ('list-of-dicts', 'zato:list-of-dicts'),
+            Opaque: ('opaque', 'anyType'),
+            Text: STRING,
+            UTC: ('string', 'xsd:dateTime'),
+        }
+
+# ################################################################################################################################
+
+    class ZATO:
+
+        name = 'zato'
+        STRING = ('string', 'string')
+        DEFAULT = STRING
+        INTEGER = ('integer', 'integer')
+        BOOLEAN = ('boolean', 'boolean')
+
+        map = {
+            AsIs: STRING,
+            Bool: BOOLEAN,
+            CSV: STRING,
+            Dict: ('dict', 'dict'),
+            Float: ('number', 'float'),
+            Int: INTEGER,
+            List: ('list', 'list'),
+            DictList: ('list', 'list-of-dicts'),
+            Opaque: ('opaque', 'opaque'),
+            Text: STRING,
+            UTC: ('string', 'date-time-utc'),
+        }
+
+# ################################################################################################################################
+
+    def __iter__(self):
+        return iter((self.OPEN_API_V3, self.SOAP_12, self.ZATO))
 
 # ################################################################################################################################
 
@@ -1935,6 +2022,20 @@ class CySimpleIO(object):
 
         else:
             raise ValueError('Unrecognised serialisation data format `{}`'.format(data_format))
+
+# ################################################################################################################################
+
+@cy.ccall
+@cy.returns(cy.bint)
+def is_sio_bool(self, value:object) -> bool:
+    return isinstance(value, Bool)
+
+# ################################################################################################################################
+
+@cy.ccall
+@cy.returns(cy.bint)
+def is_sio_int(self, value:object) -> bool:
+    return isinstance(value, Int)
 
 # ################################################################################################################################
 

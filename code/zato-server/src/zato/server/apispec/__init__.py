@@ -28,7 +28,9 @@ from past.builtins import basestring
 
 # Zato
 from zato.common import APISPEC
-from zato.server.service.reqresp.sio import AsIs, SIO_TYPE_MAP, is_bool, is_int
+
+# Zato - Cython
+from zato.cy.simpleio import is_sio_bool, is_sio_int, SIO_TYPE_MAP
 
 # ################################################################################################################################
 
