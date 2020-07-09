@@ -35,7 +35,7 @@ from zato.common.py23_ import maxint
 from zato.common import KVDB, SECONDS_IN_DAY, StatsElem, ZatoException
 from zato.common.broker_message import STATS
 from zato.common.odb.model import Service
-from zato.server.service import Integer, UTC
+from zato.server.service import Integer, Service, UTC
 from zato.server.service.internal import AdminService, AdminSIO
 
 STATS_KEYS = ('usage', 'max', 'rate', 'mean', 'min')
@@ -63,7 +63,7 @@ class Delete(AdminService):
 
 # ##############################################################################
 
-class BaseAggregatingService(AdminService):
+class BaseAggregatingService(Service):
     """ A base class for all services that process statistics into aggregated values.
     """
     def stats_enabled(self):

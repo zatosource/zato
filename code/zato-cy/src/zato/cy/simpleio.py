@@ -1133,6 +1133,9 @@ class CySimpleIO(object):
     # Kept for backward compatibility with 3.0
     has_bool_force_empty_keys = cy.declare(cy.bint, visibility='public') # type: bool
 
+    # A service class this SimpleIO object is attached to
+    service_class = cy.declare(object, visibility='public') # type: object
+
 # ################################################################################################################################
 
     def __cinit__(self, server_config:SIOServerConfig, user_declaration:object):
@@ -1520,6 +1523,13 @@ class CySimpleIO(object):
         required = _required
         optional = _optional
 
+        if 'sql.GetList' in str(self.service_class):
+            print()
+            print(111, self.service_class, container)
+            print(222, required)
+            print(333, optional)
+            print()
+
         # If there are elements shared by required and optional lists, the ones from the optional list
         # need to be removed, the required ones take priority. The reason for that is that it is common
         # to have a base SimpleIO class with optional elements that are made mandatory in a child class.
@@ -1569,6 +1579,7 @@ class CySimpleIO(object):
 
             # Attach the Cython object representing the parsed user definition
             cy_simple_io = CySimpleIO(server_config, user_sio)
+            cy_simple_io.service_class = class_
             cy_simple_io.build(class_)
             class_._sio = cy_simple_io
 
@@ -1604,11 +1615,17 @@ class CySimpleIO(object):
         is_xml:bool = isinstance(elem, EtreeElementClass)
 
         if not (is_dict or is_csv or is_xml):
-            raise ValueError('Expected a dict, CSV or EtreeElementClass instead of `{!r}` ({})'.format(elem, type(elem).__name__))
+            raise ValueError('Expected a dict, CSV or EtreeElementClass instead of input `{!r}` ({} in {})'.format(
+                elem, type(elem).__name__, self.service_class))
 
         out:dict = {}
 
-        for idx, sio_item in enumerate(chain(self.definition._input_required, self.definition._input_optional)):
+        items = chain(self.definition._input_required, self.definition._input_optional)
+
+        for idx, sio_item in enumerate(items): # type: (int, Elem)
+
+            #print(111, self.service_class)
+            #print(222, idx, sio_item.name, sio_item.is_required)
 
             # Parse the input dictionary
             if is_dict:
@@ -1637,7 +1654,7 @@ class CySimpleIO(object):
                     try:
                         input_value = elem[idx]
                     except IndexError:
-                        raise ValueError('Could not find value at index `{}` in `{}` (dialect:{}, config:{})'.format(
+                        raise ValueError('Could not find input value at index `{}` in `{}` (dialect:{}, config:{})'.format(
                             idx, elem, self.definition._csv_config.dialect, self.definition._csv_config.common_config))
 
                 # Otherwise, refuse to continue
@@ -1646,6 +1663,11 @@ class CySimpleIO(object):
 
             # We do not have such a elem on input so an exception needs to be raised if this is a require one
             if input_value is InternalNotGiven:
+
+                print()
+                print(111, input_value, sio_item.name, sio_item.is_required)
+                print()
+
                 if sio_item.is_required:
 
                     if is_dict:
@@ -1655,7 +1677,8 @@ class CySimpleIO(object):
                     elif is_csv:
                         all_elems = elem
 
-                    raise ValueError('No such elem `{}` among `{}` in `{}`'.format(sio_item.name, all_elems, elem))
+                    raise ValueError('No such input elem `{}` among `{}` in `{}` ({})'.format(
+                        sio_item.name, all_elems, elem, self.service_class))
                 else:
                     if self._should_skip_on_input(self.definition, sio_item, input_value):
                         # Continue to the next sio_item
@@ -1668,7 +1691,7 @@ class CySimpleIO(object):
                 try:
                     value = parse_func(input_value)
                 except NotImplementedError:
-                    raise NotImplementedError('No parser for `{}` ({})'.format(input_value, data_format))
+                    raise NotImplementedError('No parser for input `{}` ({})'.format(input_value, data_format))
 
             # We get here only if should_skip is not True
             out[sio_item.name] = value

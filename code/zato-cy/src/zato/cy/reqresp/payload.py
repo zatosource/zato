@@ -141,8 +141,16 @@ class SimpleIOPayload(object):
     def __setattr__(self, key, value):
         self.user_attrs_dict[key] = value
 
+        print()
+        print(333, key, value)
+        print(444, self.user_attrs_dict, hex(id(self.user_attrs_dict)))
+        print()
+
     def __getattr__(self, key):
-        return self.user_attrs_dict[key]
+        try:
+            return self.user_attrs_dict[key]
+        except KeyError:
+            raise KeyError('No such key `{}` among `{}` ({})'.format(key, self.user_attrs_dict, hex(id(self.user_attrs_dict))))
 
 # ################################################################################################################################
 # ################################################################################################################################
