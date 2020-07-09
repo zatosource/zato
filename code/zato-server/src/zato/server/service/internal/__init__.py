@@ -23,7 +23,6 @@ from zato.common.odb.model import Cluster
 from zato.common.util import get_response_value, replace_private_key
 from zato.common.util.sql import search as sql_search
 from zato.server.service import AsIs, Bool, Int, Service
-from zato.server.service.reqresp.sio import convert_sio
 
 # ################################################################################################################################
 
@@ -84,12 +83,6 @@ class AdminService(Service):
             self._search_tool = SearchTool(self._filter_by)
         self.ipc_api = self.server.ipc_api
         super(AdminService, self)._init(is_http)
-
-# ################################################################################################################################
-
-    def _convert_sio_elem(self, param_name, value):
-        return convert_sio(self.cid, param_name, param_name, value, True, False, self.request.bool_parameter_prefixes,
-            self.request.int_parameters, self.request.int_parameter_suffixes, False, self.server.encrypt, True)
 
 # ################################################################################################################################
 
