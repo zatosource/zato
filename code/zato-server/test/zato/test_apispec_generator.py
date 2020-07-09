@@ -48,7 +48,7 @@ class GeneratorTestCase(TestCase):
         info = generator.get_info()
         info = bunchify(info)
 
-        services   = info.services   # type: Bunch
+        services = info.services   # type: Bunch
         self.assertEqual(len(services), 1)
 
         service = services[0] # type: Bunch
