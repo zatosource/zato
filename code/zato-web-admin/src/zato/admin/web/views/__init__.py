@@ -365,6 +365,11 @@ class Index(_BaseView):
         names = tuple(chain(self.SimpleIO.output_required, self.SimpleIO.output_optional))
 
         for msg_item in item_list:
+
+            print()
+            print(111, msg_item)
+            print()
+
             item = self.output_class()
             for name in names:
                 value = getattr(msg_item, name, None)
