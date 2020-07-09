@@ -89,6 +89,10 @@ class GetList(AdminService):
 
             out.append(item)
 
+        print()
+        print(111, out)
+        print()
+
         return out
 
     def handle(self):
