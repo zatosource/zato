@@ -61,7 +61,7 @@ class AdminSIO(object):
 
 class GetListAdminSIO(object):
     namespace = zato_namespace
-    input_optional = (Int('cur_page'), Bool('paginate'), 'query')
+    input_optional = (Bool('paginate'), 'query')
 
 # ################################################################################################################################
 
