@@ -36,7 +36,7 @@ class MyBaseService(Service):
 
 class ResponseTestCase(BaseTestCase):
 
-    def xtest_defaults(self):
+    def test_defaults(self):
         response = Response()
 
         self.assertIsNone(response.cid)
@@ -44,7 +44,7 @@ class ResponseTestCase(BaseTestCase):
         self.assertEqual(response.content_type, 'text/plain')
         self.assertFalse(response.content_type_changed)
         self.assertIsNone(response.data_format)
-        self.assertIsNone(response.headers)
+        self.assertDictEqual(response.headers, {})
         self.assertEqual(response.payload, '')
         self.assertEqual(response.result, ZATO_OK)
         self.assertEqual(response.result_details, '')
@@ -53,7 +53,7 @@ class ResponseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_len(self):
+    def test_len(self):
         response = Response()
         response._payload = 'abcdef'
 
@@ -61,7 +61,7 @@ class ResponseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_content_type(self):
+    def test_content_type(self):
         response = Response()
         response.content_type = 'abc'
 
@@ -70,9 +70,9 @@ class ResponseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_init_no_sio(self):
+    def test_init_no_sio(self):
         response = Response()
-        response.init('abc', DATA_FORMAT.CSV)
+        response.init('abc', None, DATA_FORMAT.CSV)
 
         self.assertEqual(response.cid, 'abc')
         self.assertEqual(response.data_format, DATA_FORMAT.CSV)
@@ -80,7 +80,7 @@ class ResponseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_init_has_sio(self):
+    def test_init_has_sio(self):
 
         MyService = deepcopy(MyBaseService)
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
@@ -107,10 +107,10 @@ class ResponseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_set_payload_dict_no_sio_case_1b(self):
+    def test_set_payload_dict_no_sio_case_1b(self):
 
         response = Response()
-        response.init('abc', DATA_FORMAT.CSV)
+        response.init('abc', None, DATA_FORMAT.CSV)
 
         data = {'a':'aa', 'b':'bb'}
         response.payload = data
@@ -119,7 +119,7 @@ class ResponseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_set_payload_direct_payload_case_2a(self):
+    def test_set_payload_direct_payload_case_2a(self):
         # basestring, dict, list, tuple, bool, Number + (EtreeElement, ObjectifiedElement)
 
         data_01 = b'abc'
@@ -136,7 +136,7 @@ class ResponseTestCase(BaseTestCase):
         elems = [data_01, data_02, data_03, data_04, data_05, data_06, data_07, data_08, data_09, data_10]
 
         response = Response()
-        response.init('abc', DATA_FORMAT.CSV)
+        response.init('abc', None, DATA_FORMAT.CSV)
 
         for elem in elems:
             response.payload = elem
@@ -144,7 +144,7 @@ class ResponseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_set_payload_not_direct_payload_has_sio_case_2b1(self):
+    def test_set_payload_not_direct_payload_has_sio_case_2b1(self):
         #
         # ZZZ: Remember about KeyedTuple here
         # ZZZ: Remember about __setslice__, i.e. self.response.payload[:] = data
@@ -152,14 +152,14 @@ class ResponseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_set_payload_not_direct_payload_no_sio_case_2b2(self):
+    def test_set_payload_not_direct_payload_no_sio_case_2b2(self):
 
         class MyCustomPayloadType:
             def __repr__(self):
                 return '<MyCustomPayloadType>'
 
         response = Response()
-        response.init('abc', DATA_FORMAT.CSV)
+        response.init('abc', None, DATA_FORMAT.CSV)
 
         try:
             response.payload = MyCustomPayloadType()
