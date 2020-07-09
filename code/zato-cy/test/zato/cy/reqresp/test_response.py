@@ -92,6 +92,22 @@ class ResponseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
+    def test_setslice(self):
+
+        MyService = deepcopy(MyBaseService)
+        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+
+        response = Response()
+        response.init('abc', MyService._sio, DATA_FORMAT.CSV)
+
+        data = [{'a':'aa', 'b':'bb'}, {'a':'aa2', 'b':'bb2'}]
+        response.payload[:] = data
+
+        for idx, elem in enumerate(data):
+            self.assertDictEqual(data[idx], response.payload.user_attrs_list[idx])
+
+# ################################################################################################################################
+
     def test_set_payload_dict_has_sio_case_1a(self):
 
         MyService = deepcopy(MyBaseService)
@@ -141,14 +157,6 @@ class ResponseTestCase(BaseTestCase):
         for elem in elems:
             response.payload = elem
             self.assertIs(response.payload, elem)
-
-# ################################################################################################################################
-
-    def test_set_payload_not_direct_payload_has_sio_case_2b1(self):
-        #
-        # ZZZ: Remember about KeyedTuple here
-        # ZZZ: Remember about __setslice__, i.e. self.response.payload[:] = data
-        pass
 
 # ################################################################################################################################
 

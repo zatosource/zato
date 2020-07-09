@@ -2037,14 +2037,14 @@ class CySimpleIO(object):
 
 @cy.ccall
 @cy.returns(cy.bint)
-def is_sio_bool(self, value:object) -> bool:
+def is_sio_bool(value:object) -> bool:
     return isinstance(value, Bool)
 
 # ################################################################################################################################
 
 @cy.ccall
 @cy.returns(cy.bint)
-def is_sio_int(self, value:object) -> bool:
+def is_sio_int(value:object) -> bool:
     return isinstance(value, Int)
 
 # ################################################################################################################################
