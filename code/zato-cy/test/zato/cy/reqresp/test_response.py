@@ -86,8 +86,7 @@ class ResponseTestCase(BaseTestCase):
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
 
         response = Response()
-        response.sio = MyService._sio
-        response.init('abc', DATA_FORMAT.CSV)
+        response.init('abc', MyService._sio, DATA_FORMAT.CSV)
 
         self.assertIsInstance(response.payload, SimpleIOPayload)
 
@@ -99,15 +98,12 @@ class ResponseTestCase(BaseTestCase):
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
 
         response = Response()
-        response.sio = MyService._sio
-        response.init('abc', DATA_FORMAT.XML)
+        response.init('abc', MyService._sio, DATA_FORMAT.XML)
 
         # Note that 'ddd' is optional so it can be missing
         # and that 'fff' is not in SIO so it should be ignored.
         data = {'aaa':'111', 'bbb':'222', 'ccc':'333', 'eee':'555', 'fff':'666', 'qqq':777, 'www':888}
         response.payload = data
-
-        print(111, response.payload.getvalue())
 
 # ################################################################################################################################
 

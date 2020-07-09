@@ -1845,17 +1845,9 @@ class CySimpleIO(object):
         current_elem:Elem
 
         for data_dict in data:
-            is_dict = isinstance(data_dict, dict)
-
             for is_required, current_elems in all_elems:
                 for current_elem_name, current_elem in current_elems.items():
-
-                    # Differentiate between dicts and WritableKeyedTuple objects
-                    if is_dict:
-                        value = data_dict.get(current_elem_name, InternalNotGiven)
-                    else:
-                        value = getattr(data_dict, current_elem_name, InternalNotGiven)
-
+                    value = data_dict.get(current_elem_name, InternalNotGiven)
                     if value is InternalNotGiven:
                         if is_required:
                             raise SerialisationError('Required element `{}` missing in `{}` ({})'.format(
@@ -1864,12 +1856,7 @@ class CySimpleIO(object):
                         try:
                             parse_func = current_elem.parse_to[data_format]
                             value = parse_func(value)
-
-                            if is_dict:
-                                data_dict[current_elem_name] = value
-                            else:
-                                setattr(data_dict, current_elem_name, value)
-
+                            data_dict[current_elem_name] = value
                         except Exception as e:
                             raise SerialisationError('Exception `{}` while serialising `{}` ({})'.format(
                                 e, data_dict, self.service_class))
@@ -2024,13 +2011,6 @@ class CySimpleIO(object):
         """ Serialises input data to the data format specified.
         """
         if data_format == DATA_FORMAT_JSON:
-            print()
-            print()
-            print(111, type(data), isinstance(data, WritableKeyedTuple))
-            print()
-            print()
-            if isinstance(data, WritableKeyedTuple):
-                data = data.get_value()
             return json_dumps(data)
 
         elif data_format == DATA_FORMAT_XML:
