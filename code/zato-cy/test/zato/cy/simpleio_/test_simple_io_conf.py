@@ -165,8 +165,6 @@ class SimpleIOConfig(BaseTestCase):
             'abc_timeout': '123'
         }, DATA_FORMAT.DICT)
 
-        print(111, input)
-
 # ################################################################################################################################
 
     def xtest_parse_csv(self):

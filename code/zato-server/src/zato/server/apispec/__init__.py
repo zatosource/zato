@@ -30,7 +30,7 @@ from past.builtins import basestring
 from zato.common import APISPEC
 
 # Zato - Cython
-from zato.cy.simpleio import is_sio_bool, is_sio_int, SIO_TYPE_MAP
+from zato.cy.simpleio import AsIs, is_sio_bool, is_sio_int, SIO_TYPE_MAP
 
 # ################################################################################################################################
 
@@ -245,10 +245,10 @@ class ServiceInfo(object):
                         if isinstance(param, AsIs):
                             type_info = api_spec_info.DEFAULT
 
-                        elif is_bool(param, param_name, self.simple_io_config.bool.prefix):
+                        elif is_sio_bool(param):
                             type_info = api_spec_info.BOOLEAN
 
-                        elif is_int(param_name, self.simple_io_config.int.exact, self.simple_io_config.int.suffix):
+                        elif is_sio_int(param_name):
                             type_info = api_spec_info.INTEGER
 
                         else:
