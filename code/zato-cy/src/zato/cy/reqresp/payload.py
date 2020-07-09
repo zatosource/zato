@@ -68,8 +68,8 @@ class SimpleIOPayload(object):
         self.all_output_elem_names = all_output_elem_names
         self.cid = cid
         self.data_format = data_format
-        self.user_attrs_dict = None
-        self.user_attrs_list = None
+        self.user_attrs_dict = {}
+        self.user_attrs_list = []
 
 # ################################################################################################################################
 
@@ -113,6 +113,7 @@ class SimpleIOPayload(object):
         # .. that is, assigning to payload its own value without previous serialisation,
         # just like it used to be done in WorkerStore._set_service_response_data,
         # we will need possibly to rethink the idea of clearing out the user attributes
+        #
         # For now, this is not a concern because, with the exception of WorkerStore._set_service_response_data,
         # which is no longer doing it, no other component will attempt to do it
         # and this comment is left just in case reconsdering it is needed in the future.
