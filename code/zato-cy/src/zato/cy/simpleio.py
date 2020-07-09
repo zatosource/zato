@@ -1892,8 +1892,8 @@ class CySimpleIO(object):
 # ################################################################################################################################
 
     @cy.ccall
-    @cy.returns(str)
-    def serialise(self, data:object, data_format:cy.unicode) -> str:
+    @cy.returns(object)
+    def serialise(self, data:object, data_format:cy.unicode) -> object:
 
         if data_format == DATA_FORMAT_JSON:
             return self._serialise_json(data)
@@ -1906,6 +1906,9 @@ class CySimpleIO(object):
 
         elif data_format == DATA_FORMAT_CSV:
             return self._serialise_csv(data)
+
+        elif data_format == DATA_FORMAT.DICT:
+            return data
 
         else:
             raise ValueError('Unrecognised serialisation data format `{}`'.format(data_format))
