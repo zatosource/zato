@@ -1682,11 +1682,16 @@ class CySimpleIO(object):
     def _should_skip_on_input(self, definition:SIODefinition, sio_item:Elem, input_value:object) -> bool:
         should_skip:bool = False
 
-        # Should we skip this value ..
+        # Should we skip this value based on the server's configuration ..
         if definition.skip_empty.skip_all_empty_input or sio_item.name in definition.skip_empty.skip_input_set:
 
             # .. possibly, unless we are forced not to include it.
             if sio_item.name not in definition.skip_empty.force_empty_input_set:
+                return True
+
+        # .. or, possibly, because this particular value cannot be converted to a SIO element.
+        if isinstance(sio_item, Int):
+            if input_value in (None, ''):
                 return True
 
         # In all other cases, we explicitly say that this value should not be skipped
@@ -1710,9 +1715,6 @@ class CySimpleIO(object):
         items = chain(self.definition._input_required, self.definition._input_optional)
 
         for idx, sio_item in enumerate(items): # type: (int, Elem)
-
-            #print(111, self.service_class)
-            #print(222, idx, sio_item.name, sio_item.is_required)
 
             # Parse the input dictionary
             if is_dict:
@@ -1751,10 +1753,6 @@ class CySimpleIO(object):
             # We do not have such a elem on input so an exception needs to be raised if this is a require one
             if input_value is InternalNotGiven:
 
-                print()
-                print(111, input_value, sio_item.name, sio_item.is_required)
-                print()
-
                 if sio_item.is_required:
 
                     if is_dict:
@@ -1776,7 +1774,11 @@ class CySimpleIO(object):
                 parse_func = sio_item.parse_from[data_format]
 
                 try:
-                    value = parse_func(input_value)
+                    if self._should_skip_on_input(self.definition, sio_item, input_value):
+                        # Continue to the next sio_item
+                        continue
+                    else:
+                        value = parse_func(input_value)
                 except NotImplementedError:
                     raise NotImplementedError('No parser for input `{}` ({})'.format(input_value, data_format))
 
@@ -1814,16 +1816,6 @@ class CySimpleIO(object):
             else:
                 out = self._parse_input_elem(data, data_format)
             return bunchify(out)
-
-# ################################################################################################################################
-
-    @cy.cfunc
-    @cy.returns(str)
-    def _serialise_post(self, data:object) -> str:
-        print()
-        print(444, data)
-        print()
-        return '444-a'
 
 # ################################################################################################################################
 

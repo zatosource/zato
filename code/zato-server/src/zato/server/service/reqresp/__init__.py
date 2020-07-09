@@ -71,6 +71,9 @@ if 0:
     from zato.server.connection.zmq_.outgoing import ZMQFacade
     from zato.server.service import AMQPFacade
 
+    # Zato - Cython
+    from zato.cy.simpleio import CySimpleIO
+
     AMQPFacade = AMQPFacade
     Arrow = Arrow
     ConfigDict = ConfigDict
@@ -212,6 +215,7 @@ class Request(object):
     def init(self, is_sio, cid, sio, data_format, transport, wsgi_environ, encrypt_func):
         """ Initializes the object with an invocation-specific data.
         """
+        # type: (bool, str, CySimpleIO, str, str, dict, object)
         self.input = ServiceInput()
         self.encrypt_func = encrypt_func
 
