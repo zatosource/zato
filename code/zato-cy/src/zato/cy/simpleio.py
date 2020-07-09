@@ -1936,10 +1936,10 @@ class CySimpleIO(object):
 # ################################################################################################################################
 
     @cy.cfunc
-    @cy.returns(str)
-    def _get_output_json(self, data:object) -> str:
+    @cy.returns(object)
+    def _get_output_json(self, data:object, serialise:bool) -> object:
         out:object = self._convert_to_dicts(data, DATA_FORMAT_JSON)
-        return json_dumps(out)
+        return self.serialise(out, DATA_FORMAT_JSON) if serialise else out
 
 # ################################################################################################################################
 
@@ -1955,10 +1955,9 @@ class CySimpleIO(object):
 # ################################################################################################################################
 
     @cy.cfunc
-    @cy.returns(str)
-    def _get_output_xml(self, data:object) -> str:
+    @cy.returns(object)
+    def _get_output_xml(self, data:object, serialise:bool) -> object:
         dict_items:object = self._convert_to_dicts(data, DATA_FORMAT_XML)
-        xml_serialised:bytes
         out:cy.unicode
         dict_item:dict
         xml_sub_elem:object
@@ -1978,14 +1977,7 @@ class CySimpleIO(object):
         else:
             self._convert_dict_to_xml(root_elem, namespace, dict_items)
 
-        xml_serialised = etree_to_string(root_elem,
-            xml_declaration=self.definition._xml_config.declaration,
-            encoding=self.definition._xml_config.encoding,
-            pretty_print=self.definition._xml_config.pretty_print
-        )
-        out = xml_serialised.decode('utf8')
-
-        return out
+        return self.serialise(root_elem, DATA_FORMAT_XML) if serialise else root_elem
 
 # ################################################################################################################################
 
@@ -1994,12 +1986,39 @@ class CySimpleIO(object):
     def get_output(self, data:object, data_format:cy.unicode, serialise:bool=True) -> object:
         """ Returns input converted to the output format, possibly including serialisation to a string representation.
         """
-
         if data_format == DATA_FORMAT_JSON:
-            return self._get_output_json(data)
+            return self._get_output_json(data, serialise)
 
         elif data_format == DATA_FORMAT_XML:
-            return self._get_output_xml(data)
+            return self._get_output_xml(data, serialise)
+
+        # Note that 'serialise' is ignored for CSV
+        elif data_format == DATA_FORMAT_CSV:
+            return self._get_output_csv(data)
+
+        elif data_format == DATA_FORMAT.DICT:
+            return data
+
+        else:
+            raise ValueError('Unrecognised output data format `{}`'.format(data_format))
+
+# ################################################################################################################################
+
+    @cy.ccall
+    @cy.returns(object)
+    def serialise(self, data:object, data_format:cy.unicode) -> object:
+        """ Serialises input data to the data format specified.
+        """
+        if data_format == DATA_FORMAT_JSON:
+            return json_dumps(data)
+
+        elif data_format == DATA_FORMAT_XML:
+            xml_serialised = etree_to_string(data,
+                xml_declaration=self.definition._xml_config.declaration,
+                encoding=self.definition._xml_config.encoding,
+                pretty_print=self.definition._xml_config.pretty_print
+            )
+            return xml_serialised.decode('utf8')
 
         elif data_format == DATA_FORMAT_POST:
             return self._get_output_post(data)
