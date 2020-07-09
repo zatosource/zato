@@ -1610,13 +1610,6 @@ class CySimpleIO(object):
         required = _required
         optional = _optional
 
-        if 'sql.GetList' in str(self.service_class):
-            print()
-            print(111, self.service_class, container)
-            print(222, required)
-            print(333, optional)
-            print()
-
         # If there are elements shared by required and optional lists, the ones from the optional list
         # need to be removed, the required ones take priority. The reason for that is that it is common
         # to have a base SimpleIO class with optional elements that are made mandatory in a child class.
@@ -1681,9 +1674,10 @@ class CySimpleIO(object):
     @cy.exceptval(-1)
     def _should_skip_on_input(self, definition:SIODefinition, sio_item:Elem, input_value:object) -> bool:
         should_skip:bool = False
+        is_skippable:bool = not bool(input_value)
 
         # Should we skip this value based on the server's configuration ..
-        if definition.skip_empty.skip_all_empty_input or sio_item.name in definition.skip_empty.skip_input_set:
+        if (definition.skip_empty.skip_all_empty_input and is_skippable) or sio_item.name in definition.skip_empty.skip_input_set:
 
             # .. possibly, unless we are forced not to include it.
             if sio_item.name not in definition.skip_empty.force_empty_input_set:
@@ -1856,13 +1850,15 @@ class CySimpleIO(object):
                     value = data_dict.get(current_elem_name, InternalNotGiven)
                     if value is InternalNotGiven:
                         if is_required:
-                            raise SerialisationError('Required element `{}` missing in `{}`'.format(current_elem_name, data_dict))
+                            raise SerialisationError('Required element `{}` missing in `{}` ({})'.format(
+                                current_elem_name, data_dict, self.service_class))
                     else:
                         try:
                             value = current_elem.to_csv(value)
                             data_dict[current_elem_name] = value
                         except Exception as e:
-                            raise SerialisationError('Exception `{}` while serialising `{}`'.format(e, data_dict))
+                            raise SerialisationError('Exception `{}` while serialising `{}` ({})'.format(
+                                e, data_dict, self.service_class))
 
             # More yields - to actually return data
             yield data_dict
@@ -1871,7 +1867,7 @@ class CySimpleIO(object):
 
     @cy.cfunc
     @cy.returns(str)
-    def _serialise_csv(self, data:object) -> str:
+    def _get_output_csv(self, data:object) -> str:
 
         # No reason to continue if no SimpleIO output is declared
         if not (self.definition.has_output_required or self.definition.has_output_optional):
@@ -1901,7 +1897,7 @@ class CySimpleIO(object):
 
     @cy.cfunc
     @cy.returns(object)
-    def _serialise_to_dicts(self, data:object, data_format:cy.unicode) -> object:
+    def _convert_to_dicts(self, data:object, data_format:cy.unicode) -> object:
 
         # No reason to continue if no SimpleIO output is declared
         if not (self.definition.has_output_required or self.definition.has_output_optional):
@@ -1941,14 +1937,14 @@ class CySimpleIO(object):
 
     @cy.cfunc
     @cy.returns(str)
-    def _serialise_json(self, data:object) -> str:
-        out:object = self._serialise_to_dicts(data, DATA_FORMAT_JSON)
+    def _get_output_json(self, data:object) -> str:
+        out:object = self._convert_to_dicts(data, DATA_FORMAT_JSON)
         return json_dumps(out)
 
 # ################################################################################################################################
 
     @cy.cfunc
-    def _serialise_dict_to_xml(self, parent:object, namespace:cy.unicode, dict_elem:dict):
+    def _convert_dict_to_xml(self, parent:object, namespace:cy.unicode, dict_elem:dict):
         key:object
         value:object
 
@@ -1960,8 +1956,8 @@ class CySimpleIO(object):
 
     @cy.cfunc
     @cy.returns(str)
-    def _serialise_xml(self, data:object) -> str:
-        dict_items:object = self._serialise_to_dicts(data, DATA_FORMAT_XML)
+    def _get_output_xml(self, data:object) -> str:
+        dict_items:object = self._convert_to_dicts(data, DATA_FORMAT_XML)
         xml_serialised:bytes
         out:cy.unicode
         dict_item:dict
@@ -1978,9 +1974,9 @@ class CySimpleIO(object):
         if isinstance(dict_items, list):
             for dict_item in dict_items:
                 xml_item = SubElement(root_elem, '{}{}'.format(namespace, 'item'))
-                self._serialise_dict_to_xml(xml_item, namespace, dict_item)
+                self._convert_dict_to_xml(xml_item, namespace, dict_item)
         else:
-            self._serialise_dict_to_xml(root_elem, namespace, dict_items)
+            self._convert_dict_to_xml(root_elem, namespace, dict_items)
 
         xml_serialised = etree_to_string(root_elem,
             xml_declaration=self.definition._xml_config.declaration,
@@ -1995,25 +1991,27 @@ class CySimpleIO(object):
 
     @cy.ccall
     @cy.returns(object)
-    def serialise(self, data:object, data_format:cy.unicode) -> object:
+    def get_output(self, data:object, data_format:cy.unicode, serialise:bool=True) -> object:
+        """ Returns input converted to the output format, possibly including serialisation to a string representation.
+        """
 
         if data_format == DATA_FORMAT_JSON:
-            return self._serialise_json(data)
+            return self._get_output_json(data)
 
         elif data_format == DATA_FORMAT_XML:
-            return self._serialise_xml(data)
+            return self._get_output_xml(data)
 
         elif data_format == DATA_FORMAT_POST:
-            return self._serialise_post(data)
+            return self._get_output_post(data)
 
         elif data_format == DATA_FORMAT_CSV:
-            return self._serialise_csv(data)
+            return self._get_output_csv(data)
 
         elif data_format == DATA_FORMAT.DICT:
             return data
 
         else:
-            raise ValueError('Unrecognised serialisation data format `{}`'.format(data_format))
+            raise ValueError('Unrecognised output data format `{}`'.format(data_format))
 
 # ################################################################################################################################
 
