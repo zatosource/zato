@@ -138,20 +138,20 @@ class SimpleIOPayload(object):
 # ################################################################################################################################
 
     @cy.ccall
-    def getvalue(self, serialise:bool=True):
+    def getvalue(self, serialize:bool=True):
         """ Returns a service's payload, either serialised or not.
         """
         # What to return
         value = self.user_attrs_list or self.user_attrs_dict
 
         # Return serialised or not
-        return self.sio.serialise(value, self.data_format) if serialise else value
+        return self.sio.serialise(value, self.data_format) if serialize else value
 
 # ################################################################################################################################
 
     def __setitem__(self, key, value):
         if isinstance(key, slice):
-            self.__setslice__(key.start, key.stop, value)
+            self.user_attrs_list[key.start:key.stop] = value
         else:
             setattr(self, key, value)
 
