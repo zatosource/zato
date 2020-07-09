@@ -41,7 +41,7 @@ def get_ping_query(fs_sql_config, engine_params):
 
     if not ping_query:
 
-        # We special case SQLite because it is never server from sql.ini
+        # We special case SQLite because it is never served from sql.ini
         if engine_params['engine'] == 'sqlite':
             ping_query = 'SELECT 1'
 
@@ -53,7 +53,7 @@ def get_ping_query(fs_sql_config, engine_params):
 
 # ################################################################################################################################
 
-def create_pool(crypto_manager, engine_params, ping_query):
+def create_pool(engine_params, ping_query, query_class=None):
     from zato.common.util import get_engine_url
 
     engine_params = copy.deepcopy(engine_params)
@@ -61,11 +61,12 @@ def create_pool(crypto_manager, engine_params, ping_query):
         engine_params['password'] = str(engine_params['password'])
         engine_params['extra']['pool_size'] = engine_params.pop('pool_size')
 
-    engine = create_engine(get_engine_url(engine_params), **engine_params['extra'])
+    engine = create_engine(get_engine_url(engine_params), **engine_params.get('extra', {}))
     engine.execute(ping_query)
 
     Session = sessionmaker()
-    Session.configure(bind=engine)
+
+    Session.configure(bind=engine, query_cls=query_class)
     session = Session()
 
     return session
