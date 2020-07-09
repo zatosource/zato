@@ -223,7 +223,7 @@ class GetList(_Get):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
 
-        for item in self.response.payload.zato_output:
+        for item in self.response.payload:
             item.start_date = item.start_date.isoformat()
 
 # ################################################################################################################################

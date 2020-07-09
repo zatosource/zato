@@ -159,11 +159,10 @@ class SimpleIOPayload(object):
         else:
             return self.sio.get_output(value, self.data_format) if serialize else value
 
-        # Return serialised or not
-        #_needs_internal_serialise:bool = False if self.zato_meta else True
-        #return self.sio.get_output(value, self.data_format, _needs_internal_serialise) if serialize else value
-
 # ################################################################################################################################
+
+    def __iter__(self):
+        return iter(self.user_attrs_list if self.output_repeated else self.user_attrs_dict)
 
     def __setitem__(self, key, value):
 

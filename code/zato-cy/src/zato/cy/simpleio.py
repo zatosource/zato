@@ -35,6 +35,7 @@ from lxml.etree import _Element as EtreeElementClass, Element, SubElement, tostr
 
 # Zato
 from zato.common import APISPEC, DATA_FORMAT
+from zato.common.odb.api import WritableKeyedTuple
 from zato.util_convert import to_bool
 
 # Zato - Cython
@@ -1813,7 +1814,7 @@ class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    def _yield_data_dicts(self, data:object):
+    def _yield_data_dicts(self, data:object, data_format:str):
 
         required_elems:dict = self.definition._output_required.elems_by_name
         optional_elems:dict = self.definition._output_optional.elems_by_name
@@ -1842,20 +1843,33 @@ class CySimpleIO(object):
         current_elems:dict
         current_elem_name:cy.unicode
         current_elem:Elem
-        value:object
 
         for data_dict in data:
+            is_dict = isinstance(data_dict, dict)
+
             for is_required, current_elems in all_elems:
                 for current_elem_name, current_elem in current_elems.items():
-                    value = data_dict.get(current_elem_name, InternalNotGiven)
+
+                    # Differentiate between dicts and WritableKeyedTuple objects
+                    if is_dict:
+                        value = data_dict.get(current_elem_name, InternalNotGiven)
+                    else:
+                        value = getattr(data_dict, current_elem_name, InternalNotGiven)
+
                     if value is InternalNotGiven:
                         if is_required:
                             raise SerialisationError('Required element `{}` missing in `{}` ({})'.format(
                                 current_elem_name, data_dict, self.service_class))
                     else:
                         try:
-                            value = current_elem.to_csv(value)
-                            data_dict[current_elem_name] = value
+                            parse_func = current_elem.parse_to[data_format]
+                            value = parse_func(value)
+
+                            if is_dict:
+                                data_dict[current_elem_name] = value
+                            else:
+                                setattr(data_dict, current_elem_name, value)
+
                         except Exception as e:
                             raise SerialisationError('Exception `{}` while serialising `{}` ({})'.format(
                                 e, data_dict, self.service_class))
@@ -1873,7 +1887,7 @@ class CySimpleIO(object):
         if not (self.definition.has_output_required or self.definition.has_output_optional):
             return ''
 
-        gen = self._yield_data_dicts(data)
+        gen = self._yield_data_dicts(data, DATA_FORMAT_CSV)
 
         # First, get the field names
         field_names:list = next(gen)
@@ -1913,7 +1927,7 @@ class CySimpleIO(object):
         else:
             is_list = False
 
-        gen = self._yield_data_dicts(data)
+        gen = self._yield_data_dicts(data, DATA_FORMAT_DICT)
 
         # Ignore field names, not needed in JSON nor XML serialisation
         next(gen)
@@ -2010,6 +2024,13 @@ class CySimpleIO(object):
         """ Serialises input data to the data format specified.
         """
         if data_format == DATA_FORMAT_JSON:
+            print()
+            print()
+            print(111, type(data), isinstance(data, WritableKeyedTuple))
+            print()
+            print()
+            if isinstance(data, WritableKeyedTuple):
+                data = data.get_value()
             return json_dumps(data)
 
         elif data_format == DATA_FORMAT_XML:
