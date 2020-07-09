@@ -125,7 +125,7 @@ class WritableKeyedTuple(object):
 class WritableTupleQuery(Query):
 
     def __iter__(self):
-        it = super(WritableTupleQuery, self).__iter__()
+        out = super(WritableTupleQuery, self).__iter__()
 
         columns_desc = self.column_descriptions
 
@@ -134,15 +134,24 @@ class WritableTupleQuery(Query):
 
         # This is a simple result of a query such as session.query(ObjectName).count()
         if len_columns_desc == 1 and isinstance(first_type, TypeEngine):
-            return it
+            print()
+            print(111, out)
+            print()
+            return out
 
         # A list of objects, e.g. from .all()
         elif len_columns_desc > 1:
-            return (WritableKeyedTuple(elem) for elem in it)
+            print()
+            print(222, out)
+            print()
+            return (WritableKeyedTuple(elem) for elem in out)
 
         # Anything else
         else:
-            return it
+            print()
+            print(333, out)
+            print()
+            return out
 
 # ################################################################################################################################
 # ################################################################################################################################
