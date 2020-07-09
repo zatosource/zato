@@ -104,10 +104,12 @@ import typing
 if typing.TYPE_CHECKING:
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigStore
+    from zato.server.service import Service
 
     # For pyflakes
-    ConfigStore = ConfigStore
+    ConfigStore    = ConfigStore
     ParallelServer = ParallelServer
+    Service        = Service
 
 # ################################################################################################################################
 
@@ -1484,7 +1486,11 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         def inner(service, **ignored):
             if not isinstance(service.response.payload, self._simple_types):
-                service.response.payload = service.response.payload.getvalue(serialize)
+
+                # If serialise is False, the operation below is essentially a no-op
+                # so we can skip it altogether.
+                if serialize:
+                    service.response.payload = service.response.payload.getvalue(serialize)
 
         return inner
 
@@ -1571,7 +1577,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         else:
             payload = msg['payload']
 
-        service, is_active = self.server.service_store.new_instance_by_name(msg['service'])
+        service, is_active = self.server.service_store.new_instance_by_name(msg['service']) # type: (Service, bool)
         if not is_active:
             msg = 'Could not invoke an inactive service:`{}`, cid:`{}`'.format(service.get_name(), cid)
             logger.warn(msg)
