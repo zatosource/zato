@@ -58,7 +58,7 @@ class XMLResponse(BaseTestCase):
             'eee': eee,
         }
 
-        result = MyService._sio.serialise(data, DATA_FORMAT.XML)
+        result = MyService._sio.get_output(data, DATA_FORMAT.XML)
         self.assertEquals(result, '<ns0:my_response xmlns:ns0="https://myns.zato.io">' \
             '<ns0:aaa>aaa-111</ns0:aaa><ns0:bbb>222</ns0:bbb><ns0:ccc>ccc-ccc-ccc</ns0:ccc>' \
             '<ns0:eee>eee-444</ns0:eee></ns0:my_response>')
@@ -91,7 +91,7 @@ class XMLResponse(BaseTestCase):
             'eee': eee,
         }
 
-        result = MyService._sio.serialise(data, DATA_FORMAT.XML)
+        result = MyService._sio.get_output(data, DATA_FORMAT.XML)
 
         self.assertEquals(repr(result), repr("""<?xml version=\'1.0\' encoding=\'ASCII\'?>\n<ns0:my_response """ \
             """xmlns:ns0="https://myns.zato.io"><ns0:aaa>aaa-111</ns0:aaa><ns0:bbb>222</ns0:bbb><ns0:ccc>ccc-ccc-ccc""" \
@@ -124,7 +124,7 @@ class XMLResponse(BaseTestCase):
         data2 = {'aaa': aaa2, 'bbb': bbb2, 'ccc': ccc2, 'eee': eee2}
         data = [data1, data2]
 
-        result = MyService._sio.serialise(data, DATA_FORMAT.XML)
+        result = MyService._sio.get_output(data, DATA_FORMAT.XML)
         self.assertEquals(result, '<response><item><aaa>aaa-111-1</aaa><bbb>2221</bbb><ccc>ccc-ccc-ccc-1</ccc>' \
             '<eee>eee-444-1</eee></item><item><aaa>aaa-111-2</aaa><bbb>2222</bbb><ccc>ccc-ccc-ccc-2</ccc>' \
             '<eee>eee-444-2</eee></item></response>')
@@ -173,7 +173,7 @@ class XMLResponse(BaseTestCase):
             'qqq': qqq
         }
 
-        result = MyService._sio.serialise(data, DATA_FORMAT.XML)
+        result = MyService._sio.get_output(data, DATA_FORMAT.XML)
         self.assertEquals(result, '<response><aaa>aaa-111</aaa><bbb>bbb-222-bbb</bbb><ccc>True</ccc>' \
             '<ddd></ddd><eee>1999-12-31</eee><fff>1988-01-29T11:22:33+00:00</fff>' \
             '<ggg>123.456</ggg><jjj>111.222</jjj><mmm>9090</mmm><ooo>ZZZ-ZZZ-ZZZ</ooo>' \
@@ -199,11 +199,12 @@ class XMLResponse(BaseTestCase):
         }
 
         with self.assertRaises(SerialisationError) as ctx:
-            result = MyService._sio.serialise(data, DATA_FORMAT.XML)
+            result = MyService._sio.get_output(data, DATA_FORMAT.XML)
 
         e = ctx.exception # type: SerialisationError
         self.assertEquals(e.args[0], "Exception `invalid literal for int() with base 10: 'aaa'` while serialising " \
-            "`{'aaa': 'aaa', 'bbb': '222'}`")
+            "`{'aaa': 'aaa', 'bbb': '222'}` " \
+            "(<class 'test.zato.cy.simpleio_.test_response_xml.XMLResponse.test_response_invalid_input.<locals>.MyService'>)")
 
 # ################################################################################################################################
 # ################################################################################################################################

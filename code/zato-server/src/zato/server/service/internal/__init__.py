@@ -60,7 +60,7 @@ class AdminSIO(object):
 
 class GetListAdminSIO(object):
     namespace = zato_namespace
-    input_optional = (Bool('paginate'), 'query')
+    input_optional = (Int('cur_page'), Bool('paginate'), 'query')
 
 # ################################################################################################################################
 
@@ -127,6 +127,8 @@ class AdminService(Service):
             return
 
         if self.server.is_admin_enabled_for_info:
+            logger.info('Response; service:`%s`, data:`%s` cid:`%s`, ',
+                self.name, replace_private_key(get_response_value(self.response)), self.cid)
 
             payload = self.response.payload
             is_text = isinstance(payload, basestring)
@@ -135,9 +137,6 @@ class AdminService(Service):
             if needs_meta and hasattr(self, '_search_tool'):
                 if not is_text:
                     payload.zato_meta = self._search_tool.output_meta
-
-            logger.info('Response; service:`%s`, data:`%s` cid:`%s`, ',
-                self.name, replace_private_key(get_response_value(self.response)), self.cid)
 
 # ################################################################################################################################
 

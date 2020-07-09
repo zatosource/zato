@@ -205,7 +205,7 @@ class CSVInputParsing(BaseTestCase):
             MyService._sio.parse_input(data, DATA_FORMAT.CSV)
 
         e = ctx.exception # type: ValueError
-        self.assertEquals(e.args[0], "Could not find value at index `1` in `['aaa-111^222^333']` (dialect:excel, config:{})")
+        self.assertEquals(e.args[0], "Could not find input value at index `1` in `['aaa-111^222^333']` (dialect:excel, config:{})")
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -105,15 +105,19 @@ if 0:
     from zato.server.query import CassandraQueryAPI
     from zato.sso.api import SSOAPI
 
+    # Zato - Cython
+    from zato.cy.simpleio import CySimpleIO
+
     # For pyflakes
     AuditPII = AuditPII
     BrokerClient = BrokerClient
     BrokerClientAPI = BrokerClientAPI
     Callable = Callable
-    ConfigDict = ConfigDict
-    ConfigStore = ConfigStore
     CassandraAPI = CassandraAPI
     CassandraQueryAPI = CassandraQueryAPI
+    ConfigDict = ConfigDict
+    ConfigStore = ConfigStore
+    CySimpleIO = CySimpleIO
     FTPStore = FTPStore
     JSONPointerStore = JSONPointerStore
     JSONSchemaValidator = JSONSchemaValidator
@@ -359,10 +363,10 @@ class Service(object):
     _after_job_hooks = []
 
     # Cython based SimpleIO definition created by service store when the class is deployed
-    _sio = None
+    _sio = None # type: CySimpleIO
 
     # Rate limiting
-    _has_rate_limiting = None
+    _has_rate_limiting = None # type: bool
 
     # User management and SSO
     sso = None # type: SSOAPI

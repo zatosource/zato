@@ -54,7 +54,7 @@ class CSVResponse(BaseTestCase):
             'eee': eee,
         }
 
-        result = MyService._sio.serialise(data, DATA_FORMAT.CSV)
+        result = MyService._sio.get_output(data, DATA_FORMAT.CSV)
         lines = result.splitlines()
 
         self.assertEquals(lines[0], 'aaa;bbb;ccc;ddd;eee')
@@ -87,7 +87,7 @@ class CSVResponse(BaseTestCase):
 
         data = [data1, data2]
 
-        result = MyService._sio.serialise(data, DATA_FORMAT.CSV)
+        result = MyService._sio.get_output(data, DATA_FORMAT.CSV)
         lines = result.splitlines()
 
         self.assertEquals(lines[0], 'aaa:bbb:ccc:ddd:eee')
@@ -136,7 +136,7 @@ class CSVResponse(BaseTestCase):
             'qqq': qqq
         }
 
-        result = MyService._sio.serialise(data, DATA_FORMAT.CSV)
+        result = MyService._sio.get_output(data, DATA_FORMAT.CSV)
         lines = result.splitlines()
 
         self.assertEquals(lines[0], 'aaa,bbb,ccc,ddd,eee,fff,ggg,jjj,mmm,ooo,ppp,qqq')
@@ -163,11 +163,12 @@ class CSVResponse(BaseTestCase):
         }
 
         with self.assertRaises(SerialisationError) as ctx:
-            result = MyService._sio.serialise(data, DATA_FORMAT.CSV)
+            result = MyService._sio.get_output(data, DATA_FORMAT.CSV)
 
         e = ctx.exception # type: SerialisationError
         self.assertEquals(e.args[0], "Exception `invalid literal for int() with base 10: 'aaa'` while serialising " \
-            "`{'aaa': 'aaa', 'bbb': '222'}`")
+            "`{'aaa': 'aaa', 'bbb': '222'}` " \
+            "(<class 'test.zato.cy.simpleio_.test_response_csv.CSVResponse.test_response_invalid_input.<locals>.MyService'>)")
 
 # ################################################################################################################################
 # ################################################################################################################################

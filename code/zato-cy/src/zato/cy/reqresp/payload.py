@@ -11,6 +11,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from copy import deepcopy
 from logging import getLogger
 from operator import getitem
 
@@ -53,6 +54,7 @@ class SimpleIOPayload(object):
     """
     sio = cy.declare(cy.object, visibility='public')              # type: CySimpleIO
     all_output_elem_names = cy.declare(list, visibility='public') # type: list
+    output_repeated = cy.declare(cy.bint, visibility='public')    # type: bool
 
     cid         = cy.declare(str, visibility='public') # type: past_unicode
     data_format = cy.declare(str, visibility='public') # type: past_unicode
@@ -60,6 +62,9 @@ class SimpleIOPayload(object):
     # One of the two will be used to produce a response
     user_attrs_dict = cy.declare(dict, visibility='public') # type: dict
     user_attrs_list = cy.declare(list, visibility='public') # type: list
+
+    # This is used by Zato internal services only
+    zato_meta = cy.declare(cy.object, visibility='public') # type: object
 
 # ################################################################################################################################
 
@@ -70,6 +75,7 @@ class SimpleIOPayload(object):
         self.data_format = data_format
         self.user_attrs_dict = {}
         self.user_attrs_list = []
+        self.zato_meta = None
 
 # ################################################################################################################################
 
@@ -142,21 +148,38 @@ class SimpleIOPayload(object):
         """ Returns a service's payload, either serialised or not.
         """
         # What to return
-        value = self.user_attrs_list or self.user_attrs_dict
+        value = self.user_attrs_list if self.output_repeated else self.user_attrs_dict
+
+        # Special-case internal services that return metadata (e.g GetList-like ones)
+        if self.zato_meta:
+            output = self.sio.get_output(value, self.data_format, False)
+            output['zato_meta'] = self.zato_meta
+            return self.sio.serialise(output, self.data_format)
+
+        else:
+            return self.sio.get_output(value, self.data_format) if serialize else value
 
         # Return serialised or not
-        return self.sio.serialise(value, self.data_format) if serialize else value
+        #_needs_internal_serialise:bool = False if self.zato_meta else True
+        #return self.sio.get_output(value, self.data_format, _needs_internal_serialise) if serialize else value
 
 # ################################################################################################################################
 
     def __setitem__(self, key, value):
+
         if isinstance(key, slice):
             self.user_attrs_list[key.start:key.stop] = value
+            self.output_repeated = True
         else:
             setattr(self, key, value)
 
     def __setattr__(self, key, value):
-        self.user_attrs_dict[key] = value
+
+        # Special-case Zato's own internal attributes
+        if key == 'zato_meta':
+            self.zato_meta = value
+        else:
+            self.user_attrs_dict[key] = value
 
     def __getattr__(self, key):
         try:

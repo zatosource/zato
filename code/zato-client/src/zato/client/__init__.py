@@ -315,6 +315,9 @@ class ServiceInvokeResponse(JSONSIOResponse):
         super(ServiceInvokeResponse, self).__init__(*args, **kwargs)
 
     def set_data(self, payload, has_zato_env):
+        print()
+        print(111, payload)
+        print()
         response = payload.get('response')
         if response:
             if has_zato_env:
