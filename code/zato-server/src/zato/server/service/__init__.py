@@ -784,7 +784,7 @@ class Service(object):
         set_response_func = kwargs.pop('set_response_func', service.set_response_data)
 
         invoke_args = (set_response_func, service, payload, channel, data_format, transport, self.server,
-            self.broker_client, self._worker_store, kwargs.pop('cid', self.cid), self.request.simple_io_config)
+            self.broker_client, self._worker_store, kwargs.pop('cid', self.cid), None)
 
         kwargs.update({'serialize':serialize, 'as_bunch':as_bunch})
 
