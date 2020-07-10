@@ -249,7 +249,7 @@ def overview(req, service_name):
             response = req.zato.client.invoke('zato.stats.get-by-service', {'service_id':service.id, 'start':start, 'stop':now})
             if response.has_data:
                 for name in('mean_trend', 'usage_trend', 'min_resp_time', 'max_resp_time', 'mean', 'usage', 'rate'):
-                    value = getattr(response.data, name)
+                    value = getattr(response.data, name, ZATO_NONE)
                     if not value or value == ZATO_NONE:
                         value = ''
 
