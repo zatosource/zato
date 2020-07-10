@@ -30,7 +30,7 @@ from zato.common import CONTENT_TYPE, default_internal_modules, SERVER_JOIN_STAT
 from zato.common.crypto import well_known_data
 from zato.common.defaults import http_plain_server_port
 from zato.common.odb.model import Cluster, Server
-from zato.common.simpleio_ import get_bytes_to_str_encoding, simple_io_conf_contents
+from zato.common.simpleio_ import simple_io_conf_contents
 
 # ################################################################################################################################
 
