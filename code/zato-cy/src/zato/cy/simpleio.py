@@ -2010,6 +2010,13 @@ class CySimpleIO(object):
 
 # ################################################################################################################################
 
+    @cy.cfunc
+    @cy.returns(object)
+    def _get_output_dict(self, data:object) -> object:
+        return data
+
+# ################################################################################################################################
+
     @cy.ccall
     @cy.returns(object)
     def get_output(self, data:object, data_format:cy.unicode, serialise:bool=True) -> object:
@@ -2026,7 +2033,7 @@ class CySimpleIO(object):
             return self._get_output_csv(data)
 
         elif data_format == DATA_FORMAT.DICT:
-            return data
+            return self._get_output_dict(data)
 
         else:
             raise ValueError('Unrecognised output data format `{}`'.format(data_format))
