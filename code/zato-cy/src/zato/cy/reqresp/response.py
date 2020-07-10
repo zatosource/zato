@@ -34,7 +34,7 @@ from past.builtins import unicode as past_unicode
 # ################################################################################################################################
 
 if 0:
-    from zato.cy.simpleio import CySimpleIO
+    from zato.simpleio import CySimpleIO
 
     CySimpleIO = CySimpleIO
     past_unicode = past_unicode
