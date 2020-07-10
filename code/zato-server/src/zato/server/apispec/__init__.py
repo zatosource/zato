@@ -30,7 +30,7 @@ from past.builtins import basestring
 from zato.common import APISPEC
 
 # Zato - Cython
-from zato.cy.simpleio import AsIs, is_sio_bool, is_sio_int, SIO_TYPE_MAP
+from zato.simpleio import AsIs, is_sio_bool, is_sio_int, SIO_TYPE_MAP
 
 # ################################################################################################################################
 

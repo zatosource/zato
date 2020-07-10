@@ -106,7 +106,7 @@ if 0:
     from zato.sso.api import SSOAPI
 
     # Zato - Cython
-    from zato.cy.simpleio import CySimpleIO
+    from zato.simpleio import CySimpleIO
 
     # For pyflakes
     AuditPII = AuditPII

@@ -25,13 +25,13 @@ from sqlalchemy.util import KeyedTuple
 from zato.common.odb.api import WritableKeyedTuple
 
 # Zato - Cython
-from zato.cy.simpleio import SIODefinition
+from zato.simpleio import SIODefinition
 
 # Python 2/3 compatibility
 from past.builtins import unicode as past_unicode
 
 if 0:
-    from zato.cy.simpleio import CySimpleIO
+    from zato.simpleio import CySimpleIO
 
     CySimpleIO = CySimpleIO
     past_unicode = past_unicode
