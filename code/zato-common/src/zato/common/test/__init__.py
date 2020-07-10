@@ -39,7 +39,20 @@ from past.builtins import basestring, cmp, xrange
 from zato.common import CHANNEL, DATA_FORMAT, SIMPLE_IO
 from zato.common.log_message import CID_LENGTH
 from zato.common.odb import model
+from zato.common.odb.model import Cluster, ElasticSearch
+from zato.common.odb.api import SessionWrapper, SQLConnectionPool
+from zato.common.odb.query import search_es_list
 from zato.common.util import is_port_taken, new_cid
+
+# ################################################################################################################################
+
+class test_odb_data:
+    cluster_id = 1
+    es_name = 'my.name'
+    es_is_active = True
+    es_hosts = 'my.hosts'
+    es_timeout = 111
+    es_body_as = 'my.body_as'
 
 # ################################################################################################################################
 
@@ -438,10 +451,76 @@ class ServiceTestCase(TestCase):
 class ODBTestCase(TestCase):
 
     def setUp(self):
-        self.engine = create_engine('sqlite:///:memory:')
+        engine_url = 'sqlite:///:memory:'
+        pool_name = 'ODBTestCase.pool'
+
+        config = {
+            'engine': 'sqlite',
+            'sqlite_path': ':memory:',
+            'fs_sql_config': {
+                'engine': {
+                    'ping_query': 'SELECT 1'
+                }
+            }
+        }
+
+        # Create a standalone engine ..
+        self.engine = create_engine(engine_url)
+
+        # .. all ODB objects for that engine..
         model.Base.metadata.create_all(self.engine)
+
+        # .. an SQL pool too ..
+        self.pool = SQLConnectionPool(pool_name, config, config)
+
+        # .. a session wrapper on top of everything ..
+        self.session_wrapper = SessionWrapper()
+        self.session_wrapper.init_session(pool_name, config, self.pool)
+
+        # .. and all ODB objects for that wrapper's engine too ..
+        model.Base.metadata.create_all(self.session_wrapper.pool.engine)
 
     def tearDown(self):
         model.Base.metadata.drop_all(self.engine)
+
+    def get_session(self):
+        return self.session_wrapper.session()
+
+    def get_sample_odb_orm_result(self, is_list):
+        # type: (bool) -> object
+
+        cluster = Cluster()
+        cluster.id = test_odb_data.cluster_id
+        cluster.name = 'my.cluster'
+        cluster.odb_type = 'sqlite'
+        cluster.broker_host = 'my.broker.host'
+        cluster.broker_port = 1234
+        cluster.lb_host = 'my.lb.host'
+        cluster.lb_port = 5678
+        cluster.lb_agent_port = 9012
+
+        es = ElasticSearch()
+        es.name = test_odb_data.es_name
+        es.is_active = test_odb_data.es_is_active
+        es.hosts = test_odb_data.es_hosts
+        es.timeout = test_odb_data.es_timeout
+        es.body_as = test_odb_data.es_body_as
+        es.cluster_id = test_odb_data.cluster_id
+
+        session = self.session_wrapper._session
+
+        session.add(cluster)
+        session.add(es)
+        session.commit()
+
+        session = self.session_wrapper._session
+
+        result = search_es_list(session, test_odb_data.cluster_id) # type: tuple
+        result = result[0] # type: SearchResults
+
+        # This is a one-element tuple of ElasticSearch ORM objects
+        result = result.result # type: tuple
+
+        return result if is_list else result[0]
 
 # ################################################################################################################################
