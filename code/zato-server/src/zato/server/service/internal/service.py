@@ -61,7 +61,7 @@ class GetList(AdminService):
     class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_service_get_list_request'
         response_elem = 'zato_service_get_list_response'
-        input_required = 'cluster_id', 'query'
+        input_required = 'cluster_id'
         input_optional = Integer('cur_page'), Boolean('paginate')
         output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), Integer('usage'), \
             Integer('slow_threshold')
@@ -88,10 +88,6 @@ class GetList(AdminService):
             item.needs_json_schema_err_details = json_schema_config['needs_json_schema_err_details']
 
             out.append(item)
-
-        print()
-        print(111, out)
-        print()
 
         return out
 
