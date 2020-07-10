@@ -14,9 +14,6 @@ from zato.server.service import Service
 # Zato - Cython
 from test.zato.cy.simpleio_ import BaseTestCase, CySimpleIO, test_class_name
 
-# Python 2/3 compatibility
-from past.builtins import unicode
-
 # ################################################################################################################################
 # ################################################################################################################################
 

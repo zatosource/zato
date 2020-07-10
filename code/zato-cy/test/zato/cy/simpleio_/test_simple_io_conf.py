@@ -16,7 +16,6 @@ from zato.server.service import Service
 
 # Zato - Cython
 from test.zato.cy.simpleio_ import BaseTestCase
-from zato.bunch import Bunch
 from zato.simpleio import CySimpleIO
 
 # ################################################################################################################################
@@ -26,7 +25,7 @@ class SimpleIOConfig(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_default_config_string(self):
+    def test_default_config_string(self):
         config = get_config_from_string(simple_io_conf_contents)
 
         bool_        = config.bool
@@ -79,7 +78,7 @@ class SimpleIOConfig(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_default_config_object(self):
+    def test_default_config_object(self):
 
         test_encoding = 'abcdef'
 
@@ -147,7 +146,7 @@ class SimpleIOConfig(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_as_is(self):
+    def test_parse_as_is(self):
         pass
 
 # ################################################################################################################################
@@ -160,59 +159,59 @@ class SimpleIOConfig(BaseTestCase):
 
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
 
-        input = MyService._sio.parse_input({
+        MyService._sio.parse_input({
             'is_ready': 'true',
             'abc_timeout': '123'
         }, DATA_FORMAT.DICT)
 
 # ################################################################################################################################
 
-    def xtest_parse_csv(self):
+    def test_parse_csv(self):
         pass
 
 # ################################################################################################################################
 
-    def xtest_parse_date(self):
+    def test_parse_date(self):
         pass
 
 # ################################################################################################################################
 
-    def xtest_parse_date_time(self):
+    def test_parse_date_time(self):
         pass
 
 # ################################################################################################################################
 
-    def xtest_parse_dict(self):
+    def test_parse_dict(self):
         pass
 
 # ################################################################################################################################
 
-    def xtest_parse_dict_list(self):
+    def test_parse_dict_list(self):
         pass
 
 # ################################################################################################################################
 
-    def xtest_parse_float(self):
+    def test_parse_float(self):
         pass
 
 # ################################################################################################################################
 
-    def xtest_parse_int(self):
+    def test_parse_int(self):
         pass
 
 # ################################################################################################################################
 
-    def xtest_parse_list(self):
+    def test_parse_list(self):
         pass
 
 # ################################################################################################################################
 
-    def xtest_parse_text(self):
+    def test_parse_text(self):
         pass
 
 # ################################################################################################################################
 
-    def xtest_parse_uuid(self):
+    def test_parse_uuid(self):
         pass
 
 # ################################################################################################################################
