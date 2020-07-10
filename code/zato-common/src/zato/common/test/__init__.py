@@ -43,6 +43,7 @@ from zato.common.odb.model import Cluster, ElasticSearch
 from zato.common.odb.api import SessionWrapper, SQLConnectionPool
 from zato.common.odb.query import search_es_list
 from zato.common.util import is_port_taken, new_cid
+from zato.server.service import Service
 
 # ################################################################################################################################
 
@@ -526,5 +527,27 @@ class ODBTestCase(TestCase):
         result = result.result # type: tuple
 
         return result if is_list else result[0]
+
+# ################################################################################################################################
+
+class MyODBService(Service):
+    class SimpleIO:
+        output = 'cluster_id', 'is_active', 'name'
+
+# ################################################################################################################################
+
+class MyODBServiceWithResponseElem(MyODBService):
+    class SimpleIO(MyODBService.SimpleIO):
+        response_elem = 'my_response_elem'
+
+# ################################################################################################################################
+
+class MyZatoClass:
+    def to_zato(self):
+        return {
+            'cluster_id': test_odb_data.cluster_id,
+            'is_active':  test_odb_data.is_active,
+            'name':       test_odb_data.name,
+        }
 
 # ################################################################################################################################
