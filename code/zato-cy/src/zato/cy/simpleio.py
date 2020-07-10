@@ -733,7 +733,10 @@ class Text(Elem):
                     encoding = kwargs.get('encoding') or 'utf8'
                     return str(value, encoding)
                 else:
-                    return str(value)
+                    if value is None:
+                        return value
+                    else:
+                        return str(value)
 
     @staticmethod
     def from_json_static(value, *args, **kwargs):
@@ -1854,8 +1857,11 @@ class CySimpleIO(object):
                 input_data_dict = input_data_dict.asdict()
 
             # This could be an object that explicitly knows how to serialise to Zato
-            if hasattr(input_data_dict, 'to_zato'):
+            elif hasattr(input_data_dict, 'to_zato'):
                 input_data_dict = input_data_dict.to_zato()
+
+            elif isinstance(input_data_dict, WritableKeyedTuple):
+                input_data_dict = input_data_dict.get_value()
 
             for is_required, current_elems in all_elems:
                 for current_elem_name, current_elem in current_elems.items():
@@ -1871,6 +1877,10 @@ class CySimpleIO(object):
                         except Exception as e:
                             raise SerialisationError('Exception `{}` while serialising `{}` ({})'.format(
                                 e, input_data_dict, self.service_class))
+
+                        if current_elem._type == ElemType.text:
+                            if isinstance(value, bytes):
+                                value = value.decode(current_elem.encoding)
 
                         # All checks passed - we can append this particular element to the output dictionary
                         out_data_dict[current_elem_name] = value
@@ -2025,6 +2035,9 @@ class CySimpleIO(object):
         """ Serialises input data to the data format specified.
         """
         if data_format == DATA_FORMAT_JSON:
+            print()
+            print(111, data)
+            print()
             return json_dumps(data)
 
         elif data_format == DATA_FORMAT_XML:
