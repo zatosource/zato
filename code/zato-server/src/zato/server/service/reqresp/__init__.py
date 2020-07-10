@@ -32,7 +32,7 @@ from zato.common import simple_types
 from zato.common.util import make_repr
 
 # Zato - Cython
-from zato.cy.simpleio import ServiceInput
+from zato.simpleio import ServiceInput
 
 # ################################################################################################################################
 
@@ -61,7 +61,7 @@ if 0:
     from zato.server.service import AMQPFacade
 
     # Zato - Cython
-    from zato.cy.simpleio import CySimpleIO
+    from zato.simpleio import CySimpleIO
 
     AMQPFacade = AMQPFacade
     Arrow = Arrow
