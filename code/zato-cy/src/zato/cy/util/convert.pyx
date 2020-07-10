@@ -7,7 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 true_values = ('true', 'yes', 'on', 'y', 't', '1')
-false_values = ('false', 'no', 'off', 'n', 'f', '0')
+false_values = ('false', 'no', 'off', 'n', 'f', '0', '', None)
 
 def to_bool(value):
     if isinstance(value, basestring):
