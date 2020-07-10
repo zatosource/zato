@@ -12,38 +12,27 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 from cgi import FieldStorage
 from copy import deepcopy
-from http.client import OK
-from itertools import chain
 from io import BytesIO
-from traceback import format_exc
 
 # anyjson
-from anyjson import dumps, loads
+from anyjson import loads
 
 # Bunch
 from bunch import Bunch, bunchify
 
 # lxml
-from lxml import etree
 from lxml.etree import _Element as EtreeElement
-from lxml.objectify import deannotate, Element, ElementMaker, ObjectifiedElement
-
-# SQLAlchemy
-from sqlalchemy.util import KeyedTuple
+from lxml.objectify import ObjectifiedElement
 
 # Python 2/3 compatibility
-from builtins import bytes
 from future.utils import iteritems
-from past.builtins import basestring
 
 # Zato
-from zato.common import NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, SIMPLE_IO, simple_types, TRACE1, ZatoException, \
-     ZATO_OK
-from zato.common.odb.api import WritableKeyedTuple
+from zato.common import simple_types
 from zato.common.util import make_repr
 
 # Zato - Cython
-from zato.simpleio import ServiceInput
+from zato.cy.simpleio import ServiceInput
 
 # ################################################################################################################################
 
@@ -78,6 +67,7 @@ if 0:
     Arrow = Arrow
     ConfigDict = ConfigDict
     ConfigStore = ConfigStore
+    CySimpleIO = CySimpleIO
     EMailAPI = EMailAPI
     FTPStore = FTPStore
     KombuAMQPMessage = KombuAMQPMessage

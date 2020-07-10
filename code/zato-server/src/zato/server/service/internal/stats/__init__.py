@@ -34,7 +34,7 @@ from zato.common.py23_ import maxint
 # Zato
 from zato.common import KVDB, SECONDS_IN_DAY, StatsElem, ZatoException
 from zato.common.broker_message import STATS
-from zato.common.odb.model import Service
+from zato.common.odb.model import Service as ServiceModel
 from zato.server.service import Integer, Service, UTC
 from zato.server.service.internal import AdminService, AdminSIO
 
@@ -480,8 +480,8 @@ class GetByService(StatsReturningService):
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            service = session.query(Service).\
-                filter(Service.id==self.request.input.service_id).\
+            service = session.query(ServiceModel).\
+                filter(ServiceModel.id==self.request.input.service_id).\
                 one()
 
         stats_elem = list(self.get_stats(self.request.input.start, self.request.input.stop, service.name))
