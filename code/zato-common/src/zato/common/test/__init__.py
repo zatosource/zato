@@ -48,8 +48,8 @@ from zato.common.util import is_port_taken, new_cid
 
 class test_odb_data:
     cluster_id = 1
-    es_name = 'my.name'
-    es_is_active = True
+    name = 'my.name'
+    is_active = True
     es_hosts = 'my.hosts'
     es_timeout = 111
     es_body_as = 'my.body_as'
@@ -480,8 +480,12 @@ class ODBTestCase(TestCase):
         # .. and all ODB objects for that wrapper's engine too ..
         model.Base.metadata.create_all(self.session_wrapper.pool.engine)
 
+        # Unrelated to the above, used in individual tests
+        self.ODBTestModelClass = ElasticSearch
+
     def tearDown(self):
         model.Base.metadata.drop_all(self.engine)
+        self.ODBTestModelClass = None
 
     def get_session(self):
         return self.session_wrapper.session()
@@ -499,9 +503,9 @@ class ODBTestCase(TestCase):
         cluster.lb_port = 5678
         cluster.lb_agent_port = 9012
 
-        es = ElasticSearch()
-        es.name = test_odb_data.es_name
-        es.is_active = test_odb_data.es_is_active
+        es = self.ODBTestModelClass()
+        es.name = test_odb_data.name
+        es.is_active = test_odb_data.is_active
         es.hosts = test_odb_data.es_hosts
         es.timeout = test_odb_data.es_timeout
         es.body_as = test_odb_data.es_body_as

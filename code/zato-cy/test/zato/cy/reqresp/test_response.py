@@ -12,10 +12,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from copy import deepcopy
 from http.client import OK
 from json import loads as json_loads
+from io import StringIO
 
 # lxml
 from lxml.etree import _Element as EtreeElement
-from lxml.objectify import ObjectifiedElement
+from lxml.objectify import fromstring as objectify_from_string, ObjectifiedElement
 
 # Zato
 from zato.common import DATA_FORMAT, ZATO_OK
@@ -40,12 +41,21 @@ class MyODBService(Service):
     class SimpleIO:
         output = 'cluster_id', 'is_active', 'name'
 
+
+class MyZatoClass:
+    def to_zato(self):
+        return {
+            'cluster_id': test_odb_data.cluster_id,
+            'is_active':  test_odb_data.is_active,
+            'name':       test_odb_data.name,
+        }
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ResponseTestCase(BaseTestCase):
 
-    def xtest_defaults(self):
+    def test_defaults(self):
         response = Response()
 
         self.assertIsNone(response.cid)
@@ -62,7 +72,7 @@ class ResponseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_len(self):
+    def test_len(self):
         response = Response()
         response._payload = 'abcdef'
 
@@ -70,7 +80,7 @@ class ResponseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_content_type(self):
+    def test_content_type(self):
         response = Response()
         response.content_type = 'abc'
 
@@ -79,7 +89,7 @@ class ResponseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_init_no_sio(self):
+    def test_init_no_sio(self):
         response = Response()
         response.init('abc', None, DATA_FORMAT.CSV)
 
@@ -89,7 +99,7 @@ class ResponseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_init_has_sio(self):
+    def test_init_has_sio(self):
 
         MyService = deepcopy(MyBaseService)
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
@@ -101,7 +111,7 @@ class ResponseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_setslice(self):
+    def test_setslice(self):
 
         MyService = deepcopy(MyBaseService)
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
@@ -117,7 +127,7 @@ class ResponseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_set_payload_dict_has_sio_case_1a(self):
+    def test_set_payload_dict_has_sio_case_1a(self):
 
         MyService = deepcopy(MyBaseService)
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
@@ -132,7 +142,7 @@ class ResponseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_set_payload_dict_no_sio_case_1b(self):
+    def test_set_payload_dict_no_sio_case_1b(self):
 
         response = Response()
         response.init('abc', None, DATA_FORMAT.CSV)
@@ -144,7 +154,7 @@ class ResponseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_set_payload_direct_payload_case_2a(self):
+    def test_set_payload_direct_payload_case_2a(self):
         # basestring, dict, list, tuple, bool, Number + (EtreeElement, ObjectifiedElement)
 
         data_01 = b'abc'
@@ -169,7 +179,7 @@ class ResponseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_set_payload_not_direct_payload_no_sio_case_2b2(self):
+    def test_set_payload_not_direct_payload_no_sio_case_2b2(self):
 
         class MyCustomPayloadType:
             def __repr__(self):
@@ -220,107 +230,170 @@ class PayloadFromSQLAlchemy(BaseTestCase, ODBTestCase):
 
     def _prepare_sio_response_from_orm(self, data_format, is_list):
         # type: (str, bool) -> str
-        orm_result = self.get_sample_odb_orm_result(is_list)
-        return self._prepare_sio_response(orm_result, data_format, is_list)
+        data = self.get_sample_odb_orm_result(is_list)
+        return self._prepare_sio_response(data, data_format, is_list)
+
+# ################################################################################################################################
+
+    def _prepare_sio_response_from_zato(self, data_format, is_list):
+        # type: (str, bool) -> str
+        data = MyZatoClass()
+        return self._prepare_sio_response(data, data_format, is_list)
 
 # ################################################################################################################################
 
     def test_sio_response_from_sqlalchemy_orm_single_json(self):
+
         result = self._prepare_sio_response_from_orm(DATA_FORMAT.JSON, False)
         result = json_loads(result)
 
         self.assertEqual(result['cluster_id'], test_odb_data.cluster_id)
-        self.assertEqual(result['name'], test_odb_data.es_name)
-        self.assertTrue(result['is_active'])
+        self.assertEqual(result['name'], test_odb_data.name)
+        self.assertIs(result['is_active'], test_odb_data.is_active)
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_sqlalchemy_orm_single_xml(self):
+    def test_sio_response_from_sqlalchemy_orm_single_xml(self):
+
         result = self._prepare_sio_response_from_orm(DATA_FORMAT.XML, False)
+        result = result.encode('utf8')
+        root = objectify_from_string(result)
+
+        self.assertEqual(root.cluster_id, test_odb_data.cluster_id)
+        self.assertEqual(root.name, test_odb_data.name)
+        self.assertTrue(root.is_active)
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_sqlalchemy_orm_single_csv(self):
+    def test_sio_response_from_sqlalchemy_orm_single_csv(self):
+
         result = self._prepare_sio_response_from_orm(DATA_FORMAT.CSV, False)
+        result = result.splitlines()
+
+        data_row_expected = '{},{},{}'.format(test_odb_data.cluster_id, test_odb_data.is_active, test_odb_data.name)
+
+        self.assertEqual(result[0], 'cluster_id,is_active,name')
+        self.assertEqual(result[1], data_row_expected)
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_sqlalchemy_orm_single_dict(self):
+    def test_sio_response_from_sqlalchemy_orm_single_dict(self):
+
         result = self._prepare_sio_response_from_orm(DATA_FORMAT.DICT, False)
+
+        self.assertDictEqual(result, {
+            'cluster_id': test_odb_data.cluster_id,
+            'is_active': test_odb_data.is_active,
+            'name': test_odb_data.name,
+        })
 
 # ################################################################################################################################
 
     def test_sio_response_from_sqlalchemy_orm_list_json(self):
+
         result = self._prepare_sio_response_from_orm(DATA_FORMAT.JSON, True)
         result = json_loads(result)
         result = result[0]
 
         self.assertEqual(result['cluster_id'], test_odb_data.cluster_id)
-        self.assertEqual(result['name'], test_odb_data.es_name)
+        self.assertEqual(result['name'], test_odb_data.name)
+        self.assertIs(result['is_active'], test_odb_data.is_active)
+
+# ################################################################################################################################
+
+    def test_sio_response_from_sqlalchemy_orm_list_xml(self):
+
+        result = self._prepare_sio_response_from_orm(DATA_FORMAT.XML, True)
+        result = result.encode('utf8')
+        root = objectify_from_string(result)
+
+        self.assertEqual(root.item.cluster_id, test_odb_data.cluster_id)
+        self.assertEqual(root.item.name, test_odb_data.name)
+        self.assertTrue(root.item.is_active)
+
+# ################################################################################################################################
+
+    def test_sio_response_from_sqlalchemy_orm_list_csv(self):
+
+        result = self._prepare_sio_response_from_orm(DATA_FORMAT.CSV, True)
+        result = result.splitlines()
+
+        data_row_expected = '{},{},{}'.format(test_odb_data.cluster_id, test_odb_data.is_active, test_odb_data.name)
+
+        self.assertEqual(result[0], 'cluster_id,is_active,name')
+        self.assertEqual(result[1], data_row_expected)
+
+# ################################################################################################################################
+
+    def test_sio_response_from_sqlalchemy_orm_list_dict(self):
+
+        result = self._prepare_sio_response_from_orm(DATA_FORMAT.DICT, True)
+        result = result[0]
+
+        self.assertIsInstance(result, self.ODBTestModelClass)
+
+        result = result.asdict()
+
+        # Note that the input format DICT acts, essentially, as pass-through.
+        self.assertDictEqual(result, {
+
+            # These were added by the database
+            'id': 1,
+            'opaque1': None,
+
+            # These were specified explicitly
+            'name': test_odb_data.name,
+            'is_active': test_odb_data.is_active,
+            'hosts': test_odb_data.es_hosts,
+            'timeout': test_odb_data.es_timeout,
+            'body_as': test_odb_data.es_body_as,
+            'cluster_id': test_odb_data.cluster_id,
+        })
+
+# ################################################################################################################################
+
+    def test_sio_response_from_sqlalchemy_to_zato_single_json(self):
+
+        result = self._prepare_sio_response_from_orm(DATA_FORMAT.JSON, False)
+        result = json_loads(result)
+
+        self.assertEqual(result['cluster_id'], test_odb_data.cluster_id)
+        self.assertEqual(result['name'], test_odb_data.name)
         self.assertTrue(result['is_active'])
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_sqlalchemy_orm_list_xml(self):
+    def test_sio_response_from_sqlalchemy_to_zato_single_xml(self):
         pass
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_sqlalchemy_orm_list_csv(self):
+    def test_sio_response_from_sqlalchemy_to_zato_single_csv(self):
         pass
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_sqlalchemy_orm_list_dict(self):
+    def test_sio_response_from_sqlalchemy_to_zato_single_dict(self):
         pass
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_sqlalchemy_to_zato_single_json(self):
-
-        class MyObject:
-            def to_zato(self):
-                return {
-                    'cluster_id':2,
-                    'is_active':False,
-                    'name':'my.to.zato'
-                }
-
-        response.payload[:] = [MyObject()]
-
-# ################################################################################################################################
-
-    def xtest_sio_response_from_sqlalchemy_to_zato_single_xml(self):
+    def test_sio_response_from_sqlalchemy_to_zato_list_json(self):
         pass
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_sqlalchemy_to_zato_single_csv(self):
+    def test_sio_response_from_sqlalchemy_to_zato_list_xml(self):
         pass
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_sqlalchemy_to_zato_single_dict(self):
+    def test_sio_response_from_sqlalchemy_to_zato_list_csv(self):
         pass
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_sqlalchemy_to_zato_list_json(self):
-        pass
-
-# ################################################################################################################################
-
-    def xtest_sio_response_from_sqlalchemy_to_zato_list_xml(self):
-        pass
-
-# ################################################################################################################################
-
-    def xtest_sio_response_from_sqlalchemy_to_zato_list_csv(self):
-        pass
-
-# ################################################################################################################################
-
-    def xtest_sio_response_from_sqlalchemy_to_zato_list_dict(self):
+    def test_sio_response_from_sqlalchemy_to_zato_list_dict(self):
         pass
 
 # ################################################################################################################################
