@@ -314,31 +314,36 @@ class ServiceInvokeResponse(JSONSIOResponse):
         self.inner_service_response = None
         super(ServiceInvokeResponse, self).__init__(*args, **kwargs)
 
+    def _handle_response_with_meta(self, data):
+
+        if isinstance(data, dict):
+            self.meta = data.get('_meta')
+            data_keys = list(data.keys())
+            if len(data_keys) == 1:
+                data_key = data_keys[0]
+                if isinstance(data_key, text) and data_key.startswith('zato'):
+                    self.data = data[data_key]
+                else:
+                    self.data = data
+            else:
+                self.data = data
+        else:
+            self.data = data
+
     def set_data(self, payload, has_zato_env):
 
         if has_zato_env:
             payload = b64decode(payload)
             payload = payload.decode('utf8') if isinstance(payload, bytes) else payload
             self.inner_service_response = payload
+
             try:
                 data = loads(self.inner_service_response)
             except ValueError:
                 # Not a JSON response
                 self.data = self.inner_service_response
             else:
-                if isinstance(data, dict):
-                    self.meta = data.get('_meta')
-                    data_keys = list(data.keys())
-                    if len(data_keys) == 1:
-                        data_key = data_keys[0]
-                        if isinstance(data_key, text) and data_key.startswith('zato'):
-                            self.data = data[data_key]
-                        else:
-                            self.data = data
-                    else:
-                        self.data = data
-                else:
-                    self.data = data
+                self._handle_response_with_meta(data)
         else:
             try:
                 data = loads(payload)
@@ -346,7 +351,7 @@ class ServiceInvokeResponse(JSONSIOResponse):
                 # Not a JSON response
                 self.data = payload
             else:
-                self.data = data
+                self._handle_response_with_meta(data)
 
         return True
 

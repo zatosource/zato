@@ -153,7 +153,9 @@ class SimpleIOPayload(object):
         # Special-case internal services that return metadata (e.g GetList-like ones)
         if self.zato_meta:
             output = self.sio.get_output(value, self.data_format, False)
-            output['zato_meta'] = self.zato_meta
+            search = self.zato_meta.get('search')
+            if search:
+                output['_meta'] = search
             return self.sio.serialise(output, self.data_format)
 
         else:
