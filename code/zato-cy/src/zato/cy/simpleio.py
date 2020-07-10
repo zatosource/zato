@@ -1573,7 +1573,7 @@ class CySimpleIO(object):
                 is_sio_elem = isinstance(elem, Elem)
                 elem_name = elem.name if is_sio_elem else elem
 
-                if elem_name.startswith(prefix_optional):
+                if elem_name.startswith(prefix_optional) or (is_sio_elem and (not elem.is_required)):
                     elem_name_no_prefix = elem_name.replace(prefix_optional, '')
                     optional.append(elem if is_sio_elem else elem_name_no_prefix)
                 else:

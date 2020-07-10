@@ -51,8 +51,8 @@ class GetList(AdminService):
         response_elem = 'zato_outgoing_sql_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username',
-            Integer('pool_size'), 'engine_display_name')
-        output_optional = ('extra',)
+            Integer('pool_size'))
+        output_optional = ('extra', 'engine_display_name')
 
     def get_data(self, session):
         return self._search(out_sql_list, session, self.request.input.cluster_id, False)
