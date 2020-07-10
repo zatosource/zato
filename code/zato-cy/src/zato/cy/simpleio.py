@@ -1600,6 +1600,10 @@ class CySimpleIO(object):
                 if not isinstance(elem, Elem):
                     elem = self._convert_to_elem_instance(elem, is_required)
 
+                # By default all Elem instances are required so we need
+                # to potentially overwrite it with the actual is_required value.
+                elem.is_required = is_required
+
                 # Make sure all elements have a default value, either a user-defined one or the SimpleIO-level configured one
                 sio_default_value = self.definition.sio_default.input_value if container == 'input' else \
                     self.definition.sio_default.output_value
@@ -2035,9 +2039,6 @@ class CySimpleIO(object):
         """ Serialises input data to the data format specified.
         """
         if data_format == DATA_FORMAT_JSON:
-            print()
-            print(111, data)
-            print()
             return json_dumps(data)
 
         elif data_format == DATA_FORMAT_XML:
