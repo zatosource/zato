@@ -263,6 +263,8 @@ class JSONSIOResponse(_Response):
             self.ok = self.inner.ok
 
         if self.ok:
+            value = None
+
             if has_zato_env:
                 # There will be two keys, zato_env and the actual payload
                 for key, _value in json.items():
@@ -272,10 +274,11 @@ class JSONSIOResponse(_Response):
             else:
                 value = json
 
-            if self.set_data(value, has_zato_env):
-                self.has_data = True
-                if self.to_bunch:
-                    self.data = bunchify(self.data)
+            if value:
+                if self.set_data(value, has_zato_env):
+                    self.has_data = True
+                    if self.to_bunch:
+                        self.data = bunchify(self.data)
 
     def set_data(self, payload, _ignored):
         self.data = payload
