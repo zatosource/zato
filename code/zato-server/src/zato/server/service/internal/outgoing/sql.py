@@ -256,7 +256,7 @@ class AutoPing(AdminService):
         except Exception:
             self.logger.warn('Could not ping ODB, e:`%s`', format_exc())
 
-        for item in self.invoke(GetList.get_name(), {'cluster_id':self.server.cluster_id})['zato_outgoing_sql_get_list_response']:
+        for item in self.invoke(GetList.get_name(), {'cluster_id':self.server.cluster_id}):
             try:
                 self.invoke(Ping.get_name(), {'id': item['id']})
             except Exception:
