@@ -341,10 +341,10 @@ class ServiceInvokeResponse(JSONSIOResponse):
                     self.data = data
         else:
             try:
-                data = loads(response)
+                data = loads(payload)
             except ValueError:
                 # Not a JSON response
-                self.data = response
+                self.data = payload
             else:
                 self.data = data
 
