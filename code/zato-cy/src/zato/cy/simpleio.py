@@ -682,7 +682,7 @@ class Int(Elem):
 
     @staticmethod
     def from_json_static(value, *args, **kwargs):
-        return _builtin_int(value)
+        return _builtin_int(value) if value else value
 
     def from_json(self, value):
         return Int.from_json_static(value)
