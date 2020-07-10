@@ -142,7 +142,10 @@ def add_services(form, req, by_id=False, initial_service=None, api_name='zato.se
             if has_name_filter:
                 request['name_filter'] = '*'
 
-            for service in req.zato.client.invoke(api_name, request).data:
+            response = req.zato.client.invoke(api_name, request)
+            data = response.data
+
+            for service in data:
 
                 # Older parts of web-admin use service names only but newer ones prefer service ID
                 id_attr = service.id if by_id else service.name
