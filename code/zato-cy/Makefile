@@ -20,9 +20,6 @@ rate-limit:
 simpleio:
 	$(MAKE) build
 
-rate-limit-tests:
-	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/rate_limit/*.py -s
-
 reqresp-tests:
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/reqresp/test_*.py -s
 
@@ -31,5 +28,6 @@ simpleio-tests:
 
 run-tests:
 	# No tests to run for now
-	$(MAKE) build
+	$(MAKE) reqresp-tests
+	$(MAKE) simpleio-tests
 	echo
