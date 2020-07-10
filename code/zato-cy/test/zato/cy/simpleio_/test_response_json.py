@@ -22,7 +22,7 @@ from dateparser import parse as dt_parse
 
 # Zato
 from zato.common import DATA_FORMAT
-from zato.common.odb.testing import create_test_in_mem_sqlite
+from zato.common.util.search import SearchResults
 from zato.server.service import Service
 from zato.simpleio import backward_compat_default_value, AsIs, Bool, CySimpleIO, Date, DateTime, Decimal, \
      Float, Int, Opaque, SerialisationError, Text, UUID
@@ -37,7 +37,7 @@ class JSONResponse(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_response_basic(self):
+    def test_response_basic(self):
 
         class MyService(Service):
             class SimpleIO:
@@ -68,7 +68,7 @@ class JSONResponse(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_response_with_response_elem(self):
+    def test_response_with_response_elem(self):
 
         class MyService(Service):
             class SimpleIO:
@@ -102,7 +102,7 @@ class JSONResponse(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_response_multiline(self):
+    def test_response_multiline(self):
 
         class MyService(Service):
             class SimpleIO:
@@ -141,7 +141,7 @@ class JSONResponse(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_response_all_elem_types(self):
+    def test_response_all_elem_types(self):
 
         class MyService(Service):
             class SimpleIO:
@@ -198,45 +198,7 @@ class JSONResponse(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_response_from_sqlalchemy(self):
-
-        class MyService(Service):
-            class SimpleIO:
-                output = 'aaa', Int('bbb'), Opaque('ccc'), '-ddd', '-eee'
-
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
-
-        session = create_test_in_mem_sqlite()
-        result = session.execute('SELECT * FROM abc')
-
-        #print(111, type(result.fetchall()[0]))
-
-        '''
-        aaa = 'aaa-111'
-        bbb = '222'
-        ccc = 'ccc-ccc-ccc'
-        eee = 'eee-444'
-
-        # Note that 'ddd' is optional and we are free to skip it
-        data = {
-            'aaa': aaa,
-            'bbb': bbb,
-            'ccc': ccc,
-            'eee': eee,
-        }
-
-        result = MyService._sio.get_output(data, DATA_FORMAT.JSON)
-        json_data = json_loads(result)
-
-        self.assertEquals(json_data['aaa'], aaa)
-        self.assertEquals(json_data['bbb'], int(bbb))
-        self.assertEquals(json_data['ccc'], ccc)
-        self.assertEquals(json_data['eee'], eee)
-        '''
-
-# ################################################################################################################################
-
-    def xtest_response_invalid_input(self):
+    def test_response_invalid_input(self):
 
         class MyService(Service):
             class SimpleIO:

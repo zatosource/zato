@@ -1844,25 +1844,39 @@ class CySimpleIO(object):
         current_elem_name:cy.unicode
         current_elem:Elem
 
-        for data_dict in data:
+        for input_data_dict in data:
+
+            # This is the dictionary that we return.
+            out_data_dict = {}
+
+            # This could be an SQLAlchemy object that we need to convert to a dictionary
+            if hasattr(input_data_dict, 'asdict'):
+                input_data_dict = input_data_dict.asdict()
+
+            # This could be an object that explicitly knows how to serialise to Zato
+            if hasattr(input_data_dict, 'to_zato'):
+                input_data_dict = input_data_dict.to_zato()
+
             for is_required, current_elems in all_elems:
                 for current_elem_name, current_elem in current_elems.items():
-                    value = data_dict.get(current_elem_name, InternalNotGiven)
+                    value = input_data_dict.get(current_elem_name, InternalNotGiven)
                     if value is InternalNotGiven:
                         if is_required:
                             raise SerialisationError('Required element `{}` missing in `{}` ({})'.format(
-                                current_elem_name, data_dict, self.service_class))
+                                current_elem_name, input_data_dict, self.service_class))
                     else:
                         try:
                             parse_func = current_elem.parse_to[data_format]
                             value = parse_func(value)
-                            data_dict[current_elem_name] = value
                         except Exception as e:
                             raise SerialisationError('Exception `{}` while serialising `{}` ({})'.format(
-                                e, data_dict, self.service_class))
+                                e, input_data_dict, self.service_class))
+
+                        # All checks passed - we can append this particular element to the output dictionary
+                        out_data_dict[current_elem_name] = value
 
             # More yields - to actually return data
-            yield data_dict
+            yield out_data_dict
 
 # ################################################################################################################################
 

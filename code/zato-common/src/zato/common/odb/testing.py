@@ -70,21 +70,3 @@ class UnittestEngine(object):
     _contextual_connect = connect
 
 # ################################################################################################################################
-
-def create_test_in_mem_sqlite():
-    from zato.common.odb.api import SessionWrapper
-
-    '''
-    pool = create_pool({
-        'engine': 'sqlite',
-        'sqlite_path': ':memory:',
-    }, 'SELECT 1', WritableTupleQuery)
-
-    pool.execute('CREATE TABLE abc(foo int, bar int)')
-    pool.execute('INSERT INTO abc(foo, bar) VALUES(1, 2)')
-    pool.execute('INSERT INTO abc(foo, bar) VALUES(10, 20)')
-
-    return pool
-    '''
-
-# ################################################################################################################################

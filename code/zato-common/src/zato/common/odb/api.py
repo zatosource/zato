@@ -134,23 +134,14 @@ class WritableTupleQuery(Query):
 
         # This is a simple result of a query such as session.query(ObjectName).count()
         if len_columns_desc == 1 and isinstance(first_type, TypeEngine):
-            print()
-            print(111, out)
-            print()
             return out
 
         # A list of objects, e.g. from .all()
         elif len_columns_desc > 1:
-            print()
-            print(222, out)
-            print()
             return (WritableKeyedTuple(elem) for elem in out)
 
         # Anything else
         else:
-            print()
-            print(333, out)
-            print()
             return out
 
 # ################################################################################################################################
@@ -161,15 +152,16 @@ class SessionWrapper(object):
     """
     def __init__(self):
         self.session_initialized = False
-        self.pool = None
-        self.config = None
-        self.is_sqlite = None
+        self.pool = None      # type: SQLConnectionPool
+        self.config = None    # type: dict
+        self.is_sqlite = None # type: bool
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def init_session(self, *args, **kwargs):
         spawn_greenlet(self._init_session, *args, **kwargs)
 
     def _init_session(self, name, config, pool, use_scoped_session=True):
+        # type: (str, dict, SQLConnectionPool, bool)
         self.config = config
         self.fs_sql_config = config['fs_sql_config']
         self.pool = pool
@@ -340,7 +332,6 @@ class SQLConnectionPool(object):
     def ping(self, fs_sql_config):
         """ Pings the SQL database and returns the response time, in milliseconds.
         """
-        return
         if hasattr(self.engine, 'ping'):
             func = self.engine.ping
             query = self.engine.ping_query
