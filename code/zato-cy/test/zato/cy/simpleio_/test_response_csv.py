@@ -8,18 +8,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from datetime import datetime
-from decimal import Decimal as decimal_Decimal
-from uuid import UUID as uuid_UUID
-
 # dateparser
 from dateparser import parse as dt_parse
 
 # Zato
 from zato.common import DATA_FORMAT
 from zato.server.service import Service
-from zato.simpleio import backward_compat_default_value, AsIs, Bool, CySimpleIO, Date, DateTime, Decimal, \
+from zato.simpleio import AsIs, Bool, CySimpleIO, Date, DateTime, Decimal, \
      Float, Int, Opaque, SerialisationError, Text, UUID
 
 # Zato - Cython
@@ -163,7 +158,7 @@ class CSVResponse(BaseTestCase):
         }
 
         with self.assertRaises(SerialisationError) as ctx:
-            result = MyService._sio.get_output(data, DATA_FORMAT.CSV)
+            MyService._sio.get_output(data, DATA_FORMAT.CSV)
 
         e = ctx.exception # type: SerialisationError
         self.assertEquals(e.args[0], "Exception `invalid literal for int() with base 10: 'aaa'` while serialising " \
