@@ -22,6 +22,7 @@ import cython as cy
 from sqlalchemy.util import KeyedTuple
 
 # Zato
+from zato.common import DATA_FORMAT
 from zato.common.odb.api import WritableKeyedTuple
 
 # Zato - Cython
@@ -29,6 +30,8 @@ from zato.simpleio import SIODefinition
 
 # Python 2/3 compatibility
 from past.builtins import unicode as past_unicode
+
+# ################################################################################################################################
 
 if 0:
     from zato.simpleio import CySimpleIO
@@ -42,8 +45,9 @@ logger = getLogger('zato')
 
 # ################################################################################################################################
 
+DATA_FORMAT_DICT:str = DATA_FORMAT.DICT
 list_like:tuple = (list, tuple)
-_not_given = object()
+_not_given:object = object()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -144,10 +148,15 @@ class SimpleIOPayload(object):
 # ################################################################################################################################
 
     @cy.ccall
-    def getvalue(self, serialize:bool=True):
+    def getvalue(self, serialize:bool=True, force_dict_serialisation:bool=True):
         """ Returns a service's payload, either serialised or not.
         """
-        # What to return
+        if self.data_format == DATA_FORMAT_DICT:
+            if force_dict_serialisation:
+                serialize = True
+
+        # If data format is DICT, we force serialisation to that format
+        # unless overridden on input.
         value = self.user_attrs_list if self.output_repeated else self.user_attrs_dict
 
         # Special-case internal services that return metadata (e.g GetList-like ones)
@@ -166,7 +175,10 @@ class SimpleIOPayload(object):
             return self.sio.get_output(value, self.data_format) if serialize else value
 
         else:
-            return self.sio.get_output(value, self.data_format) if serialize else value
+            logger.warn('TTT-1 %s %s %s', value, self.data_format, serialize)
+            out = self.sio.get_output(value, self.data_format) if serialize else value
+            logger.warn('TTT-2 %s %s %s', out, self.data_format, serialize)
+            return out
 
 # ################################################################################################################################
 
@@ -194,6 +206,10 @@ class SimpleIOPayload(object):
             return self.user_attrs_dict[key]
         except KeyError:
             raise KeyError('No such key `{}` among `{}` ({})'.format(key, self.user_attrs_dict, hex(id(self.user_attrs_dict))))
+
+    def append(self, value):
+        self.user_attrs_list.append(value)
+        self.output_repeated = True
 
 # ################################################################################################################################
 # ################################################################################################################################

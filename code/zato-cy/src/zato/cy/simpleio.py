@@ -34,7 +34,7 @@ from dateutil.parser import parse as dt_parse
 from lxml.etree import _Element as EtreeElementClass, Element, SubElement, tostring as etree_to_string, XPath
 
 # Zato
-from zato.common import APISPEC, DATA_FORMAT
+from zato.common import APISPEC, DATA_FORMAT, ZATO_NONE
 from zato.common.odb.api import WritableKeyedTuple
 from zato.util_convert import to_bool
 
@@ -49,6 +49,8 @@ from past.builtins import basestring, str as past_str
 logger = getLogger('zato')
 
 # ################################################################################################################################
+
+_zato_none:str = ZATO_NONE
 
 _builtin_float = float
 _builtin_int = int
@@ -682,7 +684,7 @@ class Int(Elem):
 
     @staticmethod
     def from_json_static(value, *args, **kwargs):
-        return _builtin_int(value) if value else value
+        return _builtin_int(value) if (value and value != _zato_none) else value
 
     def from_json(self, value):
         return Int.from_json_static(value)
@@ -1890,6 +1892,7 @@ class CySimpleIO(object):
                         out_data_dict[current_elem_name] = value
 
             # More yields - to actually return data
+
             yield out_data_dict
 
 # ################################################################################################################################
@@ -2026,7 +2029,8 @@ class CySimpleIO(object):
             return self._get_output_csv(data)
 
         elif data_format == DATA_FORMAT_DICT:
-            return self._convert_to_dicts(data, DATA_FORMAT_DICT)
+            out = self._convert_to_dicts(data, DATA_FORMAT_DICT)
+            return out
 
         else:
             raise ValueError('Unrecognised output data format `{}`'.format(data_format))
