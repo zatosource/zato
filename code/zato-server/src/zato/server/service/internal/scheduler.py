@@ -222,7 +222,6 @@ class GetList(_Get):
     def handle(self):
         with closing(self.odb.session()) as session:
             data = self.get_data(session)
-            self.logger.warn('QQQ %s', data.result)
             self.response.payload[:] = data
 
         for item in self.response.payload:
