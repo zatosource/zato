@@ -117,6 +117,7 @@ class ResponseSerialiseNoResponseElem(BaseTestCase, ODBTestCase):
     def test_sio_response_from_sqlalchemy_orm_single_dict(self):
 
         result = self._prepare_sio_response_from_orm(DATA_FORMAT.DICT, False)
+        result = result[response_elem]
 
         self.assertDictEqual(result, {
             'cluster_id': test_odb_data.cluster_id,
@@ -167,26 +168,13 @@ class ResponseSerialiseNoResponseElem(BaseTestCase, ODBTestCase):
     def test_sio_response_from_sqlalchemy_orm_list_dict(self):
 
         result = self._prepare_sio_response_from_orm(DATA_FORMAT.DICT, True)
+        result = result[response_elem]
         result = result[0]
 
-        self.assertIsInstance(result, self.ODBTestModelClass)
-
-        result = result.asdict()
-
-        # Note that the input format DICT acts, essentially, as pass-through.
         self.assertDictEqual(result, {
-
-            # These were added by the database
-            'id': 1,
-            'opaque1': None,
-
-            # These were specified explicitly
+            'cluster_id': test_odb_data.cluster_id,
             'name': test_odb_data.name,
             'is_active': test_odb_data.is_active,
-            'hosts': test_odb_data.es_hosts,
-            'timeout': test_odb_data.es_timeout,
-            'body_as': test_odb_data.es_body_as,
-            'cluster_id': test_odb_data.cluster_id,
         })
 
 # ################################################################################################################################
@@ -230,6 +218,7 @@ class ResponseSerialiseNoResponseElem(BaseTestCase, ODBTestCase):
     def test_sio_response_from_zato_single_dict(self):
 
         result = self._prepare_sio_response_from_orm(DATA_FORMAT.DICT, False)
+        result = result[response_elem]
 
         self.assertDictEqual(result, {
             'cluster_id': test_odb_data.cluster_id,
@@ -279,15 +268,12 @@ class ResponseSerialiseNoResponseElem(BaseTestCase, ODBTestCase):
     def test_sio_response_from_zato_list_dict(self):
 
         result = self._prepare_sio_response_from_zato(DATA_FORMAT.DICT, True)
+        result = result[response_elem]
         result = result[0]
 
-        self.assertIsInstance(result, MyZatoClass)
-
-        to_zato = result.to_zato()
-
-        self.assertEqual(to_zato['cluster_id'], test_odb_data.cluster_id)
-        self.assertEqual(to_zato['name'], test_odb_data.name)
-        self.assertIs(to_zato['is_active'], test_odb_data.is_active)
+        self.assertEqual(result['cluster_id'], test_odb_data.cluster_id)
+        self.assertEqual(result['name'], test_odb_data.name)
+        self.assertIs(result['is_active'], test_odb_data.is_active)
 
 # ################################################################################################################################
 # ################################################################################################################################

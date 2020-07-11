@@ -1954,7 +1954,7 @@ class CySimpleIO(object):
         out:object = out_elems if is_list else out_elems[0]
 
         # Wrap the response in a top-level element if needed
-        if data_format == DATA_FORMAT_JSON:
+        if data_format in (DATA_FORMAT_JSON, DATA_FORMAT_DICT):
             if self.definition._response_elem:
                 out = {
                     self.definition._response_elem: out
@@ -2010,13 +2010,6 @@ class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    @cy.cfunc
-    @cy.returns(object)
-    def _get_output_dict(self, data:object) -> object:
-        return data
-
-# ################################################################################################################################
-
     @cy.ccall
     @cy.returns(object)
     def get_output(self, data:object, data_format:cy.unicode, serialise:bool=True) -> object:
@@ -2032,8 +2025,8 @@ class CySimpleIO(object):
         elif data_format == DATA_FORMAT_CSV:
             return self._get_output_csv(data)
 
-        elif data_format == DATA_FORMAT.DICT:
-            return self._get_output_dict(data)
+        elif data_format == DATA_FORMAT_DICT:
+            return self._convert_to_dicts(data, DATA_FORMAT_DICT)
 
         else:
             raise ValueError('Unrecognised output data format `{}`'.format(data_format))
