@@ -13,7 +13,6 @@ import logging
 
 # Zato
 from zato.common import UNITTEST
-from zato.common.odb import create_pool
 
 # ################################################################################################################################
 

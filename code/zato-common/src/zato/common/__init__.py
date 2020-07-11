@@ -34,9 +34,7 @@ from lxml.objectify import ObjectPath as _ObjectPath
 
 # Python 2/3 compatibility
 from past.builtins import basestring, execfile
-from six import PY3
 from zato.common.py23_ import maxint
-
 
 # Zato
 from zato.vault.client import VAULT
