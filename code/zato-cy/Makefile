@@ -24,7 +24,7 @@ reqresp-tests:
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/reqresp/test_*.py -s
 
 simpleio-tests:
-	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/simpleio_/test_parsing_input_dict.py -s
+	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/simpleio_/test_*.py -s
 
 run-tests:
 	# No tests to run for now
