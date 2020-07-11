@@ -19,7 +19,7 @@ from datetime import date as stdlib_date, datetime as stdlib_datetime
 from decimal import Decimal as decimal_Decimal
 from io import StringIO
 from itertools import chain
-from json import dumps as json_dumps
+from json import dumps as json_dumps, JSONEncoder
 from logging import getLogger
 from traceback import format_exc
 from uuid import UUID as uuid_UUID
@@ -86,6 +86,14 @@ DATA_FORMAT_DICT:cy.unicode = DATA_FORMAT.DICT
 DATA_FORMAT_JSON:cy.unicode = DATA_FORMAT.JSON
 DATA_FORMAT_POST:cy.unicode = DATA_FORMAT.POST
 DATA_FORMAT_XML:cy.unicode  = DATA_FORMAT.XML
+
+# ################################################################################################################################
+
+class SIOJSONEncoder(JSONEncoder):
+    def default(self, value):
+        if isinstance(value, bytes):
+            # Ultimately, this should use bytes_to_str_encoding
+            return value.decode('utf8')
 
 # ################################################################################################################################
 
@@ -935,8 +943,10 @@ class SIOServerConfig(object):
     int_config = cy.declare(IntConfig, visibility='public')       # type: IntConfig
     secret_config = cy.declare(SecretConfig, visibility='public') # type: SecretConfig
 
-    # Names in SimpleIO declarations that can be overridden by users
+    # Custom JSON encoder to handle types outside what the stdlib's one supports
+    json_encoder = cy.declare(object, visibility='public') # type: SIOJSONEncoder
 
+    # Names in SimpleIO declarations that can be overridden by users
     input_required_name = cy.declare(str, visibility='public')  # type: str
     input_optional_name = cy.declare(str, visibility='public')  # type: str
     output_required_name = cy.declare(str, visibility='public') # type: str
@@ -984,6 +994,9 @@ class SIOServerConfig(object):
     def is_secret(self, name) -> bool:
         """ Returns True if input name should be treated like ElemType.secret.
         """
+
+    def __cinit__(self):
+        self.json_encoder = SIOJSONEncoder()
 
 # ################################################################################################################################
 
@@ -2052,7 +2065,7 @@ class CySimpleIO(object):
         """ Serialises input data to the data format specified.
         """
         if data_format == DATA_FORMAT_JSON:
-            return json_dumps(data)
+            return self.server_config.json_encoder.encode(data)
 
         elif data_format == DATA_FORMAT_XML:
             xml_serialised = etree_to_string(data,

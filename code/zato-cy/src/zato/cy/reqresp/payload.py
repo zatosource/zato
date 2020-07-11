@@ -93,10 +93,13 @@ class SimpleIOPayload(object):
 
         # Use a different function depending on whether the object is dict-like or not.
         # Note that we need .get to be able to provide a default value.
-        func = getitem if hasattr(item, '__getitem__') else getattr
+        has_get = hasattr(item, 'get') # type: bool
 
         for name in self.all_output_elem_names: # type: str
-            value = func(item, name, _not_given)
+            if has_get:
+                value = item.get(name, _not_given)
+            else:
+                value = getattr(item, name, _not_given)
             if value is not _not_given:
                 extracted[name] = value
 
