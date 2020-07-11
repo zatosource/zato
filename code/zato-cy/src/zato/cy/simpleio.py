@@ -90,10 +90,15 @@ DATA_FORMAT_XML:cy.unicode  = DATA_FORMAT.XML
 # ################################################################################################################################
 
 class SIOJSONEncoder(JSONEncoder):
+
+    def __init__(self, *args, **kwargs):
+        super(SIOJSONEncoder, self).__init__(*args, **kwargs)
+        self.bytes_to_str_encoding = None # type: str
+
     def default(self, value):
         if isinstance(value, bytes):
             # Ultimately, this should use bytes_to_str_encoding
-            return value.decode('utf8')
+            return value.decode(self.bytes_to_str_encoding)
 
 # ################################################################################################################################
 
