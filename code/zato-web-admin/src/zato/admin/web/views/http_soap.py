@@ -283,10 +283,17 @@ def delete(req, id, cluster_id):
 
 @method_allowed('POST')
 def ping(req, id, cluster_id):
-    ret = id_only_service(req, 'zato.http-soap.ping', id, 'Could not ping the connection, e:`{}`')
-    if isinstance(ret, HttpResponseServerError):
-        return ret
-    return HttpResponse(ret.data.info)
+    response = id_only_service(req, 'zato.http-soap.ping', id, 'Could not ping the connection, e:`{}`')
+
+    print(111, response.data)
+
+    if isinstance(response, HttpResponseServerError):
+        return response
+    else:
+        if response.data.is_success:
+            return HttpResponse(response.data.info)
+        else:
+            return HttpResponseServerError(response.data.info)
 
 @method_allowed('POST')
 def reload_wsdl(req, id, cluster_id):

@@ -550,19 +550,12 @@ class Service(object):
 
     def set_response_data(self, service, _raw_types=_response_raw_types, **kwargs):
         # type: (Service, tuple, **object)
-
-        self.logger.warn('QQQ-1 %s', service)
-        self.logger.warn('QQQ-2 %s', service.response.payload)
-        self.logger.warn('QQQ-3 %s', kwargs)
-
         response = service.response.payload
         if not isinstance(response, _raw_types):
             response = response.getvalue(serialize=kwargs['serialize'])
             if kwargs['as_bunch']:
                 response = bunchify(response)
             service.response.payload = response
-
-        self.logger.warn('QQQ-4 %s', service.response.payload)
 
         return response
 

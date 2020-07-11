@@ -50,8 +50,6 @@ class Create(AdminService):
                 filter(ChannelWebSocket.name==req.channel_name).\
                 one()
 
-            #self.logger.warn('QQQ %r', req)
-
             client.is_internal = req.is_internal
             client.pub_client_id = req.pub_client_id
             client.ext_client_id = req.ext_client_id
@@ -124,9 +122,6 @@ class DeleteByServer(AdminService):
         input_required = 'needs_pid',
 
     def handle(self):
-
-        #self.logger.warn('QQQ %s', self.request.input)
-
         with closing(self.odb.session()) as session:
             server_pid = self.server.pid if self.request.input.needs_pid else None
             clients = web_socket_clients_by_server_id(session, self.server.id, server_pid)
