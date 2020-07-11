@@ -57,7 +57,6 @@ from zato.server.service.reqresp import AMQPRequestData, Cloud, Definition, IBMM
      Request
 
 # Zato - Cython
-from zato.cy.reqresp.payload import SimpleIOPayload
 from zato.cy.reqresp.response import Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
