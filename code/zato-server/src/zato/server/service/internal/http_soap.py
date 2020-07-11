@@ -267,8 +267,8 @@ class Create(_CreateEdit):
                 item.has_rbac = input.get('has_rbac') or input.sec_use_rbac or False
                 item.content_type = input.get('content_type')
                 item.sec_use_rbac = input.sec_use_rbac
-                item.cache_id = input.cache_id or None
-                item.cache_expiry = input.cache_expiry or 0
+                item.cache_id = input.get('cache_id') or None
+                item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
 
                 if input.security_id:
@@ -416,8 +416,8 @@ class Edit(_CreateEdit):
                 item.has_rbac = input.get('has_rbac') or input.sec_use_rbac or False
                 item.content_type = input.get('content_type')
                 item.sec_use_rbac = input.sec_use_rbac
-                item.cache_id = input.cache_id or None
-                item.cache_expiry = input.cache_expiry
+                item.cache_id = input.get('cache_id') or None
+                item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
 
                 sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
