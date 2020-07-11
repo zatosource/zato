@@ -16,10 +16,18 @@ from past.builtins import basestring, unicode
 from six import PY3
 
 # ################################################################################################################################
+
+if 0:
+    from zato.cy.simpleio import BoolConfig      as PyBoolConfig
+    from zato.cy.simpleio import IntConfig       as PyIntConfig
+    from zato.cy.simpleio import SecretConfig    as PySecretConfig
+    from zato.cy.simpleio import SIOServerConfig as PySIOServerConfig
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def get_bytes_to_str_encoding():
-    return 'utf8' if PY3 else ''
+    return 'utf8'
 
 # ################################################################################################################################
 
@@ -104,19 +112,19 @@ def c18n_sio_fs_config(sio_fs_config):
 def get_sio_server_config(sio_fs_config):
     c18n_sio_fs_config(sio_fs_config)
 
-    sio_server_config = SIOServerConfig()
+    sio_server_config = SIOServerConfig() # type: PySIOServerConfig
 
-    bool_config = BoolConfig()
+    bool_config = BoolConfig() # type: PyBoolConfig
     bool_config.exact = sio_fs_config.bool.exact
     bool_config.prefixes = sio_fs_config.bool.prefix
     bool_config.suffixes = sio_fs_config.bool.suffix
 
-    int_config = IntConfig()
+    int_config = IntConfig() # type: PyIntConfig
     int_config.exact = sio_fs_config.int.exact
     int_config.prefixes = sio_fs_config.int.prefix
     int_config.suffixes = sio_fs_config.int.suffix
 
-    secret_config = SecretConfig()
+    secret_config = SecretConfig() # type: PySecretConfig
     secret_config.exact = sio_fs_config.secret.exact
     secret_config.prefixes = sio_fs_config.secret.prefix
     secret_config.suffixes = sio_fs_config.secret.suffix
@@ -177,6 +185,7 @@ def get_sio_server_config(sio_fs_config):
         bytes_to_str_encoding = bytes_to_str_encoding.decode('utf8')
 
     sio_server_config.bytes_to_str_encoding = bytes_to_str_encoding
+    sio_server_config.json_encoder.bytes_to_str_encoding = bytes_to_str_encoding
 
     return sio_server_config
 
