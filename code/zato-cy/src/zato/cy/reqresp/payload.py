@@ -75,6 +75,7 @@ class SimpleIOPayload(object):
     def __cinit__(self, sio:object, all_output_elem_names:list, cid:str, data_format:str):
         self.sio = sio
         self.all_output_elem_names = all_output_elem_names
+        self.output_repeated = self.sio.definition.output_repeated
         self.cid = cid
         self.data_format = data_format
         self.user_attrs_dict = {}
