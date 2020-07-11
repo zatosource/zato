@@ -257,6 +257,9 @@ class AutoPing(AdminService):
             self.logger.warn('Could not ping ODB, e:`%s`', format_exc())
 
         response = self.invoke(GetList.get_name(), {'cluster_id':self.server.cluster_id})
+
+        self.logger.warn('EEE %s', response)
+
         response = response['zato_outgoing_sql_get_list_response']
 
         for item in response:
