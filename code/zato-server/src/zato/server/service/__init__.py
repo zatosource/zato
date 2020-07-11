@@ -57,6 +57,7 @@ from zato.server.service.reqresp import AMQPRequestData, Cloud, Definition, IBMM
      Request
 
 # Zato - Cython
+from zato.cy.reqresp.payload import SimpleIOPayload
 from zato.cy.reqresp.response import Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
@@ -157,6 +158,10 @@ PubSub = PubSub
 # ################################################################################################################################
 
 _wsgi_channels = (CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC)
+
+# ################################################################################################################################
+
+_response_raw_types=(basestring, dict, list, tuple, EtreeElement, ObjectifiedElement)
 
 # ################################################################################################################################
 
@@ -543,13 +548,21 @@ class Service(object):
         # Cache is always enabled
         self.cache = self._worker_store.cache_api
 
-    def set_response_data(self, service, _raw_types=(basestring, dict, list, tuple, EtreeElement, ObjectifiedElement), **kwargs):
+    def set_response_data(self, service, _raw_types=_response_raw_types, **kwargs):
+        # type: (Service, tuple, **object)
+
+        self.logger.warn('QQQ-1 %s', service)
+        self.logger.warn('QQQ-2 %s', service.response.payload)
+        self.logger.warn('QQQ-3 %s', kwargs)
+
         response = service.response.payload
         if not isinstance(response, _raw_types):
             response = response.getvalue(serialize=kwargs['serialize'])
             if kwargs['as_bunch']:
                 response = bunchify(response)
             service.response.payload = response
+
+        self.logger.warn('QQQ-4 %s', service.response.payload)
 
         return response
 
@@ -804,6 +817,7 @@ class Service(object):
                         raise
             else:
                 out = self.update_handle(*invoke_args, **kwargs)
+
                 if kwargs.get('skip_response_elem') and hasattr(out, 'keys'):
                     keys = list(iterkeys(out))
                     response_elem = keys[0]
