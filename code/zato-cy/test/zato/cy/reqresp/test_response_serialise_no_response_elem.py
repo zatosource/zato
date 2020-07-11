@@ -89,6 +89,7 @@ class ResponseSerialiseNoResponseElem(BaseTestCase, ODBTestCase):
         result = result.encode('utf8')
         root = objectify_from_string(result)
 
+        self.assertEqual(root.tag, 'response')
         self.assertEqual(root.cluster_id, test_odb_data.cluster_id)
         self.assertEqual(root.name, test_odb_data.name)
         self.assertTrue(root.is_active)
@@ -137,6 +138,7 @@ class ResponseSerialiseNoResponseElem(BaseTestCase, ODBTestCase):
         result = result.encode('utf8')
         root = objectify_from_string(result)
 
+        self.assertEqual(root.tag, 'response')
         self.assertEqual(root.item.cluster_id, test_odb_data.cluster_id)
         self.assertEqual(root.item.name, test_odb_data.name)
         self.assertTrue(root.item.is_active)
