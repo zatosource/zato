@@ -533,14 +533,24 @@ class Ping(AdminService):
         request_elem = 'zato_http_soap_ping_request'
         response_elem = 'zato_http_soap_ping_response'
         input_required = 'id'
-        output_required = 'id', 'info'
+        output_required = 'id', 'is_success'
+        output_optional = 'info'
 
     def handle(self):
         with closing(self.odb.session()) as session:
             item = session.query(HTTPSOAP).filter_by(id=self.request.input.id).one()
             config_dict = getattr(self.outgoing, item.transport)
             self.response.payload.id = self.request.input.id
-            self.response.payload.info = config_dict.get(item.name).ping(self.cid)
+
+            try:
+                result = config_dict.get(item.name).ping(self.cid)
+                is_success = True
+            except Exception as e:
+                result = e.args[0]
+                is_success = False
+            finally:
+                self.response.payload.info = result
+                self.response.payload.is_success = is_success
 
 # ################################################################################################################################
 
