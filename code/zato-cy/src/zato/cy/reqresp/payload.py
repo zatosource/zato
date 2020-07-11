@@ -175,9 +175,7 @@ class SimpleIOPayload(object):
             return self.sio.get_output(value, self.data_format) if serialize else value
 
         else:
-            logger.warn('TTT-1 %s %s %s', value, self.data_format, serialize)
             out = self.sio.get_output(value, self.data_format) if serialize else value
-            logger.warn('TTT-2 %s %s %s', out, self.data_format, serialize)
             return out
 
 # ################################################################################################################################
