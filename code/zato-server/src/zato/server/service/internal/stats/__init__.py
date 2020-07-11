@@ -342,7 +342,7 @@ class StatsReturningService(AdminService):
         else:
             data = dict.fromkeys(stats_elems, 0)
             for name in data:
-                data[name] = getattr(stats_elems[name], n_type)
+                data[name] = getattr(stats_elems[name], n_type) or 0
 
             # It's itemgetter(1 ,0) because idx=1 is the actual value and idx=0
             # is a name so in the end nlargest returns values in ascending order
