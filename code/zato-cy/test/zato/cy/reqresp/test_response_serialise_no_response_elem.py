@@ -72,7 +72,7 @@ class ResponseSerialiseNoResponseElem(BaseTestCase, ODBTestCase):
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_sqlalchemy_orm_single_json(self):
+    def test_sio_response_from_sqlalchemy_orm_single_json(self):
 
         result = self._prepare_sio_response_from_orm(DATA_FORMAT.JSON, False)
         result = json_loads(result)
@@ -83,7 +83,7 @@ class ResponseSerialiseNoResponseElem(BaseTestCase, ODBTestCase):
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_sqlalchemy_orm_single_xml(self):
+    def test_sio_response_from_sqlalchemy_orm_single_xml(self):
 
         result = self._prepare_sio_response_from_orm(DATA_FORMAT.XML, False)
         result = result.encode('utf8')
@@ -96,7 +96,7 @@ class ResponseSerialiseNoResponseElem(BaseTestCase, ODBTestCase):
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_sqlalchemy_orm_single_csv(self):
+    def test_sio_response_from_sqlalchemy_orm_single_csv(self):
 
         result = self._prepare_sio_response_from_orm(DATA_FORMAT.CSV, False)
         result = result.splitlines()
@@ -108,7 +108,7 @@ class ResponseSerialiseNoResponseElem(BaseTestCase, ODBTestCase):
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_sqlalchemy_orm_single_dict(self):
+    def test_sio_response_from_sqlalchemy_orm_single_dict(self):
 
         result = self._prepare_sio_response_from_orm(DATA_FORMAT.DICT, False)
 
@@ -120,7 +120,7 @@ class ResponseSerialiseNoResponseElem(BaseTestCase, ODBTestCase):
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_sqlalchemy_orm_list_json(self):
+    def test_sio_response_from_sqlalchemy_orm_list_json(self):
 
         result = self._prepare_sio_response_from_orm(DATA_FORMAT.JSON, True)
         result = json_loads(result)
@@ -132,7 +132,7 @@ class ResponseSerialiseNoResponseElem(BaseTestCase, ODBTestCase):
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_sqlalchemy_orm_list_xml(self):
+    def test_sio_response_from_sqlalchemy_orm_list_xml(self):
 
         result = self._prepare_sio_response_from_orm(DATA_FORMAT.XML, True)
         result = result.encode('utf8')
@@ -145,7 +145,7 @@ class ResponseSerialiseNoResponseElem(BaseTestCase, ODBTestCase):
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_sqlalchemy_orm_list_csv(self):
+    def test_sio_response_from_sqlalchemy_orm_list_csv(self):
 
         result = self._prepare_sio_response_from_orm(DATA_FORMAT.CSV, True)
         result = result.splitlines()
@@ -157,34 +157,22 @@ class ResponseSerialiseNoResponseElem(BaseTestCase, ODBTestCase):
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_sqlalchemy_orm_list_dict(self):
+    def test_sio_response_from_sqlalchemy_orm_list_dict(self):
 
         result = self._prepare_sio_response_from_orm(DATA_FORMAT.DICT, True)
         result = result[0]
 
-        self.assertIsInstance(result, self.ODBTestModelClass)
-
-        result = result.asdict()
-
-        # Note that the input format DICT acts, essentially, as pass-through.
         self.assertDictEqual(result, {
 
-            # These were added by the database
-            'id': 1,
-            'opaque1': None,
-
-            # These were specified explicitly
+            'cluster_id': test_odb_data.cluster_id,
             'name': test_odb_data.name,
             'is_active': test_odb_data.is_active,
-            'hosts': test_odb_data.es_hosts,
-            'timeout': test_odb_data.es_timeout,
-            'body_as': test_odb_data.es_body_as,
-            'cluster_id': test_odb_data.cluster_id,
+
         })
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_zato_single_json(self):
+    def test_sio_response_from_zato_single_json(self):
 
         result = self._prepare_sio_response_from_zato(DATA_FORMAT.JSON, False)
         result = json_loads(result)
@@ -195,7 +183,7 @@ class ResponseSerialiseNoResponseElem(BaseTestCase, ODBTestCase):
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_zato_single_xml(self):
+    def test_sio_response_from_zato_single_xml(self):
 
         result = self._prepare_sio_response_from_zato(DATA_FORMAT.XML, False)
         result = result.encode('utf8')
@@ -207,7 +195,7 @@ class ResponseSerialiseNoResponseElem(BaseTestCase, ODBTestCase):
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_zato_single_csv(self):
+    def test_sio_response_from_zato_single_csv(self):
 
         result = self._prepare_sio_response_from_zato(DATA_FORMAT.CSV, False)
         result = result.splitlines()
@@ -219,7 +207,7 @@ class ResponseSerialiseNoResponseElem(BaseTestCase, ODBTestCase):
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_zato_single_dict(self):
+    def test_sio_response_from_zato_single_dict(self):
 
         result = self._prepare_sio_response_from_orm(DATA_FORMAT.DICT, False)
 
@@ -231,7 +219,7 @@ class ResponseSerialiseNoResponseElem(BaseTestCase, ODBTestCase):
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_zato_list_json(self):
+    def test_sio_response_from_zato_list_json(self):
 
         result = self._prepare_sio_response_from_zato(DATA_FORMAT.JSON, True)
         result = json_loads(result)
@@ -243,7 +231,7 @@ class ResponseSerialiseNoResponseElem(BaseTestCase, ODBTestCase):
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_zato_list_xml(self):
+    def test_sio_response_from_zato_list_xml(self):
 
         result = self._prepare_sio_response_from_zato(DATA_FORMAT.XML, True)
         result = result.encode('utf8')
@@ -255,7 +243,7 @@ class ResponseSerialiseNoResponseElem(BaseTestCase, ODBTestCase):
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_zato_list_csv(self):
+    def test_sio_response_from_zato_list_csv(self):
 
         result = self._prepare_sio_response_from_zato(DATA_FORMAT.CSV, True)
         result = result.splitlines()
@@ -267,18 +255,16 @@ class ResponseSerialiseNoResponseElem(BaseTestCase, ODBTestCase):
 
 # ################################################################################################################################
 
-    def xtest_sio_response_from_zato_list_dict(self):
+    def test_sio_response_from_zato_list_dict(self):
 
         result = self._prepare_sio_response_from_zato(DATA_FORMAT.DICT, True)
         result = result[0]
 
-        self.assertIsInstance(result, MyZatoClass)
+        self.assertIsInstance(result, dict)
 
-        to_zato = result.to_zato()
-
-        self.assertEqual(to_zato['cluster_id'], test_odb_data.cluster_id)
-        self.assertEqual(to_zato['name'], test_odb_data.name)
-        self.assertIs(to_zato['is_active'], test_odb_data.is_active)
+        self.assertEqual(result['cluster_id'], test_odb_data.cluster_id)
+        self.assertEqual(result['name'], test_odb_data.name)
+        self.assertIs(result['is_active'], test_odb_data.is_active)
 
 # ################################################################################################################################
 # ################################################################################################################################
