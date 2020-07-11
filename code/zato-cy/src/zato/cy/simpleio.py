@@ -390,23 +390,22 @@ class Elem(object):
 # ################################################################################################################################
 
     @staticmethod
-    def _not_implemented(*args, **kwargs):
-        raise NotImplementedError('Elem._not_implemented - operation not implemented')
+    def _not_implemented(class_, func):
+        def _inner(*args, **kwargs):
+            raise NotImplementedError('{}.{} - operation not implemented'.format(class_, func))
+        return _inner
 
-    from_json = _not_implemented
-    to_json   = _not_implemented
+    from_json = Elem._not_implemented(Elem, 'from_json')
+    to_json   = Elem._not_implemented(Elem, 'to_json')
 
-    from_xml  = _not_implemented
-    to_xml    = _not_implemented
+    from_xml  = Elem._not_implemented(Elem, 'from_xml')
+    to_xml    = Elem._not_implemented(Elem, 'to_xml')
 
-    from_csv  = _not_implemented
-    to_csv    = _not_implemented
+    from_csv  = Elem._not_implemented(Elem, 'from_csv')
+    to_csv    = Elem._not_implemented(Elem, 'to_csv')
 
-    from_post  = _not_implemented
-    to_post    = _not_implemented
-
-    from_dict  = _not_implemented
-    to_dict    = _not_implemented
+    from_dict  = Elem._not_implemented(Elem, 'from_dict')
+    to_dict    = Elem._not_implemented(Elem, 'to_dict')
 
 # ################################################################################################################################
 
@@ -471,7 +470,8 @@ class CSV(Elem):
     from_xml  = from_json
     to_dict   = to_json
     from_dict = from_json
-    to_csv    = from_csv = Elem._not_implemented
+    to_csv    = Elem._not_implemented(CSV, 'to_csv')
+    from_csv  = Elem._not_implemented(CSV, 'from_csv')
 
 # ################################################################################################################################
 
@@ -650,7 +650,11 @@ class Dict(Elem):
         return Dict.from_json_static(value, self._keys_required, self._keys_optional, self.default_value)
 
     from_dict = from_json
-    to_csv = from_csv = to_xml = from_xml = Elem._not_implemented
+
+    to_csv    = Elem._not_implemented(Dict, 'to_csv')
+    from_csv  = Elem._not_implemented(Dict, 'from_csv')
+    to_xml    = Elem._not_implemented(Dict, 'to_xml')
+    from_xml  = Elem._not_implemented(Dict, 'from_xml')
 
 # ################################################################################################################################
 
@@ -670,7 +674,11 @@ class DictList(Dict):
         return DictList.from_json_static(value, self._keys_required, self._keys_optional, self.default_value)
 
     from_dict = from_json
-    to_csv = from_csv = to_xml = from_xml = Elem._not_implemented
+
+    to_csv    = Elem._not_implemented(DictList, 'to_csv')
+    from_csv  = Elem._not_implemented(DictList, 'from_csv')
+    to_xml    = Elem._not_implemented(DictList, 'to_xml')
+    from_xml  = Elem._not_implemented(DictList, 'from_xml')
 
 # ################################################################################################################################
 
@@ -1908,8 +1916,8 @@ class CySimpleIO(object):
                             parse_func = current_elem.parse_to[data_format]
                             value = parse_func(value)
                         except Exception as e:
-                            raise SerialisationError('Exception `{}` while serialising `{}` ({})'.format(
-                                e, input_data_dict, self.service_class))
+                            raise SerialisationError('Exception `{!r}` while serialising `{}` ({}) ({})'.format(
+                                e, value, self.service_class, input_data_dict))
 
                         if current_elem._type == ElemType.text:
                             if isinstance(value, bytes):
