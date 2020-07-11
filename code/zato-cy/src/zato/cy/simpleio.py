@@ -1080,6 +1080,9 @@ class SIODefinition(object):
     # XML configuration for the definition
     _xml_config = cy.declare(XMLConfig, visibility='public') # type: XMLConfig
 
+    # A flag that can be set by users explicitly
+    output_repeated = cy.declare(cy.bint, visibility='public') # type: bool
+
     # To indicate whether I/O particular definitions exist or not
     has_input_required = cy.declare(cy.bint, visibility='public') # type: bool
     has_input_optional = cy.declare(cy.bint, visibility='public') # type: bool
@@ -1106,6 +1109,8 @@ class SIODefinition(object):
         self._output_optional = SIOList()
         self._csv_config = CSVConfig()
         self._xml_config = XMLConfig()
+
+        self.output_repeated = False
 
         self.has_input_required = False
         self.has_input_optional = False
@@ -1427,6 +1432,10 @@ class CySimpleIO(object):
 
         if (not response_elem) or (response_elem is InternalNotGiven):
             response_elem = None
+
+        output_repeated = getattr(self.user_declaration, 'output_repeated', InternalNotGiven)
+        if output_repeated is not InternalNotGiven:
+            self.definition.output_repeated = bool(output_repeated)
 
         self.definition._response_elem = response_elem
 
