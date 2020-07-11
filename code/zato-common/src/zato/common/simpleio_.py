@@ -46,7 +46,7 @@ encoding={bytes_to_str_encoding}
 default_value=
 default_input_value=
 default_output_value=
-response_elem=
+response_elem=response
 
 skip_empty_keys = False
 skip_empty_request_keys = False
