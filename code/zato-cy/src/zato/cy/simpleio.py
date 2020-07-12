@@ -390,22 +390,22 @@ class Elem(object):
 # ################################################################################################################################
 
     @staticmethod
-    def _not_implemented(class_, func):
+    def _not_implemented(func):
         def _inner(*args, **kwargs):
-            raise NotImplementedError('{}.{} - operation not implemented'.format(class_, func))
+            raise NotImplementedError('{} - operation not implemented'.format(func))
         return _inner
 
-    from_json = Elem._not_implemented(Elem, 'from_json')
-    to_json   = Elem._not_implemented(Elem, 'to_json')
+    from_json = Elem._not_implemented('Elem.from_json')
+    to_json   = Elem._not_implemented('Elem.to_json')
 
-    from_xml  = Elem._not_implemented(Elem, 'from_xml')
-    to_xml    = Elem._not_implemented(Elem, 'to_xml')
+    from_xml  = Elem._not_implemented('Elem.from_xml')
+    to_xml    = Elem._not_implemented('Elem.to_xml')
 
-    from_csv  = Elem._not_implemented(Elem, 'from_csv')
-    to_csv    = Elem._not_implemented(Elem, 'to_csv')
+    from_csv  = Elem._not_implemented('Elem.from_csv')
+    to_csv    = Elem._not_implemented('Elem.to_csv')
 
-    from_dict  = Elem._not_implemented(Elem, 'from_dict')
-    to_dict    = Elem._not_implemented(Elem, 'to_dict')
+    from_dict  = Elem._not_implemented('Elem.from_dict')
+    to_dict    = Elem._not_implemented('Elem.to_dict')
 
 # ################################################################################################################################
 
@@ -470,8 +470,8 @@ class CSV(Elem):
     from_xml  = from_json
     to_dict   = to_json
     from_dict = from_json
-    to_csv    = Elem._not_implemented(CSV, 'to_csv')
-    from_csv  = Elem._not_implemented(CSV, 'from_csv')
+    to_csv    = Elem._not_implemented('CSV.to_csv')
+    from_csv  = Elem._not_implemented('CSV.from_csv')
 
 # ################################################################################################################################
 
@@ -649,12 +649,12 @@ class Dict(Elem):
     def from_json(self, value):
         return Dict.from_json_static(value, self._keys_required, self._keys_optional, self.default_value)
 
-    from_dict = from_json
+    from_dict = to_dict = from_json
 
-    to_csv    = Elem._not_implemented(Dict, 'to_csv')
-    from_csv  = Elem._not_implemented(Dict, 'from_csv')
-    to_xml    = Elem._not_implemented(Dict, 'to_xml')
-    from_xml  = Elem._not_implemented(Dict, 'from_xml')
+    to_csv    = Elem._not_implemented('Dict.to_csv')
+    from_csv  = Elem._not_implemented('Dict.from_csv')
+    to_xml    = Elem._not_implemented('Dict.to_xml')
+    from_xml  = Elem._not_implemented('Dict.from_xml')
 
 # ################################################################################################################################
 
@@ -675,10 +675,10 @@ class DictList(Dict):
 
     from_dict = from_json
 
-    to_csv    = Elem._not_implemented(DictList, 'to_csv')
-    from_csv  = Elem._not_implemented(DictList, 'from_csv')
-    to_xml    = Elem._not_implemented(DictList, 'to_xml')
-    from_xml  = Elem._not_implemented(DictList, 'from_xml')
+    to_csv    = Elem._not_implemented('DictList.to_csv')
+    from_csv  = Elem._not_implemented('DictList.from_csv')
+    to_xml    = Elem._not_implemented('DictList.to_xml')
+    from_xml  = Elem._not_implemented('DictList.from_xml')
 
 # ################################################################################################################################
 
