@@ -183,6 +183,7 @@ class Request(object):
         'merge_channel_params', 'http', 'amqp', 'wmq', 'ibm_mq', 'enforce_string_encoding')
 
     def __init__(self, logger, simple_io_config=None, data_format=None, transport=None):
+        # type: (Logger, object, str, str)
         self.logger = logger
         self.payload = ''
         self.raw_request = ''
