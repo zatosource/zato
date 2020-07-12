@@ -52,7 +52,7 @@ class SimpleIOConfig(BaseTestCase):
         self.assertEquals(default.default_value, '')
         self.assertEquals(default.default_input_value, '')
         self.assertEquals(default.default_output_value, '')
-        self.assertEquals(default.response_elem, '')
+        self.assertEquals(default.response_elem, 'response')
 
         self.assertFalse(default.skip_empty_keys)
         self.assertFalse(default.skip_empty_request_keys)
@@ -120,7 +120,7 @@ class SimpleIOConfig(BaseTestCase):
         self.assertEquals(config.default_value, '')
         self.assertEquals(config.default_input_value, '')
         self.assertEquals(config.default_output_value, '')
-        self.assertEquals(config.response_elem, '')
+        self.assertEquals(config.response_elem, 'response')
 
         self.assertFalse(config.skip_empty_keys)
         self.assertFalse(config.skip_empty_request_keys)
