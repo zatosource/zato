@@ -130,6 +130,12 @@ class _InternalNotGiven(_NotGiven):
 class ServiceInput(Bunch):
     """ A Bunch holding input data for a service.
     """
+    def __getattr__(self, name):
+        if name not in self:
+            raise AttributeError('No such key `{}` among `{}`'.format(name, self))
+        else:
+            return super(ServiceInput, self).__getattr__(name)
+
     def deepcopy(self):
         return deepcopy(self)
 
@@ -667,13 +673,14 @@ class DictList(Dict):
     def from_json_static(value, keys_required, keys_optional, default_value, *args, **kwargs):
         out = []
         for elem in value:
-            out.append(Dict.from_json_static(elem, keys_required, keys_optional, default_value))
+            value = Dict.from_json_static(elem, keys_required, keys_optional, default_value)
+            out.append(value)
         return out
 
     def from_json(self, value):
         return DictList.from_json_static(value, self._keys_required, self._keys_optional, self.default_value)
 
-    from_dict = from_json
+    from_dict = to_dict = from_json
 
     to_csv    = Elem._not_implemented('DictList.to_csv')
     from_csv  = Elem._not_implemented('DictList.from_csv')
@@ -1097,7 +1104,7 @@ class SIODefinition(object):
     # Default values to use for optional elements, unless overridden on a per-element basis
     sio_default = cy.declare(SIODefault, visibility='public') # type: SIODefault
 
-    # Which empty values should not be produced from input / sent on output, unless overridden by each element
+    # Which empty values should not be produced from input or sent on output, unless overridden by each element
     skip_empty = cy.declare(SIOSkipEmpty, visibility='public') # type: SIOSkipEmpty
 
     # CSV configuration for the definition
@@ -1719,10 +1726,13 @@ class CySimpleIO(object):
     @cy.exceptval(-1)
     def _should_skip_on_input(self, definition:SIODefinition, sio_item:Elem, input_value:object) -> bool:
         should_skip:bool = False
-        is_skippable:bool = not bool(input_value)
+        has_no_input_value:bool = not bool(input_value)
+
+        matches_skip_all:bool = definition.skip_empty.skip_all_empty_input and has_no_input_value # type: bool
+        matches_skip_input_set:bool = sio_item.name in definition.skip_empty.skip_input_set       # type: bool
 
         # Should we skip this value based on the server's configuration ..
-        if (definition.skip_empty.skip_all_empty_input and is_skippable) or sio_item.name in definition.skip_empty.skip_input_set:
+        if matches_skip_all or matches_skip_input_set:
 
             # .. possibly, unless we are forced not to include it.
             if sio_item.name not in definition.skip_empty.force_empty_input_set:
