@@ -44,7 +44,7 @@ class BaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def get_server_config(self):
+    def get_server_config(self, needs_response_elem=False):
 
         with NamedTemporaryFile() as f:
             contents = simple_io_conf_contents.format(bytes_to_str_encoding=get_bytes_to_str_encoding())
@@ -56,7 +56,12 @@ class BaseTestCase(TestCase):
             sio_fs_config = ConfigObj(f.name)
             sio_fs_config = bunchify(sio_fs_config)
 
-        return get_sio_server_config(sio_fs_config)
+        sio_server_config = get_sio_server_config(sio_fs_config)
+
+        if not needs_response_elem:
+            sio_server_config.response_elem = None
+
+        return sio_server_config
 
 # ################################################################################################################################
 
