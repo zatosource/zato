@@ -127,7 +127,7 @@ class Response(object):
             # 1a)
             # If we are using SimpleIO, extract elements from that dict ..
             if self._has_sio_output:
-                self._payload.set_payload_attrs(value)
+                self._payload.set_payload_attrs(value, 1)
 
             # 1b)
             # .. otherwise, assign the dict as-is.
@@ -149,7 +149,7 @@ class Response(object):
                 # 2b1)
                 # .. if using SimpleIO ..
                 if self._has_sio_output:
-                    self._payload.set_payload_attrs(value)
+                    self._payload.set_payload_attrs(value, 0)
 
                 # 2b2)
                 # .. someone assigns to self.response.payload an object that needs
