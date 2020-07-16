@@ -95,7 +95,7 @@ class Response(object):
         self.sio = sio # type: CySimpleIO
         self.data_format = data_format
 
-        if self.sio and self.sio.definition.has_output_declared:
+        if self.sio and cy.cast(cy.bint, self.sio.definition.has_output_declared):
             self._payload = SimpleIOPayload(self.sio, self.sio.definition.all_output_elem_names, self.cid, self.data_format)
             self._has_sio_output = True
 
