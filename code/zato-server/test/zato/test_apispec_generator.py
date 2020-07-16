@@ -9,14 +9,19 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from unittest import main, TestCase
+from copy import deepcopy
+from unittest import main
 
 # Bunch
 from bunch import bunchify
 
 # Zato
+from zato.common.test import BaseSIOTestCase
 from zato.server.apispec import Generator
 from common import MyService, sio_config
+
+# Zato - Cython
+from zato.simpleio import CySimpleIO
 
 # ################################################################################################################################
 
@@ -28,14 +33,17 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class GeneratorTestCase(TestCase):
+class GeneratorTestCase(BaseSIOTestCase):
 
     def test_generator_get_info(self):
+
+        MyClass = deepcopy(MyService)
+        CySimpleIO.attach_sio(self.get_server_config(), MyClass)
 
         service_store_services = {
             'my.impl.name': {
                 'name': 'my.name',
-                'service_class': MyService,
+                'service_class': MyClass,
             }
         }
         include = ['*']
@@ -48,7 +56,7 @@ class GeneratorTestCase(TestCase):
         info = generator.get_info()
         info = bunchify(info)
 
-        services   = info.services   # type: Bunch
+        services = info.services   # type: Bunch
         self.assertEqual(len(services), 1)
 
         service = services[0] # type: Bunch
@@ -85,14 +93,14 @@ class GeneratorTestCase(TestCase):
         sio_openapi_v3_input_required_0 = sio_openapi_v3.input_required[0] # type: Bunch
         sio_openapi_v3_input_required_1 = sio_openapi_v3.input_required[1] # type: Bunch
 
-        self.assertEqual(sio_openapi_v3_input_required_0.name, 'input_req_user_id')
-        self.assertEqual(sio_openapi_v3_input_required_0.description,
-            'This is the first line.\nHere is another.\nAnd here are some more lines.')
+        self.assertEqual(sio_openapi_v3_input_required_0.name, 'input_req_customer_id')
+        self.assertEqual(sio_openapi_v3_input_required_0.description, '')
         self.assertEqual(sio_openapi_v3_input_required_0.type, 'integer')
         self.assertEqual(sio_openapi_v3_input_required_0.subtype, 'int32')
 
-        self.assertEqual(sio_openapi_v3_input_required_1.name, 'input_req_customer_id')
-        self.assertEqual(sio_openapi_v3_input_required_1.description, '')
+        self.assertEqual(sio_openapi_v3_input_required_1.name, 'input_req_user_id')
+        self.assertEqual(sio_openapi_v3_input_required_1.description,
+            'This is the first line.\nHere is another.\nAnd here are some more lines.')
         self.assertEqual(sio_openapi_v3_input_required_1.type, 'integer')
         self.assertEqual(sio_openapi_v3_input_required_1.subtype, 'int32')
 
@@ -101,14 +109,14 @@ class GeneratorTestCase(TestCase):
         sio_soap_12_input_required_0 = sio_soap_12.input_required[0] # type: Bunch
         sio_soap_12_input_required_1 = sio_soap_12.input_required[1] # type: Bunch
 
-        self.assertEqual(sio_soap_12_input_required_0.name, 'input_req_user_id')
-        self.assertEqual(sio_soap_12_input_required_0.description,
-            'This is the first line.\nHere is another.\nAnd here are some more lines.')
+        self.assertEqual(sio_soap_12_input_required_0.name, 'input_req_customer_id')
+        self.assertEqual(sio_soap_12_input_required_0.description, '')
         self.assertEqual(sio_soap_12_input_required_0.type, 'integer')
         self.assertEqual(sio_soap_12_input_required_0.subtype, 'xsd:integer')
 
-        self.assertEqual(sio_soap_12_input_required_1.name, 'input_req_customer_id')
-        self.assertEqual(sio_soap_12_input_required_1.description, '')
+        self.assertEqual(sio_soap_12_input_required_1.name, 'input_req_user_id')
+        self.assertEqual(sio_soap_12_input_required_1.description,
+            'This is the first line.\nHere is another.\nAnd here are some more lines.')
         self.assertEqual(sio_soap_12_input_required_1.type, 'integer')
         self.assertEqual(sio_soap_12_input_required_1.subtype, 'xsd:integer')
 
@@ -117,14 +125,14 @@ class GeneratorTestCase(TestCase):
         sio_zato_input_required_0 = sio_zato.input_required[0] # type: Bunch
         sio_zato_input_required_1 = sio_zato.input_required[1] # type: Bunch
 
-        self.assertEqual(sio_zato_input_required_0.name, 'input_req_user_id')
-        self.assertEqual(sio_zato_input_required_0.description,
-            'This is the first line.\nHere is another.\nAnd here are some more lines.')
+        self.assertEqual(sio_zato_input_required_0.name, 'input_req_customer_id')
+        self.assertEqual(sio_zato_input_required_0.description, '')
         self.assertEqual(sio_zato_input_required_0.type, 'integer')
         self.assertEqual(sio_zato_input_required_0.subtype, 'integer')
 
-        self.assertEqual(sio_zato_input_required_1.name, 'input_req_customer_id')
-        self.assertEqual(sio_zato_input_required_1.description, '')
+        self.assertEqual(sio_zato_input_required_1.name, 'input_req_user_id')
+        self.assertEqual(sio_zato_input_required_1.description,
+            'This is the first line.\nHere is another.\nAnd here are some more lines.')
         self.assertEqual(sio_zato_input_required_1.type, 'integer')
         self.assertEqual(sio_zato_input_required_1.subtype, 'integer')
 

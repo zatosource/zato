@@ -263,6 +263,8 @@ class JSONSIOResponse(_Response):
             self.ok = self.inner.ok
 
         if self.ok:
+            value = None
+
             if has_zato_env:
                 # There will be two keys, zato_env and the actual payload
                 for key, _value in json.items():
@@ -272,10 +274,11 @@ class JSONSIOResponse(_Response):
             else:
                 value = json
 
-            if self.set_data(value, has_zato_env):
-                self.has_data = True
-                if self.to_bunch:
-                    self.data = bunchify(self.data)
+            if value:
+                if self.set_data(value, has_zato_env):
+                    self.has_data = True
+                    if self.to_bunch:
+                        self.data = bunchify(self.data)
 
     def set_data(self, payload, _ignored):
         self.data = payload
@@ -314,43 +317,46 @@ class ServiceInvokeResponse(JSONSIOResponse):
         self.inner_service_response = None
         super(ServiceInvokeResponse, self).__init__(*args, **kwargs)
 
-    def set_data(self, payload, has_zato_env):
-        response = payload.get('response')
-        if response:
-            if has_zato_env:
-                payload_response = payload['response']
-                payload_response = b64decode(payload_response)
-                payload_response = payload_response.decode('utf8') if isinstance(payload_response, bytes) else payload_response
-                self.inner_service_response = payload_response
-                try:
-                    data = loads(self.inner_service_response)
-                except ValueError:
-                    # Not a JSON response
-                    self.data = self.inner_service_response
-                else:
-                    if isinstance(data, dict):
-                        self.meta = data.get('_meta')
-                        data_keys = list(data.keys())
-                        if len(data_keys) == 1:
-                            data_key = data_keys[0]
-                            if isinstance(data_key, text) and data_key.startswith('zato'):
-                                self.data = data[data_key]
-                            else:
-                                self.data = data
-                        else:
-                            self.data = data
-                    else:
-                        self.data = data
-            else:
-                try:
-                    data = loads(response)
-                except ValueError:
-                    # Not a JSON response
-                    self.data = response
+    def _handle_response_with_meta(self, data):
+
+        if isinstance(data, dict):
+            self.meta = data.get('_meta')
+            data_keys = list(data.keys())
+            if len(data_keys) == 1:
+                data_key = data_keys[0]
+                if isinstance(data_key, text) and data_key.startswith('zato'):
+                    self.data = data[data_key]
                 else:
                     self.data = data
+            else:
+                self.data = data
+        else:
+            self.data = data
 
-            return True
+    def set_data(self, payload, has_zato_env):
+
+        if has_zato_env:
+            payload = b64decode(payload)
+            payload = payload.decode('utf8') if isinstance(payload, bytes) else payload
+            self.inner_service_response = payload
+
+            try:
+                data = loads(self.inner_service_response)
+            except ValueError:
+                # Not a JSON response
+                self.data = self.inner_service_response
+            else:
+                self._handle_response_with_meta(data)
+        else:
+            try:
+                data = loads(payload)
+            except ValueError:
+                # Not a JSON response
+                self.data = payload
+            else:
+                self._handle_response_with_meta(data)
+
+        return True
 
 # ################################################################################################################################
 

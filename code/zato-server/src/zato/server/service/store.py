@@ -53,6 +53,9 @@ from zato.server.service import after_handle_hooks, after_job_hooks, before_hand
      WSXFacade
 from zato.server.service.internal import AdminService
 
+# Zato - Cython
+from zato.simpleio import CySimpleIO
+
 # Python 2/3 compatibility
 from past.builtins import basestring
 
@@ -362,6 +365,8 @@ class ServiceStore(object):
             class_.has_sio = True
         except AttributeError:
             class_.has_sio = False
+        else:
+            CySimpleIO.attach_sio(service_store.server.sio_config, class_)
 
         # May be None during unit-tests - not every test provides it.
         if service_store:
@@ -926,8 +931,7 @@ class ServiceStore(object):
 # ################################################################################################################################
 
     def import_services_from_anywhere(self, items, base_dir, work_dir=None, is_internal=None):
-        """ Imports services from any of the supported sources, be it module names,
-        individual files, directories or distutils2 packages (compressed or not).
+        """ Imports services from any of the supported sources.
         """
         # type: (Any, text, text) -> DeploymentInfo
 
@@ -1043,15 +1047,7 @@ class ServiceStore(object):
 # ################################################################################################################################
 
     def import_services_from_directory(self, dir_name, base_dir):
-        """ dir_name points to a directory.
-
-        If dist2 is True, the directory is assumed to be a Distutils2 one and its
-        setup.cfg file is read and all the modules from packages pointed to by the
-        'files' section are scanned for services.
-
-        If dist2 is False, this will be treated as a directory with a flat list
-        of Python source code to import, as is the case with services that have
-        been hot-deployed.
+        """ Imports services from a specified directory.
         """
         to_process = []
 
@@ -1239,7 +1235,7 @@ class ServiceStore(object):
 
         except Exception:
             logger.error(
-                'Exception while visiting mod:`%s`, is_internal:`%s`, fs_location:`%s`, e:`%s`',
+                'Exception while visiting module:`%s`, is_internal:`%s`, fs_location:`%s`, e:`%s`',
                 mod, is_internal, fs_location, format_exc())
         finally:
             return to_process

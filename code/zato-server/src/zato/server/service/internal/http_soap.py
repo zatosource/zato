@@ -267,8 +267,8 @@ class Create(_CreateEdit):
                 item.has_rbac = input.get('has_rbac') or input.sec_use_rbac or False
                 item.content_type = input.get('content_type')
                 item.sec_use_rbac = input.sec_use_rbac
-                item.cache_id = input.cache_id or None
-                item.cache_expiry = input.cache_expiry or 0
+                item.cache_id = input.get('cache_id') or None
+                item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
 
                 if input.security_id:
@@ -416,8 +416,8 @@ class Edit(_CreateEdit):
                 item.has_rbac = input.get('has_rbac') or input.sec_use_rbac or False
                 item.content_type = input.get('content_type')
                 item.sec_use_rbac = input.sec_use_rbac
-                item.cache_id = input.cache_id or None
-                item.cache_expiry = input.cache_expiry
+                item.cache_id = input.get('cache_id') or None
+                item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
 
                 sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
@@ -533,14 +533,24 @@ class Ping(AdminService):
         request_elem = 'zato_http_soap_ping_request'
         response_elem = 'zato_http_soap_ping_response'
         input_required = 'id'
-        output_required = 'id', 'info'
+        output_required = 'id', 'is_success'
+        output_optional = 'info'
 
     def handle(self):
         with closing(self.odb.session()) as session:
             item = session.query(HTTPSOAP).filter_by(id=self.request.input.id).one()
             config_dict = getattr(self.outgoing, item.transport)
             self.response.payload.id = self.request.input.id
-            self.response.payload.info = config_dict.get(item.name).ping(self.cid)
+
+            try:
+                result = config_dict.get(item.name).ping(self.cid)
+                is_success = True
+            except Exception as e:
+                result = e.args[0]
+                is_success = False
+            finally:
+                self.response.payload.info = result
+                self.response.payload.is_success = is_success
 
 # ################################################################################################################################
 

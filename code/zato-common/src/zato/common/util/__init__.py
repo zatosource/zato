@@ -404,12 +404,9 @@ def get_user_config_name(file_name):
 
 # ################################################################################################################################
 
-def get_config(repo_location, config_name, bunchified=True, needs_user_config=True, crypto_manager=None, secrets_conf=None):
-    """ Returns the configuration object. Will load additional user-defined config files,
-    if any are available at all.
-    """
-    conf = ConfigObj(
-        os.path.join(repo_location, config_name), zato_crypto_manager=crypto_manager, zato_secrets_conf=secrets_conf)
+def _get_config(conf, bunchified, needs_user_config, repo_location=None):
+    # type: (bool, bool, str) -> Bunch
+
     conf = bunchify(conf) if bunchified else conf
 
     if needs_user_config:
@@ -427,6 +424,33 @@ def get_config(repo_location, config_name, bunchified=True, needs_user_config=Tr
                     conf.user_config_items[name] = user_conf
 
     return conf
+
+# ################################################################################################################################
+
+def get_config(repo_location, config_name, bunchified=True, needs_user_config=True, crypto_manager=None, secrets_conf=None):
+    """ Returns the configuration object. Will load additional user-defined config files, if any are available.
+    """
+    # type: (str, str, bool, bool, object, object) -> Bunch
+    conf_location = os.path.join(repo_location, config_name)
+    conf = ConfigObj(conf_location , zato_crypto_manager=crypto_manager, zato_secrets_conf=secrets_conf)
+
+    return _get_config(conf, bunchified, needs_user_config, repo_location)
+
+# ################################################################################################################################
+
+def get_config_from_string(data):
+    """ A simplified version of get_config which creates a config object from string, skipping any user-defined config files.
+    """
+    # type: (str) -> Bunch
+    buff = StringIO()
+    buff.write(data)
+    buff.seek(0)
+
+    conf = ConfigObj(buff)
+    out = _get_config(conf, True, False)
+
+    buff.close()
+    return out
 
 # ################################################################################################################################
 

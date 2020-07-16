@@ -102,7 +102,7 @@ def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_
     elems = attrs.get(elems_name) or []
     columns = []
 
-    # Generate elems out of SQLAlchemy tables, including calls to ForceType's subclasses, such as Bool or Int.
+    # Generate elems out of SQLAlchemy tables, including calls to SIOElem's subclasses, such as Bool or Int.
 
     if elems and isclass(elems) and issubclass(elems, Base):
 
@@ -115,7 +115,7 @@ def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_
             if column.name == 'cluster_id' and is_output:
                 continue
 
-            # We already have cluster_id and don't need a ForceType'd one.
+            # We already have cluster_id and don't need a SIOElem'd one.
             if column.name == 'cluster_id' and has_cluster_id:
                 continue
 
@@ -218,7 +218,7 @@ def update_attrs(cls, name, attrs):
 class AdminServiceMeta(type):
 
     @staticmethod
-    def get_sio(attrs, name, input_required=None, output_required=None, is_list=True):
+    def get_sio(attrs, name, input_required=None, output_required=None, is_list=True, class_=None):
 
         _BaseClass = GetListAdminSIO if is_list else AdminSIO
 
@@ -252,7 +252,8 @@ class AdminServiceMeta(type):
 
                 sio_elem = getattr(SimpleIO, _name)
                 has_cluster_id = 'cluster_id' in sio_elem
-                sio_to_add = get_io(attrs, _name, attrs.get('is_edit'), is_required, is_output, is_get_list, has_cluster_id)
+                sio_to_add = get_io(
+                    attrs, _name, attrs.get('is_edit'), is_required, is_output, is_get_list, has_cluster_id)
                 sio_elem.extend(sio_to_add)
 
                 if attrs.is_create_edit and is_required:
@@ -318,7 +319,7 @@ class CreateEditMeta(AdminServiceMeta):
         attrs = update_attrs(cls, name, attrs)
         verb = 'Creates' if attrs.is_create else 'Updates'
         cls.__doc__ = '{} {}.'.format(verb, attrs.label)
-        cls.SimpleIO = CreateEditMeta.get_sio(attrs, name)
+        cls.SimpleIO = CreateEditMeta.get_sio(attrs, name, is_list=False, class_=cls)
         cls.handle = CreateEditMeta.handle(attrs)
         return super(CreateEditMeta, cls).__init__(cls)
 

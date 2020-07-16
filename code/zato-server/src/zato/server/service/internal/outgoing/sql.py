@@ -51,8 +51,8 @@ class GetList(AdminService):
         response_elem = 'zato_outgoing_sql_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username',
-            Integer('pool_size'), 'engine_display_name')
-        output_optional = ('extra',)
+            Integer('pool_size'))
+        output_optional = ('extra', 'engine_display_name')
 
     def get_data(self, session):
         return self._search(out_sql_list, session, self.request.input.cluster_id, False)
@@ -256,7 +256,10 @@ class AutoPing(AdminService):
         except Exception:
             self.logger.warn('Could not ping ODB, e:`%s`', format_exc())
 
-        for item in self.invoke(GetList.get_name(), {'cluster_id':self.server.cluster_id})['zato_outgoing_sql_get_list_response']:
+        response = self.invoke(GetList.get_name(), {'cluster_id':self.server.cluster_id})
+        response = response['zato_outgoing_sql_get_list_response']
+
+        for item in response:
             try:
                 self.invoke(Ping.get_name(), {'id': item['id']})
             except Exception:

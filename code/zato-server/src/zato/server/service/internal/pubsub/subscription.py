@@ -29,12 +29,17 @@ from zato.common.odb.query.pubsub.subscribe import add_subscription, add_wsx_sub
 from zato.common.odb.query.pubsub.subscription import pubsub_subscription_list_by_endpoint_id_no_search
 from zato.common.pubsub import new_sub_key
 from zato.common.util import get_sa_model_columns, make_repr
+from zato.common.simpleio_ import drop_sio_elems
 from zato.common.util.time_ import datetime_to_ms, utcnow_as_ms
 from zato.server.connection.web_socket import WebSocket
 from zato.server.pubsub import PubSub, Topic
 from zato.server.service import Bool, Int, List, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.internal.pubsub import common_sub_data
+
+# ################################################################################################################################
+
+logger_pubsub = getLogger('zato_pubsub.srv')
 
 # ################################################################################################################################
 
@@ -45,11 +50,11 @@ WebSocket = WebSocket
 
 # ################################################################################################################################
 
-logger_pubsub = getLogger('zato_pubsub.srv')
-
-# ################################################################################################################################
-
 sub_broker_attrs = get_sa_model_columns(PubSubSubscription)
+
+sub_impl_input_optional = list(common_sub_data)
+sub_impl_input_optional.remove('is_internal')
+sub_impl_input_optional.remove('topic_name')
 
 # ################################################################################################################################
 
@@ -266,9 +271,9 @@ class SubscribeServiceImpl(_Subscribe):
     endpoint_type = None
 
     class SimpleIO(AdminSIO):
-        input_required = ('topic_name', 'is_internal')
-        input_optional = common_sub_data
-        output_optional = ('sub_key', 'queue_depth')
+        input_required = 'topic_name', 'is_internal'
+        input_optional = drop_sio_elems(common_sub_data, 'is_internal', 'topic_name')
+        output_optional = 'sub_key', 'queue_depth'
         default_value = None
 
 # ################################################################################################################################
