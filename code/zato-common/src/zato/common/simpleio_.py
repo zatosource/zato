@@ -13,7 +13,6 @@ from zato.simpleio import BoolConfig, IntConfig, SecretConfig, SIOServerConfig
 
 # Python 2/3 compatibility
 from past.builtins import basestring, unicode
-from six import PY3
 
 # ################################################################################################################################
 
@@ -22,6 +21,11 @@ if 0:
     from zato.cy.simpleio import IntConfig       as PyIntConfig
     from zato.cy.simpleio import SecretConfig    as PySecretConfig
     from zato.cy.simpleio import SIOServerConfig as PySIOServerConfig
+
+    PyBoolConfig      = PyBoolConfig
+    PyIntConfig       = PyIntConfig
+    PySecretConfig    = PySecretConfig
+    PySIOServerConfig = PySIOServerConfig
 
 # ################################################################################################################################
 # ################################################################################################################################

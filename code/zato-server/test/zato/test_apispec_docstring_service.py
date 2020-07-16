@@ -13,7 +13,6 @@ from unittest import main, TestCase
 
 # Zato
 from zato.common import APISPEC
-from zato.common.test import BaseSIOTestCase
 from zato.server.apispec import not_public, ServiceInfo
 from common import service_name, sio_config
 
