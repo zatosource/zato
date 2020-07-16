@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2020, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime
+from tempfile import NamedTemporaryFile
 from random import choice, randint
 from unittest import TestCase
 from uuid import uuid4
@@ -18,7 +19,10 @@ from uuid import uuid4
 from anyjson import loads
 
 # Bunch
-from bunch import Bunch
+from bunch import Bunch, bunchify
+
+# ConfigObj
+from configobj import ConfigObj
 
 # mock
 from mock import MagicMock, Mock
@@ -32,9 +36,6 @@ from six import string_types
 # SQLAlchemy
 from sqlalchemy import create_engine
 
-# Python 2/3 compatibility
-from past.builtins import basestring, cmp, xrange
-
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, SIMPLE_IO
 from zato.common.log_message import CID_LENGTH
@@ -42,8 +43,20 @@ from zato.common.odb import model
 from zato.common.odb.model import Cluster, ElasticSearch
 from zato.common.odb.api import SessionWrapper, SQLConnectionPool
 from zato.common.odb.query import search_es_list
+from zato.common.simpleio_ import get_bytes_to_str_encoding, get_sio_server_config, simple_io_conf_contents
+from zato.common.py23_ import maxint
 from zato.common.util import is_port_taken, new_cid
 from zato.server.service import Service
+
+# Zato - Cython
+from zato.simpleio import CySimpleIO
+
+# Python 2/3 compatibility
+from past.builtins import basestring, cmp, unicode, xrange
+
+# ################################################################################################################################
+
+test_class_name = '<my-test-class>'
 
 # ################################################################################################################################
 
@@ -550,4 +563,45 @@ class MyZatoClass:
             'name':       test_odb_data.name,
         }
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class BaseSIOTestCase(TestCase):
+
+# ################################################################################################################################
+
+    def setUp(self):
+        self.maxDiff = maxint
+
+# ################################################################################################################################
+
+    def get_server_config(self, needs_response_elem=False):
+
+        with NamedTemporaryFile() as f:
+            contents = simple_io_conf_contents.format(bytes_to_str_encoding=get_bytes_to_str_encoding())
+            if isinstance(contents, unicode):
+                contents = contents.encode('utf8')
+            f.write(contents)
+            f.flush()
+
+            sio_fs_config = ConfigObj(f.name)
+            sio_fs_config = bunchify(sio_fs_config)
+
+        sio_server_config = get_sio_server_config(sio_fs_config)
+
+        if not needs_response_elem:
+            sio_server_config.response_elem = None
+
+        return sio_server_config
+
+# ################################################################################################################################
+
+    def get_sio(self, declaration, class_):
+
+        sio = CySimpleIO(self.get_server_config(), declaration)
+        sio.build(class_)
+
+        return sio
+
+# ################################################################################################################################
 # ################################################################################################################################

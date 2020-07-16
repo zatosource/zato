@@ -13,17 +13,17 @@ from dateparser import parse as dt_parse
 
 # Zato
 from zato.common import DATA_FORMAT
+from zato.common.test import BaseSIOTestCase
 from zato.server.service import Service
+
+# Zato - Cython
 from zato.simpleio import AsIs, Bool, CySimpleIO, Date, DateTime, Decimal, \
      Float, Int, Opaque, SerialisationError, Text, UUID
 
-# Zato - Cython
-from test.zato.cy.simpleio_ import BaseTestCase
-
 # ################################################################################################################################
 # ################################################################################################################################
 
-class CSVResponse(BaseTestCase):
+class CSVResponse(BaseSIOTestCase):
 
 # ################################################################################################################################
 

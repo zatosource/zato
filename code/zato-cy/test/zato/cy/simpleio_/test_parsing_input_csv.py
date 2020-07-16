@@ -15,17 +15,17 @@ from uuid import UUID as uuid_UUID
 
 # Zato
 from zato.common import DATA_FORMAT
+from zato.common.test import BaseSIOTestCase
 from zato.server.service import Service
+
+# Zato - Cython
 from zato.simpleio import backward_compat_default_value, AsIs, Bool, CySimpleIO, Date, DateTime, Decimal, \
      Float, Int, Opaque, Text, UUID
 
-# Zato - Cython
-from test.zato.cy.simpleio_ import BaseTestCase
-
 # ################################################################################################################################
 # ################################################################################################################################
 
-class CSVInputParsing(BaseTestCase):
+class CSVInputParsing(BaseSIOTestCase):
 
 # ################################################################################################################################
 
