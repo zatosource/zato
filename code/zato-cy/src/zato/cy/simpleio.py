@@ -131,10 +131,10 @@ class ServiceInput(Bunch):
     """ A Bunch holding input data for a service.
     """
     def __getattr__(self, name):
-        if name not in self:
-            raise AttributeError('No such key `{}` among `{}`'.format(name, self))
-        else:
+        try:
             return super(ServiceInput, self).__getattr__(name)
+        except AttributeError:
+            raise AttributeError('No such key `{}` among `{}`'.format(name, self))
 
     def deepcopy(self):
         return deepcopy(self)
@@ -175,8 +175,11 @@ class SIOSkipEmpty(object):
     skip_output_set        = cy.declare(set, visibility='public')    # type: set
     force_empty_input_set  = cy.declare(set, visibility='public')    # type: set
     force_empty_output_set = cy.declare(set, visibility='public')    # type: set
-    skip_all_empty_input   = cy.declare(cy.bint, visibility='public')   # type: bool
-    skip_all_empty_output  = cy.declare(cy.bint, visibility='public')   # type: bool
+
+    skip_all_empty_input   = cy.declare(cy.bint, visibility='public') # type: bool
+    skip_all_empty_output  = cy.declare(cy.bint, visibility='public') # type: bool
+
+    has_skip_input_set = cy.declare(cy.bint, visibility='public') # type: bool
 
     def __init__(self, input_def, output_def, force_empty_input_set, force_empty_output_set, empty_output_value):
 
@@ -217,6 +220,8 @@ class SIOSkipEmpty(object):
         self.skip_output_set = skip_output_set
         self.skip_all_empty_output = skip_all_empty_output
 
+        self.has_skip_input_set = bool(self.skip_input_set)
+
 # ################################################################################################################################
 
 @cy.cclass
@@ -249,6 +254,11 @@ class ElemType:
     utc:int           = 13000 # Deprecated, do not use
     uuid:int          = 14000
     user_defined:int  = 1_000_000
+
+# ################################################################################################################################
+
+# Useful to make sure no attribute lookups for 'text' under ElemType as performed in runtime
+sio_text_type:int = ElemType.text
 
 # ################################################################################################################################
 
@@ -1129,11 +1139,18 @@ class SIODefinition(object):
     all_input_elem_names  = cy.declare(list, visibility='public') # type: list
     all_output_elem_names = cy.declare(list, visibility='public') # type: list
 
+    # All input/output elements (not just names), both required and optional ones
+    all_input_elems  = cy.declare(list, visibility='public') # type: list
+    all_output_elems = cy.declare(list, visibility='public') # type: list
+
     # Name of the service this definition is for
     _service_name = cy.declare(cy.unicode, visibility='public') # type: str
 
     # Name of the response element, or None if there should be no top-level one
     _response_elem = cy.declare(object, visibility='public') # type: object
+
+    # To let Cython use cy.bint in order to check if _response_elem is provided
+    _has_response_elem = cy.declare(cy.bint, visibility='public') # type: object
 
     def __cinit__(self):
         self._input_required = SIOList()
@@ -1155,6 +1172,8 @@ class SIODefinition(object):
 
         self.all_input_elem_names  = []
         self.all_output_elem_names = []
+
+        self.all_input_elems = []
 
     def __init__(self, sio_default:SIODefault, skip_empty:SIOSkipEmpty):
         self.sio_default = sio_default
@@ -1483,6 +1502,7 @@ class CySimpleIO(object):
             self.definition.output_repeated = bool(output_repeated)
 
         self.definition._response_elem = response_elem
+        self.definition._has_response_elem = bool(self.definition._response_elem)
 
         self.definition.has_input_required = stdlib_bool(len(self.definition._input_required))
         self.definition.has_input_optional = stdlib_bool(len(self.definition._input_optional))
@@ -1497,6 +1517,9 @@ class CySimpleIO(object):
 
         self.definition.all_output_elem_names.extend(self.definition.get_output_required_elem_names())
         self.definition.all_output_elem_names.extend(self.definition.get_output_optional_elem_names())
+
+        self.definition.all_input_elems.extend(self.definition.get_input_required())
+        self.definition.all_input_elems.extend(self.definition.get_input_optional())
 
         # Set up CSV configuration
         self._set_up_csv_config()
@@ -1736,12 +1759,13 @@ class CySimpleIO(object):
     @cy.cfunc
     @cy.returns(cy.bint)
     @cy.exceptval(-1)
-    def _should_skip_on_input(self, definition:SIODefinition, sio_item:Elem, input_value:object) -> bool:
+    def _should_skip_on_input(self, definition:SIODefinition, sio_item:Elem, input_value:object) -> cy.bint:
         should_skip:cy.bint = False
         has_no_input_value:bool = not bool(input_value)
 
         matches_skip_all:cy.bint = definition.skip_empty.skip_all_empty_input and has_no_input_value # type: bool
-        matches_skip_input_set:cy.bint = sio_item.name in definition.skip_empty.skip_input_set       # type: bool
+        matches_skip_input_set:cy.bint = definition.skip_empty.has_skip_input_set and \
+            sio_item.name in definition.skip_empty.skip_input_set       # type: bool
 
         # Should we skip this value based on the server's configuration ..
         if matches_skip_all or matches_skip_input_set:
@@ -1751,7 +1775,7 @@ class CySimpleIO(object):
                 return True
 
         # .. or, possibly, because this particular value cannot be converted to a SIO element.
-        if isinstance(sio_item, Int):
+        if cy.cast(cy.int, sio_item._type) == cy.cast(cy.int, ElemType.int_):
             if input_value in (None, ''):
                 return True
 
@@ -1765,21 +1789,28 @@ class CySimpleIO(object):
     def _parse_input_elem(self, elem:object, data_format:cy.unicode, is_csv:cy.bint=False) -> object:
 
         is_dict:cy.bint = isinstance(elem, dict)
-        is_xml:cy.bint = isinstance(elem, EtreeElementClass)
+        is_xml:cy.bint  = isinstance(elem, EtreeElementClass)
 
-        if not (is_dict or is_csv or is_xml):
+        if not (is_dict or is_xml or is_csv):
             raise ValueError('Expected a dict, CSV or EtreeElementClass instead of input `{!r}` ({} in {})'.format(
                 elem, type(elem).__name__, self.service_class))
 
         out:dict = {}
+        idx:cy.int = -1
+        sio_item:Elem = None
+        sio_item_name:str = None
+        items:list = self.definition.all_input_elems
 
-        items = chain(self.definition._input_required, self.definition._input_optional)
+        for sio_item in items:
 
-        for idx, sio_item in enumerate(items): # type: (int, Elem)
+            # Start the loop with 0
+            idx += 1
+
+            sio_item_name = sio_item.name
 
             # Parse the input dictionary
             if is_dict:
-                input_value = elem.get(sio_item.name, InternalNotGiven)
+                input_value = cy.cast(dict, elem).get(sio_item_name, InternalNotGiven)
 
             # Parse the input XML document
             elif is_xml:
@@ -1787,7 +1818,7 @@ class CySimpleIO(object):
                 # This will not be populated the first time around we are parsing an input document
                 # in which case we create this XPath expression here and make use of it going forward.
                 if not sio_item.xpath:
-                    sio_item.xpath = XPath('*[local-name() = "{}"]'.format(sio_item.name))
+                    sio_item.xpath = XPath('*[local-name() = "{}"]'.format(sio_item_name))
 
                 # Here, elem is the root of an XML document
                 input_value = sio_item.xpath.evaluate(elem)
@@ -1817,14 +1848,14 @@ class CySimpleIO(object):
                 if sio_item.is_required:
 
                     if is_dict:
-                        all_elems = elem.keys()
+                        all_elems = cy.cast(dict, elem).keys()
                     elif is_xml:
                         all_elems = elem.getchildren()
                     elif is_csv:
                         all_elems = elem
 
                     raise ValueError('No such input elem `{}` among `{}` in `{}` ({})'.format(
-                        sio_item.name, all_elems, elem, self.service_class))
+                        sio_item_name, all_elems, elem, self.service_class))
                 else:
                     if self._should_skip_on_input(self.definition, sio_item, input_value):
                         # Continue to the next sio_item
@@ -1844,7 +1875,7 @@ class CySimpleIO(object):
                     raise NotImplementedError('No parser for input `{}` ({})'.format(input_value, data_format))
 
             # We get here only if should_skip is not True
-            out[sio_item.name] = value
+            out[sio_item_name] = value
 
         return out
 
@@ -1889,11 +1920,7 @@ class CySimpleIO(object):
         yield list(required_elems.keys())
         yield list(optional_elems.keys())
 
-        if not isinstance(data, dict):
-            if not isinstance(data, list):
-                data = self._build_serialisation_dict(data)
-
-        data = data if isinstance(data, (list, tuple)) else [data]
+        input_data:list = data if isinstance(data, (list, tuple)) else [data]
 
         # 1st item = is_required
         # 2nd item = elems dict
@@ -1903,12 +1930,12 @@ class CySimpleIO(object):
         ]
 
         is_required:cy.bint
-        current_elems:dict
-        current_elem_name:cy.unicode
-        current_elem:Elem
-        input_data_dict:dict
+        current_elems:dict = None
+        current_elem_name:cy.unicode = None
+        current_elem:Elem = None
+        input_data_dict:dict = None
 
-        for _input_data_dict in data:
+        for _input_data_dict in input_data:
 
             # This is the dictionary that we return.
             out_data_dict = {}
@@ -1942,7 +1969,7 @@ class CySimpleIO(object):
                             raise SerialisationError('Exception `{!r}` while serialising `{}` ({}) ({})'.format(
                                 e, value, self.service_class, input_data_dict))
 
-                        if current_elem._type == ElemType.text:
+                        if cy.cast(cy.int, current_elem._type) == cy.cast(cy.int, sio_text_type):
                             if isinstance(value, bytes):
                                 value = value.decode(current_elem.encoding)
 
@@ -1996,8 +2023,10 @@ class CySimpleIO(object):
             return ''
 
         # Needed to find out if we are producing a list or a single element
-        current_idx:int = 0
         is_list:cy.bint
+
+        # Local variables
+        current_idx:int = 0
         out_elems:list = []
 
         if isinstance(data, (list, tuple)):
@@ -2019,7 +2048,7 @@ class CySimpleIO(object):
 
         # Wrap the response in a top-level element if needed
         if data_format in (DATA_FORMAT_JSON, DATA_FORMAT_DICT):
-            if self.definition._response_elem:
+            if self.definition._has_response_elem:
                 out = {
                     self.definition._response_elem: out
                 }
