@@ -9,10 +9,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from unittest import main, TestCase
+from unittest import main
 
 # Zato
 from zato.common import APISPEC
+from zato.common.test import BaseSIOTestCase
 from zato.server.apispec import not_public, ServiceInfo
 from common import service_name, sio_config
 
@@ -28,7 +29,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class APISpecDocstringParsing(TestCase):
+class APISpecDocstringParsing(BaseSIOTestCase):
 
     maxDiff = 100000
 

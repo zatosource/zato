@@ -15,9 +15,9 @@ from uuid import UUID as uuid_UUID
 
 # Zato
 from zato.common import DATA_FORMAT
+from zato.common.test import BaseSIOTestCase
 
 # Zato - Cython
-from test.zato.cy.simpleio_ import BaseTestCase
 from zato.simpleio import AsIs, Bool,  CSV, Date, DateTime, Decimal, Dict, DictList, Float, Int, List, NotGiven, Opaque, \
      Text, UUID
 from zato.util_convert import false_values, true_values
@@ -28,7 +28,7 @@ from past.builtins import basestring, long, unicode
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ElemsFromJSONTestCase(BaseTestCase):
+class ElemsFromJSONTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 

@@ -11,17 +11,17 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Zato
 from zato.common import DATA_FORMAT
 from zato.common.simpleio_ import get_sio_server_config, simple_io_conf_contents
+from zato.common.test import BaseSIOTestCase
 from zato.common.util import get_config_from_string
 from zato.server.service import Service
 
 # Zato - Cython
-from test.zato.cy.simpleio_ import BaseTestCase
 from zato.simpleio import CySimpleIO
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SimpleIOConfig(BaseTestCase):
+class SimpleIOConfig(BaseSIOTestCase):
 
 # ################################################################################################################################
 
