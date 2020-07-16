@@ -242,6 +242,8 @@ class ServiceInfo(object):
                         _param_info.is_required = 'required' in param_list_name
                         _param_info.description = desc_dict.get(param_name) or '' # Always use a string, even if an empty one
 
+                        print(111, param, sio)
+
                         if isinstance(param, AsIs):
                             type_info = api_spec_info.DEFAULT
 

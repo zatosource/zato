@@ -18,13 +18,13 @@ from lxml.etree import fromstring as lxml_fromstring, tostring as lxml_tostring
 
 # Zato
 from zato.common import DATA_FORMAT
+from zato.common.test import BaseSIOTestCase
 from zato.server.service import Service
-from zato.simpleio import backward_compat_default_value, AsIs, Bool, CSV, CySimpleIO, Date, DateTime, Decimal, \
-     Float, Int, Opaque, Text, UUID
 
 # Zato - Cython
-from test.zato.cy.simpleio_ import BaseTestCase
 from zato.bunch import Bunch
+from zato.simpleio import backward_compat_default_value, AsIs, Bool, CSV, CySimpleIO, Date, DateTime, Decimal, \
+     Float, Int, Opaque, Text, UUID
 
 # ################################################################################################################################
 
@@ -34,7 +34,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class XMLInputParsing(BaseTestCase):
+class XMLInputParsing(BaseSIOTestCase):
 
 # ################################################################################################################################
 

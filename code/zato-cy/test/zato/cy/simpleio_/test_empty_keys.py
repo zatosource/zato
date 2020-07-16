@@ -9,12 +9,12 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from test.zato.cy.simpleio_ import BaseTestCase, test_class_name
+from zato.common.test import BaseSIOTestCase, test_class_name
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SkipEmptyTestCase(BaseTestCase):
+class SkipEmptyTestCase(BaseSIOTestCase):
 
     def test_raw_skip_and_class_not_allowed(self):
 

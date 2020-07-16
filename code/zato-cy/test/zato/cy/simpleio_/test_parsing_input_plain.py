@@ -9,15 +9,16 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
+from zato.common.test import BaseSIOTestCase, test_class_name
 from zato.server.service import Service
 
 # Zato - Cython
-from test.zato.cy.simpleio_ import BaseTestCase, CySimpleIO, test_class_name
+from zato.simpleio import CySimpleIO
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class InputPlainParsingTestCase(BaseTestCase):
+class InputPlainParsingTestCase(BaseSIOTestCase):
 
     def test_convert_plain_into_required_optional(self):
 

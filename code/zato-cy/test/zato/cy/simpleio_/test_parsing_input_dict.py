@@ -18,18 +18,18 @@ from dateutil.parser import parse as dt_parse
 
 # Zato
 from zato.common import DATA_FORMAT
+from zato.common.test import BaseSIOTestCase
 from zato.server.service import Service
+
+# Zato - Cython
+from zato.bunch import Bunch
 from zato.simpleio import backward_compat_default_value, AsIs, Bool, CSV, CySimpleIO, Date, DateTime, Decimal, \
      Dict, DictList, Float, Int, List, NotGiven, Opaque, Text, UUID
 
-# Zato - Cython
-from test.zato.cy.simpleio_ import BaseTestCase
-from zato.bunch import Bunch
-
 # ################################################################################################################################
 # ################################################################################################################################
 
-class JSONInputParsing(BaseTestCase):
+class JSONInputParsing(BaseSIOTestCase):
 
 # ################################################################################################################################
 

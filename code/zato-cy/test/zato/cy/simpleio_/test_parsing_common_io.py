@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from test.zato.cy.simpleio_ import BaseTestCase, test_class_name
+from zato.common.test import BaseSIOTestCase, test_class_name
 
 # Python 2/3 compatibility
 from past.builtins import unicode
@@ -17,7 +17,7 @@ from past.builtins import unicode
 # ################################################################################################################################
 # ################################################################################################################################
 
-class InputOutputParsingTestCase(BaseTestCase):
+class InputOutputParsingTestCase(BaseSIOTestCase):
 
     def test_no_input_output(self):
 
