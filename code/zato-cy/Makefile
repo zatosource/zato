@@ -1,5 +1,6 @@
 
 .PHONY: build
+MAKEFLAGS += --silent
 
 default: build
 PY_DIR=$(CURDIR)/../bin

@@ -9,11 +9,16 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from unittest import main, TestCase
+from copy import deepcopy
+from unittest import main
 
 # Zato
 from zato.server.apispec import ServiceInfo
+from zato.common.test import BaseSIOTestCase
 from common import MyService, service_name, sio_config
+
+# Zato - Cython
+from zato.simpleio import CySimpleIO
 
 # ################################################################################################################################
 
@@ -27,11 +32,14 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class APISpecSIODescription(TestCase):
+class APISpecSIODescription(BaseSIOTestCase):
 
     def test_get_sio_desc_multiline_no_separator(self):
 
-        info = ServiceInfo(service_name, MyService, sio_config, 'public')
+        MyClass = deepcopy(MyService)
+        CySimpleIO.attach_sio(self.get_server_config(), MyClass)
+
+        info = ServiceInfo(service_name, MyClass, sio_config, 'public')
         description = info.simple_io['zato'].description # type: SimpleIODescription
 
         # There are multiple lines and no I/O separator

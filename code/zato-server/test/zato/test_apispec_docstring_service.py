@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from unittest import main
+from unittest import main, TestCase
 
 # Zato
 from zato.common import APISPEC
@@ -29,7 +29,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class APISpecDocstringParsing(BaseSIOTestCase):
+class APISpecDocstringParsing(TestCase):
 
     maxDiff = 100000
 

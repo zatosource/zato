@@ -18,10 +18,10 @@ from lxml.objectify import ObjectifiedElement
 
 # Zato
 from zato.common import DATA_FORMAT, ZATO_OK
+from zato.common.test import BaseSIOTestCase
 from zato.server.service import Service
 
 # Zato - Cython
-from test.zato.cy.simpleio_ import BaseTestCase
 from zato.cy.reqresp.payload import SimpleIOPayload
 from zato.cy.reqresp.response import Response
 from zato.simpleio import CySimpleIO
@@ -37,7 +37,7 @@ class MyBaseService(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ResponseTestCase(BaseTestCase):
+class ResponseTestCase(BaseSIOTestCase):
 
     def xtest_defaults(self):
         response = Response()

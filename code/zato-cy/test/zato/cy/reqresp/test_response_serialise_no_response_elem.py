@@ -17,24 +17,23 @@ from lxml.objectify import fromstring as objectify_from_string
 
 # Zato
 from zato.common import DATA_FORMAT
-from zato.common.test import MyODBService, MyZatoClass, ODBTestCase, test_odb_data
+from zato.common.test import BaseSIOTestCase, MyODBService, MyZatoClass, ODBTestCase, test_odb_data
 
 # Zato - Cython
-from test.zato.cy.simpleio_ import BaseTestCase
 from zato.cy.reqresp.response import Response
 from zato.simpleio import CySimpleIO
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ResponseSerialiseNoResponseElem(BaseTestCase, ODBTestCase):
+class ResponseSerialiseNoResponseElem(BaseSIOTestCase, ODBTestCase):
 
     def setUp(self):
-        super(BaseTestCase, self).setUp()
+        super(BaseSIOTestCase, self).setUp()
         super(ODBTestCase, self).setUp()
 
     def tearDown(self):
-        super(BaseTestCase, self).tearDown()
+        super(BaseSIOTestCase, self).tearDown()
         super(ODBTestCase, self).tearDown()
 
 # ################################################################################################################################
