@@ -87,10 +87,6 @@ class GetServerDeliveryTaskMessageList(AdminService):
 
                             out.append(item)
 
-                            self.logger.warn('EEE %s', msg.to_dict())
-
-        self.logger.warn('ZZZ %s', out)
-
         return out
 
     def handle(self):

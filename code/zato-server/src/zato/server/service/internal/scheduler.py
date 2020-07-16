@@ -221,9 +221,10 @@ class GetList(_Get):
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = self.get_data(session)
+            data = self.get_data(session)
+            self.response.payload[:] = data
 
-        for item in self.response.payload.zato_output:
+        for item in self.response.payload:
             item.start_date = item.start_date.isoformat()
 
 # ################################################################################################################################

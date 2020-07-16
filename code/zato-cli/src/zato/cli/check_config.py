@@ -63,9 +63,9 @@ class CheckConfig(ManageCommand):
 
 # ################################################################################################################################
 
-    def ping_sql(self, cm, engine_params, ping_query):
+    def ping_sql(self, engine_params, ping_query):
 
-        session = create_pool(cm, engine_params, ping_query)
+        session = create_pool(engine_params, ping_query)
         session.execute(ping_query)
         session.close()
 
@@ -85,7 +85,7 @@ class CheckConfig(ManageCommand):
             if password:
                 engine_params['password'] = cm.decrypt(password)
 
-        self.ping_sql(cm, engine_params, get_ping_query(fs_sql_config, engine_params))
+        self.ping_sql(engine_params, get_ping_query(fs_sql_config, engine_params))
 
 # ################################################################################################################################
 
@@ -105,7 +105,7 @@ class CheckConfig(ManageCommand):
         if password:
             engine_params['password'] = cm.decrypt(password)
 
-        self.ping_sql(cm, engine_params, ping_queries[engine_params['engine']])
+        self.ping_sql(engine_params, ping_queries[engine_params['engine']])
 
 # ################################################################################################################################
 

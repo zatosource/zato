@@ -54,28 +54,32 @@ from zato.server.pattern.invoke_retry import InvokeRetry
 from zato.server.pattern.parallel import ParallelExec
 from zato.server.pubsub import PubSub
 from zato.server.service.reqresp import AMQPRequestData, Cloud, Definition, IBMMQRequestData, InstantMessaging, Outgoing, \
-     Request, Response
+     Request
+
+# Zato - Cython
+from zato.cy.reqresp.response import Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
-from zato.server.service.reqresp.sio import AsIs, CSV, Boolean, Date, DateTime, Dict, Float, ForceType, Integer, List, \
-     ListOfDicts, Nested, Opaque, Unicode, UTC
+from zato.simpleio import AsIs, CSV, Bool, Date, DateTime, Dict, Decimal, DictList, Elem as SIOElem, Float, Int, List, \
+     Opaque, Text, UTC, UUID
 
-# So pyflakes doesn't complain about names being imported but not used
+# For pyflakes
 AsIs = AsIs
 CSV = CSV
-Boolean = Boolean
+Bool = Bool
 Date = Date
 DateTime = DateTime
+Decimal = Decimal
+Bool = Bool
 Dict = Dict
+DictList = DictList
 Float = Float
-ForceType = ForceType
-Integer = Integer
+Int = Int
 List = List
-ListOfDicts = ListOfDicts
-Nested = Nested
 Opaque = Opaque
-Unicode = Unicode
+Text = Text
 UTC = UTC
+UUID = UUID
 
 # ################################################################################################################################
 
@@ -101,15 +105,19 @@ if 0:
     from zato.server.query import CassandraQueryAPI
     from zato.sso.api import SSOAPI
 
+    # Zato - Cython
+    from zato.simpleio import CySimpleIO
+
     # For pyflakes
     AuditPII = AuditPII
     BrokerClient = BrokerClient
     BrokerClientAPI = BrokerClientAPI
     Callable = Callable
-    ConfigDict = ConfigDict
-    ConfigStore = ConfigStore
     CassandraAPI = CassandraAPI
     CassandraQueryAPI = CassandraQueryAPI
+    ConfigDict = ConfigDict
+    ConfigStore = ConfigStore
+    CySimpleIO = CySimpleIO
     FTPStore = FTPStore
     JSONPointerStore = JSONPointerStore
     JSONSchemaValidator = JSONSchemaValidator
@@ -133,9 +141,13 @@ NOT_GIVEN = 'ZATO_NOT_GIVEN'
 
 # ################################################################################################################################
 
-# Back compat
-Bool = Boolean
-Int = Integer
+# Backward compatibility
+Boolean = Bool
+Integer = Int
+ForceType = SIOElem
+ListOfDicts = DictList
+Nested = Opaque
+Unicode = Text
 
 # ################################################################################################################################
 
@@ -145,6 +157,10 @@ PubSub = PubSub
 # ################################################################################################################################
 
 _wsgi_channels = (CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC)
+
+# ################################################################################################################################
+
+_response_raw_types=(basestring, dict, list, tuple, EtreeElement, ObjectifiedElement)
 
 # ################################################################################################################################
 
@@ -350,8 +366,11 @@ class Service(object):
     _before_job_hooks = []
     _after_job_hooks = []
 
+    # Cython based SimpleIO definition created by service store when the class is deployed
+    _sio = None # type: CySimpleIO
+
     # Rate limiting
-    _has_rate_limiting = None
+    _has_rate_limiting = None # type: bool
 
     # User management and SSO
     sso = None # type: SSOAPI
@@ -519,16 +538,17 @@ class Service(object):
         if may_have_wsgi_environ:
             self.request.http.init(self.wsgi_environ)
 
-        # self.is_sio attribute is set by ServiceStore during deployment
+        # self.has_sio attribute is set by ServiceStore during deployment
         if self.has_sio:
-            self.request.init(True, self.cid, self.SimpleIO, self.data_format, self.transport, self.wsgi_environ,
+            self.request.init(True, self.cid, self._sio, self.data_format, self.transport, self.wsgi_environ,
                 self.server.encrypt)
-            self.response.init(self.cid, self.SimpleIO, self.data_format)
+            self.response.init(self.cid, self._sio, self.data_format)
 
         # Cache is always enabled
         self.cache = self._worker_store.cache_api
 
-    def set_response_data(self, service, _raw_types=(basestring, dict, list, tuple, EtreeElement, ObjectifiedElement), **kwargs):
+    def set_response_data(self, service, _raw_types=_response_raw_types, **kwargs):
+        # type: (Service, tuple, **object)
         response = service.response.payload
         if not isinstance(response, _raw_types):
             response = response.getvalue(serialize=kwargs['serialize'])
@@ -773,7 +793,7 @@ class Service(object):
         set_response_func = kwargs.pop('set_response_func', service.set_response_data)
 
         invoke_args = (set_response_func, service, payload, channel, data_format, transport, self.server,
-            self.broker_client, self._worker_store, kwargs.pop('cid', self.cid), self.request.simple_io_config)
+            self.broker_client, self._worker_store, kwargs.pop('cid', self.cid), None)
 
         kwargs.update({'serialize':serialize, 'as_bunch':as_bunch})
 
@@ -789,6 +809,7 @@ class Service(object):
                         raise
             else:
                 out = self.update_handle(*invoke_args, **kwargs)
+
                 if kwargs.get('skip_response_elem') and hasattr(out, 'keys'):
                     keys = list(iterkeys(out))
                     response_elem = keys[0]
@@ -1159,8 +1180,8 @@ class Service(object):
         service.request.payload = payload
         service.request.raw_request = raw_request
         service.transport = transport
-        service.request.simple_io_config = simple_io_config
-        service.response.simple_io_config = simple_io_config
+        #service.request.simple_io_config = simple_io_config
+        #service.response.simple_io_config = simple_io_config
         service.data_format = data_format
         service.wsgi_environ = wsgi_environ or {}
         service.job_type = job_type
@@ -1173,7 +1194,7 @@ class Service(object):
             service.request.channel_params.update(channel_params)
 
         service.request.merge_channel_params = merge_channel_params
-        service.request.params_priority = params_priority
+        #service.request.params_priority = params_priority
         service.in_reply_to = in_reply_to
         service.environ = environ or {}
 

@@ -362,20 +362,16 @@ class ConfigLoader(object):
         # but actual code paths require the pre-3.0 format so let's prepare it here.
         self.config.simple_io = ConfigDict('simple_io', Bunch())
 
-        int_exact = self.sio_config.int.exact
-        int_suffix = self.sio_config.int.suffix
-        bool_prefix = self.sio_config.bool.prefix
+        int_exact = self.sio_config.int_config.exact
+        int_suffixes = self.sio_config.int_config.suffixes
+        bool_prefixes = self.sio_config.bool_config.prefixes
 
-        self.config.simple_io['int_parameters'] = int_exact if isinstance(int_exact, list) else [int_exact]
-        self.config.simple_io['int_parameter_suffixes'] = int_suffix if isinstance(int_suffix, list) else [int_suffix]
-        self.config.simple_io['bool_parameter_prefixes'] = bool_prefix if isinstance(bool_prefix, list) else [bool_prefix]
+        self.config.simple_io['int_parameters'] = int_exact
+        self.config.simple_io['int_parameter_suffixes'] = int_suffixes
+        self.config.simple_io['bool_parameter_prefixes'] = bool_prefixes
 
         # Maintain backward-compatibility with pre-3.1 versions that did not specify any particular encoding
-        bytes_to_str = self.sio_config.get('bytes_to_str')
-        if not bytes_to_str:
-            bytes_to_str = {'encoding': None}
-
-        self.config.simple_io['bytes_to_str'] = bytes_to_str
+        self.config.simple_io['bytes_to_str'] = {'encoding': self.sio_config.bytes_to_str_encoding or None}
 
         # Pub/sub
         self.config.pubsub = Bunch()
