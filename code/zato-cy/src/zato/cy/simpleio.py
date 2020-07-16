@@ -180,8 +180,8 @@ class SIOSkipEmpty(object):
 
     def __init__(self, input_def, output_def, force_empty_input_set, force_empty_output_set, empty_output_value):
 
-        skip_all_empty_input:bool = False
-        skip_all_empty_output:bool = False
+        skip_all_empty_input:cy.bint = False
+        skip_all_empty_output:cy.bint = False
         skip_input_set:set = set()
         skip_output_set:set = set()
 
@@ -999,19 +999,19 @@ class SIOServerConfig(object):
 
     @cy.cfunc
     @cy.returns(cy.bint)
-    def is_int(self, name) -> bool:
+    def is_int(self, name) -> cy.bint:
         """ Returns True if input name should be treated like ElemType.int.
         """
 
     @cy.cfunc
     @cy.returns(cy.bint)
-    def is_bool(self, name) -> bool:
+    def is_bool(self, name) -> cy.bint:
         """ Returns True if input name should be treated like ElemType.bool.
         """
 
     @cy.cfunc
     @cy.returns(cy.bint)
-    def is_secret(self, name) -> bool:
+    def is_secret(self, name) -> cy.bint:
         """ Returns True if input name should be treated like ElemType.secret.
         """
 
@@ -1235,7 +1235,7 @@ class SIODefinition(object):
 # ################################################################################################################################
 
     @cy.cfunc
-    def set_csv_config(self, dialect:cy.unicode, common_config:dict, writer_config:dict, should_write_header:bool):
+    def set_csv_config(self, dialect:cy.unicode, common_config:dict, writer_config:dict, should_write_header:cy.bint):
         self._csv_config.dialect = dialect
         self._csv_config.common_config.update(common_config)
         self._csv_config.writer_config.update(writer_config)
@@ -1244,7 +1244,7 @@ class SIODefinition(object):
 # ################################################################################################################################
 
     @cy.cfunc
-    def set_xml_config(self, namespace:object, pretty_print:bool, encoding:cy.unicode, declaration:bool):
+    def set_xml_config(self, namespace:object, pretty_print:cy.bint, encoding:cy.unicode, declaration:cy.bint):
         self._xml_config.namespace = namespace
         self._xml_config.pretty_print = pretty_print
         self._xml_config.encoding = encoding
@@ -1424,7 +1424,7 @@ class CySimpleIO(object):
         declaration:object
         value:object  = InternalNotGiven
         xml_sio_class:object  = getattr(self.user_declaration, 'XML', InternalNotGiven)
-        has_xml_sio_class:bool = xml_sio_class is not InternalNotGiven
+        has_xml_sio_class:cy.bint = xml_sio_class is not InternalNotGiven
 
         for attr_name in attrs:
 
@@ -1508,7 +1508,7 @@ class CySimpleIO(object):
 
     @cy.cfunc
     @cy.returns(Elem)
-    def _convert_to_elem_instance(self, elem_name:cy.unicode, is_required:bool) -> Elem:
+    def _convert_to_elem_instance(self, elem_name:cy.unicode, is_required:cy.bint) -> Elem:
 
         # The element we return, at this point we do not know what its exact subtype will be
         _elem:Elem
@@ -1517,7 +1517,7 @@ class CySimpleIO(object):
         prefixes:set
         suffixes:set
         config_elem:cy.unicode
-        keep_running:bool = True
+        keep_running:cy.bint = True
 
         config_item:ConfigItem
 
@@ -1737,11 +1737,11 @@ class CySimpleIO(object):
     @cy.returns(cy.bint)
     @cy.exceptval(-1)
     def _should_skip_on_input(self, definition:SIODefinition, sio_item:Elem, input_value:object) -> bool:
-        should_skip:bool = False
+        should_skip:cy.bint = False
         has_no_input_value:bool = not bool(input_value)
 
-        matches_skip_all:bool = definition.skip_empty.skip_all_empty_input and has_no_input_value # type: bool
-        matches_skip_input_set:bool = sio_item.name in definition.skip_empty.skip_input_set       # type: bool
+        matches_skip_all:cy.bint = definition.skip_empty.skip_all_empty_input and has_no_input_value # type: bool
+        matches_skip_input_set:cy.bint = sio_item.name in definition.skip_empty.skip_input_set       # type: bool
 
         # Should we skip this value based on the server's configuration ..
         if matches_skip_all or matches_skip_input_set:
@@ -1762,10 +1762,10 @@ class CySimpleIO(object):
 
     @cy.cfunc
     @cy.returns(object)
-    def _parse_input_elem(self, elem:object, data_format:cy.unicode, is_csv:bool=False) -> object:
+    def _parse_input_elem(self, elem:object, data_format:cy.unicode, is_csv:cy.bint=False) -> object:
 
-        is_dict:bool = isinstance(elem, dict)
-        is_xml:bool = isinstance(elem, EtreeElementClass)
+        is_dict:cy.bint = isinstance(elem, dict)
+        is_xml:cy.bint = isinstance(elem, EtreeElementClass)
 
         if not (is_dict or is_csv or is_xml):
             raise ValueError('Expected a dict, CSV or EtreeElementClass instead of input `{!r}` ({} in {})'.format(
@@ -1852,7 +1852,7 @@ class CySimpleIO(object):
 
     @cy.cfunc
     @cy.returns(object)
-    def _parse_input_list(self, data:object, data_format:cy.unicode, is_csv:bool) -> object:
+    def _parse_input_list(self, data:object, data_format:cy.unicode, is_csv:cy.bint) -> object:
         out = []
         for elem in data:
             converted = self._parse_input_elem(elem, data_format, is_csv)
@@ -1865,7 +1865,7 @@ class CySimpleIO(object):
     @cy.returns(object)
     def parse_input(self, data:object, data_format:cy.unicode) -> object:
 
-        is_csv:bool = data_format == DATA_FORMAT_CSV and isinstance(data, basestring)
+        is_csv:cy.bint = data_format == DATA_FORMAT_CSV and isinstance(data, basestring)
 
         if isinstance(data, list):
             return self._parse_input_list(data, data_format, is_csv)
@@ -1885,12 +1885,9 @@ class CySimpleIO(object):
         required_elems:dict = self.definition._output_required.elems_by_name
         optional_elems:dict = self.definition._output_optional.elems_by_name
 
-        field_names:list = []
-        field_names.extend(list(required_elems.keys()))
-        field_names.extend(list(optional_elems.keys()))
-
-        # First yield - return only field names
-        yield field_names
+        # First yield calls- return only field names
+        yield list(required_elems.keys())
+        yield list(optional_elems.keys())
 
         if not isinstance(data, dict):
             if not isinstance(data, list):
@@ -1905,28 +1902,32 @@ class CySimpleIO(object):
             (False, optional_elems),
         ]
 
-        is_required:bool
+        is_required:cy.bint
         current_elems:dict
         current_elem_name:cy.unicode
         current_elem:Elem
+        input_data_dict:dict
 
-        for input_data_dict in data:
+        for _input_data_dict in data:
 
             # This is the dictionary that we return.
             out_data_dict = {}
 
+            if isinstance(_input_data_dict, dict):
+                input_data_dict = _input_data_dict
+
             # This could be an SQLAlchemy object that we need to convert to a dictionary
-            if hasattr(input_data_dict, 'asdict'):
-                input_data_dict = input_data_dict.asdict()
+            elif hasattr(_input_data_dict, 'asdict'):
+                input_data_dict = _input_data_dict.asdict()
 
             # This could be an object that explicitly knows how to serialise to Zato
-            elif hasattr(input_data_dict, 'to_zato'):
-                input_data_dict = input_data_dict.to_zato()
+            elif hasattr(_input_data_dict, 'to_zato'):
+                input_data_dict = _input_data_dict.to_zato()
 
-            elif isinstance(input_data_dict, WritableKeyedTuple):
-                input_data_dict = input_data_dict.get_value()
+            elif isinstance(_input_data_dict, WritableKeyedTuple):
+                input_data_dict = _input_data_dict.get_value()
 
-            for is_required, current_elems in all_elems:
+            for is_required, current_elems in all_elems: # type: bool, dict
                 for current_elem_name, current_elem in current_elems.items():
                     value = input_data_dict.get(current_elem_name, InternalNotGiven)
                     if value is InternalNotGiven:
@@ -1965,11 +1966,13 @@ class CySimpleIO(object):
         gen = self._yield_data_dicts(data, DATA_FORMAT_CSV)
 
         # First, get the field names
-        field_names:list = next(gen)
+        required_field_names:list = next(gen)
+        optional_field_names:list = next(gen)
 
         out:cy.unicode
         buff:StringIO = StringIO()
-        writer:DictWriter = DictWriter(buff, field_names, **self.definition._csv_config.writer_config)
+        writer:DictWriter = DictWriter(
+            buff, required_field_names + optional_field_names, **self.definition._csv_config.writer_config)
 
         if self.definition._csv_config.should_write_header:
             writer.writeheader()
@@ -1994,7 +1997,7 @@ class CySimpleIO(object):
 
         # Needed to find out if we are producing a list or a single element
         current_idx:int = 0
-        is_list:bool
+        is_list:cy.bint
         out_elems:list = []
 
         if isinstance(data, (list, tuple)):
@@ -2005,6 +2008,7 @@ class CySimpleIO(object):
         gen = self._yield_data_dicts(data, DATA_FORMAT_DICT)
 
         # Ignore field names, not needed in JSON nor XML serialisation
+        next(gen)
         next(gen)
 
         for data_dict in gen:
@@ -2026,7 +2030,7 @@ class CySimpleIO(object):
 
     @cy.cfunc
     @cy.returns(object)
-    def _get_output_json(self, data:object, serialise:bool) -> object:
+    def _get_output_json(self, data:object, serialise:cy.bint) -> object:
         out:object = self._convert_to_dicts(data, DATA_FORMAT_JSON)
         return self.serialise(out, DATA_FORMAT_JSON) if serialise else out
 
@@ -2045,7 +2049,7 @@ class CySimpleIO(object):
 
     @cy.cfunc
     @cy.returns(object)
-    def _get_output_xml(self, data:object, serialise:bool) -> object:
+    def _get_output_xml(self, data:object, serialise:cy.int) -> object:
         dict_items:object = self._convert_to_dicts(data, DATA_FORMAT_XML)
         out:cy.unicode
         dict_item:dict
@@ -2072,7 +2076,7 @@ class CySimpleIO(object):
 
     @cy.ccall
     @cy.returns(object)
-    def get_output(self, data:object, data_format:cy.unicode, serialise:bool=True) -> object:
+    def get_output(self, data:object, data_format:cy.unicode, serialise:cy.int=True) -> object:
         """ Returns input converted to the output format, possibly including serialisation to a string representation.
         """
         if data_format == DATA_FORMAT_JSON:
@@ -2126,14 +2130,14 @@ class CySimpleIO(object):
 
 @cy.ccall
 @cy.returns(cy.bint)
-def is_sio_bool(value:object) -> bool:
+def is_sio_bool(value:object) -> cy.int:
     return isinstance(value, Bool)
 
 # ################################################################################################################################
 
 @cy.ccall
 @cy.returns(cy.bint)
-def is_sio_int(value:object) -> bool:
+def is_sio_int(value:object) -> cy.int:
     return isinstance(value, Int)
 
 # ################################################################################################################################
