@@ -120,12 +120,17 @@ class WritableKeyedTuple(object):
         return 'WritableKeyedTuple(%s)' % (', '.join('%r=%r' % (key, value) for (key, value) in inner + outer))
 
 # ################################################################################################################################
+
+    def get_value(self):
+        return self._elem._asdict()
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class WritableTupleQuery(Query):
 
     def __iter__(self):
-        it = super(WritableTupleQuery, self).__iter__()
+        out = super(WritableTupleQuery, self).__iter__()
 
         columns_desc = self.column_descriptions
 
@@ -134,15 +139,15 @@ class WritableTupleQuery(Query):
 
         # This is a simple result of a query such as session.query(ObjectName).count()
         if len_columns_desc == 1 and isinstance(first_type, TypeEngine):
-            return it
+            return out
 
         # A list of objects, e.g. from .all()
         elif len_columns_desc > 1:
-            return (WritableKeyedTuple(elem) for elem in it)
+            return (WritableKeyedTuple(elem) for elem in out)
 
         # Anything else
         else:
-            return it
+            return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -152,15 +157,16 @@ class SessionWrapper(object):
     """
     def __init__(self):
         self.session_initialized = False
-        self.pool = None
-        self.config = None
-        self.is_sqlite = None
+        self.pool = None      # type: SQLConnectionPool
+        self.config = None    # type: dict
+        self.is_sqlite = None # type: bool
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def init_session(self, *args, **kwargs):
         spawn_greenlet(self._init_session, *args, **kwargs)
 
     def _init_session(self, name, config, pool, use_scoped_session=True):
+        # type: (str, dict, SQLConnectionPool, bool)
         self.config = config
         self.fs_sql_config = config['fs_sql_config']
         self.pool = pool
@@ -331,7 +337,6 @@ class SQLConnectionPool(object):
     def ping(self, fs_sql_config):
         """ Pings the SQL database and returns the response time, in milliseconds.
         """
-        return
         if hasattr(self.engine, 'ping'):
             func = self.engine.ping
             query = self.engine.ping_query

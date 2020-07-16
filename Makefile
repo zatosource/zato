@@ -1,5 +1,6 @@
 
 .PHONY: build
+MAKEFLAGS += --silent
 
 cy-tests:
 	cd $(CURDIR)/code/zato-cy && make run-tests

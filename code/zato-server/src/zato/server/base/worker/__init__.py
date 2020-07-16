@@ -45,8 +45,8 @@ from six import PY3
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
-from zato.common import broker_message, CHANNEL, GENERIC as COMMON_GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, NOTIF, \
-     PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, SECRETS, simple_types, URL_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
+from zato.common import broker_message, CHANNEL, DATA_FORMAT, GENERIC as COMMON_GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, IPC, \
+     KVDB, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, SECRETS, simple_types, URL_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.dispatch import dispatcher
 from zato.common.match import Matcher
@@ -99,15 +99,20 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 # Type hints
-import typing
+if 0:
 
-if typing.TYPE_CHECKING:
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigStore
+    from zato.server.service import Service
 
     # For pyflakes
-    ConfigStore = ConfigStore
+    ConfigStore    = ConfigStore
     ParallelServer = ParallelServer
+    Service        = Service
+
+# ################################################################################################################################
+
+_data_format_dict = DATA_FORMAT.DICT
 
 # ################################################################################################################################
 
@@ -1484,7 +1489,11 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         def inner(service, **ignored):
             if not isinstance(service.response.payload, self._simple_types):
-                service.response.payload = service.response.payload.getvalue(serialize)
+
+                # If serialise is False, the operation below is essentially a no-op
+                # so we can skip it altogether.
+                if serialize:
+                    service.response.payload = service.response.payload.getvalue(serialize)
 
         return inner
 
@@ -1563,7 +1572,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         if zato_ctx:
             wsgi_environ['zato.channel_item'] = zato_ctx.get('zato.channel_item')
 
-        data_format = msg.get('data_format')
+        data_format = msg.get('data_format') or _data_format_dict
         transport = msg.get('transport')
 
         if msg.get('channel') in (CHANNEL.FANOUT_ON_TARGET, CHANNEL.FANOUT_ON_FINAL, CHANNEL.PARALLEL_EXEC_ON_TARGET):
@@ -1571,7 +1580,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         else:
             payload = msg['payload']
 
-        service, is_active = self.server.service_store.new_instance_by_name(msg['service'])
+        service, is_active = self.server.service_store.new_instance_by_name(msg['service']) # type: (Service, bool)
         if not is_active:
             msg = 'Could not invoke an inactive service:`{}`, cid:`{}`'.format(service.get_name(), cid)
             logger.warn(msg)

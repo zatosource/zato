@@ -1,5 +1,6 @@
 
 .PHONY: build
+MAKEFLAGS += --silent
 
 default: build
 PY_DIR=$(CURDIR)/../bin
@@ -20,14 +21,14 @@ rate-limit:
 simpleio:
 	$(MAKE) build
 
-rate-limit-tests:
-	$(MAKE) build
-	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/rate_limit/*.py -s
+reqresp-tests:
+	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/reqresp/test_response_serialise_with_response_elem.py -s
 
 simpleio-tests:
-	$(MAKE) build
-	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/simpleio_/*.py -s
+	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/simpleio_/test_*.py -s
 
 run-tests:
 	# No tests to run for now
+	$(MAKE) reqresp-tests
+	$(MAKE) simpleio-tests
 	echo
