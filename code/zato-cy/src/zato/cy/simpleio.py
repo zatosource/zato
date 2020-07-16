@@ -1162,29 +1162,41 @@ class SIODefinition(object):
 
 # ################################################################################################################################
 
-    @cy.cfunc
-    @cy.returns(list)
+    def get_input_required(self) -> SIOList:
+        return self._input_required
+
+# ################################################################################################################################
+
+    def get_input_optional(self) -> SIOList:
+        return self._input_optional
+
+# ################################################################################################################################
+
+    def get_output_required(self) -> SIOList:
+        return self._output_required
+
+# ################################################################################################################################
+
+    def get_output_optional(self) -> SIOList:
+        return self._output_optional
+
+# ################################################################################################################################
+
     def get_input_required_elem_names(self) -> list:
         return self._input_required.get_elem_names()
 
 # ################################################################################################################################
 
-    @cy.cfunc
-    @cy.returns(list)
     def get_input_optional_elem_names(self) -> list:
         return self._input_optional.get_elem_names()
 
 # ################################################################################################################################
 
-    @cy.cfunc
-    @cy.returns(list)
     def get_output_required_elem_names(self) -> list:
         return self._output_required.get_elem_names()
 
 # ################################################################################################################################
 
-    @cy.cfunc
-    @cy.returns(list)
     def get_output_optional_elem_names(self) -> list:
         return self._output_optional.get_elem_names()
 

@@ -36,12 +36,20 @@ from zato.simpleio import AsIs, is_sio_bool, is_sio_int, SIO_TYPE_MAP
 
 if 0:
     from zato.server.service import Service
+    from zato.cy.simpleio import CySimpleIO
 
+    CySimpleIO = CySimpleIO
     Service = Service
 
 # ################################################################################################################################
 
-_sio_attrs = ('input_required', 'input_optional', 'output_required', 'output_optional')
+_sio_attrs = (
+    'input_required',
+    'input_optional',
+    'output_required',
+    'output_optional'
+)
+
 _SIO_TYPE_MAP = SIO_TYPE_MAP()
 
 # ################################################################################################################################
@@ -208,7 +216,7 @@ class ServiceInfo(object):
             self.namespace.docs = getattr(mod, 'namespace_docs', '')
 
         # SimpleIO
-        sio = getattr(self.service_class, 'SimpleIO', None)
+        sio = getattr(self.service_class, '_sio', None) # type: CySimpleIO
 
         if sio:
 
@@ -223,26 +231,27 @@ class ServiceInfo(object):
                 _api_spec_info.request_elem = getattr(sio, 'request_elem', None)
                 _api_spec_info.response_elem = getattr(sio, 'response_elem', None)
 
-                for param_list_name in _sio_attrs:
+                for param_list_name in _sio_attrs: # type: str
+
                     _param_list = []
-                    param_list = getattr(sio, param_list_name, [])
-                    param_list = param_list if isinstance(param_list, (tuple, list)) else [param_list]
+
+                    param_func_name = 'get_{}'.format(param_list_name)
+                    param_func = getattr(sio.definition, param_func_name)
+                    param_list = param_func()
 
                     for param in param_list:
 
                         # Actual parameter name
-                        param_name = param if isinstance(param, basestring) else param.name
+                        param_name = param if isinstance(param, basestring) else param.name # type: str
 
                         # To look up description based on parameter's name
-                        desc_dict = sio_desc.input if param_list_name.startswith('input') else sio_desc.output
+                        desc_dict = sio_desc.input if param_list_name.startswith('input') else sio_desc.output # type: dict
 
                         # Parameter details object
                         _param_info = Bunch()
                         _param_info.name = param_name
                         _param_info.is_required = 'required' in param_list_name
                         _param_info.description = desc_dict.get(param_name) or '' # Always use a string, even if an empty one
-
-                        print(111, param, sio)
 
                         if isinstance(param, AsIs):
                             type_info = api_spec_info.DEFAULT
@@ -454,12 +463,13 @@ class ServiceInfo(object):
         # type: (object) -> SimpleIODescription
 
         out = SimpleIODescription()
+        doc = sio.service_class.SimpleIO.__doc__
 
         # No description to parse
-        if not sio.__doc__:
+        if not doc:
             return out
 
-        doc = sio.__doc__.strip() # type: str
+        doc = doc.strip() # type: str
 
         lines = []
 
@@ -667,7 +677,7 @@ class Generator(object):
             if not proceed:
                 continue
 
-            info = self.services[name]
+            info = self.services[name] # type: ServiceInfo
             item = Bunch()
 
             item.name = info.name

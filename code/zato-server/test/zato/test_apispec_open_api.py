@@ -9,7 +9,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from unittest import main, TestCase
+from copy import deepcopy
+from unittest import main
 
 # Bunch
 from bunch import bunchify
@@ -20,9 +21,13 @@ from yaml import load as yaml_load
 # Zato
 from common import MyService, service_name, sio_config
 from zato.common import APISPEC, URL_TYPE
+from zato.common.test import BaseSIOTestCase
 from zato.common.util import fs_safe_name
 from zato.server.apispec import Generator
 from zato.server.apispec.openapi import OpenAPIGenerator
+
+# Zato - Cython
+from zato.simpleio import CySimpleIO
 
 # ################################################################################################################################
 
@@ -39,14 +44,17 @@ class _MatchTestCompiled:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class OpenAPITestCase(TestCase):
+class OpenAPITestCase(BaseSIOTestCase):
 
     def test_generate_open_api(self):
+
+        MyClass = deepcopy(MyService)
+        CySimpleIO.attach_sio(self.get_server_config(), MyClass)
 
         service_store_services = {
             'my.impl.name': {
                 'name': service_name,
-                'service_class': MyService,
+                'service_class': MyClass,
             }
         }
         include = ['*']
