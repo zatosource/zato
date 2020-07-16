@@ -26,7 +26,7 @@ from zato.common import DATA_FORMAT
 from zato.common.odb.api import WritableKeyedTuple
 
 # Zato - Cython
-from zato.simpleio import SIODefinition
+from zato.simpleio import CySimpleIO, SIODefinition
 
 # Python 2/3 compatibility
 from past.builtins import unicode as past_unicode
@@ -72,7 +72,7 @@ class SimpleIOPayload(object):
 
 # ################################################################################################################################
 
-    def __cinit__(self, sio:object, all_output_elem_names:list, cid:str, data_format:str):
+    def __cinit__(self, sio:CySimpleIO, all_output_elem_names:list, cid:str, data_format:str):
         self.sio = sio
         self.all_output_elem_names = all_output_elem_names
         self.output_repeated = self.sio.definition.output_repeated
@@ -90,13 +90,16 @@ class SimpleIOPayload(object):
         """ Extract response attributes from a single object.
         """
         extracted:dict = {}
+        is_dict:bint = isinstance(item, dict)
 
         # Use a different function depending on whether the object is dict-like or not.
         # Note that we need .get to be able to provide a default value.
         has_get = hasattr(item, 'get') # type: bool
 
         for name in self.all_output_elem_names: # type: str
-            if has_get:
+            if is_dict:
+                value = cy.cast(dict, item).get(name, _not_given)
+            elif has_get:
                 value = item.get(name, _not_given)
             else:
                 value = getattr(item, name, _not_given)
