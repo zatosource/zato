@@ -46,7 +46,6 @@ logger = getLogger('zato')
 # ################################################################################################################################
 
 DATA_FORMAT_DICT:str = DATA_FORMAT.DICT
-list_like:tuple = (list, tuple)
 _not_given:object = object()
 
 # ################################################################################################################################
@@ -87,7 +86,7 @@ class SimpleIOPayload(object):
     @cy.cfunc
     @cy.returns(dict)
     def _extract_payload_attrs(self, item:object) -> dict:
-        """ Extract response attributes from a single object.
+        """ Extract response attributes from a single object. Used with items other than dicts.
         """
         extracted:dict = {}
         is_dict:bint = isinstance(item, dict)
@@ -95,6 +94,7 @@ class SimpleIOPayload(object):
         # Use a different function depending on whether the object is dict-like or not.
         # Note that we need .get to be able to provide a default value.
         has_get = hasattr(item, 'get') # type: bool
+        name:str = None
 
         for name in self.all_output_elem_names: # type: str
             if is_dict:
@@ -111,13 +111,32 @@ class SimpleIOPayload(object):
 # ################################################################################################################################
 
     @cy.cfunc
+    @cy.returns(dict)
+    def _extract_payload_attrs_dict(self, item:dict) -> dict:
+        """ Extract response attributes from a dict.
+        """
+        extracted:dict = {}
+        is_dict:bint = isinstance(item, dict)
+
+        name:str = None
+
+        for name in self.all_output_elem_names:
+            value = item.get(name, _not_given)
+            if value is not _not_given:
+                extracted[name] = value
+
+        return extracted
+
+# ################################################################################################################################
+
+    @cy.cfunc
     def _is_sqlalchemy(self, item:object):
         return hasattr(item, '_sa_class_manager')
 
 # ################################################################################################################################
 
     @cy.ccall
-    def set_payload_attrs(self, value:object):
+    def set_payload_attrs(self, value:object, is_dict:cy.bint):
         """ Assigns user-defined attributes to what will eventually be a response.
         """
 
@@ -141,16 +160,21 @@ class SimpleIOPayload(object):
         self.user_attrs_dict.clear()
         self.user_attrs_list.clear()
 
-        # Check if this is something that can be explicitly serialised for our purposes
-        if hasattr(value, 'to_zato'):
-            value = value.to_zato()
+        # Shortcut in case we know already this is a dict on input
+        if is_dict:
+            self.user_attrs_dict.update(self._extract_payload_attrs_dict(value))
 
-        # Now, check if this is a dict or an SQL response-like object ..
-        if isinstance(value, list_like):
-            for item in value:
-                self.user_attrs_list.append(self._extract_payload_attrs(item))
         else:
-            self.user_attrs_dict.update(self._extract_payload_attrs(value))
+
+            # Check if this is something that can be explicitly serialised for our purposes
+            if hasattr(value, 'to_zato'):
+                value = value.to_zato()
+
+            if isinstance(value, (list, tuple)):
+                for item in value:
+                    self.user_attrs_list.append(self._extract_payload_attrs(item))
+            else:
+                self.user_attrs_dict.update(self._extract_payload_attrs(value))
 
 # ################################################################################################################################
 
