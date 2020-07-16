@@ -1047,15 +1047,15 @@ class SIOList(object):
     def __len__(self):
         return len(self.elems)
 
-    def set_elems(self, elems):
+    def set_elems(self, elems:list):
         self.elems[:] = elems
         for elem in self.elems:
             self.elems_by_name[elem.name] = elem
 
-    def get_elem_by_name(self, name:cy.unicode):
+    def get_elem_by_name(self, name:cy.unicode) -> Elem:
         return self.elems_by_name[name]
 
-    def get_elem_names(self, use_sorted=False):
+    def get_elem_names(self, use_sorted=False) -> list:
         out = [elem.name for elem in self.elems]
         return sorted(out) if use_sorted else out
 
@@ -1672,12 +1672,18 @@ class CySimpleIO(object):
             (optional, False),
         )
 
+        elem:Elem = None
+        elem_list:list = None
+        is_required:cy.bint
+
         for elem_list, is_required in elems:
-            for elem in elem_list:
+            for initial_elem in elem_list:
 
                 # All of our elements are always SimpleIO objects
-                if not isinstance(elem, Elem):
-                    elem = self._convert_to_elem_instance(elem, is_required)
+                if isinstance(initial_elem, Elem):
+                    elem = initial_elem
+                else:
+                    elem = self._convert_to_elem_instance(initial_elem, is_required)
 
                 # By default all Elem instances are required so we need
                 # to potentially overwrite it with the actual is_required value.
@@ -1722,11 +1728,11 @@ class CySimpleIO(object):
         # Everything is validated, we can actually set the lists of elements now
 
         container_req_name = '_{}_required'.format(container)
-        container_required = getattr(self.definition, container_req_name) # type: SIOList
+        container_required:SIOList = getattr(self.definition, container_req_name)
         container_required.set_elems(required)
 
         container_opt_name = '_{}_optional'.format(container)
-        container_optional = getattr(self.definition, container_opt_name) # type: SIOList
+        container_optional:SIOList = getattr(self.definition, container_opt_name)
         container_optional.set_elems(optional)
 
 # ################################################################################################################################
