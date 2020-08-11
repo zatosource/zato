@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2020, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from setuptools import setup, find_packages
 
-version = '3.1.1'
+version = '3.1.2'
 
 long_description = description = 'Python API client for Zato - ESB, SOA, REST, APIs and Cloud Integrations in Python (https://zato.io)'
 
