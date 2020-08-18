@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 from json import loads
 from logging import INFO, WARN
 from platform import system as platform_system
+from random import seed as random_seed
 from re import IGNORECASE
 from tempfile import mkstemp
 from traceback import format_exc
@@ -28,9 +29,6 @@ import gevent.monkey # Needed for Cassandra
 
 # globre
 import globre
-
-# numpy
-from numpy.random import seed as numpy_seed
 
 # Paste
 from paste.util.converters import asbool
@@ -1035,7 +1033,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         """ A Gunicorn hook which initializes the worker.
         """
         # Each subprocess needs to have the random number generator re-seeded.
-        numpy_seed()
+        random_seed()
 
         worker.app.zato_wsgi_app.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.BEFORE_POST_FORK, kwargs={
             'arbiter': arbiter,
