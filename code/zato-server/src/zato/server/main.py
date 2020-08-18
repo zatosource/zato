@@ -152,7 +152,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     logging_conf_path = os.path.join(repo_location, 'logging.conf')
 
     with open(logging_conf_path) as f:
-        logging_config = yaml.load(f)
+        logging_config = yaml.load(f, yaml.FullLoader)
         dictConfig(logging_config)
 
     logger = logging.getLogger(__name__)
