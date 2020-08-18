@@ -55,19 +55,19 @@ class Response(object):
     """ A response from a service's invocation.
     """
     # Public attributes
-    result           = cy.declare(cy.unicode, visibility='public')  # type: past_unicode
-    result_details   = cy.declare(cy.unicode, visibility='public')  # type: past_unicode
+    result           = cy.declare(cy.object, visibility='public')  # type: past_unicode
+    result_details   = cy.declare(cy.object, visibility='public')  # type: past_unicode
     _payload         = cy.declare(cy.object, visibility='public')   # type: object
-    content_encoding = cy.declare(cy.unicode, visibility='public')  # type: past_unicode
-    cid              = cy.declare(cy.unicode, visibility='public')  # type: past_unicode
-    data_format      = cy.declare(cy.unicode, visibility='public')  # type: past_unicode
+    content_encoding = cy.declare(cy.object, visibility='public')  # type: past_unicode
+    cid              = cy.declare(cy.object, visibility='public')  # type: past_unicode
+    data_format      = cy.declare(cy.object, visibility='public')  # type: past_unicode
     headers          = cy.declare(cy.dict, visibility='public')     # type: dict
     status_code      = cy.declare(cy.int, visibility='public')      # type: int
-    status_message   = cy.declare(cy.unicode, visibility='public')  # type: past_unicode
+    status_message   = cy.declare(cy.object, visibility='public')  # type: past_unicode
     sio              = cy.declare(object, visibility='public')      # type: CySimpleIO
 
     # Private-use attributes (still declared as public)
-    _content_type        = cy.declare(cy.unicode, visibility='public') # type: past_unicode
+    _content_type        = cy.declare(cy.object, visibility='public') # type: past_unicode
     _has_sio_output      = cy.declare(cy.bint, visibility='public')    # type: bool
     content_type_changed = cy.declare(cy.bint, visibility='public')    # type: bool
 
@@ -90,7 +90,7 @@ class Response(object):
 
 # ################################################################################################################################
 
-    def init(self, cid:str, sio:object, data_format:str):
+    def init(self, cid, sio:object, data_format):
         self.cid = cid
         self.sio = sio # type: CySimpleIO
         self.data_format = data_format
