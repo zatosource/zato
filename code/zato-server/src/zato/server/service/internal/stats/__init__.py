@@ -35,6 +35,7 @@ from zato.common.py23_ import maxint
 from zato.common import KVDB, SECONDS_IN_DAY, StatsElem, ZatoException
 from zato.common.broker_message import STATS
 from zato.common.odb.model import Service as ServiceModel
+from zato.common.util.stats import percentile, tmean
 from zato.server.service import Integer, Service, UTC
 from zato.server.service.internal import AdminService, AdminSIO
 
@@ -89,9 +90,9 @@ class BaseAggregatingService(Service):
 
         if times:
             mean_percentile = int(self.server.kvdb.conn.hget(KVDB.SERVICE_TIME_BASIC + service_name, 'mean_percentile') or 0)
-            max_score = int(sp_stats.scoreatpercentile(times, mean_percentile))
+            max_score = int(percentile(times, mean_percentile))
 
-            return min(times), max(times), (sp_stats.tmean(times, (None, max_score)) or 0), len(times)
+            return min(times), max(times), (tmean(times, max_score) or 0), len(times)
         else:
             return 0, 0, 0, 0
 
@@ -140,7 +141,7 @@ class BaseAggregatingService(Service):
         for service_name, values in service_stats.items():
             mean = values.get('mean')
             if mean:
-                values['mean'] = sp_stats.tmean(mean)
+                values['mean'] = tmean(mean)
 
             if needs_rate:
                 values['rate'] = values['usage'] / total_seconds
@@ -218,7 +219,7 @@ class ProcessRawTimes(BaseAggregatingService):
                 key, service_name, config.max_batch_size)
 
             self.server.kvdb.conn.hset(
-               KVDB.SERVICE_TIME_BASIC + service_name, 'mean_all_time', sp_stats.tmean((batch_mean, current_mean)))
+               KVDB.SERVICE_TIME_BASIC + service_name, 'mean_all_time', tmean(batch_mean, current_mean))
             self.server.kvdb.conn.hset(
                KVDB.SERVICE_TIME_BASIC + service_name, 'min_all_time', min(current_min, batch_min))
             self.server.kvdb.conn.hset(
@@ -434,7 +435,7 @@ class StatsReturningService(AdminService):
                     for attr in('mean', 'usage'):
                         stats_elem.expected_time_elems[suffix][attr] = key_values[attr]
 
-        mean_all_services = '{:.0f}'.format(sp_stats.tmean(mean_all_services_list)) if mean_all_services_list else 0
+        mean_all_services = '{:.0f}'.format(tmean(mean_all_services_list)) if mean_all_services_list else 0
 
         # 3rd pass (partly optional)
         for stats_elem in stats_elems.values():
@@ -448,7 +449,7 @@ class StatsReturningService(AdminService):
             stats_elem.mean_trend_int = [int(elem.mean) for elem in values]
             stats_elem.usage_trend_int = [int(elem.usage) for elem in values]
 
-            stats_elem.mean = float('{:.2f}'.format(sp_stats.tmean(stats_elem.mean_trend_int)))
+            stats_elem.mean = float('{:.2f}'.format(tmean(stats_elem.mean_trend_int)))
             stats_elem.usage = sum(stats_elem.usage_trend_int)
             stats_elem.rate = float('{:.2f}'.format(sum(stats_elem.usage_trend_int) / delta_seconds))
 
