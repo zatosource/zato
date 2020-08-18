@@ -844,7 +844,7 @@ class CACreateCommand(ZatoCommand):
                   -out {csr_name} \
                   -keyout {priv_key_name} \
                   -pubkey \
-                  -newkey rsa:4096 -config {config} \
+                  -newkey rsa:2048 -config {config} \
                   >/dev/null 2>&1""".format(**format_args)
         os.system(cmd)
 

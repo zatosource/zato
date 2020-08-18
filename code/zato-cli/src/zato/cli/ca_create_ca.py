@@ -42,7 +42,7 @@ organizationalUnitName         = supplied
 commonName                     = supplied
 
 [ req ]
-default_bits                   = 4096
+default_bits                   = 2048
 default_md                     = sha1
 string_mask                    = nombstr
 distinguished_name             = req_distinguished_name
@@ -125,7 +125,7 @@ class Create(ZatoCommand):
         f.write(openssl_template.format(**template_args))
         f.flush()
 
-        cmd = """openssl req -batch -new -x509 -newkey rsa:4096 -extensions v3_ca -keyout \
+        cmd = """openssl req -batch -new -x509 -newkey rsa:2048 -extensions v3_ca -keyout \
                    {target_dir}/ca-material/ca-key.pem -out {target_dir}/ca-material/ca-cert.pem -days 3650 \
                    -config {config} -passout file:{target_dir}/ca-material/ca-password >/dev/null 2>&1""".format(
                        config=f.name, target_dir=self.target_dir)
