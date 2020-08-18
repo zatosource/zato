@@ -69,7 +69,7 @@ class BaseLoadBalancerAgent(object):
 
         log_config = os.path.abspath(os.path.join(self.repo_dir, self.json_config['log_config']))
         with open(log_config) as f:
-            logging.config.dictConfig(yaml.load(f))
+            logging.config.dictConfig(yaml.load(f, yaml.FullLoader))
 
         self.config_path = os.path.join(self.repo_dir, config_file)
         self.config = self._read_config()
