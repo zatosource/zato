@@ -74,6 +74,7 @@ ln -fs $VIRTUAL_ENV/zato_extra_paths extlib
 # Apply patches.
 patch -p0 -d eggs < patches/butler/__init__.py.diff
 patch -p0 -d eggs < patches/configobj.py.diff
+patch -p0 -d eggs < patches/django/db/models/base.py.diff
 patch -p0 --binary -d eggs < patches/ntlm/HTTPNtlmAuthHandler.py.diff
 patch -p0 -d eggs < patches/pykafka/topic.py.diff
 patch -p0 -d eggs < patches/redis/redis/connection.py.diff
