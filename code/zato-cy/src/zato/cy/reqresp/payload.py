@@ -157,7 +157,7 @@ class SimpleIOPayload(object):
         # #####################################################################################################
 
         # First, clear out what was potentially set earlier
-        self.user_attrs_dict[:] = []
+        self.user_attrs_dict.clear()
         self.user_attrs_list[:] = []
 
         # Shortcut in case we know already this is a dict on input
