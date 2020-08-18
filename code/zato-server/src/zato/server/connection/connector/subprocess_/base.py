@@ -163,7 +163,7 @@ class BaseConnectionContainer(object):
         self.server_address = self.server_address.format(self.server_port, self.server_path)
 
         with open(config.logging_conf_path) as f:
-            logging_config = yaml.load(f)
+            logging_config = yaml.load(f, yaml.FullLoader)
 
         if not 'zato_{}'.format(self.conn_type) in logging_config['loggers']:
             logging_config = get_logging_config(self.conn_type, self.logging_file_name)
