@@ -15,11 +15,22 @@ import functools
 # ################################################################################################################################
 # ################################################################################################################################
 
-def tmean(data, limit_to=None):
+def tmean(data, limit_from=None, limit_to=None):
     """ Trimmed mean - includes only elements up to the input limit, if it is given at all.
     """
-    if limit_to:
-        data = [elem for elem in data if elem < limit_to]
+    data = data if isinstance(data, list) else [data]
+
+    if limit_from or limit_to:
+        _data = []
+        for elem in data:
+            if limit_from:
+                if elem < limit_from:
+                    continue
+            if limit_to:
+                if elem > limit_to:
+                    continue
+            _data.append(elem)
+        data = _data[:]
 
     count = len(data)
     total = sum(data)
