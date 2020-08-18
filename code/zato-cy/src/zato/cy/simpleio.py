@@ -1938,7 +1938,7 @@ class CySimpleIO(object):
         current_elems:dict = None
         current_elem_name:cy.unicode = None
         current_elem:Elem = None
-        input_data_dict:dict = None
+        input_data_dict = None
 
         for _input_data_dict in input_data:
 
