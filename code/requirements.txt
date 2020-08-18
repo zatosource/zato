@@ -84,7 +84,6 @@ portalocker==0.5.7
 posix-ipc==1.0.0
 prettytable==0.7.2
 psutil==2.2.1
-psycogreen==1.0
 py-cpuinfo==3.3.0
 pyasn1==0.4.5
 pycparser==2.10
