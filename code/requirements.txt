@@ -34,7 +34,7 @@ elasticsearch==7.0.0
 ephem==3.7.6.0
 faker==0.7.18
 flake8==2.1.0
-future==0.17.1
+future==0.18.2
 futures==2.1.6
 gevent==1.5.0
 greenify==0.3.2
