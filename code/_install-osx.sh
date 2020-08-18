@@ -11,8 +11,8 @@ PY_BINARY=$1
 echo "*** Zato Mac installation using $PY_BINARY ***"
 
 brew install \
-    bzip2 curl git gsasl haproxy libev libevent libffi libxml2 libxslt \
-    libyaml openldap openssl ossp-uuid postgresql python3 swig \
+    autoconf automake bzip2 curl git gsasl haproxy libev libevent libffi libtool libxml2 libxslt \
+    libyaml openldap openssl ossp-uuid pkg-config postgresql python3 swig \
     || true
 
 curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
