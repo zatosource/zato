@@ -24,9 +24,6 @@ from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import MINUTELY, rrule, rruleset
 
-# SciPy
-from scipy import stats as sp_stats
-
 # Python 2/3 compatibility
 from future.utils import iteritems
 from zato.common.py23_ import maxint
@@ -92,7 +89,7 @@ class BaseAggregatingService(Service):
             mean_percentile = int(self.server.kvdb.conn.hget(KVDB.SERVICE_TIME_BASIC + service_name, 'mean_percentile') or 0)
             max_score = int(percentile(times, mean_percentile))
 
-            return min(times), max(times), (tmean(times, max_score) or 0), len(times)
+            return min(times), max(times), (tmean(times, limit_to=max_score) or 0), len(times)
         else:
             return 0, 0, 0, 0
 
@@ -219,7 +216,7 @@ class ProcessRawTimes(BaseAggregatingService):
                 key, service_name, config.max_batch_size)
 
             self.server.kvdb.conn.hset(
-               KVDB.SERVICE_TIME_BASIC + service_name, 'mean_all_time', tmean(batch_mean, current_mean))
+               KVDB.SERVICE_TIME_BASIC + service_name, 'mean_all_time', tmean(batch_mean, limit_to=current_mean))
             self.server.kvdb.conn.hset(
                KVDB.SERVICE_TIME_BASIC + service_name, 'min_all_time', min(current_min, batch_min))
             self.server.kvdb.conn.hset(

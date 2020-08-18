@@ -36,7 +36,7 @@ stderr_sleep_bg = 1.2
 # ################################################################################################################################
 
 # This is for convenience of switching to a newer version of sarge in the future. Newer versions use async_ instead of async.
-async_keyword = 'async' if PY2 else 'async_'
+async_keyword = 'async_' if PY2 else 'async_'
 
 # ################################################################################################################################
 
