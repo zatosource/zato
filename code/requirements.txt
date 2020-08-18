@@ -43,7 +43,7 @@ greenlet==0.4.14
 hiredis==0.2.0
 httpagentparser==1.7.9
 httplib2==0.8
-https://bitbucket.org/dsuch/suds/get/fb304981931b.zip#egg=suds-ovnicraft
+https://github.com/ovnicraft/suds/archive/9140d27a2c10d6bb870f2c29e39029a400887b11.zip#egg=suds-ovnicraft
 https://github.com/dsuch/dpath-python/archive/66a2f5ab.zip#egg=dpath
 globre==0.1.5
 humanize==0.5.1
