@@ -36,7 +36,7 @@ faker==0.7.18
 flake8==2.1.0
 future==0.17.1
 futures==2.1.6
-gevent==1.4.0
+gevent==1.5.0
 greenify==0.3.2
 greenlet==0.4.14
 hiredis==0.2.0
