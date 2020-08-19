@@ -57,7 +57,6 @@ jsonpatch==1.23
 jsonpointer==2.0
 jsonschema==3.0.1
 keyring==3.7
-keyutils==0.5; sys_platform != 'darwin'
 kombu==4.2.1
 ldap3==2.5.2
 lxml==4.5.2
