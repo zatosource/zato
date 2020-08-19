@@ -50,7 +50,6 @@ from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, ge
      register_diag_handlers
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC
 from zato.common.util.time_ import TimeUtil
-from zato.common.zato_keyutils import KeyUtils
 from zato.distlock import LockManager
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigStore
@@ -172,7 +171,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.shmem_size = -1.0
         self.server_startup_ipc = ServerStartupIPC()
         self.connector_config_ipc = ConnectorConfigIPC()
-        self.keyutils = KeyUtils()
         self.sso_api = None # type: SSOAPI
         self.is_sso_enabled = False
         self.audit_pii = audit_pii
