@@ -19,7 +19,11 @@ import logging
 from gevent import sleep
 
 # Watchdog
+from watchdog.events import FileCreatedEvent, FileModifiedEvent
 from watchdog.utils.dirsnapshot import DirectorySnapshot, DirectorySnapshotDiff
+
+# Zato
+from zato.common.util import spawn_greenlet
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,26 +37,66 @@ class FSOBserver:
     """ A file-system observer used on systems other than Linux.
     This is needed for gevent interoperability.
     """
+    def __init__(self, timeout=0.25):
+        self.timeout = timeout
+        self.event_handler = None
+        self.path = '<initial-fs-observer>'
+        self.is_recursive = False
 
-    def watch(self):
-        # type: () -> None
+    def schedule(self, event_handler, path, recursive):
+        self.event_handler = event_handler
+        self.path = path
+        self.is_recursive = recursive
 
-        dir_path = '/tmp'
-        snapshot = DirectorySnapshot(dir_path, recursive=False)
+    def start(self):
+        spawn_greenlet(self._start)
+
+    def _start(self):
+
+        # Local aliases to avoid namespace lookups in self
+        timeout = self.timeout
+        handler_func = self.event_handler.on_created
+        path = self.path
+        is_recursive = self.is_recursive
+
+        # Take an initial snapshot
+        snapshot = DirectorySnapshot(path, recursive=is_recursive)
 
         while True:
-            new_snapshot = DirectorySnapshot(dir_path, recursive=False)
+
+            # The latest snapshot ..
+            new_snapshot = DirectorySnapshot(path, recursive=is_recursive)
+
+            # .. difference between the old and new will return, in particular, new or modified files ..
             diff = DirectorySnapshotDiff(snapshot, new_snapshot)
 
-            print(111, diff.files_created, diff.files_modified, diff.files_moved)
+            for path_created in diff.files_created:
+                handler_func(FileCreatedEvent(path_created))
 
-            snapshot = DirectorySnapshot(dir_path, recursive=False)
+            for path_modified in diff.files_modified:
+                handler_func(FileModifiedEvent(path_modified))
 
-            sleep(0.25)
+            # .. a new snapshot which will be treated as the old one in the next iteration ..
+            snapshot = DirectorySnapshot(path, recursive=is_recursive)
+
+            sleep(timeout)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    watcher = FSWatcher()
-    watcher.watch()
+
+    from zato.server.pickup.api import PickupEventHandler
+
+    manager = 111
+    stanza  = 222
+    config  = 333
+
+    event_handler = PickupEventHandler(manager, stanza, config)
+    path = '/tmp'
+    is_recursive = False
+
+    observer = FSOBserver()
+    observer.schedule(event_handler, path, is_recursive)
+
+    observer.start()
