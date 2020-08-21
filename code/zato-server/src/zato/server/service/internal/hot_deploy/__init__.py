@@ -260,7 +260,7 @@ class Create(AdminService):
                         self.server.kvdb.conn.expire(already_deployed_flag, self.server.deployment_lock_expires)
 
                     # .. all workers get here.
-                    services_deployed = self.deploy_package(self.request.input.package_id, session)
+                    services_deployed = self.deploy_package(self.request.input.package_id, session) or []
 
                     # Go through all services deployed, check if any needs post-processing
                     # and if does, call the relevant function and clear the flag.
