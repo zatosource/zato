@@ -24,7 +24,8 @@ from watchdog.events import FileSystemEventHandler
 from watchdog.utils import platform
 
 if platform.is_linux():
-    from watchdog.observers.polling import PollingObserver as Observer
+    # from watchdog.observers.polling import PollingObserver as Observer
+    from zato.server.pickup.observer import FSOBserver as Observer
 else:
     from zato.server.pickup.observer import FSOBserver as Observer
 
