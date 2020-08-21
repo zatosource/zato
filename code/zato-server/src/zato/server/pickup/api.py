@@ -20,6 +20,7 @@ from traceback import format_exc
 from bunch import Bunch
 
 # Watchdog
+from watchdog.events import FileSystemEventHandler
 from watchdog.utils import platform
 
 if platform.is_linux():
