@@ -36,9 +36,9 @@ faker==0.7.18
 flake8==2.1.0
 future==0.18.2
 futures==2.1.6
-gevent==1.5.0
+gevent==20.6.2
 greenify==0.3.2
-greenlet==0.4.14
+greenlet==0.4.16
 hiredis==0.2.0
 httpagentparser==1.7.9
 httplib2==0.8
@@ -81,7 +81,7 @@ pep8==1.5.7
 portalocker==0.5.7
 posix-ipc==1.0.0
 prettytable==0.7.2
-psutil==2.2.1
+psutil==5.7.2
 py-cpuinfo==3.3.0
 pyasn1==0.4.5
 pycparser==2.10
