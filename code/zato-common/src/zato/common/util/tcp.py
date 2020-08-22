@@ -55,7 +55,7 @@ def is_port_taken(port, is_linux=platform_system().lower()=='linux'):
             sock.bind(('', port))
             sock.close()
         except socket.error as e:
-            if e[0] == errno.EADDRINUSE:
+            if e.args[0] == errno.EADDRINUSE:
                 return True
             raise
 
