@@ -53,6 +53,7 @@ import errno
 import warnings
 import logging
 import re
+from platform import system as platform_system
 
 from zato.server.ext.zunicorn import _compat
 from zato.server.ext.zunicorn.errors import AppImportError
@@ -60,6 +61,12 @@ from zato.server.ext.zunicorn.six import text_type
 from zato.server.ext.zunicorn.workers import SUPPORTED_WORKERS
 
 REDIRECT_TO = getattr(os, 'devnull', '/dev/null')
+
+# Forking to child processes is used only on Linux
+is_linux = 'linux' in platform_system().lower()
+
+# Forking to child processes is used only on Linux
+is_forking = is_linux
 
 # Server and Date aren't technically hop-by-hop
 # headers, but they are in the purview of the

@@ -1531,7 +1531,7 @@ class CySimpleIO(object):
 
     @cy.cfunc
     @cy.returns(Elem)
-    def _convert_to_elem_instance(self, elem_name:cy.unicode, is_required:cy.bint) -> Elem:
+    def _convert_to_elem_instance(self, elem_name, is_required:cy.bint) -> Elem:
 
         # The element we return, at this point we do not know what its exact subtype will be
         _elem:Elem
@@ -1539,7 +1539,6 @@ class CySimpleIO(object):
         exact:set
         prefixes:set
         suffixes:set
-        config_elem:cy.unicode
         keep_running:cy.bint = True
 
         config_item:ConfigItem
@@ -1939,7 +1938,7 @@ class CySimpleIO(object):
         current_elems:dict = None
         current_elem_name:cy.unicode = None
         current_elem:Elem = None
-        input_data_dict:dict = None
+        input_data_dict = None
 
         for _input_data_dict in input_data:
 

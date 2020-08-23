@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2020, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -21,7 +21,13 @@ from bunch import Bunch
 
 # Watchdog
 from watchdog.events import FileSystemEventHandler
-from watchdog.observers.polling import PollingObserver
+from watchdog.utils import platform
+
+if platform.is_linux():
+    # from watchdog.observers.polling import PollingObserver as Observer
+    from zato.server.pickup.observer import FSOBserver as Observer
+else:
+    from zato.server.pickup.observer import FSOBserver as Observer
 
 # Zato
 from zato.common.util import hot_deploy, spawn_greenlet
@@ -129,7 +135,7 @@ class PickupManager(object):
             cb_config.update(section_config)
             cb_config.stanza = stanza
 
-            observer = PollingObserver(0.25)
+            observer = Observer(0.25)
             event_handler = PickupEventHandler(self, stanza, section_config)
             observer.schedule(event_handler, section_config.pickup_from, recursive=False)
 

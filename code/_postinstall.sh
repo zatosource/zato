@@ -33,9 +33,6 @@ git log -n 1 --pretty=format:"%H" > ./release-info/revision.txt
 
 $PY_BINARY -m pip install -U setuptools pip
 
-# SciPy builds require NumPy available in setup.py, so install it separately.
-$PY_BINARY -m pip install numpy==1.14.0
-# pip install pipdeptree
 $PY_BINARY -m pip install -r requirements.txt
 $PY_BINARY -m pip install -r _req_py$EXTRA_REQ_VERSION.txt
 
@@ -77,8 +74,8 @@ ln -fs $VIRTUAL_ENV/zato_extra_paths extlib
 # Apply patches.
 patch -p0 -d eggs < patches/butler/__init__.py.diff
 patch -p0 -d eggs < patches/configobj.py.diff
+patch -p0 -d eggs < patches/django/db/models/base.py.diff
 patch -p0 --binary -d eggs < patches/ntlm/HTTPNtlmAuthHandler.py.diff
-patch -p0 -d eggs < patches/psycopg2/__init__.py.diff --forward || true
 patch -p0 -d eggs < patches/pykafka/topic.py.diff
 patch -p0 -d eggs < patches/redis/redis/connection.py.diff
 patch -p0 -d eggs < patches/requests/models.py.diff
