@@ -1044,12 +1044,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         """
         logger.warn('PROCESS FORKED %s', os.getpid())
 
+        '''
         self = worker.app.zato_wsgi_app # type: ParallelServer
 
         self.start_loop(1)
         self.start_loop(2)
-
         '''
+
         # Each subprocess needs to have the random number generator re-seeded.
         random_seed()
 
@@ -1060,7 +1061,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         worker.app.zato_wsgi_app.worker_pid = worker.pid
         ParallelServer.start_server(worker.app.zato_wsgi_app, arbiter.zato_deployment_key)
-        '''
 
 # ################################################################################################################################
 
