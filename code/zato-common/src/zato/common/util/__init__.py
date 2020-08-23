@@ -18,6 +18,7 @@ import json
 import linecache
 import logging
 import os
+import random
 import re
 import signal
 import string
@@ -72,9 +73,6 @@ from gevent.hub import Hub
 # lxml
 from lxml import etree, objectify
 
-# numpy
-from numpy.random import bytes as random_bytes, seed as numpy_seed
-
 # OpenSSL
 from OpenSSL import crypto
 
@@ -124,6 +122,10 @@ from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_pin
 
 # ################################################################################################################################
 
+random.seed()
+
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 logging.addLevelName(TRACE1, "TRACE1")
 
@@ -145,11 +147,6 @@ get_free_port = get_free_port
 is_port_taken = is_port_taken
 wait_until_port_free = wait_until_port_free
 wait_until_port_taken = wait_until_port_taken
-
-# ################################################################################################################################
-
-# This reseeds the current process only and each parallel server does it for each subprocess too.
-numpy_seed()
 
 # ################################################################################################################################
 
@@ -388,14 +385,14 @@ def tech_account_password(password_clear, salt):
 
 # ################################################################################################################################
 
-def new_cid(bytes=12, _random_bytes=random_bytes, _hexlify=binascii_hexlify):
+def new_cid(bits=96, _random=random.getrandbits):
     """ Returns a new 96-bit correlation identifier. It's *not* safe to use the ID
     for any cryptographical purposes, it's only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.
     Changed in 2.0: The number is now 28 characters long not 40, like in previous versions.
     Changed in 3.0: The number is now 96 bits rather than 128, 24 characters, with no constant prefix.
     """
-    return _hexlify(_random_bytes(bytes)).decode('utf8')
+    return hex(_random(bits))[2:-1]
 
 # ################################################################################################################################
 

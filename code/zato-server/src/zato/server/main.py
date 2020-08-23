@@ -37,12 +37,6 @@ if not settings.configured:
 # ConfigObj
 from configobj import ConfigObj
 
-# psycopg2
-import psycopg2
-
-# psycogreen
-from psycogreen.gevent import patch_psycopg as make_psycopg_green
-
 # Repoze
 from repoze.profile import ProfileMiddleware
 
@@ -146,12 +140,6 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     except ImportError:
         pass
 
-    # We're doing it here even if someone doesn't use PostgreSQL at all
-    # so we're not suprised when someone suddenly starts using PG.
-    # TODO: Make sure it's registered for each of the subprocess
-    psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
-    psycopg2.extensions.register_type(psycopg2.extensions.UNICODEARRAY)
-
     # We know we don't need warnings because users may explicitly configure no certificate validation.
     # We don't want for urllib3 to warn us about it.
     import requests as _r
@@ -164,7 +152,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     logging_conf_path = os.path.join(repo_location, 'logging.conf')
 
     with open(logging_conf_path) as f:
-        logging_config = yaml.load(f)
+        logging_config = yaml.load(f, yaml.FullLoader)
         dictConfig(logging_config)
 
     logger = logging.getLogger(__name__)
@@ -247,10 +235,6 @@ def run(base_dir, start_gunicorn_app=True, options=None):
         value = 12345
         logger.info('Locale is `%s`, amount of %s -> `%s`', user_locale, value, locale.currency(
             value, grouping=True).decode('utf-8'))
-
-    # Makes queries against Postgres asynchronous
-    if asbool(server_config.odb.use_async_driver) and server_config.odb.engine == 'postgresql':
-        make_psycopg_green()
 
     if server_config.misc.http_proxy:
         os.environ['http_proxy'] = server_config.misc.http_proxy

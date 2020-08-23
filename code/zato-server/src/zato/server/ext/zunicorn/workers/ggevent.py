@@ -60,6 +60,7 @@ from zato.server.ext.zunicorn import SERVER_SOFTWARE
 from zato.server.ext.zunicorn.http.wsgi import base_environ
 from zato.server.ext.zunicorn.workers.base_async import AsyncWorker
 from zato.server.ext.zunicorn.http.wsgi import sendfile as o_sendfile
+from zato.server.ext.zunicorn.util import is_forking
 
 def _gevent_sendfile(fdout, fdin, offset, nbytes):
     while True:
@@ -110,7 +111,8 @@ class GeventWorker(AsyncWorker):
     def notify(self):
         super(GeventWorker, self).notify()
         if self.ppid != os.getppid():
-            self.log.info("Parent changed, shutting down: %s", self)
+            if is_forking:
+                self.log.info("Parent changed, shutting down: %s", self)
             sys.exit(0)
 
     def timeout_ctx(self):
