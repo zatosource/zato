@@ -1026,30 +1026,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _start_loop(self, value):
-        while True:
-            logger.warn('LOOP %s %s', value, os.getpid())
-            gevent.sleep(1)
-
-# ################################################################################################################################
-
-    def start_loop(self, value):
-        gevent.spawn(self._start_loop, value)
-
-# ################################################################################################################################
-
     @staticmethod
     def post_fork(arbiter, worker):
         """ A Gunicorn hook which initializes the worker.
         """
-        logger.warn('PROCESS FORKED %s', os.getpid())
-
-        '''
-        self = worker.app.zato_wsgi_app # type: ParallelServer
-
-        self.start_loop(1)
-        self.start_loop(2)
-        '''
 
         # Each subprocess needs to have the random number generator re-seeded.
         random_seed()
