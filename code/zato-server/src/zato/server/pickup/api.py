@@ -219,24 +219,7 @@ class PickupManager(object):
 
     def run(self):
 
-        self.start_loop(11)
-        self.start_loop(22)
-
-        '''
         for observer in self.observers:
             observer.start()
-        '''
-
-# ################################################################################################################################
-
-    def _start_loop(self, value):
-        while True:
-            logger.warn('LOOP %s %s', value, os.getpid())
-            gevent.sleep(1)
-
-# ################################################################################################################################
-
-    def start_loop(self, value):
-        gevent.spawn(self._start_loop, value)
 
 # ################################################################################################################################
