@@ -128,8 +128,8 @@ then
 elif [ "$(uname -s)" = "Darwin" ]
 then
     source ./clean.sh
-    source ./_install-osx.sh $PY_BINARY
+    source ./_install-mac.sh $PY_BINARY
 else
-    echo "install.sh: Unsupported OS: could not detect OS X, apt-get, yum, or apk." >&2
+    echo "install.sh: Unsupported OS: could not detect Mac, apt-get, yum, or apk." >&2
     exit 1
 fi
