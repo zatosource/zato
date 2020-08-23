@@ -44,18 +44,15 @@ import signal
 import sys
 import time
 import traceback
-from platform import system as platform_system
 
 # Zato
 from zato.common import get_version
 from zato.server.ext.zunicorn import SERVER_SOFTWARE, sock, systemd, util
 from zato.server.ext.zunicorn.errors import HaltServer, AppImportError
 from zato.server.ext.zunicorn.pidfile import Pidfile
+from zato.server.ext.zunicorn.util import is_forking
 
 version = get_version()
-
-# Forking to child processes is used only on Linux
-is_forking = 'linux' in platform_system().lower()
 
 class Arbiter(object):
     """
