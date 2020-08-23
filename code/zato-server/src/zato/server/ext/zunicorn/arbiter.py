@@ -44,6 +44,7 @@ import signal
 import sys
 import time
 import traceback
+from platform import system as platform_system
 
 # Zato
 from zato.common import get_version
@@ -52,6 +53,9 @@ from zato.server.ext.zunicorn.errors import HaltServer, AppImportError
 from zato.server.ext.zunicorn.pidfile import Pidfile
 
 version = get_version()
+
+# Forking to child processes is used only on Linux
+is_forking = 'linux' in platform_system().lower()
 
 class Arbiter(object):
     """
@@ -594,27 +598,27 @@ class Arbiter(object):
 
     def spawn_worker(self):
         self.worker_age += 1
-        worker = self.worker_class(self.worker_age, self.pid, self.LISTENERS,
-                                   self.app, self.timeout / 2.0,
-                                   self.cfg, self.log)
+        worker = self.worker_class(self.worker_age, self.pid, self.LISTENERS, self.app, self.timeout / 2.0, self.cfg, self.log)
         self.cfg.pre_fork(self, worker)
 
-        self.WORKERS[worker.pid] = worker
+        # We can actually fork on this system ..
+        if is_forking:
+            pid = os.fork()
+            if pid != 0:
+                worker.pid = pid
+                self.WORKERS[pid] = worker
+                return pid
 
-        '''
-        pid = os.fork()
-        if pid != 0:
-            worker.pid = pid
-            self.WORKERS[pid] = worker
-            return pid
+            # Do not inherit the temporary files of other workers
+            for sibling in self.WORKERS.values():
+                sibling.tmp.close()
 
-        # Do not inherit the temporary files of other workers
-        for sibling in self.WORKERS.values():
-            sibling.tmp.close()
+            # Process Child
+            worker.pid = os.getpid()
 
-        # Process Child
-        worker.pid = os.getpid()
-        '''
+        # .. no forking on this system
+        else:
+            self.WORKERS[worker.pid] = worker
 
         try:
             util._setproctitle("worker [%s]" % self.proc_name)
@@ -636,15 +640,16 @@ class Arbiter(object):
                 sys.exit(self.WORKER_BOOT_ERROR)
             sys.exit(-1)
         finally:
-            '''
-            self.log.info("Worker exiting (pid: %s)", worker.pid)
-            try:
-                worker.tmp.close()
-                self.cfg.worker_exit(self, worker)
-            except:
-                self.log.warning("Exception during worker exit:\n%s", traceback.format_exc())
-            '''
-            pass
+
+            # We go here only if we are forking because otherwise
+            # we would run this piece of code immediately during startup.
+            if is_forking:
+                self.log.info("Worker exiting (pid: %s)", worker.pid)
+                try:
+                    worker.tmp.close()
+                    self.cfg.worker_exit(self, worker)
+                except:
+                    self.log.warning("Exception during worker exit:\n%s", traceback.format_exc())
 
     def spawn_workers(self):
         """\
