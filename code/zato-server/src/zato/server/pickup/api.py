@@ -19,9 +19,6 @@ from traceback import format_exc
 # Bunch
 from bunch import Bunch
 
-# gevent
-import gevent
-
 # Watchdog
 from watchdog.events import FileSystemEventHandler
 from watchdog.utils import platform
