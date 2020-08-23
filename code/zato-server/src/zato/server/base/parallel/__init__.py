@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 from json import loads
 from logging import INFO, WARN
 from platform import system as platform_system
+from random import seed as random_seed
 from re import IGNORECASE
 from tempfile import mkstemp
 from traceback import format_exc
@@ -28,9 +29,6 @@ import gevent.monkey # Needed for Cassandra
 
 # globre
 import globre
-
-# numpy
-from numpy.random import seed as numpy_seed
 
 # Paste
 from paste.util.converters import asbool
@@ -52,7 +50,6 @@ from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, ge
      register_diag_handlers
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC
 from zato.common.util.time_ import TimeUtil
-from zato.common.zato_keyutils import KeyUtils
 from zato.distlock import LockManager
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigStore
@@ -62,7 +59,7 @@ from zato.server.base.parallel.http import HTTPHandler
 from zato.server.base.parallel.subprocess_.ftp import FTPIPC
 from zato.server.base.parallel.subprocess_.ibm_mq import IBMMQIPC
 from zato.server.base.parallel.subprocess_.outconn_sftp import SFTPIPC
-from zato.server.pickup import PickupManager
+from zato.server.pickup.api import PickupManager
 from zato.server.sso import SSOTool
 
 # ################################################################################################################################
@@ -174,7 +171,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.shmem_size = -1.0
         self.server_startup_ipc = ServerStartupIPC()
         self.connector_config_ipc = ConnectorConfigIPC()
-        self.keyutils = KeyUtils()
         self.sso_api = None # type: SSOAPI
         self.is_sso_enabled = False
         self.audit_pii = audit_pii
@@ -1034,8 +1030,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def post_fork(arbiter, worker):
         """ A Gunicorn hook which initializes the worker.
         """
+
         # Each subprocess needs to have the random number generator re-seeded.
-        numpy_seed()
+        random_seed()
 
         worker.app.zato_wsgi_app.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.BEFORE_POST_FORK, kwargs={
             'arbiter': arbiter,

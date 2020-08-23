@@ -59,8 +59,8 @@ class SimpleIOPayload(object):
     all_output_elem_names = cy.declare(list, visibility='public') # type: list
     output_repeated = cy.declare(cy.bint, visibility='public')    # type: bool
 
-    cid         = cy.declare(str, visibility='public') # type: past_unicode
-    data_format = cy.declare(str, visibility='public') # type: past_unicode
+    cid         = cy.declare(cy.object, visibility='public') # type: past_unicode
+    data_format = cy.declare(cy.object, visibility='public') # type: past_unicode
 
     # One of the two will be used to produce a response
     user_attrs_dict = cy.declare(dict, visibility='public') # type: dict
@@ -71,7 +71,7 @@ class SimpleIOPayload(object):
 
 # ################################################################################################################################
 
-    def __cinit__(self, sio:CySimpleIO, all_output_elem_names:list, cid:str, data_format:str):
+    def __cinit__(self, sio:CySimpleIO, all_output_elem_names:list, cid, data_format):
         self.sio = sio
         self.all_output_elem_names = all_output_elem_names
         self.output_repeated = self.sio.definition.output_repeated
@@ -94,7 +94,7 @@ class SimpleIOPayload(object):
         # Use a different function depending on whether the object is dict-like or not.
         # Note that we need .get to be able to provide a default value.
         has_get = hasattr(item, 'get') # type: bool
-        name:str = None
+        name = None
 
         for name in self.all_output_elem_names: # type: str
             if is_dict:
@@ -118,7 +118,7 @@ class SimpleIOPayload(object):
         extracted:dict = {}
         is_dict:bint = isinstance(item, dict)
 
-        name:str = None
+        name = None
 
         for name in self.all_output_elem_names:
             value = item.get(name, _not_given)
@@ -158,7 +158,7 @@ class SimpleIOPayload(object):
 
         # First, clear out what was potentially set earlier
         self.user_attrs_dict.clear()
-        self.user_attrs_list.clear()
+        self.user_attrs_list[:] = []
 
         # Shortcut in case we know already this is a dict on input
         if is_dict:
