@@ -598,6 +598,10 @@ class Arbiter(object):
                                    self.app, self.timeout / 2.0,
                                    self.cfg, self.log)
         self.cfg.pre_fork(self, worker)
+
+        self.WORKERS[worker.pid] = worker
+
+        '''
         pid = os.fork()
         if pid != 0:
             worker.pid = pid
@@ -610,6 +614,8 @@ class Arbiter(object):
 
         # Process Child
         worker.pid = os.getpid()
+        '''
+
         try:
             util._setproctitle("worker [%s]" % self.proc_name)
             self.log.info("Booting worker with pid: %s", worker.pid)
@@ -630,13 +636,15 @@ class Arbiter(object):
                 sys.exit(self.WORKER_BOOT_ERROR)
             sys.exit(-1)
         finally:
+            '''
             self.log.info("Worker exiting (pid: %s)", worker.pid)
             try:
                 worker.tmp.close()
                 self.cfg.worker_exit(self, worker)
             except:
-                self.log.warning("Exception during worker exit:\n%s",
-                                  traceback.format_exc())
+                self.log.warning("Exception during worker exit:\n%s", traceback.format_exc())
+            '''
+            pass
 
     def spawn_workers(self):
         """\
