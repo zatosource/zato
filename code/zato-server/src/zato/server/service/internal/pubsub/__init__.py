@@ -76,7 +76,7 @@ class CommonSubData:
     common = ('is_internal', 'topic_name', 'active_status', 'endpoint_type', 'endpoint_id', 'endpoint_name', 'delivery_method',
         'delivery_data_format', 'delivery_batch_size', Bool('wrap_one_msg_in_list'), 'delivery_max_retry',
         Bool('delivery_err_should_block'), 'wait_sock_err', 'wait_non_sock_err', 'server_id', 'out_http_method',
-        'out_http_method', 'creation_time', DateTime('last_interaction_time'), 'last_interaction_type',
+        'out_http_method', DateTime('creation_time'), DateTime('last_interaction_time'), 'last_interaction_type',
         'last_interaction_details', Int('total_depth'), Int('current_depth_gd'),
         Int('current_depth_non_gd'), 'sub_key', 'has_gd', 'is_staging_enabled', 'sub_id', 'name', AsIs('ws_ext_client_id'),
         AsIs('ext_client_id'), 'topic_id')
