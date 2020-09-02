@@ -285,8 +285,6 @@ def delete(req, id, cluster_id):
 def ping(req, id, cluster_id):
     response = id_only_service(req, 'zato.http-soap.ping', id, 'Could not ping the connection, e:`{}`')
 
-    print(111, response.data)
-
     if isinstance(response, HttpResponseServerError):
         return response
     else:
