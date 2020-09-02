@@ -366,10 +366,6 @@ class Index(_BaseView):
 
         for msg_item in item_list:
 
-            print()
-            print(111, msg_item)
-            print()
-
             item = self.output_class()
             for name in names:
                 value = getattr(msg_item, name, None)
