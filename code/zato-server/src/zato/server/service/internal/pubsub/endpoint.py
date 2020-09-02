@@ -596,8 +596,9 @@ class GetEndpointSummaryList(_GetEndpointSummaryBase):
         response_elem = 'zato_pubsub_endpoint_get_endpoint_summary_list_response'
 
     def get_data(self, session):
+
         result = self._search(pubsub_endpoint_summary_list, session, self.request.input.cluster_id,
-            self.request.input.topic_id, False)
+            self.request.input.get('topic_id') or None, False)
 
         for item in result:
 
