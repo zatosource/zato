@@ -513,7 +513,11 @@ class Date(Elem):
     @staticmethod
     def to_json_static(value, stdlib_type, *args, **kwargs):
 
-        if not isinstance(value, (stdlib_date, stdlib_datetime)):
+        # Convert a timestamp in milliseconds to a datetime object
+        if isinstance(value, float):
+            value = stdlib_datetime.fromtimestamp(value)
+
+        elif not isinstance(value, (stdlib_date, stdlib_datetime)):
             value = dt_parse(value)
 
         if stdlib_type is stdlib_date:
@@ -1968,11 +1972,12 @@ class CySimpleIO(object):
                                 current_elem_name, input_data_dict, self.service_class))
                     else:
                         try:
+                            parse_func = None
                             parse_func = current_elem.parse_to[data_format]
                             value = parse_func(value)
                         except Exception as e:
-                            raise SerialisationError('Exception `{!r}` while serialising `{}` ({}) ({})'.format(
-                                e, value, self.service_class, input_data_dict))
+                            raise SerialisationError('Exception `{!r}` while serialising `{}` ({}) ({}) (func:{})'.format(
+                                e, value, self.service_class, input_data_dict, parse_func))
 
                         if cy.cast(cy.int, current_elem._type) == cy.cast(cy.int, sio_text_type):
                             if isinstance(value, bytes):
