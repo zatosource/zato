@@ -596,6 +596,11 @@ class WebSocket(_WebSocket):
             'Peer %s (%s) %s, closing its connection to %s (%s), cid:`%s` (%s)', self._peer_address, self._peer_fqdn, action,
             self._local_address, self.config.name, cid, self.peer_conn_info_pretty)
 
+        # If the client is already known to have disconnected there is no point in sending a Forbidden message.
+        if self.is_client_disconnected():
+            self.update_terminated_status()
+            return
+
         try:
             self.send(Forbidden(cid, data).serialize(self._json_dump_func))
         except AttributeError as e:
@@ -605,9 +610,19 @@ class WebSocket(_WebSocket):
             # with a specific message. Otherwise, we reraise the exception.
             if not e.args[0] == "'NoneType' object has no attribute 'text_message'":
                 raise
+        else:
+            self.update_terminated_status()
 
+# ################################################################################################################################
+
+    def update_terminated_status(self):
         self.server_terminated = True
         self.client_terminated = True
+
+# ################################################################################################################################
+
+    def is_client_disconnected(self):
+        return self.terminated or self.sock is None
 
 # ################################################################################################################################
 
