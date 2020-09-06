@@ -255,6 +255,9 @@ class EndpointQueues(_EndpointObjects):
 
     def on_before_append_item(self, item):
 
+        item.current_depth_gd = item.current_depth_gd or 0
+        item.current_depth_non_gd = item.current_depth_non_gd or 0
+
         item.name_slug = slugify(item.name)
 
         item.creation_time_utc = item.creation_time
