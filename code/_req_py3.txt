@@ -1,6 +1,5 @@
 https://github.com/dsuch/bunch/archive/master.zip#egg=bunch
 fs==2.2.1
-librabbitmq==2.0.0
 odoo-client-lib==1.2.0
 https://github.com/dsuch/paodate/archive/master.zip#egg=paodate
 Paste==3.0.6
