@@ -151,7 +151,7 @@ class Create(AdminService):
 
     def _deploy_file(self, current_work_dir, payload, file_name):
 
-        f = open(file_name, 'w')
+        f = open(file_name, 'w', encoding='utf-8')
         f.write(payload.decode('utf8') if isinstance(payload, bytes) else payload)
         f.close()
 
