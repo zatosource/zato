@@ -20,6 +20,7 @@ from traceback import format_exc
 from anyjson import dumps
 
 # Python 2/3 compatibility
+from future.utils import PY3
 from builtins import bytes
 
 # Zato
@@ -151,7 +152,11 @@ class Create(AdminService):
 
     def _deploy_file(self, current_work_dir, payload, file_name):
 
-        f = open(file_name, 'w', encoding='utf-8')
+        if PY3:
+            f = open(file_name, 'w', encoding='utf-8')
+        else:
+            f = open(file_name, 'w')
+
         f.write(payload.decode('utf8') if isinstance(payload, bytes) else payload)
         f.close()
 
