@@ -46,18 +46,21 @@ class PickupEventHandler(FileSystemEventHandler):
         self.config = config
 
     def on_created(self, wd_event):
+        self.handle_event(wd_event.src_path);
+
+    def handle_event(self, src_path):
         # type: (FileSystemEvent) -> None
 
         try:
 
-            file_name = os.path.basename(wd_event.src_path) # type: str
+            file_name = os.path.basename(src_path) # type: str
 
             if not self.manager.should_pick_up(file_name, self.config.patterns):
                 return
 
             pe = PickupEvent()
-            pe.full_path = wd_event.src_path
-            pe.base_dir = os.path.dirname(wd_event.src_path)
+            pe.full_path = src_path
+            pe.base_dir = os.path.dirname(src_path)
             pe.file_name = file_name
             pe.stanza = self.stanza
 
@@ -87,6 +90,10 @@ class PickupEventHandler(FileSystemEventHandler):
             logger.warn('Exception in pickup event handler `%s`', format_exc())
 
     on_modified = on_created
+
+    def on_moved(self, wd_event):
+        self.handle_event(wd_event.dest_path);
+
 
 # ################################################################################################################################
 
