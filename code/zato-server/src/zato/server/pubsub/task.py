@@ -97,7 +97,7 @@ class DeliveryTask(object):
         self.wait_non_sock_err = float(self.sub_config.wait_non_sock_err)
         self.last_iter_run = utcnow_as_ms()
         self.delivery_interval = self.sub_config.task_delivery_interval / 1000.0
-        self.delivery_max_retry = int(self.sub_config.delivery_max_retry)
+        self.delivery_max_retry = self.sub_config.delivery_max_retry
         self.previous_delivery_method = self.sub_config.delivery_method
         self.python_id = str(hex(id(self)))
         self.py_object = '<empty>'

@@ -137,7 +137,7 @@ def get_expiration(cid, input, default_expiration=_default_expiration):
     Returns (2 ** 31 - 1) * 1000 milliseconds (around 68 years) if expiration is not set explicitly.
     """
     expiration = input.get('expiration')
-    if expiration and expiration < 0:
+    if expiration is not None and expiration < 0:
         raise BadRequest(cid, 'Expiration `{}` must not be negative'.format(expiration))
 
     return expiration or default_expiration
