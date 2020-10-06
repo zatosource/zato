@@ -12,9 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging, time
 from traceback import format_exc
 
-# anyjson
-from anyjson import dumps, loads
-
 # Bunch
 from bunch import Bunch
 
@@ -30,6 +27,7 @@ from builtins import bytes
 # Zato
 from zato.common import BROKER, ZATO_NONE
 from zato.common.broker_message import KEYS, MESSAGE_TYPE, TOPICS
+from zato.common.json_ import dumps, loads
 from zato.common.kvdb import LuaContainer
 from zato.common.util import new_cid, spawn_greenlet
 

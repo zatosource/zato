@@ -9,11 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 
-# anyjson
-from anyjson import dumps
-
 # Zato
 from zato.common import KVDB, TRACE1
+from zato.common.json_ import dumps
 
 logger = logging.getLogger(__name__)
 

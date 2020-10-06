@@ -11,11 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import os
 
-# anyjson
-import anyjson
-
 # Zato
 from zato.cli import ManageCommand, ZatoCommand
+from zato.common.json_ import dumps
 from zato.common.crypto import CryptoManager, SchedulerCryptoManager, ServerCryptoManager, WebAdminCryptoManager
 
 # ################################################################################################################################
@@ -120,7 +118,7 @@ class GetHashRounds(ZatoCommand):
         info = CryptoManager.get_hash_rounds(goal, header_func, progress_func, footer_func)
 
         if args.json:
-            self.logger.info(anyjson.dumps(info))
+            self.logger.info(dumps(info))
         elif args.rounds_only:
             self.logger.info(info['rounds'])
 
