@@ -46,5 +46,5 @@ def remote_command_execute(req):
             return HttpResponse(dumps({'message': dumps(response.data.result)}), content_type='application/javascript')
         else:
             raise ZatoException(msg=response.details)
-    except Exception:
-        return HttpResponseServerError(format_exc())
+    except Exception as e:
+        return HttpResponseServerError(e.args[0])
