@@ -50,9 +50,6 @@ from threading import current_thread
 from time import sleep
 from traceback import format_exc
 
-# alembic
-from alembic import op
-
 # anyjson
 from anyjson import dumps, loads
 
@@ -1134,13 +1131,6 @@ def get_kvdb_config_for_log(config):
 
 def has_redis_sentinels(config):
     return asbool(config.get('use_redis_sentinels', False))
-
-# ################################################################################################################################
-
-def alter_column_nullable_false(table_name, column_name, default_value, column_type):
-    column = sa.sql.table(table_name, sa.sql.column(column_name))
-    op.execute(column.update().values({column_name:default_value}))
-    op.alter_column(table_name, column_name, type_=column_type, existing_type=column_type, nullable=False)
 
 # ################################################################################################################################
 
