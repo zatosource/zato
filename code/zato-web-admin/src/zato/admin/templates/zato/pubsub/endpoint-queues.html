@@ -109,7 +109,7 @@
 {% block "content" %}
 <h2 class="zato">
     Subscription queues for endpoint :
-    <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;highlight={{ endpoint.id }}">{{ endpoint.name }}</a>
+    <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;query={{ endpoint.name }}">{{ endpoint.name }}</a>
     : Type :
     {{ endpoint.endpoint_type }}
 </h2>
