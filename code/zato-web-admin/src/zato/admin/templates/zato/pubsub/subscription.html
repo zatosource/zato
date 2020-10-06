@@ -81,7 +81,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Pub/sub subscriptions{% if topic_id %} for topic <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ topic_id }}">{{ topic_name }}{% endif %}</a></h2>
+<h2 class="zato">Pub/sub subscriptions{% if topic_id %} for topic <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;query={{ topic_name }}">{{ topic_name }}{% endif %}</a></h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
