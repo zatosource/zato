@@ -15,14 +15,12 @@ from traceback import format_exc
 from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 
-# anyjson
-from anyjson import dumps
-
 # Zato
 from zato.admin.web.forms import SearchForm
 from zato.admin.web.forms.kvdb import RemoteCommandForm
 from zato.admin.web.views import method_allowed
 from zato.common import ZatoException
+from zato.common.json_ import dumps, loads
 
 @method_allowed('GET')
 def remote_command(req):

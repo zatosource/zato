@@ -19,9 +19,6 @@ import sys
 from datetime import datetime
 from time import sleep
 
-# anyjson
-import anyjson
-
 # Bunch
 from zato.bunch import Bunch, bunchify, debunchify
 
@@ -42,6 +39,7 @@ from past.builtins import basestring
 from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
 from zato.common import SECRETS
+from zato.common.json_ import dumps, loads
 from zato.common.util import get_client_from_server_conf
 from zato.common.util.tcp import wait_for_zato_ping
 
@@ -1180,7 +1178,7 @@ class JsonCodec(object):
 # ################################################################################################################################
 
     def load(self, fp, results):
-        return anyjson.loads(fp.read())
+        return loads(fp.read())
 
 # ################################################################################################################################
 

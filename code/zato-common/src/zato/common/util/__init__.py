@@ -50,9 +50,6 @@ from threading import current_thread
 from time import sleep
 from traceback import format_exc
 
-# anyjson
-from anyjson import dumps, loads
-
 # Bunch
 from bunch import Bunch, bunchify
 
@@ -114,6 +111,7 @@ from zato.common import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_de
      ZATO_NOT_GIVEN, ZMQ
 from zato.common.broker_message import SERVICE
 from zato.common.crypto import CryptoManager
+from zato.common.json_ import dumps, loads
 from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
 from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_ping, wait_until_port_free, wait_until_port_taken
 
