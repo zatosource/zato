@@ -5,7 +5,7 @@ set -o pipefail
 shopt -s compat31
 
 # Default python binary
-PY_BINARY="python"
+PY_BINARY="python3"
 
 # Taken from https://stackoverflow.com/a/14203146
 OPTIND=1
