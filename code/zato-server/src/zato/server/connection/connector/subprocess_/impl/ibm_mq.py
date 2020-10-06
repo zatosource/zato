@@ -364,9 +364,9 @@ class IBMMQConnectionContainer(BaseConnectionContainer):
             channel.queue_name = msg.queue.encode('utf8')
             channel.service_name = msg.service_name
             channel.data_format = msg.data_format
-            channel.keep_running = True
-            channel.start()
-
+            if msg.is_active:
+                channel.keep_running = True
+                channel.start()
             return Response()
 
 # ################################################################################################################################

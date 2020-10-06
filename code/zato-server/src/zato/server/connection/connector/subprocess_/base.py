@@ -398,6 +398,7 @@ class BaseConnectionContainer(object):
 
             del self.channels[channel.id]
             del self.channel_id_to_def_id[channel.id]
+            return Response()
 
 # ################################################################################################################################
 
@@ -407,7 +408,8 @@ class BaseConnectionContainer(object):
         with self.lock:
             conn = self.connections[msg.def_id]
             channel = self._create_channel_impl(conn, msg)
-            channel.start()
+            if msg.is_active:
+                channel.start()
             self.channels[channel.id] = channel
             self.channel_id_to_def_id[channel.id] = msg.def_id
             return Response()
