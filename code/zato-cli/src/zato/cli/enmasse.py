@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import collections
 import copy
-import json
 import logging
 import os
 import re
@@ -1183,7 +1182,7 @@ class JsonCodec(object):
 # ################################################################################################################################
 
     def dump(self, fp, obj):
-        fp.write(json.dumps(obj, indent=1, sort_keys=True))
+        fp.write(dumps(obj, indent=1, sort_keys=True))
 
 class YamlCodec(object):
     extension = '.yml'
