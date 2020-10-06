@@ -123,6 +123,7 @@ class Create(AdminService):
         output_required = (AsIs('id'), 'name')
         request_elem = 'zato_pubsub_endpoint_create_request'
         response_elem = 'zato_pubsub_endpoint_create_response'
+        default_value = None
 
     def handle(self):
         input = self.request.input
@@ -146,8 +147,8 @@ class Create(AdminService):
             endpoint.role = input.role
             endpoint.topic_patterns = input.topic_patterns
             endpoint.security_id = input.security_id
-            endpoint.service_id = input.service_id
-            endpoint.ws_channel_id = input.ws_channel_id
+            endpoint.service_id = input.get('service_id')
+            endpoint.ws_channel_id = input.get('ws_channel_id')
 
             session.add(endpoint)
             session.commit()
