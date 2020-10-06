@@ -14,9 +14,6 @@ from cgi import FieldStorage
 from copy import deepcopy
 from io import BytesIO
 
-# anyjson
-from anyjson import loads
-
 # Bunch
 from bunch import Bunch, bunchify
 
@@ -29,6 +26,7 @@ from future.utils import iteritems
 
 # Zato
 from zato.common import simple_types
+from zato.common.json_ import loads
 from zato.common.util import make_repr
 
 # Zato - Cython
