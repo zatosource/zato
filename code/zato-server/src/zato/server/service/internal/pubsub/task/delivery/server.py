@@ -125,8 +125,8 @@ class GetDetails(AdminService):
         if max_last_task_run:
             max_last_task_run = datetime_from_ms(max_last_task_run * 1000)
 
-        self.response.payload.last_gd_run = max_last_gd_run
-        self.response.payload.last_task_run = max_last_task_run
+        self.response.payload.last_gd_run = max_last_gd_run or ''
+        self.response.payload.last_task_run = max_last_task_run or ''
 
 # ################################################################################################################################
 
@@ -179,7 +179,7 @@ class GetList(AdminService):
                     'messages': pid_response.messages,
                     'messages_gd': pid_response.messages_gd,
                     'messages_non_gd': pid_response.messages_non_gd,
-                    'msg_handler_counter': pid_response.msg_handler_counter,
+                    'msg_handler_counter': pid_response.get('msg_handler_counter'),
                     'last_gd_run': pid_response.last_gd_run,
                     'last_task_run': pid_response.last_task_run,
                 })

@@ -38,6 +38,9 @@ class DeliveryServer(object):
         self.messages_non_gd = None
         self.msg_handler_counter = 0
 
+        self.last_gd_run = None
+        self.last_gd_run_utc = None
+
         self.last_sync = None
         self.last_sync_utc = None
 
@@ -69,7 +72,9 @@ class Index(_Index):
 
             if item.last_gd_run:
                 item.last_gd_run_utc = item.last_gd_run
-                item.last_gd_run = from_utc_to_user(item.last_gd_run_utc + '+00:00', self.req.zato.user_profile)
+
+                if item.last_gd_run_utc:
+                    item.last_gd_run = from_utc_to_user(item.last_gd_run_utc + '+00:00', self.req.zato.user_profile)
 
             if item.last_task_run:
                 item.last_task_run_utc = item.last_task_run
