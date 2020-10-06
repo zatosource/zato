@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from builtins import input as raw_input, int
 from imp import reload
 from io import StringIO
-import json
 import logging
 import os
 import shutil
@@ -29,6 +28,7 @@ import sqlalchemy
 # Zato
 from zato.cli import util as cli_util
 from zato.common import get_version, MS_SQL, odb, util, ZATO_INFO_FILE
+from zato.common.json_ import dumps, load
 from zato.common.util import get_engine_url, get_full_stack, get_session
 from zato.common.util.cli import read_stdin_data
 from zato.common.util.import_ import import_string
@@ -358,7 +358,6 @@ def run_command(args):
         ('from_config', 'zato.cli.FromConfig'),
         ('hash_get_rounds', 'zato.cli.crypto.GetHashRounds'),
         ('info', 'zato.cli.info.Info'),
-        ('migrate', 'zato.cli.migrate.Migrate'),
         ('reset_totp_key', 'zato.cli.web_admin_auth.ResetTOTPKey'),
         ('quickstart_create', 'zato.cli.quickstart.Create'),
         ('service_invoke', 'zato.cli.service.Invoke'),
@@ -549,7 +548,7 @@ class ZatoCommand(object):
                 'created_ts': datetime.utcnow().isoformat(), # noqa
                 'component': component
                 }
-        open(os.path.join(target_dir, ZATO_INFO_FILE), 'w').write(json.dumps(info))
+        open(os.path.join(target_dir, ZATO_INFO_FILE), 'w').write(dumps(info))
 
 # ################################################################################################################################
 
@@ -939,7 +938,7 @@ class ManageCommand(ZatoCommand):
             sys.exit(self.SYS_ERROR.NOT_A_ZATO_COMPONENT) # noqa
 
         found = list(found)[0]
-        json_data = json.load(open(os.path.join(self.component_dir, found)))
+        json_data = load(open(os.path.join(self.component_dir, found)))
 
         os.chdir(self.component_dir)
         return self._get_dispatch()[json_data['component']](args)

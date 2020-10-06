@@ -14,7 +14,6 @@ import errno
 import gc
 import imp
 import inspect
-import json
 import linecache
 import logging
 import os
@@ -1111,7 +1110,7 @@ def validate_xpath(expr):
 # ################################################################################################################################
 
 def get_haproxy_agent_pidfile(component_dir):
-    json_config = json.loads(open(os.path.join(component_dir, 'config', 'repo', 'lb-agent.conf')).read())
+    json_config = loads(open(os.path.join(component_dir, 'config', 'repo', 'lb-agent.conf')).read())
     return os.path.abspath(os.path.join(component_dir, json_config['pid_file']))
 
 def store_pidfile(component_dir, pidfile=MISC.PIDFILE):
@@ -1679,7 +1678,7 @@ def get_response_value(response):
 # ################################################################################################################################
 
 def get_lb_agent_json_config(repo_dir):
-    return json.loads(open(os.path.join(repo_dir, 'lb-agent.conf')).read())
+    return loads(open(os.path.join(repo_dir, 'lb-agent.conf')).read())
 
 # ################################################################################################################################
 
