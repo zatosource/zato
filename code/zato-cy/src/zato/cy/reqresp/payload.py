@@ -112,7 +112,7 @@ class SimpleIOPayload(object):
 
     @cy.cfunc
     @cy.returns(dict)
-    def _extract_payload_attrs_dict(self, item:dict) -> dict:
+    def _extract_payload_attrs_dict(self, item:object) -> dict:
         """ Extract response attributes from a dict.
         """
         extracted:dict = {}
@@ -152,7 +152,7 @@ class SimpleIOPayload(object):
         #
         # For now, this is not a concern because, with the exception of WorkerStore._set_service_response_data,
         # which is no longer doing it, no other component will attempt to do it
-        # and this comment is left just in case reconsdering it is needed in the future.
+        # and this comment is left just in case reconsidering it in the future.
         #
         # #####################################################################################################
 
@@ -162,7 +162,8 @@ class SimpleIOPayload(object):
 
         # Shortcut in case we know already this is a dict on input
         if is_dict:
-            self.user_attrs_dict.update(self._extract_payload_attrs_dict(value))
+            dict_attrs:dict = self._extract_payload_attrs_dict(value)
+            self.user_attrs_dict.update(dict_attrs)
 
         else:
 
