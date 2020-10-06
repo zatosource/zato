@@ -60,13 +60,15 @@ def enrich_item(cluster_id, item):
 
     if is_pub:
         endpoint_topics_path = django_url_reverse('pubsub-endpoint-topics', kwargs=html_kwargs)
-        item.endpoint_topics_html = '<a href="{}">Topics</a>'.format(endpoint_topics_path)
+        item.endpoint_topics_html = '<a href="{}?cluster={}">Topics</a>'.format(
+            endpoint_topics_path, cluster_id)
     else:
         item.endpoint_topics_html = '<span class="form_hint">---</span>'
 
     if is_sub:
         endpoint_queues_path = django_url_reverse('pubsub-endpoint-queues', kwargs=html_kwargs)
-        item.endpoint_queues_html = '<a href="{}">Queues</a>'.format(endpoint_queues_path)
+        item.endpoint_queues_html = '<a href="{}?cluster={}">Queues</a>'.format(
+            endpoint_queues_path, cluster_id)
     else:
         item.endpoint_queues_html = '<span class="form_hint">---</span>'
 
