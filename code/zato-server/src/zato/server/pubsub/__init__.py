@@ -549,10 +549,10 @@ class PubSub(object):
         if config['security_id']:
             self.sec_id_to_endpoint_id[config['security_id']] = config.id
 
-        if config['ws_channel_id']:
+        if config.get('ws_channel_id'):
             self.ws_channel_id_to_endpoint_id[config['ws_channel_id']] = config.id
 
-        if config['service_id']:
+        if config.get('service_id'):
             self.service_id_to_endpoint_id[config['service_id']] = config.id
 
 # ################################################################################################################################
