@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-import json as stdlib_json
 from base64 import b64decode
 from collections import namedtuple
 from datetime import datetime
@@ -44,7 +43,7 @@ from zato.admin.web import from_utc_to_user, last_hour_start_stop
 from zato.admin.web.forms.service import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, upload_to_server
 from zato.common import DATA_FORMAT, SourceCodeInfo, ZATO_NONE
-from zato.common.json_ import dumps, loads
+from zato.common.json_ import dumps
 from zato.common.odb.model import Service
 
 # ################################################################################################################################
@@ -159,7 +158,7 @@ def get_pretty_print(value, data_format):
         return etree.tostring(tree, pretty_print=True, xml_declaration=True, encoding='UTF-8')
     else:
         value = loads(value)
-        return stdlib_json.dumps(value, sort_keys=True, indent=2)
+        return dumps(value, sort_keys=True, indent=2)
 
 # ################################################################################################################################
 
