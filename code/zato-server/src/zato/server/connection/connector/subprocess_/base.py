@@ -14,7 +14,6 @@ import os
 import signal
 import sys
 from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_ACCEPTABLE, OK, responses, SERVICE_UNAVAILABLE
-from json import loads
 from logging import Formatter, getLogger, StreamHandler
 from logging.handlers import RotatingFileHandler
 from os import getppid, path
@@ -38,7 +37,7 @@ from six import PY2
 # Zato
 from zato.common import MISC
 from zato.common.broker_message import code_to_name
-from zato.common.json_ import dumps
+from zato.common.json_ import dumps, loads
 from zato.common.util import parse_cmd_line_options
 from zato.common.util.auth import parse_basic_auth
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC

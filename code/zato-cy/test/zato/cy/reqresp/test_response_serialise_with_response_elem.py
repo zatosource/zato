@@ -10,13 +10,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from copy import deepcopy
-from json import loads as json_loads
 
 # lxml
 from lxml.objectify import fromstring as objectify_from_string
 
 # Zato
 from zato.common import DATA_FORMAT
+from zato.common.json_ import loads as json_loads
 from zato.common.test import BaseSIOTestCase, MyODBServiceWithResponseElem, MyZatoClass, ODBTestCase, test_odb_data
 
 # Zato - Cython

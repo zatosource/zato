@@ -8,15 +8,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from json import dumps
-
 # Requests
 from requests import Session as RequestsSession
 
 # Zato
 from zato.common import CACHE, NotGiven
 from zato.common.crypto import ServerCryptoManager
+from zato.common.json_ import dumps
 from zato.common.util import as_bool, get_config, get_odb_session_from_server_config, get_repo_dir_from_component_dir
 from zato.common.odb.model import Cluster, HTTPBasicAuth, Server
 

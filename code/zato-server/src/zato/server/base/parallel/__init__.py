@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 import os
 from datetime import datetime, timedelta
-from json import loads
 from logging import INFO, WARN
 from platform import system as platform_system
 from random import seed as random_seed
@@ -39,7 +38,7 @@ from zato.common import DATA_FORMAT, default_internal_modules, KVDB, RATE_LIMIT,
 from zato.common.audit import audit_pii
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.ipc.api import IPCAPI
-from zato.common.json_ import dumps
+from zato.common.json_ import dumps, loads
 from zato.common.odb.post_process import ODBPostProcess
 from zato.common.pubsub import SkipDelivery
 from zato.common.rate_limiting import RateLimiting
