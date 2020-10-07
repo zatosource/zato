@@ -26,8 +26,8 @@ from past.builtins import basestring
 
 # Zato
 from zato.common.audit import audit_pii
+from zato.common.json_ import dumps
 from zato.common.odb.model import SSOAttr as AttrModel, SSOSession
-from zato.common.util.json_ import dumps
 from zato.sso import status_code, ValidationError
 
 # ################################################################################################################################

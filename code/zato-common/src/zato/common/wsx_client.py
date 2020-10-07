@@ -27,7 +27,7 @@ from six.moves.http_client import OK
 from ws4py.client.geventclient import WebSocketClient
 
 # Zato
-from zato.common.util.json_ import dumps
+from zato.common.json_ import dumps
 
 # ################################################################################################################################
 

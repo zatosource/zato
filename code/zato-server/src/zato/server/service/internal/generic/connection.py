@@ -15,9 +15,9 @@ from json import loads
 # Zato
 from zato.common import GENERIC as COMMON_GENERIC
 from zato.common.broker_message import GENERIC
+from zato.common.json_ import dumps
 from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.odb.query.generic import connection_list
-from zato.common.util.json_ import dumps
 from zato.server.generic.connection import GenericConnection
 from zato.server.service import Bool, Int
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO

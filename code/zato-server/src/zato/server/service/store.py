@@ -42,12 +42,12 @@ except ImportError:
 
 # Zato
 from zato.common import CHANNEL, DONT_DEPLOY_ATTR_NAME, KVDB, RATE_LIMIT, SourceCodeInfo, TRACE1
+from zato.common.json_ import dumps
 from zato.common.json_schema import get_service_config, ValidationConfig as JSONSchemaValidationConfig, \
      Validator as JSONSchemaValidator
 from zato.common.match import Matcher
 from zato.common.odb.model.base import Base as ModelBase
 from zato.common.util import deployment_info, import_module_from_path, is_func_overridden, is_python_file, visit_py_source
-from zato.common.util.json_ import dumps
 from zato.server.config import ConfigDict
 from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, PubSubHook, Service, \
      WSXFacade

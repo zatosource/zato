@@ -14,7 +14,7 @@ from bunch import bunchify
 
 # Zato
 from zato.common import GENERIC
-from zato.common.util.json_ import dumps
+from zato.common.json_ import dumps
 from zato.server.generic import attrs_gen_conn
 
 # ################################################################################################################################

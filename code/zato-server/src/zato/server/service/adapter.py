@@ -15,7 +15,7 @@ from uuid import uuid4
 
 # Zato
 from zato.common import ADAPTER_PARAMS, HTTPException
-from zato.common.util.json_ import dumps
+from zato.common.json_ import dumps
 from zato.server.service import Service
 
 # ################################################################################################################################
