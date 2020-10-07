@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import os
-from json import dumps, loads
 from logging import getLogger
 
 # JSON Schema
@@ -20,6 +19,7 @@ from jsonschema.validators import validator_for
 
 # Zato
 from zato.common import CHANNEL, NotGiven
+from zato.common.json_ import dumps, loads
 from zato.common.json_rpc import ErrorCtx, JSONRPCBadRequest, ItemResponse
 
 # ################################################################################################################################

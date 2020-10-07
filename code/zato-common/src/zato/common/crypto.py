@@ -15,7 +15,6 @@ import os
 import sys
 from datetime import datetime
 from math import ceil
-from json import loads
 
 # Bunch
 from bunch import bunchify
@@ -41,6 +40,7 @@ from builtins import bytes
 
 # Zato
 from zato.common import SECRETS
+from zato.common.json_ import loads
 
 # ################################################################################################################################
 

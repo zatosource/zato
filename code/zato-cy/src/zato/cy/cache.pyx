@@ -13,7 +13,6 @@ from datetime import datetime
 from decimal import Decimal
 from email.utils import formatdate as stdlib_format_date
 from hashlib import sha256
-from json import dumps as json_dumps, JSONEncoder
 from logging import getLogger
 from sys import getsizeof
 
@@ -30,6 +29,9 @@ from cpython.sequence cimport PySequence_ITEM
 from libc.stdint cimport uint64_t
 from posix.time cimport timeval, timezone, gettimeofday
 
+# gevent
+from gevent.lock import RLock
+
 # regex
 from regex import compile as re_compile
 
@@ -40,9 +42,7 @@ from zato.common.py23_ import maxint
 
 # Zato
 from zato.common import CACHE as _COMMON_CACHE
-
-# gevent
-from gevent.lock import RLock
+from zato.common.json_ import dumps as json_dumps, JSONEncoder
 
 # ################################################################################################################################
 

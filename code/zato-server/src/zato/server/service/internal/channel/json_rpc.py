@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from json import dumps, loads
 from traceback import format_exc
 
 # Bunch
@@ -18,6 +17,7 @@ from bunch import bunchify
 # Zato
 from zato.common import CONNECTION, JSON_RPC, URL_TYPE
 from zato.common. exception import Unauthorized
+from zato.common.json_ import dumps, loads
 from zato.common.json_rpc import ErrorCtx, Forbidden, InternalError, ItemResponse, JSONRPCHandler, ParseError, \
      RateLimitReached as JSONRPCRateLimitReached, RequestContext
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException

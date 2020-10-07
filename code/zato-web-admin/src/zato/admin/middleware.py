@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from http.client import OK
-from json import loads
 
 # Bunch
 from bunch import Bunch
@@ -25,6 +24,7 @@ from zato.admin.web.models import ClusterColorMarker
 from zato.admin.web.util import get_user_profile
 from zato.client import AnyServiceInvoker
 from zato.common import get_version
+from zato.common.json_ import loads
 from zato.common.odb.model import Cluster
 
 # New in 2.0.8 thus optional
