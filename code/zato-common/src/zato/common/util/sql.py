@@ -25,8 +25,8 @@ from sqlalchemy.exc import InternalError as SAInternalError
 
 # Zato
 from zato.common import GENERIC, SEARCH
+from zato.common.json_ import dumps
 from zato.common.odb.model import Base, SecurityBase
-from zato.common.util.json_ import dumps
 from zato.common.util.search import SearchResults
 
 # ################################################################################################################################
