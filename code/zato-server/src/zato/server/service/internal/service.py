@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from base64 import b64decode, b64encode
 from contextlib import closing
 from http.client import BAD_REQUEST, NOT_FOUND
-from json import loads
 from mimetypes import guess_type
 from tempfile import NamedTemporaryFile
 from traceback import format_exc
@@ -31,7 +30,7 @@ from past.builtins import basestring
 from zato.common import BROKER, KVDB, ZatoException
 from zato.common.broker_message import SERVICE
 from zato.common.exception import BadRequest
-from zato.common.json_ import dumps
+from zato.common.json_ import dumps, loads
 from zato.common.json_schema import get_service_config
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, Service
 from zato.common.odb.query import service_list

@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import os
-from json import loads
 from unittest import TestCase
 
 # Bunch
@@ -22,6 +21,7 @@ from cryptography.fernet import Fernet
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, UNITTEST
 from zato.common.crypto import CryptoManager
+from zato.common.json_ import loads
 from zato.common.kvdb import KVDB
 from zato.common.odb.api import PoolStore
 from zato.common.util import new_cid

@@ -13,7 +13,6 @@ import logging
 from contextlib import closing
 from datetime import datetime, timedelta
 from io import StringIO
-from json import dumps
 from operator import attrgetter
 from traceback import format_exc
 
@@ -32,6 +31,7 @@ from past.builtins import basestring, unicode
 from zato.common import DATA_FORMAT, PUBSUB, SEARCH
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
+from zato.common.json_ import dumps
 from zato.common.odb.model import WebSocketClientPubSubKeys
 from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered as _confirm_pubsub_msg_delivered, \
      get_delivery_server_for_sub_key, get_sql_messages_by_msg_id_list as _get_sql_messages_by_msg_id_list, \

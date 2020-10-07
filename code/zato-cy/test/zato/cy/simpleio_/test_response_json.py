@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from json import loads as json_loads
 from uuid import UUID as uuid_UUID
 
 # Bunch
@@ -20,6 +19,7 @@ from dateparser import parse as dt_parse
 
 # Zato
 from zato.common import DATA_FORMAT
+from zato.common.json_ import loads as json_loads
 from zato.common.test import BaseSIOTestCase
 from zato.server.service import Service
 

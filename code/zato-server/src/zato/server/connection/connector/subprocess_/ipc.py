@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime, timedelta
-from json import loads
 from logging import getLogger
 from traceback import format_exc
 
@@ -21,7 +20,7 @@ from gevent import sleep
 from requests import get, post
 
 # Zato
-from zato.common.json_ import dumps
+from zato.common.json_ import dumps, loads
 from zato.common.util import get_free_port
 from zato.common.util.proc import start_python_process
 
