@@ -18,6 +18,7 @@ from csv import DictWriter, reader as csv_reader
 from datetime import date as stdlib_date, datetime as stdlib_datetime
 from decimal import Decimal as decimal_Decimal
 from io import StringIO
+from json import JSONEncoder
 from itertools import chain
 from logging import getLogger
 from traceback import format_exc
@@ -34,7 +35,7 @@ from lxml.etree import _Element as EtreeElementClass, Element, SubElement, tostr
 
 # Zato
 from zato.common import APISPEC, DATA_FORMAT, ZATO_NONE
-from zato.common.json_ import dumps as json_dumps, JSONEncoder
+from zato.common.json_ import dumps as json_dumps
 from zato.common.odb.api import WritableKeyedTuple
 from zato.util_convert import to_bool
 
