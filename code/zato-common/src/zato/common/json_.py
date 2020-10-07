@@ -17,8 +17,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from datetime import datetime
 
+# BSON
+from bson import ObjectId
+
 # simdjson
-from simdjson import dump, dumps as json_dumps, load, loads
+from simdjson import load, loads
+
+# uJSON
+from ujson import dump, dumps as json_dumps
 
 # Python 2/3 compatibility
 from builtins import bytes
@@ -35,27 +41,27 @@ loads = loads
 
 # ################################################################################################################################
 
-def default_json_handler(value):
+def dumps(value, indent=4, expected=(str, dict, int, float, list, tuple, set)):
 
-    # Useful in various contexts
-    if isinstance(value, datetime):
-        return value.isoformat()
+    if not isinstance(value, expected):
 
-    # Always use Unicode
-    elif isinstance(value, bytes):
-        return value.decode('utf8')
+        # Useful in various contexts
+        if isinstance(value, datetime):
+            value = value.isoformat()
 
-    # For MongoDB queries
-    elif isinstance(value, ObjectId):
-        return 'ObjectId({})'.format(value)
+        # Always use Unicode
+        elif isinstance(value, bytes):
+            value = value.decode('utf8')
 
-    # We do not know how to serialize it
-    raise TypeError('Cannot serialize `{}`'.format(value))
+        # For MongoDB queries
+        elif isinstance(value, ObjectId):
+            value = 'ObjectId({})'.format(value)
 
-# ################################################################################################################################
+        else:
+            # We do not know how to serialize it
+            raise TypeError('Cannot serialize `{}` ({})'.format(value, type(value)))
 
-def dumps(value, indent=4):
-    return json_dumps(value, default=default_json_handler, indent=indent)
+    return json_dumps(value)#, indent=indent)
 
 # ################################################################################################################################
 

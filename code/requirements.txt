@@ -140,6 +140,7 @@ texttable==1.6.1
 twilio==6.5.2
 typing==3.5.3.0
 tzlocal==2.1
+ujson==3.2.0
 umalqurra==0.2
 untokenize==0.1.1
 urllib3==1.23
