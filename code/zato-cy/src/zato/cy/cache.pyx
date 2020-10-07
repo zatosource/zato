@@ -13,6 +13,7 @@ from datetime import datetime
 from decimal import Decimal
 from email.utils import formatdate as stdlib_format_date
 from hashlib import sha256
+from json import JSONEncoder
 from logging import getLogger
 from sys import getsizeof
 
@@ -42,7 +43,7 @@ from zato.common.py23_ import maxint
 
 # Zato
 from zato.common import CACHE as _COMMON_CACHE
-from zato.common.json_ import dumps as json_dumps, JSONEncoder
+from zato.common.json_ import dumps as json_dumps
 
 # ################################################################################################################################
 
