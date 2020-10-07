@@ -21,8 +21,8 @@ from gevent import sleep
 from requests import get, post
 
 # Zato
+from zato.common.json_ import dumps
 from zato.common.util import get_free_port
-from zato.common.util.json_ import dumps
 from zato.common.util.proc import start_python_process
 
 # ################################################################################################################################
