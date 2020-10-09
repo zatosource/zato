@@ -17,6 +17,7 @@ then
 fi
 
 if [[ "$(lsb_release -sir)" =~ '^CentOS.8\.' ]]
+then
     sudo ${INSTALL_CMD} install -y python3
     sudo ${INSTALL_CMD} -y groupinstall development
     sudo ${INSTALL_CMD} install -y 'dnf-command(config-manager)'
@@ -31,6 +32,7 @@ sudo ${INSTALL_CMD} install -y \
     uuid-devel wget
 
 if [[ "$(lsb_release -sir)" =~ '^CentOS.8\.' ]]
+then
     $PY_BINARY -m venv .
     source ./bin/activate
     source ./_postinstall.sh $PY_BINARY
