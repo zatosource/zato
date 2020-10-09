@@ -129,7 +129,7 @@ if [ "$(type -p apt-get)" ]
 then
     source ./clean.sh
     source ./_install-deb.sh $PY_BINARY
-elif [ "$(type -p yum)" || "$(type -p dnf)" ]
+elif [ "$(type -p yum)" ] || [ "$(type -p dnf)" ]
 then
     source ./clean.sh
     source ./_install-rhel.sh $PY_BINARY
