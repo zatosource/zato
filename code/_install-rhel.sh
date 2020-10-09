@@ -26,6 +26,8 @@ sudo ${INSTALL_CMD} install -y \
 if [[ "$(lsb_release -sir)" =~ '^CentOS.8\.' ]]
     ${INSTALL_CMD} install -y python3
     ${INSTALL_CMD} -y groupinstall development
+    ${INSTALL_CMD} install -y 'dnf-command(config-manager)'
+    ${INSTALL_CMD} config-manager --set-enabled PowerTools
 
     $PY_BINARY -m venv .
     source ./bin/activate
