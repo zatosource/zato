@@ -432,7 +432,7 @@ class SFTPIPCFacade(object):
         # type: (str) -> bool
 
         # The is_ok flag will be True only if the remote path points to an existing file or directory
-        return self.execute('ls {}'.format(remote_path), raise_on_error=False).is_ok
+        return self.execute('ls {}'.format(remote_path), log_level, raise_on_error=False).is_ok
 
 # ################################################################################################################################
 
