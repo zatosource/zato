@@ -167,7 +167,6 @@ class ServiceTestCase(TestCase):
 
         self.worker_store = WorkerStore(self.worker_config, self.server)
         self.worker_store.sql_pool_store = self.sql_pool_store
-        self.worker_store.stomp_outconn_api = None
         self.worker_store.outconn_wsx = None
         self.worker_store.vault_conn_api = self.vault_conn_api
         self.worker_store.sms_twilio_api = None

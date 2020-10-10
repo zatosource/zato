@@ -369,7 +369,7 @@ class Invoke(AdminService):
         if isinstance(response, basestring):
             if response:
                 response = response if isinstance(response, bytes) else response.encode('utf8')
-                self.response.payload.response = b64encode(response) if response else ''
+                self.response.payload.response = b64encode(response).decode('utf8') if response else ''
 
 # ################################################################################################################################
 
