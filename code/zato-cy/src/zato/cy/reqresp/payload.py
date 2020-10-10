@@ -83,7 +83,6 @@ class SimpleIOPayload(object):
 
 # ################################################################################################################################
 
-    @cy.cfunc
     @cy.returns(dict)
     def _extract_payload_attrs(self, item:object) -> dict:
         """ Extract response attributes from a single object. Used with items other than dicts.
@@ -110,7 +109,6 @@ class SimpleIOPayload(object):
 
 # ################################################################################################################################
 
-    @cy.cfunc
     @cy.returns(dict)
     def _extract_payload_attrs_dict(self, item:object) -> dict:
         """ Extract response attributes from a dict.

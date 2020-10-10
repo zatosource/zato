@@ -72,8 +72,6 @@ from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConn
 from zato.server.connection.search.solr import SolrAPI, SolrConnStore
 from zato.server.connection.sftp import SFTPIPCFacade
 from zato.server.connection.sms.twilio import TwilioAPI, TwilioConnStore
-from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channel_main_loop as stomp_channel_main_loop, \
-     OutconnSTOMPConnStore
 from zato.server.connection.web_socket import ChannelWebSocket
 from zato.server.connection.vault import VaultConnAPI
 from zato.server.ext.zunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
@@ -219,14 +217,10 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.json_pointer_store = self.worker_config.json_pointer_store
         self.xpath_store = self.worker_config.xpath_store
 
-        # CassandraOutconnSTOMPConnStore
+        # Cassandra
         self.cassandra_api = CassandraAPI(CassandraConnStore())
         self.cassandra_query_store = CassandraQueryStore()
         self.cassandra_query_api = CassandraQueryAPI(self.cassandra_query_store)
-
-        # STOMP
-        self.stomp_outconn_api = STOMPAPI(OutconnSTOMPConnStore())
-        self.stomp_channel_api = STOMPAPI(ChannelSTOMPConnStore())
 
         # Search
         self.search_es_api = ElasticSearchAPI(ElasticSearchConnStore())
@@ -307,9 +301,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # E-mail
         self.init_email_smtp()
         self.init_email_imap()
-
-        # STOMP
-        self.init_stomp()
 
         # ZeroMQ
         self.init_zmq()
@@ -650,22 +641,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
                 gevent.spawn(self._init_cassandra_query, self.cassandra_query_api.create, k, v.config)
             except Exception:
                 logger.warn('Could not create a Cassandra query `%s`, e:`%s`', k, format_exc())
-
-# ################################################################################################################################
-
-    def init_stomp(self):
-
-        for k, v in self.worker_config.out_stomp.items():
-            try:
-                self.stomp_outconn_api.create_def(k, v.config)
-            except Exception:
-                logger.warn('Could not create a Stomp outgoing connection `%s`, e:`%s`', k, format_exc())
-
-        for k, v in self.worker_config.channel_stomp.items():
-            try:
-                self.stomp_channel_api.create_def(k, v.config, stomp_channel_main_loop, self)
-            except Exception:
-                logger.warn('Could not create a Stomp channel `%s`, e:`%s`', k, format_exc())
 
 # ################################################################################################################################
 
@@ -2264,44 +2239,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
     def on_broker_msg_OUTGOING_ZMQ_DELETE(self, msg):
         self.zmq_out_api.delete(msg.name)
-
-# ################################################################################################################################
-
-    def on_broker_msg_OUTGOING_STOMP_CREATE(self, msg):
-        self.stomp_outconn_api.create_def(msg.name, msg)
-
-    def on_broker_msg_OUTGOING_STOMP_EDIT(self, msg):
-        dispatcher.notify(broker_message.OUTGOING.STOMP_EDIT.value, msg)
-        old_name = msg.get('old_name')
-        del_name = old_name if old_name else msg['name']
-        self.stomp_outconn_api.edit_def(del_name, msg)
-
-    def on_broker_msg_OUTGOING_STOMP_DELETE(self, msg):
-        dispatcher.notify(broker_message.OUTGOING.STOMP_DELETE.value, msg)
-        self.stomp_outconn_api.delete_def(msg.name)
-
-    def on_broker_msg_OUTGOING_STOMP_CHANGE_PASSWORD(self, msg):
-        dispatcher.notify(broker_message.OUTGOING.STOMP_CHANGE_PASSWORD.value, msg)
-        self.stomp_outconn_api.change_password_def(msg)
-
-# ################################################################################################################################
-
-    def on_broker_msg_CHANNEL_STOMP_CREATE(self, msg):
-        self.stomp_channel_api.create_def(msg.name, msg, stomp_channel_main_loop, self)
-
-    def on_broker_msg_CHANNEL_STOMP_EDIT(self, msg):
-        dispatcher.notify(broker_message.CHANNEL.STOMP_EDIT.value, msg)
-        old_name = msg.get('old_name')
-        del_name = old_name if old_name else msg['name']
-        self.stomp_channel_api.edit_def(del_name, msg, stomp_channel_main_loop, self)
-
-    def on_broker_msg_CHANNEL_STOMP_DELETE(self, msg):
-        dispatcher.notify(broker_message.CHANNEL.STOMP_DELETE.value, msg)
-        self.stomp_channel_api.delete_def(msg.name)
-
-    def on_broker_msg_CHANNEL_STOMP_CHANGE_PASSWORD(self, msg):
-        dispatcher.notify(broker_message.CHANNEL.STOMP_CHANGE_PASSWORD.value, msg)
-        self.stomp_channel_api.change_password_def(msg)
 
 # ################################################################################################################################
 
