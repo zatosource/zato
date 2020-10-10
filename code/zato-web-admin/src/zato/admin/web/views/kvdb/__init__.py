@@ -8,9 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from traceback import format_exc
-
 # Django
 from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
@@ -20,7 +17,7 @@ from zato.admin.web.forms import SearchForm
 from zato.admin.web.forms.kvdb import RemoteCommandForm
 from zato.admin.web.views import method_allowed
 from zato.common import ZatoException
-from zato.common.json_ import dumps, loads
+from zato.common.json_ import dumps
 
 @method_allowed('GET')
 def remote_command(req):
