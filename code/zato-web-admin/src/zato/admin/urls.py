@@ -24,7 +24,6 @@ from zato.admin.web.views.channel import amqp_ as channel_amqp
 from zato.admin.web.views.channel import file_transfer as channel_file_transfer
 from zato.admin.web.views.channel import jms_wmq as channel_jms_wmq
 from zato.admin.web.views.channel import json_rpc as channel_json_rpc
-from zato.admin.web.views.channel import stomp as channel_stomp
 from zato.admin.web.views.channel import web_socket as channel_web_socket
 from zato.admin.web.views.channel import zmq as channel_zmq
 from zato.admin.web.views.cloud.aws import s3 as cloud_aws_s3
@@ -51,7 +50,6 @@ from zato.admin.web.views.outgoing import odoo as out_odoo
 from zato.admin.web.views.outgoing import sap as out_sap
 from zato.admin.web.views.outgoing import sftp as out_sftp
 from zato.admin.web.views.outgoing import sql as out_sql
-from zato.admin.web.views.outgoing import stomp as out_stomp
 from zato.admin.web.views.outgoing import wsx as out_wsx
 from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.pubsub import endpoint as pubsub_endpoint
@@ -828,25 +826,6 @@ urlpatterns += [
 
 urlpatterns += [
 
-    # .. STOMP
-    url(r'^zato/outgoing/stomp/$',
-        login_required(out_stomp.Index()), name=out_stomp.Index.url_name),
-    url(r'^zato/outgoing/stomp/create/$',
-        login_required(out_stomp.Create()), name=out_stomp.Create.url_name),
-    url(r'^zato/outgoing/stomp/edit/$',
-        login_required(out_stomp.Edit()), name=out_stomp.Edit.url_name),
-    url(r'^zato/outgoing/stomp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(out_stomp.Delete()), name=out_stomp.Delete.url_name),
-    url(r'^zato/outgoing/stomp/change-password/$',
-        login_required(out_stomp.change_password), name='out-stomp-change-password'),
-    url(r'^zato/outgoing/stomp/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(out_stomp.ping), name='out-stomp-ping'),
-    ]
-
-# ################################################################################################################################
-
-urlpatterns += [
-
     # SQL connection pools
 
     url(r'^zato/outgoing/sql/$',
@@ -958,25 +937,6 @@ urlpatterns += [
         login_required(channel_json_rpc.Edit()), name=channel_json_rpc.Edit.url_name),
     url(r'^zato/channel/json-rpc/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_json_rpc.Delete()), name=channel_json_rpc.Delete.url_name),
-    ]
-
-# ################################################################################################################################
-
-urlpatterns += [
-
-    # .. STOMP
-    url(r'^zato/channel/stomp/$',
-        login_required(channel_stomp.Index()), name=channel_stomp.Index.url_name),
-    url(r'^zato/channel/stomp/create/$',
-        login_required(channel_stomp.Create()), name=channel_stomp.Create.url_name),
-    url(r'^zato/channel/stomp/edit/$',
-        login_required(channel_stomp.Edit()), name=channel_stomp.Edit.url_name),
-    url(r'^zato/channel/stomp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(channel_stomp.Delete()), name=channel_stomp.Delete.url_name),
-    url(r'^zato/channel/stomp/change-password/$',
-        login_required(channel_stomp.change_password), name='channel-stomp-change-password'),
-    url(r'^zato/channel/stomp/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(channel_stomp.ping), name='channel-stomp-ping'),
     ]
 
 # ################################################################################################################################
