@@ -22,9 +22,7 @@ simpleio:
 	$(MAKE) build
 
 reqresp-tests:
-	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/reqresp/test_response.py -s && \
-	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/reqresp/test_response_serialise_no_response_elem.py -s && \
-	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/reqresp/test_response_serialise_with_response_elem.py -s
+	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/reqresp/test_*.py -s
 
 simpleio-tests:
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/simpleio_/test_*.py -s
@@ -32,5 +30,5 @@ simpleio-tests:
 run-tests:
 	# No tests to run for now
 	$(MAKE) reqresp-tests
-	#$(MAKE) simpleio-tests
+	$(MAKE) simpleio-tests
 	echo
