@@ -27,7 +27,7 @@ from zato.cli import apispec as apispec_mod, ca_create_ca as ca_create_ca_mod, c
      component_version as component_version_mod, create_cluster as create_cluster_mod, \
      create_lb as create_lb_mod, create_odb as create_odb_mod, create_scheduler as create_scheduler_mod, \
      create_server as create_server_mod, create_web_admin as create_web_admin_mod, crypto as crypto_mod, \
-     delete_odb as delete_odb_mod, enmasse as enmasse_mod, FromConfig, info as info_mod, migrate as migrate_mod, \
+     delete_odb as delete_odb_mod, enmasse as enmasse_mod, FromConfig, info as info_mod, \
      quickstart as quickstart_mod, run_command, service as service_mod, sso as sso_mod, start as start_mod, \
      stop as stop_mod, wait as wait_mod, web_admin_auth as web_admin_auth_mod
 from zato.common import get_version
@@ -255,14 +255,6 @@ def get_parser():
     from_config = subs.add_parser('from-config', description=FromConfig.__doc__, parents=[base_parser])
     from_config.add_argument('path', help='Path to a Zato command config file')
     from_config.set_defaults(command='from_config')
-
-    #
-    # migrate
-    #
-    migrate = subs.add_parser('migrate', description=migrate_mod.Migrate.__doc__, parents=[base_parser])
-    migrate.add_argument('path', help='Path to a Zato component')
-    migrate.set_defaults(command='migrate')
-    add_opts(migrate, migrate_mod.Migrate.opts)
 
     #
     # reset-totp-key

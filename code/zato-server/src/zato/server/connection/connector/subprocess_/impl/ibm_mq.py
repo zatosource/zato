@@ -35,7 +35,7 @@ from traceback import format_exc
 from zato.common.py23_ import start_new_thread
 
 # Zato
-from zato.common.util.json_ import dumps
+from zato.common.json_ import dumps
 from zato.server.connection.jms_wmq.jms import WebSphereMQException, NoMessageAvailableException
 from zato.server.connection.jms_wmq.jms.connection import WebSphereMQConnection
 from zato.server.connection.jms_wmq.jms.core import TextMessage

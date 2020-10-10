@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from datetime import datetime, timedelta
 from hashlib import sha256
-from json import dumps
 from logging import getLogger
 from traceback import format_exc
 from uuid import uuid4
@@ -26,6 +25,7 @@ from past.builtins import unicode
 # Zato
 from zato.common import GENERIC, SEC_DEF_TYPE
 from zato.common.audit import audit_pii
+from zato.common.json_ import dumps
 from zato.common.odb.model import SSOSession as SessionModel
 from zato.common.crypto import CryptoManager
 from zato.sso import const, status_code, Session as SessionEntity, ValidationError

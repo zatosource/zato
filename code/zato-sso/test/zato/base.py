@@ -13,7 +13,6 @@ import logging
 import os
 from datetime import datetime
 from itertools import count
-from json import dumps, loads
 from unittest import TestCase
 
 # Bunch
@@ -29,6 +28,7 @@ import sh
 import requests
 
 # Zato
+from zato.common.json_ import dumps, loads
 from zato.common.crypto import CryptoManager
 from zato.sso import const, status_code
 
