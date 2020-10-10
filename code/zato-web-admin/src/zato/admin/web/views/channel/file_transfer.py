@@ -8,13 +8,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from json import dumps
-
 # Zato
 from zato.admin.web.forms.channel.file_transfer import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.common import GENERIC
+from zato.common.json_ import dumps
 from zato.common.model import FileTransferChannel
 
 # ################################################################################################################################

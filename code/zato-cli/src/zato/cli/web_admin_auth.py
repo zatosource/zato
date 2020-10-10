@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import json
 import os
 import sys
 from traceback import format_exc
@@ -22,6 +21,7 @@ from zato.admin.web.util import set_user_profile_totp_key
 from zato.admin.zato_settings import update_globals
 from zato.cli import common_totp_opts, ManageCommand
 from zato.cli.util import get_totp_info_from_args
+from zato.common.json_ import dumps, loads
 from zato.common.crypto import WebAdminCryptoManager
 
 # ################################################################################################################################
@@ -31,7 +31,7 @@ class _WebAdminAuthCommand(ManageCommand):
     def _prepare(self, args):
         os.chdir(os.path.abspath(args.path))
         base_dir = os.path.join(self.original_dir, args.path)
-        config = json.loads(open(os.path.join(base_dir, '.', 'config/repo/web-admin.conf')).read())
+        config = loads(open(os.path.join(base_dir, '.', 'config/repo/web-admin.conf')).read())
         config['config_dir'] = os.path.abspath(args.path)
         update_globals(config, base_dir)
 
@@ -192,7 +192,7 @@ class ResetTOTPKey(_WebAdminAuthCommand):
         opaque_attrs = set_user_profile_totp_key(user_profile, zato_secret_key, key, key_label)
 
         # .. and save the modified profile.
-        user_profile.opaque1 = json.dumps(opaque_attrs)
+        user_profile.opaque1 = dumps(opaque_attrs)
         user_profile.save()
 
         # Log the key only if it was not given on input. Otherwise the user is expected to know it already

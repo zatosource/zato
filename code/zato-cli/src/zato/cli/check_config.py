@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import os
 from distutils.version import LooseVersion
-from json import loads
 from os.path import abspath, exists, join
 
 # Bunch
@@ -31,6 +30,7 @@ from zato.cli import ManageCommand
 from zato.common import INFO_FORMAT, ping_queries
 from zato.common.component_info import get_info
 from zato.common.crypto import resolve_secret_key, SchedulerCryptoManager, ServerCryptoManager, WebAdminCryptoManager
+from zato.common.json_ import loads
 from zato.common.kvdb import KVDB
 from zato.common.haproxy import validate_haproxy_config
 from zato.common.odb import create_pool, get_ping_query

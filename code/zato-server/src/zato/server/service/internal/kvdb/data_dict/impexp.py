@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import bz2
 from base64 import b64decode
-from json import loads
 
 # Python 2/3 compatibility
 from future.utils import iteritems, iterkeys
@@ -19,6 +18,7 @@ from past.builtins import unicode
 
 # Zato
 from zato.common import KVDB
+from zato.common.json_ import loads
 from zato.common.util import dict_item_name, translation_name
 from zato.server.service.internal import AdminSIO
 from zato.server.service.internal.kvdb.data_dict import DataDictService

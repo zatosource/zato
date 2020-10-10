@@ -17,9 +17,6 @@ from datetime import datetime
 from io import StringIO
 from traceback import format_exc
 
-# anyjson
-from anyjson import dumps
-
 # dateutil
 from dateutil.parser import parse
 
@@ -36,6 +33,7 @@ from zato.admin.web.views import get_js_dt_format, get_sample_dt, method_allowed
 from zato.admin.settings import job_type_friendly_names
 from zato.admin.web.forms.scheduler import CronStyleSchedulerJobForm, IntervalBasedSchedulerJobForm, OneTimeSchedulerJobForm
 from zato.common import SCHEDULER, TRACE1, ZatoException
+from zato.common.json_ import dumps
 from zato.common.odb.model import CronStyleJob, IntervalBasedJob, Job
 from zato.common.util import pprint
 

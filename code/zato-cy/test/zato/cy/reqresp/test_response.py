@@ -39,7 +39,7 @@ class MyBaseService(Service):
 
 class ResponseTestCase(BaseSIOTestCase):
 
-    def xtest_defaults(self):
+    def test_defaults(self):
         response = Response()
 
         self.assertIsNone(response.cid)
@@ -56,7 +56,7 @@ class ResponseTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_len(self):
+    def test_len(self):
         response = Response()
         response._payload = 'abcdef'
 
@@ -64,7 +64,7 @@ class ResponseTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_content_type(self):
+    def test_content_type(self):
         response = Response()
         response.content_type = 'abc'
 
@@ -73,7 +73,7 @@ class ResponseTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_init_no_sio(self):
+    def test_init_no_sio(self):
         response = Response()
         response.init('abc', None, DATA_FORMAT.CSV)
 
@@ -83,7 +83,7 @@ class ResponseTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_init_has_sio(self):
+    def test_init_has_sio(self):
 
         MyService = deepcopy(MyBaseService)
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
@@ -95,7 +95,7 @@ class ResponseTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_setslice(self):
+    def test_setslice(self):
 
         MyService = deepcopy(MyBaseService)
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
@@ -111,7 +111,7 @@ class ResponseTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_set_payload_dict_has_sio_case_1a(self):
+    def test_set_payload_dict_has_sio_case_1a(self):
 
         MyService = deepcopy(MyBaseService)
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
@@ -126,7 +126,7 @@ class ResponseTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_set_payload_dict_no_sio_case_1b(self):
+    def test_set_payload_dict_no_sio_case_1b(self):
 
         response = Response()
         response.init('abc', None, DATA_FORMAT.CSV)
@@ -138,7 +138,7 @@ class ResponseTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_set_payload_direct_payload_case_2a(self):
+    def test_set_payload_direct_payload_case_2a(self):
         # basestring, dict, list, tuple, bool, Number + (EtreeElement, ObjectifiedElement)
 
         data_01 = b'abc'
@@ -163,7 +163,7 @@ class ResponseTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_set_payload_not_direct_payload_no_sio_case_2b2(self):
+    def test_set_payload_not_direct_payload_no_sio_case_2b2(self):
 
         class MyCustomPayloadType:
             def __repr__(self):

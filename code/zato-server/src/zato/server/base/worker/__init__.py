@@ -17,7 +17,6 @@ from copy import deepcopy
 from datetime import datetime
 from errno import ENOENT
 from inspect import isclass
-from json import loads
 from shutil import rmtree
 from tempfile import gettempdir
 from threading import RLock
@@ -49,6 +48,7 @@ from zato.common import broker_message, CHANNEL, DATA_FORMAT, GENERIC as COMMON_
      KVDB, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, SECRETS, simple_types, URL_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.dispatch import dispatcher
+from zato.common.json_ import loads
 from zato.common.match import Matcher
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \

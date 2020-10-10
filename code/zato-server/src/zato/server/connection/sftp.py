@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import date, datetime
-from json import loads
 from logging import getLogger
 from tempfile import NamedTemporaryFile
 from time import strptime
@@ -24,6 +23,7 @@ from humanize import naturalsize
 # Zato
 from zato.common import SFTP
 from zato.common.broker_message import OUTGOING
+from zato.common.json_ import loads
 from zato.common.sftp import SFTPOutput
 
 # ################################################################################################################################

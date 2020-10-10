@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from bisect import bisect_left
 from copy import deepcopy
-from json import loads
 from logging import getLogger
 from socket import error as SocketError
 from threading import current_thread
@@ -30,6 +29,7 @@ from future.utils import iteritems
 
 # Zato
 from zato.common import GENERIC, PUBSUB
+from zato.common.json_ import loads
 from zato.common.pubsub import PubSubMessage
 from zato.common.util import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms

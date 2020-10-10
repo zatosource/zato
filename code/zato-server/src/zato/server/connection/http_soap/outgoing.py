@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from copy import deepcopy
 from datetime import datetime
 from io import StringIO
-from json import loads
 from logging import DEBUG, getLogger
 from traceback import format_exc
 
@@ -36,8 +35,8 @@ from past.builtins import basestring, unicode
 # Zato
 from zato.common import CONTENT_TYPE, DATA_FORMAT, Inactive, SEC_DEF_TYPE, soapenv11_namespace, soapenv12_namespace, TimeoutException, \
      URL_TYPE, ZATO_NONE
+from zato.common.json_ import dumps, loads
 from zato.common.util import get_component_name
-from zato.common.util.json_ import dumps
 from zato.server.connection.queue import ConnectionQueue
 
 # ################################################################################################################################
