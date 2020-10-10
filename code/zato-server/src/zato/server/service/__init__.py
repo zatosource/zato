@@ -440,7 +440,6 @@ class Service(object):
             self._out_plain_http,
             self._worker_config.out_soap,
             self._worker_store.sql_pool_store,
-            self._worker_store.stomp_outconn_api,
             ZMQFacade(self._worker_store.zmq_out_api) if self.component_enabled_zeromq else NO_DEFAULT_VALUE,
             self._worker_store.outconn_wsx,
             self._worker_store.vault_conn_api,
