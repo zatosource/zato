@@ -16,7 +16,7 @@ from unittest import main
 from bunch import bunchify
 
 # PyYAML
-from yaml import load as yaml_load
+from yaml import FullLoader, load as yaml_load
 
 # Zato
 from common import MyService, service_name, sio_config
@@ -80,7 +80,7 @@ class OpenAPITestCase(BaseSIOTestCase):
         open_api_generator = OpenAPIGenerator(info, channel_data, needs_api_invoke, needs_rest_channels, api_invoke_path)
 
         result = open_api_generator.generate()
-        result = yaml_load(result)
+        result = yaml_load(result, FullLoader)
         result = bunchify(result)
 
         result_components = result.components # type: Bunch
