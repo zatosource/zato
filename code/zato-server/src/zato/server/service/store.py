@@ -100,7 +100,6 @@ hook_methods = ('accept', 'get_request_hash') + before_handle_hooks + after_hand
 
 class _TestingWorkerStore(object):
     sql_pool_store = None
-    stomp_outconn_api = None
     outconn_wsx = None
     vault_conn_api = None
     outconn_ldap = None
@@ -387,7 +386,6 @@ class ServiceStore(object):
                 class_.component_enabled_msg_path = True
                 class_.component_enabled_ibm_mq = True
                 class_.component_enabled_odoo = True
-                class_.component_enabled_stomp = True
                 class_.component_enabled_zeromq = True
                 class_.component_enabled_patterns = True
                 class_.component_enabled_target_matcher = True
@@ -427,7 +425,6 @@ class ServiceStore(object):
                 class_.component_enabled_msg_path = service_store.server.fs_server_config.component_enabled.msg_path
                 class_.component_enabled_ibm_mq = service_store.server.fs_server_config.component_enabled.ibm_mq
                 class_.component_enabled_odoo = service_store.server.fs_server_config.component_enabled.odoo
-                class_.component_enabled_stomp = service_store.server.fs_server_config.component_enabled.stomp
                 class_.component_enabled_zeromq = service_store.server.fs_server_config.component_enabled.zeromq
                 class_.component_enabled_patterns = service_store.server.fs_server_config.component_enabled.patterns
                 class_.component_enabled_target_matcher = service_store.server.fs_server_config.component_enabled.target_matcher

@@ -16,11 +16,7 @@ from Cython.Build import cythonize
 # Python 2/3 compatibility
 from past.builtins import execfile
 
-curdir = os.path.dirname(os.path.abspath(__file__))
-_version_py = os.path.normpath(os.path.join(curdir, '..', '.version.py'))
-_locals = {}
-execfile(_version_py, _locals)
-version = _locals['version']
+version = '3.1'
 
 setup(
       name = 'zato-cy',
