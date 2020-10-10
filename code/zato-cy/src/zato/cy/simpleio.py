@@ -513,6 +513,9 @@ class Date(Elem):
     @staticmethod
     def to_json_static(value, stdlib_type, *args, **kwargs):
 
+        if value is None:
+            return value
+
         # Convert a timestamp in milliseconds to a datetime object
         if isinstance(value, float):
             value = stdlib_datetime.fromtimestamp(value)
