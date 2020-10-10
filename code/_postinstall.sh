@@ -86,6 +86,5 @@ patch -p0 -d eggs < patches/ws4py/server/geventserver.py.diff
 if [ $HAS_PYTHON2 == 1 ]
 then
     patch -p0 -d eggs < patches/jsonpointer/jsonpointer.py.diff
-    patch -p0 -d eggs < patches/anyjson/__init__.py.diff
     patch -p0 -d eggs < patches/oauth/oauth.py.diff
 fi

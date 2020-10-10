@@ -1,5 +1,0 @@
-{
-   "cluster_id": 1,
-   "payload": "ZnJvbSBfX2Z1dHVyZV9fIGltcG9ydCBhYnNvbHV0ZV9pbXBvcnQsIGRpdmlzaW9uLCBwcmludF9mdW5jdGlvbiwgdW5pY29kZV9saXRlcmFscwoKCiMgemF0bwpmcm9tIHphdG8uc2VydmVyLnNlcnZpY2UgaW1wb3J0IFNlcnZpY2UKaW1wb3J0IHRpbWUKCmNsYXNzIFNsb3dTZXJ2aWNlKFNlcnZpY2UpOgoKICAgIGRlZiBoYW5kbGUoc2VsZik6CiAgICAgICAgdGltZS5zbGVlcCgxKQogICAgICAgIHNlbGYubG9nZ2VyLmluZm8oJ3Nsb3cgc2VydmljZSBjYWxsZWQnKQogICAgICAgIHNlbGYucmVzcG9uc2UucGF5bG9hZCA9ICdob2xhIHNsb3cnIAoK",
-   "payload_name": "slow_service.py"
-}

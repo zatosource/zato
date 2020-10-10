@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from itertools import chain
-from json import loads
 from logging import DEBUG, getLogger
 from traceback import format_exc
 
@@ -25,8 +24,8 @@ from sqlalchemy.exc import InternalError as SAInternalError
 
 # Zato
 from zato.common import GENERIC, SEARCH
+from zato.common.json_ import dumps, loads
 from zato.common.odb.model import Base, SecurityBase
-from zato.common.util.json_ import dumps
 from zato.common.util.search import SearchResults
 
 # ################################################################################################################################

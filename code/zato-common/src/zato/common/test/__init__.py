@@ -15,9 +15,6 @@ from random import choice, randint
 from unittest import TestCase
 from uuid import uuid4
 
-# anyjson
-from anyjson import loads
-
 # Bunch
 from bunch import Bunch, bunchify
 
@@ -38,6 +35,7 @@ from sqlalchemy import create_engine
 
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, SIMPLE_IO
+from zato.common.json_ import loads
 from zato.common.log_message import CID_LENGTH
 from zato.common.odb import model
 from zato.common.odb.model import Cluster, ElasticSearch

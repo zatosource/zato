@@ -38,8 +38,8 @@ except ImportError:
 from zato.admin.settings import ssl_key_file, ssl_cert_file, ssl_ca_certs, LB_AGENT_CONNECT_TIMEOUT
 from zato.admin.web import from_utc_to_user
 from zato.common import SEC_DEF_TYPE_NAME, ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
+from zato.common.json_ import dumps
 from zato.common.util import get_lb_client as _get_lb_client
-from zato.common.util.json_ import dumps
 
 # ################################################################################################################################
 

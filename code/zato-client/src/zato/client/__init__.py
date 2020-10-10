@@ -13,7 +13,6 @@ import logging
 from base64 import b64decode, b64encode
 from datetime import datetime
 from http.client import OK
-from json import dumps, loads
 from traceback import format_exc
 
 # Bunch
@@ -36,6 +35,7 @@ from six import PY3
 from zato.common import BROKER, soap_data_path, soap_data_xpath, soap_fault_xpath, \
      ZatoException, zato_data_path, zato_data_xpath, zato_details_xpath, \
      ZATO_NOT_GIVEN, ZATO_OK, zato_result_xpath
+from zato.common.json_ import dumps, loads
 from zato.common.log_message import CID_LENGTH
 from zato.common.odb.model import Server
 
