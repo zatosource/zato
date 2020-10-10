@@ -338,7 +338,6 @@ class Elem(object):
 
 # ################################################################################################################################
 
-    @cy.cfunc
     @cy.returns(str)
     def _get_unicode_name(self, name:object) -> str:
         if name:
@@ -1226,7 +1225,6 @@ class SIODefinition(object):
 
 # ################################################################################################################################
 
-    @cy.cfunc
     @cy.returns(str)
     def get_elems_pretty(self, required_list:SIOList, optional_list:SIOList) -> str:
         out:cy.unicode = ''
@@ -1244,14 +1242,12 @@ class SIODefinition(object):
 
 # ################################################################################################################################
 
-    @cy.ccall
     @cy.returns(str)
     def get_input_pretty(self) -> str:
         return self.get_elems_pretty(self._input_required, self._input_optional)
 
 # ################################################################################################################################
 
-    @cy.ccall
     @cy.returns(str)
     def get_output_pretty(self) -> str:
         return self.get_elems_pretty(self._output_required, self._output_optional)
@@ -1534,7 +1530,6 @@ class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    @cy.cfunc
     @cy.returns(Elem)
     def _convert_to_elem_instance(self, elem_name, is_required:cy.bint) -> Elem:
 
@@ -1794,7 +1789,6 @@ class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    @cy.cfunc
     @cy.returns(object)
     def _parse_input_elem(self, elem:object, data_format:cy.unicode, is_csv:cy.bint=False) -> object:
 
@@ -1891,7 +1885,6 @@ class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    @cy.cfunc
     @cy.returns(object)
     def _parse_input_list(self, data:object, data_format:cy.unicode, is_csv:cy.bint) -> object:
         out = []
@@ -1902,7 +1895,6 @@ class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    @cy.ccall
     @cy.returns(object)
     def parse_input(self, data:object, data_format:cy.unicode) -> object:
 
@@ -1993,7 +1985,6 @@ class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    @cy.cfunc
     @cy.returns(str)
     def _get_output_csv(self, data:object) -> str:
 
@@ -2025,7 +2016,6 @@ class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    @cy.cfunc
     @cy.returns(object)
     def _convert_to_dicts(self, data:object, data_format:cy.unicode) -> object:
 
@@ -2068,7 +2058,6 @@ class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    @cy.cfunc
     @cy.returns(object)
     def _get_output_json(self, data:object, serialise:cy.bint) -> object:
         out:object = self._convert_to_dicts(data, DATA_FORMAT_JSON)
@@ -2087,7 +2076,6 @@ class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    @cy.cfunc
     @cy.returns(object)
     def _get_output_xml(self, data:object, serialise:cy.int) -> object:
         dict_items:object = self._convert_to_dicts(data, DATA_FORMAT_XML)
@@ -2114,7 +2102,6 @@ class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    @cy.ccall
     @cy.returns(object)
     def get_output(self, data:object, data_format:cy.unicode, serialise:cy.int=True) -> object:
         """ Returns input converted to the output format, possibly including serialisation to a string representation.
@@ -2138,7 +2125,6 @@ class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    @cy.ccall
     @cy.returns(object)
     def serialise(self, data:object, data_format:cy.unicode) -> object:
         """ Serialises input data to the data format specified.
