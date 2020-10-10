@@ -270,7 +270,6 @@ class ConfigStore(object):
         self.out_odoo = None  # type: ConfigDict
         self.out_soap = None  # type: ConfigDict
         self.out_sql = None   # type: ConfigDict
-        self.out_stomp = None # type: ConfigDict
         self.out_sap = None   # type: ConfigDict
         self.out_plain_http = None # type: ConfigDict
 
