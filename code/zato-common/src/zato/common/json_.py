@@ -43,25 +43,27 @@ loads = loads
 
 def dumps(value, indent=4, expected=(str, dict, int, float, list, tuple, set)):
 
-    if not isinstance(value, expected):
+    if value is not None:
 
-        # Useful in various contexts
-        if isinstance(value, datetime):
-            value = value.isoformat()
+        if not isinstance(value, expected):
 
-        # Always use Unicode
-        elif isinstance(value, bytes):
-            value = value.decode('utf8')
+            # Useful in various contexts
+            if isinstance(value, datetime):
+                value = value.isoformat()
 
-        # For MongoDB queries
-        elif isinstance(value, ObjectId):
-            value = 'ObjectId({})'.format(value)
+            # Always use Unicode
+            elif isinstance(value, bytes):
+                value = value.decode('utf8')
 
-        else:
-            # We do not know how to serialize it
-            raise TypeError('Cannot serialize `{}` ({})'.format(value, type(value)))
+            # For MongoDB queries
+            elif isinstance(value, ObjectId):
+                value = 'ObjectId({})'.format(value)
 
-    return json_dumps(value)#, indent=indent)
+            else:
+                # We do not know how to serialize it
+                raise TypeError('Cannot serialize `{}` ({})'.format(value, type(value)))
+
+    return json_dumps(value, indent=indent)
 
 # ################################################################################################################################
 
