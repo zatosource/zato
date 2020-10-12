@@ -61,7 +61,7 @@ from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
 from zato.server.base.parallel.subprocess_.ibm_mq import IBMMQIPC
 from zato.server.base.parallel.subprocess_.sftp import SFTPIPC
-from zato.server.pickup import PickupManager
+from zato.server.pickup.api import PickupManager
 from zato.server.sso import SSOTool
 
 # ################################################################################################################################
