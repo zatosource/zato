@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from http.client import OK
-from json import loads
 from logging import getLogger
 from traceback import format_exc
 
@@ -21,6 +20,7 @@ from bunch import bunchify
 import requests
 
 # Zato
+from zato.common.json_ import loads
 from zato.common.util.http import get_proxy_config
 from zato.server.connection.wrapper import Wrapper
 

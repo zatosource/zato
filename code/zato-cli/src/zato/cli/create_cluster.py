@@ -26,9 +26,9 @@ from zato.common import APISPEC, CACHE, CONNECTION, DATA_FORMAT, IPC, MISC, PUBS
 from zato.common.odb.model import CacheBuiltin, Cluster, HTTPBasicAuth, HTTPSOAP, PubSubEndpoint, \
      PubSubSubscription, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, Service, WSSDefinition
 from zato.common.odb.post_process import ODBPostProcess
+from zato.common.json_ import dumps
 from zato.common.pubsub import new_sub_key
 from zato.common.util import get_http_json_channel, get_http_soap_channel
-from zato.common.util.json_ import dumps
 from zato.common.util.time_ import utcnow_as_ms
 
 # ################################################################################################################################

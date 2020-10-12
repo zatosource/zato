@@ -13,9 +13,6 @@ import logging
 from operator import itemgetter
 from traceback import format_exc
 
-# anyjson
-from anyjson import dumps
-
 # Django
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerError
 from django.template.response import TemplateResponse
@@ -28,6 +25,7 @@ from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, DELEGA
      HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, SEC_DEF_TYPE_NAME, SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, \
      URL_PARAMS_PRIORITY, URL_TYPE, ZatoException
 from zato.common import CACHE, MISC, SEC_DEF_TYPE
+from zato.common.json_ import dumps
 from zato.common.odb.model import HTTPSOAP
 
 logger = logging.getLogger(__name__)

@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from base64 import b64decode, b64encode
 from contextlib import closing
 from http.client import BAD_REQUEST, NOT_FOUND
-from json import loads
 from mimetypes import guess_type
 from tempfile import NamedTemporaryFile
 from traceback import format_exc
@@ -31,12 +30,12 @@ from past.builtins import basestring
 from zato.common import BROKER, KVDB, ZatoException
 from zato.common.broker_message import SERVICE
 from zato.common.exception import BadRequest
+from zato.common.json_ import dumps, loads
 from zato.common.json_schema import get_service_config
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, Service
 from zato.common.odb.query import service_list
 from zato.common.rate_limiting import DefinitionParser
 from zato.common.util import hot_deploy, payload_from_request
-from zato.common.util.json_ import dumps
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean, Integer, Service as ZatoService
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -370,7 +369,7 @@ class Invoke(AdminService):
         if isinstance(response, basestring):
             if response:
                 response = response if isinstance(response, bytes) else response.encode('utf8')
-                self.response.payload.response = b64encode(response) if response else ''
+                self.response.payload.response = b64encode(response).decode('utf8') if response else ''
 
 # ################################################################################################################################
 

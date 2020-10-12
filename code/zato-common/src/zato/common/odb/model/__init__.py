@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from ftplib import FTP_PORT
-from json import dumps as json_dumps
 
 # SQLAlchemy
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, false as sa_false, ForeignKey, Index, Integer, LargeBinary, \
@@ -20,6 +19,7 @@ from sqlalchemy.orm import backref, relationship
 # Zato
 from zato.common import AMQP, CASSANDRA, CLOUD, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MISC, NOTIF, ODOO, SAP, PUBSUB, \
      SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY
+from zato.common.json_ import dumps as json_dumps
 from zato.common.odb import WMQ_DEFAULT_PRIORITY
 from zato.common.odb.model.base import Base, _JSON
 from zato.common.odb.model.sso import _SSOAttr, _SSOGroup, _SSOLinkedAuth, _SSOSession, _SSOUser
