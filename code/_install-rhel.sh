@@ -1,6 +1,6 @@
 
 # Python version to use needs to be provided by our caller
-PY_BINARY=python3
+PY_BINARY=$1
 echo "*** Zato RHEL/CentOS installation using $PY_BINARY ***"
 
 INSTALL_CMD="yum"
