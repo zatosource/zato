@@ -14,9 +14,6 @@ from cgi import FieldStorage
 from copy import deepcopy
 from io import BytesIO
 
-# anyjson
-from anyjson import loads
-
 # Bunch
 from bunch import Bunch, bunchify
 
@@ -29,6 +26,7 @@ from future.utils import iteritems
 
 # Zato
 from zato.common import simple_types
+from zato.common.json_ import loads
 from zato.common.util import make_repr
 
 # Zato - Cython
@@ -55,7 +53,6 @@ if 0:
     from zato.server.connection.jms_wmq.outgoing import WMQFacade
     from zato.server.connection.search import SearchAPI
     from zato.server.connection.sms import SMSAPI
-    from zato.server.connection.stomp import STOMPAPI
     from zato.server.connection.vault import VaultConnAPI
     from zato.server.connection.zmq_.outgoing import ZMQFacade
     from zato.server.service import AMQPFacade
@@ -75,7 +72,6 @@ if 0:
     PoolStore = PoolStore
     SearchAPI = SearchAPI
     SMSAPI = SMSAPI
-    STOMPAPI = STOMPAPI
     VaultConnAPI = VaultConnAPI
     WMQFacade = WMQFacade
     ZMQFacade = ZMQFacade
@@ -264,10 +260,10 @@ class Outgoing(object):
     """ A container for various outgoing connections a service can access. This in fact is a thin wrapper around data
     fetched from the service's self.worker_store.
     """
-    __slots__ = ('amqp', 'ftp', 'ibm_mq', 'jms_wmq', 'wmq', 'odoo', 'plain_http', 'soap', 'sql', 'stomp', 'zmq', 'wsx', 'vault',
+    __slots__ = ('amqp', 'ftp', 'ibm_mq', 'jms_wmq', 'wmq', 'odoo', 'plain_http', 'soap', 'sql', 'zmq', 'wsx', 'vault',
         'sms', 'sap', 'sftp', 'ldap', 'mongodb', 'def_kafka')
 
-    def __init__(self, amqp=None, ftp=None, jms_wmq=None, odoo=None, plain_http=None, soap=None, sql=None, stomp=None, zmq=None,
+    def __init__(self, amqp=None, ftp=None, jms_wmq=None, odoo=None, plain_http=None, soap=None, sql=None, zmq=None,
             wsx=None, vault=None, sms=None, sap=None, sftp=None, ldap=None, mongodb=None, def_kafka=None):
 
         self.amqp = amqp # type: AMQPFacade
@@ -280,7 +276,6 @@ class Outgoing(object):
         self.plain_http = plain_http # type: ConfigDict
         self.soap = soap # type: ConfigDict
         self.sql = sql   # type: PoolStore
-        self.stomp = stomp # type: STOMPAPI
         self.zmq = zmq     # type: ZMQFacade
         self.wsx = wsx     # type: dict
         self.vault = vault # type: VaultConnAPI

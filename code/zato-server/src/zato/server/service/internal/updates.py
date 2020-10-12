@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from errno import ENETUNREACH
 from http.client import OK
-from json import loads
 from traceback import format_exc
 
 # Arrow
@@ -29,6 +28,7 @@ from requests.exceptions import ConnectionError
 
 # Zato
 from zato.common import get_version
+from zato.common.json_ import loads
 from zato.server.service import Service
 
 # ################################################################################################################################

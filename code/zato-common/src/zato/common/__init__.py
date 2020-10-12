@@ -661,7 +661,6 @@ class CHANNEL(Attrs):
     SERVICE = 'service'
     SSO_USER = 'sso-user'
     STARTUP_SERVICE = 'startup-service'
-    STOMP = 'stomp'
     URL_DATA = 'url-data'
     WEB_SOCKET = 'web-socket'
     WEBSPHERE_MQ = 'websphere-mq'
@@ -1174,19 +1173,6 @@ class SAP:
 # ################################################################################################################################
 
 class STOMP:
-
-    class PROTOCOL:
-        PROTO_10 = NameId('1.0', '1.0')
-        PROTO_11 = NameId('1.1', '1.1')
-        PROTO_12 = NameId('1.2', '1.2')
-
-        class __metaclass__(type):
-            def __iter__(self):
-                return iter((self.PROTO_10, self.PROTO_11, self.PROTO_12))
-
-    class ACK_MODE:
-        AUTO = NameId('auto', 'auto')
-        CLIENT_INDIVIDUAL = NameId('client-individual', 'client-individual')
 
     class DEFAULT:
         ADDRESS = '127.0.0.1:61613'
@@ -1880,7 +1866,6 @@ default_internal_modules = {
     'zato.server.service.internal.channel.amqp_': True,
     'zato.server.service.internal.channel.jms_wmq': True,
     'zato.server.service.internal.channel.json_rpc': True,
-    'zato.server.service.internal.channel.stomp': False,
     'zato.server.service.internal.channel.web_socket': True,
     'zato.server.service.internal.channel.web_socket.cleanup': True,
     'zato.server.service.internal.channel.web_socket.client': True,
@@ -1917,7 +1902,6 @@ default_internal_modules = {
     'zato.server.service.internal.outgoing.jms_wmq': True,
     'zato.server.service.internal.outgoing.odoo': True,
     'zato.server.service.internal.outgoing.sql': True,
-    'zato.server.service.internal.outgoing.stomp': True,
     'zato.server.service.internal.outgoing.sap': True,
     'zato.server.service.internal.outgoing.sftp': True,
     'zato.server.service.internal.outgoing.zmq': True,

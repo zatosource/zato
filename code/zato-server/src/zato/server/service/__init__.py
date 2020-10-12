@@ -14,9 +14,6 @@ from datetime import datetime
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED
 from traceback import format_exc
 
-# anyjson
-from anyjson import dumps
-
 # Bunch
 from bunch import bunchify
 
@@ -39,6 +36,7 @@ from zato.common import BROKER, CHANNEL, DATA_FORMAT, Inactive, KVDB, NO_DEFAULT
      ZatoException, zato_no_op_marker
 from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL, SERVICE
 from zato.common.exception import Reportable
+from zato.common.json_ import dumps
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException
 from zato.common.nav import DictNav, ListNav
 from zato.common.util import get_response_value, make_repr, new_cid, payload_from_request, service_name_from_impl, uncamelify
@@ -442,7 +440,6 @@ class Service(object):
             self._out_plain_http,
             self._worker_config.out_soap,
             self._worker_store.sql_pool_store,
-            self._worker_store.stomp_outconn_api,
             ZMQFacade(self._worker_store.zmq_out_api) if self.component_enabled_zeromq else NO_DEFAULT_VALUE,
             self._worker_store.outconn_wsx,
             self._worker_store.vault_conn_api,

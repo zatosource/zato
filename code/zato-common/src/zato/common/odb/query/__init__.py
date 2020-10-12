@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from functools import wraps
-from json import loads
 
 # Bunch
 from bunch import bunchify
@@ -24,11 +23,12 @@ from sqlalchemy.sql.expression import case
 # Zato
 from zato.common import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, \
      PARAMS_PRIORITY, PUBSUB, URL_PARAMS_PRIORITY
+from zato.common.json_ import loads
 from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, CacheBuiltin, CacheMemcached, CassandraConn, \
-     CassandraQuery, ChannelAMQP, ChannelSTOMP, ChannelWebSocket, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, \
+     CassandraQuery, ChannelAMQP, ChannelWebSocket, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, \
      CronStyleJob, ElasticSearch, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, JSONPointer, JWT, \
      MsgNamespace, NotificationOpenStackSwift as NotifOSS, NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, \
-     OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubEndpoint, \
+     OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, PubSubEndpoint, \
      PubSubEndpointTopic, PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, PubSubTopic, RBACClientRole, \
      RBACPermission, RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMSTwilio, SMTP, Solr, SQLConnectionPool, \
      TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, WebSocketClientPubSubKeys, WebSocketSubscription, \
@@ -537,32 +537,6 @@ def channel_amqp_list(session, cluster_id, needs_columns=False):
 
 # ################################################################################################################################
 
-def _channel_stomp(session, cluster_id):
-    return session.query(
-        ChannelSTOMP.id, ChannelSTOMP.name, ChannelSTOMP.is_active, ChannelSTOMP.username,
-        ChannelSTOMP.password, ChannelSTOMP.address, ChannelSTOMP.proto_version,
-        ChannelSTOMP.timeout, ChannelSTOMP.sub_to, ChannelSTOMP.service_id,
-        Service.name.label('service_name')).\
-        filter(Service.id==ChannelSTOMP.service_id).\
-        filter(Cluster.id==ChannelSTOMP.cluster_id).\
-        filter(Cluster.id==cluster_id).\
-        order_by(ChannelSTOMP.name)
-
-def channel_stomp(session, cluster_id, id):
-    """ A STOMP channel.
-    """
-    return _channel_stomp(session, cluster_id).\
-        filter(ChannelSTOMP.id==id).\
-        one()
-
-@query_wrapper
-def channel_stomp_list(session, cluster_id, needs_columns=False):
-    """ A list of STOMP channels.
-    """
-    return _channel_stomp(session, cluster_id)
-
-# ################################################################################################################################
-
 def _channel_wmq(session, cluster_id):
     return session.query(
         ChannelWMQ.id, ChannelWMQ.name, ChannelWMQ.is_active,
@@ -587,27 +561,6 @@ def channel_wmq_list(session, cluster_id, needs_columns=False):
     """ IBM MQ channels.
     """
     return _channel_wmq(session, cluster_id)
-
-# ################################################################################################################################
-
-def _out_stomp(session, cluster_id):
-    return session.query(OutgoingSTOMP).\
-        filter(Cluster.id==OutgoingSTOMP.cluster_id).\
-        filter(Cluster.id==cluster_id).\
-        order_by(OutgoingSTOMP.name)
-
-def out_stomp(session, cluster_id, id):
-    """ An outgoing STOMP connection.
-    """
-    return _out_zmq(session, cluster_id).\
-        filter(OutgoingSTOMP.id==id).\
-        one()
-
-@query_wrapper
-def out_stomp_list(session, cluster_id, needs_columns=False):
-    """ Outgoing STOMP connections.
-    """
-    return _out_stomp(session, cluster_id)
 
 # ################################################################################################################################
 

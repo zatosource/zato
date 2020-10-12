@@ -132,10 +132,6 @@ class ConfigLoader(object):
         self.config.channel_file_transfe = ConfigDict.from_query(
             'channel_file_transfe', query, decrypt_func=self.decrypt, drop_opaque=True)
 
-        # STOMP
-        query = self.odb.get_channel_stomp_list(server.cluster.id, True)
-        self.config.channel_stomp = ConfigDict.from_query('channel_stomp', query, decrypt_func=self.decrypt)
-
         # IBM MQ
         query = self.odb.get_channel_wmq_list(server.cluster.id, True)
         self.config.channel_wmq = ConfigDict.from_query('channel_wmq', query, decrypt_func=self.decrypt)
@@ -190,10 +186,6 @@ class ConfigLoader(object):
         # SQL
         query = self.odb.get_out_sql_list(server.cluster.id, True)
         self.config.out_sql = ConfigDict.from_query('out_sql', query, decrypt_func=self.decrypt)
-
-        # STOMP
-        query = self.odb.get_out_stomp_list(server.cluster.id, True)
-        self.config.out_stomp = ConfigDict.from_query('out_stomp', query, decrypt_func=self.decrypt)
 
         # ZMQ channels
         query = self.odb.get_channel_zmq_list(server.cluster.id, True)

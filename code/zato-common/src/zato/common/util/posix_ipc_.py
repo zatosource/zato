@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime, timedelta
-from json import loads
 from logging import getLogger
 from mmap import mmap
 from time import sleep
@@ -20,7 +19,7 @@ from traceback import format_exc
 import posix_ipc as ipc
 
 # Zato
-from zato.common.util.json_ import dumps
+from zato.common.json_ import dumps, loads
 
 # ################################################################################################################################
 
