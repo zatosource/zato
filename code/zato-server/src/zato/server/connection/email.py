@@ -49,7 +49,7 @@ class Imbox(_Imbox):
         self.config = config
         self.config_no_sensitive = config_no_sensitive
         self.server = ImapTransport(self.config.host, self.config.port, self.config.mode==EMAIL.IMAP.MODE.SSL.value)
-        self.connection = self.server.connect(self.config.username, self.config.password, self.config.debug_level)
+        self.connection = self.server.connect(self.config.username, self.config.password or '', self.config.debug_level)
 
     def __repr__(self):
         return '<{} at {}, config:`{}`>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
