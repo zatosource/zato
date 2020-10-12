@@ -15,9 +15,6 @@ from random import choice, randint
 from unittest import TestCase
 from uuid import uuid4
 
-# anyjson
-from anyjson import loads
-
 # Bunch
 from bunch import Bunch, bunchify
 
@@ -38,6 +35,7 @@ from sqlalchemy import create_engine
 
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, SIMPLE_IO
+from zato.common.json_ import loads
 from zato.common.log_message import CID_LENGTH
 from zato.common.odb import model
 from zato.common.odb.model import Cluster, ElasticSearch
@@ -208,7 +206,7 @@ def enrich_with_static_config(object_):
 
     object_._worker_config = Bunch(out_odoo=None, out_soap=None)
     object_._worker_store = Bunch(
-        sql_pool_store=None, stomp_outconn_api=None, outgoing_web_sockets=None, cassandra_api=None,
+        sql_pool_store=None, outgoing_web_sockets=None, cassandra_api=None,
         cassandra_query_api=None, email_smtp_api=None, email_imap_api=None, search_es_api=None, search_solr_api=None,
         target_matcher=Bunch(target_match=target_match, is_allowed=is_allowed), invoke_matcher=Bunch(is_allowed=is_allowed),
         vault_conn_api=None, sms_twilio_api=None)

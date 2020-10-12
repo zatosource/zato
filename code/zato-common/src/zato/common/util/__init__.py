@@ -14,7 +14,6 @@ import errno
 import gc
 import imp
 import inspect
-import json
 import linecache
 import logging
 import os
@@ -49,9 +48,6 @@ from tempfile import NamedTemporaryFile
 from threading import current_thread
 from time import sleep
 from traceback import format_exc
-
-# anyjson
-from anyjson import dumps, loads
 
 # Bunch
 from bunch import Bunch, bunchify
@@ -114,6 +110,7 @@ from zato.common import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_de
      ZATO_NOT_GIVEN, ZMQ
 from zato.common.broker_message import SERVICE
 from zato.common.crypto import CryptoManager
+from zato.common.json_ import dumps, loads
 from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
 from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_ping, wait_until_port_free, wait_until_port_taken
 
@@ -1113,7 +1110,7 @@ def validate_xpath(expr):
 # ################################################################################################################################
 
 def get_haproxy_agent_pidfile(component_dir):
-    json_config = json.loads(open(os.path.join(component_dir, 'config', 'repo', 'lb-agent.conf')).read())
+    json_config = loads(open(os.path.join(component_dir, 'config', 'repo', 'lb-agent.conf')).read())
     return os.path.abspath(os.path.join(component_dir, json_config['pid_file']))
 
 def store_pidfile(component_dir, pidfile=MISC.PIDFILE):
@@ -1681,7 +1678,7 @@ def get_response_value(response):
 # ################################################################################################################################
 
 def get_lb_agent_json_config(repo_dir):
-    return json.loads(open(os.path.join(repo_dir, 'lb-agent.conf')).read())
+    return loads(open(os.path.join(repo_dir, 'lb-agent.conf')).read())
 
 # ################################################################################################################################
 

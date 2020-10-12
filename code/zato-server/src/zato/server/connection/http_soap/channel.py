@@ -16,9 +16,6 @@ from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, METHOD_NO
 from io import StringIO
 from traceback import format_exc
 
-# anyjson
-from anyjson import dumps, loads
-
 # Django
 from django.http import QueryDict
 
@@ -35,6 +32,7 @@ from past.builtins import basestring, unicode
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, JSON_RPC, HTTP_RESPONSES, HTTP_SOAP, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, \
      URL_PARAMS_PRIORITY, URL_TYPE, zato_namespace, ZATO_ERROR, ZATO_NONE, ZATO_OK
+from zato.common.json_ import dumps, loads
 from zato.common.json_schema import DictError as JSONSchemaDictError, ValidationException as JSONSchemaValidationException
 from zato.common.rate_limiting.common import AddressNotAllowed, BaseException as RateLimitingException, RateLimitReached
 from zato.common.util import payload_from_request

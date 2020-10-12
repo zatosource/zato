@@ -12,7 +12,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import subprocess
 from datetime import datetime, timedelta
-from json import loads
 from traceback import format_exc
 from uuid import uuid4
 
@@ -27,7 +26,7 @@ from six.moves.http_client import OK
 from ws4py.client.geventclient import WebSocketClient
 
 # Zato
-from zato.common.util.json_ import dumps
+from zato.common.json_ import dumps, loads
 
 # ################################################################################################################################
 

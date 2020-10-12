@@ -16,9 +16,6 @@ from errno import ENOENT
 from time import sleep
 from traceback import format_exc
 
-# anyjson
-from anyjson import dumps
-
 # Python 2/3 compatibility
 from future.utils import PY3
 from builtins import bytes
@@ -26,6 +23,7 @@ from builtins import bytes
 # Zato
 from zato.common import DEPLOYMENT_STATUS, KVDB
 from zato.common.broker_message import HOT_DEPLOY
+from zato.common.json_ import dumps
 from zato.common.odb.model import DeploymentPackage, DeploymentStatus
 from zato.common.util import fs_safe_now, is_python_file, is_archive_file, new_cid
 from zato.server.service import AsIs

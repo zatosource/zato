@@ -215,7 +215,6 @@ search=True
 msg_path=True
 ibm_mq=False
 odoo=True
-stomp=True
 zeromq=True
 patterns=True
 target_matcher=False
