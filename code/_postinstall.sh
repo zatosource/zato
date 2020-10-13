@@ -35,7 +35,6 @@ $PY_BINARY -m pip install -U setuptools pip
 
 # SciPy builds require NumPy available in setup.py, so install it separately.
 $PY_BINARY -m pip install numpy==1.14.0
-# pip install pipdeptree
 $PY_BINARY -m pip install -r requirements.txt
 $PY_BINARY -m pip install -r _req_py$EXTRA_REQ_VERSION.txt
 
