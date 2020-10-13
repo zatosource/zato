@@ -19,6 +19,8 @@ code/cx_Oracle-doc/
 code/parts/*
 code/pip-selfcheck.json
 code/pyvenv.cfg
+code/release-info/initial-remote.txt
+code/release-info/last-update-commit.txt
 code/release-info/revision.txt
 code/sec-wall-trunk-src/*
 code/share/*
