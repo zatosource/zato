@@ -35,7 +35,21 @@ if ! [ -x "$(command -v $PY_BINARY)" ]; then
   elif [ "$(type -p yum)" ]
   then
       sudo yum update -y
-      if [[ $PY_BINARY != python2* ]];then
+
+      if [ "$(type -p dnf)" ]
+      then
+        dnf update -y
+
+        if [ ! "$(type -p lsb_release)" ]
+        then
+            dnf install -y redhat-lsb-core
+        fi
+
+        if [ ! "$(type -p python3)" ]
+        then
+            dnf install -y python3
+        fi
+      else
         # Python3 customizations
         PY_V=3
         sudo yum install -y centos-release-scl-rh
@@ -51,8 +65,6 @@ if ! [ -x "$(command -v $PY_BINARY)" ]; then
         # 3. Start using software collections:
         # scl enable rh-python36 bash
         source /opt/rh/rh-python36/enable
-      else
-        sudo yum install -y ${PY_BINARY}
       fi
   elif [ "$(type -p apk)" ]
   then
@@ -117,7 +129,7 @@ if [ "$(type -p apt-get)" ]
 then
     source ./clean.sh
     source ./_install-deb.sh $PY_BINARY
-elif [ "$(type -p yum)" ]
+elif [ "$(type -p yum)" ] || [ "$(type -p dnf)" ]
 then
     source ./clean.sh
     source ./_install-rhel.sh $PY_BINARY
