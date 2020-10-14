@@ -41,6 +41,7 @@ zato_services = {
 # ################################################################################################################################
 
 def new_password():
+    from uuid import uuid4
     return uuid4().hex
 
 # ################################################################################################################################
@@ -62,28 +63,20 @@ class Create(ZatoCommand):
 
     def execute(self, args, show_output=True):
 
-
         # stdlib
         from copy import deepcopy
         from datetime import datetime
         from traceback import format_exc
-        from uuid import uuid4
 
         # SQLAlchemy
         from sqlalchemy.exc import IntegrityError
-
-        # Python 2/3 compatibility
-        from future.utils import iteritems
 
         # Zato
         from zato.common import APISPEC, CACHE, CONNECTION, DATA_FORMAT, IPC, MISC, PUBSUB, SIMPLE_IO, URL_TYPE
         from zato.common.odb.model import CacheBuiltin, Cluster, HTTPBasicAuth, HTTPSOAP, PubSubEndpoint, \
              PubSubSubscription, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, Service, WSSDefinition
         from zato.common.odb.post_process import ODBPostProcess
-        from zato.common.json_ import dumps
-        from zato.common.pubsub import new_sub_key
         from zato.common.util import get_http_json_channel, get_http_soap_channel
-        from zato.common.util.time_ import utcnow_as_ms
 
         engine = self._get_engine(args)
         session = self._get_session(engine)
@@ -188,6 +181,9 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
     def add_api_invoke(self, session, cluster, service, pubapi_sec):
+
+        from zato.common import APISPEC
+        from zato.common.odb.model import HTTPSOAP
 
         for url_path in (APISPEC.GENERIC_INVOKE_PATH, APISPEC.SOAP_INVOKE_PATH):
             channel = HTTPSOAP(None, url_path, True, True, 'channel', 'plain_http',
@@ -315,6 +311,11 @@ class Create(ZatoCommand):
     def add_admin_invoke(self, session, cluster, service, admin_invoke_sec):
         """ Adds an admin channel for invoking services from web admin and CLI.
         """
+
+        # Zato
+        from zato.common import SIMPLE_IO
+        from zato.common.odb.model import HTTPSOAP
+
         channel = HTTPSOAP(
             None, 'admin.invoke.json', True, True, 'channel', 'plain_http',
             None, '/zato/admin/invoke', None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster,
@@ -326,6 +327,11 @@ class Create(ZatoCommand):
     def add_internal_invoke(self, session, cluster, service, internal_invoke_sec):
         """ Adds an internal channel for invoking services from other servers.
         """
+
+        # Zato
+        from zato.common import SIMPLE_IO
+        from zato.common.odb.model import HTTPSOAP
+
         channel = HTTPSOAP(
             None, 'zato.internal.invoke', True, True, 'channel', 'plain_http',
             None, '/zato/internal/invoke', None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster,
@@ -337,6 +343,10 @@ class Create(ZatoCommand):
     def add_default_rbac_permissions(self, session, cluster):
         """ Adds default CRUD permissions used by RBAC.
         """
+
+        # Zato
+        from zato.common.odb.model import RBACPermission
+
         for name in('Create', 'Read', 'Update', 'Delete'):
             item = RBACPermission()
             item.name = name
@@ -348,6 +358,10 @@ class Create(ZatoCommand):
     def add_default_rbac_roles(self, session, cluster):
         """ Adds default roles used by RBAC.
         """
+
+        # Zato
+        from zato.common.odb.model import RBACRole
+
         root = RBACRole(name='Root', parent=None, cluster=cluster)
         session.add(root)
         return root
@@ -365,6 +379,11 @@ class Create(ZatoCommand):
         :param realm: "http_auth_service_realm"
         :return: New RBACRole model instance
         """
+
+        # Zato
+        from zato.common import MISC
+        from zato.common.odb.model import HTTPBasicAuth, RBACClientRole, RBACRole
+
         role = RBACRole(name=role_name, parent=root_rbac_role, cluster=cluster)
         session.add(role)
 
@@ -383,6 +402,11 @@ class Create(ZatoCommand):
     def add_default_cache(self, session, cluster):
         """ Adds default cache to cluster.
         """
+
+        # Zato
+        from zato.common import CACHE
+        from zato.common.odb.model import CacheBuiltin
+
         item = CacheBuiltin()
         item.cluster = cluster
         item.name = 'default'
@@ -400,6 +424,11 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
     def add_jwt_log_in(self, session, cluster, service):
+
+        # Zato
+        from zato.common import DATA_FORMAT
+        from zato.common.odb.model import HTTPSOAP
+
         channel = HTTPSOAP(None, 'zato.security.jwt.log-in', True, True, 'channel', 'plain_http',
             None, '/zato/jwt/log-in', None, '', None, DATA_FORMAT.JSON, merge_url_params_req=True, service=service,
             cluster=cluster)
@@ -408,6 +437,11 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
     def add_jwt_log_out(self, session, cluster, service):
+
+        # Zato
+        from zato.common import DATA_FORMAT
+        from zato.common.odb.model import HTTPSOAP
+
         channel = HTTPSOAP(None, 'zato.security.jwt.log-out', True, True, 'channel', 'plain_http',
             None, '/zato/jwt/log-out', None, '', None, DATA_FORMAT.JSON, merge_url_params_req=True, service=service,
             cluster=cluster)
@@ -424,6 +458,10 @@ class Create(ZatoCommand):
         :param rbac_role: RBACRole model instance
         :param url_path: "/url/path" to expose service as
         """
+
+        # Zato
+        from zato.common.odb.model import HTTPSOAP, RBACPermission, RBACRolePermission
+
         name = 'admin.' + service.name.replace('zato.', '')
         channel = HTTPSOAP(name=name, is_active=True, is_internal=True, connection='channel', transport='plain_http',
             url_path=url_path, soap_action='', has_rbac=True, sec_use_rbac=True, merge_url_params_req=True, service=service,
@@ -443,6 +481,10 @@ class Create(ZatoCommand):
 
     def add_check(self, session, cluster, service, pubapi_sec):
 
+        # Zato
+        from zato.common import DATA_FORMAT
+        from zato.common.odb.model import HTTPSOAP
+
         data_formats = [DATA_FORMAT.JSON, DATA_FORMAT.XML]
         for data_format in data_formats:
 
@@ -456,6 +498,13 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
     def add_cache_endpoints(self, session, cluster):
+
+        # Python 2/3 compatibility
+        from future.utils import iteritems
+
+        # Zato
+        from zato.common import DATA_FORMAT
+        from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, Service
 
         service_to_endpoint = {
 
@@ -562,6 +611,13 @@ class Create(ZatoCommand):
 
     def add_crypto_endpoints(self, session, cluster):
 
+        # Python 2/3 compatibility
+        from future.utils import iteritems
+
+        # Zato
+        from zato.common import DATA_FORMAT
+        from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, Service
+
         service_to_endpoint = {
             'zato.crypto.encrypt':  '/zato/crypto/encrypt',
             'zato.crypto.decrypt':  '/zato/crypto/decrypt',
@@ -599,7 +655,15 @@ class Create(ZatoCommand):
 
     def add_pubsub_sec_endpoints(self, session, cluster):
 
-        sec_demo = HTTPBasicAuth(None, 'zato.pubsub.demo.secdef', True, 'zato.pubsub.demo', 'Zato pub/sub demo', new_password(), cluster)
+        from zato.common import CONNECTION, DATA_FORMAT, PUBSUB, URL_TYPE
+        from zato.common.json_ import dumps
+        from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, PubSubEndpoint, PubSubSubscription, PubSubTopic, \
+             Service
+        from zato.common.pubsub import new_sub_key
+        from zato.common.util.time_ import utcnow_as_ms
+
+        sec_demo = HTTPBasicAuth(
+            None, 'zato.pubsub.demo.secdef', True, 'zato.pubsub.demo', 'Zato pub/sub demo', new_password(), cluster)
         session.add(sec_demo)
 
         sec_default_internal = HTTPBasicAuth(None, 'zato.pubsub.internal.secdef', True, 'zato.pubsub.internal',
@@ -703,6 +767,10 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
     def add_internal_callback_wmq(self, session, cluster):
+
+        from zato.common import IPC
+        from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, Service
+
         impl_name = 'zato.server.service.internal.channel.jms_wmq.OnMessageReceived'
         service = Service(None, 'zato.channel.jms-wmq.on-message-received', True, impl_name, True, cluster)
 
@@ -720,6 +788,10 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
     def add_sftp_credentials(self, session, cluster):
+
+        from zato.common import IPC
+        from zato.common.odb.model import HTTPBasicAuth
+
         username = IPC.CONNECTOR.USERNAME.SFTP
         sec = HTTPBasicAuth(None, username, True, username, 'Zato SFTP', new_password(), cluster)
         session.add(sec)
@@ -727,6 +799,10 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
     def add_cache_credentials(self, session, cluster):
+
+        from zato.common import CACHE
+        from zato.common.odb.model import HTTPBasicAuth
+
         username = CACHE.API_USERNAME
         sec = HTTPBasicAuth(None, username, True, username, 'Zato Cache', new_password(), cluster)
         session.add(sec)
@@ -734,6 +810,9 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
     def add_sso_endpoints(self, session, cluster):
+
+        from zato.common import DATA_FORMAT
+        from zato.common.odb.model import HTTPSOAP, Service
 
         data = [
 
