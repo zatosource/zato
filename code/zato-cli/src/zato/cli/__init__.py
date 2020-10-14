@@ -27,11 +27,12 @@ import sqlalchemy
 
 # Zato
 from zato.cli import util as cli_util
-from zato.common import get_version, MS_SQL, odb, util, ZATO_INFO_FILE
+from zato.common import MS_SQL, odb, util, ZATO_INFO_FILE
 from zato.common.json_ import dumps, load
 from zato.common.util import get_engine_url, get_full_stack, get_session
 from zato.common.util.cli import read_stdin_data
 from zato.common.util.import_ import import_string
+from zato.common.version import get_version
 
 # ################################################################################################################################
 

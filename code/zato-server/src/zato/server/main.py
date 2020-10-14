@@ -82,7 +82,7 @@ start = datetime.utcnow()
 #from zato.sso.api import SSOAPI
 from zato.sso.util import new_user_id, normalize_sso_config
 
-print(datetime.utcnow() - start, 111)
+print(111, datetime.utcnow() - start)
 
 # ################################################################################################################################
 
