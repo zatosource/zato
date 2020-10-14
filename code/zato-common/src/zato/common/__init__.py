@@ -15,22 +15,13 @@ from copy import deepcopy
 from http.client import responses
 from io import StringIO
 from numbers import Number
-from string import Template
 from sys import version_info as py_version_info
-from traceback import format_exc
-
-# boto
-from boto.s3.key import Key
 
 # Bunch
 from bunch import Bunch
 
 # candv
 from candv import Constants, ValueConstant
-
-# lxml
-from lxml import etree
-from lxml.objectify import ObjectPath as _ObjectPath
 
 # Python 2/3 compatibility
 from past.builtins import basestring, execfile
@@ -62,72 +53,11 @@ def get_version():
 
 # ################################################################################################################################
 
-# XML namespace for use in all Zato's own services.
-zato_namespace = 'https://zato.io/ns/v1'
-zato_ns_map = {None: zato_namespace}
-
 # SQL ODB
 engine_def = '{engine}://{username}:{password}@{host}:{port}/{db_name}'
 engine_def_sqlite = 'sqlite:///{sqlite_path}'
 
 # Convenience access functions and constants.
-
-soapenv11_namespace = 'http://schemas.xmlsoap.org/soap/envelope/'
-soapenv12_namespace = 'http://www.w3.org/2003/05/soap-envelope'
-
-wsse_namespace = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd'
-wsu_namespace = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd'
-
-common_namespaces = {
-    'soapenv':soapenv11_namespace,
-    'wsse':wsse_namespace,
-    'wsu':wsu_namespace,
-    'zato':zato_namespace
-}
-
-soap_doc = Template("""<soap:Envelope xmlns:soap='%s'><soap:Body>$body</soap:Body></soap:Envelope>""" % soapenv11_namespace)
-
-soap_body_path = '/soapenv:Envelope/soapenv:Body'
-soap_body_xpath = etree.XPath(soap_body_path, namespaces=common_namespaces)
-
-soap_fault_path = '/soapenv:Envelope/soapenv:Body/soapenv:Fault'
-soap_fault_xpath = etree.XPath(soap_fault_path, namespaces=common_namespaces)
-
-wsse_password_type_text = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText'
-supported_wsse_password_types = (wsse_password_type_text,)
-
-wsse_username_path = '/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Username'
-wsse_username_xpath = etree.XPath(wsse_username_path, namespaces=common_namespaces)
-
-wsse_password_path = '/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Password'
-wsse_password_xpath = etree.XPath(wsse_password_path, namespaces=common_namespaces)
-
-wsse_password_type_path = '/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Password/@Type'
-wsse_password_type_xpath = etree.XPath(wsse_password_type_path, namespaces=common_namespaces)
-
-wsse_nonce_path = '/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Nonce'
-wsse_nonce_xpath = etree.XPath(wsse_nonce_path, namespaces=common_namespaces)
-
-wsu_username_created_path = '/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsu:Created'
-wsu_username_created_xpath = etree.XPath(wsu_username_created_path, namespaces=common_namespaces)
-
-wsu_expires_path = '/soapenv:Envelope/soapenv:Header/wsse:Security/wsu:Timestamp/wsu:Expires'
-wsu_expires_xpath = etree.XPath(wsu_expires_path, namespaces=common_namespaces)
-
-wsse_username_objectify = '{}Security'.format(wsse_namespace)
-wsse_username_token_objectify = '{}UsernameToken'.format(wsse_namespace)
-
-zato_data_path = soap_data_path = '/soapenv:Envelope/soapenv:Body/*[1]'
-zato_data_xpath = soap_data_xpath = etree.XPath(zato_data_path, namespaces=common_namespaces)
-
-zato_result_path = '//zato:zato_env/zato:result'
-zato_result_xpath = etree.XPath(zato_result_path, namespaces=common_namespaces)
-
-zato_cid_path = '//zato:zato_env/zato:cid'
-zato_cid_xpath = etree.XPath(zato_result_path, namespaces=common_namespaces)
-
-zato_details_path = '//zato:zato_env/zato:details'
-zato_details_xpath = etree.XPath(zato_details_path, namespaces=common_namespaces)
 
 megabyte = 10 ** 6
 
@@ -788,7 +718,7 @@ class CLOUD:
 
             class DEFAULTS:
                 ADDRESS = 'https://s3.amazonaws.com/'
-                CONTENT_TYPE = Key.DefaultContentType
+                CONTENT_TYPE = 'application/octet-stream' # Taken from boto.s3.key.Key.DefaultContentType
                 DEBUG_LEVEL = 0
                 POOL_SIZE = 5
                 PROVIDER = 'aws'
@@ -1553,133 +1483,6 @@ class SECRETS:
 
     # Zato secret (configuration)
     URL_PREFIX = 'zato+secret://'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class path(object):
-    def __init__(self, path, raise_on_not_found=False, ns='', text_only=False):
-        self.path = path
-        self.ns = ns
-        self.raise_on_not_found = raise_on_not_found
-        self.text_only = text_only
-        self.children_only = False
-        self.children_only_idx = None
-
-    def get_from(self, elem):
-        if self.ns:
-            _path = '{{{}}}{}'.format(self.ns, self.path)
-        else:
-            _path = self.path
-        try:
-            if self.children_only:
-                elem = elem.getchildren()[self.children_only_idx]
-            value = _ObjectPath(_path)(elem)
-            if self.text_only:
-                return value.text
-            return value
-        except(ValueError, AttributeError):
-            if self.raise_on_not_found:
-                raise ParsingException(None, format_exc())
-            else:
-                return None
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class zato_path(path):
-    def __init__(self, path, raise_on_not_found=False, text_only=False):
-        super(zato_path, self).__init__(path, raise_on_not_found, zato_namespace, text_only)
-        self.children_only = True
-        self.children_only_idx = 1 # 0 is zato_env
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class ZatoException(Exception):
-    """ Base class for all Zato custom exceptions.
-    """
-    def __init__(self, cid=None, msg=None):
-        super(ZatoException, self).__init__(msg)
-        self.cid = cid
-        self.msg = msg
-
-    def __repr__(self):
-        return '<{} at {} cid:`{}`, msg:`{}`>'.format(
-            self.__class__.__name__, hex(id(self)), self.cid, self.msg)
-
-    __str__ = __repr__
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class ClientSecurityException(ZatoException):
-    """ An exception for signalling errors stemming from security problems
-    on the client side, such as invalid username or password.
-    """
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class ConnectionException(ZatoException):
-    """ Encountered a problem with an external connections, such as to AMQP brokers.
-    """
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class TimeoutException(ConnectionException):
-    pass
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class StatusAwareException(ZatoException):
-    """ Raised when the underlying error condition can be easily expressed
-    as one of the HTTP status codes.
-    """
-    def __init__(self, cid, msg, status):
-        super(StatusAwareException, self).__init__(cid, msg)
-        self.status = status
-        self.reason = HTTP_RESPONSES[status]
-
-    def __repr__(self):
-        return '<{} at {} cid:`{}`, status:`{}`, msg:`{}`>'.format(
-            self.__class__.__name__, hex(id(self)), self.cid, self.status, self.msg)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class HTTPException(StatusAwareException):
-    pass
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class ParsingException(ZatoException):
-    """ Raised when the error is to do with parsing of documents, such as an input
-    XML document.
-    """
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class NoDistributionFound(ZatoException):
-    """ Raised when an attempt is made to import services from a Distutils2 archive
-    or directory but they don't contain a proper Distutils2 distribution.
-    """
-    def __init__(self, path):
-        super(NoDistributionFound, self).__init__(None, 'No Disutils distribution in path:[{}]'.format(path))
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class Inactive(ZatoException):
-    """ Raised when an attempt was made to use an inactive resource, such
-    as an outgoing connection or a channel.
-    """
-    def __init__(self, name):
-        super(Inactive, self).__init__(None, '`{}` is inactive'.format(name))
 
 # ################################################################################################################################
 # ################################################################################################################################

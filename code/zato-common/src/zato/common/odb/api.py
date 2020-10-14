@@ -32,8 +32,9 @@ from sqlalchemy.sql.type_api import TypeEngine
 from bunch import Bunch, bunchify
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, GENERIC, HTTP_SOAP, Inactive, MS_SQL, NotGiven, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, \
+from zato.common import DEPLOYMENT_STATUS, GENERIC, HTTP_SOAP, MS_SQL, NotGiven, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, \
      SERVER_UP_STATUS, UNITTEST, ZATO_NONE, ZATO_ODB_POOL_NAME
+from zato.common.exception import Inactive
 from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
 from zato.common.odb import get_ping_query, query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
