@@ -64,7 +64,6 @@ class Create(ZatoCommand):
     def execute(self, args, show_output=True):
 
         # stdlib
-        from copy import deepcopy
         from datetime import datetime
         from traceback import format_exc
 
@@ -72,11 +71,8 @@ class Create(ZatoCommand):
         from sqlalchemy.exc import IntegrityError
 
         # Zato
-        from zato.common import APISPEC, CACHE, CONNECTION, DATA_FORMAT, IPC, MISC, PUBSUB, SIMPLE_IO, URL_TYPE
-        from zato.common.odb.model import CacheBuiltin, Cluster, HTTPBasicAuth, HTTPSOAP, PubSubEndpoint, \
-             PubSubSubscription, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, Service, WSSDefinition
+        from zato.common.odb.model import Cluster, HTTPBasicAuth
         from zato.common.odb.post_process import ODBPostProcess
-        from zato.common.util import get_http_json_channel, get_http_soap_channel
 
         engine = self._get_engine(args)
         session = self._get_session(engine)
@@ -201,6 +197,14 @@ class Create(ZatoCommand):
         # HTTPSOAP + services
         #
 
+        # Python 2/3 compatibility
+        from future.utils import iteritems
+
+        # Zato
+        from zato.common import DATA_FORMAT
+        from zato.common.odb.model import Service
+        from zato.common.util import get_http_json_channel, get_http_soap_channel
+
         for name, impl_name in iteritems(zato_services):
 
             service = Service(None, name, True, impl_name, True, cluster)
@@ -234,6 +238,11 @@ class Create(ZatoCommand):
     def add_ping_services(self, session, cluster):
         """ Adds a ping service and channels, with and without security checks.
         """
+
+        # Zato
+        from zato.common import SIMPLE_IO
+        from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, Service, WSSDefinition
+
         passwords = {
             'ping.plain_http.basic_auth': None,
             'ping.soap.basic_auth': None,
