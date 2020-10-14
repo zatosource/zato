@@ -8,9 +8,24 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# gevent monkeypatch is needed as soon as possible
-from gevent.monkey import patch_all
-patch_all()
+# Monkey-patching modules individually can be about 20% faster,
+# or, in absolute terms, instead of 275 ms it takes 220 ms.
+from gevent.monkey import patch_os, patch_time, patch_thread, patch_sys, patch_socket, patch_select, patch_selectors, \
+     patch_subprocess, patch_ssl, patch_builtins, patch_signal, patch_queue, patch_contextvars
+
+patch_os()
+patch_time()
+patch_thread()
+patch_sys()
+patch_socket()
+patch_select()
+patch_selectors()
+patch_ssl()
+patch_subprocess()
+patch_builtins()
+patch_signal()
+patch_queue()
+patch_contextvars()
 
 # stdlib
 import locale, logging, os, ssl, sys
