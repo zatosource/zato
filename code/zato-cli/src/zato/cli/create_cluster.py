@@ -10,26 +10,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from copy import deepcopy
-from datetime import datetime
-from traceback import format_exc
-from uuid import uuid4
-
-# SQLAlchemy
-from sqlalchemy.exc import IntegrityError
-
-# Python 2/3 compatibility
-from future.utils import iteritems
 
 # Zato
 from zato.cli import common_odb_opts, is_arg_given, ZatoCommand
-from zato.common import APISPEC, CACHE, CONNECTION, DATA_FORMAT, IPC, MISC, PUBSUB, SIMPLE_IO, URL_TYPE
-from zato.common.odb.model import CacheBuiltin, Cluster, HTTPBasicAuth, HTTPSOAP, PubSubEndpoint, \
-     PubSubSubscription, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, Service, WSSDefinition
-from zato.common.odb.post_process import ODBPostProcess
-from zato.common.json_ import dumps
-from zato.common.pubsub import new_sub_key
-from zato.common.util import get_http_json_channel, get_http_soap_channel
-from zato.common.util.time_ import utcnow_as_ms
 
 # ################################################################################################################################
 
@@ -78,6 +61,29 @@ class Create(ZatoCommand):
         'help':'Return without raising an error if cluster already exists', 'action':'store_true'})
 
     def execute(self, args, show_output=True):
+
+
+        # stdlib
+        from copy import deepcopy
+        from datetime import datetime
+        from traceback import format_exc
+        from uuid import uuid4
+
+        # SQLAlchemy
+        from sqlalchemy.exc import IntegrityError
+
+        # Python 2/3 compatibility
+        from future.utils import iteritems
+
+        # Zato
+        from zato.common import APISPEC, CACHE, CONNECTION, DATA_FORMAT, IPC, MISC, PUBSUB, SIMPLE_IO, URL_TYPE
+        from zato.common.odb.model import CacheBuiltin, Cluster, HTTPBasicAuth, HTTPSOAP, PubSubEndpoint, \
+             PubSubSubscription, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, Service, WSSDefinition
+        from zato.common.odb.post_process import ODBPostProcess
+        from zato.common.json_ import dumps
+        from zato.common.pubsub import new_sub_key
+        from zato.common.util import get_http_json_channel, get_http_soap_channel
+        from zato.common.util.time_ import utcnow_as_ms
 
         engine = self._get_engine(args)
         session = self._get_session(engine)

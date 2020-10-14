@@ -30,7 +30,7 @@ from zato.cli import apispec as apispec_mod, ca_create_ca as ca_create_ca_mod, c
      delete_odb as delete_odb_mod, enmasse as enmasse_mod, FromConfig, info as info_mod, \
      quickstart as quickstart_mod, run_command, service as service_mod, sso as sso_mod, start as start_mod, \
      stop as stop_mod, wait as wait_mod, web_admin_auth as web_admin_auth_mod
-from zato.common import get_version
+from zato.common.version import get_version
 
 def add_opts(parser, opts):
     """ Adds parser-specific options.

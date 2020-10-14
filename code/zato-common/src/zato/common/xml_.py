@@ -16,6 +16,9 @@ from traceback import format_exc
 from lxml import etree
 from lxml.objectify import ObjectPath as _ObjectPath
 
+# Zato
+from zato.common.exception import ParsingException
+
 # ################################################################################################################################
 # ################################################################################################################################
 

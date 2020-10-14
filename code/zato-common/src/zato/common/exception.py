@@ -12,6 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from http.client import BAD_REQUEST, CONFLICT, FORBIDDEN, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, \
      SERVICE_UNAVAILABLE, UNAUTHORIZED
 
+# Zato
+from zato.common.http_ import HTTP_RESPONSES
+
 # ################################################################################################################################
 # ################################################################################################################################
 

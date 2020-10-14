@@ -9,13 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import os
 from collections import OrderedDict
-from copy import deepcopy
-from http.client import responses
 from io import StringIO
 from numbers import Number
-from sys import version_info as py_version_info
 
 # Bunch
 from bunch import Bunch
@@ -24,7 +20,6 @@ from bunch import Bunch
 from candv import Constants, ValueConstant
 
 # Python 2/3 compatibility
-from past.builtins import basestring, execfile
 from zato.common.py23_ import maxint
 
 # Zato
@@ -32,24 +27,6 @@ from zato.vault.client import VAULT
 
 # For pyflakes, otherwise it doesn't know that other parts of Zato import VAULT from here
 VAULT = VAULT
-
-# ################################################################################################################################
-# Version
-# ################################################################################################################################
-
-def get_version():
-    try:
-        curdir = os.path.dirname(os.path.abspath(__file__))
-        _version_py = os.path.normpath(os.path.join(curdir, '..', '..', '..', '..', '.version.py'))
-        _locals = {}
-        execfile(_version_py, _locals)
-        version = 'Zato {}'.format(_locals['version'])
-    except IOError:
-        version = '3.1'
-    finally:
-        version = '{}-py{}.{}.{}'.format(version, py_version_info.major, py_version_info.minor, py_version_info.micro)
-
-    return version
 
 # ################################################################################################################################
 
@@ -112,18 +89,11 @@ ZATO_CRYPTO_WELL_KNOWN_DATA = 'ZATO'
 # Used if it could not be established what remote address a request came from
 NO_REMOTE_ADDRESS = '(None)'
 
-# https://tools.ietf.org/html/rfc6585
-TOO_MANY_REQUESTS = 429
-
-HTTP_RESPONSES = deepcopy(responses)
-HTTP_RESPONSES[TOO_MANY_REQUESTS] = 'Too Many Requests'
-
 # Pattern matching order
 TRUE_FALSE = 'true_false'
 FALSE_TRUE = 'false_true'
 
-# If self.response.payload
-simple_types = (basestring, dict, list, tuple, bool, Number)
+simple_types = (str, dict, list, tuple, bool, Number)
 
 # ################################################################################################################################
 # ################################################################################################################################
