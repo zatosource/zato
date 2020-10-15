@@ -8,22 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-'''
-import os
-import sys
-
-# Bunch
-from bunch import Bunch
-
-# Zato
-from zato.cli import ManageCommand
-from zato.cli.check_config import CheckConfig
-from zato.cli.stop import Stop
-from zato.common import MISC
-from zato.common.util import get_haproxy_agent_pidfile
-from zato.common.util.proc import start_python_process
-'''
-
 # Zato
 from zato.cli import ManageCommand
 
