@@ -27,7 +27,7 @@ from future.utils import iterkeys
 from past.builtins import basestring
 
 # Zato
-from zato.common import BROKER, KVDB, ZatoException
+from zato.common.api import BROKER, KVDB, ZatoException
 from zato.common.broker_message import SERVICE
 from zato.common.exception import BadRequest
 from zato.common.json_ import dumps, loads

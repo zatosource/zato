@@ -38,7 +38,7 @@ from pytz import timezone, utc
 from zato.admin.web import from_user_to_utc, from_utc_to_user
 from zato.admin.web.forms.stats import MaintenanceForm, NForm, SettingsForm
 from zato.admin.web.views import get_js_dt_format, get_sample_dt, method_allowed
-from zato.common import DEFAULT_STATS_SETTINGS, StatsElem
+from zato.common.api import DEFAULT_STATS_SETTINGS, StatsElem
 from zato.common.json_ import dumps
 from zato.common.util import from_local_to_utc, make_repr, now, utcnow
 

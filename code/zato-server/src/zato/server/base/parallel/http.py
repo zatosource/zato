@@ -25,7 +25,7 @@ from future.utils import iteritems
 from past.builtins import unicode
 
 # Zato
-from zato.common import NO_REMOTE_ADDRESS
+from zato.common.api import NO_REMOTE_ADDRESS
 from zato.common.util import new_cid
 
 # ################################################################################################################################

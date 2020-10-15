@@ -17,7 +17,7 @@ from django.http import HttpResponse, HttpResponseServerError
 # Zato
 from zato.admin.web.forms.search.solr import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, id_only_service, Index as _Index, method_allowed
-from zato.common import SEARCH
+from zato.common.api import SEARCH
 from zato.common.odb.model import Solr
 
 logger = logging.getLogger(__name__)

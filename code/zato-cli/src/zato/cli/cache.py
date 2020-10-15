@@ -60,7 +60,7 @@ class CacheCommand(ManageCommand):
         import sys
 
         # Zato
-        from zato.common import NotGiven
+        from zato.common.api import NotGiven
         from zato.common.util.cache import Client as CacheClient, CommandConfig
 
         if args.address:

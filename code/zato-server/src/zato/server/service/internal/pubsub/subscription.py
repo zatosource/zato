@@ -19,7 +19,7 @@ from bunch import Bunch
 from sqlalchemy import update
 
 # Zato
-from zato.common import PUBSUB
+from zato.common.api import PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest, NotFound, Forbidden, PubSubSubscriptionExists
 from zato.common.odb.model import PubSubSubscription

@@ -20,7 +20,7 @@ from sqlalchemy import create_engine
 import yaml
 
 # Zato
-from zato.common import TRACE1
+from zato.common.api import TRACE1
 from zato.common.settings_db import SettingsDB
 from zato.common.util import get_engine_url
 from zato.admin.zato_settings import *  # NOQA

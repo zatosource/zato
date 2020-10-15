@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Zato
 from zato.cli import ZatoCommand
-from zato.common import ZATO_INFO_FILE
+from zato.common.api import ZATO_INFO_FILE
 
 class ComponentVersion(ZatoCommand):
     file_needed = ZATO_INFO_FILE

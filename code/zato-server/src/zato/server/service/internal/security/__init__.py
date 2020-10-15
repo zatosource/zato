@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 
 # Zato
-from zato.common import SEC_DEF_TYPE
+from zato.common.api import SEC_DEF_TYPE
 from zato.common.odb import query
 from zato.server.service import Boolean, Integer, List
 from zato.server.service.internal import AdminService, GetListAdminSIO

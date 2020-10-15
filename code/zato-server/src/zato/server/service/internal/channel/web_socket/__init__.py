@@ -17,7 +17,7 @@ from traceback import format_exc
 from six import add_metaclass
 
 # Zato
-from zato.common import DATA_FORMAT
+from zato.common.api import DATA_FORMAT
 from zato.common.broker_message import CHANNEL
 from zato.common.odb.model import ChannelWebSocket, PubSubSubscription, PubSubTopic, Service as ServiceModel, WebSocketClient
 from zato.common.odb.query import channel_web_socket_list, channel_web_socket, service, web_socket_client, \

@@ -30,7 +30,7 @@ from gevent import sleep, spawn
 from mock import patch
 
 # Zato
-from zato.common import SCHEDULER
+from zato.common.api import SCHEDULER
 from zato.common.test import is_like_cid, rand_bool, rand_date_utc, rand_int, rand_string
 from zato.scheduler.backend import Interval, Job, Scheduler
 

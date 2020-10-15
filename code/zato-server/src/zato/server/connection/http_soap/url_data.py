@@ -22,7 +22,7 @@ from six import PY2
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import CONNECTION, DATA_FORMAT, MISC, RATE_LIMIT, SEC_DEF_TYPE, URL_TYPE, VAULT, ZATO_NONE
+from zato.common.api import CONNECTION, DATA_FORMAT, MISC, RATE_LIMIT, SEC_DEF_TYPE, URL_TYPE, VAULT, ZATO_NONE
 from zato.common.broker_message import code_to_name, SECURITY, VAULT as VAULT_BROKER_MSG
 from zato.common.dispatch import dispatcher
 from zato.common.util import parse_tls_channel_security_definition, update_apikey_username_to_channel

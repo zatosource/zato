@@ -19,7 +19,7 @@ from gevent import sleep, spawn
 import zmq.green as zmq
 
 # Zato
-from zato.common import ZMQ
+from zato.common.api import ZMQ
 from zato.common.test import get_free_tcp_port, rand_string
 from zato.zmq_.outgoing import Simple as OutgoingZMQ
 

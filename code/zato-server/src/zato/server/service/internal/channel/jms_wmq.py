@@ -21,7 +21,7 @@ from arrow import get as arrow_get
 from zato.common.py23_ import pickle_loads
 
 # Zato
-from zato.common import CHANNEL
+from zato.common.api import CHANNEL
 from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL
 from zato.common.json_ import loads
 from zato.common.odb.model import ChannelWMQ, Cluster, ConnDefWMQ, Service

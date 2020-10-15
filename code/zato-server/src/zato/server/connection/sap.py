@@ -14,7 +14,7 @@ from traceback import format_exc
 
 # Zato
 from zato.common.util import ping_sap
-from zato.common import SECRETS
+from zato.common.api import SECRETS
 from zato.server.connection.queue import Wrapper
 
 # ################################################################################################################################

@@ -19,7 +19,7 @@ from bunch import bunchify
 from cryptography.fernet import Fernet
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, UNITTEST
+from zato.common.api import CHANNEL, DATA_FORMAT, UNITTEST
 from zato.common.crypto import CryptoManager
 from zato.common.json_ import loads
 from zato.common.kvdb import KVDB

@@ -25,7 +25,7 @@ from lxml.objectify import ObjectifiedElement
 from sqlalchemy.util import KeyedTuple
 
 # Zato
-from zato.common import simple_types, ZATO_OK
+from zato.common.api import simple_types, ZATO_OK
 from zato.cy.reqresp.payload import SimpleIOPayload
 
 # Python 2/3 compatibility

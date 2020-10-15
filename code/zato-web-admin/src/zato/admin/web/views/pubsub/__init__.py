@@ -22,7 +22,7 @@ from django.template.response import TemplateResponse
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.pubsub import MsgForm
 from zato.admin.web.views import django_url_reverse, slugify
-from zato.common import PUBSUB
+from zato.common.api import PUBSUB
 from zato.common.util import asbool
 
 # ################################################################################################################################

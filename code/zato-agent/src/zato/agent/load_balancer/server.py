@@ -31,7 +31,7 @@ from six import PY2
 # Zato
 from zato.agent.load_balancer.config import backend_template, config_from_string, string_from_config, zato_item_token
 from zato.agent.load_balancer.haproxy_stats import HAProxyStats
-from zato.common import MISC, TRACE1, ZATO_OK
+from zato.common.api import MISC, TRACE1, ZATO_OK
 from zato.common.haproxy import haproxy_stats, validate_haproxy_config
 from zato.common.py23_.spring_ import RequestHandler, SimpleXMLRPCServer, SSLServer
 from zato.common.repo import RepoManager

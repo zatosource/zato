@@ -24,7 +24,7 @@ from zato.admin.web.forms.pubsub.endpoint import CreateForm, EditForm
 from zato.admin.web.forms.pubsub.subscription import EditForm as EditSubscriptionForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, method_allowed, slugify
 from zato.admin.web.views.pubsub import get_client_html
-from zato.common import PUBSUB, ZATO_NONE
+from zato.common.api import PUBSUB, ZATO_NONE
 from zato.common.json_ import dumps
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubSubscription, PubSubTopic
 from zato.common.util import asbool, get_sa_model_columns

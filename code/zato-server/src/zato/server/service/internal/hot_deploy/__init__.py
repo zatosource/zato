@@ -21,7 +21,7 @@ from future.utils import PY3
 from builtins import bytes
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, KVDB
+from zato.common.api import DEPLOYMENT_STATUS, KVDB
 from zato.common.broker_message import HOT_DEPLOY
 from zato.common.json_ import dumps
 from zato.common.odb.model import DeploymentPackage, DeploymentStatus

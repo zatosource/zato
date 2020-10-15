@@ -73,7 +73,7 @@ Examples:
         import os
 
         # Zato
-        from zato.common import MISC
+        from zato.common.api import MISC
 
         try:
             path = os.path.join(self.component_dir, MISC.PIDFILE)
@@ -89,7 +89,7 @@ Examples:
         import os
 
         # Zato
-        from zato.common import MISC
+        from zato.common.api import MISC
 
         pidfile = pidfile or os.path.join(self.config_dir, MISC.PIDFILE)
 

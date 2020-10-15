@@ -14,7 +14,7 @@ from traceback import format_exc
 from sqlalchemy.exc import IntegrityError
 
 # Zato
-from zato.common import PUBSUB
+from zato.common.api import PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage, PubSubTopic
 from zato.common.util.sql import sql_op_with_deadlock_retry

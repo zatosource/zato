@@ -14,7 +14,7 @@ from decimal import Decimal as decimal_Decimal
 from uuid import UUID as uuid_UUID
 
 # Zato
-from zato.common import DATA_FORMAT
+from zato.common.api import DATA_FORMAT
 from zato.common.test import BaseSIOTestCase
 from zato.server.service import Service
 

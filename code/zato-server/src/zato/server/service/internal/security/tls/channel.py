@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from six import add_metaclass
 
 # Zato
-from zato.common import SEC_DEF_TYPE
+from zato.common.api import SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import TLSChannelSecurity
 from zato.common.odb.query import tls_channel_sec_list

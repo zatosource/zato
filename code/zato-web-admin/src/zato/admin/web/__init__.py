@@ -18,7 +18,7 @@ from dateutil.relativedelta import relativedelta
 from django.template.defaultfilters import date as django_date_filter
 
 # Zato
-from zato.common import INVOCATION_TARGET
+from zato.common.api import INVOCATION_TARGET
 from zato.common.util import from_local_to_utc as _from_local_to_utc, from_utc_to_local as _from_utc_to_local
 
 logger = logging.getLogger(__name__)

@@ -12,7 +12,7 @@ from copy import deepcopy
 from datetime import datetime
 
 # Zato
-from zato.common import GENERIC as COMMON_GENERIC
+from zato.common.api import GENERIC as COMMON_GENERIC
 from zato.common.broker_message import GENERIC
 from zato.common.json_ import dumps, loads
 from zato.common.odb.model import GenericConn as ModelGenericConn

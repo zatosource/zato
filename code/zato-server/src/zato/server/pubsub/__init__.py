@@ -28,7 +28,7 @@ from future.utils import iteritems, itervalues
 from past.builtins import basestring, unicode
 
 # Zato
-from zato.common import DATA_FORMAT, PUBSUB, SEARCH
+from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.json_ import dumps

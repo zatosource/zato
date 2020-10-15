@@ -13,7 +13,7 @@ from past.builtins import unicode
 from six import add_metaclass
 
 # Zato
-from zato.common import SEC_DEF_TYPE
+from zato.common.api import SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import TLSKeyCertSecurity
 from zato.common.odb.query import tls_key_cert_list
