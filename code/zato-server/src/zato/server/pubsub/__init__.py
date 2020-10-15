@@ -38,7 +38,7 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
      get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
-from zato.common.util import fs_safe_name, new_cid, spawn_greenlet
+from zato.common.util.api import fs_safe_name, new_cid, spawn_greenlet
 from zato.common.util.event import EventLog
 from zato.common.util.hook import HookTool
 from zato.common.util.python_ import get_current_stack

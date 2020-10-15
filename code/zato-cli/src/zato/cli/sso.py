@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Zato
 from zato.cli import ZatoCommand, common_odb_opts, common_totp_opts
-from zato.common.util import as_bool
+from zato.common.util.api import as_bool
 
 # ################################################################################################################################
 
@@ -56,7 +56,7 @@ class SSOCommand(ZatoCommand):
     def _get_current_host(self):
 
         # Zato
-        from zato.common.util import current_host
+        from zato.common.util.api import current_host
 
         return current_host()
 
@@ -65,7 +65,7 @@ class SSOCommand(ZatoCommand):
     def _get_user(self):
 
         # Zato
-        from zato.common.util import current_host, current_user
+        from zato.common.util.api import current_host, current_user
 
         return '{}@{}'.format(current_user(), current_host())
 
@@ -76,7 +76,7 @@ class SSOCommand(ZatoCommand):
 
         # Zato
         from zato.common.crypto import CryptoManager
-        from zato.common.util import get_config
+        from zato.common.util.api import get_config
         from zato.sso.api import UserAPI
         from zato.sso.util import new_user_id, normalize_password_reject_list
 
@@ -109,7 +109,7 @@ class SSOCommand(ZatoCommand):
         import os
 
         # Zato
-        from zato.common.util import get_config
+        from zato.common.util.api import get_config
 
         repo_location = os.path.join(args.path, 'config', 'repo')
         secrets_conf = get_config(repo_location, 'secrets.conf', needs_user_config=False)
@@ -280,7 +280,7 @@ class Login(SSOCommand):
         # type: (Namespace, SSOUser, UserAPI)
 
         # Zato
-        from zato.common.util import current_host
+        from zato.common.util.api import current_host
 
         response = user_api.login(
             self._get_cid(), args.username, None, None, '127.0.0.1', user_agent='Zato CLI {}'.format(current_host()),

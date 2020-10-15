@@ -30,7 +30,7 @@ from past.builtins import xrange
 
 # Zato
 from zato.common.api import AMQP, CHANNEL, SECRET_SHADOW, get_version
-from zato.common.util import get_component_name
+from zato.common.util.api import get_component_name
 from zato.server.connection.connector import Connector, Inactive
 
 version = get_version()

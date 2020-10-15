@@ -21,7 +21,7 @@ from zato.common.api import WEB_SOCKET
 from zato.common.broker_message import PUBSUB
 from zato.common.odb.model import ChannelWebSocket, PubSubSubscription, WebSocketClient, WebSocketClientPubSubKeys
 from zato.common.util.pubsub import get_topic_sub_keys_from_sub_keys
-from zato.common.util import parse_extra_into_dict
+from zato.common.util.api import parse_extra_into_dict
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.service.internal import AdminService
 

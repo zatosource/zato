@@ -40,7 +40,7 @@ from zato.admin.web.forms.stats import MaintenanceForm, NForm, SettingsForm
 from zato.admin.web.views import get_js_dt_format, get_sample_dt, method_allowed
 from zato.common.api import DEFAULT_STATS_SETTINGS, StatsElem
 from zato.common.json_ import dumps
-from zato.common.util import from_local_to_utc, make_repr, now, utcnow
+from zato.common.util.api import from_local_to_utc, make_repr, now, utcnow
 
 logger = logging.getLogger(__name__)
 

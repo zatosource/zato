@@ -21,7 +21,7 @@ from past.builtins import unicode
 # Zato
 from zato.common.api import NotGiven
 from zato.common.broker_message import SSO as BROKER_MSG_SSO
-from zato.common.util import asbool
+from zato.common.util.api import asbool
 from zato.server.service import AsIs, Bool, Int, List, Opaque
 from zato.server.service.internal.sso import BaseService, BaseRESTService, BaseSIO
 from zato.sso import status_code, SearchCtx, SignupCtx, ValidationError

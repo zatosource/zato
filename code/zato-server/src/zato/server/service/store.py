@@ -47,7 +47,7 @@ from zato.common.json_schema import get_service_config, ValidationConfig as JSON
      Validator as JSONSchemaValidator
 from zato.common.match import Matcher
 from zato.common.odb.model.base import Base as ModelBase
-from zato.common.util import deployment_info, import_module_from_path, is_func_overridden, is_python_file, visit_py_source
+from zato.common.util.api import deployment_info, import_module_from_path, is_func_overridden, is_python_file, visit_py_source
 from zato.server.config import ConfigDict
 from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, PubSubHook, Service, \
      WSXFacade

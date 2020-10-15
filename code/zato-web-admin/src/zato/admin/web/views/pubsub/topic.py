@@ -21,7 +21,7 @@ from zato.admin.web.forms.pubsub.topic import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, slugify
 from zato.admin.web.views.pubsub import get_client_html, get_endpoint_html
 from zato.common.odb.model import PubSubEndpoint, PubSubMessage, PubSubTopic
-from zato.common.util import asbool
+from zato.common.util.api import asbool
 
 # ################################################################################################################################
 

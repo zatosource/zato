@@ -54,7 +54,7 @@ def get_ping_query(fs_sql_config, engine_params):
 # ################################################################################################################################
 
 def create_pool(engine_params, ping_query, query_class=None):
-    from zato.common.util import get_engine_url
+    from zato.common.util.api import get_engine_url
 
     engine_params = copy.deepcopy(engine_params)
     if engine_params['engine'] != 'sqlite':

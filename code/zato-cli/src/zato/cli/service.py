@@ -46,7 +46,7 @@ class Invoke(ZatoCommand):
 
         # Zato
         from zato.common.api import DATA_FORMAT
-        from zato.common.util import get_client_from_server_conf
+        from zato.common.util.api import get_client_from_server_conf
 
         client = get_client_from_server_conf(args.path)
 

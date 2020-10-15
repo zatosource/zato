@@ -28,7 +28,7 @@ from past.builtins import basestring
 
 # Zato
 from zato.common.api import CHANNEL, ZMQ
-from zato.common.util import new_cid, wait_until_port_free
+from zato.common.util.api import new_cid, wait_until_port_free
 from zato.zmq_.mdp import const, EventBrokerDisconnect, EventBrokerHeartbeat, EventClientReply, EventWorkerRequest, \
      Service, WorkerData
 

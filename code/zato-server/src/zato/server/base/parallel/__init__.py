@@ -42,7 +42,7 @@ from zato.common.json_ import dumps, loads
 from zato.common.odb.post_process import ODBPostProcess
 from zato.common.pubsub import SkipDelivery
 from zato.common.rate_limiting import RateLimiting
-from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
+from zato.common.util.api import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
      invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
      register_diag_handlers
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC

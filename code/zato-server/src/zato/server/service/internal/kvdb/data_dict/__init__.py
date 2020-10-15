@@ -14,7 +14,7 @@ from future.utils import iteritems
 
 # Zato
 from zato.common.api import KVDB, ZatoException
-from zato.common.util import multikeysort, translation_name
+from zato.common.util.api import multikeysort, translation_name
 from zato.server.service.internal import AdminService
 
 class DataDictService(AdminService):

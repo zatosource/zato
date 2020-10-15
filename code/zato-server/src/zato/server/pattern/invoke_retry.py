@@ -21,7 +21,7 @@ from gevent import sleep
 # Zato
 from zato.common.api import ZatoException
 from zato.common.json_ import dumps
-from zato.common.util import new_cid
+from zato.common.util.api import new_cid
 
 logger = getLogger(__name__)
 

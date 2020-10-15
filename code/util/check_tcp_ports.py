@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.common.util import wait_until_port_free
+from zato.common.util.api import wait_until_port_free
 
 def wait_for_ports(*data):
     """ Blocks until input TCP ports are free.

@@ -35,7 +35,7 @@ class CheckConfig(ManageCommand):
     def ensure_port_free(self, prefix, port, address):
 
         # Zato
-        from zato.common.util import is_port_taken
+        from zato.common.util.api import is_port_taken
 
         if is_port_taken(port):
             raise Exception('{} check failed. Address `{}` already taken.'.format(prefix, address))
