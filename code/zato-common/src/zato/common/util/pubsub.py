@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.common import PUBSUB as COMMON_PUBSUB
+from zato.common.api import PUBSUB as COMMON_PUBSUB
 from zato.common.odb.query import pubsub_endpoint_queue_list_by_sub_keys
 from zato.common.util.time_ import datetime_from_ms
 

@@ -17,7 +17,7 @@ from logging import getLogger
 from future.utils import iteritems
 
 # Zato
-from zato.common import WEB_SOCKET
+from zato.common.api import WEB_SOCKET
 from zato.common.broker_message import PUBSUB
 from zato.common.odb.model import ChannelWebSocket, PubSubSubscription, WebSocketClient, WebSocketClientPubSubKeys
 from zato.common.util.pubsub import get_topic_sub_keys_from_sub_keys

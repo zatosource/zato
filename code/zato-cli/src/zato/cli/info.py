@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Zato
 from zato.cli import ManageCommand
-from zato.common import INFO_FORMAT
+from zato.common.api import INFO_FORMAT
 
 DEFAULT_COLS_WIDTH = '30,90'
 

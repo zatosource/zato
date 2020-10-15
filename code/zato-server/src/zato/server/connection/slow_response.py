@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
-from zato.common import KVDB, TRACE1
+from zato.common.api import KVDB, TRACE1
 from zato.common.json_ import dumps
 
 logger = logging.getLogger(__name__)

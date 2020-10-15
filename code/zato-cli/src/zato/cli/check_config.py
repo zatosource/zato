@@ -88,7 +88,7 @@ class CheckConfig(ManageCommand):
     def check_sql_odb_web_admin(self, cm, conf):
 
         # Zato
-        from zato.common import ping_queries
+        from zato.common.api import ping_queries
 
         pairs = (
             ('engine', 'db_type'),
@@ -155,7 +155,7 @@ class CheckConfig(ManageCommand):
         from psutil import AccessDenied, Process, NoSuchProcess
 
         # Zato
-        from zato.common import INFO_FORMAT
+        from zato.common.api import INFO_FORMAT
         from zato.common.component_info import get_info
 
         pidfile = abspath(join(self.component_dir, 'pidfile'))

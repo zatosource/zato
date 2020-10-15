@@ -39,7 +39,7 @@ from pyotp.totp import TOTP
 from builtins import bytes
 
 # Zato
-from zato.common import SECRETS
+from zato.common.api import SECRETS
 from zato.common.json_ import loads
 
 # ################################################################################################################################

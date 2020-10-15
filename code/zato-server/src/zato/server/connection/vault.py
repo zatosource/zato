@@ -23,7 +23,7 @@ from gevent.lock import RLock
 from hvac import Client
 
 # Zato
-from zato.common import UNITTEST, VAULT
+from zato.common.api import UNITTEST, VAULT
 
 # ################################################################################################################################
 

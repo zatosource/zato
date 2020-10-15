@@ -26,7 +26,7 @@ from zato.server.ext.outbox import AnonymousOutbox, Attachment, Email, Outbox
 from past.builtins import basestring, unicode
 
 # Zato
-from zato.common import IMAPMessage, EMAIL
+from zato.common.api import IMAPMessage, EMAIL
 from zato.server.store import BaseAPI, BaseStore
 
 # ################################################################################################################################

@@ -34,8 +34,7 @@ install_aliases()
 class CommandStore(object):
 
     def __init__(self):
-        #self.ipc = CommandStoreIPC()
-        pass
+        self.ipc = CommandStoreIPC()
 
 # ################################################################################################################################
 
@@ -55,7 +54,7 @@ class CommandStore(object):
 
     def load_parser(self):
 
-        #parser = self.get_parser()
+        parser = self.get_parser()
 
         print(111, self.ipc)
         print(222, self.ipc)
@@ -493,24 +492,20 @@ class CommandStore(object):
 
         return parser
 
-#command_store = CommandStore()
+command_store = CommandStore()
 
 # ################################################################################################################################
 
 def main():
-    return
     parser = command_store.load_parser()
-    '''
     args = parser.parse_args()
     if not hasattr(args, 'command'):
         parser.print_help()
-    '''
     if 0:
         pass
     else:
         # Zato
-        #from zato.cli import run_command
-        #return run_command(args)
-        pass
+        from zato.cli import run_command
+        return run_command(args)
 
 # ################################################################################################################################

@@ -16,7 +16,7 @@ from future.utils import iteritems
 from past.builtins import basestring
 
 # Zato
-from zato.common import DELEGATED_TO_RBAC, RATE_LIMIT, SIMPLE_IO, TLS, ZATO_NONE, ZATO_SEC_USE_RBAC
+from zato.common.api import DELEGATED_TO_RBAC, RATE_LIMIT, SIMPLE_IO, TLS, ZATO_NONE, ZATO_SEC_USE_RBAC
 
 # ################################################################################################################################
 

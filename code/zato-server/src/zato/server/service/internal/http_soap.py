@@ -16,7 +16,7 @@ from traceback import format_exc
 from paste.util.converters import asbool
 
 # Zato
-from zato.common import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
+from zato.common.api import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.broker_message import CHANNEL, OUTGOING

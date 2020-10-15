@@ -13,7 +13,7 @@ from copy import deepcopy
 from uuid import uuid4
 
 # Zato
-from zato.common import ADAPTER_PARAMS, HTTPException
+from zato.common.api import ADAPTER_PARAMS, HTTPException
 from zato.common.json_ import dumps, loads
 from zato.server.service import Service
 

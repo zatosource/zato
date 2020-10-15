@@ -468,7 +468,7 @@ class ZatoCommand(object):
         from imp import reload
 
         # Zato
-        from zato.common import util
+        from zato.common.api import util
 
         if reload_:
             logging.shutdown() # noqa
@@ -590,7 +590,7 @@ class ZatoCommand(object):
         from io import StringIO
 
         # Zato
-        from zato.common import util
+        from zato.common.api import util
 
         now = util.fs_safe_now() # noqa
         file_name = 'zato.{}.config'.format(now)
@@ -616,7 +616,7 @@ class ZatoCommand(object):
         import sqlalchemy
 
         # Zato
-        from zato.common import util
+        from zato.common.api import util
         from zato.common.util import get_engine_url
 
         connect_args = {'application_name':util.get_component_name('enmasse')} if args.odb_type == 'postgresql' else {}

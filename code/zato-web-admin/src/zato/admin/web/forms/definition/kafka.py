@@ -13,7 +13,7 @@ from django import forms
 
 # Zato
 from zato.admin.web.forms import WithTLSForm
-from zato.common import KAFKA
+from zato.common.api import KAFKA
 
 default = KAFKA.DEFAULT
 timeout = default.TIMEOUT

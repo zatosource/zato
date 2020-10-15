@@ -25,7 +25,7 @@ from lxml.objectify import ObjectifiedElement
 from future.utils import iteritems
 
 # Zato
-from zato.common import simple_types
+from zato.common.api import simple_types
 from zato.common.json_ import loads
 from zato.common.util import make_repr
 

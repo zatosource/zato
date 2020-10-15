@@ -17,7 +17,7 @@ from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, false as sa_
 from sqlalchemy.orm import backref, relationship
 
 # Zato
-from zato.common import AMQP, CASSANDRA, CLOUD, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MISC, NOTIF, ODOO, SAP, PUBSUB, \
+from zato.common.api import AMQP, CASSANDRA, CLOUD, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MISC, NOTIF, ODOO, SAP, PUBSUB, \
      SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY
 from zato.common.json_ import dumps as json_dumps
 from zato.common.odb import WMQ_DEFAULT_PRIORITY

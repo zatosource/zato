@@ -15,7 +15,7 @@ import logging
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.definition.cassandra import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, method_allowed
-from zato.common import CASSANDRA
+from zato.common.api import CASSANDRA
 from zato.common.odb.model import CassandraConn
 
 logger = logging.getLogger(__name__)

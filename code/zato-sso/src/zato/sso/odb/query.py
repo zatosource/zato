@@ -18,7 +18,7 @@ from bunch import bunchify
 from sqlalchemy import or_
 
 # Zato
-from zato.common import GENERIC
+from zato.common.api import GENERIC
 from zato.common.json_ import loads
 from zato.common.odb.model import SecurityBase, SSOLinkedAuth, SSOSession, SSOUser
 from zato.common.util.sql import elems_with_opaque

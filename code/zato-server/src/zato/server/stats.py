@@ -15,7 +15,7 @@ import logging
 from dateutil.rrule import MINUTELY, rrule
 
 # Zato
-from zato.common import KVDB
+from zato.common.api import KVDB
 
 logger = logging.getLogger(__name__)
 

@@ -20,7 +20,7 @@ from yaml import FullLoader, load as yaml_load
 
 # Zato
 from common import MyService, service_name, sio_config
-from zato.common import APISPEC, URL_TYPE
+from zato.common.api import APISPEC, URL_TYPE
 from zato.common.test import BaseSIOTestCase
 from zato.common.util import fs_safe_name
 from zato.server.apispec import Generator

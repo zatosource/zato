@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.common import DATA_FORMAT
+from zato.common.api import DATA_FORMAT
 from zato.common.simpleio_ import get_sio_server_config, simple_io_conf_contents
 from zato.common.test import BaseSIOTestCase
 from zato.common.util import get_config_from_string

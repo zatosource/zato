@@ -24,7 +24,7 @@ from sqlalchemy import Boolean, Integer
 from sqlalchemy.exc import IntegrityError
 
 # Zato
-from zato.common import ZATO_NOT_GIVEN
+from zato.common.api import ZATO_NOT_GIVEN
 from zato.common.odb.model import Base, Cluster
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import AsIs, Bool as BoolSIO, Int as IntSIO

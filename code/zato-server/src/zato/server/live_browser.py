@@ -25,7 +25,7 @@ from future.utils import iteritems
 from past.builtins import basestring
 
 # Zato
-from zato.common import WEB_SOCKET
+from zato.common.api import WEB_SOCKET
 from zato.common.odb.model import Server, WebSocketClient, WebSocketSubscription
 
 # ################################################################################################################################

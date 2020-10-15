@@ -13,7 +13,7 @@ from copy import deepcopy
 
 # Zato
 from zato.cli import common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents, ZatoCommand
-from zato.common import CONTENT_TYPE, default_internal_modules
+from zato.common.api import CONTENT_TYPE, default_internal_modules
 from zato.common.simpleio_ import simple_io_conf_contents
 
 # ################################################################################################################################
@@ -653,7 +653,7 @@ class Create(ZatoCommand):
 
         # Zato
         from zato.cli._apispec_default import apispec_files
-        from zato.common import SERVER_JOIN_STATUS
+        from zato.common.api import SERVER_JOIN_STATUS
         from zato.common.crypto import well_known_data
         from zato.common.defaults import http_plain_server_port
         from zato.common.odb.model import Cluster, Server

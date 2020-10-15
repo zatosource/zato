@@ -34,7 +34,7 @@ from six import string_types
 from sqlalchemy import create_engine
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, SIMPLE_IO
+from zato.common.api import CHANNEL, DATA_FORMAT, SIMPLE_IO
 from zato.common.json_ import loads
 from zato.common.log_message import CID_LENGTH
 from zato.common.odb import model

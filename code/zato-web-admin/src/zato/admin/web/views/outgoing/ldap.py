@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 
 # Zato
-from zato.common import GENERIC, LDAP
+from zato.common.api import GENERIC, LDAP
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.ldap import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \

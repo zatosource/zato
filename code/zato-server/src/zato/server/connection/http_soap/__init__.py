@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.common import exception
+from zato.common.api import exception
 
 # Backward compatibility - in 3.0 these exceptions were moved from here to zato.common.exception
 
