@@ -20,7 +20,7 @@ from bunch import Bunch
 from candv import Constants, ValueConstant
 
 # Python 2/3 compatibility
-from zato.common.py23_ import maxint
+#from zato.common.py23_ import maxint
 
 # Zato
 from zato.vault.client import VAULT
