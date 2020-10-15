@@ -30,7 +30,8 @@ from paodate import Date
 from zato.common.py23_ import maxint
 
 # Zato
-from zato.common.api import KVDB, StatsElem, ZatoException
+from zato.common.api import KVDB, StatsElem
+from zato.common.exception import ZatoException
 from zato.common.util.stats import tmean
 from zato.server.service import Integer, UTC
 from zato.server.service.internal.stats import BaseAggregatingService, STATS_KEYS, StatsReturningService, \

@@ -32,7 +32,8 @@ from zato.admin.web import from_user_to_utc, from_utc_to_user
 from zato.admin.web.views import get_js_dt_format, get_sample_dt, method_allowed, Delete as _Delete, parse_response_data
 from zato.admin.settings import job_type_friendly_names
 from zato.admin.web.forms.scheduler import CronStyleSchedulerJobForm, IntervalBasedSchedulerJobForm, OneTimeSchedulerJobForm
-from zato.common.api import SCHEDULER, TRACE1, ZatoException
+from zato.common.api import SCHEDULER, TRACE1
+from zato.common.exception import ZatoException
 from zato.common.json_ import dumps
 from zato.common.odb.model import CronStyleJob, IntervalBasedJob, Job
 from zato.common.util.api import pprint

@@ -27,7 +27,7 @@ from requests import get as requests_get
 from requests.exceptions import ConnectionError
 
 # Zato
-from zato.common.api import get_version
+from zato.common.version import get_version
 from zato.common.json_ import loads
 from zato.server.service import Service
 

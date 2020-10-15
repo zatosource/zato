@@ -32,10 +32,10 @@ from zato.common.py23_ import maxint
 
 # Zato
 from zato.bunch import Bunch
-from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, Inactive, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, PUBSUB, WEB_SOCKET, \
-     ZatoException, zato_no_op_marker
+from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, PUBSUB, WEB_SOCKET, \
+     zato_no_op_marker
 from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL, SERVICE
-from zato.common.exception import Reportable
+from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.json_ import dumps
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException
 from zato.common.nav import DictNav, ListNav

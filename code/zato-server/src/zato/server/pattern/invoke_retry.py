@@ -19,7 +19,7 @@ from arrow import utcnow
 from gevent import sleep
 
 # Zato
-from zato.common.api import ZatoException
+from zato.common.exception import ZatoException
 from zato.common.json_ import dumps
 from zato.common.util.api import new_cid
 
