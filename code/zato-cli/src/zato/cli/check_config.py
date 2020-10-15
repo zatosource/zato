@@ -8,33 +8,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-import os
-from distutils.version import LooseVersion
-from os.path import abspath, exists, join
-
-# Bunch
-from bunch import Bunch
-
-# ConfigObj
-from configobj import ConfigObj
-
-# psutil
-from psutil import AccessDenied, Process, NoSuchProcess
-
-# Python 2/3 compatibility
-from future.utils import iteritems
-
 # Zato
 from zato.cli import ManageCommand
-from zato.common import INFO_FORMAT, ping_queries
-from zato.common.component_info import get_info
-from zato.common.crypto import resolve_secret_key, SchedulerCryptoManager, ServerCryptoManager, WebAdminCryptoManager
-from zato.common.json_ import loads
-from zato.common.kvdb import KVDB
-from zato.common.haproxy import validate_haproxy_config
-from zato.common.odb import create_pool, get_ping_query
-from zato.common.util import is_port_taken
 
 # ################################################################################################################################
 
@@ -45,12 +20,23 @@ class CheckConfig(ManageCommand):
 # ################################################################################################################################
 
     def get_json_conf(self, conf_name, repo_dir=None):
+
+        # stdlib
+        from os.path import join
+
+        # Zato
+        from zato.common.json_ import loads
+
         repo_dir = repo_dir or join(self.config_dir, 'repo')
         return loads(open(join(repo_dir, conf_name)).read())
 
 # ################################################################################################################################
 
     def ensure_port_free(self, prefix, port, address):
+
+        # Zato
+        from zato.common.util import is_port_taken
+
         if is_port_taken(port):
             raise Exception('{} check failed. Address `{}` already taken.'.format(prefix, address))
 
@@ -65,6 +51,9 @@ class CheckConfig(ManageCommand):
 
     def ping_sql(self, engine_params, ping_query):
 
+        # Zato
+        from zato.common.odb import create_pool
+
         session = create_pool(engine_params, ping_query)
         session.execute(ping_query)
         session.close()
@@ -75,6 +64,13 @@ class CheckConfig(ManageCommand):
 # ################################################################################################################################
 
     def check_sql_odb_server_scheduler(self, cm, conf, fs_sql_config, needs_decrypt_password=True):
+
+        # Zato
+        from zato.common.odb import get_ping_query
+
+        # Python 2/3 compatibility
+        from future.utils import iteritems
+
         engine_params = dict(iteritems((conf['odb'])))
         engine_params['extra'] = {}
         engine_params['pool_size'] = 1
@@ -90,6 +86,10 @@ class CheckConfig(ManageCommand):
 # ################################################################################################################################
 
     def check_sql_odb_web_admin(self, cm, conf):
+
+        # Zato
+        from zato.common import ping_queries
+
         pairs = (
             ('engine', 'db_type'),
             ('username', 'DATABASE_USER'),
@@ -110,6 +110,18 @@ class CheckConfig(ManageCommand):
 # ################################################################################################################################
 
     def on_server_check_kvdb(self, cm, conf, conf_key='kvdb'):
+
+        # stdlib
+        from distutils.version import LooseVersion
+
+        # Bunch
+        from bunch import Bunch
+
+        # Zato
+        from zato.common.kvdb import KVDB
+
+        # Python 2/3 compatibility
+        from future.utils import iteritems
 
         kvdb_config = Bunch(dict(iteritems((conf[conf_key]))))
         kvdb = KVDB(None, kvdb_config, cm.decrypt)
@@ -134,6 +146,18 @@ class CheckConfig(ManageCommand):
 # ################################################################################################################################
 
     def ensure_no_pidfile(self, log_file_marker):
+
+        # stdlib
+        import os
+        from os.path import abspath, exists, join
+
+        # psutil
+        from psutil import AccessDenied, Process, NoSuchProcess
+
+        # Zato
+        from zato.common import INFO_FORMAT
+        from zato.common.component_info import get_info
+
         pidfile = abspath(join(self.component_dir, 'pidfile'))
 
         # Pidfile exists ..
@@ -216,17 +240,38 @@ class CheckConfig(ManageCommand):
 # ################################################################################################################################
 
     def get_crypto_manager(self, secret_key=None, stdin_data=None, class_=None):
+
+        # stdlib
+        from os.path import join
+
         return class_.from_repo_dir(secret_key, join(self.config_dir, 'repo'), stdin_data)
 
 # ################################################################################################################################
 
     def get_sql_ini(self, conf_file, repo_dir=None):
+
+        # stdlib
+        from os.path import join
+
+        # ConfigObj
+        from configobj import ConfigObj
+
         repo_dir = repo_dir or join(self.config_dir, 'repo')
         return ConfigObj(join(repo_dir, conf_file))
 
 # ################################################################################################################################
 
     def _on_server(self, args):
+
+        # stdlib
+        from os.path import join
+
+        # ConfigObj
+        from configobj import ConfigObj
+
+        # Zato
+        from zato.common.crypto import ServerCryptoManager
+
         cm = self.get_crypto_manager(getattr(args, 'secret_key', None), getattr(args, 'stdin_data', None),
             class_=ServerCryptoManager)
         fs_sql_config = self.get_sql_ini('sql.conf')
@@ -247,6 +292,13 @@ class CheckConfig(ManageCommand):
 # ################################################################################################################################
 
     def _on_lb(self, args, *ignored_args, **ignored_kwargs):
+
+        # stdlib
+        from os.path import join
+
+        # Zato
+        from zato.common.haproxy import validate_haproxy_config
+
         self.ensure_no_pidfile('lb-agent')
         repo_dir = join(self.config_dir, 'repo')
 
@@ -276,6 +328,13 @@ class CheckConfig(ManageCommand):
 # ################################################################################################################################
 
     def _on_web_admin(self, args, *ignored_args, **ignored_kwargs):
+
+        # stdlib
+        from os.path import join
+
+        # Zato
+        from zato.common.crypto import resolve_secret_key, WebAdminCryptoManager
+
         repo_dir = join(self.component_dir, 'config', 'repo')
 
         secret_key = getattr(args, 'secret_key', None)
@@ -291,6 +350,16 @@ class CheckConfig(ManageCommand):
 # ################################################################################################################################
 
     def _on_scheduler(self, args, *ignored_args, **ignored_kwargs):
+
+        # stdlib
+        from os.path import join
+
+        # ConfigObj
+        from configobj import ConfigObj
+
+        # Zato
+        from zato.common.crypto import SchedulerCryptoManager
+
         repo_dir = join(self.component_dir, 'config', 'repo')
         server_conf_path = join(repo_dir, 'scheduler.conf')
 
