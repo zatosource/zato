@@ -468,7 +468,7 @@ class ZatoCommand(object):
         from imp import reload
 
         # Zato
-        from zato.common.api import util
+        from zato.common.util import api as util_api
 
         if reload_:
             logging.shutdown() # noqa
@@ -484,7 +484,7 @@ class ZatoCommand(object):
         self.logger.addHandler(console_handler)
 
         if args.store_log:
-            verbose_handler = logging.FileHandler('zato.{}.log'.format(util.fs_safe_now())) # noqa
+            verbose_handler = logging.FileHandler('zato.{}.log'.format(util_api.fs_safe_now())) # noqa
             verbose_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s') # noqa
             verbose_handler.setFormatter(verbose_formatter)
             self.logger.addHandler(verbose_handler)
@@ -590,9 +590,9 @@ class ZatoCommand(object):
         from io import StringIO
 
         # Zato
-        from zato.common.api import util
+        from zato.common.util import api as util_api
 
-        now = util.fs_safe_now() # noqa
+        now = util_api.fs_safe_now() # noqa
         file_name = 'zato.{}.config'.format(now)
         file_args = StringIO()
 
@@ -616,10 +616,10 @@ class ZatoCommand(object):
         import sqlalchemy
 
         # Zato
-        from zato.common.api import util
+        from zato.common.util import api as util_api
         from zato.common.util.api import get_engine_url
 
-        connect_args = {'application_name':util.get_component_name('enmasse')} if args.odb_type == 'postgresql' else {}
+        connect_args = {'application_name':util_api.get_component_name('enmasse')} if args.odb_type == 'postgresql' else {}
         return sqlalchemy.create_engine(get_engine_url(args), connect_args=connect_args)
 
 # ################################################################################################################################

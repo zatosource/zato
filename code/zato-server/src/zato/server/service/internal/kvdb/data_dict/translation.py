@@ -15,7 +15,8 @@ from hashlib import sha1, sha256
 from past.builtins import unicode
 
 # Zato
-from zato.common.api import KVDB, ZatoException
+from zato.common.api import KVDB
+from zato.common.exception import ZatoException
 from zato.common.util.api import hexlify, multikeysort
 from zato.server.service import Int
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
