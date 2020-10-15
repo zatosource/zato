@@ -22,8 +22,8 @@ import redis
 # Zato
 from zato.common import BROKER, TRACE1, ZATO_NONE
 from zato.common.broker_message import KEYS, MESSAGE_TYPE, TOPICS
-from zato.common.json_ import dumps
-from zato.common.util import new_cid
+from zato.common.json_ import dumps, loads
+from zato.common.util.api import new_cid
 
 logger = logging.getLogger(__name__)
 
