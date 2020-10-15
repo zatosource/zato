@@ -22,7 +22,7 @@ from rapidjson import dumps
 
 # Zato
 from zato.common.api import DATA_FORMAT
-from zato.common.util import make_repr, new_cid
+from zato.common.util.api import make_repr, new_cid
 from zato.cy.reqresp.payload import SimpleIOPayload
 
 # ################################################################################################################################

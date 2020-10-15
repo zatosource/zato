@@ -78,7 +78,7 @@ class Stop(ManageCommand):
         import signal
 
         # Zato
-        from zato.common.util import get_haproxy_agent_pidfile
+        from zato.common.util.api import get_haproxy_agent_pidfile
 
         # We much check whether the pidfile for agent exists, it won't if --fg was given on input in which case
         # Ctrl-C must have closed the agent thus we cannot send any signal.

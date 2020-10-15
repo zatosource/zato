@@ -203,7 +203,7 @@ class Create(ZatoCommand):
         # Zato
         from zato.common.api import DATA_FORMAT
         from zato.common.odb.model import Service
-        from zato.common.util import get_http_json_channel, get_http_soap_channel
+        from zato.common.util.api import get_http_json_channel, get_http_soap_channel
 
         for name, impl_name in iteritems(zato_services):
 

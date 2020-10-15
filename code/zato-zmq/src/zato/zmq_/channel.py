@@ -16,7 +16,7 @@ from gevent import spawn
 
 # Zato
 from zato.common.api import CHANNEL
-from zato.common.util import new_cid
+from zato.common.util.api import new_cid
 from zato.zmq_ import Base
 from zato.zmq_.mdp.broker import Broker
 

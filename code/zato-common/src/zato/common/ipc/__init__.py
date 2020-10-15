@@ -18,7 +18,7 @@ import zmq.green as zmq
 
 # Zato
 from zato.common.api import DATA_FORMAT, NO_DEFAULT_VALUE
-from zato.common.util import get_logger_for_class, make_repr, new_cid, spawn_greenlet
+from zato.common.util.api import get_logger_for_class, make_repr, new_cid, spawn_greenlet
 
 # ################################################################################################################################
 

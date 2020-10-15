@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from bunch import bunchify
 
 # Zato
-from zato.common.util import start_connectors
+from zato.common.util.api import start_connectors
 from zato.server.base.worker.common import WorkerImpl
 
 # ################################################################################################################################

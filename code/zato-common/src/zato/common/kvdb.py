@@ -30,7 +30,7 @@ from past.builtins import basestring
 
 # Zato
 from zato.common.api import KVDB as _KVDB, NONCE_STORE
-from zato.common.util import has_redis_sentinels
+from zato.common.util.api import has_redis_sentinels
 
 logger = getLogger(__name__)
 

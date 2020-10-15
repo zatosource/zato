@@ -267,7 +267,7 @@ class Create(ZatoCommand):
         from zato.common.crypto import CryptoManager
         from zato.common.defaults import http_plain_server_port
         from zato.common.odb.model import Cluster
-        from zato.common.util import get_engine, get_session
+        from zato.common.util.api import get_engine, get_session
 
         random.seed()
 

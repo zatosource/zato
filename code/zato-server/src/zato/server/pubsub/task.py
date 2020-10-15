@@ -31,7 +31,7 @@ from future.utils import iteritems
 from zato.common.api import GENERIC, PUBSUB
 from zato.common.json_ import loads
 from zato.common.pubsub import PubSubMessage
-from zato.common.util import grouper, spawn_greenlet
+from zato.common.util.api import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 
 # ################################################################################################################################

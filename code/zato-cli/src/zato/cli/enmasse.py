@@ -1456,7 +1456,7 @@ class Enmasse(ManageCommand):
 
         # Zato
         from zato.cli.check_config import CheckConfig
-        from zato.common.util import get_client_from_server_conf
+        from zato.common.util.api import get_client_from_server_conf
         from zato.common.util.tcp import wait_for_zato_ping
 
         self.args = args

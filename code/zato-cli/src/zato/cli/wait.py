@@ -39,7 +39,7 @@ class Wait(ZatoCommand):
         import sys
 
         # Zato
-        from zato.common.util import get_client_from_server_conf
+        from zato.common.util.api import get_client_from_server_conf
         from zato.common.util.tcp import wait_for_zato
 
         # We need to have a local or remote server on input ..

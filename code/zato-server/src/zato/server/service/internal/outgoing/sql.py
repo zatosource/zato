@@ -22,7 +22,7 @@ from zato.common.api import ZatoException, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import Cluster, SQLConnectionPool
 from zato.common.odb.query import out_sql_list
-from zato.common.util import get_sql_engine_display_name
+from zato.common.util.api import get_sql_engine_display_name
 from zato.server.service import AsIs, Integer
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 

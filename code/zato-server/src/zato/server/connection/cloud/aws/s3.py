@@ -18,7 +18,7 @@ from boto.s3.key import Key
 
 # Zato
 from zato.common.api import ZATO_NONE
-from zato.common.util import parse_extra_into_dict
+from zato.common.util.api import parse_extra_into_dict
 from zato.server.connection.queue import Wrapper
 
 logger = getLogger(__name__)

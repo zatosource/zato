@@ -53,7 +53,7 @@ class APISpec(ZatoCommand):
         from shutil import rmtree
 
         # Zato
-        from zato.common.util import fs_safe_now, get_client_from_server_conf
+        from zato.common.util.api import fs_safe_now, get_client_from_server_conf
 
         client = get_client_from_server_conf(args.path)
 

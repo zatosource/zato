@@ -42,7 +42,7 @@ class Util(object):
         # Zato
         from zato.client import AnyServiceInvoker
         from zato.common.api import odb
-        from zato.common.util import get_config, get_crypto_manager_from_server_config, get_odb_session_from_server_config, \
+        from zato.common.util.api import get_config, get_crypto_manager_from_server_config, get_odb_session_from_server_config, \
              get_server_client_auth
 
         class ZatoClient(AnyServiceInvoker):

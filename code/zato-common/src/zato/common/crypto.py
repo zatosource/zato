@@ -417,7 +417,7 @@ def resolve_secret_key(secret_key, _url_prefix=SECRETS.URL_PREFIX):
             # This will be used when components are invoked as subprocesses
             else:
                 # To prevent circular imports
-                from zato.common.util import parse_cmd_line_options
+                from zato.common.util.api import parse_cmd_line_options
 
                 cli_options = parse_cmd_line_options(sys.argv[1])
                 secret_key = cli_options['secret_key']

@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.common.util import make_repr
+from zato.common.util.api import make_repr
 
 # Defaults per AMQP spec
 FRAME_MAX_SIZE = 131072

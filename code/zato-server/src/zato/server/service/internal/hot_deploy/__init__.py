@@ -25,7 +25,7 @@ from zato.common.api import DEPLOYMENT_STATUS, KVDB
 from zato.common.broker_message import HOT_DEPLOY
 from zato.common.json_ import dumps
 from zato.common.odb.model import DeploymentPackage, DeploymentStatus
-from zato.common.util import fs_safe_now, is_python_file, is_archive_file, new_cid
+from zato.common.util.api import fs_safe_now, is_python_file, is_archive_file, new_cid
 from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO
 

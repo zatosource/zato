@@ -39,7 +39,7 @@ from zato.common.exception import Reportable
 from zato.common.json_ import dumps
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException
 from zato.common.nav import DictNav, ListNav
-from zato.common.util import get_response_value, make_repr, new_cid, payload_from_request, service_name_from_impl, uncamelify
+from zato.common.util.api import get_response_value, make_repr, new_cid, payload_from_request, service_name_from_impl, uncamelify
 from zato.server.connection import slow_response
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.jms_wmq.outgoing import WMQFacade

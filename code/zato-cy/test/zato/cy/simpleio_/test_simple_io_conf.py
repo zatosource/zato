@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from zato.common.api import DATA_FORMAT
 from zato.common.simpleio_ import get_sio_server_config, simple_io_conf_contents
 from zato.common.test import BaseSIOTestCase
-from zato.common.util import get_config_from_string
+from zato.common.util.api import get_config_from_string
 from zato.server.service import Service
 
 # Zato - Cython

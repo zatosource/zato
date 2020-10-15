@@ -88,7 +88,7 @@ def wait_for_zato(address, url_path, timeout=60, interval=0.1):
     """ Waits until a Zato server responds.
     """
     # Imported here to avoid circular imports
-    from zato.common.util import wait_for_predicate
+    from zato.common.util.api import wait_for_predicate
 
     # Full URL to check a Zato server under
     url = address + url_path

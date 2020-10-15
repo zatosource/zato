@@ -30,7 +30,7 @@ from zato.broker.client import BrokerClient
 from zato.common.api import CHANNEL, DATA_FORMAT, SCHEDULER, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER as SCHEDULER_MSG, SERVICE, TOPICS
 from zato.common.kvdb import KVDB
-from zato.common.util import new_cid, spawn_greenlet
+from zato.common.util.api import new_cid, spawn_greenlet
 from zato.scheduler.backend import Interval, Job, Scheduler as _Scheduler
 
 # ################################################################################################################################

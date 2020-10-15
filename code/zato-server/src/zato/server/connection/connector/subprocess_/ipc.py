@@ -21,7 +21,7 @@ from requests import get, post
 
 # Zato
 from zato.common.json_ import dumps, loads
-from zato.common.util import get_free_port
+from zato.common.util.api import get_free_port
 from zato.common.util.proc import start_python_process
 
 # ################################################################################################################################
