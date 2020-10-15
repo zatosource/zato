@@ -8,39 +8,19 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from builtins import input as raw_input, int
-from imp import reload
-from io import StringIO
-import logging
-import os
-import shutil
-import sys
-import tempfile
-import time
-from datetime import datetime
-from getpass import getpass, getuser
-from socket import gethostname
+# ################################################################################################################################
 
-# SQLAlchemy
-import sqlalchemy
+# Some objects are re-defined here to avoid importing them from zato.common = improves CLI performance.
+class MS_SQL:
+    ZATO_DIRECT = 'zato+mssql1'
 
-# Zato
-from zato.cli import util as cli_util
-from zato.common import MS_SQL, odb, util, ZATO_INFO_FILE
-from zato.common.json_ import dumps, load
-from zato.common.util import get_engine_url, get_full_stack, get_session
-from zato.common.util.cli import read_stdin_data
-from zato.common.util.import_ import import_string
-from zato.common.version import get_version
+ZATO_INFO_FILE = '.zato-info'
+
+SUPPORTED_DB_TYPES = ('mysql', 'postgresql', 'sqlite')
 
 # ################################################################################################################################
 
-zato_version = get_version()
-
-# ################################################################################################################################
-
-_opts_odb_type = 'Operational database type, must be one of {}'.format(odb.SUPPORTED_DB_TYPES) # noqa
+_opts_odb_type = 'Operational database type, must be one of {}'.format(SUPPORTED_DB_TYPES) # noqa
 _opts_odb_host = 'Operational database host'
 _opts_odb_port = 'Operational database port'
 _opts_odb_user = 'Operational database user'
@@ -70,7 +50,7 @@ default_common_name = 'localhost'
 # ################################################################################################################################
 
 common_odb_opts = [
-    {'name':'odb_type', 'help':_opts_odb_type, 'choices':odb.SUPPORTED_DB_TYPES}, # noqa
+    {'name':'odb_type', 'help':_opts_odb_type, 'choices':SUPPORTED_DB_TYPES}, # noqa
     {'name':'--odb_host', 'help':_opts_odb_host},
     {'name':'--odb_port', 'help':_opts_odb_port},
     {'name':'--odb_user', 'help':_opts_odb_user},
@@ -330,6 +310,10 @@ ping_query=SELECT 1
 # ################################################################################################################################
 
 def run_command(args):
+
+    # Zato
+    from zato.common.util.import_ import import_string
+
     command_class = {}
     command_imports = (
         ('apispec', 'zato.cli.apispec.APISpec'),
@@ -452,6 +436,13 @@ class ZatoCommand(object):
 # ################################################################################################################################
 
     def __init__(self, args):
+
+        # stdlib
+        import os
+
+        # Zato
+        from zato.common.util.cli import read_stdin_data
+
         self.args = args
         self.original_dir = os.getcwd()
         self.show_output = False if 'ZATO_CLI_DONT_SHOW_OUTPUT' in os.environ else True
@@ -470,6 +461,15 @@ class ZatoCommand(object):
 # ################################################################################################################################
 
     def reset_logger(self, args, reload_=False):
+
+        # stdlib
+        import logging
+        import sys
+        from imp import reload
+
+        # Zato
+        from zato.common import util
+
         if reload_:
             logging.shutdown() # noqa
             reload(logging) # noqa
@@ -497,6 +497,10 @@ class ZatoCommand(object):
         are always stripped before returning the secret, so that "\n" becomes
         "", "\nsecret\n" becomes "secret" and "\nsec\nret\n" becomes "sec\nret".
         """
+
+        # stdlib
+        from getpass import getpass
+
         keep_running = True
         self.logger.info('')
 
@@ -520,6 +524,10 @@ class ZatoCommand(object):
 # ################################################################################################################################
 
     def get_confirmation(self, template, yes_char='y', no_char='n'):
+
+        # stdlib
+        from builtins import input as raw_input
+
         template = '{} [{}/{}] '.format(template, yes_char, no_char)
         while True:
             value = raw_input(template)
@@ -531,6 +539,10 @@ class ZatoCommand(object):
 # ################################################################################################################################
 
     def _get_now(self, time_=None):
+
+        # stdlib
+        import time
+
         if not time_:
             time_ = time.gmtime() # noqa
 
@@ -539,11 +551,27 @@ class ZatoCommand(object):
 # ################################################################################################################################
 
     def _get_user_host(self):
+
+        # stdlib
+        from getpass import getuser
+        from socket import gethostname
+
         return getuser() + '@' + gethostname()
 
 # ################################################################################################################################
 
     def store_initial_info(self, target_dir, component):
+
+        # stdlib
+        import os
+        from datetime import datetime
+
+        # Zato
+        from zato.common.json_ import dumps
+        from zato.common.version import get_version
+
+        zato_version = get_version()
+
         info = {'version': zato_version, # noqa
                 'created_user_host': self._get_user_host(),
                 'created_ts': datetime.utcnow().isoformat(), # noqa
@@ -556,6 +584,14 @@ class ZatoCommand(object):
     def store_config(self, args):
         """ Stores the config options in a config file for a later use.
         """
+
+        # stdlib
+        import os
+        from io import StringIO
+
+        # Zato
+        from zato.common import util
+
         now = util.fs_safe_now() # noqa
         file_name = 'zato.{}.config'.format(now)
         file_args = StringIO()
@@ -575,12 +611,24 @@ class ZatoCommand(object):
 # ################################################################################################################################
 
     def _get_engine(self, args):
+
+        # SQLAlchemy
+        import sqlalchemy
+
+        # Zato
+        from zato.common import util
+        from zato.common.util import get_engine_url
+
         connect_args = {'application_name':util.get_component_name('enmasse')} if args.odb_type == 'postgresql' else {}
         return sqlalchemy.create_engine(get_engine_url(args), connect_args=connect_args)
 
 # ################################################################################################################################
 
     def _get_session(self, engine):
+
+        # Zato
+        from zato.common.util import get_session
+
         return get_session(engine)
 
 # ################################################################################################################################
@@ -614,6 +662,14 @@ class ZatoCommand(object):
         """ Parses the command line or the args passed in and figures out
         whether the user wishes to use a config file or command line switches.
         """
+
+        # stdlib
+        import os
+        import sys
+
+        # Zato
+        from zato.common.util import get_full_stack
+
         try:
             # Do we need to have a clean directory to work in?
             if self.needs_empty_dir:
@@ -692,6 +748,11 @@ class ZatoCommand(object):
 # ################################################################################################################################
 
     def _copy_crypto(self, repo_dir, args, middle_part):
+
+        # stdlib
+        import shutil
+        import os
+
         for name in('pub-key', 'priv-key', 'cert', 'ca-certs'):
             arg_name = '{}_path'.format(name.replace('-', '_'))
             target_path = os.path.join(repo_dir, 'zato-{}-{}.pem'.format(middle_part, name))
@@ -720,6 +781,11 @@ class ZatoCommand(object):
 # ################################################################################################################################
 
     def copy_web_admin_crypto(self, repo_dir, args):
+
+        # stdlib
+        import shutil
+        import os
+
         for attr, name in (('pub_key_path', 'pub-key'), ('priv_key_path', 'priv-key'), ('cert_path', 'cert'),
             ('ca_certs_path', 'ca-certs')):
             file_name = os.path.join(repo_dir, 'web-admin-{}.pem'.format(name))
@@ -728,11 +794,19 @@ class ZatoCommand(object):
 # ################################################################################################################################
 
     def get_crypto_manager_from_server_config(self, config, repo_dir):
+
+        # Zato
+        from zato.cli import util as cli_util
+
         return cli_util.get_crypto_manager_from_server_config(config, repo_dir)
 
 # ################################################################################################################################
 
     def get_odb_session_from_server_config(self, config, cm):
+
+        # Zato
+        from zato.cli import util as cli_util
+
         return cli_util.get_odb_session_from_server_config(config, cm, False)
 
 # ################################################################################################################################
@@ -740,6 +814,10 @@ class ZatoCommand(object):
     def get_server_client_auth(self, config, repo_dir):
         """ Returns credentials to authenticate with against Zato's own /zato/admin/invoke channel.
         """
+
+        # Zato
+        from zato.cli import util as cli_util
+
         return cli_util.get_server_client_auth(config, repo_dir)
 
 # ################################################################################################################################
@@ -773,6 +851,10 @@ class CACreateCommand(ZatoCommand):
 # ################################################################################################################################
 
     def __init__(self, args):
+
+        # stdlib
+        import os
+
         super(CACreateCommand, self).__init__(args)
         self.target_dir = os.path.abspath(args.path)
 
@@ -785,6 +867,11 @@ class CACreateCommand(ZatoCommand):
 # ################################################################################################################################
 
     def _execute(self, args, extension, show_output=True):
+
+        # stdlib
+        import os
+        import tempfile
+
         now = self._get_now()
         openssl_template = open(os.path.join(self.target_dir, 'ca-material/openssl-template.conf')).read()
 
@@ -924,6 +1011,13 @@ class ManageCommand(ZatoCommand):
 # ################################################################################################################################
 
     def execute(self, args):
+
+        # stdlib
+        import os
+        import sys
+
+        # Zato
+        from zato.common.json_ import load
 
         self.component_dir = os.path.abspath(args.path)
         self.config_dir = os.path.join(self.component_dir, 'config')
