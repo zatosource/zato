@@ -22,7 +22,7 @@ cloghandler = cloghandler # For pyflakes
 from dill import dumps as dill_dumps, load as dill_load
 
 # Zato
-from zato.common.util.posix_ipc_ import CommandStoreIPC
+#from zato.common.util.posix_ipc_ import CommandStoreIPC
 
 # Python 2/3 compatibility
 from future.standard_library import install_aliases
@@ -34,7 +34,8 @@ install_aliases()
 class CommandStore(object):
 
     def __init__(self):
-        self.ipc = CommandStoreIPC()
+        #self.ipc = CommandStoreIPC()
+        pass
 
 # ################################################################################################################################
 
@@ -56,8 +57,8 @@ class CommandStore(object):
 
         parser = self.get_parser()
 
-        print(111, self.ipc)
-        print(222, self.ipc)
+        #print(111, self.ipc)
+        #print(222, self.ipc)
 
         '''
         f = open(self.cache_path, 'rb')
@@ -76,9 +77,9 @@ class CommandStore(object):
 
         print(111, self.mm)
         print(222, parser)
+        '''
 
         return parser
-        '''
 
 # ################################################################################################################################
 

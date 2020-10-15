@@ -32,8 +32,8 @@ from future.moves.urllib.parse import urlparse
 from past.builtins import basestring
 
 # Zato
-from zato.common.api import CHANNEL, DATA_FORMAT, ParsingException, PUBSUB, SEC_DEF_TYPE, WEB_SOCKET
-from zato.common.exception import Reportable
+from zato.common.api import CHANNEL, DATA_FORMAT, PUBSUB, SEC_DEF_TYPE, WEB_SOCKET
+from zato.common.exception import ParsingException, Reportable
 from zato.common.json_ import loads
 from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
 from zato.common.util.api import new_cid

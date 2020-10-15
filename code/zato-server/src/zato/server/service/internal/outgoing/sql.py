@@ -18,7 +18,8 @@ from uuid import uuid4
 from past.builtins import unicode
 
 # Zato
-from zato.common.api import ZatoException, ZATO_ODB_POOL_NAME
+from zato.common.api import ZATO_ODB_POOL_NAME
+from zato.common.exception import ZatoException
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import Cluster, SQLConnectionPool
 from zato.common.odb.query import out_sql_list
