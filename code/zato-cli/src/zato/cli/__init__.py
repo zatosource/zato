@@ -617,7 +617,7 @@ class ZatoCommand(object):
 
         # Zato
         from zato.common.api import util
-        from zato.common.util import get_engine_url
+        from zato.common.util.api import get_engine_url
 
         connect_args = {'application_name':util.get_component_name('enmasse')} if args.odb_type == 'postgresql' else {}
         return sqlalchemy.create_engine(get_engine_url(args), connect_args=connect_args)
@@ -627,7 +627,7 @@ class ZatoCommand(object):
     def _get_session(self, engine):
 
         # Zato
-        from zato.common.util import get_session
+        from zato.common.util.api import get_session
 
         return get_session(engine)
 
@@ -668,7 +668,7 @@ class ZatoCommand(object):
         import sys
 
         # Zato
-        from zato.common.util import get_full_stack
+        from zato.common.util.api import get_full_stack
 
         try:
             # Do we need to have a clean directory to work in?

@@ -16,7 +16,7 @@ from zato.common.api import SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import TLSChannelSecurity
 from zato.common.odb.query import tls_channel_sec_list
-from zato.common.util import parse_tls_channel_security_definition
+from zato.common.util.api import parse_tls_channel_security_definition
 from zato.server.service.internal import AdminService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 

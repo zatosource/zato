@@ -28,7 +28,7 @@ from portalocker import lock, LockException, LOCK_NB, LOCK_EX, unlock
 from sqlalchemy import func
 
 # Zato
-from zato.common.util import make_repr
+from zato.common.util.api import make_repr
 
 # ################################################################################################################################
 

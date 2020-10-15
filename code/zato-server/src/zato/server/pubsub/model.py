@@ -22,7 +22,7 @@ from future.utils import iteritems
 from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
 from zato.common.exception import BadRequest
 from zato.common.pubsub import dict_keys
-from zato.common.util import make_repr
+from zato.common.util.api import make_repr
 from zato.common.util.event import EventLog
 from zato.common.util.time_ import utcnow_as_ms
 

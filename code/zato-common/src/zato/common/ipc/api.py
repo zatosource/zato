@@ -33,7 +33,7 @@ from builtins import bytes
 from zato.common.api import IPC
 from zato.common.ipc.publisher import Publisher
 from zato.common.ipc.subscriber import Subscriber
-from zato.common.util import fs_safe_name, spawn_greenlet
+from zato.common.util.api import fs_safe_name, spawn_greenlet
 
 # ################################################################################################################################
 

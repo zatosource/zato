@@ -43,7 +43,7 @@ from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, Depl
 from zato.common.odb.testing import UnittestEngine
 from zato.common.odb.query.pubsub import subscription as query_ps_subscription
 from zato.common.odb.query import generic as query_generic
-from zato.common.util import current_host, get_component_name, get_engine_url, new_cid, parse_extra_into_dict, \
+from zato.common.util.api import current_host, get_component_name, get_engine_url, new_cid, parse_extra_into_dict, \
      parse_tls_channel_security_definition, spawn_greenlet
 from zato.common.util.sql import ElemsWithOpaqueMaker, elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target

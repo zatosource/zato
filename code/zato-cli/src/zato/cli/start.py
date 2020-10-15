@@ -143,7 +143,7 @@ Examples:
 
         # Zato
         from zato.cli.stop import Stop
-        from zato.common.util import get_haproxy_agent_pidfile
+        from zato.common.util.api import get_haproxy_agent_pidfile
 
         self.run_check_config()
 

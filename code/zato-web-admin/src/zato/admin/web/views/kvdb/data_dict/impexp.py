@@ -22,7 +22,7 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.views import method_allowed
 from zato.common.json_ import dumps
-from zato.common.util import current_host, translation_name
+from zato.common.util.api import current_host, translation_name
 
 # Python 2/3 compatibility
 from past.builtins import unicode

@@ -35,7 +35,7 @@ from zato.common.api import CHANNEL, DATA_FORMAT, JSON_RPC, HTTP_RESPONSES, HTTP
 from zato.common.json_ import dumps, loads
 from zato.common.json_schema import DictError as JSONSchemaDictError, ValidationException as JSONSchemaValidationException
 from zato.common.rate_limiting.common import AddressNotAllowed, BaseException as RateLimitingException, RateLimitReached
-from zato.common.util import payload_from_request
+from zato.common.util.api import payload_from_request
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, MethodNotAllowed, NotFound, \
      TooManyRequests, Unauthorized
 from zato.server.service.internal import AdminService
