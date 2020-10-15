@@ -20,7 +20,7 @@ from bunch import bunchify
 from sh import Command, ErrorReturnCode
 
 # Zato
-from zato.common import SFTP
+from zato.common.api import SFTP
 from zato.common.json_ import dumps
 from zato.common.sftp import SFTPOutput
 from zato.server.connection.connector.subprocess_.base import BaseConnectionContainer, Response

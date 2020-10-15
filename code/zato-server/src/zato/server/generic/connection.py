@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from bunch import bunchify
 
 # Zato
-from zato.common import GENERIC
+from zato.common.api import GENERIC
 from zato.common.json_ import dumps, loads
 from zato.server.generic import attrs_gen_conn
 

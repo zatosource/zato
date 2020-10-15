@@ -13,7 +13,7 @@ from unittest import main
 
 # Zato
 from base import BaseTest
-from zato.common import SEC_DEF_TYPE
+from zato.common.api import SEC_DEF_TYPE
 from zato.common.crypto import CryptoManager
 from zato.sso import status_code
 

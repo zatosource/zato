@@ -30,7 +30,7 @@ from six import PY3
 from past.builtins import basestring, unicode
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, JSON_RPC, HTTP_RESPONSES, HTTP_SOAP, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, \
+from zato.common.api import CHANNEL, DATA_FORMAT, JSON_RPC, HTTP_RESPONSES, HTTP_SOAP, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, \
      URL_PARAMS_PRIORITY, URL_TYPE, zato_namespace, ZATO_ERROR, ZATO_NONE, ZATO_OK
 from zato.common.json_ import dumps, loads
 from zato.common.json_schema import DictError as JSONSchemaDictError, ValidationException as JSONSchemaValidationException

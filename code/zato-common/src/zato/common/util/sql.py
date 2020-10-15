@@ -23,7 +23,7 @@ from gevent import sleep
 from sqlalchemy.exc import InternalError as SAInternalError
 
 # Zato
-from zato.common import GENERIC, SEARCH
+from zato.common.api import GENERIC, SEARCH
 from zato.common.json_ import dumps, loads
 from zato.common.odb.model import Base, SecurityBase
 from zato.common.util.search import SearchResults

@@ -15,7 +15,7 @@ import re
 from past.builtins import unicode
 
 # Zato
-from zato.common import KVDB, ZatoException
+from zato.common.api import KVDB, ZatoException
 from zato.common.util import dict_item_name
 from zato.server.service import Int
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO

@@ -24,7 +24,7 @@ from future.utils import itervalues
 from past.builtins import unicode
 
 # Zato
-from zato.common import SECRETS, ZATO_NONE
+from zato.common.api import SECRETS, ZATO_NONE
 from zato.common.util.config import resolve_value
 from zato.common.util.sql import ElemsWithOpaqueMaker
 

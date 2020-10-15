@@ -16,7 +16,7 @@ from traceback import format_exc
 from ws4py.client.threadedclient import WebSocketClient
 
 # Zato
-from zato.common import WEB_SOCKET, ZATO_NONE
+from zato.common.api import WEB_SOCKET, ZATO_NONE
 from zato.common.wsx_client import Client as ZatoWSXClientImpl, Config as _ZatoWSXConfigImpl
 from zato.common.util import new_cid
 from zato.server.connection.queue import Wrapper

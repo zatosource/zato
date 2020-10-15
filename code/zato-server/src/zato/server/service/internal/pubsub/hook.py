@@ -15,7 +15,7 @@ from contextlib import closing
 from future.utils import iteritems
 
 # Zato
-from zato.common import PUBSUB
+from zato.common.api import PUBSUB
 from zato.common.util import is_class_pubsub_hook
 from zato.common.odb.model import PubSubSubscription, PubSubTopic
 from zato.common.odb.query import pubsub_hook_service

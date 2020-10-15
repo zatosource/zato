@@ -33,7 +33,7 @@ from builtins import str as text
 from six import PY3
 
 # Zato
-from zato.common import BROKER, ZATO_NOT_GIVEN, ZATO_OK
+from zato.common.api import BROKER, ZATO_NOT_GIVEN, ZATO_OK
 from zato.common.exception import ZatoException
 from zato.common.xml_ import soap_data_path, soap_data_xpath, soap_fault_xpath, zato_data_path, \
      zato_data_xpath, zato_details_xpath, zato_result_xpath

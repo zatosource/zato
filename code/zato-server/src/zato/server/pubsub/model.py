@@ -19,7 +19,7 @@ from globre import compile as globre_compile
 from future.utils import iteritems
 
 # Zato
-from zato.common import DATA_FORMAT, PUBSUB, SEARCH
+from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
 from zato.common.exception import BadRequest
 from zato.common.pubsub import dict_keys
 from zato.common.util import make_repr

@@ -17,7 +17,7 @@ from logging import getLogger
 from gevent import sleep, spawn
 
 # Zato
-from zato.common import SECRET_SHADOW
+from zato.common.api import SECRET_SHADOW
 from zato.common.util import spawn_greenlet
 from zato.server.service import Service
 from zato.server.service.internal import AdminService

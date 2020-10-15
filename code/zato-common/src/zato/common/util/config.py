@@ -19,7 +19,7 @@ from builtins import bytes
 from past.builtins import basestring
 
 # Zato
-from zato.common import SECRETS
+from zato.common.api import SECRETS
 
 # ################################################################################################################################
 

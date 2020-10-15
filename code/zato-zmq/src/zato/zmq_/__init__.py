@@ -14,7 +14,7 @@ from traceback import format_exc
 import zmq.green as zmq
 
 # Zato
-from zato.common import ZMQ
+from zato.common.api import ZMQ
 from zato.server.connection.connector import Connector
 
 # ################################################################################################################################

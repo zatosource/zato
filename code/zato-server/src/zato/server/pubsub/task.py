@@ -28,7 +28,7 @@ from sortedcontainers import SortedList as _SortedList
 from future.utils import iteritems
 
 # Zato
-from zato.common import GENERIC, PUBSUB
+from zato.common.api import GENERIC, PUBSUB
 from zato.common.json_ import loads
 from zato.common.pubsub import PubSubMessage
 from zato.common.util import grouper, spawn_greenlet

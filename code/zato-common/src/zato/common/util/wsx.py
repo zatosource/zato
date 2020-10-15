@@ -13,7 +13,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # Zato
-from zato.common import WEB_SOCKET
+from zato.common.api import WEB_SOCKET
 
 # ################################################################################################################################
 

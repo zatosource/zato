@@ -15,7 +15,7 @@ from logging import getLogger
 from past.builtins import unicode
 
 # Zato
-from zato.common import GENERIC
+from zato.common.api import GENERIC
 from zato.common.util import new_cid
 from zato.common.util.time_ import utcnow_as_ms
 

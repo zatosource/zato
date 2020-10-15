@@ -13,7 +13,7 @@ import logging
 from traceback import format_exc
 
 # Zato
-from zato.common import ZATO_NONE
+from zato.common.api import ZATO_NONE
 from zato.common.broker_message import code_to_name
 from zato.common.util import new_cid
 from zato.common.util.config import resolve_env_variables

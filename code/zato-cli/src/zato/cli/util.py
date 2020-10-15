@@ -41,7 +41,7 @@ class Util(object):
 
         # Zato
         from zato.client import AnyServiceInvoker
-        from zato.common import odb
+        from zato.common.api import odb
         from zato.common.util import get_config, get_crypto_manager_from_server_config, get_odb_session_from_server_config, \
              get_server_client_auth
 
@@ -82,7 +82,7 @@ def get_totp_info_from_args(args, default_key_label=None):
 
     # Zato
     from zato.common.crypto import CryptoManager
-    from zato.common import TOTP
+    from zato.common.api import TOTP
 
     default_key_label = default_key_label or TOTP.default_label
 

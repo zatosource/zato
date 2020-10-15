@@ -64,22 +64,22 @@ import yaml
 start = datetime.utcnow()
 
 # Zato
-#from zato.common import SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
-#from zato.common.crypto import ServerCryptoManager
-#from zato.common.ipaddress_ import get_preferred_ip
-#from zato.common.kvdb import KVDB
-#from zato.common.odb.api import ODBManager, PoolStore
-#from zato.common.repo import RepoManager
-#from zato.common.util import absjoin, asbool, clear_locks, get_config, get_kvdb_config_for_log, parse_cmd_line_options, \
-#     register_diag_handlers, store_pidfile
-#from zato.common.util.cli import read_stdin_data
-#from zato.common.simpleio_ import get_sio_server_config
-#from zato.server.base.parallel import ParallelServer
-#from zato.server.ext import zunicorn
-#from zato.server.ext.zunicorn.app.base import Application
-#from zato.server.service.store import ServiceStore
-#from zato.server.startup_callable import StartupCallableTool
-#from zato.sso.api import SSOAPI
+from zato.common.api import SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
+from zato.common.crypto import ServerCryptoManager
+from zato.common.ipaddress_ import get_preferred_ip
+from zato.common.kvdb import KVDB
+from zato.common.odb.api import ODBManager, PoolStore
+from zato.common.repo import RepoManager
+from zato.common.util import absjoin, asbool, clear_locks, get_config, get_kvdb_config_for_log, parse_cmd_line_options, \
+     register_diag_handlers, store_pidfile
+from zato.common.util.cli import read_stdin_data
+from zato.common.simpleio_ import get_sio_server_config
+from zato.server.base.parallel import ParallelServer
+from zato.server.ext import zunicorn
+from zato.server.ext.zunicorn.app.base import Application
+from zato.server.service.store import ServiceStore
+from zato.server.startup_callable import StartupCallableTool
+from zato.sso.api import SSOAPI
 from zato.sso.util import new_user_id, normalize_sso_config
 
 print(111, datetime.utcnow() - start)

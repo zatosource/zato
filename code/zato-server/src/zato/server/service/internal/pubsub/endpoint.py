@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 
 # Zato
-from zato.common import PUBSUB as COMMON_PUBSUB
+from zato.common.api import PUBSUB as COMMON_PUBSUB
 from zato.common.broker_message import PUBSUB
 from zato.common.exception import BadRequest, Conflict
 from zato.common.json_ import loads

@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.common import HTTP_SOAP_SERIALIZATION_TYPE, PUBSUB, URL_TYPE
+from zato.common.api import HTTP_SOAP_SERIALIZATION_TYPE, PUBSUB, URL_TYPE
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.pubsub import HandleNewMessageCtx

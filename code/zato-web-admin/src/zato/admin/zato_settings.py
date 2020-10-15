@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os
 
 # Zato
-from zato.common import SCHEDULER
+from zato.common.api import SCHEDULER
 from zato.common.crypto import resolve_secret_key, WebAdminCryptoManager
 from zato.common.util.cli import read_stdin_data
 

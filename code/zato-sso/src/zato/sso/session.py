@@ -23,7 +23,7 @@ from ipaddress import ip_address
 from past.builtins import unicode
 
 # Zato
-from zato.common import GENERIC, SEC_DEF_TYPE
+from zato.common.api import GENERIC, SEC_DEF_TYPE
 from zato.common.audit import audit_pii
 from zato.common.json_ import dumps
 from zato.common.odb.model import SSOSession as SessionModel

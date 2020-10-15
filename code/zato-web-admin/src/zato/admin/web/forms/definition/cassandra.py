@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.common import CASSANDRA
+from zato.common.api import CASSANDRA
 
 class CreateForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())

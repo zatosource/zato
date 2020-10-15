@@ -19,8 +19,8 @@ from bunch import Bunch
 from lxml import etree
 
 # Zato
-from zato.common import ParsingException, soap_body_xpath, zato_path
-from zato.common import util
+from zato.common.api import ParsingException, soap_body_xpath, zato_path
+from zato.common.api import util
 from zato.common.py23_ import maxint
 from zato.common.test.tls_material import ca_cert
 

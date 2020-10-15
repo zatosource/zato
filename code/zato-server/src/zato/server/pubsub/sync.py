@@ -20,7 +20,7 @@ from gevent.lock import RLock
 from future.utils import iteritems, itervalues
 
 # Zato
-from zato.common import DATA_FORMAT, PUBSUB, SEARCH
+from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
 from zato.common.exception import BadRequest
 from zato.common.util import spawn_greenlet
 from zato.common.util.pubsub import make_short_msg_copy_from_dict

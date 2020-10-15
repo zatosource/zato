@@ -18,7 +18,7 @@ from jsonschema.exceptions import ValidationError as JSValidationError
 from jsonschema.validators import validator_for
 
 # Zato
-from zato.common import CHANNEL, NotGiven
+from zato.common.api import CHANNEL, NotGiven
 from zato.common.json_ import dumps, loads
 from zato.common.json_rpc import ErrorCtx, JSONRPCBadRequest, ItemResponse
 

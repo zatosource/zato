@@ -25,7 +25,7 @@ import redis
 from builtins import bytes
 
 # Zato
-from zato.common import BROKER, ZATO_NONE
+from zato.common.api import BROKER, ZATO_NONE
 from zato.common.broker_message import KEYS, MESSAGE_TYPE, TOPICS
 from zato.common.json_ import dumps, loads
 from zato.common.kvdb import LuaContainer

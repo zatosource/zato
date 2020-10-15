@@ -29,7 +29,7 @@ from pytz import UTC
 from texttable import Texttable
 
 # Zato
-from zato.common import INFO_FORMAT, MISC, ZATO_INFO_FILE
+from zato.common.api import INFO_FORMAT, MISC, ZATO_INFO_FILE
 from zato.common.json_ import dumps as json_dumps, loads as json_loads
 from zato.common.util import current_host
 

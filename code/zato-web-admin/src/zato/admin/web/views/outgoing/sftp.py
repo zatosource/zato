@@ -17,7 +17,7 @@ from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 
 # Zato
-from zato.common import GENERIC
+from zato.common.api import GENERIC
 from zato.common.json_ import dumps
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.sftp import CommandShellForm, CreateForm, EditForm

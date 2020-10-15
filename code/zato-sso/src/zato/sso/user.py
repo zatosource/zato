@@ -27,7 +27,7 @@ from sqlalchemy.exc import IntegrityError
 from past.builtins import basestring, unicode
 
 # Zato
-from zato.common import RATE_LIMIT, SEC_DEF_TYPE, TOTP
+from zato.common.api import RATE_LIMIT, SEC_DEF_TYPE, TOTP
 from zato.common.audit import audit_pii
 from zato.common.crypto import CryptoManager
 from zato.common.exception import BadRequest

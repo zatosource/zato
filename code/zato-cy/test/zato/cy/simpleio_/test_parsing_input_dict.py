@@ -17,7 +17,7 @@ from uuid import UUID as uuid_UUID, uuid4
 from dateutil.parser import parse as dt_parse
 
 # Zato
-from zato.common import DATA_FORMAT
+from zato.common.api import DATA_FORMAT
 from zato.common.test import BaseSIOTestCase
 from zato.server.service import Service
 
