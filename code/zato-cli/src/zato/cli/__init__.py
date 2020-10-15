@@ -272,7 +272,7 @@ formatters:
         format: '%(remote_ip)s %(cid_resp_time)s "%(channel_name)s" [%(req_timestamp)s] "%(method)s %(path)s %(http_version)s" %(status_code)s %(response_size)s "-" "%(user_agent)s"'
     colour:
         format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
-        (): zato.common.util.ColorFormatter
+        (): zato.common.util.api.ColorFormatter
 
 version: 1
 """ # nopep8
