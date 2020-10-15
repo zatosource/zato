@@ -51,11 +51,10 @@ if ! [ -x "$(command -v $PY_BINARY)" ]; then
         fi
       else
         # Python3 customizations
-        PY_V=3
         sudo yum install -y centos-release-scl-rh
         sudo yum-config-manager --enable centos-sclo-rh-testing
 
-        # On RHEL, enable RHSCL and RHSCL-beta repositories for you system:
+        # On RHEL, enable RHSCL and RHSCL-beta repositories for the system
         sudo yum-config-manager --enable rhel-server-rhscl-7-rpms
         sudo yum-config-manager --enable rhel-server-rhscl-beta-7-rpms
 
