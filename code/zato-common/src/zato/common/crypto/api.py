@@ -8,10 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from datetime import datetime
-
-#print('CRYPTO-', datetime.utcnow())
-
 # stdlib
 import base64
 import logging
@@ -20,41 +16,21 @@ import sys
 from datetime import datetime
 from math import ceil
 
-#print('CRYPTO-0', datetime.utcnow())
-
 # Bunch
 from bunch import bunchify
-
-#print('CRYPTO-1', datetime.utcnow())
 
 # configobj
 from configobj import ConfigObj
 
-#print('CRYPTO-2', datetime.utcnow())
-
-#print('CRYPTO-3', datetime.utcnow())
-
 # cryptography
 from cryptography.fernet import Fernet, InvalidToken
-
-#print('CRYPTO-4', datetime.utcnow())
-
-#print('CRYPTO-5', datetime.utcnow())
-
-#print('CRYPTO-6', datetime.utcnow())
 
 # Python 2/3 compatibility
 from builtins import bytes
 
-#print('CRYPTO-7', datetime.utcnow())
-
-#print('CRYPTO-8', datetime.utcnow())
-
+# Zato
 from zato.common.json_internal import loads
 from zato.common.crypto.const import well_known_data, zato_stdin_prefix
-
-#print('CRYPTO-9', datetime.utcnow())
-
 
 # ################################################################################################################################
 

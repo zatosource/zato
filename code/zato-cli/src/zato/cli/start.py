@@ -61,8 +61,6 @@ Examples:
         cc = CheckConfig(self.args)
         cc.show_output = False
 
-        print('START-0', datetime.utcnow())
-
         cc.execute(Bunch({
             'path': '.',
             'ensure_no_pidfile': True,
