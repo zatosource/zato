@@ -8,6 +8,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+from datetime import datetime
+
 # stdlib
 import base64
 import logging
@@ -112,9 +114,16 @@ class CryptoManager(object):
         # Fernet keys always require encoding
         value = value if isinstance(value, bytes) else value.encode('utf8')
 
-        # Create a transient key just to confirm that what we found was syntactically correct
+        # Create a transient key just to confirm that what we found was syntactically correct.
+        # Note that we use our own invalid backend which will not be used by Fernet for anything
+        # but we need to provide it to make sure Fernet.__init__ does not import its default backend.
         try:
-            Fernet(value)
+            print('MANAGER 0', datetime.utcnow())
+
+            Fernet(value, backend='invalid')
+
+            print('MANAGER 1', datetime.utcnow())
+
         except Exception as e:
             raise SecretKeyError(e.args)
         else:

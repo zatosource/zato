@@ -37,7 +37,7 @@ has_debug = logger_zato.isEnabledFor(DEBUG) or logger_pubsub.isEnabledFor(DEBUG)
 
 # ################################################################################################################################
 
-_default_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value
+_default_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE
 _max_page_size = _default_page_size * 5
 
 # In MySQL, 1213 = 'Deadlock found when trying to get lock; try restarting transaction'

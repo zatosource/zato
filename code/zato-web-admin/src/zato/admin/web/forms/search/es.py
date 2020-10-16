@@ -19,9 +19,9 @@ class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     hosts = forms.CharField(
-        initial=SEARCH.ES.DEFAULTS.HOSTS.value, widget=forms.Textarea(attrs={'style':'width:100%', 'class':'required'}))
+        initial=SEARCH.ES.DEFAULTS.HOSTS, widget=forms.Textarea(attrs={'style':'width:100%', 'class':'required'}))
     timeout = forms.CharField(initial=90, widget=forms.TextInput(attrs={'class':'required', 'style':'width:15%'}))
-    body_as = forms.CharField(initial=SEARCH.ES.DEFAULTS.BODY_AS.value,
+    body_as = forms.CharField(initial=SEARCH.ES.DEFAULTS.BODY_AS,
         widget=forms.TextInput(attrs={'class':'required', 'style':'width:15%'}))
 
 class EditForm(CreateForm):
