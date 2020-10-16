@@ -115,11 +115,11 @@ class CryptoManager(object):
         # Note that we use our own invalid backend which will not be used by Fernet for anything
         # but we need to provide it to make sure Fernet.__init__ does not import its default backend.
         try:
-            print('MANAGER 0', datetime.utcnow())
+            #print('MANAGER 0', datetime.utcnow())
 
             Fernet(value, backend='invalid')
 
-            print('MANAGER 1', datetime.utcnow())
+            #print('MANAGER 1', datetime.utcnow())
 
         except Exception as e:
             raise SecretKeyError(e.args)
@@ -133,27 +133,27 @@ class CryptoManager(object):
         decrypts well known data to itself in order to confirm that keys are valid / expected.
         """
 
-        print('MAN-CONFIG-0', datetime.utcnow())
+        #print('MAN-CONFIG-0', datetime.utcnow())
 
         key = self._find_secret_key(secret_key)
 
-        print('MAN-CONFIG-1', datetime.utcnow())
+        #print('MAN-CONFIG-1', datetime.utcnow())
 
         self.secret_key = Fernet(key)
 
-        print('MAN-CONFIG-2', datetime.utcnow())
+        #print('MAN-CONFIG-2', datetime.utcnow())
 
         self.well_known_data = well_known_data if well_known_data else None
 
-        print('MAN-CONFIG-3', datetime.utcnow())
+        #print('MAN-CONFIG-3', datetime.utcnow())
 
         if self.well_known_data:
 
-            print('MAN-CONFIG-4', datetime.utcnow())
+            #print('MAN-CONFIG-4', datetime.utcnow())
 
             self.check_consistency()
 
-            print('MAN-CONFIG-5', datetime.utcnow())
+            #print('MAN-CONFIG-5', datetime.utcnow())
 
 # ################################################################################################################################
 

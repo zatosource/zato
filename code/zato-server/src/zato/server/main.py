@@ -10,14 +10,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from datetime import datetime
 
-print('MAIN-0', datetime.utcnow())
+#print('MAIN-0', datetime.utcnow())
 
 # Monkey-patching modules individually can be about 20% faster,
 # or, in absolute terms, instead of 275 ms it may take 220 ms.
 from gevent.monkey import patch_builtins, patch_contextvars, patch_thread, patch_time, patch_os, patch_queue, patch_select, \
      patch_selectors, patch_signal, patch_socket, patch_ssl, patch_subprocess, patch_sys
 
-print('MAIN-1', datetime.utcnow())
+#print('MAIN-1', datetime.utcnow())
 
 # Note that the order of patching matters, just like in patch_all
 patch_os()
@@ -34,123 +34,123 @@ patch_signal()
 patch_queue()
 patch_contextvars()
 
-print('MAIN-2', datetime.utcnow())
+#print('MAIN-2', datetime.utcnow())
 
 # stdlib
 import locale
 
-print('MAIN-3', datetime.utcnow())
+#print('MAIN-3', datetime.utcnow())
 
 import logging
 
-print('MAIN-4', datetime.utcnow())
+#print('MAIN-4', datetime.utcnow())
 
 import os
 
-print('MAIN-5', datetime.utcnow())
+#print('MAIN-5', datetime.utcnow())
 
 import ssl
 
-print('MAIN-6', datetime.utcnow())
+#print('MAIN-6', datetime.utcnow())
 
 import sys
 
-print('MAIN-7', datetime.utcnow())
+#print('MAIN-7', datetime.utcnow())
 
 from logging.config import dictConfig
 
-print('MAIN-8', datetime.utcnow())
+#print('MAIN-8', datetime.utcnow())
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
 import cloghandler
 cloghandler = cloghandler # For pyflakes
 
-print('MAIN-8-b', datetime.utcnow())
+#print('MAIN-8-b', datetime.utcnow())
 
 # Update logging.Logger._log to make it a bit faster
 from zato.common.microopt import logging_Logger_log
 from logging import Logger
 Logger._log = logging_Logger_log
 
-print('MAIN-9', datetime.utcnow())
+#print('MAIN-9', datetime.utcnow())
 
 # ConfigObj
 from configobj import ConfigObj
 
-print('MAIN-10', datetime.utcnow())
+#print('MAIN-10', datetime.utcnow())
 
-print('MAIN-11', datetime.utcnow())
+#print('MAIN-11', datetime.utcnow())
 
 # YAML
 import yaml
 
-print('MAIN-12', datetime.utcnow())
+#print('MAIN-12', datetime.utcnow())
 
 # Zato
 from zato.common.api import SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
 
-print('MAIN-13', datetime.utcnow())
+#print('MAIN-13', datetime.utcnow())
 
 from zato.common.crypto.api import ServerCryptoManager
 
-print('MAIN-14', datetime.utcnow())
+#print('MAIN-14', datetime.utcnow())
 
 from zato.common.ipaddress_ import get_preferred_ip
 
-print('MAIN-15', datetime.utcnow())
+#print('MAIN-15', datetime.utcnow())
 
 from zato.common.kvdb.api import KVDB
 
-print('MAIN-16', datetime.utcnow())
+#print('MAIN-16', datetime.utcnow())
 
 from zato.common.odb.api import ODBManager, PoolStore
 
-print('MAIN-17', datetime.utcnow())
+#print('MAIN-17', datetime.utcnow())
 
 from zato.common.repo import RepoManager
 
-print('MAIN-18', datetime.utcnow())
+#print('MAIN-18', datetime.utcnow())
 
 from zato.common.util.api import absjoin, asbool, clear_locks, get_config, get_kvdb_config_for_log, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
 
-print('MAIN-19', datetime.utcnow())
+#print('MAIN-19', datetime.utcnow())
 
 from zato.common.util.cli import read_stdin_data
 
-print('MAIN-20', datetime.utcnow())
+#print('MAIN-20', datetime.utcnow())
 
 from zato.common.simpleio_ import get_sio_server_config
 
-print('MAIN-21', datetime.utcnow())
+#print('MAIN-21', datetime.utcnow())
 
 from zato.server.base.parallel import ParallelServer
 
-print('MAIN-22', datetime.utcnow())
+#print('MAIN-22', datetime.utcnow())
 
 from zato.server.ext import zunicorn
 
-print('MAIN-23', datetime.utcnow())
+#print('MAIN-23', datetime.utcnow())
 
 from zato.server.ext.zunicorn.app.base import Application
 
-print('MAIN-24', datetime.utcnow())
+#print('MAIN-24', datetime.utcnow())
 
 from zato.server.service.store import ServiceStore
 
-print('MAIN-25', datetime.utcnow())
+#print('MAIN-25', datetime.utcnow())
 
 from zato.server.startup_callable import StartupCallableTool
 
-print('MAIN-26', datetime.utcnow())
+#print('MAIN-26', datetime.utcnow())
 
 from zato.sso.api import SSOAPI
 
-print('MAIN-27', datetime.utcnow())
+#print('MAIN-27', datetime.utcnow())
 
 from zato.sso.util import new_user_id, normalize_sso_config
 
-print('MAIN-28', datetime.utcnow())
+#print('MAIN-28', datetime.utcnow())
 
 # ################################################################################################################################
 
