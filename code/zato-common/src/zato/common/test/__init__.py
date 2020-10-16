@@ -35,7 +35,7 @@ from sqlalchemy import create_engine
 
 # Zato
 from zato.common.api import CHANNEL, DATA_FORMAT, SIMPLE_IO
-from zato.common.json_ import loads
+from zato.common.json_internal import loads
 from zato.common.log_message import CID_LENGTH
 from zato.common.odb import model
 from zato.common.odb.model import Cluster, ElasticSearch

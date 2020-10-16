@@ -33,7 +33,7 @@ from past.builtins import basestring, unicode
 from zato.common.api import CHANNEL, DATA_FORMAT, JSON_RPC, HTTP_SOAP, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, \
      URL_PARAMS_PRIORITY, URL_TYPE, ZATO_ERROR, ZATO_NONE, ZATO_OK
 from zato.common.exception import HTTP_RESPONSES
-from zato.common.json_ import dumps, loads
+from zato.common.json_internal import dumps, loads
 from zato.common.json_schema import DictError as JSONSchemaDictError, ValidationException as JSONSchemaValidationException
 from zato.common.rate_limiting.common import AddressNotAllowed, BaseException as RateLimitingException, RateLimitReached
 from zato.common.util.api import payload_from_request

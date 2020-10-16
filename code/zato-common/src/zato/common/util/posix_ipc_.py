@@ -19,7 +19,7 @@ from traceback import format_exc
 import posix_ipc as ipc
 
 # Zato
-from zato.common.json_ import dumps, loads
+from zato.common.json_internal import dumps, loads
 
 # ################################################################################################################################
 

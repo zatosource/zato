@@ -43,7 +43,7 @@ from zato.common.py23_ import maxint
 
 # Zato
 from zato.common.api import CACHE as _COMMON_CACHE
-from zato.common.json_ import dumps as json_dumps
+from zato.common.json_internal import dumps as json_dumps
 
 # ################################################################################################################################
 

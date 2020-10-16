@@ -18,7 +18,7 @@ from django.http import HttpResponse, HttpResponseServerError
 # Zato
 from zato.admin.web.forms.channel.jms_wmq import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, get_definition_list, Index as _Index, method_allowed
-from zato.common.json_ import dumps
+from zato.common.json_internal import dumps
 from zato.common.odb.model import ChannelWMQ
 
 # ################################################################################################################################

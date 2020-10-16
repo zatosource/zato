@@ -27,7 +27,7 @@ from future.utils import iteritems
 
 # Zato
 from zato.common.api import common_namespaces, ZATO_OK
-from zato.common.json_ import dumps, loads
+from zato.common.json_internal import dumps, loads
 from zato.common.test import rand_bool, rand_int, rand_object, rand_string
 from zato.common.util.api import new_cid, make_repr
 from zato.client import AnyServiceInvoker, CID_NO_CLIP, _Client, JSONClient, JSONSIOClient, \

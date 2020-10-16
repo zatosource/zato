@@ -30,7 +30,7 @@ from past.builtins import basestring
 from zato.common.api import BROKER, KVDB
 from zato.common.broker_message import SERVICE
 from zato.common.exception import BadRequest, ZatoException
-from zato.common.json_ import dumps, loads
+from zato.common.json_internal import dumps, loads
 from zato.common.json_schema import get_service_config
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, Service
 from zato.common.odb.query import service_list

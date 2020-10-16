@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from browser import document as doc
 
 # Zato
-from zato.common.json_ import loads
+from zato.common.json_internal import loads
 
 # ################################################################################################################################
 

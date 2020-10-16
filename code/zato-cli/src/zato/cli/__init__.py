@@ -570,7 +570,7 @@ class ZatoCommand(object):
         from datetime import datetime
 
         # Zato
-        from zato.common.json_ import dumps
+        from zato.common.json_internal import dumps
         from zato.common.version import get_version
 
         zato_version = get_version()

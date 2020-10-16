@@ -17,7 +17,7 @@ from bunch import bunchify
 
 # Zato
 from zato.common.exception import BadRequest
-from zato.common.json_ import dumps
+from zato.common.json_internal import dumps
 from zato.common.pubsub import all_dict_keys, pubsub_main_data
 from zato.server.service import AsIs, Int, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO

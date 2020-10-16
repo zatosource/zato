@@ -28,7 +28,7 @@ class CheckConfig(ManageCommand):
         from os.path import join
 
         # Zato
-        from zato.common.json_ import loads
+        from zato.common.json_internal import loads
 
         repo_dir = repo_dir or join(self.config_dir, 'repo')
         return loads(open(join(repo_dir, conf_name)).read())

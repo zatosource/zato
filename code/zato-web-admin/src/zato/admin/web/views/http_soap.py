@@ -25,7 +25,7 @@ from zato.common.api import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_S
      HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, SOAP_CHANNEL_VERSIONS, \
      SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE
 from zato.common.exception import ZatoException
-from zato.common.json_ import dumps
+from zato.common.json_internal import dumps
 from zato.common.odb.model import HTTPSOAP
 
 logger = logging.getLogger(__name__)

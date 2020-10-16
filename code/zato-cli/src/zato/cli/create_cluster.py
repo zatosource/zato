@@ -665,7 +665,7 @@ class Create(ZatoCommand):
     def add_pubsub_sec_endpoints(self, session, cluster):
 
         from zato.common.api import CONNECTION, DATA_FORMAT, PUBSUB, URL_TYPE
-        from zato.common.json_ import dumps
+        from zato.common.json_internal import dumps
         from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, PubSubEndpoint, PubSubSubscription, PubSubTopic, \
              Service
         from zato.common.pubsub import new_sub_key

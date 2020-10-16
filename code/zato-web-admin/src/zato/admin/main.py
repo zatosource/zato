@@ -31,7 +31,7 @@ from django.core.management import call_command, execute_from_command_line
 
 # Zato
 from zato.admin.zato_settings import update_globals
-from zato.common.json_ import loads
+from zato.common.json_internal import loads
 from zato.common.repo import RepoManager
 from zato.common.util.api import store_pidfile
 
