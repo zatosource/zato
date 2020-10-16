@@ -68,7 +68,7 @@ from zato.common.api import SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
 
 #print(111, datetime.utcnow() - start)
 
-from zato.common.crypto import ServerCryptoManager
+from zato.common.crypto.api import ServerCryptoManager
 
 #print(222, datetime.utcnow() - start)
 

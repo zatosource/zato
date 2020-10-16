@@ -29,7 +29,8 @@ from past.builtins import basestring, unicode
 # Zato
 from zato.common.api import RATE_LIMIT, SEC_DEF_TYPE, TOTP
 from zato.common.audit import audit_pii
-from zato.common.crypto import CryptoManager
+from zato.common.crypto.api import CryptoManager
+from zato.common.crypto.totp_ import TOTPManager
 from zato.common.exception import BadRequest
 from zato.common.json_ import dumps
 from zato.common.odb.model import SSOLinkedAuth as LinkedAuth, SSOSession as SessionModel, SSOUser as UserModel
@@ -380,7 +381,7 @@ class UserAPI(object):
         user_model.password_must_change = ctx.data.get('password_must_change') or False
         user_model.password_expiry = now + timedelta(days=self.password_expiry)
 
-        totp_key = ctx.data.get('totp_key') or CryptoManager.generate_totp_key()
+        totp_key = ctx.data.get('totp_key') or TOTPManager.generate_totp_key()
         totp_label = ctx.data.get('totp_label') or TOTP.default_label
 
         user_model.is_totp_enabled = ctx.data.get('is_totp_enabled')

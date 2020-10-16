@@ -1151,7 +1151,7 @@ class ObjectManager(object):
     def get_objects_by_type(self, item_type):
 
         # Zato
-        from zato.common.api import SECRETS
+        from zato.common.const import SECRETS
 
         # Python 2/3 compatibility
         from future.utils import iteritems

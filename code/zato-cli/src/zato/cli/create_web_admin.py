@@ -103,7 +103,8 @@ class Create(ZatoCommand):
         from zato.admin.zato_settings import update_globals
 
         from zato.cli import common_logging_conf_contents, is_arg_given
-        from zato.common.crypto import WebAdminCryptoManager, well_known_data
+        from zato.common.crypto.api import WebAdminCryptoManager
+        from zato.common.crypto.const import well_known_data
         from zato.common.defaults import web_admin_host, web_admin_port
 
         os.chdir(self.target_dir)
