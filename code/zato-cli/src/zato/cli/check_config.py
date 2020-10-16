@@ -8,6 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from datetime import datetime
+
 # Zato
 from zato.cli import ManageCommand
 
@@ -111,32 +114,38 @@ class CheckConfig(ManageCommand):
 
     def on_server_check_kvdb(self, cm, conf, conf_key='kvdb'):
 
-        # stdlib
-        from distutils.version import LooseVersion
+        start = datetime.utcnow()
+
+        print('CONN-0', start)
 
         # Bunch
         from bunch import Bunch
 
+        print('CONN-1', datetime.utcnow() - start)
+
         # Zato
-        from zato.common.kvdb import KVDB
+        from zato.common.kvdb.api import KVDB
+
+        print('CONN-2', datetime.utcnow() - start)
 
         # Python 2/3 compatibility
         from future.utils import iteritems
 
+        print('CONN-3', datetime.utcnow() - start)
+
         kvdb_config = Bunch(dict(iteritems((conf[conf_key]))))
+
+        print('CONN-4', datetime.utcnow() - start)
+
         kvdb = KVDB(None, kvdb_config, cm.decrypt)
+
+        print('CONN-5', datetime.utcnow() - start)
+
         kvdb.init()
 
-        minimum = '2.8.4'
+        print('CONN-6', datetime.utcnow() - start)
 
         info = kvdb.conn.info()
-        redis_version = info.get('redis_version')
-
-        if not redis_version:
-            raise Exception('Could not obtain `redis_version` from {}'.format(info))
-
-        if not LooseVersion(redis_version) >= LooseVersion(minimum):
-            raise Exception('Redis version required: `{}` or later, found:`{}`'.format(minimum, redis_version))
 
         kvdb.close()
 
@@ -263,6 +272,8 @@ class CheckConfig(ManageCommand):
 
     def _on_server(self, args):
 
+        print('ON-SERVER-A', datetime.utcnow())
+
         # stdlib
         from os.path import join
 
@@ -272,6 +283,8 @@ class CheckConfig(ManageCommand):
         # Zato
         from zato.common.crypto import ServerCryptoManager
 
+        print('ON-SERVER-0', datetime.utcnow())
+
         cm = self.get_crypto_manager(getattr(args, 'secret_key', None), getattr(args, 'stdin_data', None),
             class_=ServerCryptoManager)
         fs_sql_config = self.get_sql_ini('sql.conf')
@@ -280,14 +293,25 @@ class CheckConfig(ManageCommand):
         secrets_conf_path = ConfigObj(join(repo_dir, 'secrets.conf'), use_zato=False)
         server_conf = ConfigObj(server_conf_path, zato_secrets_conf=secrets_conf_path, zato_crypto_manager=cm, use_zato=True)
 
+        print('ON-SERVER-1', datetime.utcnow())
+
         self.check_sql_odb_server_scheduler(cm, server_conf, fs_sql_config, False)
+
+        print('ON-SERVER-2', datetime.utcnow())
+
         self.on_server_check_kvdb(cm, server_conf)
+
+        print('ON-SERVER-3', datetime.utcnow())
 
         if getattr(args, 'ensure_no_pidfile', False):
             self.ensure_no_pidfile('server')
 
+        print('ON-SERVER-4', datetime.utcnow())
+
         if getattr(args, 'check_server_port_available', False):
             self.on_server_check_port_available(server_conf)
+
+        print('ON-SERVER-5', datetime.utcnow())
 
 # ################################################################################################################################
 
