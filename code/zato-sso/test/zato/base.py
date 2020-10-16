@@ -29,7 +29,6 @@ import requests
 
 # Zato
 from zato.common.json_ import dumps, loads
-from zato.common.crypto.api import CryptoManager
 from zato.common.crypto.api import TOTPManager
 from zato.sso import const, status_code
 

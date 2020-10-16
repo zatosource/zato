@@ -14,7 +14,6 @@ from unittest import main
 # Zato
 from base import BaseTest
 from zato.common.api import SEC_DEF_TYPE
-from zato.common.crypto.api import CryptoManager
 from zato.common.crypto.api import TOTPManager
 from zato.sso import status_code
 

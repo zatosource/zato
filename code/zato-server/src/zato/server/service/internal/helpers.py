@@ -141,7 +141,6 @@ class HTMLService(Service):
         # Django
         import django
         from django.conf import settings
-        from django.template import Context, Template
 
         # Configure Django settings when the module is picked up
         if not settings.configured:
@@ -150,6 +149,8 @@ class HTMLService(Service):
 
     def set_html_payload(self, ctx, template):
 
+        # Django
+        from django.template import Context, Template
 
         # Generate HTML and return response
         c = Context(ctx)
