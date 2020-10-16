@@ -21,7 +21,6 @@ import random
 import re
 import signal
 import threading
-import traceback
 import socket
 import sys
 import unicodedata

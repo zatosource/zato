@@ -164,7 +164,7 @@ class CheckConfig(ManageCommand):
 
         print('CONN-6', datetime.utcnow())
 
-        info = kvdb.conn.info()
+        kvdb.conn.info()
 
         print('CONN-7', datetime.utcnow())
 

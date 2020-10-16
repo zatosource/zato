@@ -10,13 +10,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # ################################################################################################################################
 
-from datetime import datetime
-
 # stdlib
 from calendar import timegm
 from importlib import import_module
 from logging import getLogger
-from string import punctuation
 from time import gmtime
 
 # Cryptography

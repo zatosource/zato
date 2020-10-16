@@ -35,9 +35,6 @@ class CommandStore(object):
         # stdlib
         import argparse
 
-        # Zato
-        from zato.cli import start as start_mod
-
         base_parser = argparse.ArgumentParser(add_help=False)
         base_parser.add_argument('--store-log', help='Whether to store an execution log', action='store_true')
         base_parser.add_argument('--verbose', help='Show verbose output', action='store_true')
@@ -102,7 +99,7 @@ class CommandStore(object):
              create_lb as create_lb_mod, create_odb as create_odb_mod, create_scheduler as create_scheduler_mod, \
              create_server as create_server_mod, create_web_admin as create_web_admin_mod, crypto as crypto_mod, \
              delete_odb as delete_odb_mod, enmasse as enmasse_mod, FromConfig, info as info_mod, \
-             quickstart as quickstart_mod, service as service_mod, sso as sso_mod, start as start_mod, \
+             quickstart as quickstart_mod, service as service_mod, sso as sso_mod, \
              stop as stop_mod, wait as wait_mod, web_admin_auth as web_admin_auth_mod
 
         parser, base_parser, subs, formatter_class = self.build_core_parser()
