@@ -36,7 +36,7 @@ from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, KVDB, NO_DEFAULT_VALUE
      zato_no_op_marker
 from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL, SERVICE
 from zato.common.exception import Inactive, Reportable, ZatoException
-from zato.common.json_ import dumps
+from zato.common.json_internal import dumps
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException
 from zato.common.nav import DictNav, ListNav
 from zato.common.util.api import get_response_value, make_repr, new_cid, payload_from_request, service_name_from_impl, uncamelify

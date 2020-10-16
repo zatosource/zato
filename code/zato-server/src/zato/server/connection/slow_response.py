@@ -11,7 +11,7 @@ import logging
 
 # Zato
 from zato.common.api import KVDB, TRACE1
-from zato.common.json_ import dumps
+from zato.common.json_internal import dumps
 
 logger = logging.getLogger(__name__)
 

@@ -22,7 +22,7 @@ class _WebAdminAuthCommand(ManageCommand):
 
         # Zato
         from zato.admin.zato_settings import update_globals
-        from zato.common.json_ import loads
+        from zato.common.json_internal import loads
 
         os.chdir(os.path.abspath(args.path))
         base_dir = os.path.join(self.original_dir, args.path)
@@ -182,7 +182,7 @@ class ResetTOTPKey(_WebAdminAuthCommand):
         from zato.admin.web.util import get_user_profile
         from zato.admin.zato_settings import zato_secret_key
         from zato.cli.util import get_totp_info_from_args
-        from zato.common.json_ import dumps
+        from zato.common.json_internal import dumps
 
         # Extract or generate a new TOTP key and label
         key, key_label = get_totp_info_from_args(args)

@@ -42,7 +42,7 @@ except ImportError:
 
 # Zato
 from zato.common.api import CHANNEL, DONT_DEPLOY_ATTR_NAME, KVDB, RATE_LIMIT, SourceCodeInfo, TRACE1
-from zato.common.json_ import dumps
+from zato.common.json_internal import dumps
 from zato.common.json_schema import get_service_config, ValidationConfig as JSONSchemaValidationConfig, \
      Validator as JSONSchemaValidator
 from zato.common.match import Matcher

@@ -29,7 +29,7 @@ from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.cluster import DeleteClusterForm, EditClusterForm, EditServerForm
 from zato.admin.web.views import Delete as _Delete, get_lb_client, method_allowed, set_servers_state
 from zato.common.api import SERVER_UP_STATUS
-from zato.common.json_ import dumps
+from zato.common.json_internal import dumps
 from zato.common.odb.model import Cluster, Server
 
 logger = logging.getLogger(__name__)

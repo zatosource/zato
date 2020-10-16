@@ -20,7 +20,7 @@ from gevent import sleep
 from requests import get, post
 
 # Zato
-from zato.common.json_ import dumps, loads
+from zato.common.json_internal import dumps, loads
 from zato.common.util.api import get_free_port
 from zato.common.util.proc import start_python_process
 

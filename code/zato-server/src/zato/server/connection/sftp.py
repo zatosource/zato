@@ -23,7 +23,7 @@ from humanize import naturalsize
 # Zato
 from zato.common.api import SFTP
 from zato.common.broker_message import OUTGOING
-from zato.common.json_ import loads
+from zato.common.json_internal import loads
 from zato.common.sftp import SFTPOutput
 
 # ################################################################################################################################

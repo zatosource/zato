@@ -30,7 +30,7 @@ from texttable import Texttable
 
 # Zato
 from zato.common.api import INFO_FORMAT, MISC, ZATO_INFO_FILE
-from zato.common.json_ import dumps as json_dumps, loads as json_loads
+from zato.common.json_internal import dumps as json_dumps, loads as json_loads
 from zato.common.util.api import current_host
 
 def format_connections(conns, format):

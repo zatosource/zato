@@ -15,9 +15,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from simdjson import load, loads
 
 # uJSON
-from ujson import dump, dumps as json_dumps
+from ujson import dump, dumps
 
 load = load
-loads = loads
 dump = dump
-json_dumps = json_dumps
+
+json_dumps = dumps
+json_loads = loads

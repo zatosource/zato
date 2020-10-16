@@ -21,7 +21,7 @@ from cryptography.fernet import Fernet
 # Zato
 from zato.common.api import CHANNEL, DATA_FORMAT, UNITTEST
 from zato.common.crypto.api import CryptoManager
-from zato.common.json_ import loads
+from zato.common.json_internal import loads
 from zato.common.kvdb.api import KVDB
 from zato.common.odb.api import PoolStore
 from zato.common.util.api import new_cid

@@ -34,7 +34,7 @@ from zato.admin.settings import job_type_friendly_names
 from zato.admin.web.forms.scheduler import CronStyleSchedulerJobForm, IntervalBasedSchedulerJobForm, OneTimeSchedulerJobForm
 from zato.common.api import SCHEDULER, TRACE1
 from zato.common.exception import ZatoException
-from zato.common.json_ import dumps
+from zato.common.json_internal import dumps
 from zato.common.odb.model import CronStyleJob, IntervalBasedJob, Job
 from zato.common.util.api import pprint
 

@@ -24,7 +24,7 @@ from zato.admin.web.forms import SearchForm
 from zato.admin.web.models import ClusterColorMarker
 from zato.admin.web.util import get_user_profile
 from zato.client import AnyServiceInvoker
-from zato.common.json_ import loads
+from zato.common.json_internal import loads
 from zato.common.odb.model import Cluster
 from zato.common.version import get_version
 

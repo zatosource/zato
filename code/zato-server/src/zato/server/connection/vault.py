@@ -83,7 +83,7 @@ class _Client(Client):
         }
 
     def ping(self):
-        return self.is_sealed()
+        return self.is_sealed
 
     def _auth_token(self, client_token, _from_vault=VaultResponse.from_vault):
         if not client_token:

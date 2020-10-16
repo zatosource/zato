@@ -34,7 +34,7 @@ from past.builtins import basestring
 # Zato
 from zato.common.api import CHANNEL, DATA_FORMAT, PUBSUB, SEC_DEF_TYPE, WEB_SOCKET
 from zato.common.exception import ParsingException, Reportable
-from zato.common.json_ import loads
+from zato.common.json_internal import loads
 from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
 from zato.common.util.api import new_cid
 from zato.common.util.hook import HookTool
