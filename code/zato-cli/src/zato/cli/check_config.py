@@ -65,7 +65,11 @@ class CheckConfig(ManageCommand):
         # Zato
         from zato.common.odb import ping_database
 
+        print('PING-0-a', datetime.utcnow())
+
         ping_database(engine_params, ping_query)
+
+        print('PING-0-b', datetime.utcnow())
 
         if self.show_output:
             self.logger.info('SQL ODB connection OK')
@@ -162,7 +166,11 @@ class CheckConfig(ManageCommand):
 
         info = kvdb.conn.info()
 
+        print('CONN-7', datetime.utcnow())
+
         kvdb.close()
+
+        print('CONN-8', datetime.utcnow())
 
         if self.show_output:
             self.logger.info('Redis connection OK')

@@ -12,8 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from datetime import datetime
 
-print('KVDB-0', datetime.utcnow())
-
 # stdlib
 from calendar import timegm
 from importlib import import_module
@@ -21,30 +19,15 @@ from logging import getLogger
 from string import punctuation
 from time import gmtime
 
-print('KVDB-1', datetime.utcnow())
-
 # Cryptography
 from cryptography.fernet import InvalidToken
-
-print('KVDB-2', datetime.utcnow())
-
-print('KVDB-3', datetime.utcnow())
-
-print('KVDB-4', datetime.utcnow())
 
 # Python 2/3 compatibility
 from past.builtins import basestring
 
-print('KVDB-5', datetime.utcnow())
-
 # Zato
 from zato.cy.common.api import KVDB as _KVDB, NONCE_STORE
-
-print('KVDB-6', datetime.utcnow())
-
 from zato.common.util.kvdb import has_redis_sentinels
-
-print('KVDB-7', datetime.utcnow())
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -91,11 +74,12 @@ class KVDB(object):
         """ Returns a concrete class to create Redis connections off basing on whether we use Redis sentinels or not.
         Abstracted out to a separate method so it's easier to test the whole class in separation.
         """
-        # redis
-        from redis import StrictRedis
-        from redis.sentinel import Sentinel
-
-        return Sentinel if self.has_sentinel else StrictRedis
+        if self.has_sentinel:
+            from redis.sentinel import Sentinel
+            return Sentinel
+        else:
+            from redis import StrictRedis
+            return StrictRedis
 
     def _parse_sentinels(self, item):
         if item:
@@ -108,8 +92,8 @@ class KVDB(object):
             return out
 
     def init(self):
-        config = {}
 
+        config = {}
         self.has_sentinel = has_redis_sentinels(self.config)
 
         if self.has_sentinel:
@@ -155,6 +139,7 @@ class KVDB(object):
             config['socket_timeout'] = float(self.config.socket_timeout)
 
         if self.config.get('connection_pool'):
+
             split = self.config.connection_pool.split('.')
             module, class_name = split[:-1], split[-1]
             mod = import_module(module)
@@ -173,12 +158,7 @@ class KVDB(object):
                 socket_timeout=config.get('socket_timeout'), decode_responses=True)
             self.conn = instance.master_for(config['sentinel_master'])
         else:
-
-            print('KVDB-CONN-0', datetime.utcnow())
-
             self.conn = self.conn_class(charset='utf-8', decode_responses=True, **config)
-
-            print('KVDB-CONN-1', datetime.utcnow())
 
         self.lua_container.kvdb = self.conn
 
