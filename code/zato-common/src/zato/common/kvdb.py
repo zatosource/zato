@@ -8,6 +8,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+from datetime import datetime
+
 # stdlib
 from calendar import timegm
 from importlib import import_module
@@ -28,9 +30,13 @@ from redis.sentinel import Sentinel
 # Python 2/3 compatibility
 from past.builtins import basestring
 
+start = datetime.utcnow()
+
 # Zato
 from zato.common.api import KVDB as _KVDB, NONCE_STORE
-from zato.common.util.api import has_redis_sentinels
+from zato.common.util.kvdb import has_redis_sentinels
+
+print('RED', datetime.utcnow() - start)
 
 logger = getLogger(__name__)
 

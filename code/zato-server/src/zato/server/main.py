@@ -65,24 +65,73 @@ start = datetime.utcnow()
 
 # Zato
 from zato.common.api import SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
+
+#print(111, datetime.utcnow() - start)
+
 from zato.common.crypto import ServerCryptoManager
+
+#print(222, datetime.utcnow() - start)
+
 from zato.common.ipaddress_ import get_preferred_ip
+
+#print(333, datetime.utcnow() - start)
+
+#print('AAA', datetime.utcnow() - start)
+
+start = datetime.utcnow()
+
 from zato.common.kvdb import KVDB
+
+print('BBB', datetime.utcnow() - start)
+
 from zato.common.odb.api import ODBManager, PoolStore
+
+#print(555, datetime.utcnow() - start)
+
 from zato.common.repo import RepoManager
+
+#print(666, datetime.utcnow() - start)
+
 from zato.common.util.api import absjoin, asbool, clear_locks, get_config, get_kvdb_config_for_log, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
+
+#print(777, datetime.utcnow() - start)
+
 from zato.common.util.cli import read_stdin_data
+
+#print(888, datetime.utcnow() - start)
+
 from zato.common.simpleio_ import get_sio_server_config
+
+#print(888, datetime.utcnow() - start)
+
 from zato.server.base.parallel import ParallelServer
+
+#print(1010, datetime.utcnow() - start)
+
 from zato.server.ext import zunicorn
+
+#print(2020, datetime.utcnow() - start)
+
 from zato.server.ext.zunicorn.app.base import Application
+
+#print(3030, datetime.utcnow() - start)
+
 from zato.server.service.store import ServiceStore
+
+#print(4040, datetime.utcnow() - start)
+
 from zato.server.startup_callable import StartupCallableTool
+
+#print(5050, datetime.utcnow() - start)
+
 from zato.sso.api import SSOAPI
+
+#print(6060, datetime.utcnow() - start)
+
 from zato.sso.util import new_user_id, normalize_sso_config
 
-print(111, datetime.utcnow() - start)
+#print(7070, datetime.utcnow() - start)
 
 # ################################################################################################################################
 
