@@ -36,7 +36,7 @@ def is_port_taken(port, is_linux=sys_platform.startswith('linux')):
     # Shortcut for Linux so as not to bind to a socket which in turn means waiting until it's closed by OS
     if is_linux:
 
-        print('PSUTIL-0', datetime.utcnow())
+        #print('PSUTIL-0', datetime.utcnow())
 
         with open('/proc/net/tcp') as f:
 
@@ -65,21 +65,21 @@ def is_port_taken(port, is_linux=sys_platform.startswith('linux')):
         # psutil
         from psutil._pslinux import Connections
 
-        print('PSUTIL-1', datetime.utcnow())
+        #print('PSUTIL-1', datetime.utcnow())
 
         connections = Connections().retrieve(kind='tcp')
 
-        print('PSUTIL-1-b', datetime.utcnow())
+        #print('PSUTIL-1-b', datetime.utcnow())
 
         import psutil
 
         for conn in connections:
             if conn.laddr[1] == port and conn.status == psutil.CONN_LISTEN:
-                print('PSUTIL-2', datetime.utcnow())
+                #print('PSUTIL-2', datetime.utcnow())
                 return True
         '''
 
-        print('PSUTIL-1', datetime.utcnow())
+        #print('PSUTIL-1', datetime.utcnow())
 
     else:
 
