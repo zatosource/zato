@@ -39,21 +39,48 @@ def is_port_taken(port, is_linux=sys_platform.startswith('linux')):
 
         print('PSUTIL-0', datetime.utcnow())
 
+        with open('/proc/net/tcp') as f:
+
+            # Skip the first line, the one with comments
+            f.readline()
+
+            for line in f: # type: str
+
+                # Each line contains many entries ..
+                line = line.split()
+
+                # .. the second one is the address ..
+                local_address = line[1]
+
+                # .. which contains the port (as hex) ..
+                _, line_port = local_address.split(':')
+
+                # .. which we now convert to a decimal integer ..
+                line_port = int(line_port, 16)
+
+                # .. and if it matches, we return True
+                if line_port == port:
+                    return True
+
+        '''
         # psutil
-        import psutil
+        from psutil._pslinux import Connections
 
         print('PSUTIL-1', datetime.utcnow())
 
-        connections = psutil.net_connections(kind='tcp')
+        connections = Connections().retrieve(kind='tcp')
 
         print('PSUTIL-1-b', datetime.utcnow())
+
+        import psutil
 
         for conn in connections:
             if conn.laddr[1] == port and conn.status == psutil.CONN_LISTEN:
                 print('PSUTIL-2', datetime.utcnow())
                 return True
+        '''
 
-        print('PSUTIL-3', datetime.utcnow())
+        print('PSUTIL-1', datetime.utcnow())
 
     else:
 
