@@ -54,31 +54,34 @@ class CheckConfig(ManageCommand):
 
     def ping_sql(self, engine_params, ping_query):
 
-        # Zato
-        from zato.common.odb import create_pool
+        print('PING-0', datetime.utcnow())
 
-        session = create_pool(engine_params, ping_query)
-        session.execute(ping_query)
-        session.close()
+        # Zato
+        from zato.common.odb import ping_database
+
+        ping_database(engine_params, ping_query)
 
         if self.show_output:
             self.logger.info('SQL ODB connection OK')
+
+        print('PING-1', datetime.utcnow())
 
 # ################################################################################################################################
 
     def check_sql_odb_server_scheduler(self, cm, conf, fs_sql_config, needs_decrypt_password=True):
 
+        print('SQL-0', datetime.utcnow())
+
         # Zato
         from zato.common.odb.ping import get_ping_query
 
-        return
+        print('SQL-1', datetime.utcnow())
 
-        # Python 2/3 compatibility
-        from future.utils import iteritems
-
-        engine_params = dict(iteritems((conf['odb'])))
+        engine_params = dict((conf['odb']))
         engine_params['extra'] = {}
         engine_params['pool_size'] = 1
+
+        print('SQL-2', datetime.utcnow())
 
         # This will be needed by scheduler but not server
         if needs_decrypt_password:
@@ -86,7 +89,11 @@ class CheckConfig(ManageCommand):
             if password:
                 engine_params['password'] = cm.decrypt(password)
 
+        print('SQL-3', datetime.utcnow())
+
         self.ping_sql(engine_params, get_ping_query(fs_sql_config, engine_params))
+
+        print('SQL-4', datetime.utcnow())
 
 # ################################################################################################################################
 
