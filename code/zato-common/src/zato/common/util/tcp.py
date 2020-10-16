@@ -10,10 +10,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import errno
-import logging
 import socket
 from datetime import datetime, timedelta
-from logging import getLogger, WARN
+from logging import getLogger
 from sys import platform as sys_platform
 from time import sleep
 

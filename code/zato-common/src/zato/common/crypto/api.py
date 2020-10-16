@@ -8,13 +8,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from datetime import datetime
-
 # stdlib
 import base64
 import logging
 import os
-import sys
 from datetime import datetime
 from math import ceil
 
