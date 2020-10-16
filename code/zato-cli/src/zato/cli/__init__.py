@@ -8,6 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from datetime import datetime
+
 # ################################################################################################################################
 
 # Some objects are re-defined here to avoid importing them from zato.common = improves CLI performance.
@@ -309,62 +312,74 @@ ping_query=SELECT 1
 
 # ################################################################################################################################
 
+command_imports = (
+    ('apispec', 'zato.cli.apispec.APISpec'),
+    ('ca_create_ca', 'zato.cli.ca_create_ca.Create'),
+    ('ca_create_lb_agent', 'zato.cli.ca_create_lb_agent.Create'),
+    ('ca_create_scheduler', 'zato.cli.ca_create_scheduler.Create'),
+    ('ca_create_server', 'zato.cli.ca_create_server.Create'),
+    ('ca_create_web_admin', 'zato.cli.ca_create_web_admin.Create'),
+    ('cache_delete', 'zato.cli.cache.CacheDelete'),
+    ('cache_get', 'zato.cli.cache.CacheGet'),
+    ('cache_set', 'zato.cli.cache.CacheSet'),
+    ('check_config', 'zato.cli.check_config.CheckConfig'),
+    ('component_version', 'zato.cli.component_version.ComponentVersion'),
+    ('create_cluster', 'zato.cli.create_cluster.Create'),
+    ('create_lb', 'zato.cli.create_lb.Create'),
+    ('create_odb', 'zato.cli.create_odb.Create'),
+    ('create_scheduler', 'zato.cli.create_scheduler.Create'),
+    ('create_server', 'zato.cli.create_server.Create'),
+    ('create_secret_key', 'zato.cli.crypto.CreateSecretKey'),
+    ('create_user', 'zato.cli.web_admin_auth.CreateUser'),
+    ('create_web_admin', 'zato.cli.create_web_admin.Create'),
+    ('crypto_create_secret_key', 'zato.cli.crypto.CreateSecretKey'),
+    ('delete_odb', 'zato.cli.delete_odb.Delete'),
+    ('decrypt', 'zato.cli.crypto.Decrypt'),
+    ('encrypt', 'zato.cli.crypto.Encrypt'),
+    ('enmasse', 'zato.cli.enmasse.Enmasse'),
+    ('from_config', 'zato.cli.FromConfig'),
+    ('hash_get_rounds', 'zato.cli.crypto.GetHashRounds'),
+    ('info', 'zato.cli.info.Info'),
+    ('reset_totp_key', 'zato.cli.web_admin_auth.ResetTOTPKey'),
+    ('quickstart_create', 'zato.cli.quickstart.Create'),
+    ('service_invoke', 'zato.cli.service.Invoke'),
+    ('set_admin_invoke_password', 'zato.cli.web_admin_auth.SetAdminInvokePassword'),
+    ('sso_change_user_password', 'zato.cli.sso.ChangeUserPassword'),
+    ('sso_create_odb', 'zato.cli.sso.CreateODB'),
+    ('sso_create_user', 'zato.cli.sso.CreateUser'),
+    ('sso_create_super_user', 'zato.cli.sso.CreateSuperUser'),
+    ('sso_delete_user', 'zato.cli.sso.DeleteUser'),
+    ('sso_login', 'zato.cli.sso.Login'),
+    ('sso_logout', 'zato.cli.sso.Logout'),
+    ('sso_lock_user', 'zato.cli.sso.LockUser'),
+    ('sso_reset_totp_key', 'zato.cli.sso.ResetTOTPKey'),
+    ('sso_reset_user_password', 'zato.cli.sso.ResetUserPassword'),
+    ('sso_unlock_user', 'zato.cli.sso.UnlockUser'),
+    ('start', 'zato.cli.start.Start'),
+    ('stop', 'zato.cli.stop.Stop'),
+    ('update_password', 'zato.cli.web_admin_auth.UpdatePassword'),
+    ('wait', 'zato.cli.wait.Wait'),
+)
+
+# ################################################################################################################################
+
 def run_command(args):
+
+    print('IMPORT-0', datetime.utcnow())
 
     # Zato
     from zato.common.util.import_ import import_string
 
+    print('IMPORT-1', datetime.utcnow())
+
     command_class = {}
-    command_imports = (
-        ('apispec', 'zato.cli.apispec.APISpec'),
-        ('ca_create_ca', 'zato.cli.ca_create_ca.Create'),
-        ('ca_create_lb_agent', 'zato.cli.ca_create_lb_agent.Create'),
-        ('ca_create_scheduler', 'zato.cli.ca_create_scheduler.Create'),
-        ('ca_create_server', 'zato.cli.ca_create_server.Create'),
-        ('ca_create_web_admin', 'zato.cli.ca_create_web_admin.Create'),
-        ('cache_delete', 'zato.cli.cache.CacheDelete'),
-        ('cache_get', 'zato.cli.cache.CacheGet'),
-        ('cache_set', 'zato.cli.cache.CacheSet'),
-        ('check_config', 'zato.cli.check_config.CheckConfig'),
-        ('component_version', 'zato.cli.component_version.ComponentVersion'),
-        ('create_cluster', 'zato.cli.create_cluster.Create'),
-        ('create_lb', 'zato.cli.create_lb.Create'),
-        ('create_odb', 'zato.cli.create_odb.Create'),
-        ('create_scheduler', 'zato.cli.create_scheduler.Create'),
-        ('create_server', 'zato.cli.create_server.Create'),
-        ('create_secret_key', 'zato.cli.crypto.CreateSecretKey'),
-        ('create_user', 'zato.cli.web_admin_auth.CreateUser'),
-        ('create_web_admin', 'zato.cli.create_web_admin.Create'),
-        ('crypto_create_secret_key', 'zato.cli.crypto.CreateSecretKey'),
-        ('delete_odb', 'zato.cli.delete_odb.Delete'),
-        ('decrypt', 'zato.cli.crypto.Decrypt'),
-        ('encrypt', 'zato.cli.crypto.Encrypt'),
-        ('enmasse', 'zato.cli.enmasse.Enmasse'),
-        ('from_config', 'zato.cli.FromConfig'),
-        ('hash_get_rounds', 'zato.cli.crypto.GetHashRounds'),
-        ('info', 'zato.cli.info.Info'),
-        ('reset_totp_key', 'zato.cli.web_admin_auth.ResetTOTPKey'),
-        ('quickstart_create', 'zato.cli.quickstart.Create'),
-        ('service_invoke', 'zato.cli.service.Invoke'),
-        ('set_admin_invoke_password', 'zato.cli.web_admin_auth.SetAdminInvokePassword'),
-        ('sso_change_user_password', 'zato.cli.sso.ChangeUserPassword'),
-        ('sso_create_odb', 'zato.cli.sso.CreateODB'),
-        ('sso_create_user', 'zato.cli.sso.CreateUser'),
-        ('sso_create_super_user', 'zato.cli.sso.CreateSuperUser'),
-        ('sso_delete_user', 'zato.cli.sso.DeleteUser'),
-        ('sso_login', 'zato.cli.sso.Login'),
-        ('sso_logout', 'zato.cli.sso.Logout'),
-        ('sso_lock_user', 'zato.cli.sso.LockUser'),
-        ('sso_reset_totp_key', 'zato.cli.sso.ResetTOTPKey'),
-        ('sso_reset_user_password', 'zato.cli.sso.ResetUserPassword'),
-        ('sso_unlock_user', 'zato.cli.sso.UnlockUser'),
-        ('start', 'zato.cli.start.Start'),
-        ('stop', 'zato.cli.stop.Stop'),
-        ('update_password', 'zato.cli.web_admin_auth.UpdatePassword'),
-        ('wait', 'zato.cli.wait.Wait'),
-    )
-    for k, v in command_imports:
-        command_class[k] = import_string(v)
+    print('IMPORT-2', datetime.utcnow())
+
+    for command_name, module_name in command_imports:
+        if command_name == args.command:
+            command_class[command_name] = import_string(module_name)
+
+    print('IMPORT-3', datetime.utcnow())
 
     command_class[args.command](args).run(args)
 
@@ -663,12 +678,16 @@ class ZatoCommand(object):
         whether the user wishes to use a config file or command line switches.
         """
 
+        print('RUN-0', datetime.utcnow())
+
         # stdlib
         import os
         import sys
 
         # Zato
         from zato.common.util.api import get_full_stack
+
+        print('RUN-1', datetime.utcnow())
 
         try:
             # Do we need to have a clean directory to work in?
@@ -1012,16 +1031,24 @@ class ManageCommand(ZatoCommand):
 
     def execute(self, args):
 
+        print('CLI-0', datetime.utcnow())
+
         # stdlib
         import os
         import sys
 
+        print('CLI-1', datetime.utcnow())
+
         # Zato
         from zato.common.json_ import load
+
+        print('CLI-2', datetime.utcnow())
 
         self.component_dir = os.path.abspath(args.path)
         self.config_dir = os.path.join(self.component_dir, 'config')
         listing = set(os.listdir(self.component_dir))
+
+        print('CLI-3', datetime.utcnow())
 
         # Do we have any files we're looking for?
         found = self.command_files & listing
@@ -1032,10 +1059,17 @@ class ManageCommand(ZatoCommand):
             self.logger.info(msg)
             sys.exit(self.SYS_ERROR.NOT_A_ZATO_COMPONENT) # noqa
 
+        print('CLI-4', datetime.utcnow())
+
         found = list(found)[0]
         json_data = load(open(os.path.join(self.component_dir, found)))
 
+        print('CLI-5', datetime.utcnow())
+
         os.chdir(self.component_dir)
+
+        print('CLI-6', datetime.utcnow())
+
         return self._get_dispatch()[json_data['component']](args)
 
 # ################################################################################################################################

@@ -8,6 +8,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# ################################################################################################################################
+
 # stdlib
 from calendar import timegm
 from importlib import import_module
@@ -32,23 +34,12 @@ from past.builtins import basestring
 from zato.common.api import KVDB as _KVDB, NONCE_STORE
 from zato.common.util.kvdb import has_redis_sentinels
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = getLogger(__name__)
 
-# Redis PyParsing grammar
-
-quot = Optional(oneOf(('"', "'")))
-command = oneOf((
-    'CONFIG', 'DBSIZE', 'DECR', 'DECRBY', 'DEL', 'DUMP', 'ECHO',
-    'EXISTS', 'EXPIRE', 'EXPIREAT', 'FLUSHDB', 'GET',
-    'HDEL', 'HEXISTS', 'HGET', 'HGETALL', 'HINCRBY', 'HKEYS', 'HLEN', 'HSET', 'HSETNX',
-    'HVALS', 'INCR', 'INCRBY', 'INFO', 'KEYS', 'LLEN', 'LPOP', 'LPUSH', 'LPUSHX',
-    'LRANGE', 'LREM', 'LSET', 'LTRIM', 'MGET', 'MSET', 'MSETNX', 'OBJECT', 'PERSIST',
-    'PEXPIRE', 'PEXPIREAT', 'PING', 'PSETEX', 'PTTL', 'RANDOMKEY', 'RENAME', 'RENAMENX',
-    'RESTORE', 'RPOP', 'SADD', 'SET', 'SISMEMBER', 'SMEMBERS', 'SREM', 'TIME', 'TTL', 'TYPE',
-    'ZADD', 'ZRANGE', 'ZREM'), caseless=True).setResultsName('command')
-parameters = (OneOrMore(Word(alphanums + '-' + punctuation))).setResultsName('parameters')
-redis_grammar = command + Optional(White().suppress() + parameters)
-
+# ################################################################################################################################
 # ################################################################################################################################
 
 class LuaContainer(object):

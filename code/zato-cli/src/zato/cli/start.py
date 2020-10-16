@@ -8,6 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from datetime import datetime
+
 # Zato
 from zato.cli import ManageCommand
 
@@ -57,6 +60,9 @@ Examples:
 
         cc = CheckConfig(self.args)
         cc.show_output = False
+
+        print('START-0', datetime.utcnow())
+
         cc.execute(Bunch({
             'path': '.',
             'ensure_no_pidfile': True,

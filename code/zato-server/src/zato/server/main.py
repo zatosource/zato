@@ -80,9 +80,9 @@ from zato.common.ipaddress_ import get_preferred_ip
 
 start = datetime.utcnow()
 
-from zato.common.kvdb import KVDB
+from zato.common.kvdb.api import KVDB
 
-print('BBB', datetime.utcnow() - start)
+print('BBB', datetime.utcnow() - start, datetime.utcnow())
 
 from zato.common.odb.api import ODBManager, PoolStore
 
