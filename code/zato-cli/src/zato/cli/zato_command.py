@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import argparse
-import mmap
 from datetime import datetime
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
@@ -33,10 +32,6 @@ install_aliases()
 
 class CommandStore(object):
 
-    def __init__(self):
-        #self.ipc = CommandStoreIPC()
-        pass
-
 # ################################################################################################################################
 
     def add_opts(self, parser, opts):
@@ -53,37 +48,66 @@ class CommandStore(object):
 
 # ################################################################################################################################
 
-    def load_parser(self):
+    def build_core_parser(self):
 
-        parser = self.get_parser()
+        # Zato
+        from zato.cli import start as start_mod
 
-        #print(111, self.ipc)
-        #print(222, self.ipc)
+        base_parser = argparse.ArgumentParser(add_help=False)
+        base_parser.add_argument('--store-log', help='Whether to store an execution log', action='store_true')
+        base_parser.add_argument('--verbose', help='Show verbose output', action='store_true')
+        base_parser.add_argument(
+            '--store-config',
+            help='Whether to store config options in a file for a later use', action='store_true')
 
-        '''
-        f = open(self.cache_path, 'rb')
-        parser = dill_load(f)
-        f.close()
-        '''
+        parser = argparse.ArgumentParser(prog='zato')
+        subs = parser.add_subparsers()
 
-        #with open(self.cache_path, 'wb') as f:
-        #    f.write(dill_dumps(parser))
+        return parser, base_parser, subs
 
-        '''
-        with open(self.cache_path, 'r+b') as f:
-            self.mm = mmap.mmap(f.fileno(), 0)
-            parser = dill_load(self.mm)
+# ################################################################################################################################
 
+    def load_start_parser(self, parser=None, base_parser=None, subs=None):
 
-        print(111, self.mm)
-        print(222, parser)
-        '''
+        # Zato
+        from zato.cli import start as start_mod
 
+        if not parser:
+            parser, base_parser, subs = self.build_core_parser()
+
+        #
+        # start
+        #
+        start_ = subs.add_parser(
+            'start', description=start_mod.Start.__doc__, parents=[base_parser],
+            formatter_class=argparse.RawDescriptionHelpFormatter)
+        start_.add_argument('path', help='Path to the Zato component to be started')
+        start_.set_defaults(command='start')
+        self.add_opts(start_, start_mod.Start.opts)
+
+        return parser
+
+    add_start_server_parser = load_start_parser
+
+# ################################################################################################################################
+
+    def load_version_parser(self):
+        parser, _, _ = self.build_core_parser()
+        self._add_version(parser)
         return parser
 
 # ################################################################################################################################
 
-    def get_parser(self):
+    def _add_version(self, parser):
+
+        # Zato
+        from zato.common.version import get_version
+
+        parser.add_argument('--version', action='version', version=get_version())
+
+# ################################################################################################################################
+
+    def load_full_parser(self):
 
         # Zato
         from zato.cli import apispec as apispec_mod, ca_create_ca as ca_create_ca_mod, \
@@ -96,19 +120,9 @@ class CommandStore(object):
              delete_odb as delete_odb_mod, enmasse as enmasse_mod, FromConfig, info as info_mod, \
              quickstart as quickstart_mod, service as service_mod, sso as sso_mod, start as start_mod, \
              stop as stop_mod, wait as wait_mod, web_admin_auth as web_admin_auth_mod
-        from zato.common.version import get_version
 
-        base_parser = argparse.ArgumentParser(add_help=False)
-        base_parser.add_argument('--store-log', help='Whether to store an execution log', action='store_true')
-        base_parser.add_argument('--verbose', help='Show verbose output', action='store_true')
-        base_parser.add_argument(
-            '--store-config',
-            help='Whether to store config options in a file for a later use', action='store_true')
-
-        parser = argparse.ArgumentParser(prog='zato')
-        parser.add_argument('--version', action='version', version=get_version())
-
-        subs = parser.add_subparsers()
+        parser, base_parser, subs = self.build_core_parser()
+        self._add_version(parser)
 
         #
         # apispec
@@ -456,12 +470,7 @@ class CommandStore(object):
         #
         # start
         #
-        start_ = subs.add_parser(
-            'start', description=start_mod.Start.__doc__, parents=[base_parser],
-            formatter_class=argparse.RawDescriptionHelpFormatter)
-        start_.add_argument('path', help='Path to the Zato component to be started')
-        start_.set_defaults(command='start')
-        self.add_opts(start_, start_mod.Start.opts)
+        self.add_start_server_parser(parser, base_parser, subs)
 
         #
         # stop
@@ -498,15 +507,42 @@ command_store = CommandStore()
 # ################################################################################################################################
 
 def main():
-    parser = command_store.load_parser()
+
+    # stdlib
+    import sys
+
+    # Special-case the most commonly used commands to make the parser build quickly in these cases.
+
+    # First, zato --version
+    if sys.argv[1] == '--version':
+
+        # Zato
+        from zato.common.version import get_version
+
+        sys.stdout.write(get_version() + '\n')
+        sys.exit(0)
+
+    # Now, zato start ...
+    elif sys.argv[1] == 'start':
+        parser = command_store.load_start_parser()
+
+    # All the other commands
+    else:
+        parser = command_store.load_full_parser()
+
+    # Parse the arguments
     args = parser.parse_args()
+
+    # Exit if no known command was found among arguments ..
     if not hasattr(args, 'command'):
         parser.print_help()
-    if 0:
-        pass
+
+    # .. otherwise, run the command now.
     else:
+
         # Zato
         from zato.cli import run_command
+
         return run_command(args)
 
 # ################################################################################################################################
