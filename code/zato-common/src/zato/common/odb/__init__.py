@@ -8,52 +8,18 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-import copy
-import logging
-from traceback import format_exc
-
-# SQLAlchemy
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.sql import text
-
-logger = logging.getLogger(__name__)
-
-WMQ_DEFAULT_PRIORITY = 5
-
-# ODB version
-VERSION = 1
-
-# These databases may be used for ODB but individual SQL outconns can connect to, say, MS SQL
-SUPPORTED_DB_TYPES = ('mysql', 'postgresql', 'sqlite')
-
-# ################################################################################################################################
-
-def get_ping_query(fs_sql_config, engine_params):
-    """ Returns a ping query for input engine and component-wide SQL configuration.
-    """
-    ping_query = None
-    for key, value in fs_sql_config.items():
-        if key == engine_params['engine']:
-            ping_query = value.get('ping_query')
-            break
-
-    if not ping_query:
-
-        # We special case SQLite because it is never served from sql.ini
-        if engine_params['engine'] == 'sqlite':
-            ping_query = 'SELECT 1'
-
-        if not ping_query:
-            raise ValueError('Could not find ping_query for {}'.format(engine_params))
-
-    # If we are here it means that a query was found
-    return ping_query
-
 # ################################################################################################################################
 
 def create_pool(engine_params, ping_query, query_class=None):
+
+    # stdlib
+    import copy
+
+    # SQLAlchemy
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    # Zato
     from zato.common.util.api import get_engine_url
 
     engine_params = copy.deepcopy(engine_params)
@@ -78,6 +44,15 @@ def create_pool(engine_params, ping_query, query_class=None):
 def drop_all(engine):
     """ Drops all tables and sequences (but not VIEWS) from a Postgres database
     """
+
+    # stdlib
+    import logging
+    from traceback import format_exc
+
+    # SQLAlchemy
+    from sqlalchemy.sql import text
+
+    logger = logging.getLogger('zato')
 
     sequence_sql="""SELECT sequence_name FROM information_schema.sequences
                     WHERE sequence_schema='public'

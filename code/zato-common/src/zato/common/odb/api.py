@@ -36,7 +36,8 @@ from zato.common.api import DEPLOYMENT_STATUS, GENERIC, HTTP_SOAP, MS_SQL, NotGi
      SERVER_UP_STATUS, UNITTEST, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.exception import Inactive
 from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
-from zato.common.odb import get_ping_query, query
+from zato.common.odb import query
+from zato.common.odb.ping import get_ping_query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
      JWT, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, XPathSecurity, \
      WSSDefinition, VaultConnection
