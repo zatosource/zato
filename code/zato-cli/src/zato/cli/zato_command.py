@@ -9,24 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-import argparse
-from datetime import datetime
-
-# ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
-import cloghandler
-cloghandler = cloghandler # For pyflakes
-
-# dill
-from dill import dumps as dill_dumps, load as dill_load
-
-# Zato
-#from zato.common.util.posix_ipc_ import CommandStoreIPC
-
-# Python 2/3 compatibility
-from future.standard_library import install_aliases
-install_aliases()
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -50,6 +32,9 @@ class CommandStore(object):
 
     def build_core_parser(self):
 
+        # stdlib
+        import argparse
+
         # Zato
         from zato.cli import start as start_mod
 
@@ -63,24 +48,23 @@ class CommandStore(object):
         parser = argparse.ArgumentParser(prog='zato')
         subs = parser.add_subparsers()
 
-        return parser, base_parser, subs
+        return parser, base_parser, subs, argparse.RawDescriptionHelpFormatter
 
 # ################################################################################################################################
 
-    def load_start_parser(self, parser=None, base_parser=None, subs=None):
+    def load_start_parser(self, parser=None, base_parser=None, subs=None, formatter_class=None):
 
         # Zato
         from zato.cli import start as start_mod
 
         if not parser:
-            parser, base_parser, subs = self.build_core_parser()
+            parser, base_parser, subs, formatter_class = self.build_core_parser()
 
         #
         # start
         #
         start_ = subs.add_parser(
-            'start', description=start_mod.Start.__doc__, parents=[base_parser],
-            formatter_class=argparse.RawDescriptionHelpFormatter)
+            'start', description=start_mod.Start.__doc__, parents=[base_parser], formatter_class=formatter_class)
         start_.add_argument('path', help='Path to the Zato component to be started')
         start_.set_defaults(command='start')
         self.add_opts(start_, start_mod.Start.opts)
@@ -92,7 +76,7 @@ class CommandStore(object):
 # ################################################################################################################################
 
     def load_version_parser(self):
-        parser, _, _ = self.build_core_parser()
+        parser, _, _, _ = self.build_core_parser()
         self._add_version(parser)
         return parser
 
@@ -121,7 +105,7 @@ class CommandStore(object):
              quickstart as quickstart_mod, service as service_mod, sso as sso_mod, start as start_mod, \
              stop as stop_mod, wait as wait_mod, web_admin_auth as web_admin_auth_mod
 
-        parser, base_parser, subs = self.build_core_parser()
+        parser, base_parser, subs, formatter_class = self.build_core_parser()
         self._add_version(parser)
 
         #
@@ -470,7 +454,7 @@ class CommandStore(object):
         #
         # start
         #
-        self.add_start_server_parser(parser, base_parser, subs)
+        self.add_start_server_parser(parser, base_parser, subs, formatter_class)
 
         #
         # stop

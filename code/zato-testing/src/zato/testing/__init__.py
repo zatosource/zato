@@ -22,7 +22,7 @@ from cryptography.fernet import Fernet
 from zato.common.api import CHANNEL, DATA_FORMAT, UNITTEST
 from zato.common.crypto import CryptoManager
 from zato.common.json_ import loads
-from zato.common.kvdb import KVDB
+from zato.common.kvdb.api import KVDB
 from zato.common.odb.api import PoolStore
 from zato.common.util.api import new_cid
 from zato.server.base.worker import WorkerStore
