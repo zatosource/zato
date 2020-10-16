@@ -14,23 +14,12 @@ import logging
 import socket
 from datetime import datetime, timedelta
 from logging import getLogger, WARN
-from platform import system as platform_system
+from sys import platform as sys_platform
 from time import sleep
-
-# requests
-from requests import get
-
-# psutil
-import psutil
 
 # ################################################################################################################################
 
 logger = getLogger('zato')
-
-# ################################################################################################################################
-
-log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
-logging.basicConfig(level=WARN, format=log_format)
 
 # ################################################################################################################################
 
@@ -43,13 +32,44 @@ def get_free_port(start=30000):
 # ################################################################################################################################
 
 # Taken from http://grodola.blogspot.com/2014/04/reimplementing-netstat-in-cpython.html
-def is_port_taken(port, is_linux=platform_system().lower()=='linux'):
-    # Short for Linux so as not to bind to a socket which in turn means waiting until it's closed by OS
+def is_port_taken(port, is_linux=sys_platform.startswith('linux')):
+
+    # Shortcut for Linux so as not to bind to a socket which in turn means waiting until it's closed by OS
     if is_linux:
+
+        print('PSUTIL-0', datetime.utcnow())
+
+        # psutil
+        import psutil
+
+        print('PSUTIL-1', datetime.utcnow())
+
+        connections = psutil.net_connections(kind='tcp')
+
+        print('PSUTIL-1-b', datetime.utcnow())
+
+        for conn in connections:
+            if conn.laddr[1] == port and conn.status == psutil.CONN_LISTEN:
+                print('PSUTIL-2', datetime.utcnow())
+                return True
+
+        print('PSUTIL-3', datetime.utcnow())
+
+    else:
+
+        # This code waits for the Windows port of Zato
+
+        """
+        # psutil
+        import psutil
+
         for conn in psutil.net_connections(kind='tcp'):
             if conn.laddr[1] == port and conn.status == psutil.CONN_LISTEN:
                 return True
-    else:
+        """
+
+        # The code below is for Mac
+
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             sock.bind(('', port))
@@ -87,6 +107,10 @@ def _wait_for_port(port, timeout, interval, needs_taken):
 def wait_for_zato(address, url_path, timeout=60, interval=0.1):
     """ Waits until a Zato server responds.
     """
+
+    # Requests
+    from requests import get as requests_get
+
     # Imported here to avoid circular imports
     from zato.common.util.api import wait_for_predicate
 
@@ -95,7 +119,7 @@ def wait_for_zato(address, url_path, timeout=60, interval=0.1):
 
     def _predicate_zato_ping(*ignored_args, **ignored_kwargs):
         try:
-            get(url, timeout=interval)
+            requests_get(url, timeout=interval)
         except Exception as e:
             logger.warn('Waiting for `%s` (%s)', url, e)
         else:

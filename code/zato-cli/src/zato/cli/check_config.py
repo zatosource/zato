@@ -37,11 +37,17 @@ class CheckConfig(ManageCommand):
 
     def ensure_port_free(self, prefix, port, address):
 
+        print('ENSURE-0', datetime.utcnow())
+
         # Zato
-        from zato.common.util.api import is_port_taken
+        from zato.common.util.tcp import is_port_taken
+
+        print('ENSURE-1', datetime.utcnow())
 
         if is_port_taken(port):
             raise Exception('{} check failed. Address `{}` already taken.'.format(prefix, address))
+
+        print('ENSURE-2', datetime.utcnow())
 
 # ################################################################################################################################
 
@@ -166,20 +172,22 @@ class CheckConfig(ManageCommand):
     def ensure_no_pidfile(self, log_file_marker):
 
         # stdlib
-        import os
         from os.path import abspath, exists, join
-
-        # psutil
-        from psutil import AccessDenied, Process, NoSuchProcess
-
-        # Zato
-        from zato.common.api import INFO_FORMAT
-        from zato.common.component_info import get_info
 
         pidfile = abspath(join(self.component_dir, 'pidfile'))
 
         # Pidfile exists ..
         if exists(pidfile):
+
+            # stdlib
+            import os
+
+            # psutil
+            from psutil import AccessDenied, Process, NoSuchProcess
+
+            # Zato
+            from zato.common.api import INFO_FORMAT
+            from zato.common.component_info import get_info
 
             # .. but raise an error only if the PID it points to belongs
             # to an already running component. Otherwise, it must be a stale pidfile
@@ -251,9 +259,20 @@ class CheckConfig(ManageCommand):
 # ################################################################################################################################
 
     def on_server_check_port_available(self, server_conf):
+
+        print('ON-AVAIL-0', datetime.utcnow())
+
         address = server_conf['main']['gunicorn_bind']
+
+        print('ON-AVAIL-1', datetime.utcnow())
+
         _, port = address.split(':')
+
+        print('ON-AVAIL-2', datetime.utcnow())
+
         self.ensure_port_free('Server', int(port), address)
+
+        print('ON-AVAIL-3', datetime.utcnow())
 
 # ################################################################################################################################
 
@@ -341,7 +360,12 @@ class CheckConfig(ManageCommand):
         print('ON-SERVER-4', datetime.utcnow())
 
         if getattr(args, 'check_server_port_available', False):
+
+            print('ON-SERVER-4-a', datetime.utcnow())
+
             self.on_server_check_port_available(server_conf)
+
+            print('ON-SERVER-4-b', datetime.utcnow())
 
         print('ON-SERVER-5', datetime.utcnow())
 
