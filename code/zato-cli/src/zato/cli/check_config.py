@@ -69,7 +69,9 @@ class CheckConfig(ManageCommand):
     def check_sql_odb_server_scheduler(self, cm, conf, fs_sql_config, needs_decrypt_password=True):
 
         # Zato
-        from zato.common.odb import get_ping_query
+        from zato.common.odb.ping import get_ping_query
+
+        return
 
         # Python 2/3 compatibility
         from future.utils import iteritems
