@@ -26,7 +26,7 @@ from future.utils import iteritems
 
 # Zato
 from zato.common.api import simple_types
-from zato.common.json_ import loads
+from zato.common.json_internal import loads
 from zato.common.util.api import make_repr
 
 # Zato - Cython

@@ -1222,7 +1222,7 @@ class JsonCodec(object):
     def load(self, file_, results):
 
         # Zato
-        from zato.common.json_ import loads
+        from zato.common.json_internal import loads
 
         return loads(file_.read())
 
@@ -1231,7 +1231,7 @@ class JsonCodec(object):
     def dump(self, file_, object_):
 
         # Zato
-        from zato.common.json_ import dumps
+        from zato.common.json_internal import dumps
 
         file_.write(dumps(object_, indent=1, sort_keys=True))
 

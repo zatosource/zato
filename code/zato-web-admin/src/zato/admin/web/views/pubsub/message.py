@@ -22,7 +22,7 @@ from zato.admin.web.forms.pubsub import MsgPublishForm
 from zato.admin.web.views import method_allowed
 from zato.admin.web.views.pubsub import get_message
 from zato.common.api import PUBSUB
-from zato.common.json_ import dumps
+from zato.common.json_internal import dumps
 from zato.common.pubsub import new_msg_id
 from zato.common.util.api import asbool
 

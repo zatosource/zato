@@ -13,7 +13,7 @@ from traceback import format_exc
 
 # Zato
 from zato.common.api import DATA_FORMAT
-from zato.common.json_ import dumps
+from zato.common.json_internal import dumps
 from zato.server.service import Service
 
 class Create(Service):

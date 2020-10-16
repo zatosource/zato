@@ -37,7 +37,7 @@ from six import PY2
 # Zato
 from zato.common.api import MISC
 from zato.common.broker_message import code_to_name
-from zato.common.json_ import dumps, loads
+from zato.common.json_internal import dumps, loads
 from zato.common.util.api import parse_cmd_line_options
 from zato.common.util.auth import parse_basic_auth
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC

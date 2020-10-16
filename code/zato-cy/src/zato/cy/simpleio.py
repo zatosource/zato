@@ -35,7 +35,7 @@ from lxml.etree import _Element as EtreeElementClass, Element, SubElement, tostr
 
 # Zato
 from zato.common.api import APISPEC, DATA_FORMAT, ZATO_NONE
-from zato.common.json_ import dumps as json_dumps
+from zato.common.json_internal import dumps as json_dumps
 from zato.common.odb.api import WritableKeyedTuple
 from zato.util_convert import to_bool
 

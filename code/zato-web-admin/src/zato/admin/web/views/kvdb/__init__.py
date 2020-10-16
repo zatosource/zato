@@ -17,7 +17,7 @@ from zato.admin.web.forms import SearchForm
 from zato.admin.web.forms.kvdb import RemoteCommandForm
 from zato.admin.web.views import method_allowed
 from zato.common.exception import ZatoException
-from zato.common.json_ import dumps
+from zato.common.json_internal import dumps
 
 @method_allowed('GET')
 def remote_command(req):

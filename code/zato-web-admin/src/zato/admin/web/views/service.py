@@ -43,7 +43,7 @@ from zato.admin.web import from_utc_to_user, last_hour_start_stop
 from zato.admin.web.forms.service import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, upload_to_server
 from zato.common.api import DATA_FORMAT, SourceCodeInfo, ZATO_NONE
-from zato.common.json_ import dumps, loads
+from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import Service
 
 # ################################################################################################################################

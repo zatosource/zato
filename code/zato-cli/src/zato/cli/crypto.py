@@ -154,7 +154,7 @@ class GetHashRounds(ZatoCommand):
 
         # Zato
         from zato.common.crypto.api import CryptoManager
-        from zato.common.json_ import dumps
+        from zato.common.json_internal import dumps
 
         goal = round(float(args.goal), 2)
 

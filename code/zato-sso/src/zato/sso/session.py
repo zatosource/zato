@@ -25,7 +25,7 @@ from past.builtins import unicode
 # Zato
 from zato.common.api import GENERIC, SEC_DEF_TYPE
 from zato.common.audit import audit_pii
-from zato.common.json_ import dumps
+from zato.common.json_internal import dumps
 from zato.common.odb.model import SSOSession as SessionModel
 from zato.common.crypto.totp_ import TOTPManager
 from zato.sso import const, status_code, Session as SessionEntity, ValidationError

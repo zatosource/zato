@@ -50,7 +50,7 @@ from zato.common.api import CHANNEL, DATA_FORMAT, GENERIC as COMMON_GENERIC, HTT
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
-from zato.common.json_ import loads
+from zato.common.json_internal import loads
 from zato.common.match import Matcher
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.util.api import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \

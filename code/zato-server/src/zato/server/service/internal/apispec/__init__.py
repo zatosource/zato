@@ -23,7 +23,7 @@ from zato.server.apispec.wsdl import WSDLGenerator
 from zato.server.service import List, Opaque, Service
 
 # Zato
-from zato.common.json_ import dumps
+from zato.common.json_internal import dumps
 from zato.common.util.eval_ import as_list
 from zato.common.util.file_system import fs_safe_name
 from zato.server.apispec import Generator

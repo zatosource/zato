@@ -27,7 +27,7 @@ from builtins import bytes
 # Zato
 from zato.common.api import BROKER, ZATO_NONE
 from zato.common.broker_message import KEYS, MESSAGE_TYPE, TOPICS
-from zato.common.json_ import dumps, loads
+from zato.common.json_internal import dumps, loads
 from zato.common.kvdb.api import LuaContainer
 from zato.common.util.api import new_cid, spawn_greenlet
 

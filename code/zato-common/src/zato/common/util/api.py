@@ -109,7 +109,7 @@ from zato.common.broker_message import SERVICE
 from zato.common.const import SECRETS
 from zato.common.crypto.api import CryptoManager
 from zato.common.exception import ZatoException
-from zato.common.json_ import dumps, loads
+from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
 from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_ping, wait_until_port_free, wait_until_port_taken
 from zato.common.util.eval_ import as_bool, as_list
