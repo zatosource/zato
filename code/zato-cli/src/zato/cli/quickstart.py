@@ -264,7 +264,7 @@ class Create(ZatoCommand):
         # Zato
         from zato.cli import ca_create_ca, ca_create_lb_agent, ca_create_scheduler, ca_create_server, \
              ca_create_web_admin, create_cluster, create_lb, create_odb, create_scheduler, create_server, create_web_admin
-        from zato.common.crypto import CryptoManager
+        from zato.common.crypto.api import CryptoManager
         from zato.common.defaults import http_plain_server_port
         from zato.common.odb.model import Cluster
         from zato.common.util.api import get_engine, get_session

@@ -277,11 +277,17 @@ class CheckConfig(ManageCommand):
         # stdlib
         from os.path import join
 
+        print('ON-SERVER-A-1', datetime.utcnow())
+
         # ConfigObj
         from configobj import ConfigObj
 
+        print('ON-SERVER-A-2', datetime.utcnow())
+
         # Zato
-        from zato.common.crypto import ServerCryptoManager
+        from zato.common.crypto.api import ServerCryptoManager
+
+        print('ON-SERVER-A-3', datetime.utcnow())
 
         print('ON-SERVER-0', datetime.utcnow())
 
@@ -357,7 +363,8 @@ class CheckConfig(ManageCommand):
         from os.path import join
 
         # Zato
-        from zato.common.crypto import resolve_secret_key, WebAdminCryptoManager
+        from zato.common.crypto.api import WebAdminCryptoManager
+        from zato.common.crypto.secret_key import resolve_secret_key
 
         repo_dir = join(self.component_dir, 'config', 'repo')
 
@@ -382,7 +389,7 @@ class CheckConfig(ManageCommand):
         from configobj import ConfigObj
 
         # Zato
-        from zato.common.crypto import SchedulerCryptoManager
+        from zato.common.crypto.api import SchedulerCryptoManager
 
         repo_dir = join(self.component_dir, 'config', 'repo')
         server_conf_path = join(repo_dir, 'scheduler.conf')

@@ -375,13 +375,24 @@ def run_command(args):
     command_class = {}
     print('IMPORT-2', datetime.utcnow())
 
-    for command_name, module_name in command_imports:
+    for command_name, class_dotted_name in command_imports:
         if command_name == args.command:
-            command_class[command_name] = import_string(module_name)
 
-    print('IMPORT-3', datetime.utcnow())
+            print('IMPORT-2', datetime.utcnow())
 
-    command_class[args.command](args).run(args)
+            class_ = import_string(class_dotted_name)
+
+            print('IMPORT-4', datetime.utcnow())
+
+            instance = class_(args)
+
+            print('IMPORT-5', datetime.utcnow())
+
+            result = instance.run(args)
+
+            print('IMPORT-6', datetime.utcnow())
+
+            return result
 
 # ################################################################################################################################
 
@@ -452,42 +463,66 @@ class ZatoCommand(object):
 
     def __init__(self, args):
 
+        print('INIT-0', datetime.utcnow())
+
         # stdlib
         import os
 
         # Zato
         from zato.common.util.cli import read_stdin_data
 
+        print('INIT-1', datetime.utcnow())
+
         self.args = args
         self.original_dir = os.getcwd()
         self.show_output = False if 'ZATO_CLI_DONT_SHOW_OUTPUT' in os.environ else True
         self.verbose = args.verbose
+
+        print('INIT-1a', datetime.utcnow())
+
         self.reset_logger(args)
+
+        print('INIT-1b', datetime.utcnow())
+
         self.engine = None
+
+        print('INIT-2', datetime.utcnow())
 
         if args.store_config:
             self.store_config(args)
+
+        print('INIT-3', datetime.utcnow())
 
         # Get input from sys.stdin, if any was provided at all. It needs to be read once here,
         # because subprocesses will not be able to do it once we read it all in in the parent
         # one, so we read it here and give other processes explicitly on input, if they need it.
         self.stdin_data = read_stdin_data()
 
+        print('INIT-4', datetime.utcnow())
+
 # ################################################################################################################################
 
     def reset_logger(self, args, reload_=False):
+
+        print('LOG-0', datetime.utcnow())
 
         # stdlib
         import logging
         import sys
         from imp import reload
 
+        print('LOG-1', datetime.utcnow())
+
         # Zato
-        from zato.common.util import api as util_api
+        from zato.common.util.file_system import fs_safe_now
+
+        print('LOG-2', datetime.utcnow())
 
         if reload_:
             logging.shutdown() # noqa
             reload(logging) # noqa
+
+        print('LOG-3', datetime.utcnow())
 
         self.logger = logging.getLogger(self.__class__.__name__) # noqa
         self.logger.setLevel(logging.DEBUG if self.verbose else logging.INFO) # noqa
@@ -499,7 +534,7 @@ class ZatoCommand(object):
         self.logger.addHandler(console_handler)
 
         if args.store_log:
-            verbose_handler = logging.FileHandler('zato.{}.log'.format(util_api.fs_safe_now())) # noqa
+            verbose_handler = logging.FileHandler('zato.{}.log'.format(fs_safe_now())) # noqa
             verbose_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s') # noqa
             verbose_handler.setFormatter(verbose_formatter)
             self.logger.addHandler(verbose_handler)
@@ -684,9 +719,6 @@ class ZatoCommand(object):
         import os
         import sys
 
-        # Zato
-        from zato.common.util.api import get_full_stack
-
         print('RUN-1', datetime.utcnow())
 
         try:
@@ -744,7 +776,11 @@ class ZatoCommand(object):
         except Exception as e:
             self.reset_logger(self.args)
             if self.verbose:
+
+                # Zato
+                from zato.common.util.python_ import get_full_stack
                 msg = get_full_stack()
+
             else:
                 msg = '{}: {} (Hint: re-run with --verbose for full traceback)'.format(e.__class__.__name__, e.args)
             self.logger.error(msg)
@@ -1040,7 +1076,7 @@ class ManageCommand(ZatoCommand):
         print('CLI-1', datetime.utcnow())
 
         # Zato
-        from zato.common.json_ import load
+        from zato.common.json_internal import load
 
         print('CLI-2', datetime.utcnow())
 
@@ -1070,7 +1106,13 @@ class ManageCommand(ZatoCommand):
 
         print('CLI-6', datetime.utcnow())
 
-        return self._get_dispatch()[json_data['component']](args)
+        handler = self._get_dispatch()[json_data['component']]
+
+        print('CLI-7', datetime.utcnow())
+
+        handler(args)
+
+        print('CLI-8', datetime.utcnow())
 
 # ################################################################################################################################
 

@@ -90,7 +90,7 @@ if 0:
     # Zato
     from zato.broker.client import BrokerClient, BrokerClientAPI
     from zato.common.audit import AuditPII
-    from zato.common.crypto import ServerCryptoManager
+    from zato.common.crypto.api import ServerCryptoManager
     from zato.common.json_schema import Validator as JSONSchemaValidator
     from zato.common.odb.api import ODBManager
     from zato.server.connection.ftp import FTPStore

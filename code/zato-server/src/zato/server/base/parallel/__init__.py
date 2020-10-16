@@ -33,10 +33,11 @@ from paste.util.converters import asbool
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common.api import DATA_FORMAT, default_internal_modules, KVDB, RATE_LIMIT, SECRETS, SERVER_STARTUP, SERVER_UP_STATUS, \
+from zato.common.api import DATA_FORMAT, default_internal_modules, KVDB, RATE_LIMIT, SERVER_STARTUP, SERVER_UP_STATUS, \
      ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
+from zato.common.const import SECRETS
 from zato.common.ipc.api import IPCAPI
 from zato.common.json_ import dumps, loads
 from zato.common.odb.post_process import ODBPostProcess
@@ -69,7 +70,7 @@ from past.builtins import unicode
 if 0:
 
     # Zato
-    from zato.common.crypto import ServerCryptoManager
+    from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
     from zato.server.service.store import ServiceStore

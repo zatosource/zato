@@ -20,7 +20,7 @@ from yaml import dump as yaml_dump, Dumper as YAMLDumper
 
 # Zato
 from zato.common.api import URL_TYPE
-from zato.common.util.api import fs_safe_name
+from zato.common.util.file_system import fs_safe_name
 
 # ################################################################################################################################
 

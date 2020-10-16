@@ -228,7 +228,7 @@ class SetAdminInvokePassword(_WebAdminAuthCommand):
         import os
 
         # Zato
-        from zato.common.crypto import WebAdminCryptoManager
+        from zato.common.crypto.api import WebAdminCryptoManager
 
         # Python 2/3 compatibility
         from past.builtins import unicode

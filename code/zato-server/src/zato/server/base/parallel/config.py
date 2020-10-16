@@ -15,7 +15,8 @@ from logging import getLogger
 
 # Zato
 from zato.bunch import Bunch
-from zato.common.api import RATE_LIMIT, SECRETS
+from zato.common.api import RATE_LIMIT
+from zato.common.const import SECRETS
 from zato.common.util.api import asbool
 from zato.common.util.sql import elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target

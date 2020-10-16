@@ -20,7 +20,7 @@ class CreateSecretKey(ZatoCommand):
     def execute(self, args):
 
         # Zato
-        from zato.common.crypto import CryptoManager
+        from zato.common.crypto.api import CryptoManager
 
         self.logger.info(CryptoManager.generate_key())
 
@@ -50,7 +50,7 @@ class Encrypt(ManageCommand):
     def _on_web_admin(self, args):
 
         # Zato
-        from zato.common.crypto import WebAdminCryptoManager
+        from zato.common.crypto.api import WebAdminCryptoManager
 
         self._encrypt(WebAdminCryptoManager, args)
 
@@ -59,7 +59,7 @@ class Encrypt(ManageCommand):
     def _on_server(self, args):
 
         # Zato
-        from zato.common.crypto import ServerCryptoManager
+        from zato.common.crypto.api import ServerCryptoManager
 
         self._encrypt(ServerCryptoManager, args)
 
@@ -68,7 +68,7 @@ class Encrypt(ManageCommand):
     def _on_scheduler(self, args):
 
         # Zato
-        from zato.common.crypto import SchedulerCryptoManager
+        from zato.common.crypto.api import SchedulerCryptoManager
 
         self._encrypt(SchedulerCryptoManager, args)
 
@@ -95,21 +95,21 @@ class Decrypt(ManageCommand):
 
 
         # Zato
-        from zato.common.crypto import WebAdminCryptoManager
+        from zato.common.crypto.api import WebAdminCryptoManager
 
         self._decrypt(WebAdminCryptoManager, args)
 
     def _on_server(self, args):
 
         # Zato
-        from zato.common.crypto import ServerCryptoManager
+        from zato.common.crypto.api import ServerCryptoManager
 
         self._decrypt(ServerCryptoManager, args)
 
     def _on_scheduler(self, args):
 
         # Zato
-        from zato.common.crypto import SchedulerCryptoManager
+        from zato.common.crypto.api import SchedulerCryptoManager
 
         self._decrypt(SchedulerCryptoManager, args)
 
@@ -153,7 +153,7 @@ class GetHashRounds(ZatoCommand):
     def execute(self, args):
 
         # Zato
-        from zato.common.crypto import CryptoManager
+        from zato.common.crypto.api import CryptoManager
         from zato.common.json_ import dumps
 
         goal = round(float(args.goal), 2)
