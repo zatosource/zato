@@ -173,7 +173,12 @@ class KVDB(object):
                 socket_timeout=config.get('socket_timeout'), decode_responses=True)
             self.conn = instance.master_for(config['sentinel_master'])
         else:
+
+            print('KVDB-CONN-0', datetime.utcnow())
+
             self.conn = self.conn_class(charset='utf-8', decode_responses=True, **config)
+
+            print('KVDB-CONN-1', datetime.utcnow())
 
         self.lua_container.kvdb = self.conn
 
