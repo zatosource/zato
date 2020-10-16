@@ -24,7 +24,7 @@ from past.builtins import unicode
 # Zato
 from zato.common.exception import ZatoException
 from zato.common.kvdb import redis_grammar
-from zato.common.util.api import has_redis_sentinels
+from zato.common.util.kvdb import has_redis_sentinels
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################

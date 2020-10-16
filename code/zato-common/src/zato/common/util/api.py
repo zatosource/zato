@@ -113,13 +113,12 @@ from zato.common.exception import ZatoException
 from zato.common.json_ import dumps, loads
 from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
 from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_ping, wait_until_port_free, wait_until_port_taken
+from zato.common.util.eval_ import as_bool, as_list
 from zato.common.xml_ import soap_body_path, soap_body_xpath
 
 # ################################################################################################################################
 
 random.seed()
-
-# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 logging.addLevelName(TRACE1, "TRACE1")
@@ -134,6 +133,11 @@ encode_cid_symbols = {idx: elem for (idx, elem) in enumerate(cid_symbols)}
 cid_base = len(cid_symbols)
 
 _re_fs_safe_name = '[{}]'.format(string.punctuation + string.whitespace)
+
+# ################################################################################################################################
+
+asbool = as_bool
+aslist = as_list
 
 # ################################################################################################################################
 
@@ -162,38 +166,6 @@ TLS_KEY_TYPE = {
 
 def is_method(class_, func=isfunction if PY3 else ismethod):
     return func(class_)
-
-# ################################################################################################################################
-
-# (c) 2005 Ian Bicking and contributors; written for Paste (http://pythonpaste.org)
-# Licensed under the MIT license: http://www.opensource.org/licenses/mit-license.php
-def as_bool(obj):
-    if isinstance(obj, (str, unicode)):
-        obj = obj.strip().lower()
-        if obj in ['true', 'yes', 'on', 'y', 't', '1']:
-            return True
-        elif obj in ['false', 'no', 'off', 'n', 'f', '0']:
-            return False
-        else:
-            raise ValueError(
-                "String is not true/false: %r" % obj)
-    return bool(obj)
-
-def as_list(obj, sep=None, strip=True):
-    if isinstance(obj, (str, unicode)):
-        lst = obj.split(sep)
-        if strip:
-            lst = [v.strip() for v in lst]
-        return lst
-    elif isinstance(obj, (list, tuple)):
-        return obj
-    elif obj is None:
-        return []
-    else:
-        return [obj]
-
-asbool = as_bool
-aslist = as_list
 
 # ################################################################################################################################
 
@@ -1124,11 +1096,6 @@ def get_kvdb_config_for_log(config):
     if config.shadow_password_in_logs:
         config.password = SECRET_SHADOW
     return config
-
-# ################################################################################################################################
-
-def has_redis_sentinels(config):
-    return asbool(config.get('use_redis_sentinels', False))
 
 # ################################################################################################################################
 
