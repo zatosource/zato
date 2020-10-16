@@ -75,7 +75,7 @@ class SSOCommand(ZatoCommand):
         # type: (Namespace, unicode, Bunch) -> UserAPI
 
         # Zato
-        from zato.common.crypto import CryptoManager
+        from zato.common.crypto.api import CryptoManager
         from zato.common.util.api import get_config
         from zato.sso.api import UserAPI
         from zato.sso.util import new_user_id, normalize_password_reject_list
@@ -164,7 +164,7 @@ class _CreateUser(SSOCommand):
         from bunch import Bunch
 
         # Zato
-        from zato.common.crypto import CryptoManager
+        from zato.common.crypto.api import CryptoManager
         from zato.sso import ValidationError
 
         if user_api.get_user_by_username('', args.username):
@@ -338,7 +338,7 @@ class ResetUserPassword(SSOCommand):
         # type: (Namespace, SSOUser, UserAPI)
 
         # Zato
-        from zato.common.crypto import CryptoManager
+        from zato.common.crypto.api import CryptoManager
 
         new_password = CryptoManager.generate_password()
         user_api.set_password(

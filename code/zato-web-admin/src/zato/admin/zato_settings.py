@@ -13,7 +13,8 @@ import os
 
 # Zato
 from zato.common.api import SCHEDULER
-from zato.common.crypto import resolve_secret_key, WebAdminCryptoManager
+from zato.common.crypto.api import WebAdminCryptoManager
+from zato.common.crypto.secret_key import resolve_secret_key
 from zato.common.util.cli import read_stdin_data
 
 # ################################################################################################################################

@@ -30,8 +30,8 @@ from zato.admin.web.forms.account import BasicSettingsForm
 from zato.admin.web.models import ClusterColorMarker
 from zato.admin.web.util import set_user_profile_totp_key
 from zato.admin.web.views import method_allowed
-from zato.common.crypto import CryptoManager
-from zato.common.json_ import dumps, loads
+from zato.common.crypto.api import CryptoManager
+from zato.common.json_internal import dumps, loads
 
 # ################################################################################################################################
 

@@ -27,7 +27,8 @@ from zato.common.api import GENERIC, SEC_DEF_TYPE
 from zato.common.audit import audit_pii
 from zato.common.json_ import dumps
 from zato.common.odb.model import SSOSession as SessionModel
-from zato.common.crypto import CryptoManager
+from zato.common.crypto.api import CryptoManager
+from zato.common.crypto.totp_ import TOTPManager
 from zato.sso import const, status_code, Session as SessionEntity, ValidationError
 from zato.sso.attr import AttrAPI
 from zato.sso.odb.query import get_session_by_ext_id, get_session_by_ust, get_session_list_by_user_id, get_user_by_id, \
@@ -478,7 +479,7 @@ class SessionAPI(object):
                     raise ValidationError(status_code.auth.not_allowed, False)
                 else:
                     user_totp_key = self.decrypt_func(user.totp_key)
-                    if not CryptoManager.verify_totp_code(user_totp_key, input_totp_code):
+                    if not TOTPManager.verify_totp_code(user_totp_key, input_totp_code):
                         logger.warn('Invalid TOTP code; user `%s`', user.username)
                         raise ValidationError(status_code.auth.not_allowed, False)
 

@@ -654,7 +654,7 @@ class Create(ZatoCommand):
         # Zato
         from zato.cli._apispec_default import apispec_files
         from zato.common.api import SERVER_JOIN_STATUS
-        from zato.common.crypto import well_known_data
+        from zato.common.crypto.const import well_known_data
         from zato.common.defaults import http_plain_server_port
         from zato.common.odb.model import Cluster, Server
 

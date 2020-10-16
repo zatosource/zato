@@ -81,7 +81,8 @@ def get_totp_info_from_args(args, default_key_label=None):
     import pyotp
 
     # Zato
-    from zato.common.crypto import CryptoManager
+    from zato.common.crypto.api import CryptoManager
+    from zato.common.crypto.totp import TOTPManager
     from zato.common.api import TOTP
 
     default_key_label = default_key_label or TOTP.default_label
@@ -95,7 +96,7 @@ def get_totp_info_from_args(args, default_key_label=None):
         # If we are here, it means that the key was valid
         key = args.key
     else:
-        key = CryptoManager.generate_totp_key()
+        key = TOTPManager.generate_totp_key()
 
     return key, args.key_label if args.key_label else default_key_label
 

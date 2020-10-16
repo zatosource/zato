@@ -20,7 +20,6 @@ import os
 import random
 import re
 import signal
-import string
 import threading
 import traceback
 import socket
@@ -106,14 +105,16 @@ if PY3:
 
 # Zato
 from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, \
-     SECRET_SHADOW, SECRETS, SIMPLE_IO, TLS, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN, ZMQ
+     SECRET_SHADOW, SIMPLE_IO, TLS, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN, ZMQ
 from zato.common.broker_message import SERVICE
-from zato.common.crypto import CryptoManager
+from zato.common.const import SECRETS
+from zato.common.crypto.api import CryptoManager
 from zato.common.exception import ZatoException
 from zato.common.json_ import dumps, loads
 from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
 from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_ping, wait_until_port_free, wait_until_port_taken
 from zato.common.util.eval_ import as_bool, as_list
+from zato.common.util.file_system import fs_safe_name
 from zato.common.xml_ import soap_body_path, soap_body_xpath
 
 # ################################################################################################################################
@@ -131,8 +132,6 @@ _epoch = datetime.utcfromtimestamp(0) # Start of UNIX epoch
 cid_symbols = '0123456789abcdefghjkmnpqrstvwxyz'
 encode_cid_symbols = {idx: elem for (idx, elem) in enumerate(cid_symbols)}
 cid_base = len(cid_symbols)
-
-_re_fs_safe_name = '[{}]'.format(string.punctuation + string.whitespace)
 
 # ################################################################################################################################
 
@@ -546,19 +545,6 @@ def is_python_file(name):
     for suffix in('py', 'pyw'):
         if name.endswith(suffix):
             return True
-
-# ################################################################################################################################
-
-def fs_safe_name(value):
-    return re.sub(_re_fs_safe_name, '_', value)
-
-# ################################################################################################################################
-
-def fs_safe_now():
-    """ Returns a UTC timestamp with any characters unsafe for filesystem names
-    removed.
-    """
-    return fs_safe_name(str(datetime.utcnow()))
 
 # ################################################################################################################################
 
@@ -977,24 +963,6 @@ def dump_stacks(*ignored):
 
     table.add_rows(rows)
     logger.info('\n' + table.draw())
-
-# ################################################################################################################################
-
-# Taken from https://stackoverflow.com/a/16589622
-def get_full_stack():
-    exc = sys.exc_info()[0]
-    stack = traceback.extract_stack()[:-1]  # last one would be full_stack()
-    if exc is not None:  # i.e. if an exception is present
-        del stack[-1]    # remove call of full_stack, the printed exception will contain the caught exception caller instead
-    trace = 'Traceback (most recent call last):\n'
-    stack_string = trace + ''.join(traceback.format_list(stack))
-
-    if exc is not None:
-        stack_string += '  '
-        stack_string += traceback.format_exc()
-        stack_string = stack_string.lstrip(trace)
-
-    return stack_string
 
 # ################################################################################################################################
 

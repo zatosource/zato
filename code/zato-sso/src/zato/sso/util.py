@@ -26,18 +26,18 @@ from sqlalchemy import update
 from past.builtins import unicode
 
 # Zato
-#from zato.common.crypto import CryptoManager
+from zato.common.crypto.api import CryptoManager
 from zato.common.odb.model import SSOUser as UserModel
-#from zato.sso import status_code, ValidationError
+from zato.sso import status_code, ValidationError
 
 # ################################################################################################################################
 
-#_gen_secret = CryptoManager.generate_secret
+_gen_secret = CryptoManager.generate_secret
 
 # ################################################################################################################################
 
-#_utcnow = datetime.utcnow
-#UserModelTable = UserModel.__table__
+_utcnow = datetime.utcnow
+UserModelTable = UserModel.__table__
 
 # ################################################################################################################################
 
