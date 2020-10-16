@@ -37,7 +37,7 @@ class Index(_Index):
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
             'default_timeout': 90,
-            'default_body_as': SEARCH.ES.DEFAULTS.BODY_AS.value
+            'default_body_as': SEARCH.ES.DEFAULTS.BODY_AS
         }
 
 class _CreateEdit(CreateEdit):

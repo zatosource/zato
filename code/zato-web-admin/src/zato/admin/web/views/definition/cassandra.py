@@ -37,9 +37,9 @@ class Index(_Index):
 
     def handle(self):
         return {
-            'default_port': CASSANDRA.DEFAULT.PORT.value,
-            'default_exec_size': CASSANDRA.DEFAULT.EXEC_SIZE.value,
-            'default_proto_version': CASSANDRA.DEFAULT.PROTOCOL_VERSION.value,
+            'default_port': CASSANDRA.DEFAULT.PORT,
+            'default_exec_size': CASSANDRA.DEFAULT.EXEC_SIZE,
+            'default_proto_version': CASSANDRA.DEFAULT.PROTOCOL_VERSION,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
             'change_password_form': ChangePasswordForm()

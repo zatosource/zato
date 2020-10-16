@@ -24,6 +24,7 @@ from hvac import Client
 
 # Zato
 from zato.common.api import UNITTEST, VAULT
+from zato.common.vault_ import VAULT
 
 # ################################################################################################################################
 

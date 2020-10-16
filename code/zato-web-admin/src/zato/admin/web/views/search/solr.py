@@ -39,9 +39,9 @@ class Index(_Index):
         return {
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
-            'default_timeout': SEARCH.SOLR.DEFAULTS.TIMEOUT.value,
-            'default_ping_path': SEARCH.SOLR.DEFAULTS.PING_PATH.value,
-            'default_pool_size': SEARCH.SOLR.DEFAULTS.POOL_SIZE.value,
+            'default_timeout': SEARCH.SOLR.DEFAULTS.TIMEOUT,
+            'default_ping_path': SEARCH.SOLR.DEFAULTS.PING_PATH,
+            'default_pool_size': SEARCH.SOLR.DEFAULTS.POOL_SIZE,
         }
 
 class _CreateEdit(CreateEdit):

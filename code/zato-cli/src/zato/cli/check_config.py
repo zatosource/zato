@@ -130,29 +130,29 @@ class CheckConfig(ManageCommand):
         # Bunch
         from bunch import Bunch
 
-        print('CONN-1', datetime.utcnow() - start)
+        print('CONN-1', datetime.utcnow())
 
         # Zato
         from zato.common.kvdb.api import KVDB
 
-        print('CONN-2', datetime.utcnow() - start)
+        print('CONN-2', datetime.utcnow())
 
         # Python 2/3 compatibility
         from future.utils import iteritems
 
-        print('CONN-3', datetime.utcnow() - start)
+        print('CONN-3', datetime.utcnow())
 
         kvdb_config = Bunch(dict(iteritems((conf[conf_key]))))
 
-        print('CONN-4', datetime.utcnow() - start)
+        print('CONN-4', datetime.utcnow())
 
         kvdb = KVDB(None, kvdb_config, cm.decrypt)
 
-        print('CONN-5', datetime.utcnow() - start)
+        print('CONN-5', datetime.utcnow())
 
         kvdb.init()
 
-        print('CONN-6', datetime.utcnow() - start)
+        print('CONN-6', datetime.utcnow())
 
         info = kvdb.conn.info()
 
@@ -302,11 +302,28 @@ class CheckConfig(ManageCommand):
 
         cm = self.get_crypto_manager(getattr(args, 'secret_key', None), getattr(args, 'stdin_data', None),
             class_=ServerCryptoManager)
+
+        print('ON-SERVER-0-1', datetime.utcnow())
+
         fs_sql_config = self.get_sql_ini('sql.conf')
+
+        print('ON-SERVER-0-2', datetime.utcnow())
+
         repo_dir = join(self.component_dir, 'config', 'repo')
+
+        print('ON-SERVER-0-3', datetime.utcnow())
+
         server_conf_path = join(repo_dir, 'server.conf')
+
+        print('ON-SERVER-0-4', datetime.utcnow())
+
         secrets_conf_path = ConfigObj(join(repo_dir, 'secrets.conf'), use_zato=False)
+
+        print('ON-SERVER-0-5', datetime.utcnow())
+
         server_conf = ConfigObj(server_conf_path, zato_secrets_conf=secrets_conf_path, zato_crypto_manager=cm, use_zato=True)
+
+        print('ON-SERVER-0-6', datetime.utcnow())
 
         print('ON-SERVER-1', datetime.utcnow())
 

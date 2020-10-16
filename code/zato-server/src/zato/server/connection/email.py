@@ -36,9 +36,9 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 _modes = {
-    EMAIL.SMTP.MODE.PLAIN.value: None,
-    EMAIL.SMTP.MODE.SSL.value: 'SSL',
-    EMAIL.SMTP.MODE.STARTTLS.value: 'TLS'
+    EMAIL.SMTP.MODE.PLAIN: None,
+    EMAIL.SMTP.MODE.SSL: 'SSL',
+    EMAIL.SMTP.MODE.STARTTLS: 'TLS'
 }
 
 # ################################################################################################################################
@@ -48,7 +48,7 @@ class Imbox(_Imbox):
     def __init__(self, config, config_no_sensitive):
         self.config = config
         self.config_no_sensitive = config_no_sensitive
-        self.server = ImapTransport(self.config.host, self.config.port, self.config.mode==EMAIL.IMAP.MODE.SSL.value)
+        self.server = ImapTransport(self.config.host, self.config.port, self.config.mode==EMAIL.IMAP.MODE.SSL)
         self.connection = self.server.connect(self.config.username, self.config.password or '', self.config.debug_level)
 
     def __repr__(self):

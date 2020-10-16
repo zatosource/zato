@@ -10,6 +10,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # ################################################################################################################################
 
+from datetime import datetime
+
+print('KVDB-0', datetime.utcnow())
+
 # stdlib
 from calendar import timegm
 from importlib import import_module
@@ -17,22 +21,30 @@ from logging import getLogger
 from string import punctuation
 from time import gmtime
 
+print('KVDB-1', datetime.utcnow())
+
 # Cryptography
 from cryptography.fernet import InvalidToken
 
-# PyParsing
-from pyparsing import alphanums, oneOf, OneOrMore, Optional, White, Word
+print('KVDB-2', datetime.utcnow())
 
-# redis
-from redis import StrictRedis
-from redis.sentinel import Sentinel
+print('KVDB-3', datetime.utcnow())
+
+print('KVDB-4', datetime.utcnow())
 
 # Python 2/3 compatibility
 from past.builtins import basestring
 
+print('KVDB-5', datetime.utcnow())
+
 # Zato
-from zato.common.api import KVDB as _KVDB, NONCE_STORE
+from zato.cy.common.api import KVDB as _KVDB, NONCE_STORE
+
+print('KVDB-6', datetime.utcnow())
+
 from zato.common.util.kvdb import has_redis_sentinels
+
+print('KVDB-7', datetime.utcnow())
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -79,6 +91,10 @@ class KVDB(object):
         """ Returns a concrete class to create Redis connections off basing on whether we use Redis sentinels or not.
         Abstracted out to a separate method so it's easier to test the whole class in separation.
         """
+        # redis
+        from redis import StrictRedis
+        from redis.sentinel import Sentinel
+
         return Sentinel if self.has_sentinel else StrictRedis
 
     def _parse_sentinels(self, item):
