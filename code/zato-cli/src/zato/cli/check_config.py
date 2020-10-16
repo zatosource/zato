@@ -37,17 +37,11 @@ class CheckConfig(ManageCommand):
 
     def ensure_port_free(self, prefix, port, address):
 
-        #print('ENSURE-0', datetime.utcnow())
-
         # Zato
         from zato.common.util.tcp import is_port_taken
 
-        #print('ENSURE-1', datetime.utcnow())
-
         if is_port_taken(port):
             raise Exception('{} check failed. Address `{}` already taken.'.format(prefix, address))
-
-        #print('ENSURE-2', datetime.utcnow())
 
 # ################################################################################################################################
 
@@ -60,38 +54,24 @@ class CheckConfig(ManageCommand):
 
     def ping_sql(self, engine_params, ping_query):
 
-        #print('PING-0', datetime.utcnow())
-
         # Zato
         from zato.common.odb import ping_database
 
-        #print('PING-0-a', datetime.utcnow())
-
         ping_database(engine_params, ping_query)
-
-        #print('PING-0-b', datetime.utcnow())
 
         if self.show_output:
             self.logger.info('SQL ODB connection OK')
-
-        #print('PING-1', datetime.utcnow())
 
 # ################################################################################################################################
 
     def check_sql_odb_server_scheduler(self, cm, conf, fs_sql_config, needs_decrypt_password=True):
 
-        #print('SQL-0', datetime.utcnow())
-
         # Zato
         from zato.common.odb.ping import get_ping_query
-
-        #print('SQL-1', datetime.utcnow())
 
         engine_params = dict((conf['odb']))
         engine_params['extra'] = {}
         engine_params['pool_size'] = 1
-
-        #print('SQL-2', datetime.utcnow())
 
         # This will be needed by scheduler but not server
         if needs_decrypt_password:
@@ -99,11 +79,7 @@ class CheckConfig(ManageCommand):
             if password:
                 engine_params['password'] = cm.decrypt(password)
 
-        #print('SQL-3', datetime.utcnow())
-
         self.ping_sql(engine_params, get_ping_query(fs_sql_config, engine_params))
-
-        #print('SQL-4', datetime.utcnow())
 
 # ################################################################################################################################
 
@@ -135,42 +111,20 @@ class CheckConfig(ManageCommand):
 
         start = datetime.utcnow()
 
-        #print('CONN-0', start)
-
         # Bunch
         from bunch import Bunch
-
-        #print('CONN-1', datetime.utcnow())
 
         # Zato
         from zato.common.kvdb.api import KVDB
 
-        #print('CONN-2', datetime.utcnow())
-
         # Python 2/3 compatibility
         from future.utils import iteritems
 
-        #print('CONN-3', datetime.utcnow())
-
         kvdb_config = Bunch(dict(iteritems((conf[conf_key]))))
-
-        #print('CONN-4', datetime.utcnow())
-
         kvdb = KVDB(None, kvdb_config, cm.decrypt)
-
-        #print('CONN-5', datetime.utcnow())
-
         kvdb.init()
-
-        #print('CONN-6', datetime.utcnow())
-
         kvdb.conn.info()
-
-        #print('CONN-7', datetime.utcnow())
-
         kvdb.close()
-
-        #print('CONN-8', datetime.utcnow())
 
         if self.show_output:
             self.logger.info('Redis connection OK')
@@ -268,19 +222,9 @@ class CheckConfig(ManageCommand):
 
     def on_server_check_port_available(self, server_conf):
 
-        #print('ON-AVAIL-0', datetime.utcnow())
-
         address = server_conf['main']['gunicorn_bind']
-
-        #print('ON-AVAIL-1', datetime.utcnow())
-
         _, port = address.split(':')
-
-        #print('ON-AVAIL-2', datetime.utcnow())
-
         self.ensure_port_free('Server', int(port), address)
-
-        #print('ON-AVAIL-3', datetime.utcnow())
 
 # ################################################################################################################################
 
@@ -308,74 +252,32 @@ class CheckConfig(ManageCommand):
 
     def _on_server(self, args):
 
-        #print('ON-SERVER-A', datetime.utcnow())
-
         # stdlib
         from os.path import join
-
-        #print('ON-SERVER-A-1', datetime.utcnow())
 
         # ConfigObj
         from configobj import ConfigObj
 
-        #print('ON-SERVER-A-2', datetime.utcnow())
-
         # Zato
         from zato.common.crypto.api import ServerCryptoManager
-
-        #print('ON-SERVER-A-3', datetime.utcnow())
-
-        #print('ON-SERVER-0', datetime.utcnow())
 
         cm = self.get_crypto_manager(getattr(args, 'secret_key', None), getattr(args, 'stdin_data', None),
             class_=ServerCryptoManager)
 
-        #print('ON-SERVER-0-1', datetime.utcnow())
-
         fs_sql_config = self.get_sql_ini('sql.conf')
-
-        #print('ON-SERVER-0-2', datetime.utcnow())
-
         repo_dir = join(self.component_dir, 'config', 'repo')
-
-        #print('ON-SERVER-0-3', datetime.utcnow())
-
         server_conf_path = join(repo_dir, 'server.conf')
-
-        #print('ON-SERVER-0-4', datetime.utcnow())
-
         secrets_conf_path = ConfigObj(join(repo_dir, 'secrets.conf'), use_zato=False)
-
-        #print('ON-SERVER-0-5', datetime.utcnow())
-
         server_conf = ConfigObj(server_conf_path, zato_secrets_conf=secrets_conf_path, zato_crypto_manager=cm, use_zato=True)
 
-        #print('ON-SERVER-0-6', datetime.utcnow())
-
-        #print('ON-SERVER-1', datetime.utcnow())
-
         self.check_sql_odb_server_scheduler(cm, server_conf, fs_sql_config, False)
-
-        #print('ON-SERVER-2', datetime.utcnow())
-
         self.on_server_check_kvdb(cm, server_conf)
-
-        #print('ON-SERVER-3', datetime.utcnow())
 
         if getattr(args, 'ensure_no_pidfile', False):
             self.ensure_no_pidfile('server')
 
-        #print('ON-SERVER-4', datetime.utcnow())
-
         if getattr(args, 'check_server_port_available', False):
-
-            #print('ON-SERVER-4-a', datetime.utcnow())
-
             self.on_server_check_port_available(server_conf)
-
-            #print('ON-SERVER-4-b', datetime.utcnow())
-
-        #print('ON-SERVER-5', datetime.utcnow())
 
 # ################################################################################################################################
 
