@@ -99,11 +99,27 @@ from zato.cli.zato_command import main
 if __name__ == '__main__':
 
     # stdlib
+    import os
+    from datetime import datetime
+
+    # Python 2/3 compatibility
+    from past.builtins import execfile
+
+    curdir = os.path.dirname(os.path.abspath(__file__))
+    _version_py = os.path.normpath(os.path.join(curdir, '..', '.version.py'))
+    _locals = {}
+    execfile(_version_py, _locals)
+    version = _locals['version']
+
+    print(datetime.now(), 'Starting Zato', version)
+
+    # stdlib
     import re
     import sys
 
     sys.argv[0] = re.sub(r'(-script\.pyw?|\.exe)?$', '', sys.argv[0])
     sys.exit(main())
+
 EOF
 
 # .. and make the command executable.
