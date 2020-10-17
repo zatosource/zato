@@ -8,6 +8,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+from datetime import datetime
+
 # Monkey-patching modules individually can be about 20% faster,
 # or, in absolute terms, instead of 275 ms it may take 220 ms.
 from gevent.monkey import patch_builtins, patch_contextvars, patch_thread, patch_time, patch_os, patch_queue, patch_select, \
@@ -55,21 +57,29 @@ import yaml
 from zato.common.api import SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.ipaddress_ import get_preferred_ip
+
 from zato.common.kvdb.api import KVDB
+
+print(datetime.now(), 'Loading modules')
+
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.repo import RepoManager
+
 from zato.common.util.api import absjoin, asbool, clear_locks, get_config, get_kvdb_config_for_log, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
 
 from zato.common.util.cli import read_stdin_data
 from zato.common.simpleio_ import get_sio_server_config
+
 from zato.server.base.parallel import ParallelServer
+
 from zato.server.ext import zunicorn
 from zato.server.ext.zunicorn.app.base import Application
 from zato.server.service.store import ServiceStore
 from zato.server.startup_callable import StartupCallableTool
 from zato.sso.api import SSOAPI
 from zato.sso.util import new_user_id, normalize_sso_config
+
 # ################################################################################################################################
 
 class ZatoGunicornApplication(Application):
