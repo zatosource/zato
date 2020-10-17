@@ -109,8 +109,6 @@ class CheckConfig(ManageCommand):
 
     def on_server_check_kvdb(self, cm, conf, conf_key='kvdb'):
 
-        start = datetime.utcnow()
-
         # Bunch
         from bunch import Bunch
 
