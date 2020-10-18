@@ -14,28 +14,11 @@ fi
 
 PY_BINARY=$1
 
-# If it starts with "python2" then we install extra pip dependencies for Python 2.7,
-# otherwise, extra dependencies for Python 3.x will be installed.
-if [[ $(${PY_BINARY} -c 'import sys; print(sys.version_info[:][0])') -eq 2 ]]
-then
-    HAS_PYTHON2=1
-    HAS_PYTHON3=0
-    EXTRA_REQ_VERSION=27
-else
-    HAS_PYTHON2=0
-    HAS_PYTHON3=1
-    EXTRA_REQ_VERSION=3
-fi
-
-
 # Stamp the release hash.
 git log -n 1 --pretty=format:"%H" > ./release-info/revision.txt
 
 $PY_BINARY -m pip install -U setuptools pip
-
 $PY_BINARY -m pip install -r requirements.txt
-$PY_BINARY -m pip install -r _req_py$EXTRA_REQ_VERSION.txt
-
 
 # zato-common must be first.
 $PY_BINARY -m pip install \
@@ -82,12 +65,6 @@ patch -p0 -d eggs < patches/requests/models.py.diff
 patch -p0 -d eggs < patches/requests/sessions.py.diff
 patch -p0 -d eggs < patches/sqlalchemy/sql/crud.py.diff
 patch -p0 -d eggs < patches/ws4py/server/geventserver.py.diff
-
-if [ $HAS_PYTHON2 == 1 ]
-then
-    patch -p0 -d eggs < patches/jsonpointer/jsonpointer.py.diff
-    patch -p0 -d eggs < patches/oauth/oauth.py.diff
-fi
 
 # Add the 'zato' command ..
 cat > $VIRTUAL_ENV/bin/zato <<-EOF
