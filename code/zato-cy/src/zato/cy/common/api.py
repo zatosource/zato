@@ -85,7 +85,7 @@ NO_REMOTE_ADDRESS = '(None)'
 TRUE_FALSE = 'true_false'
 FALSE_TRUE = 'false_true'
 
-simple_types = (str, dict, list, tuple, bool, Number)
+simple_types = (bytes, str, dict, list, tuple, bool, Number)
 
 # ################################################################################################################################
 # ################################################################################################################################
