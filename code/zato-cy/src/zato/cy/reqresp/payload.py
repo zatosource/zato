@@ -22,7 +22,7 @@ import cython as cy
 from sqlalchemy.util import KeyedTuple
 
 # Zato
-from zato.common import DATA_FORMAT
+from zato.common.api import DATA_FORMAT
 from zato.common.odb.api import WritableKeyedTuple
 
 # Zato - Cython

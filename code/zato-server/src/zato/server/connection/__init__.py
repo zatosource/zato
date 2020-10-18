@@ -21,9 +21,10 @@ import cloghandler
 cloghandler = cloghandler # For pyflakes
 
 # Zato
-from zato.common import Inactive, SECRET_SHADOW
+from zato.common.api import SECRET_SHADOW
 from zato.common.dispatch import dispatcher
-from zato.common.util import new_cid
+from zato.common.exception import Inactive
+from zato.common.util.api import new_cid
 
 # ################################################################################################################################
 

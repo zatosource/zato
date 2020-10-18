@@ -8,13 +8,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-import sys
-
 # Zato
 from zato.cli import ZatoCommand
-from zato.common.util import get_client_from_server_conf
-from zato.common.util.tcp import wait_for_zato
 
 # ################################################################################################################################
 
@@ -38,7 +33,14 @@ class Wait(ZatoCommand):
     ]
 
     def execute(self, args, needs_sys_exit=True):
-        # type: (Namespace)
+        # type: (Namespace, bool)
+
+        # stdlib
+        import sys
+
+        # Zato
+        from zato.common.util.api import get_client_from_server_conf
+        from zato.common.util.tcp import wait_for_zato
 
         # We need to have a local or remote server on input ..
         if not (args.path or args.address):

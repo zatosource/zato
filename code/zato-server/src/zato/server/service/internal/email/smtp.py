@@ -16,9 +16,10 @@ from time import time
 from six import add_metaclass
 
 # Zato
-from zato.common import SMTPMessage, get_version
+from zato.common.api import SMTPMessage
 from zato.common.broker_message import EMAIL
 from zato.common.odb.model import SMTP
+from zato.common.version import get_version
 from zato.common.odb.query import email_smtp_list
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta

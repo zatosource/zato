@@ -17,7 +17,7 @@ from gevent import spawn
 from gevent.lock import RLock
 
 # Zato
-from zato.common.util import spawn_greenlet
+from zato.common.util.api import spawn_greenlet
 
 # ################################################################################################################################
 

@@ -17,7 +17,7 @@ from bunch import Bunch
 
 # Zato
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE
-from zato.common.util import get_config, get_user_config_name
+from zato.common.util.api import get_config, get_user_config_name
 from zato.server.service import Service
 
 # ################################################################################################################################

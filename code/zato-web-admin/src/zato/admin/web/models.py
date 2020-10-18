@@ -14,7 +14,7 @@ from django.contrib.auth.models import User
 
 # Zato
 from zato.admin.web import DATE_FORMATS, MONTH_YEAR_FORMATS, TIME_FORMATS
-from zato.common.json_ import loads
+from zato.common.json_internal import loads
 
 class TOTPData(object):
     def __init__(self):

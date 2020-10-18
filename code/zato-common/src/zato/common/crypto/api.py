@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import base64
 import logging
 import os
-import sys
 from datetime import datetime
 from math import ceil
 
@@ -22,34 +21,19 @@ from bunch import bunchify
 # configobj
 from configobj import ConfigObj
 
-# py-cpuinfo
-from cpuinfo import get_cpu_info
-
 # cryptography
 from cryptography.fernet import Fernet, InvalidToken
-
-# hashlib
-from passlib import hash as passlib_hash
-
-# PyOTP
-import pyotp
-from pyotp.totp import TOTP
 
 # Python 2/3 compatibility
 from builtins import bytes
 
 # Zato
-from zato.common import SECRETS
-from zato.common.json_ import loads
+from zato.common.json_internal import loads
+from zato.common.crypto.const import well_known_data, zato_stdin_prefix
 
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
-
-# ################################################################################################################################
-
-well_known_data = '3.141592...' # π number
-zato_stdin_prefix = 'zato+stdin:///'
 
 # ################################################################################################################################
 
@@ -84,6 +68,10 @@ class CryptoManager(object):
     def add_hash_scheme(self, name, rounds, salt_size):
         """ Adds a new named PBKDF2 hashing scheme, i.e. a set of named variables and a hashing object.
         """
+
+        # hashlib
+        from passlib import hash as passlib_hash
+
         self.hash_scheme[name] = passlib_hash.pbkdf2_sha512.using(rounds=rounds, salt_size=salt_size)
 
 # ################################################################################################################################
@@ -123,9 +111,11 @@ class CryptoManager(object):
         # Fernet keys always require encoding
         value = value if isinstance(value, bytes) else value.encode('utf8')
 
-        # Create a transient key just to confirm that what we found was syntactically correct
+        # Create a transient key just to confirm that what we found was syntactically correct.
+        # Note that we use our own invalid backend which will not be used by Fernet for anything
+        # but we need to provide it to make sure Fernet.__init__ does not import its default backend.
         try:
-            Fernet(value)
+            Fernet(value, backend='invalid')
         except Exception as e:
             raise SecretKeyError(e.args)
         else:
@@ -180,20 +170,6 @@ class CryptoManager(object):
         """ Generates a string strong enough to be a password (default: 192 bits)
         """
         return CryptoManager.generate_secret(bits)
-
-# ################################################################################################################################
-
-    @staticmethod
-    def generate_totp_key():
-        return pyotp.random_base32()
-
-    @staticmethod
-    def verify_totp_code(totp_key, totp_code):
-        return TOTP(totp_key).verify(totp_code)
-
-    @staticmethod
-    def get_current_totp_code(totp_key):
-        return TOTP(totp_key).now()
 
 # ################################################################################################################################
 
@@ -289,6 +265,10 @@ class HashParamsComputer(object):
     """
     def __init__(self, goal, header_func=None, progress_func=None, footer_func=None, scheme='pbkdf2_sha512', loops=10,
             iters_per_loop=10, salt_size=64, rounds_per_iter=25000):
+
+        # hashlib
+        from passlib import hash as passlib_hash
+
         self.goal = goal
         self.header_func = header_func
         self.progress_func = progress_func
@@ -311,6 +291,10 @@ class HashParamsComputer(object):
     def get_cpu_info(self):
         """ Returns metadata about current CPU the computation is executed on.
         """
+
+        # py-cpuinfo
+        from cpuinfo import get_cpu_info
+
         cpu_info = get_cpu_info()
         return {
             'brand': cpu_info['brand'],
@@ -385,55 +369,4 @@ class HashParamsComputer(object):
 
     def round_up(self, value):
         return int(ceil(value / self._round_up_to_nearest) * self._round_up_to_nearest)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def resolve_secret_key(secret_key, _url_prefix=SECRETS.URL_PREFIX):
-    """ Finds a secret key among command line options or via environment variables.
-    """
-    # We always require a string
-    secret_key = secret_key or ''
-
-    if secret_key and (not isinstance(_url_prefix, bytes)):
-        _url_prefix = _url_prefix.encode('utf8')
-
-    # This is a direct value, to be used as-is
-    if not secret_key.startswith(_url_prefix):
-        return secret_key
-    else:
-        # We need to look it up somewhere
-        secret_key = secret_key.replace(_url_prefix, '', 1)
-
-        # Command line options
-        if secret_key.startswith('cli'):
-
-            # This will be used by check-config
-            for idx, elem in enumerate(sys.argv):
-                if elem == '--secret-key':
-                    secret_key = sys.argv[idx+1]
-                    break
-
-            # This will be used when components are invoked as subprocesses
-            else:
-                # To prevent circular imports
-                from zato.common.util import parse_cmd_line_options
-
-                cli_options = parse_cmd_line_options(sys.argv[1])
-                secret_key = cli_options['secret_key']
-
-        # Environment variables
-        elif secret_key.startswith('env'):
-            env_key = secret_key.replace('env.', '', 1)
-            secret_key = os.environ[env_key]
-
-        # Unknown scheme, we need to give up
-        else:
-            raise ValueError('Unknown secret key type `{}`'.format(secret_key))
-
-    # At this point, we have a secret key extracted in one way or another
-    return secret_key if isinstance(secret_key, bytes) else secret_key.encode('utf8')
-
-# ################################################################################################################################
-# ################################################################################################################################
 

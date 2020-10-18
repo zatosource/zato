@@ -12,8 +12,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from traceback import format_exc
 
 # Zato
-from zato.common import DATA_FORMAT
-from zato.common.json_ import dumps
+from zato.common.api import DATA_FORMAT
+from zato.common.json_internal import dumps
 from zato.server.service import Service
 
 class Create(Service):

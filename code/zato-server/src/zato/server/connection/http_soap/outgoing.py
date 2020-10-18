@@ -33,10 +33,11 @@ from requests.sessions import Session as requests_session
 from past.builtins import basestring, unicode
 
 # Zato
-from zato.common import CONTENT_TYPE, DATA_FORMAT, Inactive, SEC_DEF_TYPE, soapenv11_namespace, soapenv12_namespace, TimeoutException, \
-     URL_TYPE, ZATO_NONE
-from zato.common.json_ import dumps, loads
-from zato.common.util import get_component_name
+from zato.common.api import CONTENT_TYPE, DATA_FORMAT, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
+from zato.common.exception import Inactive, TimeoutException
+from zato.common.json_internal import dumps, loads
+from zato.common.util.api import get_component_name
+from zato.common.xml_ import soapenv11_namespace, soapenv12_namespace
 from zato.server.connection.queue import ConnectionQueue
 
 # ################################################################################################################################

@@ -14,7 +14,7 @@ import os, uuid, tempfile
 # Zato
 from zato.cli import ca_defaults, default_ca_name, ZatoCommand
 
-openssl_template = '''
+openssl_template = """
 dir                            = {target_dir}
 
 [ ca ]
@@ -79,7 +79,7 @@ extendedKeyUsage               = serverAuth
 basicConstraints               = CA:FALSE
 subjectKeyIdentifier           = hash
 extendedKeyUsage               = serverAuth,clientAuth
-'''
+"""
 
 class Create(ZatoCommand):
     """Creates a new certificate authority

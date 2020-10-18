@@ -8,22 +8,23 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-import os
-
 # Zato
 from zato.cli import ManageCommand, ZatoCommand
-from zato.common.json_ import dumps
-from zato.common.crypto import CryptoManager, SchedulerCryptoManager, ServerCryptoManager, WebAdminCryptoManager
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class CreateSecretKey(ZatoCommand):
     """ Creates a new secret key.
     """
     def execute(self, args):
+
+        # Zato
+        from zato.common.crypto.api import CryptoManager
+
         self.logger.info(CryptoManager.generate_key())
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Encrypt(ManageCommand):
@@ -32,21 +33,46 @@ class Encrypt(ManageCommand):
     allow_empty_secrets = False
     opts = [{'name':'--secret', 'help':'Secret to encrypt'}]
 
+# ################################################################################################################################
+
     def _encrypt(self, class_, args):
+
+        # stdlib
+        import os
+
         os.chdir(self.original_dir)
         repo_dir = os.path.abspath(os.path.join(args.path, 'config', 'repo'))
         cm = class_(repo_dir=repo_dir)
         self.logger.info('Encrypted value: `%s`' % cm.encrypt(args.secret))
 
+# ################################################################################################################################
+
     def _on_web_admin(self, args):
+
+        # Zato
+        from zato.common.crypto.api import WebAdminCryptoManager
+
         self._encrypt(WebAdminCryptoManager, args)
 
+# ################################################################################################################################
+
     def _on_server(self, args):
+
+        # Zato
+        from zato.common.crypto.api import ServerCryptoManager
+
         self._encrypt(ServerCryptoManager, args)
 
+# ################################################################################################################################
+
     def _on_scheduler(self, args):
+
+        # Zato
+        from zato.common.crypto.api import SchedulerCryptoManager
+
         self._encrypt(SchedulerCryptoManager, args)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Decrypt(ManageCommand):
@@ -56,18 +82,35 @@ class Decrypt(ManageCommand):
     opts = [{'name':'--secret', 'help':'Secret to decrypt'}]
 
     def _decrypt(self, class_, args):
+
+        # stdlib
+        import os
+
         os.chdir(self.original_dir)
         repo_dir = os.path.abspath(os.path.join(args.path, 'config', 'repo'))
         cm = class_(repo_dir=repo_dir)
         self.logger.info('Decrypted value: `%s`' % cm.decrypt(args.secret))
 
     def _on_web_admin(self, args):
+
+
+        # Zato
+        from zato.common.crypto.api import WebAdminCryptoManager
+
         self._decrypt(WebAdminCryptoManager, args)
 
     def _on_server(self, args):
+
+        # Zato
+        from zato.common.crypto.api import ServerCryptoManager
+
         self._decrypt(ServerCryptoManager, args)
 
     def _on_scheduler(self, args):
+
+        # Zato
+        from zato.common.crypto.api import SchedulerCryptoManager
+
         self._decrypt(SchedulerCryptoManager, args)
 
 # ################################################################################################################################
@@ -108,6 +151,11 @@ class GetHashRounds(ZatoCommand):
 # ################################################################################################################################
 
     def execute(self, args):
+
+        # Zato
+        from zato.common.crypto.api import CryptoManager
+        from zato.common.json_internal import dumps
+
         goal = round(float(args.goal), 2)
 
         if args.json or args.rounds_only:

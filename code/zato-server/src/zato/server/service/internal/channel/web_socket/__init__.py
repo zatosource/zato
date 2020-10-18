@@ -17,12 +17,12 @@ from traceback import format_exc
 from six import add_metaclass
 
 # Zato
-from zato.common import DATA_FORMAT
+from zato.common.api import DATA_FORMAT
 from zato.common.broker_message import CHANNEL
 from zato.common.odb.model import ChannelWebSocket, PubSubSubscription, PubSubTopic, Service as ServiceModel, WebSocketClient
 from zato.common.odb.query import channel_web_socket_list, channel_web_socket, service, web_socket_client, \
      web_socket_client_by_pub_id, web_socket_client_list, web_socket_sub_key_data_list
-from zato.common.util import is_port_taken
+from zato.common.util.api import is_port_taken
 from zato.common.util.sql import elems_with_opaque
 from zato.common.util.time_ import datetime_from_ms
 from zato.server.service import AsIs, DateTime, Int, Service

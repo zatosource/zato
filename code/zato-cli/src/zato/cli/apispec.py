@@ -8,19 +8,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-import os
-from shutil import rmtree
-
 # Zato
 from zato.cli import ZatoCommand
-from zato.common.util import fs_safe_now, get_client_from_server_conf
 
 # ################################################################################################################################
 
 stderr_sleep_fg = 0.9
 stderr_sleep_bg = 1.2
-
 
 # ################################################################################################################################
 
@@ -53,6 +47,15 @@ class APISpec(ZatoCommand):
 # ################################################################################################################################
 
     def execute(self, args):
+
+        # stdlib
+        import os
+        from shutil import rmtree
+
+        # Zato
+        from zato.common.util.api import get_client_from_server_conf
+        from zato.common.util.file_system import fs_safe_now
+
         client = get_client_from_server_conf(args.path)
 
         exclude = args.exclude.split(',') or []

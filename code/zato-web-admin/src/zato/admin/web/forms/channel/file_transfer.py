@@ -13,7 +13,7 @@ from django import forms
 
 # Zato
 from zato.admin.web.forms import add_select, add_select_from_service, add_services, add_topics
-from zato.common import FILE_TRANSFER, GENERIC
+from zato.common.api import FILE_TRANSFER, GENERIC
 
 # ################################################################################################################################
 
