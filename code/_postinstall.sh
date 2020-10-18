@@ -29,6 +29,7 @@ $PY_BINARY -m pip install \
     -e ./zato-client \
     -e ./zato-cy \
     -e ./zato-distlock \
+    -e ./zato-lib \
     -e ./zato-scheduler \
     -e ./zato-server \
     -e ./zato-web-admin \
