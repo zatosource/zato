@@ -58,6 +58,7 @@ rm -rf ./zato-client/build
 rm -rf ./zato-common/build
 rm -rf ./zato-cy/build
 rm -rf ./zato-distlock/build
+rm -rf ./zato-lib/build
 rm -rf ./zato-scheduler/build
 rm -rf ./zato-server/build
 rm -rf ./zato-sso/build
