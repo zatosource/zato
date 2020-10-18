@@ -13,11 +13,11 @@ from past.builtins import unicode
 from six import add_metaclass
 
 # Zato
-from zato.common import SEC_DEF_TYPE
+from zato.common.api import SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import TLSKeyCertSecurity
 from zato.common.odb.query import tls_key_cert_list
-from zato.common.util import delete_tls_material_from_fs, get_tls_ca_cert_full_path, get_tls_from_payload, store_tls
+from zato.common.util.api import delete_tls_material_from_fs, get_tls_ca_cert_full_path, get_tls_from_payload, store_tls
 from zato.server.service.internal import AdminService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 

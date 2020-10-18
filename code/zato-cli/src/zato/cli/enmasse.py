@@ -9,38 +9,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import collections
-import copy
-import logging
-import os
-import re
-import sys
-from datetime import datetime
-from time import sleep
-
-# Bunch
-from zato.bunch import Bunch, bunchify, debunchify
-
-# pyyaml
-import pyaml
-
-# Texttable
-import texttable
-
-# yaml
-import yaml
-
-# Python 2/3 compatibility
-from future.utils import iteritems
-from past.builtins import basestring
+from collections import namedtuple
 
 # Zato
 from zato.cli import ManageCommand
-from zato.cli.check_config import CheckConfig
-from zato.common import SECRETS
-from zato.common.json_ import dumps, loads
-from zato.common.util import get_client_from_server_conf
-from zato.common.util.tcp import wait_for_zato_ping
 
 # ################################################################################################################################
 
@@ -64,7 +36,7 @@ if typing.TYPE_CHECKING:
 DEFAULT_COLS_WIDTH = '15,100'
 ZATO_NO_SECURITY = 'zato-no-security'
 
-Code = collections.namedtuple('Code', ('symbol', 'desc'))
+Code = namedtuple('Code', ('symbol', 'desc'))
 
 WARNING_ALREADY_EXISTS_IN_ODB = Code('W01', 'already exists in ODB')
 WARNING_MISSING_DEF = Code('W02', 'missing def')
@@ -89,8 +61,12 @@ def find_first(it, pred):
             return obj
 
 def dict_match(haystack, needle):
-    """Return True if all the keys from `needle` appear in `haystack` with the
-    same value."""
+    """Return True if all the keys from `needle` appear in `haystack` with the same value.
+    """
+
+    # Python 2/3 compatibility
+    from future.utils import iteritems
+
     return all(haystack.get(key) == value for key, value in iteritems(needle))
 
 
@@ -102,7 +78,12 @@ IGNORE_PREFIXES = {
 
 def populate_services_from_apispec(client, logger):
     """ Request a list of services from the APISpec service, and merge the results into SERVICES_BY_PREFIX,
-    creating new ServiceInfo instances to represent previously unknown services as appropriate."""
+    creating new ServiceInfo instances to represent previously unknown services as appropriate.
+    """
+
+    # Python 2/3 compatibility
+    from future.utils import iteritems
+
     response = client.invoke('zato.apispec.get-api-spec', {
         'return_internal': True,
         'include': '*',
@@ -171,6 +152,10 @@ SHORTNAME_BY_PREFIX = [
 
 
 def make_service_name(prefix):
+
+    # stdlib
+    import re
+
     escaped = re.sub('[.-]', '_', prefix)
     for module_prefix, name_prefix in SHORTNAME_BY_PREFIX:
         if prefix.startswith(module_prefix) and module_prefix.endswith('.'):
@@ -489,9 +474,11 @@ class InputValidator(object):
 # ################################################################################################################################
 
     def validate(self):
-        """
-        :rtype Results:
-        """
+        # type: () -> Results
+
+        # Python 2/3 compatibility
+        from future.utils import iteritems
+
         for item_type, items in iteritems(self.json):
             for item in items:
                 self.validate_one(item_type, item)
@@ -545,6 +532,10 @@ class DependencyScanner(object):
         """ Scan the data of a single item for required dependencies, recording any that are missing in self.missing.
         """
         # type: (str, dict, Results)
+
+        # Python 2/3 compatibility
+        from future.utils import iteritems
+
         service_info = SERVICE_BY_NAME[item_type] # type: ServiceInfo
 
         for dep_key, dep_info in iteritems(service_info.object_dependencies):
@@ -572,6 +563,9 @@ class DependencyScanner(object):
     def scan(self):
         # type: () -> Results
 
+        # Python 2/3 compatibility
+        from future.utils import iteritems
+
         results = Results()
         for item_type, items in iteritems(self.json):
             for item in items:
@@ -590,6 +584,9 @@ class DependencyScanner(object):
 class ObjectImporter(object):
     def __init__(self, client, logger, object_mgr, json, ignore_missing, args):
         # type: (APIClient, Logger, ObjectManager, dict, bool, object)
+
+        # Bunch
+        from bunch import bunchify
 
         # Zato client.
         self.client = client
@@ -613,6 +610,10 @@ class ObjectImporter(object):
 # ################################################################################################################################
 
     def validate_service_required(self, item_type, item):
+
+        # Python 2/3 compatibility
+        from future.utils import iteritems
+
         service_info = SERVICE_BY_NAME[item_type]
         item_dict = dict(item)
 
@@ -630,6 +631,10 @@ class ObjectImporter(object):
 # ################################################################################################################################
 
     def validate_import_data(self):
+
+        # Python 2/3 compatibility
+        from future.utils import iteritems
+
         results = Results()
         dep_scanner = DependencyScanner(self.json, ignore_missing=self.ignore_missing)
         scan_results = dep_scanner.scan()
@@ -755,6 +760,10 @@ class ObjectImporter(object):
 # ################################################################################################################################
 
     def find_already_existing_odb_objects(self):
+
+        # Python 2/3 compatibility
+        from future.utils import iteritems
+
         results = Results()
         for item_type, items in iteritems(self.json):
             for item in items:
@@ -793,6 +802,12 @@ class ObjectImporter(object):
 
     def import_objects(self, already_existing):
         # type: (Results)
+
+        # stdlib
+        from time import sleep
+
+        # Python 2/3 compatibility
+        from future.utils import iteritems
 
         rbac_sleep = float(self.args.rbac_sleep)
 
@@ -896,6 +911,10 @@ class ObjectImporter(object):
 # ################################################################################################################################
 
     def _import_object(self, def_type, item, is_edit):
+
+        # Python 2/3 compatibility
+        from future.utils import iteritems
+
         service_info = SERVICE_BY_NAME[def_type]
 
         if is_edit:
@@ -941,6 +960,10 @@ class ObjectImporter(object):
 # ################################################################################################################################
 
     def _maybe_change_password(self, object_id, item_type, attrs):
+
+        # stdlib
+        from time import sleep
+
         service_info = SERVICE_BY_NAME[item_type]
         service_name = service_info.get_service_name('change-password')
         if service_name is None or 'password' not in attrs:
@@ -1022,6 +1045,10 @@ class ObjectManager(object):
         to match the dependent object. Otherwise, ensure the field is set to the corresponding empty value
         (either None or ZATO_NO_SECURITY).
         """
+
+        # Python 2/3 compatibility
+        from future.utils import iteritems
+
         normalize_service_name(item)
         service_info = SERVICE_BY_NAME[item_type]
 
@@ -1108,6 +1135,10 @@ class ObjectManager(object):
 # ################################################################################################################################
 
     def delete_all(self):
+
+        # Python 2/3 compatibility
+        from future.utils import iteritems
+
         count = 0
         for item_type, items in iteritems(self.objects):
             for item in items:
@@ -1118,6 +1149,14 @@ class ObjectManager(object):
 # ################################################################################################################################
 
     def get_objects_by_type(self, item_type):
+
+        # Zato
+        from zato.common.const import SECRETS
+
+        # Python 2/3 compatibility
+        from future.utils import iteritems
+        from past.builtins import basestring
+
         service_info = SERVICE_BY_NAME[item_type]
 
         # Temporarily preserve function of the old enmasse.
@@ -1163,6 +1202,10 @@ class ObjectManager(object):
 # ################################################################################################################################
 
     def _refresh_objects(self):
+
+        # Python 2/3 compatibility
+        from future.utils import iteritems
+
         self.objects = Bunch()
         for service_info in SERVICES:
             self.get_objects_by_type(service_info.name)
@@ -1176,29 +1219,49 @@ class JsonCodec(object):
 
 # ################################################################################################################################
 
-    def load(self, fp, results):
-        return loads(fp.read())
+    def load(self, file_, results):
+
+        # Zato
+        from zato.common.json_internal import loads
+
+        return loads(file_.read())
 
 # ################################################################################################################################
 
-    def dump(self, fp, obj):
-        fp.write(dumps(obj, indent=1, sort_keys=True))
+    def dump(self, file_, object_):
+
+        # Zato
+        from zato.common.json_internal import dumps
+
+        file_.write(dumps(object_, indent=1, sort_keys=True))
 
 class YamlCodec(object):
     extension = '.yml'
 
 # ################################################################################################################################
 
-    def load(self, fp, results):
-        return yaml.load(fp, yaml.FullLoader)
+    def load(self, file_, results):
+
+        # yaml
+        import yaml
+
+        return yaml.load(file_, yaml.FullLoader)
 
 # ################################################################################################################################
 
-    def dump(self, fp, obj):
-        fp.write(pyaml.dump(obj, vspacing=True))
+    def dump(self, file_, object_):
+
+        # pyaml
+        import pyaml
+
+        file_.write(pyaml.dump(object_, vspacing=True))
 
 class InputParser(object):
     def __init__(self, path, logger, codec):
+
+        # stdlib
+        import os
+
         self.path = os.path.abspath(path)
         self.logger = logger
         self.codec = codec
@@ -1218,6 +1281,10 @@ class InputParser(object):
 # ################################################################################################################################
 
     def _get_include_path(self, include_path):
+
+        # stdlib
+        import os
+
         curdir = os.path.dirname(self.path)
         joined = os.path.join(curdir, include_path.replace('file://', ''))
         return os.path.abspath(joined)
@@ -1225,6 +1292,10 @@ class InputParser(object):
 # ################################################################################################################################
 
     def is_include(self, value):
+
+        # Python 2/3 compatibility
+        from past.builtins import basestring
+
         return isinstance(value, basestring)
 
 # ################################################################################################################################
@@ -1299,6 +1370,10 @@ class InputParser(object):
 # ################################################################################################################################
 
     def parse_items(self, dict_, results):
+
+        # Python 2/3 compatibility
+        from future.utils import iteritems
+
         for item_type, items in iteritems(dict_):
             if item_type not in SERVICE_BY_NAME and item_type not in HTTP_SOAP_ITEM_TYPES:
                 raw = (item_type,)
@@ -1351,6 +1426,10 @@ class Enmasse(ManageCommand):
 # ################################################################################################################################
 
     def load_input(self):
+
+        # stdlib
+        import os
+
         _, _, ext = self.args.input.rpartition('.')
         codec_class = self.CODEC_BY_EXTENSION.get(ext.lower())
         if codec_class is None:
@@ -1370,6 +1449,16 @@ class Enmasse(ManageCommand):
 # ################################################################################################################################
 
     def _on_server(self, args):
+
+        # stdlib
+        import os
+        from time import sleep
+
+        # Zato
+        from zato.cli.check_config import CheckConfig
+        from zato.common.util.api import get_client_from_server_conf
+        from zato.common.util.tcp import wait_for_zato_ping
+
         self.args = args
         self.curdir = os.path.abspath(self.original_dir)
         self.json = {}
@@ -1454,6 +1543,18 @@ class Enmasse(ManageCommand):
 # ################################################################################################################################
 
     def write_output(self):
+
+        # stdlib
+        import os
+        import re
+        from datetime import datetime
+
+        # Bunch
+        from zato.bunch import debunchify
+
+        # Python 2/3 compatibility
+        from future.utils import iteritems
+
         # Make a copy and remove Bunch; pyaml does not like Bunch instances.
         output = debunchify(self.json)
 
@@ -1510,6 +1611,10 @@ class Enmasse(ManageCommand):
 # ################################################################################################################################
 
     def report_warnings_errors(self, items):
+
+        # stdlib
+        import logging
+
         warn_err, warn_no, error_no = self.get_warnings_errors(items)
         table = self.get_table(warn_err)
 
@@ -1533,6 +1638,12 @@ class Enmasse(ManageCommand):
 
     def get_table(self, out):
 
+        # texttable
+        import texttable
+
+        # Python 2/3 compatibility
+        from future.utils import iteritems
+
         cols_width = self.args.cols_width if self.args.cols_width else DEFAULT_COLS_WIDTH
         cols_width = (elem.strip() for elem in cols_width.split(','))
         cols_width = [int(elem) for elem in cols_width]
@@ -1553,6 +1664,13 @@ class Enmasse(ManageCommand):
 # ################################################################################################################################
 
     def merge_odb_json(self):
+
+        # stdlib
+        import copy
+
+        # Python 2/3 compatibility
+        from future.utils import iteritems
+
         results = Results()
         merged = copy.deepcopy(self.object_mgr.objects)
 
@@ -1648,6 +1766,12 @@ class Enmasse(ManageCommand):
 # ################################################################################################################################
 
 if __name__ == '__main__':
+
+    # stdlib
+    import sys
+
+    # Bunch
+    from bunch import Bunch
 
     args = Bunch()
     args.verbose = True

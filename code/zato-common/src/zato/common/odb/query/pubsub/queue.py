@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from sqlalchemy import func, update
 
 # Zato
-from zato.common import PUBSUB
+from zato.common.api import PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription
 from zato.common.odb.query import count, _pubsub_queue_message
 from zato.common.util.time_ import utcnow_as_ms

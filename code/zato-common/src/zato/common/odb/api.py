@@ -32,17 +32,19 @@ from sqlalchemy.sql.type_api import TypeEngine
 from bunch import Bunch, bunchify
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, GENERIC, HTTP_SOAP, Inactive, MS_SQL, NotGiven, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, \
+from zato.common.api import DEPLOYMENT_STATUS, GENERIC, HTTP_SOAP, MS_SQL, NotGiven, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, \
      SERVER_UP_STATUS, UNITTEST, ZATO_NONE, ZATO_ODB_POOL_NAME
+from zato.common.exception import Inactive
 from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
-from zato.common.odb import get_ping_query, query
+from zato.common.odb import query
+from zato.common.odb.ping import get_ping_query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
      JWT, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, XPathSecurity, \
      WSSDefinition, VaultConnection
 from zato.common.odb.testing import UnittestEngine
 from zato.common.odb.query.pubsub import subscription as query_ps_subscription
 from zato.common.odb.query import generic as query_generic
-from zato.common.util import current_host, get_component_name, get_engine_url, new_cid, parse_extra_into_dict, \
+from zato.common.util.api import current_host, get_component_name, get_engine_url, new_cid, parse_extra_into_dict, \
      parse_tls_channel_security_definition, spawn_greenlet
 from zato.common.util.sql import ElemsWithOpaqueMaker, elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
@@ -127,31 +129,6 @@ class WritableKeyedTuple(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class WritableTupleQuery(Query):
-
-    def __iter__(self):
-        out = super(WritableTupleQuery, self).__iter__()
-
-        columns_desc = self.column_descriptions
-
-        first_type = columns_desc[0]['type']
-        len_columns_desc = len(columns_desc)
-
-        # This is a simple result of a query such as session.query(ObjectName).count()
-        if len_columns_desc == 1 and isinstance(first_type, TypeEngine):
-            return out
-
-        # A list of objects, e.g. from .all()
-        elif len_columns_desc > 1:
-            return (WritableKeyedTuple(elem) for elem in out)
-
-        # Anything else
-        else:
-            return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class SessionWrapper(object):
     """ Wraps an SQLAlchemy session.
     """
@@ -195,6 +172,32 @@ class SessionWrapper(object):
     def close(self):
         self._session.close()
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class WritableTupleQuery(Query):
+
+    def __iter__(self):
+        out = super(WritableTupleQuery, self).__iter__()
+
+        columns_desc = self.column_descriptions
+
+        first_type = columns_desc[0]['type']
+        len_columns_desc = len(columns_desc)
+
+        # This is a simple result of a query such as session.query(ObjectName).count()
+        if len_columns_desc == 1 and isinstance(first_type, TypeEngine):
+            return out
+
+        # A list of objects, e.g. from .all()
+        elif len_columns_desc > 1:
+            return (WritableKeyedTuple(elem) for elem in out)
+
+        # Anything else
+        else:
+            return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class SQLConnectionPool(object):

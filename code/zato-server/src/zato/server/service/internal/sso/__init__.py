@@ -16,7 +16,7 @@ from traceback import format_exc
 from ipaddress import ip_address
 
 # Zato
-from zato.common import NO_REMOTE_ADDRESS
+from zato.common.api import NO_REMOTE_ADDRESS
 from zato.server.service import List, Service
 from zato.sso import status_code, ValidationError
 

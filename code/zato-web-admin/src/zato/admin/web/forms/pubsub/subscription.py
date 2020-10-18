@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.common import CONNECTION, PUBSUB, skip_endpoint_types, URL_TYPE
+from zato.common.api import CONNECTION, PUBSUB, skip_endpoint_types, URL_TYPE
 from zato.admin.web.forms import add_http_soap_select, add_select, add_select_from_service
 
 # ################################################################################################################################

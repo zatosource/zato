@@ -16,7 +16,7 @@ from logging import DEBUG, getLogger
 from past.builtins import basestring
 
 # Zato
-from zato.common.json_ import dumps, loads
+from zato.common.json_internal import dumps, loads
 
 # ################################################################################################################################
 

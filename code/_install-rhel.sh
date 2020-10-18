@@ -38,8 +38,8 @@ then
     source ./_postinstall.sh $PY_BINARY
 else
     #  CentOS 7
-    curl https://bootstrap.pypa.io/get-pip.py | sudo $(type -p $PY_BINARY)
-    sudo $(type -p $PY_BINARY) -m pip install -U setuptools virtualenv==15.1.0 pip
+    curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
+    $(type -p $PY_BINARY) -m pip install -U setuptools virtualenv==15.1.0 pip
 
     $PY_BINARY -m virtualenv .
     source ./bin/activate

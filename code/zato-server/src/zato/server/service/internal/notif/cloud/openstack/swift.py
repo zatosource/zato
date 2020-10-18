@@ -19,7 +19,7 @@ from bunch import Bunch, bunchify
 from globre import match as globre_match
 
 # Zato
-from zato.common import NOTIF as COMMON_NOTIF, ZATO_NONE
+from zato.common.api import NOTIF as COMMON_NOTIF, ZATO_NONE
 from zato.common.broker_message import NOTIF
 from zato.common.odb.model import Cluster, NotificationOpenStackSwift, Service
 from zato.common.odb.query import notif_cloud_openstack_swift_list

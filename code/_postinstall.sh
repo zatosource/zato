@@ -88,3 +88,24 @@ then
     patch -p0 -d eggs < patches/jsonpointer/jsonpointer.py.diff
     patch -p0 -d eggs < patches/oauth/oauth.py.diff
 fi
+
+# Add the 'zato' command ..
+cat > $VIRTUAL_ENV/bin/zato <<-EOF
+#!$VIRTUAL_ENV/bin/python3
+
+# Zato
+from zato.cli.zato_command import main
+
+if __name__ == '__main__':
+
+    # stdlib
+    import re
+    import sys
+
+    sys.argv[0] = re.sub(r'(-script\.pyw?|\.exe)?$', '', sys.argv[0])
+    sys.exit(main())
+
+EOF
+
+# .. and make the command executable.
+chmod 755 $VIRTUAL_ENV/bin/zato

@@ -13,8 +13,8 @@ from unittest import main
 
 # Zato
 from base import BaseTest
-from zato.common import SEC_DEF_TYPE
-from zato.common.crypto import CryptoManager
+from zato.common.api import SEC_DEF_TYPE
+from zato.common.crypto.api import TOTPManager
 from zato.sso import status_code
 
 # For Pyflakes
@@ -42,7 +42,7 @@ class TOTPTestCase(BaseTest):
         response = self.post('/zato/sso/user/login', {
             'username': self.ctx.config.super_user_name,
             'password': self.ctx.config.super_user_password,
-            'totp_code': CryptoManager.get_current_totp_code(self.ctx.config.super_user_totp_key),
+            'totp_code': TOTPManager.get_current_totp_code(self.ctx.config.super_user_totp_key),
         })
 
         self.assertIsNotNone(response.ust)

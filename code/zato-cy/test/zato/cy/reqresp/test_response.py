@@ -17,7 +17,7 @@ from lxml.etree import _Element as EtreeElement
 from lxml.objectify import ObjectifiedElement
 
 # Zato
-from zato.common import DATA_FORMAT, ZATO_OK
+from zato.common.api import DATA_FORMAT, ZATO_OK
 from zato.common.test import BaseSIOTestCase
 from zato.server.service import Service
 

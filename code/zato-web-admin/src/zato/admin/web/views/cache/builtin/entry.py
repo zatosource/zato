@@ -20,7 +20,7 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.views import invoke_service_with_json_response, method_allowed
 from zato.admin.web.forms.cache.builtin.entry import CreateForm, EditForm
-from zato.common import CACHE
+from zato.common.api import CACHE
 
 # Python 2/3 compatibility
 from past.builtins import unicode

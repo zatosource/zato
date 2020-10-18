@@ -14,7 +14,7 @@ import os
 import socket
 
 # Zato
-from zato.common.util import get_current_user
+from zato.common.util.api import get_current_user
 
 # Python 2/3 compatibility
 from six import PY2

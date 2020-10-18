@@ -20,7 +20,7 @@ from sqlalchemy.pool import QueuePool as SAQueuePool
 from sqlalchemy.pool.dbapi_proxy import _DBProxy
 
 # Zato
-from zato.common import MS_SQL
+from zato.common.api import MS_SQL
 
 # ################################################################################################################################
 

@@ -23,8 +23,9 @@ from zato.server.apispec.wsdl import WSDLGenerator
 from zato.server.service import List, Opaque, Service
 
 # Zato
-from zato.common.json_ import dumps
-from zato.common.util import aslist, fs_safe_name
+from zato.common.json_internal import dumps
+from zato.common.util.eval_ import as_list
+from zato.common.util.file_system import fs_safe_name
 from zato.server.apispec import Generator
 from zato.server.service import AsIs, Bool
 
@@ -50,13 +51,13 @@ class GetAPISpec(Service):
 
         cluster_id = self.request.input.get('cluster_id')
 
-        include = aslist(self.request.input.include, ',')
-        exclude = aslist(self.request.input.exclude, ',')
+        include = as_list(self.request.input.include, ',')
+        exclude = as_list(self.request.input.exclude, ',')
 
         include = [elem for elem in include if elem]
         exclude = [elem for elem in exclude if elem]
 
-        api_invoke_path = aslist(self.request.input.api_invoke_path, ',')
+        api_invoke_path = as_list(self.request.input.api_invoke_path, ',')
         api_invoke_path = [elem for elem in api_invoke_path if elem]
 
         if not self.request.input.get('return_internal'):

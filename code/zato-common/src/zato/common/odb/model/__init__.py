@@ -17,10 +17,10 @@ from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, false as sa_
 from sqlalchemy.orm import backref, relationship
 
 # Zato
-from zato.common import AMQP, CASSANDRA, CLOUD, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MISC, NOTIF, ODOO, SAP, PUBSUB, \
+from zato.common.api import AMQP, CASSANDRA, CLOUD, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MISC, NOTIF, ODOO, SAP, PUBSUB, \
      SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY
-from zato.common.json_ import dumps as json_dumps
-from zato.common.odb import WMQ_DEFAULT_PRIORITY
+from zato.common.json_internal import json_dumps
+from zato.common.odb.const import WMQ_DEFAULT_PRIORITY
 from zato.common.odb.model.base import Base, _JSON
 from zato.common.odb.model.sso import _SSOAttr, _SSOGroup, _SSOLinkedAuth, _SSOSession, _SSOUser
 
@@ -1733,10 +1733,10 @@ class CassandraConn(Base):
     id = Column(Integer, Sequence('conn_def_cassandra_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
-    contact_points = Column(String(400), nullable=False, default=CASSANDRA.DEFAULT.CONTACT_POINTS.value)
-    port = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.PORT.value)
-    exec_size = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.EXEC_SIZE.value)
-    proto_version = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.PROTOCOL_VERSION.value)
+    contact_points = Column(String(400), nullable=False, default=CASSANDRA.DEFAULT.CONTACT_POINTS)
+    port = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.PORT)
+    exec_size = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.EXEC_SIZE)
+    proto_version = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.PROTOCOL_VERSION)
     cql_version = Column(Integer, nullable=True)
     default_keyspace = Column(String(400), nullable=False)
     username = Column(String(200), nullable=True)

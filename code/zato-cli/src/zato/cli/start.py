@@ -8,27 +8,18 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-import logging
-import os
-import sys
-
-# Bunch
-from bunch import Bunch
-
 # Zato
 from zato.cli import ManageCommand
-from zato.cli.check_config import CheckConfig
-from zato.cli.stop import Stop
-from zato.common import MISC
-from zato.common.util import get_haproxy_agent_pidfile
-from zato.common.util.proc import start_python_process
 
 # ################################################################################################################################
 
 # During development, it is convenient to configure it here to catch information that should be logged
 # even prior to setting up main loggers in each of components.
 if 0:
+
+    # stdlib
+    import logging
+
     log_level = logging.INFO
     log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
     logging.basicConfig(level=log_level, format=log_format)
@@ -57,8 +48,16 @@ Examples:
 # ################################################################################################################################
 
     def run_check_config(self):
+
+        # Bunch
+        from bunch import Bunch
+
+        # Zato
+        from zato.cli.check_config import CheckConfig
+
         cc = CheckConfig(self.args)
         cc.show_output = False
+
         cc.execute(Bunch({
             'path': '.',
             'ensure_no_pidfile': True,
@@ -70,6 +69,13 @@ Examples:
 # ################################################################################################################################
 
     def delete_pidfile(self):
+
+        # stdlib
+        import os
+
+        # Zato
+        from zato.common.api import MISC
+
         try:
             path = os.path.join(self.component_dir, MISC.PIDFILE)
             os.remove(path)
@@ -79,6 +85,13 @@ Examples:
 # ################################################################################################################################
 
     def check_pidfile(self, pidfile=None):
+
+        # stdlib
+        import os
+
+        # Zato
+        from zato.common.api import MISC
+
         pidfile = pidfile or os.path.join(self.config_dir, MISC.PIDFILE)
 
         # If we have a pidfile of that name then we already have a running
@@ -96,6 +109,10 @@ Examples:
     def start_component(self, py_path, name, program_dir, on_keyboard_interrupt=None):
         """ Starts a component in background or foreground, depending on the 'fg' flag.
         """
+
+        # Zato
+        from zato.common.util.proc import start_python_process
+
         start_python_process(
             name, self.args.fg, py_path, program_dir, on_keyboard_interrupt, self.SYS_ERROR.FAILED_TO_START, {
                 'sync_internal': self.args.sync_internal,
@@ -120,6 +137,15 @@ Examples:
 # ################################################################################################################################
 
     def _on_lb(self, *ignored):
+
+        # stdlib
+        import os
+        import sys
+
+        # Zato
+        from zato.cli.stop import Stop
+        from zato.common.util.api import get_haproxy_agent_pidfile
+
         self.run_check_config()
 
         def stop_haproxy():

@@ -12,8 +12,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from uuid import uuid4
 
 # Zato
-from zato.common import GENERIC
-from zato.common.json_ import loads
+from zato.common.api import GENERIC
+from zato.common.json_internal import loads
 from zato.server.service import DateTime, ListOfDicts
 from zato.server.service.internal.sso import BaseRESTService, BaseSIO
 from zato.sso import status_code, ValidationError

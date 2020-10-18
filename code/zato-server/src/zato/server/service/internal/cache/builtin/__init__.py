@@ -15,7 +15,7 @@ from dictalchemy.utils import asdict
 from six import add_metaclass
 
 # Zato
-from zato.common import CACHE as _COMMON_CACHE
+from zato.common.api import CACHE as _COMMON_CACHE
 from zato.common.broker_message import CACHE
 from zato.common.odb.model import CacheBuiltin
 from zato.common.odb.query import cache_builtin_list

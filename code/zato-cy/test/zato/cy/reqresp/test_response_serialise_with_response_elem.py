@@ -15,8 +15,8 @@ from copy import deepcopy
 from lxml.objectify import fromstring as objectify_from_string
 
 # Zato
-from zato.common import DATA_FORMAT
-from zato.common.json_ import loads as json_loads
+from zato.common.api import DATA_FORMAT
+from zato.common.json_internal import loads as json_loads
 from zato.common.test import BaseSIOTestCase, MyODBServiceWithResponseElem, MyZatoClass, ODBTestCase, test_odb_data
 
 # Zato - Cython

@@ -13,7 +13,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # Zato
-from zato.common.util import spawn_greenlet, start_connectors
+from zato.common.util.api import spawn_greenlet, start_connectors
 from zato.server.base.worker.common import WorkerImpl
 
 # Python 2/3 compatibility

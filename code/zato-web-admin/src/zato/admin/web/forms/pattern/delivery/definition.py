@@ -17,7 +17,7 @@ from future.utils import iteritems
 
 # Zato
 from zato.admin.web.forms import INITIAL_CHOICES_DICT
-from zato.common import BATCH_DEFAULTS, INVOCATION_TARGET
+from zato.common.api import BATCH_DEFAULTS, INVOCATION_TARGET
 
 # It's a pity these have to be repeated here in addition to what is in zato.admin.web
 # but here the names are shorter.

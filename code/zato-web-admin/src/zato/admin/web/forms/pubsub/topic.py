@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.common import PUBSUB
+from zato.common.api import PUBSUB
 from zato.admin.web.forms import add_select, add_pubsub_services
 
 class CreateForm(forms.Form):

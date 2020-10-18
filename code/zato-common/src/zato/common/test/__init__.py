@@ -34,8 +34,8 @@ from six import string_types
 from sqlalchemy import create_engine
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, SIMPLE_IO
-from zato.common.json_ import loads
+from zato.common.api import CHANNEL, DATA_FORMAT, SIMPLE_IO
+from zato.common.json_internal import loads
 from zato.common.log_message import CID_LENGTH
 from zato.common.odb import model
 from zato.common.odb.model import Cluster, ElasticSearch
@@ -43,7 +43,7 @@ from zato.common.odb.api import SessionWrapper, SQLConnectionPool
 from zato.common.odb.query import search_es_list
 from zato.common.simpleio_ import get_bytes_to_str_encoding, get_sio_server_config, simple_io_conf_contents
 from zato.common.py23_ import maxint
-from zato.common.util import is_port_taken, new_cid
+from zato.common.util.api import is_port_taken, new_cid
 from zato.server.service import Service
 
 # Zato - Cython

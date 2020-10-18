@@ -9,27 +9,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import os, uuid
 from copy import deepcopy
-from datetime import datetime
-from traceback import format_exc
-
-# Cryptography
-from cryptography.fernet import Fernet
-
-# SQLAlchemy
-from sqlalchemy.exc import IntegrityError
-
-# Python 2/3 compatibility
-from six import PY3
 
 # Zato
-from zato.cli import ZatoCommand, common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents
-from zato.cli._apispec_default import apispec_files
-from zato.common import CONTENT_TYPE, default_internal_modules, SERVER_JOIN_STATUS
-from zato.common.crypto import well_known_data
-from zato.common.defaults import http_plain_server_port
-from zato.common.odb.model import Cluster, Server
+from zato.cli import common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents, ZatoCommand
+from zato.common.api import CONTENT_TYPE, default_internal_modules
 from zato.common.simpleio_ import simple_io_conf_contents
 
 # ################################################################################################################################
@@ -621,6 +605,11 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
     def __init__(self, args):
+
+        # stdlib
+        import os
+        import uuid
+
         super(Create, self).__init__(args)
         self.target_dir = os.path.abspath(args.path)
         self.dirs_prepared = False
@@ -629,6 +618,10 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
     def prepare_directories(self, show_output):
+
+        # stdlib
+        import os
+
         if show_output:
             self.logger.debug('Creating directories..')
 
@@ -642,7 +635,30 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def execute(self, args, default_http_port=http_plain_server_port, show_output=True, return_server_id=False):
+    def execute(self, args, default_http_port=None, show_output=True, return_server_id=False):
+
+        # stdlib
+        import os
+        from datetime import datetime
+        from traceback import format_exc
+
+        # Cryptography
+        from cryptography.fernet import Fernet
+
+        # SQLAlchemy
+        from sqlalchemy.exc import IntegrityError
+
+        # Python 2/3 compatibility
+        from six import PY3
+
+        # Zato
+        from zato.cli._apispec_default import apispec_files
+        from zato.common.api import SERVER_JOIN_STATUS
+        from zato.common.crypto.const import well_known_data
+        from zato.common.defaults import http_plain_server_port
+        from zato.common.odb.model import Cluster, Server
+
+        default_http_port = default_http_port or http_plain_server_port
 
         engine = self._get_engine(args)
         session = self._get_session(engine)

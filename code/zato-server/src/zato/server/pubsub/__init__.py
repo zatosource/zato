@@ -28,17 +28,18 @@ from future.utils import iteritems, itervalues
 from past.builtins import basestring, unicode
 
 # Zato
-from zato.common import DATA_FORMAT, PUBSUB, SEARCH
+from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
-from zato.common.json_ import dumps
+from zato.common.json_internal import dumps
 from zato.common.odb.model import WebSocketClientPubSubKeys
 from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered as _confirm_pubsub_msg_delivered, \
      get_delivery_server_for_sub_key, get_sql_messages_by_msg_id_list as _get_sql_messages_by_msg_id_list, \
      get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
-from zato.common.util import fs_safe_name, new_cid, spawn_greenlet
+from zato.common.util.api import new_cid, spawn_greenlet
+from zato.common.util.file_system import fs_safe_name
 from zato.common.util.event import EventLog
 from zato.common.util.hook import HookTool
 from zato.common.util.python_ import get_current_stack
@@ -111,7 +112,7 @@ default_sk_server_table_columns = 6, 15, 8, 6, 17, 80
 
 _PRIORITY=PUBSUB.PRIORITY
 _JSON=DATA_FORMAT.JSON
-_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value
+_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE
 
 class msg:
     wsx_sub_resumed = 'WSX subscription resumed, sk:`%s`, peer:`%s`'

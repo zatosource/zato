@@ -7,9 +7,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common import GENERIC
+from zato.common.api import GENERIC
 from zato.common.odb.model import GenericConn as ModelGenericConn
-from zato.common.util import get_sa_model_columns
+from zato.common.util.api import get_sa_model_columns
 
 # ################################################################################################################################
 
