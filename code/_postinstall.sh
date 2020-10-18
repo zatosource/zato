@@ -17,11 +17,11 @@ PY_BINARY=$1
 # Stamp the release hash.
 git log -n 1 --pretty=format:"%H" > ./release-info/revision.txt
 
-$PY_BINARY -m pip install -U setuptools pip
-$PY_BINARY -m pip install -r requirements.txt
+$PY_BINARY -m pip install --use-feature=2020-resolver -U setuptools pip
+$PY_BINARY -m pip install --use-feature=2020-resolver -r requirements.txt
 
 # zato-common must be first.
-$PY_BINARY -m pip install \
+$PY_BINARY -m pip install --use-feature=2020-resolver \
     -e ./zato-common \
     -e ./zato-agent \
     -e ./zato-broker \
