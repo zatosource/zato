@@ -118,7 +118,7 @@ redis==2.10.6
 regex==2016.11.21
 repoze.lru==0.6
 repoze.profile==2.0
-requests==2.21.0
+requests==2.24.0
 rsa==3.1.2
 sarge==0.1.5.post0
 setproctitle==1.1.10
