@@ -65,20 +65,11 @@ if ! [ -x "$(command -v $PY_BINARY)" ]; then
         # scl enable rh-python36 bash
         source /opt/rh/rh-python36/enable
       fi
-  elif [ "$(type -p apk)" ]
-  then
-      sudo apk add ${PY_BINARY}
-      if [[ "${PY_BINARY}" == "python3" ]]
-      then
-          sudo apk add python3-dev
-      else
-          sudo apk add python-dev
-      fi
   elif [ "$(uname -s)" = "Darwin" ]
   then
       brew install  $PY_BINARY
   else
-      echo "install.sh: Unsupported OS: could not detect OS X, apt-get, yum, or apk." >&2
+      echo "install.sh: Unsupported OS: could not detect OS X, apt-get or yum." >&2
       exit 1
   fi
 fi
@@ -132,15 +123,11 @@ elif [ "$(type -p yum)" ] || [ "$(type -p dnf)" ]
 then
     source ./clean.sh
     source ./_install-rhel.sh $PY_BINARY
-elif [ "$(type -p apk)" ]
-then
-    source ./clean.sh
-    source ./_install-alpine.sh $PY_BINARY
 elif [ "$(uname -s)" = "Darwin" ]
 then
     source ./clean.sh
     source ./_install-mac.sh $PY_BINARY
 else
-    echo "install.sh: Unsupported OS: could not detect Mac, apt-get, yum, or apk." >&2
+    echo "install.sh: Unsupported OS: could not detect Mac, apt-get or yum." >&2
     exit 1
 fi
