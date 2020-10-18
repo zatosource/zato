@@ -39,7 +39,7 @@ then
 else
     #  CentOS 7
     curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
-    $(type -p $PY_BINARY) -m pip install -U setuptools virtualenv==15.1.0 pip
+    $(type -p $PY_BINARY) -m pip --use-feature=2020-resolver install -U setuptools virtualenv==15.1.0 pip
 
     $PY_BINARY -m virtualenv .
     source ./bin/activate
