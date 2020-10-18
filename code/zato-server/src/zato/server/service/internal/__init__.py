@@ -17,11 +17,12 @@ from traceback import format_exc
 from past.builtins import basestring
 
 # Zato
-from zato.common import SECRET_SHADOW, zato_namespace, ZATO_NONE
+from zato.common.api import SECRET_SHADOW, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE
 from zato.common.odb.model import Cluster
-from zato.common.util import get_response_value, replace_private_key
+from zato.common.util.api import get_response_value, replace_private_key
 from zato.common.util.sql import search as sql_search
+from zato.common.xml_ import zato_namespace
 from zato.server.service import AsIs, Bool, Int, Service
 
 # ################################################################################################################################

@@ -14,10 +14,10 @@ from contextlib import closing
 
 # Zato
 from zato.client import AnyServiceInvoker
-from zato.common import INFO_FORMAT, SERVER_JOIN_STATUS, SERVER_UP_STATUS
+from zato.common.api import INFO_FORMAT, SERVER_JOIN_STATUS, SERVER_UP_STATUS
 from zato.common.broker_message import SERVER_STATUS
 from zato.common.component_info import format_info, get_info, get_worker_pids
-from zato.common.json_ import dumps, loads
+from zato.common.json_internal import dumps, loads
 from zato.common.odb.query import server_list
 from zato.server.service import List, Service
 

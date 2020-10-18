@@ -18,7 +18,7 @@ from bunch import Bunch
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.pubsub.subscription import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, slugify
-from zato.common import PUBSUB
+from zato.common.api import PUBSUB
 from zato.common.odb.model import PubSubEndpoint
 
 # Python 2/3 compatibility

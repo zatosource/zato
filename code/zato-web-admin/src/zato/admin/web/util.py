@@ -12,8 +12,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from logging import getLogger
 
 # Zato
-from zato.common.crypto import CryptoManager
-from zato.common.json_ import loads
+from zato.common.crypto.api import CryptoManager
+from zato.common.json_internal import loads
 
 # ################################################################################################################################
 

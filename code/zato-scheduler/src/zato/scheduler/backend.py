@@ -27,8 +27,8 @@ from paodate import Delta
 from future.utils import iterkeys, itervalues
 
 # Zato
-from zato.common import SCHEDULER
-from zato.common.util import add_scheduler_jobs, add_startup_jobs, asbool, make_repr, new_cid, spawn_greenlet
+from zato.common.api import SCHEDULER
+from zato.common.util.api import add_scheduler_jobs, add_startup_jobs, asbool, make_repr, new_cid, spawn_greenlet
 
 # ################################################################################################################################
 

@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.common import CHANNEL, KVDB
+from zato.common.api import CHANNEL, KVDB
 from zato.server.pattern import ParallelBase
 
 class ParallelExec(ParallelBase):

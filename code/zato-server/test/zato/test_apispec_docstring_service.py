@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from unittest import main, TestCase
 
 # Zato
-from zato.common import APISPEC
+from zato.common.api import APISPEC
 from zato.server.apispec import not_public, ServiceInfo
 from common import service_name, sio_config
 

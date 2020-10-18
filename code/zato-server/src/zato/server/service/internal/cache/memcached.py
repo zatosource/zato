@@ -16,7 +16,7 @@ from zato.common.broker_message import CACHE
 from zato.common.exception import BadRequest
 from zato.common.odb.model import CacheMemcached
 from zato.common.odb.query import cache_memcached_list
-from zato.common.util import parse_extra_into_dict
+from zato.common.util.api import parse_extra_into_dict
 from zato.server.service.internal import AdminService
 from zato.server.service.internal.cache import common_instance_hook
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta

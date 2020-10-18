@@ -16,7 +16,7 @@ from sqlalchemy import Text, TypeDecorator
 from sqlalchemy.ext.declarative import declarative_base
 
 # Zato
-from zato.common.json_ import dumps as json_dumps, loads as json_loads
+from zato.common.json_internal import json_dumps, json_loads
 
 # ################################################################################################################################
 

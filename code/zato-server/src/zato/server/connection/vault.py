@@ -23,7 +23,8 @@ from gevent.lock import RLock
 from hvac import Client
 
 # Zato
-from zato.common import UNITTEST, VAULT
+from zato.common.api import UNITTEST
+from zato.common.vault_ import VAULT
 
 # ################################################################################################################################
 
@@ -82,7 +83,7 @@ class _Client(Client):
         }
 
     def ping(self):
-        return self.is_sealed()
+        return self.is_sealed
 
     def _auth_token(self, client_token, _from_vault=VaultResponse.from_vault):
         if not client_token:

@@ -21,10 +21,9 @@ from bunch import Bunch
 
 # Watchdog
 from watchdog.events import FileSystemEventHandler
-from watchdog.utils import platform
 
 # Zato
-from zato.common.util import hot_deploy, spawn_greenlet
+from zato.common.util.api import hot_deploy, spawn_greenlet
 from zato.server.pickup.observer import FSOBserver as Observer
 
 # ################################################################################################################################

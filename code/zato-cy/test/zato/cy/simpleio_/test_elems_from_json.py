@@ -14,7 +14,7 @@ from decimal import Decimal as decimal_Decimal, getcontext
 from uuid import UUID as uuid_UUID
 
 # Zato
-from zato.common import DATA_FORMAT
+from zato.common.api import DATA_FORMAT
 from zato.common.test import BaseSIOTestCase
 
 # Zato - Cython

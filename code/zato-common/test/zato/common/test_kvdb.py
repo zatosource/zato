@@ -18,7 +18,7 @@ from bunch import Bunch
 from nose.tools import eq_
 
 # Zato
-from zato.common.kvdb import KVDB
+from zato.common.kvdb.api import KVDB
 from zato.common.test import rand_string, rand_int
 
 # ##############################################################################

@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.common.util import make_repr
+from zato.common.util.api import make_repr
 
 # We let the user delete a cluster only if the answer on the form is equal to the
 # one given below.

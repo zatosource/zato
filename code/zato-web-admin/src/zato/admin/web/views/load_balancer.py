@@ -32,7 +32,7 @@ from zato.admin.web.forms.load_balancer import ManageLoadBalancerForm, RemoteCom
      ManageLoadBalancerSourceCodeForm
 from zato.admin.web.views import get_lb_client, method_allowed
 from zato.common.haproxy import haproxy_stats, Config
-from zato.common.json_ import dumps
+from zato.common.json_internal import dumps
 from zato.common.odb.model import Cluster
 
 logger = logging.getLogger(__name__)

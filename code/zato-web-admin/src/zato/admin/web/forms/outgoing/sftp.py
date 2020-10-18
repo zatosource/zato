@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.common import SFTP
+from zato.common.api import SFTP
 from zato.admin.web.forms import add_select
 
 # ################################################################################################################################

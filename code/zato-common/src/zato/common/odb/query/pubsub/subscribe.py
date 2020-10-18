@@ -13,7 +13,7 @@ from sqlalchemy import and_, exists, insert, update
 from sqlalchemy.sql import expression as expr
 
 # Zato
-from zato.common import PUBSUB
+from zato.common.api import PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, WebSocketSubscription
 from zato.common.util.time_ import utcnow_as_ms
 
