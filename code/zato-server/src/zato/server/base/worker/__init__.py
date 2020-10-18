@@ -57,17 +57,11 @@ from zato.common.util.api import get_tls_ca_cert_full_path, get_tls_key_cert_ful
      import_module_from_path, new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, start_connectors, \
      store_tls, update_apikey_username_to_channel, update_bind_port, visit_py_source
 from zato.server.base.worker.common import WorkerImpl
-
 from zato.server.connection.amqp_ import ConnectorAMQP
 from zato.server.connection.cache import CacheAPI
-
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
-
-print(datetime.now(), 'Loading objects')
-
 from zato.server.connection.connector import ConnectorStore, connector_type
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
-
 from zato.server.connection.cloud.openstack.swift import SwiftWrapper
 from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPConnStore
 from zato.server.connection.ftp import FTPStore

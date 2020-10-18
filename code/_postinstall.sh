@@ -99,21 +99,6 @@ from zato.cli.zato_command import main
 if __name__ == '__main__':
 
     # stdlib
-    import os
-    from datetime import datetime
-
-    # Python 2/3 compatibility
-    from past.builtins import execfile
-
-    curdir = os.path.dirname(os.path.abspath(__file__))
-    _version_py = os.path.normpath(os.path.join(curdir, '..', '.version.py'))
-    _locals = {}
-    execfile(_version_py, _locals)
-    version = _locals['version']
-
-    print(datetime.now(), 'Starting Zato', version)
-
-    # stdlib
     import re
     import sys
 
