@@ -20,8 +20,6 @@ done
 shift $((OPTIND-1))
 [ "${1:-}" = "--" ] && shift
 
-
-
 #
 # Run an OS-specific installer
 #
@@ -127,7 +125,11 @@ elif [ "$(uname -s)" = "Darwin" ]
 then
     source ./clean.sh
     source ./_install-mac.sh $PY_BINARY
+elif [ "$(type -p zypper)" ]
+then
+    source ./clean.sh
+    source ./_install-suse.sh $PY_BINARY
 else
-    echo "install.sh: Unsupported OS: could not detect Mac, apt-get or yum." >&2
+    echo "install.sh: Unsupported OS: could not detect Mac, apt-get, yum or zypper." >&2
     exit 1
 fi
