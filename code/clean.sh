@@ -44,6 +44,7 @@ rm -rf ./eggs
 rm -rf ./get-pip.py
 rm -rf ./include
 rm -rf ./lib
+rm -rf ./lib64
 rm -rf ./local
 rm -rf ./man
 rm -rf ./parts
