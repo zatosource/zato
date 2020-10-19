@@ -493,9 +493,10 @@ def main():
     import sys
 
     # Special-case the most commonly used commands to make the parser build quickly in these cases.
+    has_args = len(sys.argv) > 1
 
     # First, zato --version
-    if sys.argv[1] == '--version':
+    if has_args and sys.argv[1] == '--version':
 
         # Zato
         from zato.common.version import get_version
@@ -504,7 +505,7 @@ def main():
         sys.exit(0)
 
     # Now, zato start ...
-    elif sys.argv[1] == 'start':
+    elif has_args and sys.argv[1] == 'start':
         parser = command_store.load_start_parser()
 
     # All the other commands
