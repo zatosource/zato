@@ -6,7 +6,7 @@ echo "*** Zato Ubuntu/Debian installation using $PY_BINARY ***"
 
 # Always run an update so there are no surprises later on when it actually
 # comes to fetching the packages from repositories.
-#sudo apt-get update
+sudo apt-get update
 
 if ! [ -x "$(command -v lsb_release)" ]; then
   sudo apt-get install -y lsb-release
