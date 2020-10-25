@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 _singleton = object()
+_zato_orig_marker = 'zato_orig_'
 
 # ################################################################################################################################
 
@@ -125,6 +126,10 @@ class PickupManager(object):
         self.callback_config = Bunch()
 
         for stanza, section_config in self.config.items():
+
+            if stanza.startswith(_zato_orig_marker):
+                continue
+
             cb_config = self.callback_config.setdefault(section_config.pickup_from, Bunch())
             cb_config.update(section_config)
             cb_config.stanza = stanza
@@ -172,6 +177,9 @@ class PickupManager(object):
 
     def invoke_callbacks(self, pickup_event, services, topics):
 
+        config_orig_name = '{}{}'.format(_zato_orig_marker, pickup_event.stanza)
+        config = self.server.pickup_config[config_orig_name]
+
         request = {
             'base_dir': pickup_event.base_dir,
             'file_name': pickup_event.file_name,
@@ -183,6 +191,7 @@ class PickupManager(object):
             'has_raw_data': pickup_event.has_raw_data,
             'has_data': pickup_event.has_data,
             'parse_error': pickup_event.parse_error,
+            'config': config,
         }
 
         try:
