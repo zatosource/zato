@@ -18,7 +18,7 @@ from traceback import format_exc
 from gevent import sleep
 
 # Zato
-from zato.common import PUBSUB
+from zato.common.api import PUBSUB
 from zato.common.exception import Forbidden
 from zato.common.odb.model import PubSubSubscription, PubSubTopic
 from zato.common.odb.query.pubsub.cleanup import delete_msg_delivered, delete_msg_expired, delete_enq_delivered, \

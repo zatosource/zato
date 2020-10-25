@@ -32,18 +32,18 @@ from future.moves.urllib.parse import urlparse
 from past.builtins import basestring
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, ParsingException, PUBSUB, SEC_DEF_TYPE, WEB_SOCKET
-from zato.common.exception import Reportable
-from zato.common.json_ import loads
+from zato.common.api import CHANNEL, DATA_FORMAT, PUBSUB, SEC_DEF_TYPE, WEB_SOCKET
+from zato.common.exception import ParsingException, Reportable
+from zato.common.json_internal import loads
 from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
-from zato.common.util import new_cid
+from zato.common.util.api import new_cid
 from zato.common.util.hook import HookTool
 from zato.common.util.wsx import cleanup_wsx_client
+from zato.common.vault_ import VAULT
 from zato.server.connection.connector import Connector
 from zato.server.connection.web_socket.msg import AuthenticateResponse, InvokeClientRequest, ClientMessage, copy_forbidden, \
      error_response, ErrorResponse, Forbidden, OKResponse, InvokeClientPubSubRequest
 from zato.server.pubsub.task import PubSubTool
-from zato.vault.client import VAULT
 
 # ################################################################################################################################
 

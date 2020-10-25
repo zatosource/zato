@@ -29,8 +29,9 @@ from future.utils import iteritems
 from zato.common.py23_ import maxint
 
 # Zato
-from zato.common import KVDB, SECONDS_IN_DAY, StatsElem, ZatoException
+from zato.common.api import KVDB, SECONDS_IN_DAY, StatsElem
 from zato.common.broker_message import STATS
+from zato.common.exception import ZatoException
 from zato.common.odb.model import Service as ServiceModel
 from zato.common.util.stats import percentile, tmean
 from zato.server.service import Integer, Service, UTC

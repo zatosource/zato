@@ -15,7 +15,7 @@ from six import add_metaclass
 from zato.common.broker_message import SEARCH
 from zato.common.odb.model import Solr
 from zato.common.odb.query import search_solr_list
-from zato.common.util import ping_solr
+from zato.common.util.api import ping_solr
 from zato.server.service.internal import AdminService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta, PingMeta
 

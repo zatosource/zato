@@ -18,7 +18,7 @@ from rapidjson import dumps
 from future.utils import itervalues
 
 # Zato
-from zato.common import CHANNEL, CONTENT_TYPE, PUBSUB
+from zato.common.api import CHANNEL, CONTENT_TYPE, PUBSUB
 from zato.common.exception import BadRequest, Forbidden, PubSubSubscriptionExists
 from zato.common.util.auth import parse_basic_auth
 from zato.server.service import AsIs, Int, Service

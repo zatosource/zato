@@ -14,7 +14,7 @@ import logging
 # Zato
 from zato.admin.web.forms.cache.memcached import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
-from zato.common import CACHE
+from zato.common.api import CACHE
 from zato.common.odb.model import CacheBuiltin
 
 logger = logging.getLogger(__name__)

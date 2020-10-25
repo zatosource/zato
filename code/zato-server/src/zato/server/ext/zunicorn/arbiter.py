@@ -46,7 +46,7 @@ import time
 import traceback
 
 # Zato
-from zato.common import get_version
+from zato.common.version import get_version
 from zato.server.ext.zunicorn import SERVER_SOFTWARE, sock, systemd, util
 from zato.server.ext.zunicorn.errors import HaltServer, AppImportError
 from zato.server.ext.zunicorn.pidfile import Pidfile

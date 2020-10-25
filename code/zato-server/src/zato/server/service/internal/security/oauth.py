@@ -14,7 +14,7 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Zato
-from zato.common import SEC_DEF_TYPE
+from zato.common.api import SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, OAuth
 from zato.common.odb.query import oauth_list

@@ -33,9 +33,10 @@ from builtins import str as text
 from six import PY3
 
 # Zato
-from zato.common import BROKER, soap_data_path, soap_data_xpath, soap_fault_xpath, \
-     ZatoException, zato_data_path, zato_data_xpath, zato_details_xpath, \
-     ZATO_NOT_GIVEN, ZATO_OK, zato_result_xpath
+from zato.common.api import BROKER, ZATO_NOT_GIVEN, ZATO_OK
+from zato.common.exception import ZatoException
+from zato.common.xml_ import soap_data_path, soap_data_xpath, soap_fault_xpath, zato_data_path, \
+     zato_data_xpath, zato_details_xpath, zato_result_xpath
 from zato.common.log_message import CID_LENGTH
 from zato.common.odb.model import Server
 
@@ -527,8 +528,8 @@ def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, s
     """
 
     # To avoid circular references
-    from zato.common.crypto import ServerCryptoManager
-    from zato.common.util import get_odb_session_from_server_config, get_repo_dir_from_component_dir
+    from zato.common.crypto.api import ServerCryptoManager
+    from zato.common.util.api import get_odb_session_from_server_config, get_repo_dir_from_component_dir
 
     class ZatoClient(AnyServiceInvoker):
         def __init__(self, *args, **kwargs):

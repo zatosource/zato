@@ -8,31 +8,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-try:
-    import pymysql
-    pymysql.install_as_MySQLdb()
-except ImportError:
-    pass
-
 # stdlib
-import os, json
 from copy import deepcopy
-from random import getrandbits
-from uuid import uuid4
-
-# Django
-from django.core.management import call_command
-
-# Python 2/3 compatibility
-from past.builtins import unicode
 
 # Zato
-# TODO: There really shouldn't be any direct dependency between zato-cli and zato-web-admin
-from zato.admin.zato_settings import update_globals
-
-from zato.cli import common_logging_conf_contents, common_odb_opts, is_arg_given, ZatoCommand
-from zato.common.crypto import WebAdminCryptoManager, well_known_data
-from zato.common.defaults import web_admin_host, web_admin_port
+from zato.cli import common_odb_opts, ZatoCommand
 
 config_template = """{{
   "host": "{host}",
@@ -92,10 +72,41 @@ class Create(ZatoCommand):
     opts.append({'name':'--admin-invoke-password', 'help':'Password for web-admin to connect to servers with'})
 
     def __init__(self, args):
+
+        # stdlib
+        import os
+
         self.target_dir = os.path.abspath(args.path)
         super(Create, self).__init__(args)
 
     def execute(self, args, show_output=True, admin_password=None, needs_admin_created_flag=False):
+
+        try:
+            import pymysql
+            pymysql.install_as_MySQLdb()
+        except ImportError:
+            pass
+
+        # stdlib
+        import os, json
+        from random import getrandbits
+        from uuid import uuid4
+
+        # Django
+        from django.core.management import call_command
+
+        # Python 2/3 compatibility
+        from past.builtins import unicode
+
+        # Zato
+        # TODO: There really shouldn't be any direct dependency between zato-cli and zato-web-admin
+        from zato.admin.zato_settings import update_globals
+
+        from zato.cli import common_logging_conf_contents, is_arg_given
+        from zato.common.crypto.api import WebAdminCryptoManager
+        from zato.common.crypto.const import well_known_data
+        from zato.common.defaults import web_admin_host, web_admin_port
+
         os.chdir(self.target_dir)
 
         repo_dir = os.path.join(self.target_dir, 'config', 'repo')

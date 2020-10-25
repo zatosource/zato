@@ -21,9 +21,9 @@ from gevent.fileobject import FileObjectThread
 from humanize import naturalsize
 
 # Zato
-from zato.common import SFTP
+from zato.common.api import SFTP
 from zato.common.broker_message import OUTGOING
-from zato.common.json_ import loads
+from zato.common.json_internal import loads
 from zato.common.sftp import SFTPOutput
 
 # ################################################################################################################################
@@ -432,7 +432,7 @@ class SFTPIPCFacade(object):
         # type: (str) -> bool
 
         # The is_ok flag will be True only if the remote path points to an existing file or directory
-        return self.execute('ls {}'.format(remote_path), raise_on_error=False).is_ok
+        return self.execute('ls {}'.format(remote_path), log_level, raise_on_error=False).is_ok
 
 # ################################################################################################################################
 

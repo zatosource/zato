@@ -20,9 +20,9 @@ from gevent.lock import RLock
 from future.utils import iteritems, itervalues
 
 # Zato
-from zato.common import DATA_FORMAT, PUBSUB, SEARCH
+from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
 from zato.common.exception import BadRequest
-from zato.common.util import spawn_greenlet
+from zato.common.util.api import spawn_greenlet
 from zato.common.util.pubsub import make_short_msg_copy_from_dict
 from zato.common.util.time_ import utcnow_as_ms
 
@@ -76,7 +76,7 @@ default_sk_server_table_columns = 6, 15, 8, 6, 17, 80
 
 _PRIORITY=PUBSUB.PRIORITY
 _JSON=DATA_FORMAT.JSON
-_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value
+_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE
 
 class msg:
     wsx_sub_resumed = 'WSX subscription resumed, sk:`%s`, peer:`%s`'
