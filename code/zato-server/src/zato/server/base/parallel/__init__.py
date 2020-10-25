@@ -821,8 +821,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             if stanza_config.case_insensitive:
                 flags |= IGNORECASE
 
-            patterns = stanza_config.patterns
-            stanza_config.patterns = [patterns] if not isinstance(patterns, list) else patterns
+            orig_patterns = stanza_config.pop('patterns')
+            stanza_config.orig_patterns = orig_patterns
+            stanza_config.patterns = [orig_patterns] if not isinstance(orig_patterns, list) else orig_patterns
             stanza_config.patterns = [globre.compile(elem, flags) for elem in stanza_config.patterns]
 
             if not os.path.exists(stanza_config.pickup_from):
@@ -835,9 +836,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # we still need to make it aware of services and how to pick them up from FS.
 
         stanza = 'zato_internal_service_hot_deploy'
+        orig_patterns = '*.py'
         stanza_config = Bunch({
             'pickup_from': self.hot_deploy_config.pickup_dir,
-            'patterns': [globre.compile('*.py', globre.EXACT | IGNORECASE)],
+            'orig_patterns': orig_patterns,
+            'patterns': [globre.compile(orig_patterns, globre.EXACT | IGNORECASE)],
             'read_on_pickup': False,
             'parse_on_pickup': False,
             'delete_after_pickup': self.hot_deploy_config.delete_after_pickup,
@@ -845,8 +848,32 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         })
 
         self.pickup_config[stanza] = stanza_config
-        self.pickup = PickupManager(self, self.pickup_config)
 
+        # Go over all the stanza configuration items and add new ones
+        # without live regexp objects - this is needed because such objects
+        # cannot be serialised to JSON which is what is used to provide
+        # the stanza configuration on input to handler services.
+        for name in list(self.pickup_config.keys()):
+            config = self.pickup_config[name]
+
+            new_name = 'zato_orig_{}'.format(name)
+            new_config = Bunch()
+
+            # We add all they keys except for a specific one,
+            # the one with live Python objects,
+            # but 'orig_patterns', they one with a list, stays.
+            for key, value in config.items():
+                if key == 'patterns':
+                    continue
+                elif key == 'orig_patterns':
+                    new_config['patterns'] = value
+                else:
+                    new_config[key] = value
+
+            # Set the new key now
+            self.pickup_config[new_name] = new_config
+
+        self.pickup = PickupManager(self, self.pickup_config)
         spawn_greenlet(self.pickup.run)
 
 # ################################################################################################################################
