@@ -12,15 +12,6 @@ if ! [ -x "$(command -v lsb_release)" ]; then
   sudo apt-get install -y lsb-release
 fi
 
-# Debian 7.0 (Wheezy) requires the wheezy-backports repository.
-if [[ "$(lsb_release -sir)" =~ '^Debian.7\.' ]]
-then
-    sudo apt-get install -y apt-transport-https python-software-properties
-    sudo apt-add-repository 'deb https://deb.debian.org/debian wheezy-backports main'
-    sudo apt-get update
-    sudo apt-get install -y --reinstall libffi5
-fi
-
 sudo apt-get install -y \
     build-essential curl git haproxy libbz2-dev libev-dev libev4 libevent-dev \
     libffi-dev libkeyutils-dev libldap2-dev libmemcached-dev libpq-dev \
@@ -36,8 +27,8 @@ then
     sudo ln -sf /usr/sbin/haproxy /usr/bin/haproxy
 fi
 
-curl https://bootstrap.pypa.io/get-pip.py | sudo $(type -p $PY_BINARY)
-sudo $PY_BINARY -m pip install -U virtualenv
+curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
+$PY_BINARY -m pip install --use-feature=2020-resolver -U virtualenv
 
 $PY_BINARY -m virtualenv .
 source ./bin/activate

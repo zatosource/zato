@@ -23,7 +23,7 @@ from watchdog.events import FileCreatedEvent, FileModifiedEvent
 from watchdog.utils.dirsnapshot import DirectorySnapshot, DirectorySnapshotDiff
 
 # Zato
-from zato.common.util import spawn_greenlet
+from zato.common.util.api import spawn_greenlet
 
 # ################################################################################################################################
 # ################################################################################################################################

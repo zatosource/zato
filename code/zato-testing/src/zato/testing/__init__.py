@@ -19,12 +19,12 @@ from bunch import bunchify
 from cryptography.fernet import Fernet
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, UNITTEST
-from zato.common.crypto import CryptoManager
-from zato.common.json_ import loads
-from zato.common.kvdb import KVDB
+from zato.common.api import CHANNEL, DATA_FORMAT, UNITTEST
+from zato.common.crypto.api import CryptoManager
+from zato.common.json_internal import loads
+from zato.common.kvdb.api import KVDB
 from zato.common.odb.api import PoolStore
-from zato.common.util import new_cid
+from zato.common.util.api import new_cid
 from zato.server.base.worker import WorkerStore
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.http_soap.channel import RequestHandler

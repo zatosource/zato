@@ -19,7 +19,7 @@ from future.utils import iteritems
 
 # Zato
 from zato.admin.settings import delivery_friendly_name
-from zato.common import AMQP
+from zato.common.api import AMQP
 
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))

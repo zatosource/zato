@@ -15,9 +15,9 @@ from traceback import format_exc
 from bunch import bunchify
 
 # Zato
-from zato.common import CONNECTION, JSON_RPC, URL_TYPE
+from zato.common.api import CONNECTION, JSON_RPC, URL_TYPE
 from zato.common. exception import Unauthorized
-from zato.common.json_ import dumps, loads
+from zato.common.json_internal import dumps, loads
 from zato.common.json_rpc import ErrorCtx, Forbidden, InternalError, ItemResponse, JSONRPCHandler, ParseError, \
      RateLimitReached as JSONRPCRateLimitReached, RequestContext
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException

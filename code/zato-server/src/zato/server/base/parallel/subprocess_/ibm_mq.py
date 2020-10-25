@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from binascii import unhexlify
 
 # Zato
-from zato.common import IPC, WebSphereMQCallData
+from zato.common.api import IPC, WebSphereMQCallData
 from zato.common.broker_message import CHANNEL, DEFINITION, OUTGOING
 from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
 

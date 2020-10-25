@@ -20,7 +20,7 @@ from uuid import uuid4
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import OutgoingOdoo
 from zato.common.odb.query import out_odoo_list
-from zato.common.util import ping_odoo
+from zato.common.util.api import ping_odoo
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 

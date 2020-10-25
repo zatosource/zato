@@ -19,7 +19,8 @@ import os
 from copy import deepcopy
 
 from zato.cli import common_logging_conf_contents, common_odb_opts, is_arg_given, kvdb_opts, sql_conf_contents, ZatoCommand
-from zato.common.crypto import SchedulerCryptoManager, well_known_data
+from zato.common.crypto.api import SchedulerCryptoManager
+from zato.common.crypto.const import well_known_data
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################

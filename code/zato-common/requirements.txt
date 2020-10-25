@@ -1,4 +1,3 @@
-alembic>=0.6.5
 anyjson>=0.3.3
 arrow>=0.4.2
 boto>=2.35.1

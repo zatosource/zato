@@ -15,7 +15,7 @@ from datetime import datetime
 from future.utils import iteritems
 
 # Zato
-from zato.common import ZATO_NOT_GIVEN
+from zato.common.api import ZATO_NOT_GIVEN
 from zato.common.exception import BadRequest, InternalServerError, NotFound
 from zato.server.service import AsIs, Bool, Float, Service
 

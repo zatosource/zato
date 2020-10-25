@@ -12,20 +12,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from io import StringIO
 from logging import DEBUG
 
-# Django
-import django
-from django.conf import settings
-from django.template import Context, Template
-
 # Zato
 from zato.common.exception import Forbidden
 from zato.server.service import AsIs, Service
 from zato.server.service.internal.service import Invoke
-
-# Configure Django settings when the module is picked up
-if not settings.configured:
-    settings.configure()
-    django.setup()
 
 # ################################################################################################################################
 
@@ -141,7 +131,26 @@ class SIOInputLogger(Service):
 # ################################################################################################################################
 
 class HTMLService(Service):
+
+    def before_handle(self):
+
+        # Configure Django if this service is used - not that we are not doing it
+        # globally for the module because the configuration takes some milliseconds
+        # the first time around (but later on it is not significant).
+
+        # Django
+        import django
+        from django.conf import settings
+
+        # Configure Django settings when the module is picked up
+        if not settings.configured:
+            settings.configure()
+            django.setup()
+
     def set_html_payload(self, ctx, template):
+
+        # Django
+        from django.template import Context, Template
 
         # Generate HTML and return response
         c = Context(ctx)

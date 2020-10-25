@@ -19,7 +19,7 @@ from future.utils import iteritems
 
 # Zato
 from zato.admin.settings import delivery_friendly_name
-from zato.common.odb import WMQ_DEFAULT_PRIORITY
+from zato.common.odb.const import WMQ_DEFAULT_PRIORITY
 
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))

@@ -1,0 +1,2 @@
+# This file is needed to tell virtualenv
+# that it should not create its own .gitignore here.

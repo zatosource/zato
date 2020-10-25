@@ -15,7 +15,7 @@ import logging
 from ipaddress import IPv4Address, IPv6Address
 
 # Zato
-from zato.common.json_ import dumps
+from zato.common.json_internal import dumps
 
 # ################################################################################################################################
 

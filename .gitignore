@@ -6,6 +6,7 @@ code/develop-eggs/*
 code/docs/*
 code/downloads/*
 code/eggs
+code/eggs64
 code/env-zato
 code/extlib
 code/get-pip.py

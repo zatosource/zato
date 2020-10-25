@@ -27,7 +27,7 @@ from future.utils import iteritems
 from past.builtins import basestring
 
 # Zato
-from zato.common import APISPEC
+from zato.common.api import APISPEC
 
 # Zato - Cython
 from zato.simpleio import AsIs, is_sio_bool, is_sio_int, SIO_TYPE_MAP

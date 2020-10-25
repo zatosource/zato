@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Zato
 from zato.cli import ZatoCommand, common_odb_opts
-from zato.common.odb import drop_all
 
 class Delete(ZatoCommand):
     """ Deletes Zato components
@@ -19,6 +18,10 @@ class Delete(ZatoCommand):
     opts = common_odb_opts
 
     def execute(self, args):
+
+        # Zato
+        from zato.common.odb import drop_all
+
         engine = self._get_engine(args)
 
         if engine.dialect.has_table(engine.connect(), 'install_state'):

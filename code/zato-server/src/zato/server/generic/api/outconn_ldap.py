@@ -18,7 +18,7 @@ from traceback import format_exc
 from ldap3 import Connection, Server, ServerPool, SYNC, Tls
 
 # Zato
-from zato.common.util import spawn_greenlet
+from zato.common.util.api import spawn_greenlet
 from zato.server.connection.queue import Wrapper
 
 # ################################################################################################################################
