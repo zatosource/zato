@@ -23,7 +23,7 @@ def ping_database(params, ping_query):
 
             connection = pymysql.connect(
                 host     = params['host'],
-                port     = params['port'],
+                port     = int(params['port']),
                 user     = params['username'],
                 password = params['password'],
                 db       = params['db_name'],
@@ -37,7 +37,7 @@ def ping_database(params, ping_query):
 
             connection = pg8000.connect(
                 host     = params['host'],
-                port     = params['port'],
+                port     = int(params['port']),
                 user     = params['username'],
                 password = params['password'],
                 database = params['db_name'],
