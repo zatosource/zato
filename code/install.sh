@@ -32,36 +32,31 @@ if ! [ -x "$(command -v $PY_BINARY)" ]; then
       sudo apt-get install -y --reinstall ${PY_BINARY}
   elif [ "$(type -p yum)" ]
   then
-      sudo yum update -y
-
       if [ "$(type -p dnf)" ]
       then
-        dnf update -y
+        sudo dnf update -y
 
         if [ ! "$(type -p lsb_release)" ]
         then
-            dnf install -y redhat-lsb-core
+            sudo dnf install -y redhat-lsb-core
         fi
 
         if [ ! "$(type -p python3)" ]
         then
-            dnf install -y python3
+            sudo dnf install -y python3
         fi
       else
-        # Python3 customizations
-        sudo yum install -y centos-release-scl-rh
-        sudo yum-config-manager --enable centos-sclo-rh-testing
+        sudo yum update -y
 
-        # On RHEL, enable RHSCL and RHSCL-beta repositories for the system
-        sudo yum-config-manager --enable rhel-server-rhscl-7-rpms
-        sudo yum-config-manager --enable rhel-server-rhscl-beta-7-rpms
+        if [ ! "$(type -p lsb_release)" ]
+        then
+            sudo yum install -y redhat-lsb-core
+        fi
 
-        # 2. Install the collection:
-        sudo yum install -y rh-python36
-
-        # 3. Start using software collections:
-        # scl enable rh-python36 bash
-        source /opt/rh/rh-python36/enable
+        if [ ! "$(type -p python3)" ]
+        then
+            sudo yum install -y python3
+        fi
       fi
   elif [ "$(uname -s)" = "Darwin" ]
   then
