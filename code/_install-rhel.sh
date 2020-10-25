@@ -31,19 +31,11 @@ sudo ${INSTALL_CMD} install -y \
     openssl-devel patch postgresql-devel python3-devel suitesparse swig uuid \
     uuid-devel wget
 
-if [[ "$(lsb_release -sir)" =~ '^CentOS.8\.' ]]
-then
-    $PY_BINARY -m venv .
-    source ./bin/activate
-    source ./_postinstall.sh $PY_BINARY
-else
-    #  CentOS 7
-    curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
-    $(type -p $PY_BINARY) -m pip --use-feature=2020-resolver install -U setuptools virtualenv==15.1.0 pip
+$PY_BINARY -m venv .
 
-    $PY_BINARY -m virtualenv .
-    source ./bin/activate
-    source ./_postinstall.sh $PY_BINARY
-fi
+source ./bin/activate
+./bin/python -m pip install -U setuptools pip
+
+source ./_postinstall.sh $PY_BINARY
 
 
