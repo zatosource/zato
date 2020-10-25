@@ -16,7 +16,7 @@ from django import forms
 
 # Zato
 from zato.common.haproxy import timeouts, http_log
-from zato.common.util import make_repr
+from zato.common.util.api import make_repr
 
 def populate_choices(form, fields_choices):
     """ A convenience function used in several places for populating a given

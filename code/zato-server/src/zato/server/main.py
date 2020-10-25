@@ -8,12 +8,32 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# gevent monkeypatch is needed as soon as possible
-from gevent.monkey import patch_all
-patch_all()
+# Monkey-patching modules individually can be about 20% faster,
+# or, in absolute terms, instead of 275 ms it may take 220 ms.
+from gevent.monkey import patch_builtins, patch_contextvars, patch_thread, patch_time, patch_os, patch_queue, patch_select, \
+     patch_selectors, patch_signal, patch_socket, patch_ssl, patch_subprocess, patch_sys
+
+# Note that the order of patching matters, just like in patch_all
+patch_os()
+patch_time()
+patch_thread()
+patch_sys()
+patch_socket()
+patch_select()
+patch_selectors()
+patch_ssl()
+patch_subprocess()
+patch_builtins()
+patch_signal()
+patch_queue()
+patch_contextvars()
 
 # stdlib
-import locale, logging, os, ssl, sys
+import locale
+import logging
+import os
+import ssl
+import sys
 from logging.config import dictConfig
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
@@ -25,32 +45,20 @@ from zato.common.microopt import logging_Logger_log
 from logging import Logger
 Logger._log = logging_Logger_log
 
-# Django
-import django
-from django.conf import settings
-
-# Configure Django settings when the module is picked up
-if not settings.configured:
-    settings.configure()
-    django.setup()
-
 # ConfigObj
 from configobj import ConfigObj
-
-# Repoze
-from repoze.profile import ProfileMiddleware
 
 # YAML
 import yaml
 
 # Zato
-from zato.common import SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
-from zato.common.crypto import ServerCryptoManager
+from zato.common.api import SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
+from zato.common.crypto.api import ServerCryptoManager
 from zato.common.ipaddress_ import get_preferred_ip
-from zato.common.kvdb import KVDB
+from zato.common.kvdb.api import KVDB
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.repo import RepoManager
-from zato.common.util import absjoin, asbool, clear_locks, get_config, get_kvdb_config_for_log, parse_cmd_line_options, \
+from zato.common.util.api import absjoin, asbool, clear_locks, get_config, get_kvdb_config_for_log, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
 from zato.common.util.cli import read_stdin_data
 from zato.common.simpleio_ import get_sio_server_config
@@ -329,6 +337,10 @@ def run(base_dir, start_gunicorn_app=True, options=None):
                 logger.addHandler(handler)
 
     if asbool(profiler_enabled):
+
+        # Repoze
+        from repoze.profile import ProfileMiddleware
+
         profiler_dir = os.path.abspath(os.path.join(base_dir, server_config.profiler.profiler_dir))
         server.on_wsgi_request = ProfileMiddleware(
             server.on_wsgi_request,

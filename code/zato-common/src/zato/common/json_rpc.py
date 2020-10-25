@@ -13,7 +13,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # Zato
-from zato.common import NotGiven
+from zato.common.api import NotGiven
 from zato.common.exception import BadRequest, InternalServerError
 from zato.common.rate_limiting.common import RateLimitReached as RateLimitReachedError
 

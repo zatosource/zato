@@ -18,8 +18,8 @@ from bunch import bunchify
 from dateparser import parse as dt_parse
 
 # Zato
-from zato.common import DATA_FORMAT
-from zato.common.json_ import loads as json_loads
+from zato.common.api import DATA_FORMAT
+from zato.common.json_internal import loads as json_loads
 from zato.common.test import BaseSIOTestCase
 from zato.server.service import Service
 

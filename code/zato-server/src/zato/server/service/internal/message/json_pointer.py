@@ -17,7 +17,7 @@ from traceback import format_exc
 from jsonpointer import JsonPointer as _JsonPointer
 
 # Zato
-from zato.common import MSG_PATTERN_TYPE
+from zato.common.api import MSG_PATTERN_TYPE
 from zato.common.broker_message import MSG_JSON_POINTER
 from zato.common.odb.model import Cluster, JSONPointer
 from zato.common.odb.query import json_pointer_list

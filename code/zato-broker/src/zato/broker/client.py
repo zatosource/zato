@@ -25,11 +25,11 @@ import redis
 from builtins import bytes
 
 # Zato
-from zato.common import BROKER, ZATO_NONE
+from zato.common.api import BROKER, ZATO_NONE
 from zato.common.broker_message import KEYS, MESSAGE_TYPE, TOPICS
-from zato.common.json_ import dumps, loads
-from zato.common.kvdb import LuaContainer
-from zato.common.util import new_cid, spawn_greenlet
+from zato.common.json_internal import dumps, loads
+from zato.common.kvdb.api import LuaContainer
+from zato.common.util.api import new_cid, spawn_greenlet
 
 logger = logging.getLogger(__name__)
 has_debug = logger.isEnabledFor(logging.DEBUG)
@@ -50,7 +50,7 @@ CODE_NO_SUCH_FROM_KEY = 11
 # ################################################################################################################################
 
 if 0:
-    from zato.common.kvdb import KVDB
+    from zato.common.kvdb.api import KVDB
 
     KVDB = KVDB
 

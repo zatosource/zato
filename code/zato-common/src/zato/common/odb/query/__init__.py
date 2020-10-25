@@ -21,9 +21,9 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import case
 
 # Zato
-from zato.common import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, \
+from zato.common.api import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, \
      PARAMS_PRIORITY, PUBSUB, URL_PARAMS_PRIORITY
-from zato.common.json_ import loads
+from zato.common.json_internal import loads
 from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, CacheBuiltin, CacheMemcached, CassandraConn, \
      CassandraQuery, ChannelAMQP, ChannelWebSocket, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, \
      CronStyleJob, ElasticSearch, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, JSONPointer, JWT, \

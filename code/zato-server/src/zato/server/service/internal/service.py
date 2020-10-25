@@ -27,15 +27,15 @@ from future.utils import iterkeys
 from past.builtins import basestring
 
 # Zato
-from zato.common import BROKER, KVDB, ZatoException
+from zato.common.api import BROKER, KVDB
 from zato.common.broker_message import SERVICE
-from zato.common.exception import BadRequest
-from zato.common.json_ import dumps, loads
+from zato.common.exception import BadRequest, ZatoException
+from zato.common.json_internal import dumps, loads
 from zato.common.json_schema import get_service_config
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, Service
 from zato.common.odb.query import service_list
 from zato.common.rate_limiting import DefinitionParser
-from zato.common.util import hot_deploy, payload_from_request
+from zato.common.util.api import hot_deploy, payload_from_request
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean, Integer, Service as ZatoService
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO

@@ -18,7 +18,8 @@ from traceback import format_exc
 from fs.ftpfs import FTPFS
 
 # Zato
-from zato.common import Inactive, SECRET_SHADOW, TRACE1
+from zato.common.api import SECRET_SHADOW, TRACE1
+from zato.common.exception import Inactive
 
 # Python2/3 compatibility
 from future.utils import PY2

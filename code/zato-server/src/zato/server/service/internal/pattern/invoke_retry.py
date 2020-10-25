@@ -18,7 +18,7 @@ from bunch import Bunch
 from gevent import spawn, spawn_later
 
 # Zato
-from zato.common.json_ import loads
+from zato.common.json_internal import loads
 from zato.server.service import Service
 from zato.server.pattern.invoke_retry import RetryFailed, retry_failed_msg, retry_limit_reached_msg
 

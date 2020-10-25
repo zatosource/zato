@@ -13,7 +13,7 @@ from django import forms
 
 # Zato
 from zato.admin.web.forms import add_services
-from zato.common import NOTIF
+from zato.common.api import NOTIF
 
 class CreateForm(forms.Form):
 

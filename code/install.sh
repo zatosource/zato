@@ -20,8 +20,6 @@ done
 shift $((OPTIND-1))
 [ "${1:-}" = "--" ] && shift
 
-
-
 #
 # Run an OS-specific installer
 #
@@ -51,11 +49,10 @@ if ! [ -x "$(command -v $PY_BINARY)" ]; then
         fi
       else
         # Python3 customizations
-        PY_V=3
         sudo yum install -y centos-release-scl-rh
         sudo yum-config-manager --enable centos-sclo-rh-testing
 
-        # On RHEL, enable RHSCL and RHSCL-beta repositories for you system:
+        # On RHEL, enable RHSCL and RHSCL-beta repositories for the system
         sudo yum-config-manager --enable rhel-server-rhscl-7-rpms
         sudo yum-config-manager --enable rhel-server-rhscl-beta-7-rpms
 
@@ -66,20 +63,11 @@ if ! [ -x "$(command -v $PY_BINARY)" ]; then
         # scl enable rh-python36 bash
         source /opt/rh/rh-python36/enable
       fi
-  elif [ "$(type -p apk)" ]
-  then
-      sudo apk add ${PY_BINARY}
-      if [[ "${PY_BINARY}" == "python3" ]]
-      then
-          sudo apk add python3-dev
-      else
-          sudo apk add python-dev
-      fi
   elif [ "$(uname -s)" = "Darwin" ]
   then
       brew install  $PY_BINARY
   else
-      echo "install.sh: Unsupported OS: could not detect OS X, apt-get, yum, or apk." >&2
+      echo "install.sh: Unsupported OS: could not detect OS X, apt-get or yum." >&2
       exit 1
   fi
 fi
@@ -133,15 +121,15 @@ elif [ "$(type -p yum)" ] || [ "$(type -p dnf)" ]
 then
     source ./clean.sh
     source ./_install-rhel.sh $PY_BINARY
-elif [ "$(type -p apk)" ]
-then
-    source ./clean.sh
-    source ./_install-alpine.sh $PY_BINARY
 elif [ "$(uname -s)" = "Darwin" ]
 then
     source ./clean.sh
     source ./_install-mac.sh $PY_BINARY
+elif [ "$(type -p zypper)" ]
+then
+    source ./clean.sh
+    source ./_install-suse.sh $PY_BINARY
 else
-    echo "install.sh: Unsupported OS: could not detect Mac, apt-get, yum, or apk." >&2
+    echo "install.sh: Unsupported OS: could not detect Mac, apt-get, yum or zypper." >&2
     exit 1
 fi

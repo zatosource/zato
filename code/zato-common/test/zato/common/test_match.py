@@ -16,7 +16,7 @@ from unittest import TestCase
 from bunch import Bunch
 
 # Zato
-from zato.common import FALSE_TRUE, TRUE_FALSE
+from zato.common.api import FALSE_TRUE, TRUE_FALSE
 from zato.common.match import Matcher
 
 default_config = Bunch({

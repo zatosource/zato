@@ -18,7 +18,7 @@ from django import forms
 from future.utils import iteritems
 
 # Zato
-from zato.common import EMAIL
+from zato.common.api import EMAIL
 
 class CreateForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())
