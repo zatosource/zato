@@ -266,6 +266,7 @@ size=0.1 # In MB
 http_access_log_ignore=
 
 [greenify]
+#/path/to/oracle/instantclient_19_3/libclntsh.so.19.1=True
 
 [os_environ]
 sample_key=sample_value
