@@ -50,12 +50,12 @@
 
             {% comment %} 5 {% endcomment %}
             'topic_list',
-            'read_on_pickup',
+            'should_read_on_pickup',
 
             {% comment %} 6 {% endcomment %}
-            'parse_on_pickup',
+            'should_parse_on_pickup',
             'parse_with',
-            'delete_after_pickup',
+            'should_delete_after_pickup',
 
             {% comment %} 7 {% endcomment %}
             'is_internal',
@@ -70,7 +70,7 @@
             {% comment %} 9 {% endcomment %}
             'service_list_json',
             'topic_list_json',
-            'line_by_line',
+            'is_line_by_line',
 
             {% comment %} 10 {% endcomment %}
             'pickup_from',
@@ -78,7 +78,7 @@
             'sftp_source_name',
 
             {% comment %} 10 {% endcomment %}
-            'case_sensitive',
+            'is_case_sensitive',
 
         ]
     }
@@ -223,12 +223,12 @@
 
                         {% comment %} 5 {% endcomment %}
                         <td class='ignore'>{{ item.move_processed_to }}</td>
-                        <td class='ignore'>{{ item.read_on_pickup }}</td>
+                        <td class='ignore'>{{ item.should_read_on_pickup }}</td>
 
                         {% comment %} 6 {% endcomment %}
-                        <td class='ignore'>{{ item.parse_on_pickup }}</td>
+                        <td class='ignore'>{{ item.should_parse_on_pickup }}</td>
                         <td class='ignore'>{{ item.parse_with }}</td>
-                        <td class='ignore'>{{ item.delete_after_pickup }}</td>
+                        <td class='ignore'>{{ item.should_delete_after_pickup }}</td>
 
                         {% comment %} 7 {% endcomment %}
                         <td class='ignore'>{{ item.is_internal }}</td>
@@ -243,7 +243,7 @@
                         {% comment %} 9 {% endcomment %}
                         <td class='ignore'>{{ item.service_list_json }}</td>
                         <td class='ignore'>{{ item.topic_list_json }}</td>
-                        <td class='ignore'>{{ item.line_by_line }}</td>
+                        <td class='ignore'>{{ item.is_line_by_line }}</td>
 
                         {% comment %} 10 {% endcomment %}
                         <td class='ignore'>{{ item.pickup_from }}</td>
@@ -251,7 +251,7 @@
                         <td class='ignore'>{{ item.sftp_source_name }}</td>
 
                         {% comment %} 11 {% endcomment %}
-                        <td class='ignore'>{{ item.case_sensitive }}</td>
+                        <td class='ignore'>{{ item.is_case_sensitive }}</td>
 
                     </tr>
                 {% endfor %}
@@ -292,31 +292,35 @@
 
                             <label>
                             Read
-                            {{ create_form.read_on_pickup }}
+                            {{ create_form.should_read_on_pickup }}
                             </label>
+
+                            |
 
                             <label>
                             Parse
-                            {{ create_form.parse_on_pickup }}
+                            {{ create_form.should_parse_on_pickup }}
                             </label>
+
+                            |
 
                             <label>
                             Delete
-                            {{ create_form.delete_after_pickup }}
+                            {{ create_form.should_delete_after_pickup }}
                             </label>
 
                             |
 
                             <label>
                             Line-by-line
-                            {{ create_form.line_by_line }}
+                            {{ create_form.is_line_by_line }}
                             </label>
 
                             |
 
                             <label>
                             Case sens.
-                            {{ create_form.case_sensitive }}
+                            {{ create_form.is_case_sensitive }}
                             </label>
 
                             </td>
@@ -430,31 +434,35 @@
 
                             <label>
                             Read
-                            {{ edit_form.read_on_pickup }}
+                            {{ edit_form.should_read_on_pickup }}
                             </label>
+
+                            |
 
                             <label>
                             Parse
-                            {{ edit_form.parse_on_pickup }}
+                            {{ edit_form.should_parse_on_pickup }}
                             </label>
+
+                            |
 
                             <label>
                             Delete
-                            {{ edit_form.delete_after_pickup }}
+                            {{ edit_form.should_delete_after_pickup }}
                             </label>
 
                             |
 
                             <label>
                             Line-by-line
-                            {{ edit_form.line_by_line }}
+                            {{ edit_form.is_line_by_line }}
                             </label>
 
                             |
 
                             <label>
                             Case sens.
-                            {{ edit_form.case_sensitive }}
+                            {{ edit_form.is_case_sensitive }}
                             </label>
 
                             </td>

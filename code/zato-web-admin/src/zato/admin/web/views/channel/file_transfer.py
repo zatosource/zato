@@ -29,9 +29,9 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id', 'type_'
         output_required = 'id', 'name', 'is_active', 'source_type', 'pickup_from'
-        output_optional = 'service_list', 'topic_list', 'move_processed_to', 'file_patterns', 'parse_with', 'read_on_pickup', \
-            'parse_on_pickup', 'delete_after_pickup', 'ftp_source_id', 'sftp_source_id', 'scheduler_job_id', \
-            'ftp_source_name', 'sftp_source_name', 'case_sensitive'
+        output_optional = 'service_list', 'topic_list', 'move_processed_to', 'file_patterns', 'parse_with', 'should_read_on_pickup', \
+            'should_parse_on_pickup', 'should_delete_after_pickup', 'ftp_source_id', 'sftp_source_id', 'scheduler_job_id', \
+            'ftp_source_name', 'sftp_source_name', 'is_case_sensitive', 'is_line_by_line'
         output_repeated = True
 
 # ################################################################################################################################
@@ -67,8 +67,9 @@ class _CreateEdit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'name', 'is_active', 'source_type', 'pickup_from'
-        input_optional = 'service_list', 'topic_list', 'move_processed_to', 'file_patterns', 'parse_with', 'read_on_pickup', \
-            'parse_on_pickup', 'delete_after_pickup', 'ftp_source_id', 'sftp_source_id', 'scheduler_job_id', 'case_sensitive'
+        input_optional = 'service_list', 'topic_list', 'move_processed_to', 'file_patterns', 'parse_with', 'should_read_on_pickup', \
+            'should_parse_on_pickup', 'should_delete_after_pickup', 'ftp_source_id', 'sftp_source_id', 'scheduler_job_id', \
+            'is_case_sensitive', 'is_line_by_line'
         output_required = 'id', 'name'
 
     def populate_initial_input_dict(self, initial_input_dict):
@@ -78,7 +79,6 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['is_outconn'] = False
         initial_input_dict['sec_use_rbac'] = False
         initial_input_dict['pool_size'] = 1
-
 
     def pre_process_item(self, name, value):
         if name in ('service_list', 'topic_list'):
