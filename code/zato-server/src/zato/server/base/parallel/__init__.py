@@ -131,7 +131,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.json_schema_dir = None   # type: unicode
         self.sftp_channel_dir = None  # type: unicode
         self.hot_deploy_config = None # type: Bunch
-        self.pickup = None
+        self.file_transfer = None
         self.fs_server_config = None # type: Bunch
         self.fs_sql_config = None # type: Bunch
         self.pickup_config = None # type: Bunch
@@ -818,6 +818,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 empty.append(stanza)
                 continue
 
+            stanza_config.name = stanza
             stanza_config.read_on_pickup = asbool(stanza_config.get('read_on_pickup', True))
             stanza_config.parse_on_pickup = asbool(stanza_config.get('parse_on_pickup', True))
             stanza_config.delete_after_pickup = asbool(stanza_config.get('delete_after_pickup', True))
@@ -839,10 +840,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             if stanza_config.case_insensitive:
                 flags |= IGNORECASE
 
-            orig_patterns = stanza_config.pop('patterns')
-            stanza_config.orig_patterns = orig_patterns
-            stanza_config.patterns = [orig_patterns] if not isinstance(orig_patterns, list) else orig_patterns
-            stanza_config.patterns = [globre.compile(elem, flags) for elem in stanza_config.patterns]
+            patterns = stanza_config.patterns
+            stanza_config.pattern_matcher_list = [patterns] if not isinstance(patterns, list) else patterns
+            stanza_config.pattern_matcher_list = [globre.compile(elem, flags) for elem in patterns]
 
             if not os.path.exists(stanza_config.pickup_from):
                 logger.warn('Pickup dir `%s` does not exist (%s)', stanza_config.pickup_from, stanza)
@@ -856,6 +856,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         stanza = 'zato_internal_service_hot_deploy'
         orig_patterns = '*.py'
         stanza_config = Bunch({
+            'name': stanza,
             'pickup_from': self.hot_deploy_config.pickup_dir,
             'orig_patterns': orig_patterns,
             'patterns': [globre.compile(orig_patterns, globre.EXACT | IGNORECASE)],
@@ -876,23 +877,26 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
             new_name = 'zato_orig_{}'.format(name)
             new_config = Bunch()
+            new_config.name = new_name
 
             # We add all they keys except for a specific one,
             # the one with live Python objects,
             # but 'orig_patterns', they one with a list, stays.
             for key, value in config.items():
-                if key == 'patterns':
+                if key in ('name', 'pattern_matcher_list'):
                     continue
-                elif key == 'orig_patterns':
-                    new_config['patterns'] = value
                 else:
                     new_config[key] = value
 
             # Set the new key now
             self.pickup_config[new_name] = new_config
 
-        self.pickup = FileTransferManager(self, self.pickup_config)
-        spawn_greenlet(self.pickup.run)
+        self.file_transfer = FileTransferManager(self)#, self.pickup_config)
+
+        for channel_name, config in self.pickup_config.items():
+            self.file_transfer.create(config)
+
+        spawn_greenlet(self.file_transfer.run)
 
 # ################################################################################################################################
 
