@@ -63,7 +63,7 @@ from zato.server.base.parallel.http import HTTPHandler
 from zato.server.base.parallel.subprocess_.ftp import FTPIPC
 from zato.server.base.parallel.subprocess_.ibm_mq import IBMMQIPC
 from zato.server.base.parallel.subprocess_.outconn_sftp import SFTPIPC
-from zato.server.pickup.api import PickupManager
+from zato.server.file_transfer.api import FileTransferManager
 from zato.server.sso import SSOTool
 
 # ################################################################################################################################
@@ -891,7 +891,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             # Set the new key now
             self.pickup_config[new_name] = new_config
 
-        self.pickup = PickupManager(self, self.pickup_config)
+        self.pickup = FileTransferManager(self, self.pickup_config)
         spawn_greenlet(self.pickup.run)
 
 # ################################################################################################################################

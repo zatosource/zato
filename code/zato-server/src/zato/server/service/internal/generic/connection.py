@@ -17,6 +17,7 @@ from zato.common.broker_message import GENERIC
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.odb.query.generic import connection_list
+from zato.common.util.api import parse_simple_type
 from zato.server.generic.connection import GenericConnection
 from zato.server.service import Bool, Int
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
@@ -83,6 +84,7 @@ class _CreateEdit(_BaseService):
 # ################################################################################################################################
 
     def handle(self):
+
         data = deepcopy(self.request.input)
 
         raw_request = self.request.raw_request
@@ -91,7 +93,9 @@ class _CreateEdit(_BaseService):
 
         for key, value in raw_request.items():
             if key not in data:
-                data[key] = self._convert_sio_elem(key, value)
+                value = parse_simple_type(value)
+                self.logger.warn('EEE %s %s %r', key, value, type(value))
+                data[key] = value
 
         conn = GenericConnection.from_dict(data)
 
