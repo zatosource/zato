@@ -25,6 +25,13 @@ from .observer.local_ import LocalObserver
 
 # ################################################################################################################################
 
+if 0:
+    from zato.server.base.parallel import ParallelServer
+
+    ParallelServer = ParallelServer
+
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
@@ -34,13 +41,13 @@ _zato_orig_marker = 'zato_orig_'
 
 # ################################################################################################################################
 
-class PickupEventHandler:
+class FileTransferEventHandler:
 
-    def __init__(self, manager, config_name, config):
+    def __init__(self, manager, channel_name, config):
         # type: (FileTransferManager, str, Bunch) -> None
 
         self.manager = manager
-        self.config_name = config_name
+        self.channel_name = channel_name
         self.config = config
 
     def on_created(self, transfer_event):
@@ -50,14 +57,18 @@ class PickupEventHandler:
 
             file_name = os.path.basename(transfer_event.src_path) # type: str
 
-            if not self.manager.should_handle(file_name, self.config.patterns):
+            print()
+            print(222, self.config)
+            print()
+
+            if not self.manager.should_handle(file_name, self.config.pattern_matcher_list):
                 return
 
             pe = FileTransferEvent()
             pe.full_path = transfer_event.src_path
             pe.base_dir = os.path.dirname(transfer_event.src_path)
             pe.file_name = file_name
-            pe.config_name = self.config_name
+            pe.channel_name = self.channel_name
 
             if self.config.is_service_hot_deploy:
                 spawn_greenlet(hot_deploy, self.manager.server, pe.file_name, pe.full_path, self.config.delete_after_pickup)
@@ -91,14 +102,14 @@ class PickupEventHandler:
 class FileTransferEvent(object):
     """ Encapsulates information about a file picked up from file system.
     """
-    __slots__ = ('base_dir', 'file_name', 'full_path', 'config_name', 'ts_utc', 'raw_data', 'data', 'has_raw_data', 'has_data',
+    __slots__ = ('base_dir', 'file_name', 'full_path', 'channel_name', 'ts_utc', 'raw_data', 'data', 'has_raw_data', 'has_data',
         'parse_error')
 
     def __init__(self):
         self.base_dir = None      # type: str
         self.file_name = None     # type: str
         self.full_path = None     # type: str
-        self.config_name = None   # type: str
+        self.channel_name = None  # type: str
         self.ts_utc = None        # type: str
         self.raw_data = ''        # type: str
         self.data = _singleton    # type: str
@@ -111,31 +122,29 @@ class FileTransferEvent(object):
 class FileTransferManager(object):
     """ Manages file transfer observers and callbacks.
     """
-    def __init__(self, server, config):
+    def __init__(self, server):
+        # type: (ParallelServer) -> None
 
         self.server = server
-        self.config = config
         self.keep_running = True
-
         self.observers = []
 
-        # Unlike the main config dictionary, this one is keyed by incoming directories
-        self.callback_config = Bunch()
+    def create(self, config):
+        # type: (Bunch) -> None
 
-        for config_name, section_config in self.config.items():
+        print()
+        print(444, config)
+        print()
 
-            if config_name.startswith(_zato_orig_marker):
-                continue
+        # Ignore internal channels
+        if config.name.startswith(_zato_orig_marker):
+            return
 
-            cb_config = self.callback_config.setdefault(section_config.pickup_from, Bunch())
-            cb_config.update(section_config)
-            cb_config.config_name = config_name
+        observer = LocalObserver(0.25)
+        event_handler = FileTransferEventHandler(self, config.name, config)
+        observer.schedule(event_handler, config.pickup_from, recursive=False)
 
-            observer = LocalObserver(0.25)
-            event_handler = PickupEventHandler(self, config_name, section_config)
-            observer.schedule(event_handler, section_config.pickup_from, recursive=False)
-
-            self.observers.append(observer)
+        self.observers.append(observer)
 
 # ################################################################################################################################
 
@@ -175,14 +184,14 @@ class FileTransferManager(object):
     def invoke_callbacks(self, transfer_event, services, topics):
         # type: (FileTransferEvent, list, list) -> None
 
-        config_orig_name = '{}{}'.format(_zato_orig_marker, transfer_event.config_name)
+        config_orig_name = '{}{}'.format(_zato_orig_marker, transfer_event.channel_name)
         config = self.server.pickup_config[config_orig_name]
 
         request = {
             'base_dir': transfer_event.base_dir,
             'file_name': transfer_event.file_name,
             'full_path': transfer_event.full_path,
-            'config_name': transfer_event.config_name,
+            'channel_name': transfer_event.channel_name,
             'ts_utc': datetime.utcnow().isoformat(),
             'raw_data': transfer_event.raw_data,
             'data': transfer_event.data if transfer_event.data is not _singleton else None,
