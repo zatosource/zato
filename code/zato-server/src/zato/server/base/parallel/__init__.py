@@ -38,32 +38,25 @@ from zato.common.api import DATA_FORMAT, default_internal_modules, KVDB, RATE_LI
 from zato.common.audit import audit_pii
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.const import SECRETS
-
 from zato.common.ipc.api import IPCAPI
 from zato.common.json_internal import dumps, loads
-
 from zato.common.odb.post_process import ODBPostProcess
-
 from zato.common.pubsub import SkipDelivery
 from zato.common.rate_limiting import RateLimiting
 from zato.common.util.api import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
      invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
      register_diag_handlers
-
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC
 from zato.common.util.time_ import TimeUtil
 from zato.distlock import LockManager
-
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigStore
 from zato.server.connection.server import Servers
 from zato.server.base.parallel.config import ConfigLoader
-
 from zato.server.base.parallel.http import HTTPHandler
 from zato.server.base.parallel.subprocess_.ftp import FTPIPC
 from zato.server.base.parallel.subprocess_.ibm_mq import IBMMQIPC
 from zato.server.base.parallel.subprocess_.outconn_sftp import SFTPIPC
-from zato.server.file_transfer.api import FileTransferManager
 from zato.server.sso import SSOTool
 
 # ################################################################################################################################
@@ -112,6 +105,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.logger = logger
         self.host = None
         self.port = None
+        self.is_starting_first = '<not-set>'
         self.crypto_manager = None # type: ServerCryptoManager
         self.odb = None # type: ODBManager
         self.odb_data = None
@@ -131,7 +125,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.json_schema_dir = None   # type: unicode
         self.sftp_channel_dir = None  # type: unicode
         self.hot_deploy_config = None # type: Bunch
-        self.file_transfer = None
         self.fs_server_config = None # type: Bunch
         self.fs_sql_config = None # type: Bunch
         self.pickup_config = None # type: Bunch
@@ -295,7 +288,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         means a new deployment key) the services have been already deployed. Further workers will check that the flag exists
         and will skip the deployment altogether.
         """
-        def import_initial_services_jobs(is_first):
+        def import_initial_services_jobs():
 
             # All non-internal services that we have deployed
             locally_deployed = []
@@ -319,7 +312,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                     internal_service_modules.append(module_name)
 
             locally_deployed.extend(self.service_store.import_internal_services(
-                internal_service_modules, self.base_dir, self.sync_internal, is_first))
+                internal_service_modules, self.base_dir, self.sync_internal, self.is_starting_first))
 
             logger.info('Deploying user-defined services (%s)', self.name)
 
@@ -344,25 +337,25 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         with self.zato_lock_manager(lock_name, ttl=self.deployment_lock_expires, block=self.deployment_lock_timeout):
             if redis_conn.get(already_deployed_flag):
                 # There has been already the first worker who's done everything there is to be done so we may just return.
-                is_first = False
+                self.is_starting_first = False
                 logger.debug('Not attempting to obtain the lock_name:`%s`', lock_name)
 
                 # Simply deploy services, including any missing ones, the first worker has already cleared out the ODB
-                locally_deployed = import_initial_services_jobs(is_first)
+                locally_deployed = import_initial_services_jobs()
 
-                return is_first, locally_deployed
+                return locally_deployed
 
             else:
                 # We are this server's first worker so we need to re-populate
                 # the database and create the flag indicating we're done.
-                is_first = True
+                self.is_starting_first = True
                 logger.debug('Got lock_name:`%s`, ttl:`%s`', lock_name, self.deployment_lock_expires)
 
                 # .. Remove all the deployed services from the DB ..
                 self.odb.drop_deployed_services(server.id)
 
                 # .. deploy them back including any missing ones found on other servers.
-                locally_deployed = import_initial_services_jobs(is_first)
+                locally_deployed = import_initial_services_jobs()
 
                 # Add the flag to Redis indicating that this server has already
                 # deployed its services. Note that by default the expiration
@@ -372,7 +365,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 redis_conn.set(already_deployed_flag, dumps({'create_time_utc':datetime.utcnow().isoformat()}))
                 redis_conn.expire(already_deployed_flag, self.deployment_lock_expires)
 
-                return is_first, locally_deployed
+                return locally_deployed
 
 # ################################################################################################################################
 
@@ -440,9 +433,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Convert size of FIFO response buffers to megabytes
         self.fifo_response_buffer_size = int(float(self.fs_server_config.misc.fifo_response_buffer_size) * megabyte)
 
-        is_first, locally_deployed = self.maybe_on_first_worker(server, self.kvdb.conn)
+        locally_deployed = self.maybe_on_first_worker(server, self.kvdb.conn)
 
-        return is_first, locally_deployed
+        return locally_deployed
 
 # ################################################################################################################################
 
@@ -589,7 +582,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.worker_store.early_init()
 
         # Deploys services
-        is_first, locally_deployed = self._after_init_common(server)
+        locally_deployed = self._after_init_common(server)
 
         # Initializes worker store, including connectors
         self.worker_store.init()
@@ -662,7 +655,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Directories for SSH keys used by SFTP channels
         self.sftp_channel_dir = os.path.join(self.repo_location, 'sftp', 'channel')
 
-        if is_first:
+        if self.is_starting_first:
 
             logger.info('First worker of `%s` is %s', self.name, self.pid)
 
@@ -676,8 +669,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             self.cleanup_wsx()
 
             # Startup services
-            self.invoke_startup_services(is_first)
-            spawn_greenlet(self.set_up_pickup)
+            self.invoke_startup_services()
+            #spawn_greenlet(self.init_file_transfer)
 
             # Subprocess-based connectors
             if self.has_posix_ipc:
@@ -799,104 +792,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def invoke_startup_services(self, is_first):
-        _invoke_startup_services('Parallel', 'startup_services_first_worker' if is_first else 'startup_services_any_worker',
+    def invoke_startup_services(self):
+        stanza = 'startup_services_first_worker' if self.is_starting_first else 'startup_services_any_worker'
+        _invoke_startup_services('Parallel', stanza,
             self.fs_server_config, self.repo_location, self.broker_client, None,
             is_sso_enabled=self.is_sso_enabled)
-
-# ################################################################################################################################
-
-    def set_up_pickup(self):
-
-        empty = []
-
-        # Fix up booleans and paths
-        for stanza, stanza_config in self.pickup_config.items():
-
-            # user_config_items is empty by default
-            if not stanza_config:
-                empty.append(stanza)
-                continue
-
-            stanza_config.name = stanza
-            stanza_config.read_on_pickup = asbool(stanza_config.get('read_on_pickup', True))
-            stanza_config.parse_on_pickup = asbool(stanza_config.get('parse_on_pickup', True))
-            stanza_config.delete_after_pickup = asbool(stanza_config.get('delete_after_pickup', True))
-            stanza_config.case_insensitive = asbool(stanza_config.get('case_insensitive', True))
-            stanza_config.pickup_from = absolutize(stanza_config.pickup_from, self.base_dir)
-            stanza_config.is_service_hot_deploy = False
-
-            mpt = stanza_config.get('move_processed_to')
-            stanza_config.move_processed_to = absolutize(mpt, self.base_dir) if mpt else None
-
-            services = stanza_config.get('services') or []
-            stanza_config.services = [services] if not isinstance(services, list) else services
-
-            topics = stanza_config.get('topics') or []
-            stanza_config.topics = [topics] if not isinstance(topics, list) else topics
-
-            flags = globre.EXACT
-
-            if stanza_config.case_insensitive:
-                flags |= IGNORECASE
-
-            patterns = stanza_config.patterns
-            stanza_config.pattern_matcher_list = [patterns] if not isinstance(patterns, list) else patterns
-            stanza_config.pattern_matcher_list = [globre.compile(elem, flags) for elem in patterns]
-
-            if not os.path.exists(stanza_config.pickup_from):
-                logger.warn('Pickup dir `%s` does not exist (%s)', stanza_config.pickup_from, stanza)
-
-        for item in empty:
-            del self.pickup_config[item]
-
-        # Ok, now that we have configured everything that pickup.conf had
-        # we still need to make it aware of services and how to pick them up from FS.
-
-        stanza = 'zato_internal_service_hot_deploy'
-        orig_patterns = '*.py'
-        stanza_config = Bunch({
-            'name': stanza,
-            'pickup_from': self.hot_deploy_config.pickup_dir,
-            'orig_patterns': orig_patterns,
-            'patterns': [globre.compile(orig_patterns, globre.EXACT | IGNORECASE)],
-            'read_on_pickup': False,
-            'parse_on_pickup': False,
-            'delete_after_pickup': self.hot_deploy_config.delete_after_pickup,
-            'is_service_hot_deploy': True,
-        })
-
-        self.pickup_config[stanza] = stanza_config
-
-        # Go over all the stanza configuration items and add new ones
-        # without live regexp objects - this is needed because such objects
-        # cannot be serialised to JSON which is what is used to provide
-        # the stanza configuration on input to handler services.
-        for name in list(self.pickup_config.keys()):
-            config = self.pickup_config[name]
-
-            new_name = 'zato_orig_{}'.format(name)
-            new_config = Bunch()
-            new_config.name = new_name
-
-            # We add all they keys except for a specific one,
-            # the one with live Python objects,
-            # but 'orig_patterns', they one with a list, stays.
-            for key, value in config.items():
-                if key in ('name', 'pattern_matcher_list'):
-                    continue
-                else:
-                    new_config[key] = value
-
-            # Set the new key now
-            self.pickup_config[new_name] = new_config
-
-        self.file_transfer = FileTransferManager(self)#, self.pickup_config)
-
-        for channel_name, config in self.pickup_config.items():
-            self.file_transfer.create(config)
-
-        spawn_greenlet(self.file_transfer.run)
 
 # ################################################################################################################################
 

@@ -76,6 +76,10 @@
             'pickup_from',
             'ftp_source_name',
             'sftp_source_name',
+
+            {% comment %} 10 {% endcomment %}
+            'case_sensitive',
+
         ]
     }
     </script>
@@ -155,6 +159,9 @@
                         {% comment %} 10 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 10 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
 
                 </thead>
@@ -243,6 +250,9 @@
                         <td class='ignore'>{{ item.ftp_source_name }}</td>
                         <td class='ignore'>{{ item.sftp_source_name }}</td>
 
+                        {% comment %} 11 {% endcomment %}
+                        <td class='ignore'>{{ item.case_sensitive }}</td>
+
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -300,6 +310,13 @@
                             <label>
                             Line-by-line
                             {{ create_form.line_by_line }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Case sens.
+                            {{ create_form.case_sensitive }}
                             </label>
 
                             </td>
@@ -431,6 +448,13 @@
                             <label>
                             Line-by-line
                             {{ edit_form.line_by_line }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Case sens.
+                            {{ edit_form.case_sensitive }}
                             </label>
 
                             </td>

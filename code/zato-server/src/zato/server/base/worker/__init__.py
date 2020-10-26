@@ -77,6 +77,7 @@ from zato.server.connection.sms.twilio import TwilioAPI, TwilioConnStore
 from zato.server.connection.web_socket import ChannelWebSocket
 from zato.server.connection.vault import VaultConnAPI
 from zato.server.ext.zunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
+from zato.server.file_transfer.api import FileTransferAPI
 from zato.server.generic.api.channel_file_transfer import ChannelFileTransferWrapper
 from zato.server.generic.api.def_kafka import DefKafkaWrapper
 from zato.server.generic.api.outconn_im_slack import OutconnIMSlackWrapper
@@ -253,6 +254,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Caches
         self.cache_api = CacheAPI(self.server)
 
+        # File transfer
+        self.file_transfer_api = CacheAPI(self.server)
+
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER: self.channel_file_transfer,
@@ -321,6 +325,11 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Caches
         self.init_caches()
+
+        # File transfer - started only if this is the very first process started
+        # among possibly multiple processes of this server.
+        if self.server.is_starting_first:
+            self.init_file_transfer()
 
         # API keys
         self.update_apikeys()
@@ -848,6 +857,148 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             cache = getattr(self.worker_config, 'cache_{}'.format(name))
             for value in cache.values():
                 self.cache_api.create(bunchify(value['config']))
+
+# ################################################################################################################################
+
+    def init_file_transfer(self):
+
+        for value in self.worker_config.channel_file_transfer.values():
+            config = value['config']
+            self.logger.warn('RRR %s', value)
+
+        '''
+        {'id': 19,
+         'name': '11',
+         'type_': 'channel-file-transfer',
+         'is_active': True,
+         'is_internal': False,
+         'cache_expiry': None,
+         'address': None,
+         'port': None,
+         'timeout': None,
+         'data_format': None,
+         'is_channel': True,
+         'is_outconn': False,
+         'version': None,
+         'extra': None,
+         'pool_size': 1,
+         'username': None,
+         'username_type': None,
+         'secret': None,
+         '_encryption_needed': True,
+         '_encrypted_in_odb': False,
+         'secret_type': None,
+         'sec_use_rbac': False,
+         'conn_def_id': None,
+         'cache_id': None,
+         'cluster_id': 1,
+         'source_type': 'local',
+         'pickup_from': 22211,
+         'service_list': None,
+         'topic_list': None,
+         'move_processed_to': None,
+         'file_patterns': '*',
+         'parse_with': None,
+         'read_on_pickup': None,
+         'parse_on_pickup': None,
+         'delete_after_pickup': None,
+         'ftp_source_id': None,
+         'sftp_source_id': None,
+         'scheduler_job_id': 15
+        }
+        '''
+
+        '''
+        empty = []
+
+        # Fix up booleans and paths
+        for channel_name, channel_config in self.pickup_config.items():
+
+            # user_config_items is empty by default
+            if not channel_config:
+                empty.append(channel_name)
+                continue
+
+            channel_config.name = channel_name
+            channel_config.read_on_pickup = asbool(channel_config.get('read_on_pickup', True))
+            channel_config.parse_on_pickup = asbool(channel_config.get('parse_on_pickup', True))
+            channel_config.delete_after_pickup = asbool(channel_config.get('delete_after_pickup', True))
+            channel_config.case_insensitive = asbool(channel_config.get('case_insensitive', True))
+            channel_config.pickup_from = absolutize(channel_config.pickup_from, self.base_dir)
+            channel_config.is_service_hot_deploy = False
+
+            mpt = channel_config.get('move_processed_to')
+            channel_config.move_processed_to = absolutize(mpt, self.base_dir) if mpt else None
+
+            services = channel_config.get('services') or []
+            channel_config.services = [services] if not isinstance(services, list) else services
+
+            topics = channel_config.get('topics') or []
+            channel_config.topics = [topics] if not isinstance(topics, list) else topics
+
+            flags = globre.EXACT
+
+            if channel_config.case_insensitive:
+                flags |= IGNORECASE
+
+            patterns = channel_config.patterns
+            channel_config.pattern_matcher_list = [patterns] if not isinstance(patterns, list) else patterns
+            channel_config.pattern_matcher_list = [globre.compile(elem, flags) for elem in patterns]
+
+            if not os.path.exists(channel_config.pickup_from):
+                logger.warn('Pickup dir `%s` does not exist (%s)', channel_config.pickup_from, channel_name)
+
+        for item in empty:
+            del self.pickup_config[item]
+
+        # Ok, now that we have configured everything that pickup.conf had
+        # we still need to make it aware of services and how to pick them up from FS.
+
+        channel_name = 'zato_internal_service_hot_deploy'
+        orig_patterns = '*.py'
+        channel_config = Bunch({
+            'name': channel_name,
+            'pickup_from': self.hot_deploy_config.pickup_dir,
+            'orig_patterns': orig_patterns,
+            'patterns': [globre.compile(orig_patterns, globre.EXACT | IGNORECASE)],
+            'read_on_pickup': False,
+            'parse_on_pickup': False,
+            'delete_after_pickup': self.hot_deploy_config.delete_after_pickup,
+            'is_service_hot_deploy': True,
+        })
+
+        self.pickup_config[channel_name] = channel_config
+
+        # Go over all the channel configuration items and add new ones
+        # without live regexp objects - this is needed because such objects
+        # cannot be serialised to JSON which is what is used to provide
+        # the channel configuration on input to handler services.
+        for name in list(self.pickup_config.keys()):
+            config = self.pickup_config[name]
+
+            new_name = 'zato_orig_{}'.format(name)
+            new_config = Bunch()
+            new_config.name = new_name
+
+            # We add all they keys except for a specific one,
+            # the one with live Python objects,
+            # but 'orig_patterns', they one with a list, stays.
+            for key, value in config.items():
+                if key in ('name', 'pattern_matcher_list'):
+                    continue
+                else:
+                    new_config[key] = value
+
+            # Set the new key now
+            self.pickup_config[new_name] = new_config
+
+        self.file_transfer = FileTransferManager(self)
+
+        for channel_name, config in self.pickup_config.items():
+            self.file_transfer.create(config)
+
+        spawn_greenlet(self.file_transfer.run)
+        '''
 
 # ################################################################################################################################
 
