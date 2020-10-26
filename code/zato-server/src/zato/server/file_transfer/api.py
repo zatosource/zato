@@ -16,9 +16,6 @@ from importlib import import_module
 from shutil import copy as shutil_copy
 from traceback import format_exc
 
-# Bunch
-from bunch import Bunch
-
 # Zato
 from zato.common.util.api import hot_deploy, spawn_greenlet
 from .observer.local_ import LocalObserver

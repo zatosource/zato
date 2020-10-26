@@ -18,6 +18,7 @@ from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.odb.query.generic import connection_list
 from zato.common.util.api import parse_simple_type
+from zato.common.util.eval_ import as_bool
 from zato.server.generic.connection import GenericConnection
 from zato.server.service import Bool, Int
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
@@ -94,6 +95,9 @@ class _CreateEdit(_BaseService):
         for key, value in raw_request.items():
             if key not in data:
                 value = parse_simple_type(value)
+                for bool_prefix in self.server.sio_config.bool_config.prefixes:
+                    if key.startswith(bool_prefix):
+                        value = as_bool(value)
                 data[key] = value
 
         conn = GenericConnection.from_dict(data)
@@ -126,8 +130,6 @@ class _CreateEdit(_BaseService):
             session.commit()
 
             instance = self._get_instance_by_name(session, ModelGenericConn, data.type_, data.name)
-
-            self.logger.warn('DDD %r %r', instance.name, type(instance.name))
 
             self.response.payload.id = instance.id
             self.response.payload.name = instance.name

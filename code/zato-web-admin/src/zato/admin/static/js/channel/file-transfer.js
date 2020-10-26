@@ -95,7 +95,7 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
 
     let source_html = $.fn.zato.empty_value;
     let pickup_from_html = '';
-    let recipients_html = '';
+    let recipients_html = '<span class="form_hint">---</span>';
 
     if(item.source_type == 'local') {
         source_html = 'Local';
@@ -115,7 +115,6 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
 
         for(let idx=0; idx < item.service_list.length; idx++) {
             let service_name = item.service_list[idx];
-            console.log('QQQ '+ service_name);
         }
     }
 
@@ -143,12 +142,12 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
 
     // 5
     row += String.format("<td class='ignore'>{0}</td>", item.topic_list);
-    row += String.format("<td class='ignore'>{0}</td>", item.read_on_pickup);
+    row += String.format("<td class='ignore'>{0}</td>", item.should_read_on_pickup);
 
     // 6
-    row += String.format("<td class='ignore'>{0}</td>", item.parse_on_pickup);
+    row += String.format("<td class='ignore'>{0}</td>", item.should_parse_on_pickup);
     row += String.format("<td class='ignore'>{0}</td>", item.parse_with);
-    row += String.format("<td class='ignore'>{0}</td>", item.delete_after_pickup);
+    row += String.format("<td class='ignore'>{0}</td>", item.should_delete_after_pickup);
 
     // 7
     row += String.format("<td class='ignore'>{0}</td>", item.is_internal);
@@ -163,12 +162,18 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     // 9
     row += String.format("<td class='ignore'>{0}</td>", item.service_list_json);
     row += String.format("<td class='ignore'>{0}</td>", item.topic_list_json);
-    row += String.format("<td class='ignore'>{0}</td>", item.line_by_line);
+    row += String.format("<td class='ignore'>{0}</td>", item.is_line_by_line);
 
     // 10
     row += String.format("<td class='ignore'>{0}</td>", item.pickup_from);
     row += String.format("<td class='ignore'>{0}</td>", item.ftp_source_name);
     row += String.format("<td class='ignore'>{0}</td>", item.sftp_source_name);
+
+    // 11
+    row += String.format("<td class='ignore'>{0}</td>", item.is_case_sensitive);
+
+    console.log('AAA ' + item.is_case_sensitive);
+    console.log('BBB ' + item.is_line_by_line);
 
     if(include_tr) {
         row += '</tr>';
