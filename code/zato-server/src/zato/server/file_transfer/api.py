@@ -57,10 +57,6 @@ class FileTransferEventHandler:
 
             file_name = os.path.basename(transfer_event.src_path) # type: str
 
-            print()
-            print(222, self.config)
-            print()
-
             if not self.manager.should_handle(file_name, self.config.pattern_matcher_list):
                 return
 
@@ -119,7 +115,7 @@ class FileTransferEvent(object):
 
 # ################################################################################################################################
 
-class FileTransferManager(object):
+class FileTransferAPI(object):
     """ Manages file transfer observers and callbacks.
     """
     def __init__(self, server):
@@ -131,10 +127,6 @@ class FileTransferManager(object):
 
     def create(self, config):
         # type: (Bunch) -> None
-
-        print()
-        print(444, config)
-        print()
 
         # Ignore internal channels
         if config.name.startswith(_zato_orig_marker):

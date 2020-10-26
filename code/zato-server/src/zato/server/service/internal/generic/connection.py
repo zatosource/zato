@@ -94,7 +94,6 @@ class _CreateEdit(_BaseService):
         for key, value in raw_request.items():
             if key not in data:
                 value = parse_simple_type(value)
-                self.logger.warn('EEE %s %s %r', key, value, type(value))
                 data[key] = value
 
         conn = GenericConnection.from_dict(data)
@@ -127,6 +126,8 @@ class _CreateEdit(_BaseService):
             session.commit()
 
             instance = self._get_instance_by_name(session, ModelGenericConn, data.type_, data.name)
+
+            self.logger.warn('DDD %r %r', instance.name, type(instance.name))
 
             self.response.payload.id = instance.id
             self.response.payload.name = instance.name

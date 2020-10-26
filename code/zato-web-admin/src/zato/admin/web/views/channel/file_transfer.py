@@ -31,7 +31,7 @@ class Index(_Index):
         output_required = 'id', 'name', 'is_active', 'source_type', 'pickup_from'
         output_optional = 'service_list', 'topic_list', 'move_processed_to', 'file_patterns', 'parse_with', 'read_on_pickup', \
             'parse_on_pickup', 'delete_after_pickup', 'ftp_source_id', 'sftp_source_id', 'scheduler_job_id', \
-            'ftp_source_name', 'sftp_source_name'
+            'ftp_source_name', 'sftp_source_name', 'case_sensitive'
         output_repeated = True
 
 # ################################################################################################################################
@@ -68,7 +68,7 @@ class _CreateEdit(CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'name', 'is_active', 'source_type', 'pickup_from'
         input_optional = 'service_list', 'topic_list', 'move_processed_to', 'file_patterns', 'parse_with', 'read_on_pickup', \
-            'parse_on_pickup', 'delete_after_pickup', 'ftp_source_id', 'sftp_source_id', 'scheduler_job_id'
+            'parse_on_pickup', 'delete_after_pickup', 'ftp_source_id', 'sftp_source_id', 'scheduler_job_id', 'case_sensitive'
         output_required = 'id', 'name'
 
     def populate_initial_input_dict(self, initial_input_dict):
