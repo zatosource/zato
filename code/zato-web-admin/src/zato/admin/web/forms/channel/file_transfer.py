@@ -42,6 +42,8 @@ class CreateForm(forms.Form):
     delete_after_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     source_type = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:15%'}))
 
+    case_sensitive = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+
     ftp_source_id = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:84%', 'class':'hidden'}))
     sftp_source_id = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:84%', 'class':'hidden'}))
 
