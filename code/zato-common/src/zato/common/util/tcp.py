@@ -31,48 +31,22 @@ def get_free_port(start=30000):
 # ################################################################################################################################
 
 # Taken from http://grodola.blogspot.com/2014/04/reimplementing-netstat-in-cpython.html
-def is_port_taken(port, is_linux=sys_platform.startswith('linux')):
+def is_port_taken(port):
 
-    # Shortcut for Linux so as not to bind to a socket which in turn means waiting until it's closed by OS
+    # stdlib
+    from platform import system as platform_system
+
+    # psutil
+    import psutil
+
+    is_linux=platform_system().lower()=='linux'
+
+    # Short for Linux so as not to bind to a socket which in turn means waiting until it's closed by OS
     if is_linux:
-
-        with open('/proc/net/tcp') as f:
-
-            # Skip the first line, the one with comments
-            f.readline()
-
-            for line in f: # type: str
-
-                # Each line contains many entries ..
-                line = line.split()
-
-                # .. the second one is the address ..
-                local_address = line[1]
-
-                # .. which contains the port (as hex) ..
-                _, line_port = local_address.split(':')
-
-                # .. which we now convert to a decimal integer ..
-                line_port = int(line_port, 16)
-
-                # .. and if it matches, we return True
-                if line_port == port:
-                    return True
-    else:
-
-        # This code waits for the Windows port of Zato
-
-        """
-        # psutil
-        import psutil
-
         for conn in psutil.net_connections(kind='tcp'):
             if conn.laddr[1] == port and conn.status == psutil.CONN_LISTEN:
                 return True
-        """
-
-        # The code below is for Mac
-
+    else:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             sock.bind(('', port))
