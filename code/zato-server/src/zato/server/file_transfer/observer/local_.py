@@ -13,7 +13,7 @@ from gevent.monkey import patch_all
 patch_all()
 
 # stdlib
-import logging
+from logging import getLogger
 
 # gevent
 from gevent import sleep
@@ -28,20 +28,20 @@ from zato.common.util.api import spawn_greenlet
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class FSOBserver:
-    """ A file-system observer used on systems other than Linux.
-    This is needed for gevent interoperability.
+class LocalObserver:
+    """ A local file-system observer.
     """
     def __init__(self, timeout=0.25):
         self.timeout = timeout
         self.event_handler = None
-        self.path = '<initial-fs-observer>'
+        self.path = '<initial-local-observer>'
         self.is_recursive = False
+        self.keep_running = True
 
     def schedule(self, event_handler, path, recursive):
         self.event_handler = event_handler
@@ -62,7 +62,7 @@ class FSOBserver:
         # Take an initial snapshot
         snapshot = DirectorySnapshot(path, recursive=is_recursive)
 
-        while True:
+        while self.keep_running:
 
             # The latest snapshot ..
             new_snapshot = DirectorySnapshot(path, recursive=is_recursive)
@@ -96,7 +96,7 @@ if __name__ == '__main__':
     path = '/tmp'
     is_recursive = False
 
-    observer = FSOBserver()
+    observer = LocalObserver()
     observer.schedule(event_handler, path, is_recursive)
 
     observer.start()

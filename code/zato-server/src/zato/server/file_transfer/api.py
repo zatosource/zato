@@ -19,12 +19,9 @@ from traceback import format_exc
 # Bunch
 from bunch import Bunch
 
-# Watchdog
-from watchdog.events import FileSystemEventHandler
-
 # Zato
 from zato.common.util.api import hot_deploy, spawn_greenlet
-from zato.server.pickup.observer import FSOBserver as Observer
+from .observer.local_ import LocalObserver
 
 # ################################################################################################################################
 
@@ -37,30 +34,30 @@ _zato_orig_marker = 'zato_orig_'
 
 # ################################################################################################################################
 
-class PickupEventHandler(FileSystemEventHandler):
+class PickupEventHandler:
 
-    def __init__(self, manager, stanza, config):
-        # type: (PickupManager, str, Bunch) -> None
+    def __init__(self, manager, config_name, config):
+        # type: (FileTransferManager, str, Bunch) -> None
 
         self.manager = manager
-        self.stanza = stanza
+        self.config_name = config_name
         self.config = config
 
-    def on_created(self, wd_event):
-        # type: (FileSystemEvent) -> None
+    def on_created(self, transfer_event):
+        # type: (FileTransferEvent) -> None
 
         try:
 
-            file_name = os.path.basename(wd_event.src_path) # type: str
+            file_name = os.path.basename(transfer_event.src_path) # type: str
 
-            if not self.manager.should_pick_up(file_name, self.config.patterns):
+            if not self.manager.should_handle(file_name, self.config.patterns):
                 return
 
-            pe = PickupEvent()
-            pe.full_path = wd_event.src_path
-            pe.base_dir = os.path.dirname(wd_event.src_path)
+            pe = FileTransferEvent()
+            pe.full_path = transfer_event.src_path
+            pe.base_dir = os.path.dirname(transfer_event.src_path)
             pe.file_name = file_name
-            pe.stanza = self.stanza
+            pe.config_name = self.config_name
 
             if self.config.is_service_hot_deploy:
                 spawn_greenlet(hot_deploy, self.manager.server, pe.file_name, pe.full_path, self.config.delete_after_pickup)
@@ -91,17 +88,17 @@ class PickupEventHandler(FileSystemEventHandler):
 
 # ################################################################################################################################
 
-class PickupEvent(object):
+class FileTransferEvent(object):
     """ Encapsulates information about a file picked up from file system.
     """
-    __slots__ = ('base_dir', 'file_name', 'full_path', 'stanza', 'ts_utc', 'raw_data', 'data', 'has_raw_data', 'has_data',
+    __slots__ = ('base_dir', 'file_name', 'full_path', 'config_name', 'ts_utc', 'raw_data', 'data', 'has_raw_data', 'has_data',
         'parse_error')
 
     def __init__(self):
         self.base_dir = None      # type: str
         self.file_name = None     # type: str
         self.full_path = None     # type: str
-        self.stanza = None        # type: str
+        self.config_name = None   # type: str
         self.ts_utc = None        # type: str
         self.raw_data = ''        # type: str
         self.data = _singleton    # type: str
@@ -111,8 +108,8 @@ class PickupEvent(object):
 
 # ################################################################################################################################
 
-class PickupManager(object):
-    """ Manages inotify listeners and callbacks.
+class FileTransferManager(object):
+    """ Manages file transfer observers and callbacks.
     """
     def __init__(self, server, config):
 
@@ -125,17 +122,17 @@ class PickupManager(object):
         # Unlike the main config dictionary, this one is keyed by incoming directories
         self.callback_config = Bunch()
 
-        for stanza, section_config in self.config.items():
+        for config_name, section_config in self.config.items():
 
-            if stanza.startswith(_zato_orig_marker):
+            if config_name.startswith(_zato_orig_marker):
                 continue
 
             cb_config = self.callback_config.setdefault(section_config.pickup_from, Bunch())
             cb_config.update(section_config)
-            cb_config.stanza = stanza
+            cb_config.config_name = config_name
 
-            observer = Observer(0.25)
-            event_handler = PickupEventHandler(self, stanza, section_config)
+            observer = LocalObserver(0.25)
+            event_handler = PickupEventHandler(self, config_name, section_config)
             observer.schedule(event_handler, section_config.pickup_from, recursive=False)
 
             self.observers.append(observer)
@@ -168,29 +165,30 @@ class PickupManager(object):
 
 # ################################################################################################################################
 
-    def should_pick_up(self, name, patterns):
+    def should_handle(self, name, patterns):
         for pattern in patterns:
             if pattern.match(name):
                 return True
 
 # ################################################################################################################################
 
-    def invoke_callbacks(self, pickup_event, services, topics):
+    def invoke_callbacks(self, transfer_event, services, topics):
+        # type: (FileTransferEvent, list, list) -> None
 
-        config_orig_name = '{}{}'.format(_zato_orig_marker, pickup_event.stanza)
+        config_orig_name = '{}{}'.format(_zato_orig_marker, transfer_event.config_name)
         config = self.server.pickup_config[config_orig_name]
 
         request = {
-            'base_dir': pickup_event.base_dir,
-            'file_name': pickup_event.file_name,
-            'full_path': pickup_event.full_path,
-            'stanza': pickup_event.stanza,
+            'base_dir': transfer_event.base_dir,
+            'file_name': transfer_event.file_name,
+            'full_path': transfer_event.full_path,
+            'config_name': transfer_event.config_name,
             'ts_utc': datetime.utcnow().isoformat(),
-            'raw_data': pickup_event.raw_data,
-            'data': pickup_event.data if pickup_event.data is not _singleton else None,
-            'has_raw_data': pickup_event.has_raw_data,
-            'has_data': pickup_event.has_data,
-            'parse_error': pickup_event.parse_error,
+            'raw_data': transfer_event.raw_data,
+            'data': transfer_event.data if transfer_event.data is not _singleton else None,
+            'has_raw_data': transfer_event.has_raw_data,
+            'has_data': transfer_event.has_data,
+            'parse_error': transfer_event.parse_error,
             'config': config,
         }
 
@@ -209,6 +207,8 @@ class PickupManager(object):
     def post_handle(self, full_path, config):
         """ Runs after callback services have been already invoked, performs clean up if configured to.
         """
+        # type: (str, Bunch) -> None
+
         if config.move_processed_to:
             shutil_copy(full_path, config.move_processed_to)
 
@@ -218,7 +218,6 @@ class PickupManager(object):
 # ################################################################################################################################
 
     def run(self):
-
         for observer in self.observers:
             observer.start()
 
