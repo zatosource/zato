@@ -36,19 +36,19 @@ class CreateForm(forms.Form):
     file_patterns = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.FILE_PATTERNS)
     parse_with = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
 
-    read_on_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    parse_on_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    should_read_on_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    should_parse_on_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
-    delete_after_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    should_delete_after_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     source_type = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:15%'}))
 
-    case_sensitive = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    is_case_sensitive = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
     ftp_source_id = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:84%', 'class':'hidden'}))
     sftp_source_id = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:84%', 'class':'hidden'}))
 
     scheduler_job_id = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
-    line_by_line = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_line_by_line = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
     ftp_source_name = forms.HiddenInput()
     sftp_source_name = forms.HiddenInput()

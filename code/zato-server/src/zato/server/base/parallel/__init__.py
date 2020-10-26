@@ -15,16 +15,12 @@ from datetime import datetime, timedelta
 from logging import INFO, WARN
 from platform import system as platform_system
 from random import seed as random_seed
-from re import IGNORECASE
 from tempfile import mkstemp
 from traceback import format_exc
 from uuid import uuid4
 
 # gevent
 import gevent.monkey # Needed for Cassandra
-
-# globre
-import globre
 
 # Paste
 from paste.util.converters import asbool
