@@ -36,7 +36,7 @@
 
             {% comment %} 2 {% endcomment %}
             '_pickup_from_html',
-            'move_processed_to',
+            '_move_processed_to_html',
 
             {% comment %} 3 {% endcomment %}
             '_recipient',
@@ -79,7 +79,8 @@
 
             {% comment %} 10 {% endcomment %}
             'is_case_sensitive',
-
+            'move_processed_to',
+            'is_hot_deploy',
         ]
     }
     </script>
@@ -163,6 +164,8 @@
 
                         {% comment %} 10 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -192,7 +195,7 @@
                             <br/>
                             {{ item.file_patterns }}
                         </td>
-                        <td>{{ item.move_processed_to }}</td>
+                        <td>{{ item.move_processed_to|default:'<span class="form_hint">---</span>' }}</td>
 
                         {% comment %} 3 {% endcomment %}
 
@@ -252,6 +255,8 @@
 
                         {% comment %} 11 {% endcomment %}
                         <td class='ignore'>{{ item.is_case_sensitive }}</td>
+                        <td class='ignore'>{{ item.move_processed_to }}</td>
+                        <td class='ignore'>{{ item.is_hot_deploy }}</td>
 
                     </tr>
                 {% endfor %}
@@ -309,7 +314,13 @@
                             {{ create_form.should_delete_after_pickup }}
                             </label>
 
-                            |
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                            </td>
+                            <td>
 
                             <label>
                             Line-by-line
@@ -321,6 +332,13 @@
                             <label>
                             Case sens.
                             {{ create_form.is_case_sensitive }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Hot deploy
+                            {{ create_form.is_hot_deploy }}
                             </label>
 
                             </td>
@@ -451,7 +469,13 @@
                             {{ edit_form.should_delete_after_pickup }}
                             </label>
 
-                            |
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                            </td>
+                            <td>
 
                             <label>
                             Line-by-line
@@ -463,6 +487,13 @@
                             <label>
                             Case sens.
                             {{ edit_form.is_case_sensitive }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Hot deploy
+                            {{ edit_form.is_hot_deploy }}
                             </label>
 
                             </td>
