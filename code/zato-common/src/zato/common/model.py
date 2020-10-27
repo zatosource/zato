@@ -23,7 +23,7 @@ class FileTransferChannel(object):
         self.id = None        # type: int
         self.name = None      # type: str
 
-        self.is_active = None     # type: bool
+        self.is_hot_deploy = None # type: bool
         self.source_type = None   # type: str
         self.pickup_from = ''     # type: str
         self.service_list = None  # type: list

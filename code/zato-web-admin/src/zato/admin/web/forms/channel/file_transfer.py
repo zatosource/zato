@@ -49,6 +49,7 @@ class CreateForm(forms.Form):
 
     scheduler_job_id = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
     is_line_by_line = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_hot_deploy = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
     ftp_source_name = forms.HiddenInput()
     sftp_source_name = forms.HiddenInput()
