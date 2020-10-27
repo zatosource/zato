@@ -94,11 +94,9 @@ class _CreateEdit(_BaseService):
 
         for key, value in raw_request.items():
             if key not in data:
-                value = parse_simple_type(value)
 
-                for bool_prefix in self.server.sio_config.bool_config.prefixes:
-                    if key.startswith(bool_prefix):
-                        value = as_bool(value)
+                value = parse_simple_type(value)
+                value = self._sio.eval_(key, value, self.server.encrypt)
 
                 data[key] = value
 
