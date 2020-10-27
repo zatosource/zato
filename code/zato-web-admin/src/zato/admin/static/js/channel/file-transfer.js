@@ -41,10 +41,10 @@ $.fn.zato.channel.file_transfer.on_source_type_changed = function(prefix) {
         let ftp       = $(id_prefix + 'ftp_source_id');
         let sftp      = $(id_prefix + 'sftp_source_id');
 
-        let scheduler_create_row = $('tr_create_scheduler_job_id');
-        let scheduler_edit_row = $('tr_edit_scheduler_job_id');
+        let scheduler_create_row = $('#tr_create_scheduler_job_id');
+        let scheduler_edit_row = $('#tr_edit_scheduler_job_id');
 
-        if(source_type=='local') {
+        if(source_type == 'local') {
 
             scheduler_create_row.addClass('hidden');
             scheduler_edit_row.addClass('hidden');
@@ -53,7 +53,7 @@ $.fn.zato.channel.file_transfer.on_source_type_changed = function(prefix) {
             sftp.addClass('hidden');
         }
 
-        else if(source_type=='ftp') {
+        else if(source_type == 'ftp') {
 
             scheduler_create_row.removeClass('hidden');
             scheduler_edit_row.removeClass('hidden');
@@ -62,7 +62,8 @@ $.fn.zato.channel.file_transfer.on_source_type_changed = function(prefix) {
             sftp.addClass('hidden');
         }
 
-        else if(source_type=='sftp') {
+        else if(source_type == 'sftp') {
+
             scheduler_create_row.removeClass('hidden');
             scheduler_edit_row.removeClass('hidden');
 
@@ -85,6 +86,15 @@ $.fn.zato.channel.file_transfer.edit = function(id) {
     let instance = $.fn.zato.data_table.data[id];
     let source_type = $('#id_edit-'+ instance.source_type +'_source_id');
     source_type.removeClass('hidden');
+
+    if(instance.source_type != "local") {
+
+        let scheduler_create_row = $('#tr_create_scheduler_job_id');
+        let scheduler_edit_row = $('#tr_edit_scheduler_job_id');
+
+        scheduler_create_row.removeClass('hidden');
+        scheduler_edit_row.removeClass('hidden');
+    };
 
     $('#id_edit-ftp_source_name').val(instance.ftp_source_name);
     $('#id_edit-sftp_source_name').val(instance.sftp_source_name);

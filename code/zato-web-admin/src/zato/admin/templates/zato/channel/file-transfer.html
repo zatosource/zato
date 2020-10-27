@@ -277,7 +277,7 @@
                 <form action="{% url "channel-file-transfer-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:8%">
+                            <td style="vertical-align:middle;width:13%">
                                 <label for="id_name">Name</label>
                             </td>
                             <td>{{ create_form.name }}</td>
@@ -511,7 +511,7 @@
                         </tr>
 
 
-                        <tr>
+                        <tr id="tr_edit_scheduler_job_id" class="hidden">
                             <td style="vertical-align:middle">
                                 <label for="id_edit-scheduler_job_id">Schedule</label>
                             </td>
