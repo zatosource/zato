@@ -38,20 +38,34 @@ $.fn.zato.channel.file_transfer.on_source_type_changed = function(prefix) {
 
     if(source_type) {
 
-        let ftp = $(id_prefix + 'ftp_source_id');
-        let sftp = $(id_prefix + 'sftp_source_id');
+        let ftp       = $(id_prefix + 'ftp_source_id');
+        let sftp      = $(id_prefix + 'sftp_source_id');
+
+        let scheduler_create_row = $('tr_create_scheduler_job_id');
+        let scheduler_edit_row = $('tr_edit_scheduler_job_id');
 
         if(source_type=='local') {
+
+            scheduler_create_row.addClass('hidden');
+            scheduler_edit_row.addClass('hidden');
+
             ftp.addClass('hidden');
             sftp.addClass('hidden');
         }
 
         else if(source_type=='ftp') {
+
+            scheduler_create_row.removeClass('hidden');
+            scheduler_edit_row.removeClass('hidden');
+
             ftp.removeClass('hidden');
             sftp.addClass('hidden');
         }
 
         else if(source_type=='sftp') {
+            scheduler_create_row.removeClass('hidden');
+            scheduler_edit_row.removeClass('hidden');
+
             sftp.removeClass('hidden');
             ftp.addClass('hidden');
         }
