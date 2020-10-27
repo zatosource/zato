@@ -13,7 +13,6 @@ import errno
 import socket
 from datetime import datetime, timedelta
 from logging import getLogger
-from sys import platform as sys_platform
 from time import sleep
 
 # ################################################################################################################################
@@ -41,7 +40,7 @@ def is_port_taken(port):
 
     is_linux=platform_system().lower()=='linux'
 
-    # Short for Linux so as not to bind to a socket which in turn means waiting until it's closed by OS
+    # Shortcut for Linux so as not to bind to a socket which in turn means waiting until it's closed by OS
     if is_linux:
         for conn in psutil.net_connections(kind='tcp'):
             if conn.laddr[1] == port and conn.status == psutil.CONN_LISTEN:
