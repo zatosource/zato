@@ -17,7 +17,7 @@ configparser==3.7.1
 convertdate==2.0.3.1
 coverage==3.7.1
 crontab==0.22.9
-cryptography==2.9.2
+cryptography==3.2
 Cython==3.0a6
 dateparser==0.7.6
 decorator==3.4.0
