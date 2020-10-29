@@ -37,9 +37,10 @@ except ImportError:
 
 from zato.admin.settings import ssl_key_file, ssl_cert_file, ssl_ca_certs, LB_AGENT_CONNECT_TIMEOUT
 from zato.admin.web import from_utc_to_user
-from zato.common import SEC_DEF_TYPE_NAME, ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
-from zato.common.util import get_lb_client as _get_lb_client
-from zato.common.util.json_ import dumps
+from zato.common.api import SEC_DEF_TYPE_NAME, ZATO_NONE, ZATO_SEC_USE_RBAC
+from zato.common.exception import ZatoException
+from zato.common.json_internal import dumps
+from zato.common.util.api import get_lb_client as _get_lb_client
 
 # ################################################################################################################################
 
@@ -57,6 +58,10 @@ slugify = slugify
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+
+SKIP_VALUE = 'zato.skip.value'
 
 # ################################################################################################################################
 
@@ -276,11 +281,19 @@ class _BaseView(object):
 
         for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional, default_attrs):
             if name != 'cluster_id':
-                value = \
-                    req.GET.get(name) or \
-                    req.GET.get(self.form_prefix + name) or \
-                    req.POST.get(self.form_prefix + name) or \
-                    req.zato.args.get(self.form_prefix + name)
+
+                value = req.GET.getlist(name)
+                if value:
+                    value = value if len(value) > 1 else value[0]
+
+                if not value:
+                    value = req.POST.getlist(self.form_prefix + name)
+                    if value:
+                        value = value if len(value) > 1 else value[0]
+
+                if not value:
+                    value = req.zato.args.get(self.form_prefix + name)
+
                 self.input[name] = value
 
         self.on_after_set_input()
@@ -353,6 +366,7 @@ class Index(_BaseView):
         names = tuple(chain(self.SimpleIO.output_required, self.SimpleIO.output_optional))
 
         for msg_item in item_list:
+
             item = self.output_class()
             for name in names:
                 value = getattr(msg_item, name, None)
@@ -472,7 +486,10 @@ class CreateEdit(_BaseView):
 
             for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
                 if name not in input_dict and name not in self.input_dict:
-                    input_dict[name] = self.input.get(name)
+                    value = self.input.get(name)
+                    value = self.pre_process_item(name, value)
+                    if value != SKIP_VALUE:
+                        input_dict[name] = value
 
             self.input_dict.update(input_dict)
 
@@ -516,6 +533,9 @@ class CreateEdit(_BaseView):
 
         except Exception:
             return HttpResponseServerError(format_exc())
+
+    def pre_process_item(self, name, value):
+        return value
 
     def success_message(self, item):
         raise NotImplementedError('Must be implemented by a subclass')

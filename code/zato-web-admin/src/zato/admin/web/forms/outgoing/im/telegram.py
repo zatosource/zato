@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.common import TELEGRAM
+from zato.common.api import TELEGRAM
 
 default = TELEGRAM.DEFAULT
 timeout = TELEGRAM.TIMEOUT

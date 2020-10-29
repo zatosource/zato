@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2020, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,15 +10,16 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime
+from tempfile import NamedTemporaryFile
 from random import choice, randint
 from unittest import TestCase
 from uuid import uuid4
 
-# anyjson
-from anyjson import loads
-
 # Bunch
-from bunch import Bunch
+from bunch import Bunch, bunchify
+
+# ConfigObj
+from configobj import ConfigObj
 
 # mock
 from mock import MagicMock, Mock
@@ -32,14 +33,38 @@ from six import string_types
 # SQLAlchemy
 from sqlalchemy import create_engine
 
-# Python 2/3 compatibility
-from past.builtins import basestring, cmp, xrange
-
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, SIMPLE_IO
+from zato.common.api import CHANNEL, DATA_FORMAT, SIMPLE_IO
+from zato.common.json_internal import loads
 from zato.common.log_message import CID_LENGTH
 from zato.common.odb import model
-from zato.common.util import is_port_taken, new_cid
+from zato.common.odb.model import Cluster, ElasticSearch
+from zato.common.odb.api import SessionWrapper, SQLConnectionPool
+from zato.common.odb.query import search_es_list
+from zato.common.simpleio_ import get_bytes_to_str_encoding, get_sio_server_config, simple_io_conf_contents
+from zato.common.py23_ import maxint
+from zato.common.util.api import is_port_taken, new_cid
+from zato.server.service import Service
+
+# Zato - Cython
+from zato.simpleio import CySimpleIO
+
+# Python 2/3 compatibility
+from past.builtins import basestring, cmp, unicode, xrange
+
+# ################################################################################################################################
+
+test_class_name = '<my-test-class>'
+
+# ################################################################################################################################
+
+class test_odb_data:
+    cluster_id = 1
+    name = 'my.name'
+    is_active = True
+    es_hosts = 'my.hosts'
+    es_timeout = 111
+    es_body_as = 'my.body_as'
 
 # ################################################################################################################################
 
@@ -181,7 +206,7 @@ def enrich_with_static_config(object_):
 
     object_._worker_config = Bunch(out_odoo=None, out_soap=None)
     object_._worker_store = Bunch(
-        sql_pool_store=None, stomp_outconn_api=None, outgoing_web_sockets=None, cassandra_api=None,
+        sql_pool_store=None, outgoing_web_sockets=None, cassandra_api=None,
         cassandra_query_api=None, email_smtp_api=None, email_imap_api=None, search_es_api=None, search_solr_api=None,
         target_matcher=Bunch(target_match=target_match, is_allowed=is_allowed), invoke_matcher=Bunch(is_allowed=is_allowed),
         vault_conn_api=None, sms_twilio_api=None)
@@ -293,8 +318,8 @@ class FakeServer(object):
 
 # ################################################################################################################################
 
-class ForceTypeWrapper(object):
-    """ Makes comparison between two ForceType elements use their names.
+class SIOElemWrapper(object):
+    """ Makes comparison between two SIOElem elements use their names.
     """
     def __init__(self, value):
         self.value = value
@@ -431,17 +456,150 @@ class ServiceTestCase(TestCase):
         self._check_sio_request_input(instance, request_data)
 
     def wrap_force_type(self, elem):
-        return ForceTypeWrapper(elem)
+        return SIOElemWrapper(elem)
 
 # ################################################################################################################################
 
 class ODBTestCase(TestCase):
 
     def setUp(self):
-        self.engine = create_engine('sqlite:///:memory:')
+        engine_url = 'sqlite:///:memory:'
+        pool_name = 'ODBTestCase.pool'
+
+        config = {
+            'engine': 'sqlite',
+            'sqlite_path': ':memory:',
+            'fs_sql_config': {
+                'engine': {
+                    'ping_query': 'SELECT 1'
+                }
+            }
+        }
+
+        # Create a standalone engine ..
+        self.engine = create_engine(engine_url)
+
+        # .. all ODB objects for that engine..
         model.Base.metadata.create_all(self.engine)
+
+        # .. an SQL pool too ..
+        self.pool = SQLConnectionPool(pool_name, config, config)
+
+        # .. a session wrapper on top of everything ..
+        self.session_wrapper = SessionWrapper()
+        self.session_wrapper.init_session(pool_name, config, self.pool)
+
+        # .. and all ODB objects for that wrapper's engine too ..
+        model.Base.metadata.create_all(self.session_wrapper.pool.engine)
+
+        # Unrelated to the above, used in individual tests
+        self.ODBTestModelClass = ElasticSearch
 
     def tearDown(self):
         model.Base.metadata.drop_all(self.engine)
+        self.ODBTestModelClass = None
 
+    def get_session(self):
+        return self.session_wrapper.session()
+
+    def get_sample_odb_orm_result(self, is_list):
+        # type: (bool) -> object
+
+        cluster = Cluster()
+        cluster.id = test_odb_data.cluster_id
+        cluster.name = 'my.cluster'
+        cluster.odb_type = 'sqlite'
+        cluster.broker_host = 'my.broker.host'
+        cluster.broker_port = 1234
+        cluster.lb_host = 'my.lb.host'
+        cluster.lb_port = 5678
+        cluster.lb_agent_port = 9012
+
+        es = self.ODBTestModelClass()
+        es.name = test_odb_data.name
+        es.is_active = test_odb_data.is_active
+        es.hosts = test_odb_data.es_hosts
+        es.timeout = test_odb_data.es_timeout
+        es.body_as = test_odb_data.es_body_as
+        es.cluster_id = test_odb_data.cluster_id
+
+        session = self.session_wrapper._session
+
+        session.add(cluster)
+        session.add(es)
+        session.commit()
+
+        session = self.session_wrapper._session
+
+        result = search_es_list(session, test_odb_data.cluster_id) # type: tuple
+        result = result[0] # type: SearchResults
+
+        # This is a one-element tuple of ElasticSearch ORM objects
+        result = result.result # type: tuple
+
+        return result if is_list else result[0]
+
+# ################################################################################################################################
+
+class MyODBService(Service):
+    class SimpleIO:
+        output = 'cluster_id', 'is_active', 'name'
+
+# ################################################################################################################################
+
+class MyODBServiceWithResponseElem(MyODBService):
+    class SimpleIO(MyODBService.SimpleIO):
+        response_elem = 'my_response_elem'
+
+# ################################################################################################################################
+
+class MyZatoClass:
+    def to_zato(self):
+        return {
+            'cluster_id': test_odb_data.cluster_id,
+            'is_active':  test_odb_data.is_active,
+            'name':       test_odb_data.name,
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class BaseSIOTestCase(TestCase):
+
+# ################################################################################################################################
+
+    def setUp(self):
+        self.maxDiff = maxint
+
+# ################################################################################################################################
+
+    def get_server_config(self, needs_response_elem=False):
+
+        with NamedTemporaryFile() as f:
+            contents = simple_io_conf_contents.format(bytes_to_str_encoding=get_bytes_to_str_encoding())
+            if isinstance(contents, unicode):
+                contents = contents.encode('utf8')
+            f.write(contents)
+            f.flush()
+
+            sio_fs_config = ConfigObj(f.name)
+            sio_fs_config = bunchify(sio_fs_config)
+
+        sio_server_config = get_sio_server_config(sio_fs_config)
+
+        if not needs_response_elem:
+            sio_server_config.response_elem = None
+
+        return sio_server_config
+
+# ################################################################################################################################
+
+    def get_sio(self, declaration, class_):
+
+        sio = CySimpleIO(self.get_server_config(), declaration)
+        sio.build(class_)
+
+        return sio
+
+# ################################################################################################################################
 # ################################################################################################################################

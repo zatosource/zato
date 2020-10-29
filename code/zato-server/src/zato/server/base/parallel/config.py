@@ -15,8 +15,9 @@ from logging import getLogger
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import RATE_LIMIT, SECRETS
-from zato.common.util import asbool
+from zato.common.api import RATE_LIMIT
+from zato.common.const import SECRETS
+from zato.common.util.api import asbool
 from zato.common.util.sql import elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
 from zato.server.config import ConfigDict
@@ -127,9 +128,10 @@ class ConfigLoader(object):
         query = self.odb.get_channel_amqp_list(server.cluster.id, True)
         self.config.channel_amqp = ConfigDict.from_query('channel_amqp', query, decrypt_func=self.decrypt)
 
-        # STOMP
-        query = self.odb.get_channel_stomp_list(server.cluster.id, True)
-        self.config.channel_stomp = ConfigDict.from_query('channel_stomp', query, decrypt_func=self.decrypt)
+        # File transfer
+        query = self.odb.get_channel_file_transfer_list(server.cluster.id, True)
+        self.config.channel_file_transfe = ConfigDict.from_query(
+            'channel_file_transfe', query, decrypt_func=self.decrypt, drop_opaque=True)
 
         # IBM MQ
         query = self.odb.get_channel_wmq_list(server.cluster.id, True)
@@ -185,10 +187,6 @@ class ConfigLoader(object):
         # SQL
         query = self.odb.get_out_sql_list(server.cluster.id, True)
         self.config.out_sql = ConfigDict.from_query('out_sql', query, decrypt_func=self.decrypt)
-
-        # STOMP
-        query = self.odb.get_out_stomp_list(server.cluster.id, True)
-        self.config.out_stomp = ConfigDict.from_query('out_stomp', query, decrypt_func=self.decrypt)
 
         # ZMQ channels
         query = self.odb.get_channel_zmq_list(server.cluster.id, True)
@@ -357,20 +355,16 @@ class ConfigLoader(object):
         # but actual code paths require the pre-3.0 format so let's prepare it here.
         self.config.simple_io = ConfigDict('simple_io', Bunch())
 
-        int_exact = self.sio_config.int.exact
-        int_suffix = self.sio_config.int.suffix
-        bool_prefix = self.sio_config.bool.prefix
+        int_exact = self.sio_config.int_config.exact
+        int_suffixes = self.sio_config.int_config.suffixes
+        bool_prefixes = self.sio_config.bool_config.prefixes
 
-        self.config.simple_io['int_parameters'] = int_exact if isinstance(int_exact, list) else [int_exact]
-        self.config.simple_io['int_parameter_suffixes'] = int_suffix if isinstance(int_suffix, list) else [int_suffix]
-        self.config.simple_io['bool_parameter_prefixes'] = bool_prefix if isinstance(bool_prefix, list) else [bool_prefix]
+        self.config.simple_io['int_parameters'] = int_exact
+        self.config.simple_io['int_parameter_suffixes'] = int_suffixes
+        self.config.simple_io['bool_parameter_prefixes'] = bool_prefixes
 
         # Maintain backward-compatibility with pre-3.1 versions that did not specify any particular encoding
-        bytes_to_str = self.sio_config.get('bytes_to_str')
-        if not bytes_to_str:
-            bytes_to_str = {'encoding': None}
-
-        self.config.simple_io['bytes_to_str'] = bytes_to_str
+        self.config.simple_io['bytes_to_str'] = {'encoding': self.sio_config.bytes_to_str_encoding or None}
 
         # Pub/sub
         self.config.pubsub = Bunch()

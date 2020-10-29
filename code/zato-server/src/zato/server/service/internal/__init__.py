@@ -17,13 +17,13 @@ from traceback import format_exc
 from past.builtins import basestring
 
 # Zato
-from zato.common import SECRET_SHADOW, zato_namespace, ZATO_NONE
+from zato.common.api import SECRET_SHADOW, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE
 from zato.common.odb.model import Cluster
-from zato.common.util import get_response_value, replace_private_key
+from zato.common.util.api import get_response_value, replace_private_key
 from zato.common.util.sql import search as sql_search
+from zato.common.xml_ import zato_namespace
 from zato.server.service import AsIs, Bool, Int, Service
-from zato.server.service.reqresp.sio import convert_sio
 
 # ################################################################################################################################
 
@@ -87,12 +87,6 @@ class AdminService(Service):
 
 # ################################################################################################################################
 
-    def _convert_sio_elem(self, param_name, value):
-        return convert_sio(self.cid, param_name, param_name, value, True, False, self.request.bool_parameter_prefixes,
-            self.request.int_parameters, self.request.int_parameter_suffixes, False, self.server.encrypt, True)
-
-# ################################################################################################################################
-
     def before_handle(self):
 
         # Do not log BASE64-encoded messages
@@ -134,6 +128,8 @@ class AdminService(Service):
             return
 
         if self.server.is_admin_enabled_for_info:
+            logger.info('Response; service:`%s`, data:`%s` cid:`%s`, ',
+                self.name, replace_private_key(get_response_value(self.response)), self.cid)
 
             payload = self.response.payload
             is_text = isinstance(payload, basestring)
@@ -142,9 +138,6 @@ class AdminService(Service):
             if needs_meta and hasattr(self, '_search_tool'):
                 if not is_text:
                     payload.zato_meta = self._search_tool.output_meta
-
-            logger.info('Response; service:`%s`, data:`%s` cid:`%s`, ',
-                self.name, replace_private_key(get_response_value(self.response)), self.cid)
 
 # ################################################################################################################################
 

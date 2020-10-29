@@ -26,7 +26,7 @@ from zato.server.ext.outbox import AnonymousOutbox, Attachment, Email, Outbox
 from past.builtins import basestring, unicode
 
 # Zato
-from zato.common import IMAPMessage, EMAIL
+from zato.common.api import IMAPMessage, EMAIL
 from zato.server.store import BaseAPI, BaseStore
 
 # ################################################################################################################################
@@ -36,9 +36,9 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 _modes = {
-    EMAIL.SMTP.MODE.PLAIN.value: None,
-    EMAIL.SMTP.MODE.SSL.value: 'SSL',
-    EMAIL.SMTP.MODE.STARTTLS.value: 'TLS'
+    EMAIL.SMTP.MODE.PLAIN: None,
+    EMAIL.SMTP.MODE.SSL: 'SSL',
+    EMAIL.SMTP.MODE.STARTTLS: 'TLS'
 }
 
 # ################################################################################################################################
@@ -48,8 +48,8 @@ class Imbox(_Imbox):
     def __init__(self, config, config_no_sensitive):
         self.config = config
         self.config_no_sensitive = config_no_sensitive
-        self.server = ImapTransport(self.config.host, self.config.port, self.config.mode==EMAIL.IMAP.MODE.SSL.value)
-        self.connection = self.server.connect(self.config.username, self.config.password, self.config.debug_level)
+        self.server = ImapTransport(self.config.host, self.config.port, self.config.mode==EMAIL.IMAP.MODE.SSL)
+        self.connection = self.server.connect(self.config.username, self.config.password or '', self.config.debug_level)
 
     def __repr__(self):
         return '<{} at {}, config:`{}`>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
@@ -57,6 +57,9 @@ class Imbox(_Imbox):
     def fetch_by_uid(self, uid):
         message, data = self.connection.uid('fetch', uid, '(BODY.PEEK[])')
         raw_email = data[0][1]
+
+        if not isinstance(raw_email, unicode):
+            raw_email = raw_email.decode('utf8')
 
         email_object = parse_email(raw_email)
 

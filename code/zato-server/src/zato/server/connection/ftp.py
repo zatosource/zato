@@ -18,7 +18,11 @@ from traceback import format_exc
 from fs.ftpfs import FTPFS
 
 # Zato
-from zato.common import Inactive, SECRET_SHADOW, TRACE1
+from zato.common.api import SECRET_SHADOW, TRACE1
+from zato.common.exception import Inactive
+
+# Python2/3 compatibility
+from future.utils import PY2
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +40,8 @@ class FTPStore(object):
         self._lock = RLock()
 
     def _add(self, params):
-        """ Adds one set of params to the list of connection parameters. Must not
-        be called without holding onto self._lock
+        """ Adds one set of params to the list of connection parameters.
+        Must not be called without holding onto self._lock
         """
         self.conn_params[params.name] = params
 
@@ -57,8 +61,7 @@ class FTPStore(object):
                 self._add(params)
 
     def get_conn_names(self):
-        """ Returns a list of UTF-8 connection names this store contains,
-        sorted in ascending order.
+        """ Returns a list of UTF-8 connection names this store contains, sorted in ascending order.
         """
         with self._lock:
             return [elem.encode('utf-8') for elem in sorted(self.conn_params)]
@@ -68,8 +71,16 @@ class FTPStore(object):
             params = self.conn_params[name]
             if params.is_active:
                 timeout = float(params.timeout) if params.timeout else 180
-                return FTPFacade(params.host, params.user, params.get('password'), params.acct, timeout,
-                    int(params.port), params.dircache)
+
+                # Python 2 vs. Python 3 builds of Zato have different versions
+                # of the 'fs' dependency which in turn has a different API to its __init__ method
+                # which is why 'dircache' cannot be used with Python 3.
+                init_params = [params.host, params.user, params.get('password'), params.acct, timeout, int(params.port)]
+
+                if PY2:
+                    init_params.append(params.dircache)
+
+                return FTPFacade(*init_params)
             else:
                 raise Inactive(params.name)
 

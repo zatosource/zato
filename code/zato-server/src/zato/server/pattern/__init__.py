@@ -10,14 +10,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from bunch import Bunch
-from json import loads
 from logging import DEBUG, getLogger
 
 # Python 2/3 compatibility
 from past.builtins import basestring
 
 # Zato
-from zato.common.util.json_ import dumps
+from zato.common.json_internal import dumps, loads
 
 # ################################################################################################################################
 

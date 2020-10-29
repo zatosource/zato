@@ -23,7 +23,8 @@ from gevent.lock import RLock
 from hvac import Client
 
 # Zato
-from zato.common import VAULT
+from zato.common.api import UNITTEST
+from zato.common.vault_ import VAULT
 
 # ################################################################################################################################
 
@@ -82,7 +83,7 @@ class _Client(Client):
         }
 
     def ping(self):
-        return self.is_sealed()
+        return self.is_sealed
 
     def _auth_token(self, client_token, _from_vault=VaultResponse.from_vault):
         if not client_token:
@@ -106,7 +107,8 @@ class _Client(Client):
 # ################################################################################################################################
 
 class _VaultConn(object):
-    def __init__(self, name, url, token, service_name, tls_verify, timeout, allow_redirects, client_class=_Client):
+    def __init__(self, name, url, token, service_name, tls_verify, timeout, allow_redirects, client_class=_Client,
+            requests_adapter=None):
         self.name = name
         self.url = url
         self.token = token
@@ -115,16 +117,17 @@ class _VaultConn(object):
         self.timeout = timeout
         self.allow_redirects = allow_redirects
         self.client = client_class(self.url, self.token, verify=self.tls_verify, timeout=self.timeout,
-                allow_redirects=self.allow_redirects)
+                allow_redirects=self.allow_redirects, adapter=requests_adapter)
 
 # ################################################################################################################################
 
 class VaultConnAPI(object):
     """ An API through which connections to Vault are established and managed.
     """
-    def __init__(self, config_list=None):
+    def __init__(self, config_list=None, requests_adapter=None):
         self.config = Bunch()
         self.lock = RLock()
+        self.requests_adapter = requests_adapter
 
         for config in config_list or []:
             self.create(config)
@@ -162,9 +165,11 @@ class VaultConnAPI(object):
     def _create(self, config):
         conn = _VaultConn(
             config.name, config.url, config.token, config.get('service_name'), config.tls_verify, config.timeout,
-            config.allow_redirects)
+            config.allow_redirects, requests_adapter=self.requests_adapter)
         self.config[config.name] = conn
-        self.ping(config.name)
+
+        if config.url != UNITTEST.VAULT_URL:
+            self.ping(config.name)
 
 # ################################################################################################################################
 

@@ -12,25 +12,19 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 import os
 from datetime import datetime, timedelta
-from json import loads
 from logging import INFO, WARN
 from platform import system as platform_system
+from random import seed as random_seed
 from re import IGNORECASE
 from tempfile import mkstemp
 from traceback import format_exc
 from uuid import uuid4
-
-# anyjson
-from anyjson import dumps
 
 # gevent
 import gevent.monkey # Needed for Cassandra
 
 # globre
 import globre
-
-# numpy
-from numpy.random import seed as numpy_seed
 
 # Paste
 from paste.util.converters import asbool
@@ -39,28 +33,37 @@ from paste.util.converters import asbool
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common import DATA_FORMAT, default_internal_modules, KVDB, RATE_LIMIT, SECRETS, SERVER_STARTUP, SERVER_UP_STATUS, \
+from zato.common.api import DATA_FORMAT, default_internal_modules, KVDB, RATE_LIMIT, SERVER_STARTUP, SERVER_UP_STATUS, \
      ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
+from zato.common.const import SECRETS
+
 from zato.common.ipc.api import IPCAPI
+from zato.common.json_internal import dumps, loads
+
 from zato.common.odb.post_process import ODBPostProcess
+
 from zato.common.pubsub import SkipDelivery
 from zato.common.rate_limiting import RateLimiting
-from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
+from zato.common.util.api import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
      invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
      register_diag_handlers
+
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC
 from zato.common.util.time_ import TimeUtil
 from zato.distlock import LockManager
+
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigStore
 from zato.server.connection.server import Servers
 from zato.server.base.parallel.config import ConfigLoader
+
 from zato.server.base.parallel.http import HTTPHandler
+from zato.server.base.parallel.subprocess_.ftp import FTPIPC
 from zato.server.base.parallel.subprocess_.ibm_mq import IBMMQIPC
-from zato.server.base.parallel.subprocess_.sftp import SFTPIPC
-from zato.server.pickup import PickupManager
+from zato.server.base.parallel.subprocess_.outconn_sftp import SFTPIPC
+from zato.server.pickup.api import PickupManager
 from zato.server.sso import SSOTool
 
 # ################################################################################################################################
@@ -70,23 +73,24 @@ from past.builtins import unicode
 
 # ################################################################################################################################
 
-# Type checking
-import typing
-
-if typing.TYPE_CHECKING:
+if 0:
 
     # Zato
-    from zato.common.crypto import ServerCryptoManager
+    from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
     from zato.server.service.store import ServiceStore
+    from zato.simpleio import SIOServerConfig
+    from zato.server.startup_callable import StartupCallableTool
     from zato.sso.api import SSOAPI
 
     # For pyflakes
     ODBManager = ODBManager
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
+    SIOServerConfig = SIOServerConfig
     SSOAPI = SSOAPI
+    StartupCallableTool = StartupCallableTool
     SubprocessIPC = SubprocessIPC
 
 # ################################################################################################################################
@@ -105,6 +109,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     """ Main server process.
     """
     def __init__(self):
+        self.logger = logger
         self.host = None
         self.port = None
         self.crypto_manager = None # type: ServerCryptoManager
@@ -118,12 +123,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.soap12_content_type = None
         self.plain_xml_content_type = None
         self.json_content_type = None
-        self.service_modules = None # Set programmatically in Spring
-        self.service_sources = None # Set in a config file
-        self.base_dir = None        # type: unicode
-        self.tls_dir = None         # type: unicode
-        self.static_dir = None      # type: unicode
-        self.json_schema_dir = None # type: unicode
+        self.service_modules = None   # Set programmatically in Spring
+        self.service_sources = None   # Set in a config file
+        self.base_dir = None          # type: unicode
+        self.tls_dir = None           # type: unicode
+        self.static_dir = None        # type: unicode
+        self.json_schema_dir = None   # type: unicode
+        self.sftp_channel_dir = None  # type: unicode
         self.hot_deploy_config = None # type: Bunch
         self.pickup = None
         self.fs_server_config = None # type: Bunch
@@ -131,8 +137,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.pickup_config = None # type: Bunch
         self.logging_config = None # type: Bunch
         self.logging_conf_path = None # type: unicode
-        self.sio_config = None # type: Bunch
-        self.sso_config = None # type: Bunch
+        self.sio_config = None # type: SIOServerConfig
+        self.sso_config = None
         self.connector_server_grace_time = None
         self.id = None # type: int
         self.name = None # type: unicode
@@ -140,15 +146,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.worker_pid = None # type: int
         self.cluster = None
         self.cluster_id = None # type: int
-        self.kvdb = None
-        self.startup_jobs = None
+        self.kvdb = None # type: KVDB
+        self.startup_jobs = None # type: dict
         self.worker_store = None # type: WorkerStore
         self.service_store = None # type: ServiceStore
         self.request_dispatcher_dispatch = None
-        self.deployment_lock_expires = None
-        self.deployment_lock_timeout = None
+        self.deployment_lock_expires = None # type: int
+        self.deployment_lock_timeout = None # type: int
         self.deployment_key = ''
-        self.has_gevent = None
+        self.has_gevent = None # type: bool
         self.delivery_store = None
         self.static_config = None
         self.component_enabled = Bunch()
@@ -173,7 +179,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.is_sso_enabled = False
         self.audit_pii = audit_pii
         self.has_fg = False
-        self.startup_callable_tool = None
+        self.startup_callable_tool = None # type: StartupCallableTool
         self.default_internal_pubsub_endpoint_id = None
         self.rate_limiting = None # type: RateLimiting
         self.jwt_secret = None # type: bytes
@@ -183,6 +189,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.sso_tool = SSOTool(self)
         self.platform_system = platform_system().lower() # type: unicode
         self.has_posix_ipc = True
+        self.user_config = Bunch()
+        self.stderr_path = None # type: str
 
         # Our arbiter may potentially call the cleanup procedure multiple times
         # and this will be set to True the first time around.
@@ -193,6 +201,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.user_ctx_lock = gevent.lock.RLock()
 
         # Connectors
+        self.connector_ftp    = FTPIPC(self)
         self.connector_ibm_mq = IBMMQIPC(self)
         self.connector_sftp   = SFTPIPC(self)
 
@@ -375,8 +384,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def _after_init_common(self, server):
-        """ Initializes parts of the server that don't depend on whether the
-        server's been allowed to join the cluster or not.
+        """ Initializes parts of the server that don't depend on whether the server's been allowed to join the cluster or not.
         """
         # Patterns to match during deployment
         self.service_store.patterns_matcher.read_config(self.fs_server_config.deploy_patterns_allowed)
@@ -394,6 +402,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.kvdb.init()
 
         kvdb_logger.info('Worker config `%s`', kvdb_config)
+
+        # New in 3.1, it may be missing in the config file
+        if not self.fs_server_config.misc.get('sftp_genkey_command'):
+            self.fs_server_config.misc.sftp_genkey_command = 'dropbearkey'
+
+        # New in 3.2, may be missing in the config file
+        allow_internal = self.fs_server_config.misc.get('service_invoker_allow_internal', [])
+        allow_internal = allow_internal if isinstance(allow_internal, list) else [allow_internal]
+        self.fs_server_config.misc.service_invoker_allow_internal = allow_internal
 
         # Lua programs, both internal and user defined ones.
         for name, program in self.get_lua_programs():
@@ -567,6 +584,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Rate limiting for SSO
         self.set_up_sso_rate_limiting()
 
+        # Some parts of the worker store's configuration are required during the deployment of services
+        # which is why we are doing it here, before worker_store.init() is called.
+        self.worker_store.early_init()
+
         # Deploys services
         is_first, locally_deployed = self._after_init_common(server)
 
@@ -638,12 +659,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         has_sftp = bool(self.worker_store.worker_config.out_sftp.keys())
 
+        # Directories for SSH keys used by SFTP channels
+        self.sftp_channel_dir = os.path.join(self.repo_location, 'sftp', 'channel')
+
         if is_first:
 
             logger.info('First worker of `%s` is %s', self.name, self.pid)
 
             self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_FIRST, kwargs={
-                'parallel_server': self,
+                'server': self,
             })
 
             # Clean up any old WSX connections possibly registered for this server
@@ -659,9 +683,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             if self.has_posix_ipc:
                 self._init_subprocess_connectors(has_ibm_mq, has_sftp)
 
+            # SFTP channels are new in 3.1 and the directories may not exist
+            if not os.path.exists(self.sftp_channel_dir):
+                os.makedirs(self.sftp_channel_dir)
+
         else:
             self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_OTHER, kwargs={
-                'parallel_server': self,
+                'server': self,
             })
 
             if self.has_posix_ipc:
@@ -674,7 +702,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         spawn_greenlet(self.ipc_api.run)
 
         self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.AFTER_STARTED, kwargs={
-            'parallel_server': self,
+            'server': self,
         })
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
@@ -811,8 +839,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             if stanza_config.case_insensitive:
                 flags |= IGNORECASE
 
-            patterns = stanza_config.patterns
-            stanza_config.patterns = [patterns] if not isinstance(patterns, list) else patterns
+            orig_patterns = stanza_config.pop('patterns')
+            stanza_config.orig_patterns = orig_patterns
+            stanza_config.patterns = [orig_patterns] if not isinstance(orig_patterns, list) else orig_patterns
             stanza_config.patterns = [globre.compile(elem, flags) for elem in stanza_config.patterns]
 
             if not os.path.exists(stanza_config.pickup_from):
@@ -825,9 +854,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # we still need to make it aware of services and how to pick them up from FS.
 
         stanza = 'zato_internal_service_hot_deploy'
+        orig_patterns = '*.py'
         stanza_config = Bunch({
             'pickup_from': self.hot_deploy_config.pickup_dir,
-            'patterns': [globre.compile('*.py', globre.EXACT | IGNORECASE)],
+            'orig_patterns': orig_patterns,
+            'patterns': [globre.compile(orig_patterns, globre.EXACT | IGNORECASE)],
             'read_on_pickup': False,
             'parse_on_pickup': False,
             'delete_after_pickup': self.hot_deploy_config.delete_after_pickup,
@@ -835,8 +866,32 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         })
 
         self.pickup_config[stanza] = stanza_config
-        self.pickup = PickupManager(self, self.pickup_config)
 
+        # Go over all the stanza configuration items and add new ones
+        # without live regexp objects - this is needed because such objects
+        # cannot be serialised to JSON which is what is used to provide
+        # the stanza configuration on input to handler services.
+        for name in list(self.pickup_config.keys()):
+            config = self.pickup_config[name]
+
+            new_name = 'zato_orig_{}'.format(name)
+            new_config = Bunch()
+
+            # We add all they keys except for a specific one,
+            # the one with live Python objects,
+            # but 'orig_patterns', they one with a list, stays.
+            for key, value in config.items():
+                if key == 'patterns':
+                    continue
+                elif key == 'orig_patterns':
+                    new_config['patterns'] = value
+                else:
+                    new_config[key] = value
+
+            # Set the new key now
+            self.pickup_config[new_name] = new_config
+
+        self.pickup = PickupManager(self, self.pickup_config)
         spawn_greenlet(self.pickup.run)
 
 # ################################################################################################################################
@@ -1006,8 +1061,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def post_fork(arbiter, worker):
         """ A Gunicorn hook which initializes the worker.
         """
+
         # Each subprocess needs to have the random number generator re-seeded.
-        numpy_seed()
+        random_seed()
 
         worker.app.zato_wsgi_app.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.BEFORE_POST_FORK, kwargs={
             'arbiter': arbiter,

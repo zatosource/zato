@@ -19,11 +19,11 @@ from bunch import Bunch, bunchify
 from globre import match as globre_match
 
 # Zato
-from zato.common import NOTIF as COMMON_NOTIF, ZATO_NONE
+from zato.common.api import NOTIF as COMMON_NOTIF, ZATO_NONE
 from zato.common.broker_message import NOTIF
 from zato.common.odb.model import Cluster, NotificationOpenStackSwift, Service
 from zato.common.odb.query import notif_cloud_openstack_swift_list
-from zato.server.service import Bool, ForceType, Int
+from zato.server.service import Bool, SIOElem, Int
 from zato.server.service.internal.notif import NotifierService
 from zato.server.service.internal import AdminService, AdminSIO
 
@@ -83,7 +83,7 @@ class _CreateEdit(AdminService):
                     old_name = item.name
 
                 for name in self.SimpleIO.input_required + self.SimpleIO.input_optional:
-                    if isinstance(name, ForceType):
+                    if isinstance(name, SIOElem):
                         name = name.name
                     setattr(item, name, self.request.input.get(name))
 

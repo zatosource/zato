@@ -26,14 +26,13 @@ from dateutil.rrule import DAILY, HOURLY, MINUTELY, MONTHLY, YEARLY
 # paodate
 from paodate import Date
 
-# SciPy
-from scipy import stats as sp_stats
-
 # Python 2/3 compatibility
 from zato.common.py23_ import maxint
 
 # Zato
-from zato.common import KVDB, StatsElem, ZatoException
+from zato.common.api import KVDB, StatsElem
+from zato.common.exception import ZatoException
+from zato.common.util.stats import tmean
 from zato.server.service import Integer, UTC
 from zato.server.service.internal.stats import BaseAggregatingService, STATS_KEYS, StatsReturningService, \
     stop_excluding_rrset
@@ -199,7 +198,7 @@ class BaseSummarizingService(BaseAggregatingService):
 
             for service_name, values in services.items():
 
-                values['mean'] = round(sp_stats.tmean(values['mean']), 2)
+                values['mean'] = round(tmean(values['mean']), 2)
                 values['rate'] = round(values['usage'] / total_seconds, 2)
 
         except Exception:

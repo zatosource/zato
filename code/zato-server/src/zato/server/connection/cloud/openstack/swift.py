@@ -19,7 +19,7 @@ from gevent.lock import RLock
 from swiftclient.client import Connection
 
 # Zato
-from zato.common.util import parse_extra_into_dict
+from zato.common.util.api import parse_extra_into_dict
 from zato.server.connection.queue import ConnectionQueue
 
 class SwiftWrapper(object):

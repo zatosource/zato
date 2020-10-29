@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from base64 import b64decode
 
 # Zato
-from zato.common import CACHE
+from zato.common.api import CACHE
 from zato.server.base.worker.common import WorkerImpl
 
 # Python 2/3 compatibility

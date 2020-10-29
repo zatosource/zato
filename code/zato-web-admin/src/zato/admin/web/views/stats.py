@@ -16,9 +16,6 @@ from datetime import datetime
 from io import StringIO
 from traceback import format_exc
 
-# anyjson
-from anyjson import dumps
-
 # Bunch
 from bunch import Bunch
 
@@ -41,8 +38,9 @@ from pytz import timezone, utc
 from zato.admin.web import from_user_to_utc, from_utc_to_user
 from zato.admin.web.forms.stats import MaintenanceForm, NForm, SettingsForm
 from zato.admin.web.views import get_js_dt_format, get_sample_dt, method_allowed
-from zato.common import DEFAULT_STATS_SETTINGS, StatsElem
-from zato.common.util import from_local_to_utc, make_repr, now, utcnow
+from zato.common.api import DEFAULT_STATS_SETTINGS, StatsElem
+from zato.common.json_internal import dumps
+from zato.common.util.api import from_local_to_utc, make_repr, now, utcnow
 
 logger = logging.getLogger(__name__)
 

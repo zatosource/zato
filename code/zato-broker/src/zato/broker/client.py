@@ -12,9 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging, time
 from traceback import format_exc
 
-# anyjson
-from anyjson import dumps, loads
-
 # Bunch
 from bunch import Bunch
 
@@ -28,10 +25,11 @@ import redis
 from builtins import bytes
 
 # Zato
-from zato.common import BROKER, ZATO_NONE
+from zato.common.api import BROKER, ZATO_NONE
 from zato.common.broker_message import KEYS, MESSAGE_TYPE, TOPICS
-from zato.common.kvdb import LuaContainer
-from zato.common.util import new_cid, spawn_greenlet
+from zato.common.json_internal import dumps, loads
+from zato.common.kvdb.api import LuaContainer
+from zato.common.util.api import new_cid, spawn_greenlet
 
 logger = logging.getLogger(__name__)
 has_debug = logger.isEnabledFor(logging.DEBUG)
@@ -48,6 +46,42 @@ NEEDS_TMP_KEY = [v for k,v in TOPICS.items() if k in(
 
 CODE_RENAMED = 10
 CODE_NO_SUCH_FROM_KEY = 11
+
+# ################################################################################################################################
+
+if 0:
+    from zato.common.kvdb.api import KVDB
+
+    KVDB = KVDB
+
+# ################################################################################################################################
+
+class BrokerClientAPI(object):
+    """ BrokerClient is a function which cannot be used for type completion,
+    hence this no-op class that can be used in type hints.
+    """
+    def __init__(self, kvdb, client_type, topic_callbacks, initial_lua_programs):
+        # type: (KVDB, str, dict, dict)
+        raise NotImplementedError()
+
+    def run(self):
+        raise NotImplementedError()
+
+    def publish(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL, *ignored_args, **ignored_kwargs):
+        # type: (dict, str, *object, **object)
+        raise NotImplementedError()
+
+    def invoke_async(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ANY, expiration=BROKER.DEFAULT_EXPIRATION):
+        # type: (dict, str, *object, **object)
+        raise NotImplementedError()
+
+    def on_message(self, msg):
+        raise NotImplementedError()
+
+    def close(self):
+        raise NotImplementedError()
+
+# ################################################################################################################################
 
 def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
 
@@ -119,8 +153,7 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
             self.client.close()
 
     class _BrokerClient(object):
-        """ Zato broker client. Starts two background threads, one for publishing
-        and one for receiving of the messages.
+        """ Zato broker client. Starts two background threads, one for publishing and one for receiving of the messages.
 
         There may be 3 types of messages sent out:
 
@@ -235,3 +268,5 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
     start_new_thread(client.run, ())
 
     return client
+
+# ################################################################################################################################

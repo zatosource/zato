@@ -23,6 +23,13 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 # ################################################################################################################################
 
+if 0:
+    from bunch import Bunch
+
+    Bunch = Bunch
+
+# ################################################################################################################################
+
 elem = 'security_rbac_role_permission'
 model = RBACRolePermission
 label = 'an RBAC role permission'
@@ -41,6 +48,7 @@ check_existing_one = False
 # ################################################################################################################################
 
 def get_extra(service, role_id, service_id, perm_id):
+    # type: (Service, int, int, int) -> str
 
     with closing(service.odb.session()) as session:
 
@@ -58,6 +66,7 @@ def get_extra(service, role_id, service_id, perm_id):
 # ################################################################################################################################
 
 def instance_hook(self, input, instance, attrs):
+    # type: (Service, Bunch, RBACRolePermission, Bunch)
 
     if attrs.is_create_edit:
 
@@ -82,6 +91,7 @@ def instance_hook(self, input, instance, attrs):
 # ################################################################################################################################
 
 def response_hook(self, input, instance, attrs, service_type):
+    # type: (Service, Bunch, RBACClientRole, Bunch, str)
 
     if service_type == 'get_list':
         for item in self.response.payload:

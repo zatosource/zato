@@ -14,7 +14,7 @@ import os
 import socket
 
 # Zato
-from zato.common.util import get_current_user
+from zato.common.util.api import get_current_user
 
 # Python 2/3 compatibility
 from six import PY2
@@ -43,50 +43,9 @@ class _BaseRepoManager(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class BazaarRepoManager(_BaseRepoManager):
-
+class NoneRepoManager(_BaseRepoManager):
     def ensure_repo_consistency(self):
-        """ Makes sure the self.repo_location directory is a Bazaar branch.
-        The repo and Bazaar branch will be created if they don't already exist.
-        Any unknown or modified files will be commited to the branch.
-        Also, 'bzr whoami' will be set to the current user so that all commands
-        can be traced back to an actual person (assuming everyone has their
-        own logins).
-        """
-        # Bazaar
-        import bzrlib
-        from bzrlib.branch import Branch
-        from bzrlib.bzrdir import BzrDir
-        from bzrlib.workingtree import WorkingTree
-
-        try:
-            BzrDir.open(self.repo_location)
-        except bzrlib.errors.NotBranchError:
-            BzrDir.create_branch_convenience(self.repo_location)
-
-        c = Branch.open(self.repo_location).get_config_stack()
-        c.set('email', '{}@{}'.format(get_current_user(), socket.getfqdn()))
-
-        self.tree = WorkingTree.open(self.repo_location)
-        delta = self.tree.changes_from(self.tree.basis_tree(), want_unversioned=True)
-
-        logger.debug('tree `{}`'.format(self.tree))
-        logger.debug('delta `{}`'.format(delta))
-
-        for file_info in delta.unversioned:
-            logger.debug('unversioned [{}]'.format(file_info))
-            file_name = file_info[0]
-            self.tree.add(file_name)
-
-        if delta.unversioned:
-            self.tree.commit('Added new unversioned files')
-        else:
-            logger.debug('No unversioned files found')
-
-        if delta.modified:
-            self.tree.commit('Committed modified files')
-        else:
-            logger.debug('No modified files found')
+        pass
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -124,7 +83,7 @@ class GitRepoManager(_BaseRepoManager):
 # ################################################################################################################################
 
 if PY2:
-    RepoManager = BazaarRepoManager
+    RepoManager = NoneRepoManager
 else:
     RepoManager = GitRepoManager
 

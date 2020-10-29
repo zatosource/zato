@@ -18,11 +18,12 @@ from uuid import uuid4
 from past.builtins import unicode
 
 # Zato
-from zato.common import ZatoException, ZATO_ODB_POOL_NAME
+from zato.common.api import ZATO_ODB_POOL_NAME
+from zato.common.exception import ZatoException
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import Cluster, SQLConnectionPool
 from zato.common.odb.query import out_sql_list
-from zato.common.util import get_sql_engine_display_name
+from zato.common.util.api import get_sql_engine_display_name
 from zato.server.service import AsIs, Integer
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
@@ -51,8 +52,8 @@ class GetList(AdminService):
         response_elem = 'zato_outgoing_sql_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username',
-            Integer('pool_size'), 'engine_display_name')
-        output_optional = ('extra',)
+            Integer('pool_size'))
+        output_optional = ('extra', 'engine_display_name')
 
     def get_data(self, session):
         return self._search(out_sql_list, session, self.request.input.cluster_id, False)
@@ -237,7 +238,9 @@ class Ping(AdminService):
                 ping = self.outgoing.sql.get(item.name, False).pool.ping
 
                 self.response.payload.id = self.request.input.id
-                self.response.payload.response_time = str(ping(self.server.fs_sql_config))
+                response_time = ping(self.server.fs_sql_config)
+                if response_time:
+                    self.response.payload.response_time = str(response_time)
 
             except Exception:
                 session.rollback()
@@ -254,7 +257,10 @@ class AutoPing(AdminService):
         except Exception:
             self.logger.warn('Could not ping ODB, e:`%s`', format_exc())
 
-        for item in self.invoke(GetList.get_name(), {'cluster_id':self.server.cluster_id})['zato_outgoing_sql_get_list_response']:
+        response = self.invoke(GetList.get_name(), {'cluster_id':self.server.cluster_id})
+        response = response['zato_outgoing_sql_get_list_response']
+
+        for item in response:
             try:
                 self.invoke(Ping.get_name(), {'id': item['id']})
             except Exception:

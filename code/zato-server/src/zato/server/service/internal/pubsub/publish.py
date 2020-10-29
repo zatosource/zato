@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
-from json import loads
 from logging import DEBUG, getLogger
 from operator import itemgetter
 from traceback import format_exc
@@ -22,15 +21,15 @@ from dateparser import parse as dt_parse
 from gevent import spawn
 
 # Zato
-from zato.common import DATA_FORMAT, PUBSUB, ZATO_NONE
+from zato.common.api import DATA_FORMAT, PUBSUB, ZATO_NONE
 from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
+from zato.common.json_internal import dumps, loads
 from zato.common.odb.query.pubsub.cleanup import delete_enq_delivered, delete_enq_marked_deleted, delete_msg_delivered, \
      delete_msg_expired
 from zato.common.odb.query.pubsub.publish import sql_publish_with_retry
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic
 from zato.common.pubsub import PubSubMessage
 from zato.common.pubsub import new_msg_id
-from zato.common.util.json_ import dumps
 from zato.common.util.sql import set_instance_opaque_attrs
 from zato.common.util.time_ import datetime_to_ms, utcnow_as_ms
 from zato.server.pubsub import get_expiration, get_priority, PubSub, Topic

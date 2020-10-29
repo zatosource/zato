@@ -11,3 +11,9 @@ html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abb
 .form-data tr td a {
     color:#000;
 }
+
+.multirow-button {
+    font-size:12px;
+    font-weight:500;
+    margin-left:2px;
+}

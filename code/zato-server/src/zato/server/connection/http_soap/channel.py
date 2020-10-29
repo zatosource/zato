@@ -16,9 +16,6 @@ from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, METHOD_NO
 from io import StringIO
 from traceback import format_exc
 
-# anyjson
-from anyjson import dumps, loads
-
 # Django
 from django.http import QueryDict
 
@@ -33,11 +30,14 @@ from six import PY3
 from past.builtins import basestring, unicode
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, JSON_RPC, HTTP_RESPONSES, HTTP_SOAP, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, \
-     URL_PARAMS_PRIORITY, URL_TYPE, zato_namespace, ZATO_ERROR, ZATO_NONE, ZATO_OK
+from zato.common.api import CHANNEL, DATA_FORMAT, JSON_RPC, HTTP_SOAP, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, \
+     URL_PARAMS_PRIORITY, URL_TYPE, ZATO_ERROR, ZATO_NONE, ZATO_OK
+from zato.common.exception import HTTP_RESPONSES
+from zato.common.json_internal import dumps, loads
 from zato.common.json_schema import DictError as JSONSchemaDictError, ValidationException as JSONSchemaValidationException
 from zato.common.rate_limiting.common import AddressNotAllowed, BaseException as RateLimitingException, RateLimitReached
-from zato.common.util import payload_from_request
+from zato.common.util.api import payload_from_request
+from zato.common.xml_ import zato_namespace
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, MethodNotAllowed, NotFound, \
      TooManyRequests, Unauthorized
 from zato.server.service.internal import AdminService
@@ -46,15 +46,16 @@ stack_format = None
 
 # ################################################################################################################################
 
-# Type checking
-import typing
-
-if typing.TYPE_CHECKING:
+if 0:
+    from zato.server.service import Service
+    from zato.server.service.reqresp import Response
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.http_soap.url_data import URLData
 
     # For pyflakes
     ParallelServer = ParallelServer
+    Response = Response
+    Service = Service
     URLData = URLData
 
 # ################################################################################################################################
@@ -229,7 +230,7 @@ class RequestDispatcher(object):
         if soap_action[0] == '"' and soap_action[-1] == '"':
             soap_action = soap_action[1:-1]
 
-        return soap_action.decode('utf-8')
+        return soap_action if isinstance(soap_action, unicode) else soap_action.decode('utf-8')
 
 # ################################################################################################################################
 
@@ -474,13 +475,14 @@ class RequestHandler(object):
     """ Handles individual HTTP requests to a given service.
     """
     def __init__(self, server=None):
-        self.server = server # A ParallelServer instance
-        self.use_soap_envelope = asbool(self.server.fs_server_config.misc.use_soap_envelope)
+        # type: (ParallelServer)
+        self.server = server
+        self.use_soap_envelope = asbool(self.server.fs_server_config.misc.use_soap_envelope) # type: bool
 
 # ################################################################################################################################
 
     def _set_response_data(self, service, **kwargs):
-        """ A callback invoked by the services after it's done producing the response.
+        """ A callback invoked by the services after it is done producing the response.
         """
         data_format = kwargs.get('data_format')
         transport = kwargs.get('transport')
@@ -638,7 +640,7 @@ class RequestHandler(object):
         if payload:
             data=payload.getvalue()
         else:
-            data=b"""<{response_elem} xmlns="{namespace}">
+            data="""<{response_elem} xmlns="{namespace}">
                 <zato_env>
                   <cid>{cid}</cid>
                   <result>{result}</result>
@@ -653,10 +655,11 @@ class RequestHandler(object):
 # ################################################################################################################################
 
     def set_payload(self, response, data_format, transport, service_instance):
-        """ Sets the actual payload to represent the service's response out of
-        whatever the service produced. This includes converting dictionaries into
-        JSON, adding Zato metadata and wrapping the mesasge in SOAP if need be.
+        """ Sets the actual payload to represent the service's response out of what the service produced.
+        This includes converting dictionaries into JSON, adding Zato metadata and wrapping the mesasge in SOAP if need be.
         """
+        # type: (Response, str, str, Service)
+
         if isinstance(service_instance, AdminService):
             if data_format == SIMPLE_IO.FORMAT.JSON:
                 zato_env = {'zato_env':{'result':response.result, 'cid':service_instance.cid, 'details':response.result_details}}
@@ -693,10 +696,12 @@ class RequestHandler(object):
 
 # ################################################################################################################################
 
-    def set_content_type(self, response, data_format, transport, url_match, channel_item):
+    def set_content_type(self, response, data_format, transport, ignored_url_match, channel_item):
         """ Sets a response's content type if one hasn't been supplied by the user.
         """
-        # A user provided their own content type ..
+        # type: (Response, str, str, object, object)
+
+        # A user provided his or her own content type ..
         if response.content_type_changed:
             content_type = response.content_type
         else:

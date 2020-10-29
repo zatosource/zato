@@ -13,92 +13,95 @@ then
 fi
 
 PY_BINARY=$1
-
-# If it starts with "python2" then we install extra pip dependencies for Python 2.7,
-# otherwise, extra dependencies for Python 3.x will be installed.
-if [[ $(${PY_BINARY} -c 'import sys; print(sys.version_info[:][0])') -eq 2 ]]
-then
-    HAS_PYTHON2=1
-    HAS_PYTHON3=0
-    EXTRA_REQ_VERSION=27
-else
-    HAS_PYTHON2=0
-    HAS_PYTHON3=1
-    EXTRA_REQ_VERSION=3
-fi
-
-
 # Stamp the release hash.
 git log -n 1 --pretty=format:"%H" > ./release-info/revision.txt
 
-$PY_BINARY -m pip install -U setuptools pip
+$PY_BINARY -m pip install \
+    --use-feature=2020-resolver \
+    --no-warn-script-location   \
+    -U setuptools pip
 
-# SciPy builds require NumPy available in setup.py, so install it separately.
-$PY_BINARY -m pip install --only-binary :all: numpy==1.16.5
-# pip install pipdeptree
-$PY_BINARY -m pip install -r requirements.txt
-$PY_BINARY -m pip install -r _req_py$EXTRA_REQ_VERSION.txt
-
-if [ "$(uname -s)" = "Darwin" ]
-then
-  [[ -z ${POSTGRESQL_BIN_PATH} ]] && POSTGRESQL_BIN_PATH="$(dirname $(find /usr/local/Cellar/postgresql -name pg_dump|head -n 1))"
-  if [[ -n "${POSTGRESQL_BIN_PATH}" && -d "${POSTGRESQL_BIN_PATH}" ]]; then
-    $PY_BINARY -m pip uninstall -y psycopg2 SQLAlchemy
-    export PATH="/usr/local/opt/openssl/bin:$PATH:${POSTGRESQL_BIN_PATH}"
-    export LDFLAGS="-L/usr/local/opt/openssl/lib"
-    export CPPFLAGS="-I/usr/local/opt/openssl/include"
-    $PY_BINARY -m pip install --no-binary :all: psycopg2==2.7.7 SQLAlchemy==1.2.8
-  else
-    echo "Failed to find ${POSTGRESQL_BIN_PATH} in the system. Use the 'POSTGRESQL_BIN_PATH' to specify the path to PostgreSQL binaries." >&2
-    exit 1
-  fi
-fi
-
+$PY_BINARY -m pip install \
+    --use-feature=2020-resolver \
+    --no-warn-script-location   \
+    -r requirements.txt
 
 # zato-common must be first.
-$PY_BINARY -m pip install \
-    -e ./zato-common \
-    -e ./zato-agent \
-    -e ./zato-broker \
-    -e ./zato-cli \
-    -e ./zato-client \
-    -e ./zato-cy \
-    -e ./zato-distlock \
+$PY_BINARY -m pip install --use-feature=2020-resolver \
+    -e ./zato-common    \
+    -e ./zato-agent     \
+    -e ./zato-broker    \
+    -e ./zato-cli       \
+    -e ./zato-client    \
+    -e ./zato-cy        \
+    -e ./zato-distlock  \
+    -e ./zato-lib       \
     -e ./zato-scheduler \
-    -e ./zato-server \
+    -e ./zato-server    \
     -e ./zato-web-admin \
-    -e ./zato-zmq \
-    -e ./zato-sso
+    -e ./zato-zmq       \
+    -e ./zato-sso       \
+    -e ./zato-testing
 
 # Emulate zc.buildout's split-out eggs directory for simpler local development.
-ln -fs $VIRTUAL_ENV/lib/python*/site-packages eggs
+ln -fs $VIRTUAL_ENV/lib/python*/site-packages $VIRTUAL_ENV/eggs
 
-# Emulate zc.buildout's (now redundant) py script. Wrap rather than symlink to
-# ensure argv[0] is correct.
+# Emulate zc.buildout's py script. Wrap rather than symlink to ensure argv[0] is correct.
 cat > $VIRTUAL_ENV/bin/py <<-EOF
 #!/bin/sh
-exec "$(pwd)/bin/python" "\$@"
+exec "$VIRTUAL_ENV/bin/python" "\$@"
 EOF
 
 chmod +x $VIRTUAL_ENV/bin/py
 
 # Create and add zato_extra_paths to the virtualenv's sys.path.
 mkdir zato_extra_paths
-echo "$(pwd)/zato_extra_paths" >> eggs/easy-install.pth
+echo "$VIRTUAL_ENV/zato_extra_paths" >> eggs/easy-install.pth
+
+# Create a symlink to zato_extra_paths to make it easier to type it out
+ln -fs $VIRTUAL_ENV/zato_extra_paths extlib
 
 # Apply patches.
 patch -p0 -d eggs < patches/butler/__init__.py.diff
 patch -p0 -d eggs < patches/configobj.py.diff
-patch -p0 -d eggs < patches/psycopg2/__init__.py.diff --forward || true
+patch -p0 -d eggs < patches/django/db/models/base.py.diff
+patch -p0 --binary -d eggs < patches/ntlm/HTTPNtlmAuthHandler.py.diff
+patch -p0 -d eggs < patches/pykafka/topic.py.diff
 patch -p0 -d eggs < patches/redis/redis/connection.py.diff
 patch -p0 -d eggs < patches/requests/models.py.diff
 patch -p0 -d eggs < patches/requests/sessions.py.diff
-patch -p0 -d eggs < patches/sqlalchemy/sql/crud.py.diff
 patch -p0 -d eggs < patches/ws4py/server/geventserver.py.diff
 
-if [ $HAS_PYTHON2 == 1 ]
+#
+# On SUSE, SQLAlchemy installs to lib64 instead of lib.
+#
+if [ "$(type -p zypper)" ]
 then
-    patch -p0 -d eggs < patches/jsonpointer/jsonpointer.py.diff
-    patch -p0 -d eggs < patches/anyjson/__init__.py.diff
-    patch -p0 -d eggs < patches/oauth/oauth.py.diff
+    patch -p0 -d eggs64 < patches/sqlalchemy/sql/crud.py.diff
+else
+    patch -p0 -d eggs < patches/sqlalchemy/sql/crud.py.diff
 fi
+
+# Add the 'zato' command ..
+cat > $VIRTUAL_ENV/bin/zato <<-EOF
+#!$VIRTUAL_ENV/bin/python3
+
+# Zato
+from zato.cli.zato_command import main
+
+if __name__ == '__main__':
+
+    # stdlib
+    import re
+    import sys
+
+    # This is needed by SUSE
+    sys.path.append('$VIRTUAL_ENV/lib64/python3.6/site-packages/')
+
+    sys.argv[0] = re.sub(r'(-script\.pyw?|\.exe)?$', '', sys.argv[0])
+    sys.exit(main())
+
+EOF
+
+# .. and make the command executable.
+chmod 755 $VIRTUAL_ENV/bin/zato

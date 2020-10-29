@@ -53,7 +53,7 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% include "zato/search-form.html" with page_prompt="Show outgoing connections"%}
+{% include "zato/search-form.html" with page_prompt="Show connections"%}
 
 
     {% if cluster_id %}
@@ -136,17 +136,17 @@
                             <td style="vertical-align:middle">Host</td>
                             <td>{{ create_form.host }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Port</td>
                             <td>{{ create_form.port }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">User</td>
                             <td>{{ create_form.user }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Accounting info</td>
                             <td>{{ create_form.acct }}</td>
@@ -156,7 +156,7 @@
                             <td style="vertical-align:middle">Timeout <span class='form_hint'>(seconds)</span></td>
                             <td>{{ create_form.timeout }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Cache directories</td>
                             <td>{{ create_form.dircache }}</td>
@@ -192,17 +192,17 @@
                             <td style="vertical-align:middle">Host</td>
                             <td>{{ edit_form.host }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Port</td>
                             <td>{{ edit_form.port }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">User</td>
                             <td>{{ edit_form.user }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Accounting info</td>
                             <td>{{ edit_form.acct }}</td>
@@ -217,7 +217,7 @@
                             <td style="vertical-align:middle">Cache directories</td>
                             <td>{{ edit_form.dircache }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
@@ -230,7 +230,7 @@
                 </form>
             </div>
         </div>
-        
+
         <div id="change_password-div" class='data-popup ignore'>
             <div class="bd">
                 <form action="{% url "out-ftp-change-password" %}" method="post" id="change_password-form">
@@ -245,7 +245,7 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Confirm password</td>
-                            <td>{{ change_password_form.password2 }} 
+                            <td>{{ change_password_form.password2 }}
                                 <input type="hidden" id="id_change_password-id" name="id" />
                                 <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
                             </td>

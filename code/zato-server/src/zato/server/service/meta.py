@@ -24,7 +24,7 @@ from sqlalchemy import Boolean, Integer
 from sqlalchemy.exc import IntegrityError
 
 # Zato
-from zato.common import ZATO_NOT_GIVEN
+from zato.common.api import ZATO_NOT_GIVEN
 from zato.common.odb.model import Base, Cluster
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import AsIs, Bool as BoolSIO, Int as IntSIO
@@ -102,7 +102,7 @@ def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_
     elems = attrs.get(elems_name) or []
     columns = []
 
-    # Generate elems out of SQLAlchemy tables, including calls to ForceType's subclasses, such as Bool or Int.
+    # Generate elems out of SQLAlchemy tables, including calls to SIOElem's subclasses, such as Bool or Int.
 
     if elems and isclass(elems) and issubclass(elems, Base):
 
@@ -115,7 +115,7 @@ def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_
             if column.name == 'cluster_id' and is_output:
                 continue
 
-            # We already have cluster_id and don't need a ForceType'd one.
+            # We already have cluster_id and don't need a SIOElem'd one.
             if column.name == 'cluster_id' and has_cluster_id:
                 continue
 
@@ -181,6 +181,8 @@ def update_attrs(cls, name, attrs):
     attrs.get_list_docs = getattr(mod, 'get_list_docs', None)
     attrs.delete_require_instance = getattr(mod, 'delete_require_instance', True)
     attrs.skip_create_integrity_error = getattr(mod, 'skip_create_integrity_error', False)
+    attrs.skip_if_exists = getattr(mod, 'skip_if_exists', False)
+    attrs.skip_if_missing = getattr(mod, 'skip_if_missing', False)
     attrs._meta_session = None
 
     attrs.is_create = False
@@ -216,7 +218,7 @@ def update_attrs(cls, name, attrs):
 class AdminServiceMeta(type):
 
     @staticmethod
-    def get_sio(attrs, name, input_required=None, output_required=None, is_list=True):
+    def get_sio(attrs, name, input_required=None, output_required=None, is_list=True, class_=None):
 
         _BaseClass = GetListAdminSIO if is_list else AdminSIO
 
@@ -250,7 +252,8 @@ class AdminServiceMeta(type):
 
                 sio_elem = getattr(SimpleIO, _name)
                 has_cluster_id = 'cluster_id' in sio_elem
-                sio_to_add = get_io(attrs, _name, attrs.get('is_edit'), is_required, is_output, is_get_list, has_cluster_id)
+                sio_to_add = get_io(
+                    attrs, _name, attrs.get('is_edit'), is_required, is_output, is_get_list, has_cluster_id)
                 sio_elem.extend(sio_to_add)
 
                 if attrs.is_create_edit and is_required:
@@ -316,7 +319,7 @@ class CreateEditMeta(AdminServiceMeta):
         attrs = update_attrs(cls, name, attrs)
         verb = 'Creates' if attrs.is_create else 'Updates'
         cls.__doc__ = '{} {}.'.format(verb, attrs.label)
-        cls.SimpleIO = CreateEditMeta.get_sio(attrs, name)
+        cls.SimpleIO = CreateEditMeta.get_sio(attrs, name, is_list=False, class_=cls)
         cls.handle = CreateEditMeta.handle(attrs)
         return super(CreateEditMeta, cls).__init__(cls)
 
@@ -350,9 +353,19 @@ class CreateEditMeta(AdminServiceMeta):
 
                         existing_one = existing_one.first()
 
-                        if existing_one and not attrs.is_edit:
-                            raise Exception('{} `{}` already exists in this cluster'.format(
-                                attrs.label[0].upper() + attrs.label[1:], input.name))
+                        if existing_one:
+                            if attrs.is_create:
+                                if attrs.skip_if_exists:
+                                    pass # Ignore it explicitly
+                                else:
+                                    raise Exception('{} `{}` already exists in this cluster'.format(
+                                        attrs.label[0].upper() + attrs.label[1:], input.name))
+                            else:
+                                if attrs.skip_if_missing:
+                                    pass # Ignore it explicitly
+                                else:
+                                    raise Exception('No such {} `{}` in this cluster'.format(
+                                        attrs.label[0].upper() + attrs.label[1:], input.name))
 
                     if attrs.is_edit:
                         instance = session.query(attrs.model).filter_by(id=input.id).one()

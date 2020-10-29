@@ -8,12 +8,32 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# gevent monkeypatch is needed as soon as possible
-from gevent.monkey import patch_all
-patch_all()
+# Monkey-patching modules individually can be about 20% faster,
+# or, in absolute terms, instead of 275 ms it may take 220 ms.
+from gevent.monkey import patch_builtins, patch_contextvars, patch_thread, patch_time, patch_os, patch_queue, patch_select, \
+     patch_selectors, patch_signal, patch_socket, patch_ssl, patch_subprocess, patch_sys
+
+# Note that the order of patching matters, just like in patch_all
+patch_os()
+patch_time()
+patch_thread()
+patch_sys()
+patch_socket()
+patch_select()
+patch_selectors()
+patch_ssl()
+patch_subprocess()
+patch_builtins()
+patch_signal()
+patch_queue()
+patch_contextvars()
 
 # stdlib
-import locale, logging, os, ssl, sys
+import locale
+import logging
+import os
+import ssl
+import sys
 from logging.config import dictConfig
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
@@ -25,43 +45,23 @@ from zato.common.microopt import logging_Logger_log
 from logging import Logger
 Logger._log = logging_Logger_log
 
-# Django
-import django
-from django.conf import settings
-
-# Configure Django settings when the module is picked up
-if not settings.configured:
-    settings.configure()
-    django.setup()
-
-# Bunch
-from bunch import Bunch
-
 # ConfigObj
 from configobj import ConfigObj
-
-# psycopg2
-import psycopg2
-
-# psycogreen
-from psycogreen.gevent import patch_psycopg as make_psycopg_green
-
-# Repoze
-from repoze.profile import ProfileMiddleware
 
 # YAML
 import yaml
 
 # Zato
-from zato.common import SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
-from zato.common.crypto import ServerCryptoManager
+from zato.common.api import SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
+from zato.common.crypto.api import ServerCryptoManager
 from zato.common.ipaddress_ import get_preferred_ip
-from zato.common.kvdb import KVDB
+from zato.common.kvdb.api import KVDB
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.repo import RepoManager
-from zato.common.util import absjoin, asbool, clear_locks, get_config, get_kvdb_config_for_log, parse_cmd_line_options, \
+from zato.common.util.api import absjoin, asbool, clear_locks, get_config, get_kvdb_config_for_log, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
 from zato.common.util.cli import read_stdin_data
+from zato.common.simpleio_ import get_sio_server_config
 from zato.server.base.parallel import ParallelServer
 from zato.server.ext import zunicorn
 from zato.server.ext.zunicorn.app.base import Application
@@ -127,6 +127,7 @@ class ZatoGunicornApplication(Application):
 # ################################################################################################################################
 
 def run(base_dir, start_gunicorn_app=True, options=None):
+    # type: (str, bool, dict)
     options = options or {}
 
     # Store a pidfile before doing anything else
@@ -147,12 +148,6 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     except ImportError:
         pass
 
-    # We're doing it here even if someone doesn't use PostgreSQL at all
-    # so we're not suprised when someone suddenly starts using PG.
-    # TODO: Make sure it's registered for each of the subprocess
-    psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
-    psycopg2.extensions.register_type(psycopg2.extensions.UNICODEARRAY)
-
     # We know we don't need warnings because users may explicitly configure no certificate validation.
     # We don't want for urllib3 to warn us about it.
     import requests as _r
@@ -165,7 +160,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     logging_conf_path = os.path.join(repo_location, 'logging.conf')
 
     with open(logging_conf_path) as f:
-        logging_config = yaml.load(f)
+        logging_config = yaml.load(f, yaml.FullLoader)
         dictConfig(logging_config)
 
     logger = logging.getLogger(__name__)
@@ -175,7 +170,10 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     secrets_config = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
     server_config = get_config(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_config)
     pickup_config = get_config(repo_location, 'pickup.conf')
+
     sio_config = get_config(repo_location, 'simple-io.conf', needs_user_config=False)
+    sio_config = get_sio_server_config(sio_config)
+
     sso_config = get_config(repo_location, 'sso.conf', needs_user_config=False)
     normalize_sso_config(sso_config)
 
@@ -222,6 +220,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
         'pickup_config': pickup_config,
         'sio_config': sio_config,
         'sso_config': sso_config,
+        'base_dir': base_dir,
     })
 
     # New in 2.0 - Start monitoring as soon as possible
@@ -245,10 +244,6 @@ def run(base_dir, start_gunicorn_app=True, options=None):
         logger.info('Locale is `%s`, amount of %s -> `%s`', user_locale, value, locale.currency(
             value, grouping=True).decode('utf-8'))
 
-    # Makes queries against Postgres asynchronous
-    if asbool(server_config.odb.use_async_driver) and server_config.odb.engine == 'postgresql':
-        make_psycopg_green()
-
     if server_config.misc.http_proxy:
         os.environ['http_proxy'] = server_config.misc.http_proxy
 
@@ -268,7 +263,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server.sql_pool_store = sql_pool_store
     server.service_modules = []
     server.kvdb = kvdb
-    server.user_config = Bunch()
+    server.stderr_path = options.get('stderr_path')
 
     # Assigned here because it is a circular dependency
     odb_manager.parallel_server = server
@@ -342,6 +337,10 @@ def run(base_dir, start_gunicorn_app=True, options=None):
                 logger.addHandler(handler)
 
     if asbool(profiler_enabled):
+
+        # Repoze
+        from repoze.profile import ProfileMiddleware
+
         profiler_dir = os.path.abspath(os.path.join(base_dir, server_config.profiler.profiler_dir))
         server.on_wsgi_request = ProfileMiddleware(
             server.on_wsgi_request,

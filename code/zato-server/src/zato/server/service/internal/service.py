@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from base64 import b64decode, b64encode
 from contextlib import closing
 from http.client import BAD_REQUEST, NOT_FOUND
-from json import loads
 from mimetypes import guess_type
 from tempfile import NamedTemporaryFile
 from traceback import format_exc
@@ -28,15 +27,15 @@ from future.utils import iterkeys
 from past.builtins import basestring
 
 # Zato
-from zato.common import BROKER, KVDB, ZatoException
+from zato.common.api import BROKER, KVDB
 from zato.common.broker_message import SERVICE
-from zato.common.exception import BadRequest
+from zato.common.exception import BadRequest, ZatoException
+from zato.common.json_internal import dumps, loads
 from zato.common.json_schema import get_service_config
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, Service
 from zato.common.odb.query import service_list
 from zato.common.rate_limiting import DefinitionParser
-from zato.common.util import hot_deploy, payload_from_request
-from zato.common.util.json_ import dumps
+from zato.common.util.api import hot_deploy, payload_from_request
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean, Integer, Service as ZatoService
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -61,7 +60,7 @@ class GetList(AdminService):
     class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_service_get_list_request'
         response_elem = 'zato_service_get_list_response'
-        input_required = 'cluster_id', 'query'
+        input_required = 'cluster_id'
         input_optional = Integer('cur_page'), Boolean('paginate')
         output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), Integer('usage'), \
             Integer('slow_threshold')
@@ -370,7 +369,7 @@ class Invoke(AdminService):
         if isinstance(response, basestring):
             if response:
                 response = response if isinstance(response, bytes) else response.encode('utf8')
-                self.response.payload.response = b64encode(response) if response else ''
+                self.response.payload.response = b64encode(response).decode('utf8') if response else ''
 
 # ################################################################################################################################
 
@@ -684,6 +683,18 @@ class ServiceInvoker(AdminService):
         # Service name is given in URL path
         service_name = self.request.http.params.service_name
 
+        # Are we invoking a Zato built-in service or a user-defined one?
+        is_internal = service_name.startswith(_internal) # type: bool
+
+        # Before invoking a service that is potentially internal we need to confirm
+        # that our channel can be used for such invocations.
+        if is_internal:
+            if self.channel.name not in self.server.fs_server_config.misc.service_invoker_allow_internal:
+                self.logger.warn('Service `%s` could not be invoked; channel `%s` not among `%s` (service_invoker_allow_internal)',
+                    service_name, self.channel.name, self.server.fs_server_config.misc.service_invoker_allow_internal)
+                self.response.data_format = 'text/plain'
+                raise BadRequest(self.cid, 'No such service `{}`'.format(service_name))
+
         # Make sure the service exists
         if self.server.service_store.has_service(service_name):
 
@@ -697,11 +708,10 @@ class ServiceInvoker(AdminService):
             # Invoke the service now
             response = self.invoke(service_name, payload, wsgi_environ={'HTTP_METHOD':self.request.http.method})
 
-            # All internal services wrap their responses in top-level elements that we need to shed here.
-            if service_name.startswith(_internal):
-                if response:
-                    top_level = list(iterkeys(response))[0]
-                    response = response[top_level]
+            # All internal services wrap their responses in top-level elements that we need to shed here ..
+            if is_internal and response:
+                top_level = list(iterkeys(response))[0]
+                response = response[top_level]
 
             # Assign response to outgoing payload
             self.response.payload = dumps(response)

@@ -22,10 +22,11 @@ from six import PY2
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import CONNECTION, DATA_FORMAT, MISC, RATE_LIMIT, SEC_DEF_TYPE, URL_TYPE, VAULT, ZATO_NONE
+from zato.common.api import CONNECTION, DATA_FORMAT, MISC, RATE_LIMIT, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
+from zato.common.vault_ import VAULT
 from zato.common.broker_message import code_to_name, SECURITY, VAULT as VAULT_BROKER_MSG
 from zato.common.dispatch import dispatcher
-from zato.common.util import parse_tls_channel_security_definition, update_apikey_username_to_channel
+from zato.common.util.api import parse_tls_channel_security_definition, update_apikey_username_to_channel
 from zato.common.util.auth import on_basic_auth, on_wsse_pwd, WSSE
 from zato.common.util.url_dispatcher import get_match_target
 from zato.server.connection.http_soap import Forbidden, Unauthorized
@@ -570,7 +571,7 @@ class URLData(CyURLData, OAuthDataStore):
 # ################################################################################################################################
 
     def check_rbac_delegated_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store,
-            sep=MISC.SEPARATOR, plain_http=URL_TYPE.PLAIN_HTTP):
+            sep=MISC.SEPARATOR, plain_http=URL_TYPE.PLAIN_HTTP, _empty_client_def=tuple()):
 
         auth_result = False
 
@@ -587,7 +588,7 @@ class URLData(CyURLData, OAuthDataStore):
                 return auth_result
 
             if perm_id == http_method_permission_id and resource_id == channel_item['service_id']:
-                for client_def in worker_store.rbac.role_id_to_client_def[role_id]:
+                for client_def in worker_store.rbac.role_id_to_client_def.get(role_id, _empty_client_def):
 
                     _, sec_type, sec_name = client_def.split(sep)
 
@@ -612,7 +613,9 @@ class URLData(CyURLData, OAuthDataStore):
                         self.enrich_with_sec_data(wsgi_environ, _sec.sec_def, sec_type)
                         break
 
-        if not auth_result:
+        if auth_result:
+            return auth_result
+        else:
             logger.warn('None of RBAC definitions allowed request in, cid:`%s`', cid)
 
             # We need to return 401 Unauthorized but we need to send a challenge, i.e. authentication type
@@ -863,10 +866,10 @@ class URLData(CyURLData, OAuthDataStore):
             del self.basic_auth_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH, True)
 
-            # If this account was linked to an SSO user, delete that link,
+            # This will delete a link from this account an SSO user,
             # assuming that SSO is enabled (in which case it is not None).
             if self.worker.server.sso_api:
-                self.worker.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE(msg.id)
+                self.worker.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE(SEC_DEF_TYPE.BASIC_AUTH, msg.id)
 
     def on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an HTTP Basic Auth security definition.
@@ -949,8 +952,10 @@ class URLData(CyURLData, OAuthDataStore):
             del self.jwt_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.JWT, True)
 
-            # If this account was linked to an SSO user, delete that link
-            self.worker.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE(msg.id)
+            # This will delete a link from this account an SSO user,
+            # assuming that SSO is enabled (in which case it is not None).
+            if self.worker.server.sso_api:
+                self.worker.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE(SEC_DEF_TYPE.JWT, msg.id)
 
     def on_broker_msg_SECURITY_JWT_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of a JWT security definition.

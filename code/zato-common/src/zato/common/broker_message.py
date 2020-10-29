@@ -202,11 +202,6 @@ class OUTGOING(Constants):
     SAP_DELETE = ValueConstant('')
     SAP_CHANGE_PASSWORD = ValueConstant('')
 
-    STOMP_CREATE = ValueConstant('')
-    STOMP_EDIT = ValueConstant('')
-    STOMP_DELETE = ValueConstant('')
-    STOMP_CHANGE_PASSWORD = ValueConstant('')
-
     SFTP_CREATE = ValueConstant('')
     SFTP_EDIT = ValueConstant('')
     SFTP_DELETE = ValueConstant('')
@@ -235,15 +230,19 @@ class CHANNEL(Constants):
     HTTP_SOAP_CREATE_EDIT = ValueConstant('') # Same for creating and updating
     HTTP_SOAP_DELETE = ValueConstant('')
 
-    STOMP_CREATE = ValueConstant('')
-    STOMP_EDIT = ValueConstant('')
-    STOMP_DELETE = ValueConstant('')
-    STOMP_CHANGE_PASSWORD = ValueConstant('')
-
     WEB_SOCKET_CREATE = ValueConstant('')
     WEB_SOCKET_EDIT = ValueConstant('')
     WEB_SOCKET_DELETE = ValueConstant('')
     WEB_SOCKET_BROADCAST = ValueConstant('')
+
+    FTP_CREATE = ValueConstant('')
+    FTP_EDIT = ValueConstant('')
+    FTP_DELETE = ValueConstant('')
+    FTP_PING = ValueConstant('')
+    FTP_USER_CREATE = ValueConstant('')
+    FTP_USER_EDIT = ValueConstant('')
+    FTP_USER_DELETE = ValueConstant('')
+    FTP_USER_CHANGE_PASSWORD = ValueConstant('')
 
 class AMQP_CONNECTOR(Constants):
     """ Since 3.0, this is not used anymore.

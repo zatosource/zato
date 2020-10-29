@@ -19,8 +19,9 @@ from crontab import CronTab
 from dateutil.parser import parse
 
 # Zato
-from zato.common import scheduler_date_time_format, SCHEDULER, ZatoException, ZATO_NONE
+from zato.common.api import scheduler_date_time_format, SCHEDULER, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER as SCHEDULER_MSG
+from zato.common.exception import ZatoException
 from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob,\
      Service
 from zato.common.odb.query import job_by_name, job_list
@@ -196,8 +197,8 @@ class _CreateEdit(AdminService):
 class _Get(AdminService):
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'job_type', 'start_date', 'service_id', 'service_name')
-        output_optional = ('extra', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats', 'cron_definition')
+        output_required = 'id', 'name', 'is_active', 'job_type', 'start_date', 'service_id', 'service_name'
+        output_optional = 'extra', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats', 'cron_definition'
         output_repeated = True
         default_value = ''
         date_time_format = scheduler_date_time_format
@@ -213,16 +214,18 @@ class GetList(_Get):
     class SimpleIO(_Get.SimpleIO):
         request_elem = 'zato_scheduler_job_get_list_request'
         response_elem = 'zato_scheduler_job_get_list_response'
-        input_optional = GetListAdminSIO.input_optional
+        input_optional = GetListAdminSIO.input_optional + ('service_name',)
 
     def get_data(self, session):
-        return self._search(job_list, session, self.request.input.cluster_id, False)
+        input = self.request.input
+        return self._search(job_list, session, input.cluster_id, input.get('service_name'), False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = self.get_data(session)
+            data = self.get_data(session)
+            self.response.payload[:] = data
 
-        for item in self.response.payload.zato_output:
+        for item in self.response.payload:
             item.start_date = item.start_date.isoformat()
 
 # ################################################################################################################################

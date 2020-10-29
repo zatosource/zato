@@ -21,6 +21,17 @@ from zato.common.odb.query import rbac_client_role_list, rbac_role
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
+# ################################################################################################################################
+
+if 0:
+    from bunch import Bunch
+    from zato.server.service import Service
+
+    Bunch = Bunch
+    Service = Service
+
+# ################################################################################################################################
+
 elem = 'security_rbac_client_role'
 model = RBACClientRole
 label = 'an RBAC client role'
@@ -38,33 +49,47 @@ check_existing_one = False
 
 # ################################################################################################################################
 
-def instance_hook(service, input, instance, attrs):
+def instance_hook(self, input, instance, attrs):
+    # type: (Service, Bunch, RBACClientRole, Bunch)
 
     if attrs.is_create_edit:
-        with closing(service.odb.session()) as session:
-            role = rbac_role(session, service.server.cluster_id, input.role_id, input.role_name)
+        with closing(self.odb.session()) as session:
+            role = rbac_role(session, self.server.cluster_id, input.role_id, input.role_name)
 
         instance.role_id = role.id
         instance.name = '{}:::{}'.format(instance.client_def, role.name)
 
 # ################################################################################################################################
 
-def response_hook(service, input, instance, attrs, service_type):
+def response_hook(self, input, instance, attrs, service_type):
+    # type: (Service, Bunch, RBACClientRole, Bunch, str)
+
     if service_type == 'get_list':
-        for item in service.response.payload:
-            with closing(service.odb.session()) as session:
+        for item in self.response.payload:
+            with closing(self.odb.session()) as session:
                 role = session.query(RBACRole).\
                     filter(RBACRole.id==item.role_id).one()
                 item.client_name = item.client_def
                 item.role_name = role.name
 
     elif service_type == 'create_edit':
-        with closing(service.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             role = session.query(RBACRole).\
                 filter(RBACRole.id==instance.role_id).one()
 
-        service.response.payload.client_name = instance.client_def
-        service.response.payload.role_name = role.name
+        self.response.payload.client_name = instance.client_def
+        self.response.payload.role_name = role.name
+
+        # Do not return until internal structures have been populated
+        self.server.worker_store.rbac.wait_for_client_role(instance.role_id)
+
+# ################################################################################################################################
+
+def broker_message_hook(self, input, instance, attrs, service_type):
+    # type: (Service, Bunch, RBACClientRole, Bunch, str)
+
+    if service_type == 'create_edit':
+        input.role_id = instance.role_id
 
 # ################################################################################################################################
 

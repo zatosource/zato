@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from json import loads
 from datetime import datetime
 
 # Bunch
@@ -19,7 +18,8 @@ from bunch import bunchify
 from sqlalchemy import or_
 
 # Zato
-from zato.common import GENERIC
+from zato.common.api import GENERIC
+from zato.common.json_internal import loads
 from zato.common.odb.model import SecurityBase, SSOLinkedAuth, SSOSession, SSOUser
 from zato.common.util.sql import elems_with_opaque
 from zato.sso import const

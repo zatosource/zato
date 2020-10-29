@@ -14,14 +14,12 @@ from traceback import format_exc
 from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 
-# anyjson
-from anyjson import dumps
-
 # Zato
 from zato.admin.web.views import change_password as _change_password, parse_response_data
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.sql import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, method_allowed
+from zato.common.json_internal import dumps
 from zato.common.odb.model import SQLConnectionPool
 
 logger = logging.getLogger(__name__)
@@ -146,8 +144,12 @@ def ping(req, cluster_id, id):
         response = req.zato.client.invoke('zato.outgoing.sql.ping', {'id':id})
 
         if response.ok:
-            return TemplateResponse(req, 'zato/outgoing/sql-ping-ok.html',
-                {'response_time':'%.3f' % float(response.data.response_time)})
+
+            if not response.data.response_time:
+                return HttpResponseServerError('No response time received')
+            else:
+                return TemplateResponse(req, 'zato/outgoing/sql-ping-ok.html',
+                    {'response_time':'%.3f' % float(response.data.response_time)})
         else:
             return HttpResponseServerError(response.details)
     except Exception:

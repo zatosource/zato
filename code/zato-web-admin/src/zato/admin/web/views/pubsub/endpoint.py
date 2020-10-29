@@ -24,10 +24,10 @@ from zato.admin.web.forms.pubsub.endpoint import CreateForm, EditForm
 from zato.admin.web.forms.pubsub.subscription import EditForm as EditSubscriptionForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, method_allowed, slugify
 from zato.admin.web.views.pubsub import get_client_html
-from zato.common import PUBSUB, ZATO_NONE
+from zato.common.api import PUBSUB, ZATO_NONE
+from zato.common.json_internal import dumps
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubSubscription, PubSubTopic
-from zato.common.util import asbool, get_sa_model_columns
-from zato.common.util.json_ import dumps
+from zato.common.util.api import asbool, get_sa_model_columns
 
 # ################################################################################################################################
 
@@ -60,13 +60,15 @@ def enrich_item(cluster_id, item):
 
     if is_pub:
         endpoint_topics_path = django_url_reverse('pubsub-endpoint-topics', kwargs=html_kwargs)
-        item.endpoint_topics_html = '<a href="{}">Topics</a>'.format(endpoint_topics_path)
+        item.endpoint_topics_html = '<a href="{}?cluster={}">Topics</a>'.format(
+            endpoint_topics_path, cluster_id)
     else:
         item.endpoint_topics_html = '<span class="form_hint">---</span>'
 
     if is_sub:
         endpoint_queues_path = django_url_reverse('pubsub-endpoint-queues', kwargs=html_kwargs)
-        item.endpoint_queues_html = '<a href="{}">Queues</a>'.format(endpoint_queues_path)
+        item.endpoint_queues_html = '<a href="{}?cluster={}">Queues</a>'.format(
+            endpoint_queues_path, cluster_id)
     else:
         item.endpoint_queues_html = '<span class="form_hint">---</span>'
 
@@ -254,6 +256,9 @@ class EndpointQueues(_EndpointObjects):
         output_optional = sub_attrs
 
     def on_before_append_item(self, item):
+
+        item.current_depth_gd = item.current_depth_gd or 0
+        item.current_depth_non_gd = item.current_depth_non_gd or 0
 
         item.name_slug = slugify(item.name)
 

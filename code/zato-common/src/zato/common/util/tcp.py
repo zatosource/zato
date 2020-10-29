@@ -10,27 +10,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import errno
-import logging
 import socket
 from datetime import datetime, timedelta
-from logging import getLogger, WARN
-from platform import system as platform_system
+from logging import getLogger
+from sys import platform as sys_platform
 from time import sleep
-
-# requests
-from requests import get
-
-# psutil
-import psutil
 
 # ################################################################################################################################
 
 logger = getLogger('zato')
-
-# ################################################################################################################################
-
-log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
-logging.basicConfig(level=WARN, format=log_format)
 
 # ################################################################################################################################
 
@@ -43,7 +31,16 @@ def get_free_port(start=30000):
 # ################################################################################################################################
 
 # Taken from http://grodola.blogspot.com/2014/04/reimplementing-netstat-in-cpython.html
-def is_port_taken(port, is_linux=platform_system().lower()=='linux'):
+def is_port_taken(port):
+
+    # stdlib
+    from platform import system as platform_system
+
+    # psutil
+    import psutil
+
+    is_linux=platform_system().lower()=='linux'
+
     # Short for Linux so as not to bind to a socket which in turn means waiting until it's closed by OS
     if is_linux:
         for conn in psutil.net_connections(kind='tcp'):
@@ -55,7 +52,7 @@ def is_port_taken(port, is_linux=platform_system().lower()=='linux'):
             sock.bind(('', port))
             sock.close()
         except socket.error as e:
-            if e[0] == errno.EADDRINUSE:
+            if e.args[0] == errno.EADDRINUSE:
                 return True
             raise
 
@@ -84,37 +81,35 @@ def _wait_for_port(port, timeout, interval, needs_taken):
 
 # ################################################################################################################################
 
-def _wait_for_predicate(predicate_func, timeout, interval, *args, **kwargs):
-    is_ready = predicate_func(*args, **kwargs)
+def wait_for_zato(address, url_path, timeout=60, interval=0.1):
+    """ Waits until a Zato server responds.
+    """
 
-    if not is_ready:
-        start = datetime.utcnow()
-        wait_until = start + timedelta(seconds=timeout)
+    # Requests
+    from requests import get as requests_get
 
-        while not is_ready:
-            sleep(interval)
-            is_ready = predicate_func(*args, **kwargs)
-            if datetime.utcnow() > wait_until:
-                break
+    # Imported here to avoid circular imports
+    from zato.common.util.api import wait_for_predicate
 
-    return is_ready
+    # Full URL to check a Zato server under
+    url = address + url_path
+
+    def _predicate_zato_ping(*ignored_args, **ignored_kwargs):
+        try:
+            requests_get(url, timeout=interval)
+        except Exception as e:
+            logger.warn('Waiting for `%s` (%s)', url, e)
+        else:
+            return True
+
+    return wait_for_predicate(_predicate_zato_ping, timeout, interval, address)
 
 # ################################################################################################################################
 
 def wait_for_zato_ping(address, timeout=60, interval=0.1):
     """ Waits for timeout seconds until address replies to a request sent to /zato/ping.
     """
-    url = address + '/zato/ping'
-
-    def _predicate_zato_ping(*ignored_args, **ignored_kwargs):
-        try:
-            get(url, timeout=interval)
-        except Exception as e:
-            logger.warn('Waiting for `%s` (%s)', url, e)
-        else:
-            return True
-
-    _wait_for_predicate(_predicate_zato_ping, timeout, interval, address)
+    wait_for_zato(address, '/zato/ping', timeout, interval)
 
 # ################################################################################################################################
 

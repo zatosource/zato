@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from logging import getLogger
 
 # Zato
-from zato.common import RATE_LIMIT
+from zato.common.api import RATE_LIMIT
 from zato.server.base.worker.common import WorkerImpl
 
 # ################################################################################################################################
@@ -29,7 +29,6 @@ class SSO(WorkerImpl):
 
     def on_broker_msg_SSO_USER_CREATE(self, msg):
         self.server._create_sso_user_rate_limiting(msg.user_id, msg.is_rate_limit_active, msg.rate_limit_def)
-
 
 # ################################################################################################################################
 
@@ -52,6 +51,6 @@ class SSO(WorkerImpl):
 # ################################################################################################################################
 
     def on_broker_msg_SSO_LINK_AUTH_DELETE(self, msg):
-        self.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE('zato.{}'.format(msg.auth_type), msg.auth_id, msg.user_id)
+        self.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE(msg.auth_type, msg.auth_id)
 
 # ################################################################################################################################

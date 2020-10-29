@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from base64 import b64decode
 from binascii import unhexlify
 from contextlib import closing
-from json import loads
 from traceback import format_exc
 
 # Arrow
@@ -22,11 +21,12 @@ from arrow import get as arrow_get
 from zato.common.py23_ import pickle_loads
 
 # Zato
-from zato.common import CHANNEL
+from zato.common.api import CHANNEL
 from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL
+from zato.common.json_internal import loads
 from zato.common.odb.model import ChannelWMQ, Cluster, ConnDefWMQ, Service
 from zato.common.odb.query import channel_wmq_list
-from zato.common.util import payload_from_request
+from zato.common.util.api import payload_from_request
 from zato.common.util.time_ import datetime_from_ms
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 

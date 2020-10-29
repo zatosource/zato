@@ -14,15 +14,15 @@ apispec_files = {}
 # Custom CSS styles
 apispec_files['_static/custom.css'] = """
 * {
-  font-size:0.99em;
+    font-size:0.99em;
 }
 
-body {
-  background-color:#111;
+body, html {
+    background-color:#111 !important;
 }
 
 code {
-  font-size:1.2em
+    font-size:1.2em
 }
 
 div.body {
@@ -34,64 +34,75 @@ html {
     min-height: 100% !important;
 }
 
-h1, h2 {
-  color:#111 !important;
-}
-
 h1 {
-  background-color:#eee !important;
-  border-bottom:2px solid #ddd !important;
-  padding:12px !important;
+    color:#67beff !important;
+    background-color:#282f33 !important;
+    border-bottom:2px solid #57aeff !important;
+    font-size: 30px !important;
+    padding:12px !important;
+    text-shadow: 3px 3px 1px #111;
 }
 
 h2 {
-  background-color:#fff !important;
-  border-bottom:none !important;
+    color:#eee !important;
+    background-color:#332f2f !important;
+    border-bottom:none !important;
+    text-shadow: 3px 3px 1px #222;
 }
 
 span.doc{
-  color:#000 !important;
+    color:#eee !important;
 }
 
 a.reference {
-  text-decoration:underline;
-  text-decoration-color:#000;
-  padding:3px;
+    text-decoration:none;
+    padding:3px !important;
+    margin:9px !important;
+    margin-left:0px !important;
+    color: #red !important;
 }
 
 a.reference:hover {
-  background-color:#fcff35;
-  text-decoration:none;
+    background-color:#48751d;
+}
+
+a.headerlink {
+    color: red !important;
 }
 
 h4, p.topless a, .nav-item, .nav-item a, li.right a {
-  color:#fcdf1d !important;
-  text-shadow: 1px 1px 1px #222;
+    color:#e6e6e6 !important;
+     text-shadow: 1px 1px 1px #222;
+}
+
+table.align-default {
+    width:100% !important;
+    margin:none !important;
 }
 
 table.docutils td {
-  padding-top:2px;
-  padding-bottom:2px;
-  padding-left:0px;
-  padding-right:0px;
-  border-bottom:1px solid #f3f3e3;
+    padding-top:2px;
+    padding-bottom:2px;
+    padding-left:0px;
+    padding-right:0px;
+    border-bottom:1px solid #f3f3e3;
 }
 
 table.docutils th.head {
-  background-color:#eec;
-  text-align:left;
-  padding-left:0px;
+    background-color:#eec;
+    text-align:left;
+    padding-left:0px;
 }
 
 div.documentwrapper {
-  min-height: 300px;
-  background-color:#222;
+    min-height: 300px;
+    background-color:#222;
 }
 
 div.related {
-  background-color:#000;
-  border-top:1px solid #111;
-  border-bottom:1px solid #111;
+    background-color:#000;
+    border-top:1px solid #111;
+    border-bottom:1px solid #111;
 }
 
 .footer {
@@ -105,36 +116,67 @@ div.related {
 }
 
 table.docutils thead tr th {
-  background-color:#eee !important;
-  border-bottom:1px solid #e0e0e0 !important;
-  padding-top:7px;
-  padding-bottom:7px;
+    background-color:#332f2f !important;
+    border-bottom:1px solid #3a3a3f !important;
+    padding-top:7px;
+    padding-bottom:7px;
+    font-weight: 500 !important;
+}
+
+table.docutils thead tr th:first-child {
+    padding-left: 3px !important;
 }
 
 table.docutils tbody tr td {
-  vertical-align:middle;
+    vertical-align:middle;
+    border-bottom:2px dotted #333 !important;
 }
 
 table.docutils tbody tr td:first-child {
-  padding:2px;
-  padding-right:7px
+    padding:2px;
+    padding-right:7px;
+    padding-left: 7px !important;
+    color: #97eeff !important;
+    text-shadow: 2px 2px 1px #000;
+}
+
+li table.docutils tbody tr td:first-child {
+    color: #fff !important;
+}
+
+div.body {
+    background-color: #232221;
+    color:#fff;
 }
 
 #services table.docutils thead tr th:first-child {
-  color:transparent;
+    color:transparent;
 }
 
 #services table.docutils tbody tr td:first-child {
-  font-size:12px;
-  text-align: center;
-  color:#331;
+    font-size:12px;
+    text-align: center;
+    color:#331;
+}
+
+table.docutils tbody tr td {
+    vertical-align:top;
 }
 
 div.last_updated {
-  font-size:smaller;
-  color:#fcdf1d;
-  padding-top:10px;
-  text-shadow: 2px 2px 1px #222;
+    font-size:smaller;
+    color:#eee;
+    padding-top:10px;
+    text-shadow: 2px 2px 1px #222;
+}
+
+span.zato-tag-name-highlight {
+    color: white;
+    background-color: #885606;
+    padding: 8px;
+    font-weight: 600;
+    border-radius: 8px;
+    text-shadow: 2px 1px 1px #333;
 }
 """.lstrip()
 
@@ -608,7 +650,7 @@ texinfo_documents = [
 # -- Extension configuration -------------------------------------------------
 
 def setup(app):
-    app.add_stylesheet('custom.css')
+    app.add_css_file('custom.css')
 """.lstrip()
 
 # Main file

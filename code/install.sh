@@ -5,7 +5,7 @@ set -o pipefail
 shopt -s compat31
 
 # Default python binary
-PY_BINARY="python"
+PY_BINARY="python3"
 
 # Taken from https://stackoverflow.com/a/14203146
 OPTIND=1
@@ -20,8 +20,6 @@ done
 shift $((OPTIND-1))
 [ "${1:-}" = "--" ] && shift
 
-
-
 #
 # Run an OS-specific installer
 #
@@ -34,40 +32,37 @@ if ! [ -x "$(command -v $PY_BINARY)" ]; then
       sudo apt-get install -y --reinstall ${PY_BINARY}
   elif [ "$(type -p yum)" ]
   then
-      sudo yum update -y
-      if [[ $PY_BINARY != python2* ]];then
-        # Python3 customizations
-        PY_V=3
-        sudo yum install -y centos-release-scl-rh
-        sudo yum-config-manager --enable centos-sclo-rh-testing
-
-        # On RHEL, enable RHSCL and RHSCL-beta repositories for you system:
-        sudo yum-config-manager --enable rhel-server-rhscl-7-rpms
-        sudo yum-config-manager --enable rhel-server-rhscl-beta-7-rpms
-
-        # 2. Install the collection:
-        sudo yum install -y rh-python36
-
-        # 3. Start using software collections:
-        # scl enable rh-python36 bash
-        source /opt/rh/rh-python36/enable
-      else
-        sudo yum install -y ${PY_BINARY}
-      fi
-  elif [ "$(type -p apk)" ]
-  then
-      sudo apk add ${PY_BINARY}
-      if [[ "${PY_BINARY}" == "python3" ]]
+      if [ "$(type -p dnf)" ]
       then
-          sudo apk add python3-dev
+        sudo dnf update -y
+
+        if [ ! "$(type -p lsb_release)" ]
+        then
+            sudo dnf install -y redhat-lsb-core
+        fi
+
+        if [ ! "$(type -p python3)" ]
+        then
+            sudo dnf install -y python3
+        fi
       else
-          sudo apk add python-dev
+        sudo yum update -y
+
+        if [ ! "$(type -p lsb_release)" ]
+        then
+            sudo yum install -y redhat-lsb-core
+        fi
+
+        if [ ! "$(type -p python3)" ]
+        then
+            sudo yum install -y python3
+        fi
       fi
   elif [ "$(uname -s)" = "Darwin" ]
   then
       brew install  $PY_BINARY
   else
-      echo "install.sh: Unsupported OS: could not detect OS X, apt-get, yum, or apk." >&2
+      echo "install.sh: Unsupported OS: could not detect OS X, apt-get or yum." >&2
       exit 1
   fi
 fi
@@ -117,19 +112,19 @@ if [ "$(type -p apt-get)" ]
 then
     source ./clean.sh
     source ./_install-deb.sh $PY_BINARY
-elif [ "$(type -p yum)" ]
+elif [ "$(type -p yum)" ] || [ "$(type -p dnf)" ]
 then
     source ./clean.sh
     source ./_install-rhel.sh $PY_BINARY
-elif [ "$(type -p apk)" ]
-then
-    source ./clean.sh
-    source ./_install-alpine.sh $PY_BINARY
 elif [ "$(uname -s)" = "Darwin" ]
 then
     source ./clean.sh
-    source ./_install-osx.sh $PY_BINARY
+    source ./_install-mac.sh $PY_BINARY
+elif [ "$(type -p zypper)" ]
+then
+    source ./clean.sh
+    source ./_install-suse.sh $PY_BINARY
 else
-    echo "install.sh: Unsupported OS: could not detect OS X, apt-get, yum, or apk." >&2
+    echo "install.sh: Unsupported OS: could not detect Mac, apt-get, yum or zypper." >&2
     exit 1
 fi

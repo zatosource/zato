@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime, timedelta
-from json import loads
 from logging import getLogger
 from traceback import format_exc
 
@@ -21,8 +20,8 @@ from gevent import sleep
 from requests import get, post
 
 # Zato
-from zato.common.util import get_free_port
-from zato.common.util.json_ import dumps
+from zato.common.json_internal import dumps, loads
+from zato.common.util.api import get_free_port
 from zato.common.util.proc import start_python_process
 
 # ################################################################################################################################
@@ -101,7 +100,7 @@ class SubprocessIPC(object):
             self._check_enabled()
 
         self.ipc_tcp_port = get_free_port(ipc_tcp_start_port)
-        logger.info('Starting {} connector for server `%s` on `%s`'.format(self.connector_name),
+        logger.info('Starting {} connector for server `%s` on port `%s`'.format(self.connector_name),
             self.server.name, self.ipc_tcp_port)
 
         # Credentials for both servers and connectors
@@ -125,7 +124,7 @@ class SubprocessIPC(object):
         start_python_process('{} connector'.format(self.connector_name), False, self.connector_module, '', extra_options={
             'deployment_key': self.server.deployment_key,
             'shmem_size': self.server.shmem_size
-        })
+        }, stderr_path=self.server.stderr_path)
 
         # Wait up to timeout seconds for the connector to start as indicated by its responding to a PING request
         now = datetime.utcnow()

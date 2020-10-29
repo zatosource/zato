@@ -13,9 +13,9 @@ import logging
 from traceback import format_exc
 
 # Zato
-from zato.common import ZATO_NONE
+from zato.common.api import ZATO_NONE
 from zato.common.broker_message import code_to_name
-from zato.common.util import new_cid
+from zato.common.util.api import new_cid
 from zato.common.util.config import resolve_env_variables
 
 logger = logging.getLogger('zato')
@@ -54,7 +54,9 @@ class BrokerMessageReceiver(object):
                 if has_debug:
                     logger.debug('Rejecting broker message `%r`', msg)
         except Exception:
-            logger.error('Could not handle broker msg:`%r`, e:`%s`', msg, format_exc())
+            msg_action = msg.get('action') or 'undefined_msg_action' # type: str
+            action = code_to_name.get(msg_action) or 'undefined_action'
+            logger.error('Could not handle broker message: (%s:%s) `%r`, e:`%s`', action, msg_action, msg, format_exc())
 
 # ################################################################################################################################
 

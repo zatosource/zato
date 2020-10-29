@@ -16,13 +16,11 @@ from traceback import format_exc
 from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 
-# anyjson
-from anyjson import dumps
-
 # Zato
 from zato.admin.settings import delivery_friendly_name
 from zato.admin.web.forms.outgoing.jms_wmq import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, get_definition_list, method_allowed, parse_response_data
+from zato.common.json_internal import dumps
 from zato.common.odb.model import OutgoingWMQ
 
 # ################################################################################################################################

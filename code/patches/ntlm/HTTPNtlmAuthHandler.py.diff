@@ -1,0 +1,11 @@
+--- ntlm/HTTPNtlmAuthHandler.py.orig	2020-08-17 21:40:02.000000000 +0200
++++ ntlm/HTTPNtlmAuthHandler.py	2020-08-17 21:55:11.000000000 +0200
+@@ -107,7 +107,7 @@
+                 infourl.code = response.status
+                 infourl.msg = response.reason
+                 return infourl
+-            except socket.error, err:
++            except socket.error as err:
+                 raise urllib2.URLError(err)
+         else:
+             return None

@@ -15,7 +15,7 @@ from logging import getLogger
 from pysolr import Solr
 
 # Zato
-from zato.common.util import ping_solr
+from zato.common.util.api import ping_solr
 from zato.server.connection.queue import Wrapper
 from zato.server.store import BaseAPI, BaseStore
 

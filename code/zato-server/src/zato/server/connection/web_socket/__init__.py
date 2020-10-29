@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
-from json import loads
 from logging import getLogger
 from threading import current_thread
 from traceback import format_exc
@@ -33,17 +32,25 @@ from future.moves.urllib.parse import urlparse
 from past.builtins import basestring
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, ParsingException, PUBSUB, SEC_DEF_TYPE, WEB_SOCKET
-from zato.common.exception import Reportable
+from zato.common.api import CHANNEL, DATA_FORMAT, PUBSUB, SEC_DEF_TYPE, WEB_SOCKET
+from zato.common.exception import ParsingException, Reportable
+from zato.common.json_internal import loads
 from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
-from zato.common.util import new_cid
+from zato.common.util.api import new_cid
 from zato.common.util.hook import HookTool
 from zato.common.util.wsx import cleanup_wsx_client
+from zato.common.vault_ import VAULT
 from zato.server.connection.connector import Connector
 from zato.server.connection.web_socket.msg import AuthenticateResponse, InvokeClientRequest, ClientMessage, copy_forbidden, \
      error_response, ErrorResponse, Forbidden, OKResponse, InvokeClientPubSubRequest
 from zato.server.pubsub.task import PubSubTool
-from zato.vault.client import VAULT
+
+# ################################################################################################################################
+
+if 0:
+    from zato.server.base.parallel import ParallelServer
+
+    ParallelServer = ParallelServer
 
 # ################################################################################################################################
 
@@ -120,7 +127,35 @@ class WebSocket(_WebSocket):
         # Referred to soon enough so created here
         self.pub_client_id = 'ws.{}'.format(new_cid())
 
+        # Zato parallel server this WebSocket runs on
+        self.parallel_server = self.config.parallel_server # type: ParallelServer
+
+        # JSON dumps function can be overridden by users
+        self._json_dump_func = self._set_json_dump_func()
+
         super(WebSocket, self).__init__(_unusued_sock, _unusued_protocols, _unusued_extensions, wsgi_environ, **kwargs)
+
+    def _set_json_dump_func(self, _default='rapidjson', _supported=('rapidjson', 'bson')):
+        json_library = self.parallel_server.fs_server_config.wsx.get('json_library', _default)
+
+        if json_library not in _supported:
+
+            # Warn only if something was set by users
+            if json_library:
+                logger.warn('Unrecognized JSON library `%s` configured for WSX, not one of `%s`, switching to `%s`',
+                    json_library, _supported, _default)
+
+            json_library = _default
+
+        if json_library == 'rapidjson':
+            from rapidjson import dumps as dumps_func
+
+        elif json_library == 'bson':
+            from bson.json_util import dumps as dumps_func
+
+        logger.info('Setting JSON dumps function based on `%s`', json_library)
+
+        return dumps_func
 
     def _init(self):
 
@@ -551,7 +586,7 @@ class WebSocket(_WebSocket):
 
                 logger.info('Assigning wsx py:`%s` to `%s`', self.python_id, self.peer_conn_info_pretty)
 
-            return AuthenticateResponse(self.token.value, request.cid, request.id).serialize()
+            return AuthenticateResponse(self.token.value, request.cid, request.id).serialize(self._json_dump_func)
 
 # ################################################################################################################################
 
@@ -561,8 +596,13 @@ class WebSocket(_WebSocket):
             'Peer %s (%s) %s, closing its connection to %s (%s), cid:`%s` (%s)', self._peer_address, self._peer_fqdn, action,
             self._local_address, self.config.name, cid, self.peer_conn_info_pretty)
 
+        # If the client is already known to have disconnected there is no point in sending a Forbidden message.
+        if self.is_client_disconnected():
+            self.update_terminated_status()
+            return
+
         try:
-            self.send(Forbidden(cid, data).serialize())
+            self.send(Forbidden(cid, data).serialize(self._json_dump_func))
         except AttributeError as e:
             # Catch a lower-level exception which may be raised in case the client
             # disconnected and we did not manage to send the Forbidden message.
@@ -570,9 +610,19 @@ class WebSocket(_WebSocket):
             # with a specific message. Otherwise, we reraise the exception.
             if not e.args[0] == "'NoneType' object has no attribute 'text_message'":
                 raise
+        else:
+            self.update_terminated_status()
 
+# ################################################################################################################################
+
+    def update_terminated_status(self):
         self.server_terminated = True
         self.client_terminated = True
+
+# ################################################################################################################################
+
+    def is_client_disconnected(self):
+        return self.terminated or self.sock is None
 
 # ################################################################################################################################
 
@@ -790,7 +840,7 @@ class WebSocket(_WebSocket):
         else:
             response = OKResponse(cid, msg.id, service_response)
 
-        serialized = response.serialize()
+        serialized = response.serialize(self._json_dump_func)
 
         logger.info('Sending response `%s` from to `%s` `%s` `%s` `%s` %s', serialized,
             self.python_id, self.pub_client_id, self.ext_client_id, self.ext_client_name, self.peer_conn_info_pretty)
@@ -982,7 +1032,7 @@ class WebSocket(_WebSocket):
 
         # Serialize to string
         msg = _Class(cid, request, ctx)
-        serialized = msg.serialize()
+        serialized = msg.serialize(self._json_dump_func)
 
         # Log what is about to be sent
         if use_send:
@@ -1162,7 +1212,10 @@ class WebSocketServer(WSGIServer):
     def stop(self, *args, **kwargs):
         """ Reimplemented from the parent class to be able to call shutdown prior to its calling self.socket.close.
         """
-        self.socket.shutdown(2) # SHUT_RDWR has value of 2 in 'man 2 shutdown'
+        # self.socket will exist only if we have previously successfully
+        # bound to an address. Otherwise, there will be no such attribute.
+        if hasattr(self, 'socket'):
+            self.socket.shutdown(2) # SHUT_RDWR has value of 2 in 'man 2 shutdown'
         super(WebSocketServer, self).stop(*args, **kwargs)
 
 # ################################################################################################################################

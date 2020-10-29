@@ -22,8 +22,8 @@ from django.template.response import TemplateResponse
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.pubsub import MsgForm
 from zato.admin.web.views import django_url_reverse, slugify
-from zato.common import PUBSUB
-from zato.common.util import asbool
+from zato.common.api import PUBSUB
+from zato.common.util.api import asbool
 
 # ################################################################################################################################
 
@@ -39,26 +39,23 @@ def get_client_html(item, security_id, cluster_id):
 
     if security_id:
         path_name = 'security-basic-auth'
-        id_value = security_id
         name = item.sec_name
         protocol = 'HTTP'
 
     elif item.ws_channel_id:
         path_name = 'channel-web-socket'
-        id_value = item.ws_channel_id
         name = item.ws_channel_name
         protocol = 'WebSockets'
 
     elif getattr(item, 'service_id', None):
         path_name = 'service'
-        id_value = item.service_id
         name = item.service_name
         protocol = 'Service'
 
     if path_name:
         path = django_url_reverse(path_name)
-        client = '<span style="font-size:smaller">{}</span><br/><a href="{}?cluster={}&amp;highlight={}">{}</a>'.format(
-            protocol, path, cluster_id, id_value, name)
+        client = '<span style="font-size:smaller">{}</span><br/><a href="{}?cluster={}&amp;query={}">{}</a>'.format(
+            protocol, path, cluster_id, name, name)
 
     return client
 

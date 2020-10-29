@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 from contextlib import closing
 from datetime import datetime, timedelta
-from json import dumps
+from io import StringIO
 from operator import attrgetter
 from traceback import format_exc
 
@@ -28,20 +28,22 @@ from future.utils import iteritems, itervalues
 from past.builtins import basestring, unicode
 
 # Zato
-from zato.common import DATA_FORMAT, PUBSUB, SEARCH
+from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
+from zato.common.json_internal import dumps
 from zato.common.odb.model import WebSocketClientPubSubKeys
 from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered as _confirm_pubsub_msg_delivered, \
      get_delivery_server_for_sub_key, get_sql_messages_by_msg_id_list as _get_sql_messages_by_msg_id_list, \
      get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
-from zato.common.util import fs_safe_name, new_cid, spawn_greenlet
+from zato.common.util.api import new_cid, spawn_greenlet
+from zato.common.util.file_system import fs_safe_name
 from zato.common.util.event import EventLog
 from zato.common.util.hook import HookTool
 from zato.common.util.python_ import get_current_stack
-from zato.common.util.time_ import utcnow_as_ms
+from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.common.util.wsx import find_wsx_environ
 from zato.server.pubsub.model import Endpoint, EventType, HookCtx, Subscription, SubKeyServer, Topic
 from zato.server.pubsub.sync import InRAMSync
@@ -110,7 +112,7 @@ default_sk_server_table_columns = 6, 15, 8, 6, 17, 80
 
 _PRIORITY=PUBSUB.PRIORITY
 _JSON=DATA_FORMAT.JSON
-_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value
+_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE
 
 class msg:
     wsx_sub_resumed = 'WSX subscription resumed, sk:`%s`, peer:`%s`'
@@ -215,6 +217,7 @@ class PubSub(object):
 
     @property
     def subscriptions_by_sub_key(self):
+        # type: () -> dict
         self.emit_about_to_access_sub_sk({'sub_sk':sorted(self._subscriptions_by_sub_key), 'stack':get_current_stack()})
         return self._subscriptions_by_sub_key
 
@@ -287,6 +290,61 @@ class PubSub(object):
             for sub in itervalues(self.subscriptions_by_sub_key):
                 if sub.ext_client_id == ext_client_id:
                     return sub
+
+# ################################################################################################################################
+
+    def _write_log_sub_data(self, sub, out):
+        # type: (Subscription, StringIO)
+        items = sorted(sub.to_dict().items())
+
+        out.write('\n')
+        for key, value in items:
+            out.write(' - {} {}'.format(key, value))
+            if key == 'creation_time':
+                out.write('\n - creation_time_utc {}'.format(datetime_from_ms(value)))
+            out.write('\n')
+
+# ################################################################################################################################
+
+    def _log_subscriptions_dict(self, attr_name, prefix, title):
+        # type: (str, str, str)
+        out = StringIO()
+        out.write('\n')
+
+        attr = getattr(self, attr_name) # type: dict
+
+        for sub_key, sub_data in sorted(attr.items()): # type: (str, object)
+            out.write('* {}\n'.format(sub_key))
+
+            if isinstance(sub_data, Subscription):
+                self._write_log_sub_data(sub_data, out)
+            else:
+                sorted_sub_data = sorted(sub_data)
+                for item in sorted_sub_data:
+                    if isinstance(item, Subscription):
+                        self._write_log_sub_data(item, out)
+                    else:
+                        out.write(' - {}'.format(item))
+                        out.write('\n')
+
+            out.write('\n')
+
+        logger_zato.info('\n === %s (%s) ===\n %s', prefix, title, out.getvalue())
+        out.close()
+
+# ################################################################################################################################
+
+    def log_subscriptions_by_sub_key(self, title, prefix='PubSub.subscriptions_by_sub_key'):
+        # type: (str, str)
+        with self.lock:
+            self._log_subscriptions_dict('subscriptions_by_sub_key', prefix, title)
+
+# ################################################################################################################################
+
+    def log_subscriptions_by_topic_name(self, title, prefix='PubSub.subscriptions_by_topic'):
+        # type: (str, str)
+        with self.lock:
+            self._log_subscriptions_dict('subscriptions_by_topic', prefix, title)
 
 # ################################################################################################################################
 
@@ -492,10 +550,10 @@ class PubSub(object):
         if config['security_id']:
             self.sec_id_to_endpoint_id[config['security_id']] = config.id
 
-        if config['ws_channel_id']:
+        if config.get('ws_channel_id'):
             self.ws_channel_id_to_endpoint_id[config['ws_channel_id']] = config.id
 
-        if config['service_id']:
+        if config.get('service_id'):
             self.service_id_to_endpoint_id[config['service_id']] = config.id
 
 # ################################################################################################################################
@@ -591,10 +649,11 @@ class PubSub(object):
         """ Deletes a subscription from the list of subscription. By default, it is not an error to call
         the method with an invalid sub_key. Must be invoked with self.lock held.
         """
-        sub = self.subscriptions_by_sub_key.pop(sub_key, _invalid)
+        sub = self.subscriptions_by_sub_key.pop(sub_key, _invalid) # type: Subscription
         if sub is _invalid and (not ignore_missing):
             raise KeyError('No such sub_key `%s`', sub_key)
         else:
+            logger.info('Deleted subscription object `%s` (%s)', sub.sub_key, sub.topic_name)
             return sub # Either valid or invalid but ignore_missing is True
 
 # ################################################################################################################################
@@ -724,16 +783,26 @@ class PubSub(object):
 # ################################################################################################################################
 
     def _delete_topic(self, topic_id, topic_name):
+        # type: (int, str) -> list
         del self.topic_name_to_id[topic_name]
-        self.subscriptions_by_topic.pop(topic_name, None) # May have no subscriptions hence .pop instead of del
+        subscriptions_by_topic = self.subscriptions_by_topic.pop(topic_name, [])
         del self.topics[topic_id]
+
+        logger.info('Deleted topic object `%s` (%s), subs:`%s`',
+            topic_name, topic_id, [elem.sub_key for elem in subscriptions_by_topic])
+
+        return subscriptions_by_topic
 
 # ################################################################################################################################
 
     def delete_topic(self, topic_id):
+        # type: (int) -> list
         with self.lock:
             topic_name = self.topics[topic_id].name
-            self._delete_topic(topic_id, topic_name)
+            subscriptions_by_topic = self._delete_topic(topic_id, topic_name) # type: list
+
+            for sub in subscriptions_by_topic: # type: Subscription
+                self._delete_subscription_by_sub_key(sub.sub_key)
 
 # ################################################################################################################################
 

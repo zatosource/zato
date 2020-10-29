@@ -10,12 +10,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
-from json import loads
 
 # Zato
-from zato.common import PUBSUB as COMMON_PUBSUB
+from zato.common.api import PUBSUB as COMMON_PUBSUB
 from zato.common.broker_message import PUBSUB
 from zato.common.exception import BadRequest, Conflict
+from zato.common.json_internal import loads
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, PubSubTopic
 from zato.common.odb.query import count, pubsub_endpoint, pubsub_endpoint_list, pubsub_endpoint_queue, \
      pubsub_messages_for_queue, server_by_id
@@ -23,6 +23,7 @@ from zato.common.odb.query.pubsub.endpoint import pubsub_endpoint_summary, pubsu
 from zato.common.odb.query.pubsub.subscription import pubsub_subscription_list_by_endpoint_id
 from zato.common.pubsub import msg_pub_attrs
 from zato.common.util.pubsub import get_topic_sub_keys_from_sub_keys, make_short_msg_copy_from_msg
+from zato.common.simpleio_ import drop_sio_elems
 from zato.common.util.time_ import datetime_from_ms
 from zato.server.service import AsIs, Bool, Int, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -122,6 +123,7 @@ class Create(AdminService):
         output_required = (AsIs('id'), 'name')
         request_elem = 'zato_pubsub_endpoint_create_request'
         response_elem = 'zato_pubsub_endpoint_create_response'
+        default_value = None
 
     def handle(self):
         input = self.request.input
@@ -145,8 +147,8 @@ class Create(AdminService):
             endpoint.role = input.role
             endpoint.topic_patterns = input.topic_patterns
             endpoint.security_id = input.security_id
-            endpoint.service_id = input.service_id
-            endpoint.ws_channel_id = input.ws_channel_id
+            endpoint.service_id = input.get('service_id')
+            endpoint.ws_channel_id = input.get('ws_channel_id')
 
             session.add(endpoint)
             session.commit()
@@ -321,7 +323,7 @@ class UpdateEndpointQueue(AdminService):
     """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'id', 'sub_key', 'active_status')
-        input_optional = common_sub_data
+        input_optional = drop_sio_elems(common_sub_data, 'active_status', 'sub_key')
         output_required = ('id', 'name')
 
     def handle(self):
@@ -595,8 +597,9 @@ class GetEndpointSummaryList(_GetEndpointSummaryBase):
         response_elem = 'zato_pubsub_endpoint_get_endpoint_summary_list_response'
 
     def get_data(self, session):
+
         result = self._search(pubsub_endpoint_summary_list, session, self.request.input.cluster_id,
-            self.request.input.topic_id, False)
+            self.request.input.get('topic_id') or None, False)
 
         for item in result:
 

@@ -17,7 +17,7 @@ from past.builtins import unicode
 from six import PY2
 
 # Zato
-from zato.common import AUTH_RESULT
+from zato.common.api import AUTH_RESULT
 
 logger = getLogger('zato')
 

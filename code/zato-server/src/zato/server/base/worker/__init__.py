@@ -17,7 +17,6 @@ from copy import deepcopy
 from datetime import datetime
 from errno import ENOENT
 from inspect import isclass
-from json import loads
 from shutil import rmtree
 from tempfile import gettempdir
 from threading import RLock
@@ -45,13 +44,16 @@ from six import PY3
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
-from zato.common import broker_message, CHANNEL, GENERIC as COMMON_GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, NOTIF, \
-     PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, SECRETS, simple_types, URL_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
+from zato.common import broker_message
+from zato.common.api import CHANNEL, DATA_FORMAT, GENERIC as COMMON_GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, IPC, \
+     KVDB, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, simple_types, URL_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
+from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
+from zato.common.json_internal import loads
 from zato.common.match import Matcher
 from zato.common.odb.api import PoolStore, SessionWrapper
-from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
+from zato.common.util.api import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
      import_module_from_path, new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, start_connectors, \
      store_tls, update_apikey_username_to_channel, update_bind_port, visit_py_source
 from zato.server.base.worker.common import WorkerImpl
@@ -72,11 +74,10 @@ from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConn
 from zato.server.connection.search.solr import SolrAPI, SolrConnStore
 from zato.server.connection.sftp import SFTPIPCFacade
 from zato.server.connection.sms.twilio import TwilioAPI, TwilioConnStore
-from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channel_main_loop as stomp_channel_main_loop, \
-     OutconnSTOMPConnStore
 from zato.server.connection.web_socket import ChannelWebSocket
 from zato.server.connection.vault import VaultConnAPI
 from zato.server.ext.zunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
+from zato.server.generic.api.channel_file_transfer import ChannelFileTransferWrapper
 from zato.server.generic.api.def_kafka import DefKafkaWrapper
 from zato.server.generic.api.outconn_im_slack import OutconnIMSlackWrapper
 from zato.server.generic.api.outconn_im_telegram import OutconnIMTelegramWrapper
@@ -98,15 +99,20 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 # Type hints
-import typing
+if 0:
 
-if typing.TYPE_CHECKING:
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigStore
+    from zato.server.service import Service
 
     # For pyflakes
-    ConfigStore = ConfigStore
+    ConfigStore    = ConfigStore
     ParallelServer = ParallelServer
+    Service        = Service
+
+# ################################################################################################################################
+
+_data_format_dict = DATA_FORMAT.DICT
 
 # ################################################################################################################################
 
@@ -159,7 +165,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     """ Dispatches work between different pieces of configuration of an individual gunicorn worker.
     """
     def __init__(self, worker_config=None, server=None):
-        # type: (ConfigStore, ParallelServer) -> None
+        # type: (ConfigStore, ParallelServer)
 
         self.logger = logging.getLogger(self.__class__.__name__)
         self.is_ready = False
@@ -181,6 +187,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # To expedite look-ups
         self._simple_types = simple_types
 
+        # Generic connections - FTP channels
+        self.channel_file_transfer = {}
+
         # Generic connections - Kafka definitions
         self.def_kafka = {}
 
@@ -196,7 +205,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Generic connections - IM Slack
         self.outconn_im_slack = {}
 
-
         # Generic connections - IM Telegram
         self.outconn_im_telegram = {}
 
@@ -211,14 +219,10 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.json_pointer_store = self.worker_config.json_pointer_store
         self.xpath_store = self.worker_config.xpath_store
 
-        # CassandraOutconnSTOMPConnStore
+        # Cassandra
         self.cassandra_api = CassandraAPI(CassandraConnStore())
         self.cassandra_query_store = CassandraQueryStore()
         self.cassandra_query_api = CassandraQueryAPI(self.cassandra_query_store)
-
-        # STOMP
-        self.stomp_outconn_api = STOMPAPI(OutconnSTOMPConnStore())
-        self.stomp_channel_api = STOMPAPI(ChannelSTOMPConnStore())
 
         # Search
         self.search_es_api = ElasticSearchAPI(ElasticSearchConnStore())
@@ -251,6 +255,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
+            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER: self.channel_file_transfer,
             COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: self.def_kafka,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK: self.outconn_im_slack,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_TELEGRAM: self.outconn_im_telegram,
@@ -260,6 +265,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         }
 
         self._generic_conn_handler = {
+            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER: ChannelFileTransferWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: DefKafkaWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK: OutconnIMSlackWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_TELEGRAM: OutconnIMTelegramWrapper,
@@ -297,9 +303,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # E-mail
         self.init_email_smtp()
         self.init_email_imap()
-
-        # STOMP
-        self.init_stomp()
 
         # ZeroMQ
         self.init_zmq()
@@ -343,10 +346,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Create all the expected connections and objects
         self.init_sql()
-        self.init_ftp()
-
         self.init_http_soap()
-
         self.init_cloud()
         self.init_notifiers()
 
@@ -359,6 +359,13 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # All set, whoever is waiting for us, if anyone at all, can now proceed
         self.is_ready = True
+
+# ################################################################################################################################
+
+    def early_init(self):
+        """ Initialises these parts of our configuration that are needed earlier than others.
+        """
+        self.init_ftp()
 
 # ################################################################################################################################
 
@@ -512,13 +519,12 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             self.sql_pool_store[pool_name] = config
 
     def init_ftp(self):
-        """ Initializes FTP connetions. The method replaces whatever value self.out_ftp
+        """ Initializes FTP connections. The method replaces whatever value self.out_ftp
         previously had (initially this would be a ConfigDict of connection definitions).
         """
         config_list = self.worker_config.out_ftp.get_config_list()
         self.worker_config.out_ftp = FTPStore()
         self.worker_config.out_ftp.add_params(config_list)
-
 
     def init_sftp(self):
         """ Each outgoing SFTP connection requires a connection handle to be attached here,
@@ -637,22 +643,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
                 gevent.spawn(self._init_cassandra_query, self.cassandra_query_api.create, k, v.config)
             except Exception:
                 logger.warn('Could not create a Cassandra query `%s`, e:`%s`', k, format_exc())
-
-# ################################################################################################################################
-
-    def init_stomp(self):
-
-        for k, v in self.worker_config.out_stomp.items():
-            try:
-                self.stomp_outconn_api.create_def(k, v.config)
-            except Exception:
-                logger.warn('Could not create a Stomp outgoing connection `%s`, e:`%s`', k, format_exc())
-
-        for k, v in self.worker_config.channel_stomp.items():
-            try:
-                self.stomp_channel_api.create_def(k, v.config, stomp_channel_main_loop, self)
-            except Exception:
-                logger.warn('Could not create a Stomp channel `%s`, e:`%s`', k, format_exc())
 
 # ################################################################################################################################
 
@@ -989,6 +979,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def init_generic_connections_config(self):
 
         # Local aliases
+        channel_file_transfer_map = self.generic_impl_func_map.setdefault(
+            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER, {})
         def_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA, {})
         outconn_im_slack_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK, {})
         outconn_im_telegram_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_TELEGRAM, {})
@@ -999,6 +991,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # These generic connections are regular - they use common API methods for such connections
         regular_maps = [
+            channel_file_transfer_map,
             def_kafka_map,
             outconn_im_slack_map,
             outconn_im_telegram_map,
@@ -1022,7 +1015,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         for password_item in password_maps:
             password_item[_generic_msg.change_password] = self._change_password_generic_connection
 
-        # Outgoing SFTP connections require for a different API to be called (provided by ParallelServer)
+        # Some generic connections require different admin APIs
         outconn_sftp_map[_generic_msg.create] = self._on_outconn_sftp_create
         outconn_sftp_map[_generic_msg.edit]   = self._on_outconn_sftp_edit
         outconn_sftp_map[_generic_msg.delete] = self._on_outconn_sftp_delete
@@ -1473,7 +1466,11 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         def inner(service, **ignored):
             if not isinstance(service.response.payload, self._simple_types):
-                service.response.payload = service.response.payload.getvalue(serialize)
+
+                # If serialise is False, the operation below is essentially a no-op
+                # so we can skip it altogether.
+                if serialize:
+                    service.response.payload = service.response.payload.getvalue(serialize)
 
         return inner
 
@@ -1552,7 +1549,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         if zato_ctx:
             wsgi_environ['zato.channel_item'] = zato_ctx.get('zato.channel_item')
 
-        data_format = msg.get('data_format')
+        data_format = msg.get('data_format') or _data_format_dict
         transport = msg.get('transport')
 
         if msg.get('channel') in (CHANNEL.FANOUT_ON_TARGET, CHANNEL.FANOUT_ON_FINAL, CHANNEL.PARALLEL_EXEC_ON_TARGET):
@@ -1560,7 +1557,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         else:
             payload = msg['payload']
 
-        service, is_active = self.server.service_store.new_instance_by_name(msg['service'])
+        service, is_active = self.server.service_store.new_instance_by_name(msg['service']) # type: (Service, bool)
         if not is_active:
             msg = 'Could not invoke an inactive service:`{}`, cid:`{}`'.format(service.get_name(), cid)
             logger.warn(msg)
@@ -2244,44 +2241,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
     def on_broker_msg_OUTGOING_ZMQ_DELETE(self, msg):
         self.zmq_out_api.delete(msg.name)
-
-# ################################################################################################################################
-
-    def on_broker_msg_OUTGOING_STOMP_CREATE(self, msg):
-        self.stomp_outconn_api.create_def(msg.name, msg)
-
-    def on_broker_msg_OUTGOING_STOMP_EDIT(self, msg):
-        dispatcher.notify(broker_message.OUTGOING.STOMP_EDIT.value, msg)
-        old_name = msg.get('old_name')
-        del_name = old_name if old_name else msg['name']
-        self.stomp_outconn_api.edit_def(del_name, msg)
-
-    def on_broker_msg_OUTGOING_STOMP_DELETE(self, msg):
-        dispatcher.notify(broker_message.OUTGOING.STOMP_DELETE.value, msg)
-        self.stomp_outconn_api.delete_def(msg.name)
-
-    def on_broker_msg_OUTGOING_STOMP_CHANGE_PASSWORD(self, msg):
-        dispatcher.notify(broker_message.OUTGOING.STOMP_CHANGE_PASSWORD.value, msg)
-        self.stomp_outconn_api.change_password_def(msg)
-
-# ################################################################################################################################
-
-    def on_broker_msg_CHANNEL_STOMP_CREATE(self, msg):
-        self.stomp_channel_api.create_def(msg.name, msg, stomp_channel_main_loop, self)
-
-    def on_broker_msg_CHANNEL_STOMP_EDIT(self, msg):
-        dispatcher.notify(broker_message.CHANNEL.STOMP_EDIT.value, msg)
-        old_name = msg.get('old_name')
-        del_name = old_name if old_name else msg['name']
-        self.stomp_channel_api.edit_def(del_name, msg, stomp_channel_main_loop, self)
-
-    def on_broker_msg_CHANNEL_STOMP_DELETE(self, msg):
-        dispatcher.notify(broker_message.CHANNEL.STOMP_DELETE.value, msg)
-        self.stomp_channel_api.delete_def(msg.name)
-
-    def on_broker_msg_CHANNEL_STOMP_CHANGE_PASSWORD(self, msg):
-        dispatcher.notify(broker_message.CHANNEL.STOMP_CHANGE_PASSWORD.value, msg)
-        self.stomp_channel_api.change_password_def(msg)
 
 # ################################################################################################################################
 

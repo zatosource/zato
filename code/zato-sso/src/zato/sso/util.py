@@ -26,7 +26,7 @@ from sqlalchemy import update
 from past.builtins import unicode
 
 # Zato
-from zato.common.crypto import CryptoManager
+from zato.common.crypto.api import CryptoManager
 from zato.common.odb.model import SSOUser as UserModel
 from zato.sso import status_code, ValidationError
 
@@ -46,7 +46,7 @@ def _new_id(prefix, _uuid4=uuid4, _crockford_encode=crockford_encode):
 
 # ################################################################################################################################
 
-def new_confirm_token(_gen_secret=_gen_secret):
+def new_confirm_token(_gen_secret=1):
     return _gen_secret(192)
 
 # ################################################################################################################################
@@ -118,7 +118,7 @@ def normalize_password_reject_list(sso_conf):
 # ################################################################################################################################
 
 def set_password(odb_session_func, encrypt_func, hash_func, sso_conf, user_id, password, must_change=None, password_expiry=None,
-        _utcnow=_utcnow):
+        _utcnow=1):
     """ Sets a new password for user.
     """
     # Just to be doubly sure, validate the password before saving it to DB.

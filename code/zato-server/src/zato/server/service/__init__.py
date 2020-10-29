@@ -14,9 +14,6 @@ from datetime import datetime
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED
 from traceback import format_exc
 
-# anyjson
-from anyjson import dumps
-
 # Bunch
 from bunch import bunchify
 
@@ -35,13 +32,14 @@ from zato.common.py23_ import maxint
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import BROKER, CHANNEL, DATA_FORMAT, Inactive, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, PUBSUB, WEB_SOCKET, \
-     ZatoException, zato_no_op_marker
+from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, PUBSUB, WEB_SOCKET, \
+     zato_no_op_marker
 from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL, SERVICE
-from zato.common.exception import Reportable
+from zato.common.exception import Inactive, Reportable, ZatoException
+from zato.common.json_internal import dumps
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException
 from zato.common.nav import DictNav, ListNav
-from zato.common.util import get_response_value, make_repr, new_cid, payload_from_request, service_name_from_impl, uncamelify
+from zato.common.util.api import get_response_value, make_repr, new_cid, payload_from_request, service_name_from_impl, uncamelify
 from zato.server.connection import slow_response
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
@@ -54,61 +52,82 @@ from zato.server.pattern.invoke_retry import InvokeRetry
 from zato.server.pattern.parallel import ParallelExec
 from zato.server.pubsub import PubSub
 from zato.server.service.reqresp import AMQPRequestData, Cloud, Definition, IBMMQRequestData, InstantMessaging, Outgoing, \
-     Request, Response
+     Request
+
+# Zato - Cython
+from zato.cy.reqresp.response import Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
-from zato.server.service.reqresp.sio import AsIs, CSV, Boolean, Date, DateTime, Dict, Float, ForceType, Integer, List, \
-     ListOfDicts, Nested, Opaque, Unicode, UTC
+from zato.simpleio import AsIs, CSV, Bool, Date, DateTime, Dict, Decimal, DictList, Elem as SIOElem, Float, Int, List, \
+     Opaque, Text, UTC, UUID
 
-# So pyflakes doesn't complain about names being imported but not used
+# For pyflakes
 AsIs = AsIs
 CSV = CSV
-Boolean = Boolean
+Bool = Bool
 Date = Date
 DateTime = DateTime
+Decimal = Decimal
+Bool = Bool
 Dict = Dict
+DictList = DictList
 Float = Float
-ForceType = ForceType
-Integer = Integer
+Int = Int
 List = List
-ListOfDicts = ListOfDicts
-Nested = Nested
 Opaque = Opaque
-Unicode = Unicode
+Text = Text
 UTC = UTC
+UUID = UUID
 
 # ################################################################################################################################
 
-# Type checking
-import typing
-
-if typing.TYPE_CHECKING:
+if 0:
 
     # stdlib
+    from datetime import timedelta
     from typing import Callable
 
     # Zato
-    from zato.broker.client import BrokerClient
+    from zato.broker.client import BrokerClient, BrokerClientAPI
     from zato.common.audit import AuditPII
-    from zato.common.crypto import ServerCryptoManager
+    from zato.common.crypto.api import ServerCryptoManager
     from zato.common.json_schema import Validator as JSONSchemaValidator
     from zato.common.odb.api import ODBManager
+    from zato.server.connection.ftp import FTPStore
     from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
+    from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.server import Servers
+    from zato.server.connection.cassandra import CassandraAPI
+    from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
+    from zato.server.query import CassandraQueryAPI
     from zato.sso.api import SSOAPI
+
+    # Zato - Cython
+    from zato.simpleio import CySimpleIO
 
     # For pyflakes
     AuditPII = AuditPII
     BrokerClient = BrokerClient
+    BrokerClientAPI = BrokerClientAPI
     Callable = Callable
+    CassandraAPI = CassandraAPI
+    CassandraQueryAPI = CassandraQueryAPI
+    ConfigDict = ConfigDict
+    ConfigStore = ConfigStore
+    CySimpleIO = CySimpleIO
+    FTPStore = FTPStore
+    JSONPointerStore = JSONPointerStore
     JSONSchemaValidator = JSONSchemaValidator
+    NamespaceStore = NamespaceStore
     ODBManager = ODBManager
     ParallelServer = ParallelServer
     ServerCryptoManager = ServerCryptoManager
     Servers = Servers
     SSOAPI = SSOAPI
+    timedelta = timedelta
     WorkerStore = WorkerStore
+    XPathStore = XPathStore
 
 # ################################################################################################################################
 
@@ -120,9 +139,13 @@ NOT_GIVEN = 'ZATO_NOT_GIVEN'
 
 # ################################################################################################################################
 
-# Back compat
-Bool = Boolean
-Int = Integer
+# Backward compatibility
+Boolean = Bool
+Integer = Int
+ForceType = SIOElem
+ListOfDicts = DictList
+Nested = Opaque
+Unicode = Text
 
 # ################################################################################################################################
 
@@ -132,6 +155,10 @@ PubSub = PubSub
 # ################################################################################################################################
 
 _wsgi_channels = (CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC)
+
+# ################################################################################################################################
+
+_response_raw_types=(basestring, dict, list, tuple, EtreeElement, ObjectifiedElement)
 
 # ################################################################################################################################
 
@@ -192,11 +219,24 @@ class ChannelSecurityInfo(object):
     __slots__ = ('id', 'name', 'type', 'username', 'impl')
 
     def __init__(self, id, name, type, username, impl):
-        self.id = id
-        self.name = name
-        self.type = type
-        self.username = username
-        self.impl = impl
+        self.id = id     # type: int
+        self.name = name # type: str
+        self.type = type # type: str
+        self.username = username # type: str
+        self.impl = impl # type: dict
+
+    def to_dict(self, needs_impl=False):
+        out = {
+            'id': self.id,
+            'name': self.name,
+            'type': self.type,
+            'username': self.username,
+        }
+
+        if needs_impl:
+            out['impl'] = self.impl
+
+        return out
 
 # ################################################################################################################################
 
@@ -298,35 +338,37 @@ class Service(object):
     cloud = Cloud()
     definition = Definition()
     im = InstantMessaging()
-    odb = None # type: ODBManager
-    kvdb = None # type: KVDB
+    odb = None    # type: ODBManager
+    kvdb = None   # type: KVDB
     pubsub = None # type: PubSub
-    cassandra_conn = None
-    cassandra_query = None
-    email = None
-    search = None
+    cassandra_conn = None  # type: CassandraAPI
+    cassandra_query = None # type: CassandraQueryAPI
+    email = None  # type: EMailAPI
+    search = None # type: SearchAPI
     amqp = AMQPFacade()
 
     # For WebSockets
     wsx = None # type: WSXFacade
 
     _worker_store = None  # type: WorkerStore
-    _worker_config = None
-    _msg_ns_store = None
-    _ns_store = None
-    _json_pointer_store = None
-    _xpath_store = None
-    _out_ftp = None
-    _out_plain_http = None
+    _worker_config = None # type: ConfigStore
+    _msg_ns_store = None  # type: NamespaceStore
+    _json_pointer_store = None # type: JSONPointerStore
+    _xpath_store = None   # type: XPathStore
+    _out_ftp = None       # type: FTPStore
+    _out_plain_http = None # type: ConfigDict
 
     _req_resp_freq = 0
-    _has_before_job_hooks = None
-    _has_after_job_hooks = None
+    _has_before_job_hooks = None # type: bool
+    _has_after_job_hooks = None  # type: bool
     _before_job_hooks = []
     _after_job_hooks = []
 
+    # Cython based SimpleIO definition created by service store when the class is deployed
+    _sio = None # type: CySimpleIO
+
     # Rate limiting
-    _has_rate_limiting = None
+    _has_rate_limiting = None # type: bool
 
     # User management and SSO
     sso = None # type: SSOAPI
@@ -352,24 +394,19 @@ class Service(object):
         self.name = self.__class__.__service_name # Will be set through .get_name by Service Store
         self.impl_name = self.__class__.__service_impl_name # Ditto
         self.logger = _get_logger(self.name)
-        self.server = None         # type: ParallelServer
-        self.broker_client = None
-        self.channel = None
-        self.cid = None
-        self.in_reply_to = None
-        self.data_format = None
-        self.transport = None
-        self.wsgi_environ = None
-        self.job_type = None
+        self.server = None        # type: ParallelServer
+        self.broker_client = None # type: BrokerClientAPI
+        self.channel = None # type: ChannelInfo
+        self.chan = self.channel
+        self.cid = None          # type: str
+        self.in_reply_to = None  # type: str
+        self.data_format = None  # type: str
+        self.transport = None    # type: str
+        self.wsgi_environ = None # type: dict
+        self.job_type = None     # type: str
         self.environ = _Bunch()
         self.request = _Request(self.logger)
         self.response = _Response(self.logger)
-        self.invocation_time = None # When was the service invoked
-        self.handle_return_time = None # When did its 'handle' method finished processing the request
-        self.processing_time_raw = None # A timedelta object with the processing time up to microseconds
-        self.processing_time = None # Processing time in milliseconds
-        self.usage = 0 # How many times the service has been invoked
-        self.slow_threshold = maxint # After how many ms to consider the response came too late
         self.msg = None
         self.time = None
         self.patterns = None
@@ -380,6 +417,21 @@ class Service(object):
         self.has_validate_output = False
         self.cache = None
 
+        # When was the service invoked
+        self.invocation_time = None # type: datetime
+
+        # When did our 'handle' method finished processing the request
+        self.handle_return_time = None # type: datetime
+
+        # # A timedelta object with the processing time up to microseconds
+        self.processing_time_raw = None # type: timedelta
+
+        # Processing time in milliseconds
+        self.processing_time = None # type: int
+
+        self.usage = 0 # How many times the service has been invoked
+        self.slow_threshold = maxint # After how many ms to consider the response came too late
+
         self.out = self.outgoing = _Outgoing(
             self.amqp,
             self._out_ftp,
@@ -388,7 +440,6 @@ class Service(object):
             self._out_plain_http,
             self._worker_config.out_soap,
             self._worker_store.sql_pool_store,
-            self._worker_store.stomp_outconn_api,
             ZMQFacade(self._worker_store.zmq_out_api) if self.component_enabled_zeromq else NO_DEFAULT_VALUE,
             self._worker_store.outconn_wsx,
             self._worker_store.vault_conn_api,
@@ -473,6 +524,7 @@ class Service(object):
         if self.component_enabled_search:
             if not Service.search:
                 Service.search = SearchAPI(self._worker_store.search_es_api, self._worker_store.search_solr_api)
+
         if self.component_enabled_msg_path:
             self.msg = MessageFacade(
                 self._json_pointer_store, self._xpath_store, self._msg_ns_store, self.request.payload, self.time)
@@ -483,16 +535,17 @@ class Service(object):
         if may_have_wsgi_environ:
             self.request.http.init(self.wsgi_environ)
 
-        # self.is_sio attribute is set by ServiceStore during deployment
+        # self.has_sio attribute is set by ServiceStore during deployment
         if self.has_sio:
-            self.request.init(True, self.cid, self.SimpleIO, self.data_format, self.transport, self.wsgi_environ,
+            self.request.init(True, self.cid, self._sio, self.data_format, self.transport, self.wsgi_environ,
                 self.server.encrypt)
-            self.response.init(self.cid, self.SimpleIO, self.data_format)
+            self.response.init(self.cid, self._sio, self.data_format)
 
         # Cache is always enabled
         self.cache = self._worker_store.cache_api
 
-    def set_response_data(self, service, _raw_types=(basestring, dict, list, tuple, EtreeElement, ObjectifiedElement), **kwargs):
+    def set_response_data(self, service, _raw_types=_response_raw_types, **kwargs):
+        # type: (Service, tuple, **object)
         response = service.response.payload
         if not isinstance(response, _raw_types):
             response = response.getvalue(serialize=kwargs['serialize'])
@@ -737,7 +790,7 @@ class Service(object):
         set_response_func = kwargs.pop('set_response_func', service.set_response_data)
 
         invoke_args = (set_response_func, service, payload, channel, data_format, transport, self.server,
-            self.broker_client, self._worker_store, kwargs.pop('cid', self.cid), self.request.simple_io_config)
+            self.broker_client, self._worker_store, kwargs.pop('cid', self.cid), None)
 
         kwargs.update({'serialize':serialize, 'as_bunch':as_bunch})
 
@@ -753,6 +806,7 @@ class Service(object):
                         raise
             else:
                 out = self.update_handle(*invoke_args, **kwargs)
+
                 if kwargs.get('skip_response_elem') and hasattr(out, 'keys'):
                     keys = list(iterkeys(out))
                     response_elem = keys[0]
@@ -1092,12 +1146,13 @@ class Service(object):
     def update(
              service,               # type: Service
              channel_type,          # type: str
-             server, broker_client, # type: object
+             server,                # type: ParallelServer
+             broker_client,         # type: object
              _ignored,              # type: object
-             cid,
+             cid,                   # type: str
              payload,               # type: object
              raw_request,           # type: object
-             transport=None,
+             transport=None,        # type: str
              simple_io_config=None, # type: object
              data_format=None,      # type: str
              wsgi_environ=None,     # type: dict
@@ -1122,8 +1177,8 @@ class Service(object):
         service.request.payload = payload
         service.request.raw_request = raw_request
         service.transport = transport
-        service.request.simple_io_config = simple_io_config
-        service.response.simple_io_config = simple_io_config
+        #service.request.simple_io_config = simple_io_config
+        #service.response.simple_io_config = simple_io_config
         service.data_format = data_format
         service.wsgi_environ = wsgi_environ or {}
         service.job_type = job_type
@@ -1136,7 +1191,7 @@ class Service(object):
             service.request.channel_params.update(channel_params)
 
         service.request.merge_channel_params = merge_channel_params
-        service.request.params_priority = params_priority
+        #service.request.params_priority = params_priority
         service.in_reply_to = in_reply_to
         service.environ = environ or {}
 
@@ -1156,6 +1211,21 @@ class Service(object):
 
         if init:
             service._init(channel_type in _wsgi_channels)
+
+# ################################################################################################################################
+
+    def new_instance(self, service_name, *args, **kwargs):
+        """ Creates a new service instance without invoking its handle method.
+        """
+        # type: (str, str, str) -> object
+
+        service, ignored_is_active = \
+            self.server.service_store.new_instance_by_name(service_name, *args, **kwargs) # type: (Service, bool)
+
+        service.update(service, CHANNEL.NEW_INSTANCE, self.server, broker_client=self.broker_client, _ignored=None,
+            cid=self.cid, payload=self.request.payload, raw_request=self.request.raw_request, wsgi_environ=self.wsgi_environ)
+
+        return service
 
 # ################################################################################################################################
 

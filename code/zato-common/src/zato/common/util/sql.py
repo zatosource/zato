@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from itertools import chain
-from json import loads
 from logging import DEBUG, getLogger
 from traceback import format_exc
 
@@ -24,9 +23,9 @@ from gevent import sleep
 from sqlalchemy.exc import InternalError as SAInternalError
 
 # Zato
-from zato.common import GENERIC, SEARCH
+from zato.common.api import GENERIC, SEARCH
+from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import Base, SecurityBase
-from zato.common.util.json_ import dumps
 from zato.common.util.search import SearchResults
 
 # ################################################################################################################################
@@ -38,7 +37,7 @@ has_debug = logger_zato.isEnabledFor(DEBUG) or logger_pubsub.isEnabledFor(DEBUG)
 
 # ################################################################################################################################
 
-_default_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value
+_default_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE
 _max_page_size = _default_page_size * 5
 
 # In MySQL, 1213 = 'Deadlock found when trying to get lock; try restarting transaction'

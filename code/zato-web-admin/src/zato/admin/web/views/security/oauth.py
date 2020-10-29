@@ -16,7 +16,7 @@ from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.security.oauth import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, \
      CreateEdit, Delete as _Delete, Index as _Index, method_allowed
-from zato.common import NONCE_STORE
+from zato.common.api import NONCE_STORE
 from zato.common.odb.model import OAuth
 
 logger = logging.getLogger(__name__)

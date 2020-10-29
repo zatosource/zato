@@ -35,7 +35,7 @@ from traceback import format_exc
 from zato.common.py23_ import start_new_thread
 
 # Zato
-from zato.common.util.json_ import dumps
+from zato.common.json_internal import dumps
 from zato.server.connection.jms_wmq.jms import WebSphereMQException, NoMessageAvailableException
 from zato.server.connection.jms_wmq.jms.connection import WebSphereMQConnection
 from zato.server.connection.jms_wmq.jms.core import TextMessage
@@ -58,9 +58,14 @@ _path_api = '/api'
 _path_ping = '/ping'
 _paths = (_path_api, _path_ping)
 
-_cc_failed         = 2    # pymqi.CMQC.MQCC_FAILED
-_rc_conn_broken    = 2009 # pymqi.CMQC.MQRC_CONNECTION_BROKEN
-_rc_not_authorized = 2035 # pymqi.CMQC.MQRC_NOT_AUTHORIZED
+_cc_failed = 2  # pymqi.CMQC.MQCC_FAILED
+_rc_conn_broken = 2009  # pymqi.CMQC.MQRC_CONNECTION_BROKEN
+_rc_not_authorized = 2035  # pymqi.CMQC.MQRC_NOT_AUTHORIZED
+_rc_q_mgr_quiescing = 2161  # pymqi.CMQC.MQRC_Q_MGR_QUIESCING
+_rc_host_not_available = 2538  # pymqi.CMQC.MQRC_HOST_NOT_AVAILABLE
+
+# A list of reason codes upon which we will try to reconnect
+_rc_reconnect_list = [_rc_conn_broken, _rc_q_mgr_quiescing, _rc_host_not_available]
 
 # ################################################################################################################################
 
@@ -147,15 +152,28 @@ class IBMMQChannel(object):
                     sleep(sleep_on_error)
 
                 except WebSphereMQException as e:
-                    # If current connection is broken we may try to re-estalish it.
-                    sleep(sleep_on_error)
 
-                    if e.completion_code == _cc_failed and e.reason_code == _rc_conn_broken:
-                        self.logger.warn('Caught MQRC_CONNECTION_BROKEN in receive, will try to reconnect connection to %s ',
-                            self.conn.get_connection_info())
-                        self.conn.reconnect()
-                        self.conn.ping()
+                    sleep(sleep_on_error)
+                    conn_info = self.conn.get_connection_info()
+
+                    # Try to reconnect if the reason code points to one that is of a transient nature
+                    while self.keep_running and e.completion_code == _cc_failed and e.reason_code in _rc_reconnect_list:
+                        try:
+                            self.logger.warn('Reconnecting channel `%s` due to MQRC `%s` and MQCC `%s`',
+                                conn_info, e.reason_code, e.completion_code)
+                            self.conn.reconnect()
+                            self.conn.ping()
+                            break
+                        except WebSphereMQException as exc:
+                            e = exc
+                            sleep(sleep_on_error)
+                        except Exception as e:
+                            self.logger.error('Stopping channel `%s` due to `%s`', conn_info, format_exc())
+                            raise
                     else:
+                        self.logger.error(
+                            'Stopped channel `%s` due to MQRC `%s` and MQCC `%s`',
+                            conn_info, e.reason_code, e.completion_code)
                         raise
 
                 except Exception as e:

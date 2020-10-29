@@ -17,7 +17,7 @@ from bunch import Bunch
 
 # Zato
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE
-from zato.common.util import get_config, get_user_config_name
+from zato.common.util.api import get_config, get_user_config_name
 from zato.server.service import Service
 
 # ################################################################################################################################
@@ -39,7 +39,7 @@ class _Updater(Service):
             'action': self.pickup_action.value,
             'msg_type': MESSAGE_TYPE.TO_PARALLEL_ALL,
             'file_name': self.request.raw_request['file_name'],
-            'data': self.request.raw_request['data'],
+            'data': self.request.raw_request['data']
         })
 
 # ################################################################################################################################
@@ -57,7 +57,8 @@ class OnUpdateStatic(Service):
 
         with self.lock('{}-{}-{}'.format(self.name, self.server.name, input.data)):
             with open(os.path.join(static_config.base_dir, input.file_name), 'wb') as f:
-                f.write(input.data)
+                if input.data:
+                    f.write(input.data)
 
         static_config.read_file(input.file_name)
 

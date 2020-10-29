@@ -16,14 +16,15 @@ from traceback import format_exc
 from paste.util.converters import asbool
 
 # Zato
-from zato.common import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
+from zato.common.api import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
-     ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
+     ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.broker_message import CHANNEL, OUTGOING
+from zato.common.exception import ZatoException
+from zato.common.json_internal import dumps
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service, TLSCACert, to_json
 from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
 from zato.common.rate_limiting import DefinitionParser
-from zato.common.util.json_ import dumps
 from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_security_by_id, parse_instance_opaque_attr, \
      set_instance_opaque_attrs
 from zato.server.service import Boolean, Integer, List
@@ -193,7 +194,7 @@ class Create(_CreateEdit):
             'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
             List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
-            Boolean('rate_limit_check_parent_def')
+            Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac')
         output_required = ('id', 'name')
 
     def handle(self):
@@ -202,7 +203,7 @@ class Create(_CreateEdit):
         DefinitionParser.check_definition_from_input(self.request.input)
 
         input = self.request.input
-        input.sec_use_rbac = input.security_id == ZATO_SEC_USE_RBAC
+        input.sec_use_rbac = input.get('sec_use_rbac') or (input.security_id == ZATO_SEC_USE_RBAC)
         input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
         input.soap_action = input.soap_action if input.soap_action else ''
         input.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
@@ -267,8 +268,8 @@ class Create(_CreateEdit):
                 item.has_rbac = input.get('has_rbac') or input.sec_use_rbac or False
                 item.content_type = input.get('content_type')
                 item.sec_use_rbac = input.sec_use_rbac
-                item.cache_id = input.cache_id or None
-                item.cache_expiry = input.cache_expiry or 0
+                item.cache_id = input.get('cache_id') or None
+                item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
 
                 if input.security_id:
@@ -333,7 +334,7 @@ class Edit(_CreateEdit):
             'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
             List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
-            Boolean('rate_limit_check_parent_def')
+            Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac')
         output_required = 'id', 'name'
 
     def handle(self):
@@ -342,7 +343,7 @@ class Edit(_CreateEdit):
         DefinitionParser.check_definition_from_input(self.request.input)
 
         input = self.request.input
-        input.sec_use_rbac = input.security_id == ZATO_SEC_USE_RBAC
+        input.sec_use_rbac = input.get('sec_use_rbac') or (input.security_id == ZATO_SEC_USE_RBAC)
         input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
         input.soap_action = input.soap_action if input.soap_action else ''
 
@@ -416,8 +417,8 @@ class Edit(_CreateEdit):
                 item.has_rbac = input.get('has_rbac') or input.sec_use_rbac or False
                 item.content_type = input.get('content_type')
                 item.sec_use_rbac = input.sec_use_rbac
-                item.cache_id = input.cache_id or None
-                item.cache_expiry = input.cache_expiry
+                item.cache_id = input.get('cache_id') or None
+                item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
 
                 sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
@@ -533,14 +534,24 @@ class Ping(AdminService):
         request_elem = 'zato_http_soap_ping_request'
         response_elem = 'zato_http_soap_ping_response'
         input_required = 'id'
-        output_required = 'id', 'info'
+        output_required = 'id', 'is_success'
+        output_optional = 'info'
 
     def handle(self):
         with closing(self.odb.session()) as session:
             item = session.query(HTTPSOAP).filter_by(id=self.request.input.id).one()
             config_dict = getattr(self.outgoing, item.transport)
             self.response.payload.id = self.request.input.id
-            self.response.payload.info = config_dict.get(item.name).ping(self.cid)
+
+            try:
+                result = config_dict.get(item.name).ping(self.cid)
+                is_success = True
+            except Exception as e:
+                result = e.args[0]
+                is_success = False
+            finally:
+                self.response.payload.info = result
+                self.response.payload.is_success = is_success
 
 # ################################################################################################################################
 

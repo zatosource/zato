@@ -20,7 +20,7 @@ from regex import compile as re_compile
 
 # Zato
 from zato.bunch import bunchify
-from zato.common import HTTP_SOAP, MISC, TRACE1
+from zato.common.api import HTTP_SOAP, MISC, TRACE1
 
 http_any_internal = HTTP_SOAP.ACCEPT.ANY_INTERNAL
 
@@ -70,8 +70,8 @@ cdef class Matcher(object):
         self.pattern = pattern
         self.matcher = None
         self.is_static = True
-        self._brace_pattern = re_compile('\{[\w \$.\-|=~^\/]+\}', stdlib_re.UNICODE)
-        self._elem_re_template = r'(?P<{}>[\w \$.\-|=~^'+ slash_pattern +']+)'
+        self._brace_pattern = re_compile('\{[\w \$.\-:|=~^\/]+\}', stdlib_re.UNICODE)
+        self._elem_re_template = r'(?P<{}>[\w \$.\-:|=~^'+ slash_pattern +']+)'
         self._set_up_matcher(self.pattern)
 
 # ################################################################################################################################

@@ -20,7 +20,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from six import add_metaclass
 
 # Zato
-from zato.common import NOTIF as COMMON_NOTIF, SECRET_SHADOW
+from zato.common.api import NOTIF as COMMON_NOTIF, SECRET_SHADOW
 from zato.common.broker_message import NOTIF
 from zato.common.odb.model import Cluster, NotificationSQL, SQLConnectionPool, Service
 from zato.common.odb.query import notif_sql_list

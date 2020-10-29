@@ -8,38 +8,19 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from builtins import input as raw_input, int
-from imp import reload
-from io import StringIO
-import json
-import logging
-import os
-import shutil
-import sys
-import tempfile
-import time
-from datetime import datetime
-from getpass import getpass, getuser
-from socket import gethostname
+# ################################################################################################################################
 
-# SQLAlchemy
-import sqlalchemy
+# Some objects are re-defined here to avoid importing them from zato.common = improves CLI performance.
+class MS_SQL:
+    ZATO_DIRECT = 'zato+mssql1'
 
-# Zato
-from zato.cli import util as cli_util
-from zato.common import get_version, MS_SQL, odb, util, ZATO_INFO_FILE
-from zato.common.util import get_engine_url, get_full_stack, get_session
-from zato.common.util.cli import read_stdin_data
-from zato.common.util.import_ import import_string
+ZATO_INFO_FILE = '.zato-info'
+
+SUPPORTED_DB_TYPES = ('mysql', 'postgresql', 'sqlite')
 
 # ################################################################################################################################
 
-zato_version = get_version()
-
-# ################################################################################################################################
-
-_opts_odb_type = 'Operational database type, must be one of {}'.format(odb.SUPPORTED_DB_TYPES) # noqa
+_opts_odb_type = 'Operational database type, must be one of {}'.format(SUPPORTED_DB_TYPES) # noqa
 _opts_odb_host = 'Operational database host'
 _opts_odb_port = 'Operational database port'
 _opts_odb_user = 'Operational database user'
@@ -69,7 +50,7 @@ default_common_name = 'localhost'
 # ################################################################################################################################
 
 common_odb_opts = [
-    {'name':'odb_type', 'help':_opts_odb_type, 'choices':odb.SUPPORTED_DB_TYPES}, # noqa
+    {'name':'odb_type', 'help':_opts_odb_type, 'choices':SUPPORTED_DB_TYPES}, # noqa
     {'name':'--odb_host', 'help':_opts_odb_host},
     {'name':'--odb_port', 'help':_opts_odb_port},
     {'name':'--odb_user', 'help':_opts_odb_user},
@@ -178,7 +159,6 @@ loggers:
         handlers: [stdout, notif_sql]
         qualname: zato_notif_sql
         propagate: false
-
 handlers:
     default:
         formatter: default
@@ -292,7 +272,7 @@ formatters:
         format: '%(remote_ip)s %(cid_resp_time)s "%(channel_name)s" [%(req_timestamp)s] "%(method)s %(path)s %(http_version)s" %(status_code)s %(response_size)s "-" "%(user_agent)s"'
     colour:
         format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
-        (): zato.common.util.ColorFormatter
+        (): zato.common.util.api.ColorFormatter
 
 version: 1
 """ # nopep8
@@ -329,57 +309,67 @@ ping_query=SELECT 1
 
 # ################################################################################################################################
 
-def run_command(args):
-    command_class = {}
-    command_imports = (
-        ('apispec', 'zato.cli.apispec.APISpec'),
-        ('ca_create_ca', 'zato.cli.ca_create_ca.Create'),
-        ('ca_create_lb_agent', 'zato.cli.ca_create_lb_agent.Create'),
-        ('ca_create_scheduler', 'zato.cli.ca_create_scheduler.Create'),
-        ('ca_create_server', 'zato.cli.ca_create_server.Create'),
-        ('ca_create_web_admin', 'zato.cli.ca_create_web_admin.Create'),
-        ('check_config', 'zato.cli.check_config.CheckConfig'),
-        ('component_version', 'zato.cli.component_version.ComponentVersion'),
-        ('create_cluster', 'zato.cli.create_cluster.Create'),
-        ('create_lb', 'zato.cli.create_lb.Create'),
-        ('create_odb', 'zato.cli.create_odb.Create'),
-        ('create_scheduler', 'zato.cli.create_scheduler.Create'),
-        ('create_server', 'zato.cli.create_server.Create'),
-        ('create_secret_key', 'zato.cli.crypto.CreateSecretKey'),
-        ('create_user', 'zato.cli.web_admin_auth.CreateUser'),
-        ('create_web_admin', 'zato.cli.create_web_admin.Create'),
-        ('crypto_create_secret_key', 'zato.cli.crypto.CreateSecretKey'),
-        ('delete_odb', 'zato.cli.delete_odb.Delete'),
-        ('decrypt', 'zato.cli.crypto.Decrypt'),
-        ('encrypt', 'zato.cli.crypto.Encrypt'),
-        ('enmasse', 'zato.cli.enmasse.Enmasse'),
-        ('from_config', 'zato.cli.FromConfig'),
-        ('hash_get_rounds', 'zato.cli.crypto.GetHashRounds'),
-        ('info', 'zato.cli.info.Info'),
-        ('migrate', 'zato.cli.migrate.Migrate'),
-        ('reset_totp_key', 'zato.cli.web_admin_auth.ResetTOTPKey'),
-        ('quickstart_create', 'zato.cli.quickstart.Create'),
-        ('service_invoke', 'zato.cli.service.Invoke'),
-        ('set_admin_invoke_password', 'zato.cli.web_admin_auth.SetAdminInvokePassword'),
-        ('sso_change_user_password', 'zato.cli.sso.ChangeUserPassword'),
-        ('sso_create_odb', 'zato.cli.sso.CreateODB'),
-        ('sso_create_user', 'zato.cli.sso.CreateUser'),
-        ('sso_create_super_user', 'zato.cli.sso.CreateSuperUser'),
-        ('sso_delete_user', 'zato.cli.sso.DeleteUser'),
-        ('sso_login', 'zato.cli.sso.Login'),
-        ('sso_logout', 'zato.cli.sso.Logout'),
-        ('sso_lock_user', 'zato.cli.sso.LockUser'),
-        ('sso_reset_totp_key', 'zato.cli.sso.ResetTOTPKey'),
-        ('sso_reset_user_password', 'zato.cli.sso.ResetUserPassword'),
-        ('sso_unlock_user', 'zato.cli.sso.UnlockUser'),
-        ('start', 'zato.cli.start.Start'),
-        ('stop', 'zato.cli.stop.Stop'),
-        ('update_password', 'zato.cli.web_admin_auth.UpdatePassword'),
-    )
-    for k, v in command_imports:
-        command_class[k] = import_string(v)
+command_imports = (
+    ('apispec', 'zato.cli.apispec.APISpec'),
+    ('ca_create_ca', 'zato.cli.ca_create_ca.Create'),
+    ('ca_create_lb_agent', 'zato.cli.ca_create_lb_agent.Create'),
+    ('ca_create_scheduler', 'zato.cli.ca_create_scheduler.Create'),
+    ('ca_create_server', 'zato.cli.ca_create_server.Create'),
+    ('ca_create_web_admin', 'zato.cli.ca_create_web_admin.Create'),
+    ('cache_delete', 'zato.cli.cache.CacheDelete'),
+    ('cache_get', 'zato.cli.cache.CacheGet'),
+    ('cache_set', 'zato.cli.cache.CacheSet'),
+    ('check_config', 'zato.cli.check_config.CheckConfig'),
+    ('component_version', 'zato.cli.component_version.ComponentVersion'),
+    ('create_cluster', 'zato.cli.create_cluster.Create'),
+    ('create_lb', 'zato.cli.create_lb.Create'),
+    ('create_odb', 'zato.cli.create_odb.Create'),
+    ('create_scheduler', 'zato.cli.create_scheduler.Create'),
+    ('create_server', 'zato.cli.create_server.Create'),
+    ('create_secret_key', 'zato.cli.crypto.CreateSecretKey'),
+    ('create_user', 'zato.cli.web_admin_auth.CreateUser'),
+    ('create_web_admin', 'zato.cli.create_web_admin.Create'),
+    ('crypto_create_secret_key', 'zato.cli.crypto.CreateSecretKey'),
+    ('delete_odb', 'zato.cli.delete_odb.Delete'),
+    ('decrypt', 'zato.cli.crypto.Decrypt'),
+    ('encrypt', 'zato.cli.crypto.Encrypt'),
+    ('enmasse', 'zato.cli.enmasse.Enmasse'),
+    ('from_config', 'zato.cli.FromConfig'),
+    ('hash_get_rounds', 'zato.cli.crypto.GetHashRounds'),
+    ('info', 'zato.cli.info.Info'),
+    ('reset_totp_key', 'zato.cli.web_admin_auth.ResetTOTPKey'),
+    ('quickstart_create', 'zato.cli.quickstart.Create'),
+    ('service_invoke', 'zato.cli.service.Invoke'),
+    ('set_admin_invoke_password', 'zato.cli.web_admin_auth.SetAdminInvokePassword'),
+    ('sso_change_user_password', 'zato.cli.sso.ChangeUserPassword'),
+    ('sso_create_odb', 'zato.cli.sso.CreateODB'),
+    ('sso_create_user', 'zato.cli.sso.CreateUser'),
+    ('sso_create_super_user', 'zato.cli.sso.CreateSuperUser'),
+    ('sso_delete_user', 'zato.cli.sso.DeleteUser'),
+    ('sso_login', 'zato.cli.sso.Login'),
+    ('sso_logout', 'zato.cli.sso.Logout'),
+    ('sso_lock_user', 'zato.cli.sso.LockUser'),
+    ('sso_reset_totp_key', 'zato.cli.sso.ResetTOTPKey'),
+    ('sso_reset_user_password', 'zato.cli.sso.ResetUserPassword'),
+    ('sso_unlock_user', 'zato.cli.sso.UnlockUser'),
+    ('start', 'zato.cli.start.Start'),
+    ('stop', 'zato.cli.stop.Stop'),
+    ('update_password', 'zato.cli.web_admin_auth.UpdatePassword'),
+    ('wait', 'zato.cli.wait.Wait'),
+)
 
-    command_class[args.command](args).run(args)
+# ################################################################################################################################
+
+def run_command(args):
+
+    # Zato
+    from zato.common.util.import_ import import_string
+
+    for command_name, class_dotted_name in command_imports:
+        if command_name == args.command:
+            class_ = import_string(class_dotted_name)
+            instance = class_(args)
+            return instance.run(args)
 
 # ################################################################################################################################
 
@@ -428,6 +418,8 @@ class ZatoCommand(object):
         NOT_A_ZATO_WEB_ADMIN = 24
         NOT_A_ZATO_LB = 25
         NOT_A_ZATO_SCHEDULER = 26
+        CACHE_KEY_NOT_FOUND = 27
+        SERVER_TIMEOUT = 28
 
 # ################################################################################################################################
 
@@ -447,6 +439,13 @@ class ZatoCommand(object):
 # ################################################################################################################################
 
     def __init__(self, args):
+
+        # stdlib
+        import os
+
+        # Zato
+        from zato.common.util.cli import read_stdin_data
+
         self.args = args
         self.original_dir = os.getcwd()
         self.show_output = False if 'ZATO_CLI_DONT_SHOW_OUTPUT' in os.environ else True
@@ -465,6 +464,15 @@ class ZatoCommand(object):
 # ################################################################################################################################
 
     def reset_logger(self, args, reload_=False):
+
+        # stdlib
+        import logging
+        import sys
+        from imp import reload
+
+        # Zato
+        from zato.common.util.file_system import fs_safe_now
+
         if reload_:
             logging.shutdown() # noqa
             reload(logging) # noqa
@@ -479,7 +487,7 @@ class ZatoCommand(object):
         self.logger.addHandler(console_handler)
 
         if args.store_log:
-            verbose_handler = logging.FileHandler('zato.{}.log'.format(util.fs_safe_now())) # noqa
+            verbose_handler = logging.FileHandler('zato.{}.log'.format(fs_safe_now())) # noqa
             verbose_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s') # noqa
             verbose_handler.setFormatter(verbose_formatter)
             self.logger.addHandler(verbose_handler)
@@ -492,6 +500,10 @@ class ZatoCommand(object):
         are always stripped before returning the secret, so that "\n" becomes
         "", "\nsecret\n" becomes "secret" and "\nsec\nret\n" becomes "sec\nret".
         """
+
+        # stdlib
+        from getpass import getpass
+
         keep_running = True
         self.logger.info('')
 
@@ -515,6 +527,10 @@ class ZatoCommand(object):
 # ################################################################################################################################
 
     def get_confirmation(self, template, yes_char='y', no_char='n'):
+
+        # stdlib
+        from builtins import input as raw_input
+
         template = '{} [{}/{}] '.format(template, yes_char, no_char)
         while True:
             value = raw_input(template)
@@ -526,6 +542,10 @@ class ZatoCommand(object):
 # ################################################################################################################################
 
     def _get_now(self, time_=None):
+
+        # stdlib
+        import time
+
         if not time_:
             time_ = time.gmtime() # noqa
 
@@ -534,24 +554,48 @@ class ZatoCommand(object):
 # ################################################################################################################################
 
     def _get_user_host(self):
+
+        # stdlib
+        from getpass import getuser
+        from socket import gethostname
+
         return getuser() + '@' + gethostname()
 
 # ################################################################################################################################
 
     def store_initial_info(self, target_dir, component):
+
+        # stdlib
+        import os
+        from datetime import datetime
+
+        # Zato
+        from zato.common.json_internal import dumps
+        from zato.common.version import get_version
+
+        zato_version = get_version()
+
         info = {'version': zato_version, # noqa
                 'created_user_host': self._get_user_host(),
                 'created_ts': datetime.utcnow().isoformat(), # noqa
                 'component': component
                 }
-        open(os.path.join(target_dir, ZATO_INFO_FILE), 'w').write(json.dumps(info))
+        open(os.path.join(target_dir, ZATO_INFO_FILE), 'w').write(dumps(info))
 
 # ################################################################################################################################
 
     def store_config(self, args):
         """ Stores the config options in a config file for a later use.
         """
-        now = util.fs_safe_now() # noqa
+
+        # stdlib
+        import os
+        from io import StringIO
+
+        # Zato
+        from zato.common.util import api as util_api
+
+        now = util_api.fs_safe_now() # noqa
         file_name = 'zato.{}.config'.format(now)
         file_args = StringIO()
 
@@ -570,12 +614,24 @@ class ZatoCommand(object):
 # ################################################################################################################################
 
     def _get_engine(self, args):
-        connect_args = {'application_name':util.get_component_name('enmasse')} if args.odb_type == 'postgresql' else {}
+
+        # SQLAlchemy
+        import sqlalchemy
+
+        # Zato
+        from zato.common.util import api as util_api
+        from zato.common.util.api import get_engine_url
+
+        connect_args = {'application_name':util_api.get_component_name('enmasse')} if args.odb_type == 'postgresql' else {}
         return sqlalchemy.create_engine(get_engine_url(args), connect_args=connect_args)
 
 # ################################################################################################################################
 
     def _get_session(self, engine):
+
+        # Zato
+        from zato.common.util.api import get_session
+
         return get_session(engine)
 
 # ################################################################################################################################
@@ -609,6 +665,11 @@ class ZatoCommand(object):
         """ Parses the command line or the args passed in and figures out
         whether the user wishes to use a config file or command line switches.
         """
+
+        # stdlib
+        import os
+        import sys
+
         try:
             # Do we need to have a clean directory to work in?
             if self.needs_empty_dir:
@@ -664,7 +725,11 @@ class ZatoCommand(object):
         except Exception as e:
             self.reset_logger(self.args)
             if self.verbose:
+
+                # Zato
+                from zato.common.util.python_ import get_full_stack
                 msg = get_full_stack()
+
             else:
                 msg = '{}: {} (Hint: re-run with --verbose for full traceback)'.format(e.__class__.__name__, e.args)
             self.logger.error(msg)
@@ -687,6 +752,11 @@ class ZatoCommand(object):
 # ################################################################################################################################
 
     def _copy_crypto(self, repo_dir, args, middle_part):
+
+        # stdlib
+        import shutil
+        import os
+
         for name in('pub-key', 'priv-key', 'cert', 'ca-certs'):
             arg_name = '{}_path'.format(name.replace('-', '_'))
             target_path = os.path.join(repo_dir, 'zato-{}-{}.pem'.format(middle_part, name))
@@ -715,6 +785,11 @@ class ZatoCommand(object):
 # ################################################################################################################################
 
     def copy_web_admin_crypto(self, repo_dir, args):
+
+        # stdlib
+        import shutil
+        import os
+
         for attr, name in (('pub_key_path', 'pub-key'), ('priv_key_path', 'priv-key'), ('cert_path', 'cert'),
             ('ca_certs_path', 'ca-certs')):
             file_name = os.path.join(repo_dir, 'web-admin-{}.pem'.format(name))
@@ -723,11 +798,19 @@ class ZatoCommand(object):
 # ################################################################################################################################
 
     def get_crypto_manager_from_server_config(self, config, repo_dir):
+
+        # Zato
+        from zato.cli import util as cli_util
+
         return cli_util.get_crypto_manager_from_server_config(config, repo_dir)
 
 # ################################################################################################################################
 
     def get_odb_session_from_server_config(self, config, cm):
+
+        # Zato
+        from zato.cli import util as cli_util
+
         return cli_util.get_odb_session_from_server_config(config, cm, False)
 
 # ################################################################################################################################
@@ -735,6 +818,10 @@ class ZatoCommand(object):
     def get_server_client_auth(self, config, repo_dir):
         """ Returns credentials to authenticate with against Zato's own /zato/admin/invoke channel.
         """
+
+        # Zato
+        from zato.cli import util as cli_util
+
         return cli_util.get_server_client_auth(config, repo_dir)
 
 # ################################################################################################################################
@@ -768,6 +855,10 @@ class CACreateCommand(ZatoCommand):
 # ################################################################################################################################
 
     def __init__(self, args):
+
+        # stdlib
+        import os
+
         super(CACreateCommand, self).__init__(args)
         self.target_dir = os.path.abspath(args.path)
 
@@ -780,6 +871,11 @@ class CACreateCommand(ZatoCommand):
 # ################################################################################################################################
 
     def _execute(self, args, extension, show_output=True):
+
+        # stdlib
+        import os
+        import tempfile
+
         now = self._get_now()
         openssl_template = open(os.path.join(self.target_dir, 'ca-material/openssl-template.conf')).read()
 
@@ -839,7 +935,7 @@ class CACreateCommand(ZatoCommand):
                   -out {csr_name} \
                   -keyout {priv_key_name} \
                   -pubkey \
-                  -newkey rsa:4096 -config {config} \
+                  -newkey rsa:2048 -config {config} \
                   >/dev/null 2>&1""".format(**format_args)
         os.system(cmd)
 
@@ -920,6 +1016,13 @@ class ManageCommand(ZatoCommand):
 
     def execute(self, args):
 
+        # stdlib
+        import os
+        import sys
+
+        # Zato
+        from zato.common.json_internal import load
+
         self.component_dir = os.path.abspath(args.path)
         self.config_dir = os.path.join(self.component_dir, 'config')
         listing = set(os.listdir(self.component_dir))
@@ -934,11 +1037,12 @@ class ManageCommand(ZatoCommand):
             sys.exit(self.SYS_ERROR.NOT_A_ZATO_COMPONENT) # noqa
 
         found = list(found)[0]
-        json_data = json.load(open(os.path.join(self.component_dir, found)))
+        json_data = load(open(os.path.join(self.component_dir, found)))
 
         os.chdir(self.component_dir)
-        return self._get_dispatch()[json_data['component']](args)
 
+        handler = self._get_dispatch()[json_data['component']]
+        handler(args)
 
 # ################################################################################################################################
 

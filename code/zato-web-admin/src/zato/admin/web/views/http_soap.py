@@ -13,9 +13,6 @@ import logging
 from operator import itemgetter
 from traceback import format_exc
 
-# anyjson
-from anyjson import dumps
-
 # Django
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerError
 from django.template.response import TemplateResponse
@@ -24,10 +21,11 @@ from django.template.response import TemplateResponse
 from zato.admin.web.forms.http_soap import SearchForm, CreateForm, EditForm
 from zato.admin.web.views import get_http_channel_security_id, get_security_id_from_select, get_tls_ca_cert_list, \
      id_only_service, method_allowed, parse_response_data, SecurityList
-from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, DELEGATED_TO_RBAC, \
-     HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, SEC_DEF_TYPE_NAME, SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, \
-     URL_PARAMS_PRIORITY, URL_TYPE, ZatoException
-from zato.common import CACHE, MISC, SEC_DEF_TYPE
+from zato.common.api import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, DELEGATED_TO_RBAC, \
+     HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, SOAP_CHANNEL_VERSIONS, \
+     SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE
+from zato.common.exception import ZatoException
+from zato.common.json_internal import dumps
 from zato.common.odb.model import HTTPSOAP
 
 logger = logging.getLogger(__name__)
@@ -283,10 +281,15 @@ def delete(req, id, cluster_id):
 
 @method_allowed('POST')
 def ping(req, id, cluster_id):
-    ret = id_only_service(req, 'zato.http-soap.ping', id, 'Could not ping the connection, e:`{}`')
-    if isinstance(ret, HttpResponseServerError):
-        return ret
-    return HttpResponse(ret.data.info)
+    response = id_only_service(req, 'zato.http-soap.ping', id, 'Could not ping the connection, e:`{}`')
+
+    if isinstance(response, HttpResponseServerError):
+        return response
+    else:
+        if response.data.is_success:
+            return HttpResponse(response.data.info)
+        else:
+            return HttpResponseServerError(response.data.info)
 
 @method_allowed('POST')
 def reload_wsdl(req, id, cluster_id):

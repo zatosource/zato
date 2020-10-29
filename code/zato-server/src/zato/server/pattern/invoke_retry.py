@@ -19,9 +19,9 @@ from arrow import utcnow
 from gevent import sleep
 
 # Zato
-from zato.common import ZatoException
-from zato.common.util import new_cid
-from zato.common.util.json_ import dumps
+from zato.common.exception import ZatoException
+from zato.common.json_internal import dumps
+from zato.common.util.api import new_cid
 
 logger = getLogger(__name__)
 

@@ -13,9 +13,6 @@ import logging, time
 from threading import Thread
 from traceback import format_exc
 
-# anyjson
-from anyjson import dumps, loads
-
 # Bunch
 from bunch import Bunch
 
@@ -23,9 +20,10 @@ from bunch import Bunch
 import redis
 
 # Zato
-from zato.common import BROKER, TRACE1, ZATO_NONE
+from zato.common.api import BROKER, TRACE1, ZATO_NONE
 from zato.common.broker_message import KEYS, MESSAGE_TYPE, TOPICS
-from zato.common.util import new_cid
+from zato.common.json_internal import dumps, loads
+from zato.common.util.api import new_cid
 
 logger = logging.getLogger(__name__)
 

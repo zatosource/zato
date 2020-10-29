@@ -27,12 +27,13 @@ from sqlalchemy.exc import IntegrityError
 from past.builtins import basestring, unicode
 
 # Zato
-from zato.common import RATE_LIMIT, SEC_DEF_TYPE, TOTP
+from zato.common.api import RATE_LIMIT, SEC_DEF_TYPE, TOTP
 from zato.common.audit import audit_pii
-from zato.common.crypto import CryptoManager
+from zato.common.crypto.api import CryptoManager
+from zato.common.crypto.totp_ import TOTPManager
 from zato.common.exception import BadRequest
+from zato.common.json_internal import dumps
 from zato.common.odb.model import SSOLinkedAuth as LinkedAuth, SSOSession as SessionModel, SSOUser as UserModel
-from zato.common.util.json_ import dumps
 from zato.sso import const, not_given, status_code, User as UserEntity, ValidationError
 from zato.sso.attr import AttrAPI
 from zato.sso.odb.query import get_linked_auth_list, get_sign_up_status_by_token, get_user_by_id, get_user_by_linked_sec, \
@@ -380,7 +381,7 @@ class UserAPI(object):
         user_model.password_must_change = ctx.data.get('password_must_change') or False
         user_model.password_expiry = now + timedelta(days=self.password_expiry)
 
-        totp_key = ctx.data.get('totp_key') or CryptoManager.generate_totp_key()
+        totp_key = ctx.data.get('totp_key') or TOTPManager.generate_totp_key()
         totp_label = ctx.data.get('totp_label') or TOTP.default_label
 
         user_model.is_totp_enabled = ctx.data.get('is_totp_enabled')
@@ -796,32 +797,57 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def _lock_user_cli(self, user_id, is_locked):
-        """ Locks or unlocks a user account. Used by CLI, does not check any permissions.
+    def lock_user(self, cid, user_id, current_ust=None, current_app=None, remote_addr=None, require_super_user=True,
+        current_user=None):
+        """ Locks an existing user. It is acceptable to lock an already lock user.
         """
+        # type: (str, str, str, str, str, bool, str)
+
+        # PII audit comes first
+        audit_pii.info(cid, 'user.lock_user', extra={'current_app':current_app, 'remote_addr':remote_addr})
+
+        return self._lock_user(user_id, True, cid, current_ust, current_app, remote_addr, require_super_user, current_user)
+
+# ################################################################################################################################
+
+    def unlock_user(self, cid, user_id, current_ust=None, current_app=None, remote_addr=None, require_super_user=True,
+        current_user=None):
+        """ Unlocks an existing user. It is acceptable to unlock a user that is not locked.
+        """
+        # type: (str, str, str, str, str, bool, str)
+
+        # PII audit comes first
+        audit_pii.info(cid, 'user.lock_user', extra={'current_app':current_app, 'remote_addr':remote_addr})
+
+        return self._lock_user(user_id, False, cid, current_ust, current_app, remote_addr, require_super_user, current_user)
+
+# ################################################################################################################################
+
+    def _lock_user(self, user_id, is_locked, cid=None, current_ust=None, current_app=None, remote_addr=None,
+        require_super_user=True, current_user=None):
+        """ An internal method to lock or unlock users.
+        """
+        # type: (str, bool, str, str, str, str, bool, str)
+        if require_super_user:
+            current_session = self._require_super_user(cid, current_ust, current_app, remote_addr)
+            current_user = current_session.user_id
+        else:
+            current_user = current_user if current_user else 'auto'
+
+        # We have all that is needed to so we can actually issue the SQL call.
+        # Note that we always populate locked_time and locked_by even if is_locked is False
+        # to keep track of both who locked and unlocked the user.
         with closing(self.odb_session_func()) as session:
             session.execute(
-                update(UserModelTable).\
+                sql_update(UserModelTable).\
                 values({
                     'is_locked': is_locked,
+                    'locked_time': datetime.utcnow(),
+                    'locked_by': current_user,
                     }).\
                 where(UserModelTable.c.user_id==user_id)
             )
             session.commit()
-
-# ################################################################################################################################
-
-    def lock_user_cli(self, user_id):
-        """ Locks a user account. Does not check any permissions.
-        """
-        self._lock_user(user_id, True)
-
-# ################################################################################################################################
-
-    def unlock_user_cli(self, user_id):
-        """ Unlocks a user account. Does not check any permissions.
-        """
-        self._lock_user(user_id, False)
 
 # ################################################################################################################################
 
@@ -1373,7 +1399,7 @@ class UserAPI(object):
             # .. delete any sessions possibly existing for this link ..
             session.execute(SessionModelTableDelete().\
                 where(sql_and(
-                    SessionModelTable.c.ext_session_id=='{}.{}'.format(auth_type, auth_id),
+                    SessionModelTable.c.ext_session_id.startswith('{}.{}'.format(auth_type, auth_id)),
                 ))
             )
 
@@ -1394,7 +1420,10 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def on_broker_msg_SSO_LINK_AUTH_DELETE(self, auth_type, auth_id, user_id):
+    def on_broker_msg_SSO_LINK_AUTH_DELETE(self, auth_type, auth_id):
+
+        auth_type = 'zato.{}'.format(auth_type)
+
         with self.lock:
             auth_id_link_map = self.auth_id_link_map[auth_type]
             try:

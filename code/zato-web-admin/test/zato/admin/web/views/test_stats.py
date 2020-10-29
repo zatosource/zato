@@ -38,7 +38,7 @@ from pytz import utc
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.models import UserProfile
 from zato.admin.web.views.stats import get_default_date, shift
-from zato.common.util import utcnow
+from zato.common.util.api import utcnow
 
 class StatsTestCase(TestCase):
     def setUp(self):

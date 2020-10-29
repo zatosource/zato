@@ -15,7 +15,7 @@ import logging
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.definition.cassandra import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, method_allowed
-from zato.common import CASSANDRA
+from zato.common.api import CASSANDRA
 from zato.common.odb.model import CassandraConn
 
 logger = logging.getLogger(__name__)
@@ -37,9 +37,9 @@ class Index(_Index):
 
     def handle(self):
         return {
-            'default_port': CASSANDRA.DEFAULT.PORT.value,
-            'default_exec_size': CASSANDRA.DEFAULT.EXEC_SIZE.value,
-            'default_proto_version': CASSANDRA.DEFAULT.PROTOCOL_VERSION.value,
+            'default_port': CASSANDRA.DEFAULT.PORT,
+            'default_exec_size': CASSANDRA.DEFAULT.EXEC_SIZE,
+            'default_proto_version': CASSANDRA.DEFAULT.PROTOCOL_VERSION,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
             'change_password_form': ChangePasswordForm()
