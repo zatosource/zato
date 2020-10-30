@@ -95,10 +95,16 @@ def instance_hook(self, input, instance, attrs):
     if attrs.is_create_edit:
         instance.hook_service = _get_hook_service(self)
         instance.is_out = False
-        instance.service = attrs._meta_session.query(ServiceModel).\
+
+        service = attrs._meta_session.query(ServiceModel).\
             filter(ServiceModel.name==input.service_name).\
             filter(ServiceModel.cluster_id==input.cluster_id).\
-            one()
+            first()
+
+        if not service:
+            raise ValueError('Service not found `{}`'.format(input.service_name))
+        else:
+            instance.service = service
 
 # ################################################################################################################################
 
