@@ -11,8 +11,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # This is an internal version of zato.common.json_ which only loads the core libraries,
 # without any other additions. This is import in the CLI where every millisecond counts.
 
-# simdjson
-from simdjson import load, loads
+# simdjson is not available on Mac
+try:
+    from simdjson import load, loads
+except ImportError:
+    from ujson import load, loads
 
 # uJSON
 from ujson import dump, dumps
