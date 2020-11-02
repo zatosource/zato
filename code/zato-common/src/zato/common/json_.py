@@ -20,8 +20,11 @@ from datetime import datetime
 # BSON
 from bson import ObjectId
 
-# simdjson
-from simdjson import load, loads
+# simdjson is not available on Mac
+try:
+    from simdjson import load, loads
+except ImportError:
+    from ujson import load, loads
 
 # uJSON
 from ujson import dump, dumps as json_dumps
