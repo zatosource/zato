@@ -89,6 +89,39 @@ class _CreateEdit(CreateEdit):
                     value = [value]
         return value
 
+    def post_process_return_data(self, return_data):
+
+        service_html = ''
+        topic_html   = ''
+
+        cluster_id = self.input_dict['cluster_id']
+        service_list = sorted(self.input_dict['service_list'] or [])
+        topic_list = sorted(self.input_dict['topic_list'] or [])
+
+        for service_name in service_list:
+
+            service_html += """
+            <span class="form_hint">S</span>→
+                <a href="/zato/service/overview/{service_name}/?cluster={cluster_id}">{service_name}</a>
+            <br/>
+            """.format(**{
+                'service_name': service_name,
+                'cluster_id': cluster_id
+            })
+
+        for topic_name in topic_list:
+
+            topic_html += """
+            <span class="form_hint">T</span>→
+                <a href="/zato/pubsub/topic/?cluster={cluster_id}&amp;query={topic_name}">{topic_name}</a>
+            <br/>
+            """.format(**{
+                'topic_name': topic_name,
+                'cluster_id': cluster_id
+            })
+
+        return_data['recipients_html'] = service_html + topic_html
+
     def success_message(self, item):
         return 'Successfully {} file transfer channel `{}`'.format(self.verb, item.name)
 
