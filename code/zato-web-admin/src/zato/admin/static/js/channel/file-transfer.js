@@ -119,7 +119,7 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
 
     let source_html = $.fn.zato.empty_value;
     let pickup_from_html = '';
-    let recipients_html = '<span class="form_hint">---</span>';
+    let recipients_html = data.recipients_html || '<span class="form_hint">---</span>';
 
     if(item.source_type == 'local') {
         source_html = 'Local';
