@@ -114,6 +114,7 @@ from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, IntervalBase
 from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_ping, wait_until_port_free, wait_until_port_taken
 from zato.common.util.eval_ import as_bool, as_list
 from zato.common.util.file_system import fs_safe_name
+from zato.common.util.logging_ import ColorFormatter
 from zato.common.xml_ import soap_body_path, soap_body_xpath
 
 # ################################################################################################################################
@@ -131,6 +132,11 @@ _epoch = datetime.utcfromtimestamp(0) # Start of UNIX epoch
 cid_symbols = '0123456789abcdefghjkmnpqrstvwxyz'
 encode_cid_symbols = {idx: elem for (idx, elem) in enumerate(cid_symbols)}
 cid_base = len(cid_symbols)
+
+# ################################################################################################################################
+
+# For pyflakes
+ColorFormatter = ColorFormatter
 
 # ################################################################################################################################
 
@@ -222,49 +228,6 @@ def get_zato_command():
     """ Returns the full path to the 'zato' command' in a buildout environment.
     """
     return os.path.join(os.path.dirname(sys.executable), 'zato')
-
-# ################################################################################################################################
-
-# Based on
-# http://stackoverflow.com/questions/384076/how-can-i-make-the-python-logging-output-to-be-colored
-class ColorFormatter(logging.Formatter):
-
-    # TODO: Make it all configurable
-
-    BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
-
-    RESET_SEQ = "\033[0m"
-    COLOR_SEQ = "\033[1;%dm"
-    BOLD_SEQ = "\033[1m"
-
-    COLORS = {
-      'WARNING': YELLOW,
-      'INFO': WHITE,
-      'DEBUG': BLUE,
-      'CRITICAL': YELLOW,
-      'ERROR': RED,
-      'TRACE1': YELLOW
-    }
-
-    def __init__(self, fmt):
-        self.use_color = True
-        super(ColorFormatter, self).__init__(fmt)
-
-    def formatter_msg(self, msg, use_color=True):
-        if use_color:
-            msg = msg.replace("$RESET", self.RESET_SEQ).replace("$BOLD", self.BOLD_SEQ)
-        else:
-            msg = msg.replace("$RESET", "").replace("$BOLD", "")
-        return msg
-
-    def format(self, record):
-        levelname = record.levelname
-        if self.use_color and levelname in self.COLORS:
-            fore_color = 30 + self.COLORS[levelname]
-            levelname_color = self.COLOR_SEQ % fore_color + levelname + self.RESET_SEQ
-            record.levelname = levelname_color
-
-        return logging.Formatter.format(self, record)
 
 # ################################################################################################################################
 
