@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from base64 import b64decode, b64encode
 
 # Bunch
-from bunch import bunchify
+from bunch import Bunch, bunchify
 
 # Django
 from django.template.response import TemplateResponse
@@ -40,6 +40,9 @@ def _create_edit(req, action, cache_id, cluster_id, _KV_DATATYPE=CACHE.BUILTIN_K
                 'cache_id': cache_id,
                 'key': key
             }).data.response)
+
+        if isinstance(entry.value, Bunch):
+            entry.value = entry.value.toDict()
 
         form = EditForm({
             'key': key,

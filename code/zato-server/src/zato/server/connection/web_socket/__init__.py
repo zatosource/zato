@@ -1212,7 +1212,10 @@ class WebSocketServer(WSGIServer):
     def stop(self, *args, **kwargs):
         """ Reimplemented from the parent class to be able to call shutdown prior to its calling self.socket.close.
         """
-        self.socket.shutdown(2) # SHUT_RDWR has value of 2 in 'man 2 shutdown'
+        # self.socket will exist only if we have previously successfully
+        # bound to an address. Otherwise, there will be no such attribute.
+        if hasattr(self, 'socket'):
+            self.socket.shutdown(2) # SHUT_RDWR has value of 2 in 'man 2 shutdown'
         super(WebSocketServer, self).stop(*args, **kwargs)
 
 # ################################################################################################################################
