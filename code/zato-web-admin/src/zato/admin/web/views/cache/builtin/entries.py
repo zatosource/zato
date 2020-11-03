@@ -12,6 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 from base64 import b64decode, b64encode
 
+# Bunch
+from bunch import Bunch
+
 # Python 2/3 compatibility
 from past.builtins import unicode
 
@@ -30,7 +33,7 @@ class CacheEntry(object):
             expires_at=None, hits=None, position=None, server=None):
         self.cache_id = cache_id
         self.key = key
-        self.value = value
+        self._value = value
         self.last_read = last_read
         self.prev_read = prev_read
         self.prev_write = prev_write
@@ -39,6 +42,17 @@ class CacheEntry(object):
         self.hits = hits
         self.position = position
         self.server = server
+
+    @property
+    def value(self):
+        if isinstance(self._value, Bunch):
+            return self._value.toDict()
+        else:
+            return self._value
+
+    @value.setter
+    def value(self, value):
+        self._value = value
 
 # ################################################################################################################################
 
