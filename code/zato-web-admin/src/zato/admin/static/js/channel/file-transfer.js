@@ -198,9 +198,6 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     row += String.format("<td class='ignore'>{0}</td>", item.move_processed_to);
     row += String.format("<td class='ignore'>{0}</td>", item.is_hot_deploy);
 
-    console.log('AAA ' + item.is_case_sensitive);
-    console.log('BBB ' + item.is_line_by_line);
-
     if(include_tr) {
         row += '</tr>';
     }
