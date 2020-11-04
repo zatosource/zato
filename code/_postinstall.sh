@@ -12,6 +12,25 @@ then
     exit 1
 fi
 
+function load_basedir()
+{
+    local dir="${BASH_SOURCE[0]}"
+
+    if [[ "$(uname -s)" == 'Darwin' ]]
+    then
+        local f="-f"
+    fi
+
+    while ([ -L "${dir}" ])
+    do
+        dir="$(readlink $f "$dir")"
+    done
+
+    basedir="$(dirname "${dir}")"
+}
+
+load_basedir
+
 PY_BINARY=$1
 # Stamp the release hash.
 git log -n 1 --pretty=format:"%H" > ./release-info/revision.txt
@@ -62,24 +81,24 @@ echo "$VIRTUAL_ENV/zato_extra_paths" >> eggs/easy-install.pth
 ln -fs $VIRTUAL_ENV/zato_extra_paths extlib
 
 # Apply patches.
-patch -p0 -d eggs < patches/butler/__init__.py.diff
-patch -p0 -d eggs < patches/configobj.py.diff
-patch -p0 -d eggs < patches/django/db/models/base.py.diff
-patch -p0 --binary -d eggs < patches/ntlm/HTTPNtlmAuthHandler.py.diff
-patch -p0 -d eggs < patches/pykafka/topic.py.diff
-patch -p0 -d eggs < patches/redis/redis/connection.py.diff
-patch -p0 -d eggs < patches/requests/models.py.diff
-patch -p0 -d eggs < patches/requests/sessions.py.diff
-patch -p0 -d eggs < patches/ws4py/server/geventserver.py.diff
+patch -p0 -d eggs < $basedir/patchesbutler/__init__.py.diff
+patch -p0 -d eggs < $basedir/patchesconfigobj.py.diff
+patch -p0 -d eggs < $basedir/patchesdjango/db/models/base.py.diff
+patch -p0 --binary -d eggs < $basedir/patchesntlm/HTTPNtlmAuthHandler.py.diff
+patch -p0 -d eggs < $basedir/patchespykafka/topic.py.diff
+patch -p0 -d eggs < $basedir/patchesredis/redis/connection.py.diff
+patch -p0 -d eggs < $basedir/patchesrequests/models.py.diff
+patch -p0 -d eggs < $basedir/patchesrequests/sessions.py.diff
+patch -p0 -d eggs < $basedir/patchesws4py/server/geventserver.py.diff
 
 #
 # On SUSE, SQLAlchemy installs to lib64 instead of lib.
 #
 if [ "$(type -p zypper)" ]
 then
-    patch -p0 -d eggs64 < patches/sqlalchemy/sql/crud.py.diff
+    patch -p0 -d eggs64 < $basedir/patchessqlalchemy/sql/crud.py.diff
 else
-    patch -p0 -d eggs < patches/sqlalchemy/sql/crud.py.diff
+    patch -p0 -d eggs < $basedir/patchessqlalchemy/sql/crud.py.diff
 fi
 
 # Add the 'zato' command ..
