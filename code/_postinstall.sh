@@ -14,19 +14,12 @@ fi
 
 function load_basedir()
 {
-    local dir="${BASH_SOURCE[0]}"
-
     if [[ "$(uname -s)" == 'Darwin' ]]
     then
-        local f="-f"
+        basedir="$(grealpath .)"
+    else
+        basedir="$(dirname "$(readlink -e "$0")")"
     fi
-
-    while ([ -L "${dir}" ])
-    do
-        dir="$(readlink $f "$dir")"
-    done
-
-    basedir="$(dirname "${dir}")"
 }
 
 load_basedir
