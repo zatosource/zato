@@ -15,7 +15,7 @@ then
 
     brew install \
         autoconf automake bzip2 curl git gsasl haproxy libev libevent libffi libtool libxml2 libxslt \
-        libyaml openldap openssl ossp-uuid pkg-config postgresql python3 swig \
+        libyaml openldap openssl ossp-uuid pkg-config postgresql python3 swig coreutils \
         || true
 fi
 
