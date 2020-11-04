@@ -24,5 +24,5 @@ $PY_BINARY -m pip install -U virtualenv --ignore-installed
 
 $PY_BINARY -m virtualenv .
 source ./bin/activate
-./bin/python -m pip install -U setuptools pip
+./bin/python -m pip install -U setuptools pip $(grep pybind11 requirements.txt)
 source ./_postinstall.sh $PY_BINARY
