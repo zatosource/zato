@@ -74,24 +74,24 @@ echo "$VIRTUAL_ENV/zato_extra_paths" >> eggs/easy-install.pth
 ln -fs $VIRTUAL_ENV/zato_extra_paths extlib
 
 # Apply patches.
-patch -p0 -d eggs < $basedir/patchesbutler/__init__.py.diff
-patch -p0 -d eggs < $basedir/patchesconfigobj.py.diff
-patch -p0 -d eggs < $basedir/patchesdjango/db/models/base.py.diff
-patch -p0 --binary -d eggs < $basedir/patchesntlm/HTTPNtlmAuthHandler.py.diff
-patch -p0 -d eggs < $basedir/patchespykafka/topic.py.diff
-patch -p0 -d eggs < $basedir/patchesredis/redis/connection.py.diff
-patch -p0 -d eggs < $basedir/patchesrequests/models.py.diff
-patch -p0 -d eggs < $basedir/patchesrequests/sessions.py.diff
-patch -p0 -d eggs < $basedir/patchesws4py/server/geventserver.py.diff
+patch -p0 -d eggs < $basedir/patches/butler/__init__.py.diff
+patch -p0 -d eggs < $basedir/patches/configobj.py.diff
+patch -p0 -d eggs < $basedir/patches/django/db/models/base.py.diff
+patch -p0 --binary -d eggs < $basedir/patches/ntlm/HTTPNtlmAuthHandler.py.diff
+patch -p0 -d eggs < $basedir/patches/pykafka/topic.py.diff
+patch -p0 -d eggs < $basedir/patches/redis/redis/connection.py.diff
+patch -p0 -d eggs < $basedir/patches/requests/models.py.diff
+patch -p0 -d eggs < $basedir/patches/requests/sessions.py.diff
+patch -p0 -d eggs < $basedir/patches/ws4py/server/geventserver.py.diff
 
 #
 # On SUSE, SQLAlchemy installs to lib64 instead of lib.
 #
 if [ "$(type -p zypper)" ]
 then
-    patch -p0 -d eggs64 < $basedir/patchessqlalchemy/sql/crud.py.diff
+    patch -p0 -d eggs64 < $basedir/patches/sqlalchemy/sql/crud.py.diff
 else
-    patch -p0 -d eggs < $basedir/patchessqlalchemy/sql/crud.py.diff
+    patch -p0 -d eggs < $basedir/patches/sqlalchemy/sql/crud.py.diff
 fi
 
 # Add the 'zato' command ..
