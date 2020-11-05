@@ -84,9 +84,9 @@ class _CreateEdit(CreateEdit):
         if name in ('service_list', 'topic_list'):
             if value:
                 if isinstance(value, list):
-                    value = sorted(set(elem for elem in value))
+                    value = sorted(set(elem for elem in value if elem))
                 else:
-                    value = [value]
+                    value = [value] if value else []
         return value
 
     def post_process_return_data(self, return_data):
