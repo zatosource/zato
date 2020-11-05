@@ -24,7 +24,9 @@ from .observer.local_ import LocalObserver
 
 if 0:
     from zato.server.base.parallel import ParallelServer
+    from .observer.base import BaseObserver
 
+    BaseObserver = BaseObserver
     ParallelServer = ParallelServer
 
 # ################################################################################################################################
@@ -129,7 +131,7 @@ class FileTransferAPI(object):
         if config.name.startswith(_zato_orig_marker):
             return
 
-        observer = LocalObserver(0.25)
+        observer = LocalObserver(config.name, 0.25)
         event_handler = FileTransferEventHandler(self, config.name, config)
         observer.schedule(event_handler, config.pickup_from, recursive=False)
 
@@ -216,7 +218,11 @@ class FileTransferAPI(object):
 # ################################################################################################################################
 
     def run(self):
-        for observer in self.observers:
-            observer.start()
+        for observer in self.observers: # type: BaseObserver
+            try:
+                observer.start()
+            except Exception:
+                logger.warn('File observer `%s` could not be started, path:`%s`, e:`%s`',
+                    observer.name, observer.path, format_exc())
 
 # ################################################################################################################################
