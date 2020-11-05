@@ -131,7 +131,7 @@ class FileTransferAPI(object):
         if config.name.startswith(_zato_orig_marker):
             return
 
-        observer = LocalObserver(config.name, 0.25)
+        observer = LocalObserver(config.name, config.is_active, 0.25)
         event_handler = FileTransferEventHandler(self, config.name, config)
         observer.schedule(event_handler, config.pickup_from, recursive=False)
 
