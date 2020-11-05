@@ -308,7 +308,7 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
                 // console.log('Item attr -> `'+ item_attr +'`');
                 if(item_attr == field_name) {
                     value = instance[item_attr];
-                    console.log('Field/value: `'+ item_attr + '` `'+ value +'`');
+                    // console.log('Field/value: `'+ item_attr + '` `'+ value +'`');
                     form_elem_name = id_prefix + field_name;
                     form_elem = $(form_elem_name);
                     if($.fn.zato.like_bool(value)) {
@@ -377,14 +377,14 @@ $.fn.zato.data_table.parse = function() {
         var instance = new $.fn.zato.data_table.class_()
         var tds = $(row).find('td');
 
-        console.info('columns = ' + columns);
+        // console.info('columns = ' + columns);
 
         $.each(tds, function(td_idx, td) {
 
             var attr_name = columns[td_idx];
             var attr_value = $(td).text().trim();
 
-            console.log('td_idx:`'+ td_idx +'`, attr_name:`'+ attr_name +'`, attr_value:`'+ attr_value + '`');
+            // console.log('td_idx:`'+ td_idx +'`, attr_name:`'+ attr_name +'`, attr_value:`'+ attr_value + '`');
 
             // Don't bother with ignored attributes.
             if(attr_name[0] != '_') {
@@ -896,7 +896,8 @@ $.fn.zato.data_table.multirow.get_button = function(row_id, elem_id, text, is_ad
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.data_table.multirow.add_row = function(row_id, elem_id, is_add) {
-    console.log(`row_id=${row_id}, elem_id=${elem_id}, is_add=${is_add}`)
+
+    //console.log(`row_id=${row_id}, elem_id=${elem_id}, is_add=${is_add}`)
 
     // Find all divs for such an element ID along with the last one in the list
     let existing = $(`div[id^="div_${elem_id}"]`);
@@ -911,6 +912,9 @@ $.fn.zato.data_table.multirow.add_row = function(row_id, elem_id, is_add) {
         // Find the element to be cloned, e.g. a form select element ..
         let div = $('#div_' + row_id);
         let child_selector = `[id=${elem_id}]`;
+
+        // console.log('CHILD '+ child_selector);
+
         let child = div.children(child_selector)
 
         // .. clone it ..
