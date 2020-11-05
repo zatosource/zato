@@ -23,6 +23,7 @@ from watchdog.events import FileCreatedEvent, FileModifiedEvent
 from watchdog.utils.dirsnapshot import DirectorySnapshot, DirectorySnapshotDiff
 
 # Zato
+from .base import BaseObserver
 from zato.common.util.api import spawn_greenlet
 
 # ################################################################################################################################
@@ -33,15 +34,12 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class LocalObserver:
+class LocalObserver(BaseObserver):
     """ A local file-system observer.
     """
-    def __init__(self, timeout=0.25):
+    def __init__(self, name, timeout=0.25):
+        super().__init__(name)
         self.timeout = timeout
-        self.event_handler = None
-        self.path = '<initial-local-observer>'
-        self.is_recursive = False
-        self.keep_running = True
 
     def schedule(self, event_handler, path, recursive):
         self.event_handler = event_handler

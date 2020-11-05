@@ -666,7 +666,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
             # Startup services
             self.invoke_startup_services()
-            #spawn_greenlet(self.init_file_transfer)
 
             # Subprocess-based connectors
             if self.has_posix_ipc:

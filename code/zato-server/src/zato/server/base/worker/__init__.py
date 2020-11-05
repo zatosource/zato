@@ -45,7 +45,7 @@ from six import PY3
 from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
 from zato.common import broker_message
-from zato.common.api import CHANNEL, DATA_FORMAT, GENERIC as COMMON_GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, IPC, \
+from zato.common.api import CHANNEL, DATA_FORMAT, FILE_TRANSFER, GENERIC as COMMON_GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, IPC, \
      KVDB, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, simple_types, URL_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
@@ -54,8 +54,8 @@ from zato.common.json_internal import loads
 from zato.common.match import Matcher
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.util.api import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
-     import_module_from_path, new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, start_connectors, \
-     store_tls, update_apikey_username_to_channel, update_bind_port, visit_py_source
+     import_module_from_path, new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, spawn_greenlet, \
+     start_connectors, store_tls, update_apikey_username_to_channel, update_bind_port, visit_py_source
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
 from zato.server.connection.cache import CacheAPI
@@ -255,7 +255,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.cache_api = CacheAPI(self.server)
 
         # File transfer
-        self.file_transfer_api = CacheAPI(self.server)
+        self.file_transfer_api = FileTransferAPI(self.server)
 
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
@@ -326,10 +326,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Caches
         self.init_caches()
 
-        # File transfer - started only if this is the very first process started
-        # among possibly multiple processes of this server.
-        if self.server.is_starting_first:
-            self.init_file_transfer()
+        # File transfer
+        self.init_file_transfer()
 
         # API keys
         self.update_apikeys()
@@ -863,8 +861,20 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def init_file_transfer(self):
 
         for value in self.worker_config.channel_file_transfer.values():
-            config = value['config']
-            self.logger.warn('RRR %s', value)
+            config = value['config'] # type: dict
+
+            # For local file notifications - tell the manager to start this channel only
+            # if this is the very first process among potentially many ones for this server ..
+            if config['source_type'] == FILE_TRANSFER.SOURCE_TYPE.LOCAL.id:
+                config['_start_channel'] = True if self.server.is_starting_first else False
+            else:
+                config['_start_channel'] = True
+
+            # .. and create a new file transfer API object now.
+            self.file_transfer_api.create(config)
+
+        # Start all the file transfer channels.
+        spawn_greenlet(self.file_transfer_api.run)
 
         '''
         {'id': 19,
