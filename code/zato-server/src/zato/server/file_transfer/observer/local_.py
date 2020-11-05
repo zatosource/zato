@@ -13,6 +13,8 @@ from gevent.monkey import patch_all
 patch_all()
 
 # stdlib
+import os
+from datetime import datetime
 from logging import getLogger
 
 # gevent
@@ -24,7 +26,6 @@ from watchdog.utils.dirsnapshot import DirectorySnapshot, DirectorySnapshotDiff
 
 # Zato
 from .base import BaseObserver
-from zato.common.util.api import spawn_greenlet
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,22 +38,61 @@ logger = getLogger(__name__)
 class LocalObserver(BaseObserver):
     """ A local file-system observer.
     """
-    def __init__(self, name, timeout=0.25):
-        super().__init__(name)
-        self.timeout = timeout
 
     def schedule(self, event_handler, path, recursive):
         self.event_handler = event_handler
         self.path = path
         self.is_recursive = recursive
 
-    def start(self):
-        spawn_greenlet(self._start)
+    def ensure_path_exists(self):
+
+        # Local aliases
+        timeout = self.default_timeout
+        utcnow = datetime.utcnow
+
+        # How many times we have tried to find the correct path and since when
+        idx = 0
+        start = utcnow()
+        log_every = 50
+
+        # A flag indicating if self.path currently exists.
+        is_ok = False
+
+        # Wait until the directory exists (possibly it does already but we do not know it yet)
+        while not is_ok:
+
+            idx += 1
+
+            # Honour the main loop's status
+            if not self.keep_running:
+                return
+
+            if os.path.exists(self.path):
+                if os.path.isdir(self.path):
+                    is_ok = True
+                else:
+                    if idx == 1 or (idx % log_every == 0):
+                        logger.warn('Local file transfer path `%s` is not a directory (%s) (c:% d:%s)',
+                            self.path, self.name, idx, utcnow() - start)
+            else:
+                if idx == 1 or (idx % log_every == 0):
+                    logger.warn('Local file transfer path `%s` does not exist (%s) (c:%s d:%s)',
+                        self.path, self.name, idx, utcnow() - start)
+
+            if is_ok:
+                logger.info('Local file transfer path `%s` found successfully (%s) (c:% d:%s)',
+                    self.path, self.name, idx, utcnow() - start)
+            else:
+                sleep(timeout)
 
     def _start(self):
 
+        # The local directory may not exist yet at the time when we are starting
+        # and we possibly need to wait until it does.
+        self.ensure_path_exists()
+
         # Local aliases to avoid namespace lookups in self
-        timeout = self.timeout
+        timeout = self.default_timeout
         handler_func = self.event_handler.on_created
         path = self.path
         is_recursive = self.is_recursive
