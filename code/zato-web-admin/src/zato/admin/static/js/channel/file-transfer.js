@@ -101,8 +101,9 @@ $.fn.zato.channel.file_transfer.edit = function(id) {
 
     $.fn.zato.data_table.multirow.remove_multirow_added();
     $.fn.zato.data_table.edit('edit', 'Update the file transfer channel', id, false);
-    $.fn.zato.data_table.multirow.populate_select_field('service_list', JSON.parse(instance.service_list_json));
-    $.fn.zato.data_table.multirow.populate_select_field('topic_list', JSON.parse(instance.topic_list_json));
+
+    $.fn.zato.data_table.multirow.populate_select_field('service_list', instance.service_list);
+    $.fn.zato.data_table.multirow.populate_select_field('topic_list', instance.topic_list);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -162,11 +163,11 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     // 4
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", item.is_active);
-    row += String.format("<td class='ignore'>{0}</td>", item.service_list);
 
     // 5
-    row += String.format("<td class='ignore'>{0}</td>", item.topic_list);
     row += String.format("<td class='ignore'>{0}</td>", item.should_read_on_pickup);
+    row += String.format("<td class='ignore'>{0}</td>", JSON.stringify(data.service_list_json));
+    row += String.format("<td class='ignore'>{0}</td>", JSON.stringify(data.topic_list_json));
 
     // 6
     row += String.format("<td class='ignore'>{0}</td>", item.should_parse_on_pickup);
@@ -184,8 +185,8 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     row += String.format("<td class='ignore'>{0}</td>", item.scheduler_job_id);
 
     // 9
-    row += String.format("<td class='ignore'>{0}</td>", item.service_list_json);
-    row += String.format("<td class='ignore'>{0}</td>", item.topic_list_json);
+    row += String.format("<td class='ignore'>{0}</td>", data.service_list_json);
+    row += String.format("<td class='ignore'>{0}</td>", data.topic_list_json);
     row += String.format("<td class='ignore'>{0}</td>", item.is_line_by_line);
 
     // 10
