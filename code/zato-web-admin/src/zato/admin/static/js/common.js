@@ -308,7 +308,7 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
                 // console.log('Item attr -> `'+ item_attr +'`');
                 if(item_attr == field_name) {
                     value = instance[item_attr];
-                    // console.log('Field/value: `'+ item_attr + '` `'+ value +'`');
+                    console.log('Field/value: `'+ item_attr + '` `'+ value +'`');
                     form_elem_name = id_prefix + field_name;
                     form_elem = $(form_elem_name);
                     if($.fn.zato.like_bool(value)) {
@@ -952,16 +952,26 @@ $.fn.zato.data_table.multirow.remove_multirow_added = function() {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.data_table.multirow.populate_select_field = function(field_name, source) {
+
+    let _source = null;
+
+    if(typeof(source) === "object") {
+        _source = source;
+    }
+    else {
+        _source = JSON.parse(source);
+    }
+
     let row_id = 'id_edit-'+ field_name +'_0';
     let elem_id = 'id_edit-'+ field_name;
     let elem = $('#' + elem_id);
 
     // The very first element need no cloning ..
-    elem.val(source[0]);
+    elem.val(_source[0]);
 
     // .. but the rest requires new rows (clones), hence iterating from idx=1;
-    for(var idx=1; idx<source.length; idx++) {
-        let item = source[idx];
+    for(var idx=1; idx<_source.length; idx++) {
+        let item = _source[idx];
         let cloned = $.fn.zato.data_table.multirow.add_row(row_id, elem_id, true);
         cloned.val(item);
     };
