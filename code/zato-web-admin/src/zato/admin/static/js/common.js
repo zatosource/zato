@@ -966,14 +966,18 @@ $.fn.zato.data_table.multirow.populate_select_field = function(field_name, sourc
     let elem_id = 'id_edit-'+ field_name;
     let elem = $('#' + elem_id);
 
-    // The very first element need no cloning ..
-    elem.val(_source[0]);
+    // The very first element needs no cloning ..
+    if(_source[0]) {
+        elem.val(_source[0]);
+    };
 
     // .. but the rest requires new rows (clones), hence iterating from idx=1;
     for(var idx=1; idx<_source.length; idx++) {
         let item = _source[idx];
-        let cloned = $.fn.zato.data_table.multirow.add_row(row_id, elem_id, true);
-        cloned.val(item);
+        if(item) {
+            let cloned = $.fn.zato.data_table.multirow.add_row(row_id, elem_id, true);
+            cloned.val(item);
+        }
     };
 }
 

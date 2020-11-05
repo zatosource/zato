@@ -103,6 +103,9 @@ class _CreateEdit(CreateEdit):
 
         for service_name in service_list:
 
+            if not service_name:
+                continue
+
             # The raw list of services, to be read by JavaScript
             service_list_json.append(service_name)
 
@@ -117,6 +120,9 @@ class _CreateEdit(CreateEdit):
             })
 
         for topic_name in topic_list:
+
+            if not topic_name:
+                continue
 
             # The raw list of services, to be read by JavaScript
             topic_list_json.append(topic_name)
