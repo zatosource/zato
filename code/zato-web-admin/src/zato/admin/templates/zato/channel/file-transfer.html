@@ -46,11 +46,11 @@
             {% comment %} 4 {% endcomment %}
             'id',
             'is_active',
-            'service_list',
 
             {% comment %} 5 {% endcomment %}
-            'topic_list',
             'should_read_on_pickup',
+            'service_list',
+            'topic_list',
 
             {% comment %} 6 {% endcomment %}
             'should_parse_on_pickup',
@@ -131,9 +131,9 @@
                         {% comment %} 4 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
 
                         {% comment %} 5 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
@@ -222,11 +222,11 @@
                         {% comment %} 4 {% endcomment %}
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.service_list }}</td>
 
                         {% comment %} 5 {% endcomment %}
-                        <td class='ignore'>{{ item.move_processed_to }}</td>
                         <td class='ignore'>{{ item.should_read_on_pickup }}</td>
+                        <td class='ignore'>{{ item.service_list_json|default:"[]" }}</td>
+                        <td class='ignore'>{{ item.topic_list_json|default:"[]" }}</td>
 
                         {% comment %} 6 {% endcomment %}
                         <td class='ignore'>{{ item.should_parse_on_pickup }}</td>
@@ -244,8 +244,8 @@
                         <td class='ignore'>{{ item.scheduler_job_id }}</td>
 
                         {% comment %} 9 {% endcomment %}
-                        <td class='ignore'>{{ item.service_list_json }}</td>
-                        <td class='ignore'>{{ item.topic_list_json }}</td>
+                        <td class='ignore'>{{ item.service_list_json|default:"[]" }}</td>
+                        <td class='ignore'>{{ item.topic_list_json|default:"[]" }}</td>
                         <td class='ignore'>{{ item.is_line_by_line }}</td>
 
                         {% comment %} 10 {% endcomment %}
@@ -262,7 +262,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='17'>No results</td>
+                        <td colspan='31'>No results</td>
                     </tr>
                 {% endif %}
 

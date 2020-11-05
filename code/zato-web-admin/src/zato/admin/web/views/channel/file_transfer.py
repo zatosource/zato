@@ -91,8 +91,11 @@ class _CreateEdit(CreateEdit):
 
     def post_process_return_data(self, return_data):
 
-        service_html = ''
-        topic_html   = ''
+        service_list_json = []
+        topic_list_json   = []
+
+        service_list_html = ''
+        topic_list_html   = ''
 
         cluster_id = self.input_dict['cluster_id']
         service_list = sorted(self.input_dict['service_list'] or [])
@@ -100,7 +103,11 @@ class _CreateEdit(CreateEdit):
 
         for service_name in service_list:
 
-            service_html += """
+            # The raw list of services, to be read by JavaScript
+            service_list_json.append(service_name)
+
+            # The list of services as HTML
+            service_list_html += """
             <span class="form_hint">S</span>→
                 <a href="/zato/service/overview/{service_name}/?cluster={cluster_id}">{service_name}</a>
             <br/>
@@ -111,7 +118,11 @@ class _CreateEdit(CreateEdit):
 
         for topic_name in topic_list:
 
-            topic_html += """
+            # The raw list of services, to be read by JavaScript
+            topic_list_json.append(topic_name)
+
+            # The list of topics as HTML
+            topic_list_html += """
             <span class="form_hint">T</span>→
                 <a href="/zato/pubsub/topic/?cluster={cluster_id}&amp;query={topic_name}">{topic_name}</a>
             <br/>
@@ -120,7 +131,9 @@ class _CreateEdit(CreateEdit):
                 'cluster_id': cluster_id
             })
 
-        return_data['recipients_html'] = service_html + topic_html
+        return_data['recipients_html'] = service_list_html + topic_list_html
+        return_data['service_list_json'] = service_list_json
+        return_data['topic_list_json'] = topic_list_json
 
     def success_message(self, item):
         return 'Successfully {} file transfer channel `{}`'.format(self.verb, item.name)
