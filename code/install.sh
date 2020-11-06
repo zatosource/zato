@@ -119,7 +119,12 @@ then
 elif [ "$(uname -s)" = "Darwin" ]
 then
     source ./clean.sh
-    source ./_install-mac.sh $PY_BINARY
+    if [[ -z "$HOMEBREW_PREFIX" ]]
+    then
+        source ./_install-mac.sh $PY_BINARY
+    else
+        source ./_install-mac.sh $PY_BINARY 1>&2
+    fi
 elif [ "$(type -p zypper)" ]
 then
     source ./clean.sh
