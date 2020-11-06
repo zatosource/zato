@@ -13,8 +13,12 @@ import logging
 import os
 from datetime import datetime
 from importlib import import_module
+from re import IGNORECASE
 from shutil import copy as shutil_copy
 from traceback import format_exc
+
+# globre
+import globre
 
 # Zato
 from zato.common.util.api import hot_deploy, spawn_greenlet
@@ -24,10 +28,12 @@ from .observer.local_ import LocalObserver
 
 if 0:
     from zato.server.base.parallel import ParallelServer
+    from zato.server.base.worker import WorkerStore
     from .observer.base import BaseObserver
 
     BaseObserver = BaseObserver
     ParallelServer = ParallelServer
+    WorkerStore = WorkerStore
 
 # ################################################################################################################################
 
@@ -43,7 +49,7 @@ _zato_orig_marker = 'zato_orig_'
 class FileTransferEventHandler:
 
     def __init__(self, manager, channel_name, config):
-        # type: (FileTransferManager, str, Bunch) -> None
+        # type: (FileTransferAPI, str, Bunch) -> None
 
         self.manager = manager
         self.channel_name = channel_name
@@ -56,36 +62,36 @@ class FileTransferEventHandler:
 
             file_name = os.path.basename(transfer_event.src_path) # type: str
 
-            if not self.manager.should_handle(file_name, self.config.pattern_matcher_list):
+            if not self.manager.should_handle(self.config.name, file_name):
                 return
 
-            pe = FileTransferEvent()
-            pe.full_path = transfer_event.src_path
-            pe.base_dir = os.path.dirname(transfer_event.src_path)
-            pe.file_name = file_name
-            pe.channel_name = self.channel_name
+            event = FileTransferEvent()
+            event.full_path = transfer_event.src_path
+            event.base_dir = os.path.dirname(transfer_event.src_path)
+            event.file_name = file_name
+            event.channel_name = self.channel_name
 
-            if self.config.is_service_hot_deploy:
-                spawn_greenlet(hot_deploy, self.manager.server, pe.file_name, pe.full_path, self.config.delete_after_pickup)
+            if self.config.is_hot_deploy:
+                spawn_greenlet(hot_deploy, self.manager.server, event.file_name, event.full_path, self.config.delete_after_pickup)
                 return
 
-            if self.config.read_on_pickup:
+            if self.config.should_read_on_pickup:
 
-                f = open(pe.full_path, 'rb')
-                pe.raw_data = f.read()
-                pe.has_raw_data = True
+                f = open(event.full_path, 'rb')
+                event.raw_data = f.read()
+                event.has_raw_data = True
                 f.close()
 
-                if self.config.parse_on_pickup:
+                if self.config.should_parse_on_pickup:
 
                     try:
-                        pe.data = self.manager.get_parser(self.config.parse_with)(pe.raw_data)
-                        pe.has_data = True
+                        event.data = self.manager.get_parser(self.config.parse_with)(event.raw_data)
+                        event.has_data = True
                     except Exception as e:
-                        pe.parse_error = e
+                        event.parse_error = e
 
-            spawn_greenlet(self.manager.invoke_callbacks, pe, self.config.services, self.config.topics)
-            self.manager.post_handle(pe.full_path, self.config)
+            spawn_greenlet(self.manager.invoke_callbacks, event, self.config.service_list, self.config.topic_list)
+            self.manager.post_handle(event.full_path, self.config)
 
         except Exception:
             logger.warn('Exception in pickup event handler `%s`', format_exc())
@@ -117,12 +123,17 @@ class FileTransferEvent(object):
 class FileTransferAPI(object):
     """ Manages file transfer observers and callbacks.
     """
-    def __init__(self, server):
-        # type: (ParallelServer) -> None
+    def __init__(self, server, worker_store):
+        # type: (ParallelServer, WorkerStore) -> None
 
         self.server = server
+        self.worker_store = worker_store
+
         self.keep_running = True
         self.observers = []
+
+        # Maps channel name to a list of globre patterns for the channel's directories
+        self.pattern_matcher_dict = {}
 
     def create(self, config):
         # type: (Bunch) -> None
@@ -130,6 +141,17 @@ class FileTransferAPI(object):
         # Ignore internal channels
         if config.name.startswith(_zato_orig_marker):
             return
+
+        flags = globre.EXACT
+
+        if not config.is_case_sensitive:
+            flags |= IGNORECASE
+
+        file_patterns = config.file_patterns
+        pattern_matcher_list = [file_patterns] if not isinstance(file_patterns, list) else file_patterns
+        pattern_matcher_list = [globre.compile(elem, flags) for elem in file_patterns]
+
+        self.pattern_matcher_dict[config.name] = pattern_matcher_list
 
         observer = LocalObserver(config.name, config.is_active, 0.25)
         event_handler = FileTransferEventHandler(self, config.name, config)
@@ -165,30 +187,29 @@ class FileTransferAPI(object):
 
 # ################################################################################################################################
 
-    def should_handle(self, name, patterns):
-        for pattern in patterns:
-            if pattern.match(name):
+    def should_handle(self, channel_name, file_name):
+        for pattern in self.pattern_matcher_dict[channel_name]:
+            if pattern.match(file_name):
                 return True
 
 # ################################################################################################################################
 
-    def invoke_callbacks(self, transfer_event, services, topics):
+    def invoke_callbacks(self, event, services, topics):
         # type: (FileTransferEvent, list, list) -> None
 
-        config_orig_name = '{}{}'.format(_zato_orig_marker, transfer_event.channel_name)
-        config = self.server.pickup_config[config_orig_name]
+        config = self.worker_store.get_channel_file_transfer_config(event.channel_name)
 
         request = {
-            'base_dir': transfer_event.base_dir,
-            'file_name': transfer_event.file_name,
-            'full_path': transfer_event.full_path,
-            'channel_name': transfer_event.channel_name,
+            'base_dir': event.base_dir,
+            'file_name': event.file_name,
+            'full_path': event.full_path,
+            'channel_name': event.channel_name,
             'ts_utc': datetime.utcnow().isoformat(),
-            'raw_data': transfer_event.raw_data,
-            'data': transfer_event.data if transfer_event.data is not _singleton else None,
-            'has_raw_data': transfer_event.has_raw_data,
-            'has_data': transfer_event.has_data,
-            'parse_error': transfer_event.parse_error,
+            'raw_data': event.raw_data,
+            'data': event.data if event.data is not _singleton else None,
+            'has_raw_data': event.has_raw_data,
+            'has_data': event.has_data,
+            'parse_error': event.parse_error,
             'config': config,
         }
 
@@ -212,7 +233,7 @@ class FileTransferAPI(object):
         if config.move_processed_to:
             shutil_copy(full_path, config.move_processed_to)
 
-        if config.delete_after_pickup:
+        if config.should_delete_after_pickup:
             os.remove(full_path)
 
 # ################################################################################################################################
