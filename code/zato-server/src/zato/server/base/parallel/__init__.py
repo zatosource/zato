@@ -899,7 +899,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             'data': dumps({
                 'meta': {
                     'pickup_ts_utc': request['ts_utc'],
-                    'stanza': request['stanza'],
+                    'stanza': request.get('stanza'),
                     'full_path': request['full_path'],
                     'file_name': request['file_name'],
                 },
