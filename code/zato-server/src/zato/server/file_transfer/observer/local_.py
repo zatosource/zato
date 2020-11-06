@@ -55,8 +55,11 @@ class LocalObserver(BaseObserver):
         start = utcnow()
         log_every = 10
 
-        # A flag indicating if self.path currently exists.
+        # A flag indicating if self.path currently exists
         is_ok = False
+
+        # This becomes True only if we learn that there is something wrong with self.path
+        error_found = False
 
         # Wait until the directory exists (possibly it does already but we do not know it yet)
         while not is_ok:
@@ -71,17 +74,26 @@ class LocalObserver(BaseObserver):
                 if os.path.isdir(self.path):
                     is_ok = True
                 else:
+                    # Indicate that there was an erorr with self.path
+                    error_found = True
+
                     if idx == 1 or (idx % log_every == 0):
                         logger.warn('Local file transfer path `%s` is not a directory (%s) (c:% d:%s)',
                             self.path, self.name, idx, utcnow() - start)
             else:
+                # Indicate that there was an erorr with self.path
+                error_found = True
+
                 if idx == 1 or (idx % log_every == 0):
                     logger.warn('Local file transfer path `%s` does not exist (%s) (c:%s d:%s)',
                         self.path, self.name, idx, utcnow() - start)
 
             if is_ok:
-                logger.info('Local file transfer path `%s` found successfully (%s) (c:% d:%s)',
-                    self.path, self.name, idx, utcnow() - start)
+
+                # Log only if had an error previously, otherwise it would emit too much to logs
+                if error_found:
+                    logger.info('Local file transfer path `%s` found successfully (%s) (c:% d:%s)',
+                        self.path, self.name, idx, utcnow() - start)
             else:
                 sleep(6)
 
