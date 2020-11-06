@@ -53,7 +53,7 @@ class LocalObserver(BaseObserver):
         # How many times we have tried to find the correct path and since when
         idx = 0
         start = utcnow()
-        log_every = 50
+        log_every = 10
 
         # A flag indicating if self.path currently exists.
         is_ok = False
@@ -83,7 +83,7 @@ class LocalObserver(BaseObserver):
                 logger.info('Local file transfer path `%s` found successfully (%s) (c:% d:%s)',
                     self.path, self.name, idx, utcnow() - start)
             else:
-                sleep(timeout)
+                sleep(6)
 
     def _start(self):
 
