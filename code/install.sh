@@ -119,12 +119,6 @@ then
 elif [ "$(uname -s)" = "Darwin" ]
 then
     source ./clean.sh
-    if [[ -n "$HOMEBREW_PREFIX" ]]
-    then
-        echo "redirecting stdout to stderr"
-        exec 1>&2
-        echo "stdout redirected to stderr"
-    fi
     source ./_install-mac.sh $PY_BINARY
 elif [ "$(type -p zypper)" ]
 then
