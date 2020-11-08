@@ -136,13 +136,6 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     pickup_from_html += '<br/>';
     pickup_from_html += item.file_patterns;
 
-    if(item.service_list || item.topic_list) {
-
-        for(let idx=0; idx < item.service_list.length; idx++) {
-            let service_name = item.service_list[idx];
-        }
-    }
-
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
 
