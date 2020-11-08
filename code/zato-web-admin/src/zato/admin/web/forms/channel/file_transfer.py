@@ -12,8 +12,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_select, add_select_from_service, add_services, add_topics
-from zato.common.api import FILE_TRANSFER, GENERIC
+from zato.admin.web.forms import add_http_soap_select, add_select, add_select_from_service, add_services, add_topics
+from zato.common.api import CONNECTION, FILE_TRANSFER, GENERIC, URL_TYPE
 
 # ################################################################################################################################
 
@@ -29,6 +29,7 @@ class CreateForm(forms.Form):
 
     service_list = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:87%', 'class':'multirow'}))
     topic_list = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:87%', 'class':'multirow'}))
+    outconn_rest_list = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:87%', 'class':'multirow'}))
 
     pickup_from_list = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:75px'}))
     move_processed_to = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
@@ -62,6 +63,7 @@ class CreateForm(forms.Form):
         add_select(self, 'source_type', _source_type)
         add_services(self, req)
         add_topics(self, req, by_id=False)
+        add_http_soap_select(self, 'outconn_rest_list', req, CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP)
         add_select_from_service(self, req, 'zato.outgoing.ftp.get-list', 'ftp_source_id')
         add_select_from_service(self, req, 'zato.generic.connection.get-list', 'sftp_source_id', service_extra={'type_':_sftp})
         add_select_from_service(self, req, 'zato.scheduler.job.get-list', 'scheduler_job_id', service_extra={

@@ -104,6 +104,7 @@ $.fn.zato.channel.file_transfer.edit = function(id) {
 
     $.fn.zato.data_table.multirow.populate_field('service_list', instance.service_list);
     $.fn.zato.data_table.multirow.populate_field('topic_list', instance.topic_list);
+    $.fn.zato.data_table.multirow.populate_field('outconn_rest_list', instance.outconn_rest_list);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -195,6 +196,10 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     // 12
     row += String.format("<td class='ignore'>{0}</td>", item.binary_file_patterns);
     row += String.format("<td class='ignore'>{0}</td>", item.data_encoding);
+    row += String.format("<td class='ignore'>{0}</td>", item.outconn_rest_list);
+
+    // 13
+    row += String.format("<td class='ignore'>{0}</td>", item.outconn_rest_list_json);
 
     if(include_tr) {
         row += '</tr>';
