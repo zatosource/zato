@@ -199,6 +199,10 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     row += String.format("<td class='ignore'>{0}</td>", item.move_processed_to);
     row += String.format("<td class='ignore'>{0}</td>", item.is_hot_deploy);
 
+    // 12
+    row += String.format("<td class='ignore'>{0}</td>", item.binary_file_patterns);
+    row += String.format("<td class='ignore'>{0}</td>", item.data_encoding);
+
     if(include_tr) {
         row += '</tr>';
     }

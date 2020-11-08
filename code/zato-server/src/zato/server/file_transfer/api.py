@@ -78,7 +78,7 @@ class FileTransferEventHandler:
             if self.config.should_read_on_pickup:
 
                 f = open(event.full_path, 'rb')
-                event.raw_data = f.read().decode('utf8')
+                event.raw_data = f.read().decode(config.data_encoding)
                 event.has_raw_data = True
                 f.close()
 
