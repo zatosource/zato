@@ -83,7 +83,7 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['pool_size'] = 1
 
     def pre_process_item(self, name, value):
-        if name in ('service_list', 'topic_list'):
+        if name in ('service_list', 'topic_list', 'outcon_rest_list'):
             if value:
                 if isinstance(value, list):
                     value = sorted(set(elem for elem in value if elem))
@@ -176,7 +176,7 @@ class _CreateEdit(CreateEdit):
         # Return data
         #
 
-        return_data['recipients_html'] = service_list_html + topic_list_html
+        return_data['recipients_html'] = service_list_html + topic_list_html + outconn_rest_list_html
         return_data['service_list_json'] = service_list_json
         return_data['topic_list_json'] = topic_list_json
 
