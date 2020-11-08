@@ -216,17 +216,26 @@
                         {% comment %} 3 {% endcomment %}
 
                         <td>
-                            {% if item.service_list or item.topic_list %}
+                            {% if item.service_list or item.topic_list or item.outconn_rest_list %}
+
                                 {% for service_name in item.service_list %}
                                     <span class="form_hint">S</span>→
                                         <a href="{% url "service-overview" service_name %}?cluster={{ cluster_id }}">{{ service_name }}</a>
                                     <br/>
                                 {% endfor %}
+
                                 {% for topic_name in item.topic_list %}
                                     <span class="form_hint">T</span>→
                                         <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id}}&amp;query={{ topic_name }}">{{ topic_name }}</a>
                                     <br/>
                                 {% endfor %}
+
+                                {% for outconn_rest_name in item.topic_list %}
+                                    <span class="form_hint">R</span>→
+                                        <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id}}&amp;query={{ outconn_rest_name }}">{{ outconn_rest_name }}</a>
+                                    <br/>
+                                {% endfor %}
+
                             {% else %}
                                 <span class="form_hint">---</span>
                             {% endif %}
@@ -277,10 +286,10 @@
                         {% comment %} 12 {% endcomment %}
                         <td class='ignore'>{{ item.binary_file_patterns }}</td>
                         <td class='ignore'>{{ item.data_encoding }}</td>
-                        <td class='ignore'>{{ item.outconn_rest_list }}</td>
+                        <td class='ignore'>{{ item.outconn_rest_list|default:"[]" }}</td>
 
                         {% comment %} 13 {% endcomment %}
-                        <td class='ignore'>{{ item.outconn_rest_list_json }}</td>
+                        <td class='ignore'>{{ item.outconn_rest_list_json|default:"[]" }}</td>
 
                     </tr>
                 {% endfor %}
