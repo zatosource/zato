@@ -51,6 +51,9 @@ class CreateForm(forms.Form):
     is_line_by_line = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     is_hot_deploy = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
+    binary_file_patterns = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    data_encoding = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+
     ftp_source_name = forms.HiddenInput()
     sftp_source_name = forms.HiddenInput()
 

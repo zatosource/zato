@@ -77,10 +77,15 @@
             'ftp_source_name',
             'sftp_source_name',
 
-            {% comment %} 10 {% endcomment %}
+            {% comment %} 11 {% endcomment %}
             'is_case_sensitive',
             'move_processed_to',
             'is_hot_deploy',
+
+            {% comment %} 12 {% endcomment %}
+            'binary_file_patterns',
+            'data_encoding',
+
         ]
     }
     </script>
@@ -162,8 +167,12 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
-                        {% comment %} 10 {% endcomment %}
+                        {% comment %} 11 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 12 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
@@ -257,6 +266,10 @@
                         <td class='ignore'>{{ item.is_case_sensitive }}</td>
                         <td class='ignore'>{{ item.move_processed_to }}</td>
                         <td class='ignore'>{{ item.is_hot_deploy }}</td>
+
+                        {% comment %} 12 {% endcomment %}
+                        <td class='ignore'>{{ item.binary_file_patterns }}</td>
+                        <td class='ignore'>{{ item.data_encoding }}</td>
 
                     </tr>
                 {% endfor %}

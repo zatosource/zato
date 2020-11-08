@@ -31,7 +31,8 @@ class Index(_Index):
         output_required = 'id', 'name', 'is_active', 'source_type', 'pickup_from'
         output_optional = 'service_list', 'topic_list', 'move_processed_to', 'file_patterns', 'parse_with', 'should_read_on_pickup', \
             'should_parse_on_pickup', 'should_delete_after_pickup', 'ftp_source_id', 'sftp_source_id', 'scheduler_job_id', \
-            'ftp_source_name', 'sftp_source_name', 'is_case_sensitive', 'is_line_by_line', 'is_hot_deploy'
+            'ftp_source_name', 'sftp_source_name', 'is_case_sensitive', 'is_line_by_line', 'is_hot_deploy', \
+            'binary_file_patterns', 'data_encoding'
         output_repeated = True
 
 # ################################################################################################################################
@@ -69,7 +70,7 @@ class _CreateEdit(CreateEdit):
         input_required = 'name', 'is_active', 'source_type', 'pickup_from'
         input_optional = 'service_list', 'topic_list', 'move_processed_to', 'file_patterns', 'parse_with', 'should_read_on_pickup', \
             'should_parse_on_pickup', 'should_delete_after_pickup', 'ftp_source_id', 'sftp_source_id', 'scheduler_job_id', \
-            'is_case_sensitive', 'is_line_by_line', 'is_hot_deploy'
+            'is_case_sensitive', 'is_line_by_line', 'is_hot_deploy', 'binary_file_patterns', 'data_encoding'
         output_required = 'id', 'name'
 
     def populate_initial_input_dict(self, initial_input_dict):
