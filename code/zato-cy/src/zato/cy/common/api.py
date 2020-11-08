@@ -1410,6 +1410,7 @@ class FILE_TRANSFER:
 
     class DEFAULT:
         FILE_PATTERNS = '*'
+        ENCODING = 'utf-8'
 
     class SOURCE_TYPE:
         LOCAL = NameId('Local', 'local')
