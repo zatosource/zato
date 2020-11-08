@@ -25,6 +25,7 @@ from watchdog.events import FileCreatedEvent, FileModifiedEvent
 from watchdog.utils.dirsnapshot import DirectorySnapshot, DirectorySnapshotDiff
 
 # Zato
+from zato.common.util.api import spawn_greenlet
 from .base import BaseObserver
 
 # ################################################################################################################################
@@ -47,7 +48,8 @@ class LocalObserver(BaseObserver):
 
 # ################################################################################################################################
 
-    def ensure_path_exists(self):
+    def ensure_path_exists(self, path):
+        # type: (str) -> None
 
         # Local aliases
         timeout = self.default_timeout
@@ -58,10 +60,10 @@ class LocalObserver(BaseObserver):
         start = utcnow()
         log_every = 10
 
-        # A flag indicating if self.path currently exists
+        # A flag indicating if path currently exists
         is_ok = False
 
-        # This becomes True only if we learn that there is something wrong with self.path
+        # This becomes True only if we learn that there is something wrong with path
         error_found = False
 
         # Wait until the directory exists (possibly it does already but we do not know it yet)
@@ -73,49 +75,51 @@ class LocalObserver(BaseObserver):
             if not self.keep_running:
                 return
 
-            if os.path.exists(self.path):
-                if os.path.isdir(self.path):
+            if os.path.exists(path):
+                if os.path.isdir(path):
                     is_ok = True
                 else:
-                    # Indicate that there was an erorr with self.path
+                    # Indicate that there was an erorr with path
                     error_found = True
 
                     if idx == 1 or (idx % log_every == 0):
                         logger.warn('Local file transfer path `%s` is not a directory (%s) (c:% d:%s)',
-                            self.path, self.name, idx, utcnow() - start)
+                            path, self.name, idx, utcnow() - start)
             else:
-                # Indicate that there was an erorr with self.path
+                # Indicate that there was an erorr with path
                 error_found = True
 
                 if idx == 1 or (idx % log_every == 0):
                     logger.warn('Local file transfer path `%s` does not exist (%s) (c:%s d:%s)',
-                        self.path, self.name, idx, utcnow() - start)
+                        path, self.name, idx, utcnow() - start)
 
             if is_ok:
 
                 # Log only if had an error previously, otherwise it would emit too much to logs
                 if error_found:
                     logger.info('Local file transfer path `%s` found successfully (%s) (c:% d:%s)',
-                        self.path, self.name, idx, utcnow() - start)
+                        path, self.name, idx, utcnow() - start)
             else:
                 sleep(6)
 
 # ################################################################################################################################
 
-    def _observe_path(self, path):
+    def _start(self):
+        for path in self.path_list: # type: str
+            spawn_greenlet(self._observe_path, path)
 
 # ################################################################################################################################
 
-    def _start(self):
+    def _observe_path(self, path):
+        # type: (str) -> None
 
         # The local directory may not exist yet at the time when we are starting
         # and we possibly need to wait until it does.
-        self.ensure_path_exists()
+        self.ensure_path_exists(path)
 
         # Local aliases to avoid namespace lookups in self
         timeout = self.default_timeout
         handler_func = self.event_handler.on_created
-        path = self.path
         is_recursive = self.is_recursive
 
         # Take an initial snapshot
@@ -152,10 +156,10 @@ if __name__ == '__main__':
     config  = 333
 
     event_handler = PickupEventHandler(manager, stanza, config)
-    path = '/tmp'
+    path_list = ['/tmp']
     is_recursive = False
 
     observer = LocalObserver()
-    observer.schedule(event_handler, path, is_recursive)
+    observer.schedule(event_handler, path_list, is_recursive)
 
     observer.start()
