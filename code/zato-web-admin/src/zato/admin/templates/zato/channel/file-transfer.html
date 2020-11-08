@@ -289,7 +289,7 @@
                 <form action="{% url "channel-file-transfer-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:13%">
+                            <td style="vertical-align:middle;width:14%">
                                 <label for="id_name">Name</label>
                             </td>
                             <td>{{ create_form.name }}</td>
@@ -396,7 +396,23 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_move_processed_to">Dir. to</label>
+                                <label for="id_data_encoding">Encoding</label>
+                            </td>
+                            <td>
+
+                                {{ create_form.data_encoding }}
+
+                                |
+
+                                <label>
+                                    Binary {{ create_form.binary_file_patterns }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_move_processed_to">Proc. to</label>
                             </td>
                             <td>{{ create_form.move_processed_to }}</td>
                         </tr>
@@ -443,7 +459,7 @@
                 <form action="{% url "channel-file-transfer-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:8%">
+                            <td style="vertical-align:middle;width:14%">
                                 <label for="id_edit-name">Name</label>
                             </td>
                             <td>{{ edit_form.name }}</td>
@@ -551,7 +567,23 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_edit-move_processed_to">Dir. to</label>
+                                <label for="id_data_encoding">Encoding</label>
+                            </td>
+                            <td>
+
+                                {{ edit_form.data_encoding }}
+
+                                |
+
+                                <label>
+                                    Binary {{ edit_form.binary_file_patterns }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-move_processed_to">Proc. to</label>
                             </td>
                             <td>{{ edit_form.move_processed_to }}</td>
                         </tr>
