@@ -78,7 +78,7 @@ class FileTransferEventHandler:
             if self.config.should_read_on_pickup:
 
                 f = open(event.full_path, 'rb')
-                event.raw_data = f.read().decode(config.data_encoding)
+                event.raw_data = f.read().decode(self.config.data_encoding)
                 event.has_raw_data = True
                 f.close()
 
@@ -94,7 +94,8 @@ class FileTransferEventHandler:
             self.manager.post_handle(event.full_path, self.config)
 
         except Exception:
-            logger.warn('Exception in pickup event handler `%s`', format_exc())
+            logger.warn('Exception in pickup event handler `%s` (%s) `%s`',
+                self.config.name, transfer_event.src_path, format_exc())
 
     on_modified = on_created
 
@@ -246,6 +247,6 @@ class FileTransferAPI(object):
                 observer.start()
             except Exception:
                 logger.warn('File observer `%s` could not be started, path:`%s`, e:`%s`',
-                    observer.name, observer.path, format_exc())
+                    observer.name, observer.path_list, format_exc())
 
 # ################################################################################################################################
