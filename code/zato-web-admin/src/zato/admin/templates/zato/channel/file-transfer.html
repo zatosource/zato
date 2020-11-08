@@ -73,7 +73,7 @@
             'is_line_by_line',
 
             {% comment %} 10 {% endcomment %}
-            'pickup_from',
+            'pickup_from_list',
             'ftp_source_name',
             'sftp_source_name',
 
@@ -200,8 +200,7 @@
 
                         {% comment %} 2 {% endcomment %}
                         <td>
-                            {{ item.pickup_from }}
-                            <br/>
+                            {{ item.pickup_from_list|linebreaks }}
                             {{ item.file_patterns }}
                         </td>
                         <td>{{ item.move_processed_to|default:'<span class="form_hint">---</span>' }}</td>
@@ -258,7 +257,7 @@
                         <td class='ignore'>{{ item.is_line_by_line }}</td>
 
                         {% comment %} 10 {% endcomment %}
-                        <td class='ignore'>{{ item.pickup_from }}</td>
+                        <td class='ignore'>{{ item.pickup_from_list }}</td>
                         <td class='ignore'>{{ item.ftp_source_name }}</td>
                         <td class='ignore'>{{ item.sftp_source_name }}</td>
 
@@ -382,7 +381,7 @@
                                 <label for="id_pickup_from">Dir. from</label>
                             </td>
                             <td>
-                                {{ create_form.pickup_from }}
+                                {{ create_form.pickup_from_list }}
                             </td>
                         </tr>
 
@@ -534,10 +533,10 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_edit-pickup_from">Dir. from</label>
+                                <label for="id_edit-pickup_from_list">Dir. from</label>
                             </td>
                             <td>
-                                {{ edit_form.pickup_from }}
+                                {{ edit_form.pickup_from_list }}
                             </td>
                         </tr>
 

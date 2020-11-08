@@ -17,7 +17,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.ChannelFileTransfer;
     $.fn.zato.data_table.new_row_func = $.fn.zato.channel.file_transfer.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'source_type', 'pickup_from', 'file_patterns']);
+    $.fn.zato.data_table.setup_forms(['name', 'source_type', 'pickup_from_list', 'file_patterns']);
 
     $('#id_source_type').change(function() {
         $.fn.zato.channel.file_transfer.on_source_type_changed('');
@@ -119,7 +119,7 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     let cluster_id = $(document).getUrlParam('cluster');
 
     let source_html = $.fn.zato.empty_value;
-    let pickup_from_html = '';
+    let pickup_from_list_html = '';
     let recipients_html = data.recipients_html || '<span class="form_hint">---</span>';
 
     if(item.source_type == 'local') {
@@ -132,9 +132,9 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
         source_html = `<a href="/zato/outgoing/sftp/?cluster=${item.cluster_id}&amp;type_=outconn-sftp&amp;query=${item.sftp_source_name}">${item.sftp_source_name}</a>`;
     }
 
-    pickup_from_html += item.pickup_from;
-    pickup_from_html += '<br/>';
-    pickup_from_html += item.file_patterns;
+    pickup_from_list_html += String.replace(item.pickup_from_list.replace("\n", "<br/>"));
+    pickup_from_list_html += '<br/>';
+    pickup_from_list_html += item.file_patterns;
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
@@ -145,7 +145,7 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     row += String.format('<td>{0}</td>', source_html);
 
     // 2
-    row += String.format('<td>{0}</td>', pickup_from_html);
+    row += String.format('<td>{0}</td>', pickup_from_list_html);
     row += String.format('<td>{0}</td>', item.move_processed_to ? item.move_processed_to : $.fn.zato.empty_value);
 
     // 3
@@ -183,7 +183,7 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     row += String.format("<td class='ignore'>{0}</td>", item.is_line_by_line);
 
     // 10
-    row += String.format("<td class='ignore'>{0}</td>", item.pickup_from);
+    row += String.format("<td class='ignore'>{0}</td>", item.pickup_from_list);
     row += String.format("<td class='ignore'>{0}</td>", item.ftp_source_name);
     row += String.format("<td class='ignore'>{0}</td>", item.sftp_source_name);
 

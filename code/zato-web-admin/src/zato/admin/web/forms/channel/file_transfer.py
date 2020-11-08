@@ -30,7 +30,7 @@ class CreateForm(forms.Form):
     service_list = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:87%', 'class':'multirow'}))
     topic_list = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:87%', 'class':'multirow'}))
 
-    pickup_from = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    pickup_from_list = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:75px'}))
     move_processed_to = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
 
     file_patterns = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.FILE_PATTERNS)
