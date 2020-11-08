@@ -955,7 +955,7 @@ $.fn.zato.data_table.multirow.remove_multirow_added = function() {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.data_table.multirow.populate_select_field = function(field_name, source) {
+$.fn.zato.data_table.multirow.populate_field = function(field_name, source) {
 
     let _source = null;
 

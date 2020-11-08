@@ -102,8 +102,8 @@ $.fn.zato.channel.file_transfer.edit = function(id) {
     $.fn.zato.data_table.multirow.remove_multirow_added();
     $.fn.zato.data_table.edit('edit', 'Update the file transfer channel', id, false);
 
-    $.fn.zato.data_table.multirow.populate_select_field('service_list', instance.service_list);
-    $.fn.zato.data_table.multirow.populate_select_field('topic_list', instance.topic_list);
+    $.fn.zato.data_table.multirow.populate_field('service_list', instance.service_list);
+    $.fn.zato.data_table.multirow.populate_field('topic_list', instance.topic_list);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
