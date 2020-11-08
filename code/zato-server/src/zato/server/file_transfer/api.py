@@ -150,12 +150,14 @@ class FileTransferAPI(object):
         file_patterns = config.file_patterns
         pattern_matcher_list = [file_patterns] if not isinstance(file_patterns, list) else file_patterns
         pattern_matcher_list = [globre.compile(elem, flags) for elem in file_patterns]
-
         self.pattern_matcher_dict[config.name] = pattern_matcher_list
+
+        pickup_from_list = str(config.pickup_from_list) # type: str
+        pickup_from_list = [elem.strip() for elem in pickup_from_list.splitlines()]
 
         observer = LocalObserver(config.name, config.is_active, 0.25)
         event_handler = FileTransferEventHandler(self, config.name, config)
-        observer.schedule(event_handler, config.pickup_from_list, recursive=False)
+        observer.schedule(event_handler, pickup_from_list, recursive=False)
 
         self.observers.append(observer)
 

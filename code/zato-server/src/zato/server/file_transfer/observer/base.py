@@ -27,7 +27,7 @@ class BaseObserver:
         self.is_active = is_active
         self.default_timeout = default_timeout
         self.event_handler = None
-        self.path = '<initial-local-observer>'
+        self.path_list = ['<initial-observer>']
         self.is_recursive = False
         self.keep_running = True
 
