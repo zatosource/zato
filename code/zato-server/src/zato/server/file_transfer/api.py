@@ -155,7 +155,7 @@ class FileTransferAPI(object):
 
         observer = LocalObserver(config.name, config.is_active, 0.25)
         event_handler = FileTransferEventHandler(self, config.name, config)
-        observer.schedule(event_handler, config.pickup_from, recursive=False)
+        observer.schedule(event_handler, config.pickup_from_list, recursive=False)
 
         self.observers.append(observer)
 
