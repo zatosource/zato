@@ -85,6 +85,10 @@
             {% comment %} 12 {% endcomment %}
             'binary_file_patterns',
             'data_encoding',
+            'outconn_rest_list',
+
+            {% comment %} 13 {% endcomment %}
+            'outconn_rest_list_json',
 
         ]
     }
@@ -174,6 +178,10 @@
 
                         {% comment %} 12 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 13 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
 
                 </thead>
@@ -269,6 +277,10 @@
                         {% comment %} 12 {% endcomment %}
                         <td class='ignore'>{{ item.binary_file_patterns }}</td>
                         <td class='ignore'>{{ item.data_encoding }}</td>
+                        <td class='ignore'>{{ item.outconn_rest_list }}</td>
+
+                        {% comment %} 13 {% endcomment %}
+                        <td class='ignore'>{{ item.outconn_rest_list_json }}</td>
 
                     </tr>
                 {% endfor %}
@@ -425,6 +437,12 @@
                         </tr>
 
                         <tr>
+                            <td style="vertical-align:middle" colspan="2">
+                                Send to ↓
+                            </td>
+                        </tr>
+
+                        <tr>
                             <td style="vertical-align:middle">
                                 <label for="id_service_list">Service</label>
                             </td>
@@ -438,6 +456,15 @@
                                 <label for="id_topic_list">Topic</label>
                             </td>
                             <td>{{ create_form.topic_list }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_outconn_rest_list">REST</label>
+                            </td>
+                            <td>
+                                {{ create_form.outconn_rest_list }}
+                            </td>
                         </tr>
 
                         <tr>
@@ -596,6 +623,12 @@
                         </tr>
 
                         <tr>
+                            <td style="vertical-align:middle" colspan="2">
+                                Send to ↓
+                            </td>
+                        </tr>
+
+                        <tr>
                             <td style="vertical-align:middle">
                                 <label for="id_edit-service_list">Service</label>
                             </td>
@@ -609,6 +642,15 @@
                                 <label for="id_edit-topic_list">Topic</label>
                             </td>
                             <td>{{ edit_form.topic_list }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_outconn_rest_list">REST</label>
+                            </td>
+                            <td>
+                                {{ edit_form.outconn_rest_list }}
+                            </td>
                         </tr>
 
                         <tr>

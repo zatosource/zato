@@ -32,7 +32,7 @@ class Index(_Index):
         output_optional = 'service_list', 'topic_list', 'move_processed_to', 'file_patterns', 'parse_with', 'should_read_on_pickup', \
             'should_parse_on_pickup', 'should_delete_after_pickup', 'ftp_source_id', 'sftp_source_id', 'scheduler_job_id', \
             'ftp_source_name', 'sftp_source_name', 'is_case_sensitive', 'is_line_by_line', 'is_hot_deploy', \
-            'binary_file_patterns', 'data_encoding'
+            'binary_file_patterns', 'data_encoding', 'outconn_rest_list'
         output_repeated = True
 
 # ################################################################################################################################
@@ -70,7 +70,8 @@ class _CreateEdit(CreateEdit):
         input_required = 'name', 'is_active', 'source_type', 'pickup_from_list'
         input_optional = 'service_list', 'topic_list', 'move_processed_to', 'file_patterns', 'parse_with', 'should_read_on_pickup', \
             'should_parse_on_pickup', 'should_delete_after_pickup', 'ftp_source_id', 'sftp_source_id', 'scheduler_job_id', \
-            'is_case_sensitive', 'is_line_by_line', 'is_hot_deploy', 'binary_file_patterns', 'data_encoding'
+            'is_case_sensitive', 'is_line_by_line', 'is_hot_deploy', 'binary_file_patterns', 'data_encoding', \
+            'outconn_rest_list'
         output_required = 'id', 'name'
 
     def populate_initial_input_dict(self, initial_input_dict):
@@ -94,13 +95,20 @@ class _CreateEdit(CreateEdit):
 
         service_list_json = []
         topic_list_json   = []
+        outconn_rest_list_json   = []
 
         service_list_html = ''
         topic_list_html   = ''
+        outconn_rest_list_html   = ''
 
         cluster_id = self.input_dict['cluster_id']
         service_list = sorted(self.input_dict['service_list'] or [])
         topic_list = sorted(self.input_dict['topic_list'] or [])
+        outconn_rest_list = sorted(self.input_dict['outconn_rest_list'] or [])
+
+        #
+        # Services
+        #
 
         for service_name in service_list:
 
@@ -120,12 +128,16 @@ class _CreateEdit(CreateEdit):
                 'cluster_id': cluster_id
             })
 
+        #
+        # Topics
+        #
+
         for topic_name in topic_list:
 
             if not topic_name:
                 continue
 
-            # The raw list of services, to be read by JavaScript
+            # The raw list of topics, to be read by JavaScript
             topic_list_json.append(topic_name)
 
             # The list of topics as HTML
@@ -137,6 +149,32 @@ class _CreateEdit(CreateEdit):
                 'topic_name': topic_name,
                 'cluster_id': cluster_id
             })
+
+        #
+        # REST
+        #
+
+        for outconn_rest_name in topic_list:
+
+            if not outconn_rest_name:
+                continue
+
+            # The raw list of REST outconns, to be read by JavaScript
+            outconn_rest_list_json.append(outconn_rest_name)
+
+            # The list of REST outconns as HTML
+            outconn_rest_list_html += """
+            <span class="form_hint">R</span>→
+                <a href="/zato/pubsub/topic/?cluster={cluster_id}&amp;query={outconn_rest_name}">{outconn_rest_name}</a>
+            <br/>
+            """.format(**{
+                'outconn_rest_name': outconn_rest_name,
+                'cluster_id': cluster_id
+            })
+
+        #
+        # Return data
+        #
 
         return_data['recipients_html'] = service_list_html + topic_list_html
         return_data['service_list_json'] = service_list_json
