@@ -39,10 +39,13 @@ class LocalObserver(BaseObserver):
     """ A local file-system observer.
     """
 
-    def schedule(self, event_handler, path, recursive):
+    def schedule(self, event_handler, path_list, recursive):
+        # type: (object, list, bool) -> None
         self.event_handler = event_handler
-        self.path = path
+        self.path_list = path_list
         self.is_recursive = recursive
+
+# ################################################################################################################################
 
     def ensure_path_exists(self):
 
@@ -96,6 +99,12 @@ class LocalObserver(BaseObserver):
                         self.path, self.name, idx, utcnow() - start)
             else:
                 sleep(6)
+
+# ################################################################################################################################
+
+    def _observe_path(self, path):
+
+# ################################################################################################################################
 
     def _start(self):
 
