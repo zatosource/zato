@@ -12,7 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 import os
 from datetime import datetime
+from http.client import OK
 from importlib import import_module
+from mimetypes import guess_type as guess_mime_type
 from re import IGNORECASE
 from shutil import copy as shutil_copy
 from traceback import format_exc
@@ -27,12 +29,14 @@ from .observer.local_ import LocalObserver
 # ################################################################################################################################
 
 if 0:
+    from requests import Response
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.worker import WorkerStore
     from .observer.base import BaseObserver
 
     BaseObserver = BaseObserver
     ParallelServer = ParallelServer
+    Response = Response
     WorkerStore = WorkerStore
 
 # ################################################################################################################################
@@ -253,18 +257,48 @@ class FileTransferAPI(object):
 
 # ################################################################################################################################
 
+    def _invoke_rest_outconn_callback(self, item_id, request):
+        # type: (str, dict) -> None
+
+        cid = new_cid()
+
+        item = self.worker_store.get_outconn_rest_by_id(item_id)
+        ping_response = item.ping(cid, return_response=True, log_verbose=True) # type: Response
+
+        if ping_response.status_code != OK:
+
+            logger.warn('Could not ping file transfer connection for `%s` (%s); config:`%s`, r:`%s`, h:`%s`',
+                request['full_path'], request['config'].name, item.config, ping_response.text, ping_response.headers)
+
+        else:
+
+            file_name = request['file_name']
+
+            mime_type = guess_mime_type(file_name, strict=False)
+            mime_type = mime_type[0] if mime_type[0] else 'application/octet-stream'
+
+            payload = request['raw_data']
+            params = {'file_name': file_name, 'mime_type': mime_type}
+
+            headers = {
+                'X-Zato-File-Name': file_name,
+                'X-Zato-Mime-Type': mime_type,
+            }
+
+            response = item.conn.post(cid, payload, params, headers=headers) # type: Response
+
+            if response.status_code != OK:
+                logger.warn('Could not send file `%s` (%s) to `%s` (p:`%s`, h:`%s`), r:`%s`, h:`%s`',
+                    request['full_path'], request['config'].name, item.config, params, headers,
+                    response.text, response.headers)
+
+# ################################################################################################################################
+
     def invoke_rest_outconn_callbacks(self, outconn_rest_list, request):
         # type: (list, dict) -> None
+
         for item_id in outconn_rest_list: # type: int
-
-            cid = new_cid()
-
-            item = self.worker_store.get_outconn_rest_by_id(item_id)
-            item.ping(cid)
-
-            print()
-            #print(222, response)
-            print()
+            spawn_greenlet(self._invoke_rest_outconn_callback, item_id, request)
 
 # ################################################################################################################################
 

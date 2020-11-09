@@ -52,7 +52,6 @@ class LocalObserver(BaseObserver):
         # type: (str) -> None
 
         # Local aliases
-        timeout = self.default_timeout
         utcnow = datetime.utcnow
 
         # How many times we have tried to find the correct path and since when
