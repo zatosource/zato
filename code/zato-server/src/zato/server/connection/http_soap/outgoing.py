@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from copy import deepcopy
 from datetime import datetime
+from http.client import OK
 from io import StringIO
 from logging import DEBUG, getLogger
 from traceback import format_exc
@@ -101,7 +102,7 @@ class BaseHTTPSOAPWrapper(object):
         except RequestsTimeout:
             raise TimeoutException(cid, format_exc())
 
-    def ping(self, cid, raise_on_error=False):
+    def ping(self, cid, return_response=False, log_verbose=False):
         """ Pings a given HTTP/SOAP resource
         """
         logger.info('Pinging:`%s`', self.config_no_sensitive)
@@ -120,18 +121,17 @@ class BaseHTTPSOAPWrapper(object):
         response = self.invoke_http(cid, self.config['ping_method'], self.address, '', self._create_headers(cid, {}),
             {'zato_pre_request':zato_pre_request_hook})
 
-        print()
-        print(111, response)
-        print(222, response.status_code)
-        print()
-
         # .. store additional info, get and close the stream.
         verbose.write('Code: {}'.format(response.status_code))
         verbose.write('\nResponse time: {}'.format(datetime.utcnow() - start))
         value = verbose.getvalue()
         verbose.close()
 
-        return value
+        if log_verbose:
+            func = logger.info if response.status_code == OK else logger.warn
+            func(value)
+
+        return response if return_response else value
 
     def get_default_content_type(self):
 
