@@ -103,10 +103,6 @@ class _CreateEdit(CreateEdit):
 
     def post_process_return_data(self, return_data):
 
-        service_list_json = []
-        topic_list_json   = []
-        outconn_rest_list_json   = []
-
         service_list_html = ''
         topic_list_html   = ''
         outconn_rest_list_html   = ''
@@ -133,9 +129,6 @@ class _CreateEdit(CreateEdit):
             if not service_name:
                 continue
 
-            # The raw list of services, to be read by JavaScript
-            service_list_json.append(service_name)
-
             # The list of services as HTML
             service_list_html += """
             <span class="form_hint">S</span>→
@@ -154,9 +147,6 @@ class _CreateEdit(CreateEdit):
 
             if not topic_name:
                 continue
-
-            # The raw list of topics, to be read by JavaScript
-            topic_list_json.append(topic_name)
 
             # The list of topics as HTML
             topic_list_html += """
@@ -177,11 +167,7 @@ class _CreateEdit(CreateEdit):
             if not outconn_rest_name:
                 continue
 
-            # The raw list of REST outconns, to be read by JavaScript
-            outconn_rest_list_json.append(outconn_rest_name)
-
             # The list of REST outconns as HTML
-
             outconn_rest_list_html += """
             <span class="form_hint">R</span>→
                 <a href="/zato/http-soap/?cluster={cluster_id}&amp;connection=outgoing&amp;transport=plain_http&amp;query={outconn_rest_name}">{outconn_rest_name}</a>
@@ -196,9 +182,6 @@ class _CreateEdit(CreateEdit):
         #
 
         return_data['recipients_html'] = service_list_html + topic_list_html + outconn_rest_list_html
-        return_data['service_list_json'] = service_list_json
-        return_data['topic_list_json'] = topic_list_json
-        return_data['outconn_rest_list_json'] = outconn_rest_list_json
 
     def success_message(self, item):
         return 'Successfully {} file transfer channel `{}`'.format(self.verb, item.name)
