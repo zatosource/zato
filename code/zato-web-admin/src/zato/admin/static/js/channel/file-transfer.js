@@ -179,8 +179,6 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     row += String.format("<td class='ignore'>{0}</td>", item.scheduler_job_id);
 
     // 9
-    row += String.format("<td class='ignore'>{0}</td>", data.service_list_json);
-    row += String.format("<td class='ignore'>{0}</td>", data.topic_list_json);
     row += String.format("<td class='ignore'>{0}</td>", item.is_line_by_line);
 
     // 10
