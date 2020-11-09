@@ -85,9 +85,6 @@
             'data_encoding',
             'outconn_rest_list',
 
-            {% comment %} 13 {% endcomment %}
-            'outconn_rest_list_json',
-
         ]
     }
     </script>
@@ -177,9 +174,6 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
-                        {% comment %} 13 {% endcomment %}
-                        <th class='ignore'>&nbsp;</th>
-
                 </thead>
 
                 <tbody>
@@ -212,7 +206,7 @@
                         {% comment %} 3 {% endcomment %}
 
                         <td>
-                            {% if item.service_list or item.topic_list or item.outconn_rest_list %}
+                            {% if item.service_list or item.topic_list or item.outconn_rest_list_by_name %}
 
                                 {% for service_name in item.service_list %}
                                     <span class="form_hint">S</span>→
@@ -226,7 +220,7 @@
                                     <br/>
                                 {% endfor %}
 
-                                {% for outconn_rest_name in item.outconn_rest_list %}
+                                {% for outconn_rest_name in item.outconn_rest_list_by_name %}
                                     <span class="form_hint">R</span>→
                                         <a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=plain_http&amp;query={{ outconn_rest_name }}">{{ outconn_rest_name }}</a>
                                     <br/>
@@ -280,9 +274,6 @@
                         {% comment %} 12 {% endcomment %}
                         <td class='ignore'>{{ item.binary_file_patterns }}</td>
                         <td class='ignore'>{{ item.data_encoding }}</td>
-                        <td class='ignore'>{{ item.outconn_rest_list_json|default:"[]" }}</td>
-
-                        {% comment %} 13 {% endcomment %}
                         <td class='ignore'>{{ item.outconn_rest_list_json|default:"[]" }}</td>
 
                     </tr>

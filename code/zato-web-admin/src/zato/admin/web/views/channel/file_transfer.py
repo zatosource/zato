@@ -61,11 +61,11 @@ class Index(_Index):
         if item.outconn_rest_list:
 
             # All REST outgoing connections for the cluster
-            outconn_rest_list = get_outconn_rest_list(self.req)
+            all_outconn_rest_list = get_outconn_rest_list(self.req)
 
             item.outconn_rest_list = item.outconn_rest_list if isinstance(item.outconn_rest_list, list) else \
                 [item.outconn_rest_list]
-            item.outconn_rest_list = sorted(outconn_rest_list[int(elem)] for elem in item.outconn_rest_list)
+            item.outconn_rest_list_by_name = sorted(all_outconn_rest_list[int(elem)] for elem in item.outconn_rest_list if elem)
             item.outconn_rest_list_json = dumps(item.outconn_rest_list)
 
         return item
@@ -114,7 +114,15 @@ class _CreateEdit(CreateEdit):
         cluster_id = self.input_dict['cluster_id']
         service_list = sorted(self.input_dict['service_list'] or [])
         topic_list = sorted(self.input_dict['topic_list'] or [])
-        outconn_rest_list = sorted(self.input_dict['outconn_rest_list'] or [])
+        outconn_rest_list = self.input_dict['outconn_rest_list'] or []
+
+        if outconn_rest_list:
+
+            # All REST outgoing connections for the cluster
+            all_outconn_rest_list = get_outconn_rest_list(self.req)
+
+            outconn_rest_list = outconn_rest_list if isinstance(outconn_rest_list, list) else [outconn_rest_list]
+            outconn_rest_list = sorted(all_outconn_rest_list[int(elem)] for elem in outconn_rest_list if elem)
 
         #
         # Services
@@ -164,7 +172,7 @@ class _CreateEdit(CreateEdit):
         # REST
         #
 
-        for outconn_rest_name in topic_list:
+        for outconn_rest_name in outconn_rest_list:
 
             if not outconn_rest_name:
                 continue
@@ -173,9 +181,10 @@ class _CreateEdit(CreateEdit):
             outconn_rest_list_json.append(outconn_rest_name)
 
             # The list of REST outconns as HTML
+
             outconn_rest_list_html += """
             <span class="form_hint">R</span>→
-                <a href="/zato/pubsub/topic/?cluster={cluster_id}&amp;query={outconn_rest_name}">{outconn_rest_name}</a>
+                <a href="/zato/http-soap/?cluster={cluster_id}&amp;connection=outgoing&amp;transport=plain_http&amp;query={outconn_rest_name}">{outconn_rest_name}</a>
             <br/>
             """.format(**{
                 'outconn_rest_name': outconn_rest_name,
@@ -189,6 +198,7 @@ class _CreateEdit(CreateEdit):
         return_data['recipients_html'] = service_list_html + topic_list_html + outconn_rest_list_html
         return_data['service_list_json'] = service_list_json
         return_data['topic_list_json'] = topic_list_json
+        return_data['outconn_rest_list_json'] = outconn_rest_list_json
 
     def success_message(self, item):
         return 'Successfully {} file transfer channel `{}`'.format(self.verb, item.name)
