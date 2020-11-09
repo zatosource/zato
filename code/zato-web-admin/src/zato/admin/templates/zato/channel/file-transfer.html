@@ -232,7 +232,7 @@
 
                                 {% for outconn_rest_name in item.outconn_rest_list %}
                                     <span class="form_hint">R</span>→
-                                        <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id}}&amp;query={{ outconn_rest_name }}">{{ outconn_rest_name }}</a>
+                                        <a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=plain_http&amp;query={{ outconn_rest_name }}">{{ outconn_rest_name }}</a>
                                     <br/>
                                 {% endfor %}
 
@@ -286,7 +286,7 @@
                         {% comment %} 12 {% endcomment %}
                         <td class='ignore'>{{ item.binary_file_patterns }}</td>
                         <td class='ignore'>{{ item.data_encoding }}</td>
-                        <td class='ignore'>{{ item.outconn_rest_list|default:"[]" }}</td>
+                        <td class='ignore'>{{ item.outconn_rest_list_json|default:"[]" }}</td>
 
                         {% comment %} 13 {% endcomment %}
                         <td class='ignore'>{{ item.outconn_rest_list_json|default:"[]" }}</td>

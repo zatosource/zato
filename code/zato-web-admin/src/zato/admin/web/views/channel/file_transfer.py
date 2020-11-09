@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Zato
 from zato.admin.web.forms.channel.file_transfer import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
+from zato.admin.web.views import CreateEdit, Delete as _Delete, get_outconn_rest_list, Index as _Index
 from zato.common.api import GENERIC
 from zato.common.json_internal import dumps
 from zato.common.model import FileTransferChannel
@@ -59,9 +59,13 @@ class Index(_Index):
             item.topic_list_json = dumps(item.topic_list)
 
         if item.outconn_rest_list:
+
+            # All REST outgoing connections for the cluster
+            outconn_rest_list = get_outconn_rest_list(self.req)
+
             item.outconn_rest_list = item.outconn_rest_list if isinstance(item.outconn_rest_list, list) else \
                 [item.outconn_rest_list]
-            item.outconn_rest_list = sorted(item.outconn_rest_list)
+            item.outconn_rest_list = sorted(outconn_rest_list[int(elem)] for elem in item.outconn_rest_list)
             item.outconn_rest_list_json = dumps(item.outconn_rest_list)
 
         return item
