@@ -207,7 +207,7 @@
 
                                 |
 
-                                <label for="id_timeout">Timeout <span class='form_hint'>(seconds)</span></label>
+                                <label for="id_timeout">Timeout <span class='form_hint'>(in seconds)</span></label>
                                 {{ create_form.timeout }}
 
                             </td>
@@ -229,7 +229,7 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_acct">Default dir.</label>
+                                <label for="id_default_directory">Default dir.</label>
                             </td>
                             <td>{{ create_form.default_directory }}</td>
                         </tr>
@@ -290,7 +290,7 @@
 
                                 |
 
-                                <label for="id_edit-timeout">Timeout <span class='form_hint'>(seconds)</span></label>
+                                <label for="id_edit-timeout">Timeout <span class='form_hint'>(in seconds)</span></label>
                                 {{ edit_form.timeout }}
 
                             </td>
@@ -308,6 +308,13 @@
                                 <label for="id_edit-acct">Accounting info</label>
                             </td>
                             <td>{{ edit_form.acct }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-default_directory">Default dir.</label>
+                            </td>
+                            <td>{{ edit_form.default_directory }}</td>
                         </tr>
 
                         <tr>
