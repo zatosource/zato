@@ -21,7 +21,7 @@ from traceback import format_exc
 import globre
 
 # Zato
-from zato.common.util.api import hot_deploy, spawn_greenlet
+from zato.common.util.api import hot_deploy, new_cid, spawn_greenlet
 from .observer.local_ import LocalObserver
 
 # ################################################################################################################################
@@ -90,7 +90,11 @@ class FileTransferEventHandler:
                     except Exception as e:
                         event.parse_error = e
 
-            spawn_greenlet(self.manager.invoke_callbacks, event, self.config.service_list, self.config.topic_list)
+            # Invokes all callbacks for the event
+            spawn_greenlet(self.manager.invoke_callbacks, event, self.config.service_list, self.config.topic_list,
+                self.config.outconn_rest_list)
+
+            # Performs cleanup actions
             self.manager.post_handle(event.full_path, self.config)
 
         except Exception:
@@ -197,8 +201,8 @@ class FileTransferAPI(object):
 
 # ################################################################################################################################
 
-    def invoke_callbacks(self, event, services, topics):
-        # type: (FileTransferEvent, list, list) -> None
+    def invoke_callbacks(self, event, service_list, topic_list, outconn_rest_list):
+        # type: (FileTransferEvent, list, list, list) -> None
 
         config = self.worker_store.get_channel_file_transfer_config(event.channel_name)
 
@@ -216,15 +220,51 @@ class FileTransferAPI(object):
             'config': config,
         }
 
-        try:
-            for service in services:
-                spawn_greenlet(self.server.invoke, service, request)
+        # Services
+        self.invoke_service_callbacks(service_list, request)
 
-            for topic in topics:
-                spawn_greenlet(self.server.publish_pickup, topic, request)
+        # Topics
+        self.invoke_topic_callbacks(topic_list, request)
 
-        except Exception:
-            logger.warn(format_exc())
+        # REST outgoing connections
+        self.invoke_rest_outconn_callbacks(outconn_rest_list, request)
+
+# ################################################################################################################################
+
+    def invoke_service_callbacks(self, service_list, request):
+        # type: (list, dict) -> None
+
+        for item in service_list: # type: str
+            try:
+                spawn_greenlet(self.server.invoke, item, request)
+            except Exception:
+                logger.warn(format_exc())
+
+# ################################################################################################################################
+
+    def invoke_topic_callbacks(self, topic_list, request):
+        # type: (list, dict) -> None
+
+        for item in topic_list: # type: str
+            try:
+                spawn_greenlet(self.server.invoke, item, request)
+            except Exception:
+                logger.warn(format_exc())
+
+# ################################################################################################################################
+
+    def invoke_rest_outconn_callbacks(self, outconn_rest_list, request):
+        # type: (list, dict) -> None
+        for item_id in outconn_rest_list: # type: int
+
+            cid = new_cid()
+
+            item = self.worker_store.get_outconn_rest_by_id(item_id)
+            item.ping(cid)
+
+            print()
+            #print(222, response)
+            print()
 
 # ################################################################################################################################
 
