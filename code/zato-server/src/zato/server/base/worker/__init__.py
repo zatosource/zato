@@ -45,8 +45,9 @@ from six import PY3
 from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
 from zato.common import broker_message
-from zato.common.api import CHANNEL, DATA_FORMAT, FILE_TRANSFER, GENERIC as COMMON_GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, IPC, \
-     KVDB, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, simple_types, URL_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
+from zato.common.api import CHANNEL, CONNECTION, DATA_FORMAT, FILE_TRANSFER, GENERIC as COMMON_GENERIC, \
+     HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, simple_types, URL_TYPE, TRACE1, \
+     ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
@@ -1665,11 +1666,50 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def get_channel_plain_http(self, name):
+    def _get_channel_rest(self, connection_type, value, by_name=True):
+        # type: (str, str) -> dict
+
+        item_key = 'name' if by_name else 'id'
+
         with self.update_lock:
             for item in self.request_dispatcher.url_data.channel_data:
-                if item['connection'] == 'channel' and item['name'] == name:
-                    return item
+                if item['connection'] == connection_type:
+                    if item[item_key] == value:
+                        return item
+
+# ################################################################################################################################
+
+    def _get_outconn_rest(self, value, by_name=True):
+        # type: (str, str) -> dict
+
+        item_key = 'name' if by_name else 'id'
+
+        with self.update_lock:
+            for outconn_value in self.worker_config.out_plain_http.values():
+                if isinstance(outconn_value, dict):
+                    config = outconn_value['config'] # type: dict
+                    if config[item_key] == value:
+                        return outconn_value
+
+# ################################################################################################################################
+
+    def get_channel_rest(self, name):
+        # type: (str) -> dict
+        return self._get_channel_rest(CONNECTION.CHANNEL, name)
+
+# ################################################################################################################################
+
+    def get_outconn_rest(self, name):
+        # type: (str) -> dict
+        return self._get_outconn_rest(name)
+
+# ################################################################################################################################
+
+    def get_outconn_rest_by_id(self, id):
+        # type: (str) -> dict
+        return self._get_outconn_rest(int(id), False)
+
+# ################################################################################################################################
 
     def on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an HTTP/SOAP channel.
@@ -1681,7 +1721,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """
         # First, check if there was a cache for this channel. If so, make sure of all entries pointing
         # to the channel are deleted too.
-        item = self.get_channel_plain_http(msg.name)
+        item = self.get_channel_rest(msg.name)
         if item['cache_type']:
             cache = self.server.get_cache(item['cache_type'], item['cache_name'])
             cache.delete_by_prefix('http-channel-{}'.format(item['id']))
