@@ -1680,7 +1680,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def _get_outconn_rest(self, value, by_name=True):
-        # type: (str, str) -> dict
+        # type: (str, str) -> HTTPSOAPWrapper
 
         item_key = 'name' if by_name else 'id'
 
@@ -1700,13 +1700,13 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def get_outconn_rest(self, name):
-        # type: (str) -> dict
+        # type: (str) -> HTTPSOAPWrapper
         return self._get_outconn_rest(name)
 
 # ################################################################################################################################
 
     def get_outconn_rest_by_id(self, id):
-        # type: (str) -> dict
+        # type: (str) -> HTTPSOAPWrapper
         return self._get_outconn_rest(int(id), False)
 
 # ################################################################################################################################
