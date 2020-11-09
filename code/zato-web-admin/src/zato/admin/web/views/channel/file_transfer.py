@@ -93,12 +93,13 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['pool_size'] = 1
 
     def pre_process_item(self, name, value):
-        if name in ('service_list', 'topic_list', 'outcon_rest_list'):
+        if name in ('service_list', 'topic_list', 'outconn_rest_list'):
             if value:
                 if isinstance(value, list):
                     value = sorted(set(elem for elem in value if elem))
                 else:
                     value = [value] if value else []
+
         return value
 
     def post_process_return_data(self, return_data):
@@ -108,8 +109,8 @@ class _CreateEdit(CreateEdit):
         outconn_rest_list_html   = ''
 
         cluster_id = self.input_dict['cluster_id']
-        service_list = sorted(self.input_dict['service_list'] or [])
-        topic_list = sorted(self.input_dict['topic_list'] or [])
+        service_list = sorted(set(self.input_dict['service_list'] or []))
+        topic_list = sorted(set(self.input_dict['topic_list'] or []))
         outconn_rest_list = self.input_dict['outconn_rest_list'] or []
 
         if outconn_rest_list:
@@ -118,7 +119,7 @@ class _CreateEdit(CreateEdit):
             all_outconn_rest_list = get_outconn_rest_list(self.req)
 
             outconn_rest_list = outconn_rest_list if isinstance(outconn_rest_list, list) else [outconn_rest_list]
-            outconn_rest_list = sorted(all_outconn_rest_list[int(elem)] for elem in outconn_rest_list if elem)
+            outconn_rest_list = sorted(set(all_outconn_rest_list[int(elem)] for elem in outconn_rest_list if elem))
 
         #
         # Services
@@ -182,6 +183,9 @@ class _CreateEdit(CreateEdit):
         #
 
         return_data['recipients_html'] = service_list_html + topic_list_html + outconn_rest_list_html
+        return_data['service_list'] = service_list
+        return_data['topic_list'] = topic_list
+        return_data['outconn_rest_list'] = outconn_rest_list
 
     def success_message(self, item):
         return 'Successfully {} file transfer channel `{}`'.format(self.verb, item.name)

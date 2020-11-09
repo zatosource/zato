@@ -160,8 +160,8 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
 
     // 5
     row += String.format("<td class='ignore'>{0}</td>", item.should_read_on_pickup);
-    row += String.format("<td class='ignore'>{0}</td>", item.service_list);
-    row += String.format("<td class='ignore'>{0}</td>", item.topic_list);
+    row += String.format("<td class='ignore'>{0}</td>", data.service_list);
+    row += String.format("<td class='ignore'>{0}</td>", data.topic_list);
 
     // 6
     row += String.format("<td class='ignore'>{0}</td>", item.should_parse_on_pickup);
@@ -194,7 +194,7 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     // 12
     row += String.format("<td class='ignore'>{0}</td>", item.binary_file_patterns);
     row += String.format("<td class='ignore'>{0}</td>", item.data_encoding);
-    row += String.format("<td class='ignore'>{0}</td>", item.outconn_rest_list);
+    row += String.format("<td>{0}</td>", data.outconn_rest_list);
 
     if(include_tr) {
         row += '</tr>';
