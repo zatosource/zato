@@ -478,7 +478,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             }
         wrapper_config.update(sec_config)
 
-        if config.sec_tls_ca_cert_id and config.sec_tls_ca_cert_id != ZATO_NONE:
+        if config.get('sec_tls_ca_cert_id') and config.sec_tls_ca_cert_id != ZATO_NONE:
             tls_verify = get_tls_ca_cert_full_path(self.server.tls_dir, get_tls_from_payload(
                 self.worker_config.tls_ca_cert[config.sec_tls_ca_cert_name].config.value))
         else:
