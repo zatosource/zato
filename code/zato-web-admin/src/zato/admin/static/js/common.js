@@ -268,8 +268,8 @@ $.fn.zato.form.serialize = function(form) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /* Takes a form (ID or a jQuery object), a business object and populates the
-form with values read off the object. The 'name' and 'id' attributes of the
-form's fields may use custom prefixes that will be taken into account accordingly.
+   form with values read from the object. The 'name' and 'id' attributes of the
+   form's fields may use custom prefixes that will be taken into account accordingly.
 */
 $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
 
@@ -716,7 +716,10 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
 
                 for(var idx=0; idx<_rows.length; idx++) {
                     let _row = _rows[idx];
-                    _value.push($(_row).val());
+                    let _row_value = $(_row).val()
+                    if(!_value.includes(_row_value)) {
+                        _value.push(_row_value);
+                    }
                 }
                 value = _value;
             }
@@ -965,6 +968,9 @@ $.fn.zato.data_table.multirow.populate_field = function(field_name, source) {
     else {
         _source = JSON.parse(source);
     }
+
+    // console.log('SOURCE 1 '+ source);
+    // console.log('SOURCE 2 '+ _source);
 
     let row_id = 'id_edit-'+ field_name +'_0';
     let elem_id = 'id_edit-'+ field_name;
