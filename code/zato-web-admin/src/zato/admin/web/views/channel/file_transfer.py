@@ -58,6 +58,12 @@ class Index(_Index):
             item.topic_list = sorted(item.topic_list)
             item.topic_list_json = dumps(item.topic_list)
 
+        if item.outconn_rest_list:
+            item.outconn_rest_list = item.outconn_rest_list if isinstance(item.outconn_rest_list, list) else \
+                [item.outconn_rest_list]
+            item.outconn_rest_list = sorted(item.outconn_rest_list)
+            item.outconn_rest_list_json = dumps(item.outconn_rest_list)
+
         return item
 
 # ################################################################################################################################
