@@ -230,7 +230,7 @@
                                     <br/>
                                 {% endfor %}
 
-                                {% for outconn_rest_name in item.topic_list %}
+                                {% for outconn_rest_name in item.outconn_rest_list %}
                                     <span class="form_hint">R</span>→
                                         <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id}}&amp;query={{ outconn_rest_name }}">{{ outconn_rest_name }}</a>
                                     <br/>
