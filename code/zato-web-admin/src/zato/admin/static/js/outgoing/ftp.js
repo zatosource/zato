@@ -81,7 +81,7 @@ $.fn.zato.outgoing.ftp.data_table.new_row = function(item, data, include_tr) {
 
 $.fn.zato.outgoing.ftp.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'Outgoing FTP connection [{0}] deleted',
-        'Are you sure you want to delete the outgoing FTP connection [{0}]?',
+        'Outgoing FTP connection `{0}` deleted',
+        'Are you sure you want to delete outgoing FTP connection `{0}`?',
         true);
 }
