@@ -101,10 +101,10 @@ class BaseHTTPSOAPWrapper(object):
         except RequestsTimeout:
             raise TimeoutException(cid, format_exc())
 
-    def ping(self, cid, _has_debug=has_debug):
+    def ping(self, cid, raise_on_error=False):
         """ Pings a given HTTP/SOAP resource
         """
-        logger.info('About to ping:`%s`', self.config_no_sensitive)
+        logger.info('Pinging:`%s`', self.config_no_sensitive)
 
         # Session object will write some info to it ..
         verbose = StringIO()
@@ -119,6 +119,11 @@ class BaseHTTPSOAPWrapper(object):
         # .. invoke the other end ..
         response = self.invoke_http(cid, self.config['ping_method'], self.address, '', self._create_headers(cid, {}),
             {'zato_pre_request':zato_pre_request_hook})
+
+        print()
+        print(111, response)
+        print(222, response.status_code)
+        print()
 
         # .. store additional info, get and close the stream.
         verbose.write('Code: {}'.format(response.status_code))
