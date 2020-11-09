@@ -932,6 +932,10 @@ $.fn.zato.data_table.multirow.add_row = function(row_id, elem_id, is_add) {
         new_div.insertAfter(last);
         cloned.appendTo(new_div);
 
+        // Remove the selected option because there may be some already
+        // picked for the first select option.
+        cloned.find('option:selected').removeAttr('selected');
+
         return cloned;
 
     }
