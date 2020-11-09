@@ -68,8 +68,6 @@
             'scheduler_job_id',
 
             {% comment %} 9 {% endcomment %}
-            'service_list_json',
-            'topic_list_json',
             'is_line_by_line',
 
             {% comment %} 10 {% endcomment %}
@@ -162,8 +160,6 @@
                         <th class='ignore'>&nbsp;</th>
 
                         {% comment %} 9 {% endcomment %}
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
                         {% comment %} 10 {% endcomment %}
@@ -269,8 +265,6 @@
                         <td class='ignore'>{{ item.scheduler_job_id }}</td>
 
                         {% comment %} 9 {% endcomment %}
-                        <td class='ignore'>{{ item.service_list_json|default:"[]" }}</td>
-                        <td class='ignore'>{{ item.topic_list_json|default:"[]" }}</td>
                         <td class='ignore'>{{ item.is_line_by_line }}</td>
 
                         {% comment %} 10 {% endcomment %}
