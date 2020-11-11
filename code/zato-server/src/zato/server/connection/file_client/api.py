@@ -61,15 +61,15 @@ class BaseFileClient(object):
         raise NotImplementedError('Must be implemented by subclasses')
 
     # ftp
-    def download(self, *args, **kwargs):
+    def get(self, *args, **kwargs):
         raise NotImplementedError('Must be implemented by subclasses')
 
     # ftp
-    def save(self, *args, **kwargs):
+    def get_as_file_object(self, *args, **kwargs):
         raise NotImplementedError('Must be implemented by subclasses')
 
     # ftp
-    def upload(self, *args, **kwargs):
+    def store(self, *args, **kwargs):
         raise NotImplementedError('Must be implemented by subclasses')
 
     def delete_file(self, *args, **kwargs):
@@ -112,19 +112,19 @@ class FTPFileClient(BaseFileClient):
 
 # ################################################################################################################################
 
-    def download(self, path):
+    def get(self, path):
         # (str, str) -> str
         return self.conn.readbytes(path)
 
 # ################################################################################################################################
 
-    def save(self, path, file_object):
+    def get_as_file_object(self, path, file_object):
         # type: (str, BinaryIO) -> None
         self.conn.download(path, file_object)
 
 # ################################################################################################################################
 
-    def upload(self, path, data):
+    def store(self, path, data):
         # type: (str, object) -> None
         if not isinstance(data, bytes):
             data = data.encode(self.config['encoding'])
@@ -234,7 +234,7 @@ if __name__ == '__main__':
 
     path = '/aaa2/abc.txt2'
 
-    client.upload(path, 'zzzz')
+    client.store(path, 'zzzz')
     client.touch(path)
 
     result = client.list('/aaa2')
