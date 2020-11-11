@@ -32,7 +32,8 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-zato_indicator = 'zato.zato'
+# The 'touch' command cannot be executed for files longer than that
+touch_max_size = 200_000
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -104,9 +105,9 @@ class FTPFileClient(BaseFileClient):
             elem = {
                 'name': item.name,
                 'size': item.size,
-                'last_accessed': item.accessed,
-                'last_modified': item.modified,
                 'is_directory': item.is_dir,
+                'last_modified': item.modified,
+                'is_touch_supported': item.size < touch_max_size
             }
 
             if item.is_dir:
@@ -122,31 +123,26 @@ class FTPFileClient(BaseFileClient):
 
 # ################################################################################################################################
 
-    def touch(self, old_path):
-        #resource = self.conn.openbin(path, mode='ab+')
-        #resource.seek(0)
-        #resource.write(b'1')
-        #print(555, self.conn.getsize(path))
-        #resource.close()
-        #print(333, resource.mode.appending)
-        #pass
+    def touch(self, path):
+        """ Touches a remote file by overwriting its contents with itself.
+        """
+        with self.conn._lock:
 
-        dir_name, file_name = os.path.split(old_path)
-        print(111, dir_name)
-        print(222, file_name)
+            # Get the current size ..
+            size = self.conn.getsize(path)
 
-        new_file_name = '{}.{}.{}'.format(zato_indicator, file_name, zato_indicator)
-        new_path = os.path.join(dir_name, new_file_name)
+            # .. make sure the file is not too big ..
+            if size > touch_max_size:
+                raise ValueError('File `{}` is too big for the touch command; size={}; max={}'.format(
+                    path, size, touch_max_size))
 
-        # Assign a new name ..
-        self.conn.ftp.rename(old_path, new_path)
+            # .. read all data in ..
+            with conn.openbin(path) as f:
+                data = f.read(size)
 
-        from time import sleep
-        sleep(1)
-
-        # .. and rename it back to the original value,
-        # changing the file's modification time in this way.
-        self.conn.ftp.rename(new_path, old_path)
+            # .. and write it under the same path, effectively merely changing its modification time.
+            with conn.openbin(path, 'w') as f:
+                f.write(data)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -157,8 +153,8 @@ if __name__ == '__main__':
     from fs.ftpfs import FTPFS
 
     host = 'localhost'
-    user = 'zzz'
-    password = 'zzz'
+    user = 'abc'
+    password = 'def'
     port = 11021
 
     conn = FTPFS(host, user, password, port=port)
