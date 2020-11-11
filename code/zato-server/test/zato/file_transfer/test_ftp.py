@@ -87,11 +87,11 @@ class FTPFileTransferTestCase(TestCase):
         # .. make sure the directory was created ..
         check_directory(client, True)
 
-        # .. upload a new file ..
-        client.upload(test_file_path, test_data)
+        # .. store a new file ..
+        client.store(test_file_path, test_data)
 
         # .. download the uploaded file ..
-        received_data = client.download(test_file_path)
+        received_data = client.get(test_file_path)
 
         # .. compare the downloaded and uploaded data ..
         self.assertEqual(received_data, test_data)
