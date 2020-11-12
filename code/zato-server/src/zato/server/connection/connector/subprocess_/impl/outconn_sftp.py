@@ -195,6 +195,7 @@ class SFTPConnection(object):
             try:
                 # Finally, execute all the commands
                 result = self.command(*args)
+
             except Exception:
                 out.is_ok = False
                 out.details = format_exc()
@@ -208,7 +209,16 @@ class SFTPConnection(object):
                 out.stdout = result.stdout
                 out.stderr = result.stderr
             finally:
+                self.encode_out(out)
                 return out
+
+# ################################################################################################################################
+
+    def encode_out(self, out):
+        # type: (SFTPOutput) -> None
+        out.command = [elem.decode('utf8') for elem in out.command[:]]
+        out.stderr = out.stderr.decode('utf8')
+        out.stdout = out.stdout.decode('utf8')
 
 # ################################################################################################################################
 
@@ -295,6 +305,10 @@ class SFTPConnectionContainer(BaseConnectionContainer):
             out['cid'] = msg.cid
             out['command_no'] = connection.command_no
             out['response_time'] = str(_utcnow() - start_time)
+
+        print()
+        print(111, out)
+        print()
 
         return Response(data=dumps(out))
 
