@@ -57,6 +57,7 @@ from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.util.api import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
      import_module_from_path, new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, spawn_greenlet, \
      start_connectors, store_tls, update_apikey_username_to_channel, update_bind_port, visit_py_source
+from zato.server.base.parallel.subprocess_.api import StartConfig as SubprocessStartConfig
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
 from zato.server.connection.cache import CacheAPI
@@ -1051,6 +1052,12 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def _on_outconn_sftp_create(self, msg):
+
+        if not self.server.subproc_current_state.is_sftp_running:
+            config = SubprocessStartConfig()
+            config.has_sftp = True
+            self.server.init_subprocess_connectors(config)
+
         connector_msg = deepcopy(msg)
         self.worker_config.out_sftp[msg.name] = msg
         self.worker_config.out_sftp[msg.name].conn = SFTPIPCFacade(self.server, msg)
