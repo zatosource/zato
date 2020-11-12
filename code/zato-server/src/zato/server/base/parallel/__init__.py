@@ -50,6 +50,8 @@ from zato.server.config import ConfigStore
 from zato.server.connection.server import Servers
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
+from zato.server.base.parallel.subprocess_.api import CurrentState as SubprocessCurrentState, \
+     StartConfig as SubprocessStartConfig
 from zato.server.base.parallel.subprocess_.ftp import FTPIPC
 from zato.server.base.parallel.subprocess_.ibm_mq import IBMMQIPC
 from zato.server.base.parallel.subprocess_.outconn_sftp import SFTPIPC
@@ -180,6 +182,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.has_posix_ipc = True
         self.user_config = Bunch()
         self.stderr_path = None # type: str
+
+        # Current state of subprocess-based connectors
+        self.subproc_current_state = SubprocessCurrentState()
 
         # Our arbiter may potentially call the cleanup procedure multiple times
         # and this will be set to True the first time around.
@@ -648,6 +653,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         has_sftp = bool(self.worker_store.worker_config.out_sftp.keys())
 
+        subprocess_start_config = SubprocessStartConfig()
+        subprocess_start_config.has_ibm_mq = has_ibm_mq
+        subprocess_start_config.has_sftp = has_sftp
+
         # Directories for SSH keys used by SFTP channels
         self.sftp_channel_dir = os.path.join(self.repo_location, 'sftp', 'channel')
 
@@ -660,7 +669,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             })
 
             # Clean up any old WSX connections possibly registered for this server
-            # which may be still linger around, for instance, if the server was previously
+            # which may be still lingering around, for instance, if the server was previously
             # shut down forcibly and did not have an opportunity to run self.cleanup_on_stop
             self.cleanup_wsx()
 
@@ -669,7 +678,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
             # Subprocess-based connectors
             if self.has_posix_ipc:
-                self._init_subprocess_connectors(has_ibm_mq, has_sftp)
+                self.init_subprocess_connectors(subprocess_start_config)
 
             # SFTP channels are new in 3.1 and the directories may not exist
             if not os.path.exists(self.sftp_channel_dir):
@@ -681,7 +690,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             })
 
             if self.has_posix_ipc:
-                self._populate_connector_config(has_ibm_mq, has_sftp)
+                self._populate_connector_config(subprocess_start_config)
 
         # IPC
         self.ipc_api.name = self.ipc_api.get_endpoint_name(self.cluster.name, self.name, self.pid)
@@ -697,13 +706,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _populate_connector_config(self, has_ibm_mq, has_sftp):
+    def _populate_connector_config(self, config):
         """ Called when we are not the first worker so, any connector is enabled,
         we need to get its configuration through IPC and populate our own accordingly.
         """
+        # type: (SubprocessStartConfig)
+
         ipc_config_name_to_enabled = {
-            IBMMQIPC.ipc_config_name: has_ibm_mq,
-            SFTPIPC.ipc_config_name: has_sftp
+            IBMMQIPC.ipc_config_name: config.has_ibm_mq,
+            SFTPIPC.ipc_config_name: config.has_sftp
         }
 
         for ipc_config_name, is_enabled in ipc_config_name_to_enabled.items():
@@ -718,14 +729,16 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _init_subprocess_connectors(self, has_ibm_mq, has_sftp):
+    def init_subprocess_connectors(self, config):
         """ Sets up subprocess-based connectors.
         """
+        # type: (SubprocessStartConfig)
+
         # Common
         ipc_tcp_start_port = int(self.fs_server_config.misc.get('ipc_tcp_start_port', 34567))
 
         # IBM MQ
-        if has_ibm_mq:
+        if config.has_ibm_mq:
 
             # Will block for a few seconds at most, until is_ok is returned
             # which indicates that a connector started or not.
@@ -736,10 +749,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                     self.connector_ibm_mq.create_initial_wmq_channels(self.worker_store.worker_config.channel_wmq)
             except Exception as e:
                 logger.warn('Could not create initial IBM MQ objects, e:`%s`', e)
+            else:
+                self.subproc_current_state.is_ibm_mq_running = True
 
         # SFTP
-        if has_sftp and self.connector_sftp.start_sftp_connector(ipc_tcp_start_port):
+        if config.has_sftp and self.connector_sftp.start_sftp_connector(ipc_tcp_start_port):
             self.connector_sftp.create_initial_sftp_outconns(self.worker_store.worker_config.out_sftp)
+            self.subproc_current_state.is_sftp_running = True
 
 # ################################################################################################################################
 
