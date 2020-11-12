@@ -366,7 +366,7 @@ class BaseConnectionContainer(object):
             self.logger.warn(format_exc())
             content_type = 'text/plain'
             status = _http_503
-            data = repr(e.args)
+            data = format_exc()
         finally:
 
             try:
