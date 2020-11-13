@@ -232,6 +232,7 @@
             <div class="bd">
                 <form action="{% url "out-sftp-create" %}" method="post" id="create-form">
                     <table class="form-data">
+
                         <tr>
                             <td style="vertical-align:middle;width:10%">Name</td>
                             <td>{{ create_form.name }}</td>
@@ -294,8 +295,11 @@
                             </td>
                         </tr>
 
+
                         <tr>
-                            <td style="vertical-align:middle">Host</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_host">Host</label>
+                            </td>
                             <td>
                                 {{ create_form.host }}
 
@@ -310,14 +314,18 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Username</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_username">Username</label>
+                            </td>
                             <td>
                                 {{ create_form.username }}
                             </td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">SFTP command</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_sftp_command">SFTP command</label>
+                            </td>
                             <td>
                                 {{ create_form.sftp_command }}
 
@@ -332,21 +340,27 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Ident. file</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_identity_file">Ident. file</label>
+                            </td>
                             <td>
                                 {{ create_form.identity_file }}
                             </td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Conf. file</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_ssh_config_file">Conf. file</label>
+                            </td>
                             <td>
                                 {{ create_form.ssh_config_file }}
                             </td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Default directory</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_default_directory">Default directory</label>
+                            </td>
                             <td>
                                 {{ create_form.default_directory }}
                             </td>
@@ -354,7 +368,7 @@
 
                         <tr>
                             <td colspan="2">
-                            SSH options
+                            <label for="id_ssh_options">SSH options</label>
                             <br/>
                             {{ create_form.ssh_options }}
                             </td>
@@ -442,7 +456,9 @@
 
 
                         <tr>
-                            <td style="vertical-align:middle">Host</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-host">Host</label>
+                            </td>
                             <td>
                                 {{ edit_form.host }}
 
@@ -457,14 +473,18 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Username</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-username">Username</label>
+                            </td>
                             <td>
                                 {{ edit_form.username }}
                             </td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">SFTP command</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-sftp_command">SFTP command</label>
+                            </td>
                             <td>
                                 {{ edit_form.sftp_command }}
 
@@ -479,21 +499,27 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Ident. file</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-identity_file">Ident. file</label>
+                            </td>
                             <td>
                                 {{ edit_form.identity_file }}
                             </td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Conf. file</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-ssh_config_file">Conf. file</label>
+                            </td>
                             <td>
                                 {{ edit_form.ssh_config_file }}
                             </td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Default directory</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-default_directory">Default directory</label>
+                            </td>
                             <td>
                                 {{ edit_form.default_directory }}
                             </td>
@@ -501,12 +527,11 @@
 
                         <tr>
                             <td colspan="2">
-                            SSH options
+                            <label for="id_edit-ssh_options">SSH options</label>
                             <br/>
                             {{ edit_form.ssh_options }}
                             </td>
                         </tr>
-
 
                         <tr>
                             <td colspan="2" style="text-align:right">
