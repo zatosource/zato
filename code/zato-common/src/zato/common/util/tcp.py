@@ -32,13 +32,11 @@ def get_free_port(start=30000):
 # Taken from http://grodola.blogspot.com/2014/04/reimplementing-netstat-in-cpython.html
 def is_port_taken(port):
 
-    # stdlib
-    from platform import system as platform_system
-
     # psutil
     import psutil
 
-    is_linux=platform_system().lower()=='linux'
+    # Zato
+    from .platform_ import is_linux
 
     # Shortcut for Linux so as not to bind to a socket which in turn means waiting until it's closed by OS
     if is_linux:
