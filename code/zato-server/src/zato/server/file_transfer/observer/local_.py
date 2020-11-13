@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2020, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
+
+# stdlib
+from traceback import format_exc
 
 # gevent
 from gevent.monkey import patch_all
@@ -20,13 +23,25 @@ from logging import getLogger
 # gevent
 from gevent import sleep
 
+# inotify_simple
+from inotify_simple import flags as inotify_flags, INotify
+
 # Watchdog
 from watchdog.events import FileCreatedEvent, FileModifiedEvent
 from watchdog.utils.dirsnapshot import DirectorySnapshot, DirectorySnapshotDiff
 
 # Zato
 from zato.common.util.api import spawn_greenlet
+from zato.common.util.platform_ import is_linux
 from .base import BaseObserver
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from inotify_simple import Event as InotifyEvent
+
+    InotifyEvent = InotifyEvent
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,9 +51,94 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+class _InotifyEvent:
+    __slots__ = 'src_path'
+
+    def __init__(self, src_path):
+        self.src_path = src_path
+
+# ################################################################################################################################
+
+def _observe_path_linux(self, path):
+    """ Local observer's main loop for Linux, uses inotify.
+    """
+    # type: (LocalObserver, str) -> None
+
+    # The local directory may not exist yet at the time when we are starting
+    # and we possibly need to wait until it does.
+    self.ensure_path_exists(path)
+
+    timeout = self.default_timeout
+    handler_func = self.event_handler.on_created
+
+    inotify = INotify()
+    inotify.add_watch(path, inotify_flags.CLOSE_WRITE)
+
+    try:
+        while self.keep_running:
+
+            try:
+                for event in inotify.read():
+                    try:
+                        src_path = os.path.normpath(os.path.join(path, event.name))
+                        handler_func(_InotifyEvent(src_path))
+                    except Exception:
+                        logger.warn('Exception in inotify handler `%s`', format_exc())
+            except Exception:
+                logger.warn('Exception in inotify.read() `%s`', format_exc())
+            finally:
+                sleep(timeout)
+    except Exception:
+        logger.warn("Exception in inotify observer's main loop `%s`", format_exc())
+
+# ################################################################################################################################
+
+def _observe_path_non_linux(self, path):
+    """ Local observer's main loop for systems other than Linux, uses snapshots.
+    """
+    # type: (LocalObserver, str) -> None
+
+    # The local directory may not exist yet at the time when we are starting
+    # and we possibly need to wait until it does.
+    self.ensure_path_exists(path)
+
+    # Local aliases to avoid namespace lookups in self
+    timeout = self.default_timeout
+    handler_func = self.event_handler.on_created
+    is_recursive = self.is_recursive
+
+    # Take an initial snapshot
+    snapshot = DirectorySnapshot(path, recursive=is_recursive)
+
+    while self.keep_running:
+
+        # The latest snapshot ..
+        new_snapshot = DirectorySnapshot(path, recursive=is_recursive)
+
+        # .. difference between the old and new will return, in particular, new or modified files ..
+        diff = DirectorySnapshotDiff(snapshot, new_snapshot)
+
+        for path_created in diff.files_created:
+            handler_func(FileCreatedEvent(path_created))
+
+        for path_modified in diff.files_modified:
+            handler_func(FileModifiedEvent(path_modified))
+
+        # .. a new snapshot which will be treated as the old one in the next iteration ..
+        snapshot = DirectorySnapshot(path, recursive=is_recursive)
+
+        sleep(timeout)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class LocalObserver(BaseObserver):
     """ A local file-system observer.
     """
+    if is_linux:
+        _observe_func = _observe_path_linux
+    else:
+        _observe_func = _observe_path_non_linux
 
     def schedule(self, event_handler, path_list, recursive):
         # type: (object, list, bool) -> None
@@ -105,60 +205,7 @@ class LocalObserver(BaseObserver):
 
     def _start(self):
         for path in self.path_list: # type: str
-            spawn_greenlet(self._observe_path, path)
-
-# ################################################################################################################################
-
-    def _observe_path(self, path):
-        # type: (str) -> None
-
-        # The local directory may not exist yet at the time when we are starting
-        # and we possibly need to wait until it does.
-        self.ensure_path_exists(path)
-
-        # Local aliases to avoid namespace lookups in self
-        timeout = self.default_timeout
-        handler_func = self.event_handler.on_created
-        is_recursive = self.is_recursive
-
-        # Take an initial snapshot
-        snapshot = DirectorySnapshot(path, recursive=is_recursive)
-
-        while self.keep_running:
-
-            # The latest snapshot ..
-            new_snapshot = DirectorySnapshot(path, recursive=is_recursive)
-
-            # .. difference between the old and new will return, in particular, new or modified files ..
-            diff = DirectorySnapshotDiff(snapshot, new_snapshot)
-
-            for path_created in diff.files_created:
-                handler_func(FileCreatedEvent(path_created))
-
-            for path_modified in diff.files_modified:
-                handler_func(FileModifiedEvent(path_modified))
-
-            # .. a new snapshot which will be treated as the old one in the next iteration ..
-            snapshot = DirectorySnapshot(path, recursive=is_recursive)
-
-            sleep(timeout)
+            spawn_greenlet(self._observe_func, path)
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-if __name__ == '__main__':
-
-    from zato.server.pickup.api import PickupEventHandler
-
-    manager = 111
-    stanza  = 222
-    config  = 333
-
-    event_handler = PickupEventHandler(manager, stanza, config)
-    path_list = ['/tmp']
-    is_recursive = False
-
-    observer = LocalObserver()
-    observer.schedule(event_handler, path_list, is_recursive)
-
-    observer.start()
