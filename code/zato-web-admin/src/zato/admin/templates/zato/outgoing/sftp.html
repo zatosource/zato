@@ -25,41 +25,54 @@
             '_numbering',
             '_selection',
 
+            {% comment %} 1 {% endcomment %}
             'name',
             '_is_active',
-
             '_host',
-            '_port',
 
+            {% comment %} 2 {% endcomment %}
+            '_port',
             '_username',
             '_identity_file',
-            'bandwidth_limit',
 
+            {% comment %} 3 {% endcomment %}
+            '_default_directory',
             '_command_shell',
             '_edit',
+
+            {% comment %} 4 {% endcomment %}
             '_delete',
             '_ping',
-
             'id',
 
+            {% comment %} 5 {% endcomment %}
             'is_active',
             'log_level',
             'host',
+
+            {% comment %} 6 {% endcomment %}
             'port',
             'username',
-
             'identity_file',
+
+            {% comment %} 7 {% endcomment %}
             'ssh_config_file',
             'buffer_size',
             'is_compression_enabled',
 
+            {% comment %} 8 {% endcomment %}
             'force_ip_type',
             'should_flush',
             'should_preserve_meta',
-            'ssh_options',
 
+            {% comment %} 9 {% endcomment %}
+            'ssh_options',
             'sftp_command',
             'ping_command',
+
+            {% comment %} 10 {% endcomment %}
+            'bandwidth_limit',
+            'default_directory',
         ]
     }
     </script>
@@ -94,39 +107,52 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
 
+                        {% comment %} 1 {% endcomment %}
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
-
                         <th><a href="#">Host</a></th>
-                        <th><a href="#">Port</a></th>
 
+                        {% comment %} 2 {% endcomment %}
+                        <th><a href="#">Port</a></th>
                         <th><a href="#">Username</a></th>
                         <th><a href="#">Identity file</a></th>
-                        <th><a href="#">Bandw. limit</a></th>
 
+                        {% comment %} 3 {% endcomment %}
+                        <th><a href="#">Default dir.</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+
+                        {% comment %} 4 {% endcomment %}
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
-
                         <th class='ignore'>&nbsp;</th>
 
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
+                        {% comment %} 5 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
-                        <th class='ignore'>&nbsp;</th>
+                        {% comment %} 6 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        {% comment %} 7 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 8 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 9 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 10 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
@@ -139,47 +165,60 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
 
+                        {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-
                         <td>{{ item.host|default:'<span class="form_hint">---</span>' }}</td>
-                        <td>{{ item.port|default:'<span class="form_hint">---</span>' }}</td>
 
+                        {% comment %} 2 {% endcomment %}
+                        <td>{{ item.port|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.username|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.identity_file|default:'<span class="form_hint">---</span>' }}</td>
-                        <td>{{ item.bandwidth_limit|default:'<span class="form_hint">---</span>' }}</td>
 
+                        {% comment %} 3 {% endcomment %}
+                        <td>{{ item.default_directory|default:'<span class="form_hint">---</span>' }}</td>
                         <td><a href="{% url "out-sftp-command-shell" item.id cluster_id item.name|slugify %}?name={{ item.name|urlencode:"" }}">Command shell</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.sftp.edit('{{ item.id }}')">Edit</a></td>
+
+                        {% comment %} 4 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.outgoing.sftp.delete_('{{ item.id }}')">Delete</a></td>
                         <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
-
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
 
+                        {% comment %} 5 {% endcomment %}
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.log_level }}</td>
                         <td class='ignore'>{{ item.host }}</td>
+
+                        {% comment %} 6 {% endcomment %}
                         <td class='ignore'>{{ item.port|default:'' }}</td>
                         <td class='ignore'>{{ item.username|default:'' }}</td>
-
                         <td class='ignore'>{{ item.identity_file }}</td>
+
+                        {% comment %} 7 {% endcomment %}
                         <td class='ignore'>{{ item.ssh_config_file }}</td>
                         <td class='ignore'>{{ item.buffer_size }}</td>
                         <td class='ignore'>{{ item.is_compression_enabled }}</td>
 
+                        {% comment %} 8 {% endcomment %}
                         <td class='ignore'>{{ item.force_ip_type }}</td>
                         <td class='ignore'>{{ item.should_flush }}</td>
                         <td class='ignore'>{{ item.should_preserve_meta }}</td>
-                        <td class='ignore'>{{ item.ssh_options }}</td>
 
+                        {% comment %} 9 {% endcomment %}
+                        <td class='ignore'>{{ item.ssh_options }}</td>
                         <td class='ignore'>{{ item.sftp_command }}</td>
                         <td class='ignore'>{{ item.ping_command }}</td>
+
+                        {% comment %} 10 {% endcomment %}
+                        <td class='ignore'>{{ item.bandwidth_limit }}</td>
+                        <td class='ignore'>{{ item.default_directory }}</td>
 
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='27'>No results</td>
+                        <td colspan='31'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -303,6 +342,13 @@
                             <td style="vertical-align:middle">Conf. file</td>
                             <td>
                                 {{ create_form.ssh_config_file }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Default directory</td>
+                            <td>
+                                {{ create_form.default_directory }}
                             </td>
                         </tr>
 
@@ -443,6 +489,13 @@
                             <td style="vertical-align:middle">Conf. file</td>
                             <td>
                                 {{ edit_form.ssh_config_file }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Default directory</td>
+                            <td>
+                                {{ edit_form.default_directory }}
                             </td>
                         </tr>
 
