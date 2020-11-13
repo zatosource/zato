@@ -1192,6 +1192,7 @@ class GENERIC:
     class CONNECTION:
         class TYPE:
             CHANNEL_FILE_TRANSFER = 'channel-file-transfer'
+            CLOUD_DROPBOX = 'cloud-dropbox'
             DEF_KAFKA = 'def-kafka'
             OUTCONN_IM_SLACK = 'outconn-im-slack'
             OUTCONN_IM_TELEGRAM = 'outconn-im-telegram'
@@ -1373,6 +1374,18 @@ class SFTP:
 
         def is_valid(self, value):
             return value in (elem.id for elem in self)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DROPBOX:
+    class DEFAULT:
+        MAX_RETRIES_ON_ERROR = 4
+        MAX_RETRIES_ON_RATE_LIMIT = None
+        OAUTH2_ACCESS_TOKEN_EXPIRATION = None
+        POOL_SIZE = 10
+        TIMEOUT = 60
+        USER_AGENT = None
 
 # ################################################################################################################################
 # ################################################################################################################################
