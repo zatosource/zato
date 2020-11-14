@@ -27,6 +27,7 @@ from zato.admin.web.views.channel import json_rpc as channel_json_rpc
 from zato.admin.web.views.channel import web_socket as channel_web_socket
 from zato.admin.web.views.channel import zmq as channel_zmq
 from zato.admin.web.views.cloud.aws import s3 as cloud_aws_s3
+from zato.admin.web.views.cloud import dropbox as cloud_dropbox
 from zato.admin.web.views.cloud.openstack import swift as cloud_openstack_swift
 from zato.admin.web.views import config_file
 from zato.admin.web.views.definition import amqp_ as def_amqp
