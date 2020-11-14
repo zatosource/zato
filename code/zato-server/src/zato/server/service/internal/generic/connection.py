@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from contextlib import closing
 from copy import deepcopy
 from datetime import datetime
+from traceback import format_exc
 
 # Zato
 from zato.common.api import GENERIC as COMMON_GENERIC
@@ -298,10 +299,14 @@ class Ping(_BaseService):
             ping_func = custom_ping_func_dict.get(instance.type_, self.server.worker_store.ping_generic_connection)
 
             start_time = datetime.utcnow()
-            ping_func(self.request.input.id)
-            response_time = datetime.utcnow() - start_time
 
-            self.response.payload.info = 'Connection pinged; response time: {}'.format(response_time)
+            try:
+                ping_func(self.request.input.id)
+            except Exception:
+                self.response.payload.info = format_exc()
+            else:
+                response_time = datetime.utcnow() - start_time
+                self.response.payload.info = 'Connection pinged; response time: {}'.format(response_time)
 
 # ################################################################################################################################
 # ################################################################################################################################
