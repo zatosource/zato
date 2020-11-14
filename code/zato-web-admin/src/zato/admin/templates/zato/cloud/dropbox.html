@@ -51,8 +51,6 @@
             'oauth2_access_token',
 
             {% comment %} 6 {% endcomment %}
-            'app_key',
-            'app_secret',
             'default_scope',
 
             {% comment %} 7 {% endcomment %}
@@ -120,8 +118,6 @@
 
                         {% comment %} 6 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
 
                         {% comment %} 7 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
@@ -162,8 +158,6 @@
                         <td class='ignore'>{{ item.oauth2_access_token|default:'' }}</td>
 
                         {% comment %} 6 {% endcomment %}
-                        <td class='ignore'>{{ item.app_key|default:'' }}</td>
-                        <td class='ignore'>{{ item.app_secret|default:'' }}</td>
                         <td class='ignore'>{{ item.default_scope|default:'' }}</td>
 
                         {% comment %} 7 {% endcomment %}
@@ -287,24 +281,6 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_app_key">Key</label>
-                            </td>
-                            <td>
-                                {{ create_form.app_key }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_app_secret">Secret</label>
-                            </td>
-                            <td>
-                                {{ create_form.app_secret }}
-                            </td>
-                        </tr>
-
-                        <tr>
                             <td colspan="2">
                             <label for="id_http_headers">HTTP headers</label>
                             <br/>
@@ -423,24 +399,6 @@
                             </td>
                             <td>
                                 {{ edit_form.oauth2_access_token }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_edit-app_key">Key</label>
-                            </td>
-                            <td>
-                                {{ edit_form.app_key }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_edit-app_secret">Secret</label>
-                            </td>
-                            <td>
-                                {{ edit_form.app_secret }}
                             </td>
                         </tr>
 
