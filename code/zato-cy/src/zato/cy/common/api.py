@@ -1380,7 +1380,7 @@ class SFTP:
 
 class DROPBOX:
     class DEFAULT:
-        MAX_RETRIES_ON_ERROR = 4
+        MAX_RETRIES_ON_ERROR = 5
         MAX_RETRIES_ON_RATE_LIMIT = None
         OAUTH2_ACCESS_TOKEN_EXPIRATION = None
         POOL_SIZE = 10
