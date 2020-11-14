@@ -18,7 +18,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.Dropbox;
     $.fn.zato.data_table.new_row_func = $.fn.zato.cloud.dropbox.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'pool_size', 'timeout', 'user_agent']);
+    $.fn.zato.data_table.setup_forms(['name', 'timeout', 'user_agent', 'oauth2_access_token']);
 })
 
 $.fn.zato.cloud.dropbox.create = function() {
@@ -47,7 +47,6 @@ $.fn.zato.cloud.dropbox.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', item.user_agent);
 
     // 2
-    row += String.format('<td>{0}</td>', item.pool_size);
     row += String.format('<td>{0}</td>', item.default_scope || $.fn.zato.empty_value);
     row += String.format('<td>{0}</td>', item.default_directory || $.fn.zato.empty_value);
 
@@ -67,9 +66,8 @@ $.fn.zato.cloud.dropbox.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.oauth2_access_token || '');
 
     // 6
-    row += String.format("<td class='ignore'>{0}</td>", item.app_key || '');
-    row += String.format("<td class='ignore'>{0}</td>", item.app_secret || '');
     row += String.format("<td class='ignore'>{0}</td>", item.default_scope || '');
+    row += String.format("<td class='ignore'>{0}</td>", item.pool_size);
 
     // 7
     row += String.format("<td class='ignore'>{0}</td>", item.default_directory || '');
