@@ -999,7 +999,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # These generic connections are regular - they use common API methods for such connections
         regular_maps = [
             channel_file_transfer_map,
-            cloud_dropbox_map,
             def_kafka_map,
             outconn_im_slack_map,
             outconn_im_telegram_map,
@@ -1009,6 +1008,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         ]
 
         password_maps = [
+            cloud_dropbox_map,
             outconn_im_slack_map,
             outconn_im_telegram_map,
             outconn_ldap_map,

@@ -10,18 +10,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from traceback import format_exc
-
-# Django
-from django.http import HttpResponse, HttpResponseServerError
-from django.template.response import TemplateResponse
 
 # Zato
 from zato.common.api import GENERIC
-from zato.common.json_internal import dumps
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.cloud.dropbox import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, ping_connection, slugify
+from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
+     method_allowed, ping_connection, slugify
 from zato.common.odb.model import GenericConn
 
 # ################################################################################################################################
@@ -73,7 +68,7 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['is_internal'] = False
         initial_input_dict['is_channel'] = False
         initial_input_dict['is_outconn'] = True
-        initial_input_dict['pool_size'] = 1
+        initial_input_dict['pool_size'] = 10
         initial_input_dict['sec_use_rbac'] = False
 
     def post_process_return_data(self, return_data):
@@ -107,6 +102,14 @@ class Delete(_Delete):
     service_name = 'zato.generic.connection.delete'
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def change_password(req):
+    return _change_password(req, 'zato.generic.connection.change-password', success_msg='Token updated')
+
 # ################################################################################################################################
 
 @method_allowed('POST')
