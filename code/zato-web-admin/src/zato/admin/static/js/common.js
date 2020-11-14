@@ -66,6 +66,7 @@ $.namespace('zato.channel.zmq');
 $.namespace('zato.cloud');
 $.namespace('zato.cloud.aws');
 $.namespace('zato.cloud.aws.s3');
+$.namespace('zato.cloud.dropbox');
 $.namespace('zato.cloud.openstack');
 $.namespace('zato.cloud.openstack.swift');
 $.namespace('zato.cluster');
