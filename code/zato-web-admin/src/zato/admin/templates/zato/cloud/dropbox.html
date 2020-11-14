@@ -122,6 +122,7 @@
                         {% comment %} 7 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -139,7 +140,7 @@
 
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.default_scope }}</td>
-                        <td>{{ item.default_directory }}</td>
+                        <td>{{ item.default_directory |default:"<span class='form_hint'>---</span>"}}</td>
 
                         {% comment %} 3 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.cloud.dropbox.edit('{{ item.id }}')">Edit</a></td>
@@ -158,6 +159,7 @@
 
                         {% comment %} 6 {% endcomment %}
                         <td class='ignore'>{{ item.default_scope|default:'' }}</td>
+                        <td class='ignore'>{{ item.pool_size }}</td>
 
                         {% comment %} 7 {% endcomment %}
                         <td class='ignore'>{{ item.default_directory|default:'' }}</td>
