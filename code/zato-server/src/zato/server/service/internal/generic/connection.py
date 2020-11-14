@@ -260,6 +260,8 @@ class ChangePassword(ChangePasswordBase):
 
         def _auth(instance, secret):
             if secret:
+
+                # Always encrypt the secret given on input
                 instance.secret = self.server.encrypt(secret)
 
         if self.request.input.id:
