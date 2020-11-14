@@ -39,11 +39,11 @@ class CreateForm(forms.Form):
     app_key = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     app_secret = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
 
-    default_directory = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    default_scope = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    default_scope = forms.CharField(widget=forms.TextInput(attrs={'style':'width:30%'}))
+    default_directory = forms.CharField(widget=forms.TextInput(attrs={'style':'width:46.7%'}))
 
     user_agent = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    http_headers = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%'}))
+    http_headers = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:90px'}))
 
     def __init__(self, prefix=None, req=None):
         super(CreateForm, self).__init__(prefix=prefix)
