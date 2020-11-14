@@ -51,7 +51,8 @@ $.fn.zato.cloud.dropbox.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', item.default_directory || $.fn.zato.empty_value);
 
     // 3
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}')\">Change token</a>", item.id));
+    row += String.format('<td>{0}</td>',
+        String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}', 'Change token')\">Change token</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.cloud.dropbox.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.cloud.dropbox.delete_({0});'>Delete</a>", item.id));
 
