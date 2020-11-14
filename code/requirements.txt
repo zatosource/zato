@@ -25,6 +25,7 @@ dictalchemy==0.1.2.6
 dill==0.2.5
 Django==1.9.13
 docformatter==0.8
+dropbox==10.10.0
 elasticsearch==7.9.1
 ephem==3.7.6.0
 flake8==2.1.0
