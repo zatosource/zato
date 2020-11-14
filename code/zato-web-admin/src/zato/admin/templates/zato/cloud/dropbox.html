@@ -143,7 +143,7 @@
                         <td>{{ item.default_directory |default:"<span class='form_hint'>---</span>"}}</td>
 
                         {% comment %} 3 {% endcomment %}
-                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change token</a></td>
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}', 'Change token')">Change token</a></td>
                         <td><a href="javascript:$.fn.zato.cloud.dropbox.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.cloud.dropbox.delete_('{{ item.id }}')">Delete</a></td>
 
@@ -400,7 +400,7 @@
                 <form action="{% url "cloud-dropbox-change-password" %}" method="post" id="change_password-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
+                            <td style="vertical-align:middle; width:19%">Name</td>
                             <td id="change-password-name"></td>
                         </tr>
                         <tr>
