@@ -21,7 +21,7 @@ from zato.common.util.api import spawn_greenlet
 
 # ################################################################################################################################
 
-logger = getLogger(__name__)
+logger = getLogger('zato')
 
 # ################################################################################################################################
 
@@ -47,6 +47,8 @@ class Wrapper(object):
     """ Base class for non-queue based connections wrappers.
     """
     wrapper_type = '<undefined-Wrapper>'
+    required_secret_attr = None
+    required_secret_label = None
 
     def __init__(self, config, server=None):
         # type: (Bunch, ParallelServer)
@@ -69,8 +71,14 @@ class Wrapper(object):
     def build_wrapper(self, should_spawn=True):
 
         if not self.config.is_active:
-            logger.info('Skipped building an inactive %s `%s`', self.wrapper_type, self.config.name)
+            logger.info('Skipped building an inactive %s (%s)', self.wrapper_type, self.config.name)
             return
+
+        if self.required_secret_attr:
+            if not self.config[self.required_secret_attr]:
+                logger.warn('Skipped building a %s without %s defined (%s)', self.wrapper_type,
+                    self.required_secret_label, self.config.name)
+                return
 
         # If we are to build the wrapper, it means that we are not connected at this time
         self.is_connected = False
@@ -114,7 +122,7 @@ class Wrapper(object):
 # ################################################################################################################################
 
     def delete(self):
-        if self.client:
+        if self._client:
             self._delete()
 
 # ################################################################################################################################
