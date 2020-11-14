@@ -2157,6 +2157,86 @@ class CySimpleIO(object):
 
 # ################################################################################################################################
 
+    def eval_(self, elem_name, value, encrypt_func=None):
+        """ Tries to evaluate elem_name as if it was a SIO element, no matter if it belongs to any request or response element.
+        This is useful for dynamically created elements that should not be treated as mere strings.
+        """
+        # type: (str, object, object)
+
+        exact:set
+        prefixes:set
+        suffixes:set
+        is_int:bool
+
+        config_item:ConfigItem
+
+        handler_func_to_type:tuple = (
+            (to_bool,      self.server_config.bool_config),
+            (int,          self.server_config.int_config),
+            (encrypt_func, self.server_config.secret_config),
+        )
+
+        for (handler_func, config_item) in handler_func_to_type:
+
+            is_int    = handler_func is int
+            is_secret = handler_func is encrypt_func
+
+            exact = config_item.exact
+            prefixes = config_item.prefixes
+            suffixes = config_item.suffixes
+
+            # Try an exact match first ..
+            for config_elem in exact:
+                if elem_name == config_elem:
+
+                    # Special-case integers
+                    if is_int:
+                        if value is None or value == '':
+                            return None
+
+                    # Special-case secrets
+                    if is_secret:
+                        if encrypt_func:
+                            return encrypt_func(value)
+
+                    return handler_func(value)
+
+            # .. try prefix matching then ..
+            for config_elem in prefixes:
+                if elem_name.startswith(config_elem):
+
+                    # Special-case integers
+                    if is_int:
+                        if value is None or value == '':
+                            return None
+
+                    # Special-case secrets
+                    if is_secret:
+                        if encrypt_func:
+                            return encrypt_func(value)
+
+                    return handler_func(value)
+
+            # .. finally, try suffix matching.
+            for config_elem in suffixes:
+                if elem_name.endswith(config_elem):
+
+                    # Special-case integers
+                    if is_int:
+                        if value is None or value == '':
+                            return None
+
+                    # Special-case secrets
+                    if is_secret:
+                        if encrypt_func:
+                            return encrypt_func(value)
+
+                    return handler_func(value)
+
+        return value or ''
+
+# ################################################################################################################################
+
 @cy.ccall
 @cy.returns(cy.bint)
 def is_sio_bool(value:object) -> cy.int:
