@@ -78,6 +78,7 @@ from zato.server.connection.web_socket import ChannelWebSocket
 from zato.server.connection.vault import VaultConnAPI
 from zato.server.ext.zunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from zato.server.generic.api.channel_file_transfer import ChannelFileTransferWrapper
+from zato.server.generic.api.cloud_dropbox import CloudDropbox
 from zato.server.generic.api.def_kafka import DefKafkaWrapper
 from zato.server.generic.api.outconn_im_slack import OutconnIMSlackWrapper
 from zato.server.generic.api.outconn_im_telegram import OutconnIMTelegramWrapper
@@ -208,6 +209,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Generic connections - IM Telegram
         self.outconn_im_telegram = {}
 
+        # Generic connections - Cloud - Dropbox
+        self.cloud_dropbox = {}
+
 # ################################################################################################################################
 
     def init(self):
@@ -256,6 +260,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER: self.channel_file_transfer,
+            COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX: self.cloud_dropbox,
             COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: self.def_kafka,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK: self.outconn_im_slack,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_TELEGRAM: self.outconn_im_telegram,
@@ -266,6 +271,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         self._generic_conn_handler = {
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER: ChannelFileTransferWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX: CloudDropbox,
             COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: DefKafkaWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK: OutconnIMSlackWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_TELEGRAM: OutconnIMTelegramWrapper,
@@ -981,6 +987,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Local aliases
         channel_file_transfer_map = self.generic_impl_func_map.setdefault(
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER, {})
+        cloud_dropbox_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX, {})
         def_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA, {})
         outconn_im_slack_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK, {})
         outconn_im_telegram_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_TELEGRAM, {})
@@ -992,6 +999,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # These generic connections are regular - they use common API methods for such connections
         regular_maps = [
             channel_file_transfer_map,
+            cloud_dropbox_map,
             def_kafka_map,
             outconn_im_slack_map,
             outconn_im_telegram_map,
