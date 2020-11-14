@@ -35,19 +35,19 @@
             '_default_directory',
 
             {% comment %} 3 {% endcomment %}
+            '_change_token',
             '_edit',
             '_delete',
-            '_ping',
 
             {% comment %} 4 {% endcomment %}
+            '_ping',
             'id',
             'max_retries_on_error',
-            'max_retries_on_rate_limit',
 
             {% comment %} 5 {% endcomment %}
+            'max_retries_on_rate_limit',
             'timeout',
             'oauth2_access_token_expiration',
-            'oauth2_access_token',
 
             {% comment %} 6 {% endcomment %}
             'default_scope',
@@ -106,7 +106,7 @@
                         <th>&nbsp;</th>
 
                         {% comment %} 4 {% endcomment %}
-                        <th class='ignore'>&nbsp;</th>
+                        <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
@@ -143,19 +143,19 @@
                         <td>{{ item.default_directory |default:"<span class='form_hint'>---</span>"}}</td>
 
                         {% comment %} 3 {% endcomment %}
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change token</a></td>
                         <td><a href="javascript:$.fn.zato.cloud.dropbox.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.cloud.dropbox.delete_('{{ item.id }}')">Delete</a></td>
-                        <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
 
                         {% comment %} 4 {% endcomment %}
+                        <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.max_retries_on_error|default:'' }}</td>
-                        <td class='ignore'>{{ item.max_retries_on_rate_limit|default:'' }}</td>
 
                         {% comment %} 5 {% endcomment %}
+                        <td class='ignore'>{{ item.max_retries_on_rate_limit|default:'' }}</td>
                         <td class='ignore'>{{ item.timeout }}</td>
                         <td class='ignore'>{{ item.oauth2_access_token_expiration|default:'' }}</td>
-                        <td class='ignore'>{{ item.oauth2_access_token|default:'' }}</td>
 
                         {% comment %} 6 {% endcomment %}
                         <td class='ignore'>{{ item.default_scope|default:'' }}</td>
@@ -266,15 +266,6 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_oauth2_access_token">Token</label>
-                            </td>
-                            <td>
-                                {{ create_form.oauth2_access_token }}
-                            </td>
-                        </tr>
-
-                        <tr>
                             <td colspan="2">
                             <label for="id_http_headers">HTTP headers</label>
                             <br/>
@@ -374,15 +365,6 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_edit-oauth2_access_token">Token</label>
-                            </td>
-                            <td>
-                                {{ edit_form.oauth2_access_token }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
                                 <label for="id_edit-user_agent">User agent</label>
                             </td>
                             <td>
@@ -409,6 +391,36 @@
                     <input type="hidden" id="id_edit-pool_size" name="pool_size" value="10" />
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+
+        <div id="change_password-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "cloud-dropbox-change-password" %}" method="post" id="change_password-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td id="change-password-name"></td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Token</td>
+                            <td>{{ change_password_form.password1 }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Confirm token</td>
+                            <td>{{ change_password_form.password2 }}
+                                <input type="hidden" id="id_change_password-id" name="id" />
+                                <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
                 </form>
             </div>
         </div>
