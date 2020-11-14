@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 _sio_required = 'name',
 _sio_optional = 'is_active', 'max_retries_on_error', 'max_retries_on_rate_limit', 'timeout', 'oauth2_access_token_expiration', \
-    'oauth2_access_token', 'app_key', 'app_secret', 'default_directory', 'default_scope', 'user_agent', 'http_headers'
+    'oauth2_access_token', 'default_directory', 'default_scope', 'user_agent', 'http_headers'
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -36,8 +36,6 @@ class CreateForm(forms.Form):
         widget=forms.TextInput(attrs={'style':'width:12%'}), initial=DROPBOX.DEFAULT.OAUTH2_ACCESS_TOKEN_EXPIRATION)
 
     oauth2_access_token = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    app_key = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    app_secret = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
 
     default_scope = forms.CharField(widget=forms.TextInput(attrs={'style':'width:30%'}))
     default_directory = forms.CharField(widget=forms.TextInput(attrs={'style':'width:46.7%'}))
