@@ -1330,6 +1330,26 @@ urlpatterns += [
 
 urlpatterns += [
 
+    # .. Dropbox
+
+    url(r'^zato/cloud/dropbox/$',
+        login_required(cloud_dropbox.Index()), name=cloud_dropbox.Index.url_name),
+    url(r'^zato/cloud/dropbox/create/$',
+        login_required(cloud_dropbox.Create()), name=cloud_dropbox.Create.url_name),
+    url(r'^zato/cloud/dropbox/edit/$',
+        login_required(cloud_dropbox.Edit()), name=cloud_dropbox.Edit.url_name),
+    url(r'^zato/cloud/dropbox/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cloud_dropbox.Delete()), name=cloud_dropbox.Delete.url_name),
+    url(r'^zato/cloud/dropbox/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cloud_dropbox.ping), name='cloud-dropbox-ping'),
+    url(r'^zato/cloud/dropbox/change-password/$',
+        login_required(cloud_dropbox.change_password), name='cloud-dropbox-change-password'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
     # .. OpenStack - Swift
 
     url(r'^zato/cloud/openstack/swift/$',
