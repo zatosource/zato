@@ -30,6 +30,8 @@ class CloudDropbox(Wrapper):
     """ Wraps a Dropbox connection client.
     """
     wrapper_type = 'Dropbox connection'
+    required_secret_attr = 'secret'
+    required_secret_label = 'an OAuth 2 access token'
 
     def __init__(self, *args, **kwargs):
         super(CloudDropbox, self).__init__(*args, **kwargs)
@@ -46,7 +48,7 @@ class CloudDropbox(Wrapper):
 
             config = {
                 'user_agent': user_agent,
-                'oauth2_access_token': self.config.oauth2_access_token,
+                'oauth2_access_token': self.server.decrypt(self.config.secret),
                 'oauth2_access_token_expiration': int(self.config.oauth2_access_token_expiration or 0),
                 'scope': scope,
                 'max_retries_on_error': int(self.config.max_retries_on_error or 0),
@@ -67,7 +69,8 @@ class CloudDropbox(Wrapper):
 # ################################################################################################################################
 
     def _delete(self):
-        self._client.close()
+        if self._client:
+            self._client.close()
 
 # ################################################################################################################################
 

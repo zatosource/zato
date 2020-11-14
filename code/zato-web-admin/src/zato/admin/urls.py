@@ -1342,7 +1342,9 @@ urlpatterns += [
     url(r'^zato/cloud/dropbox/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(cloud_dropbox.Delete()), name=cloud_dropbox.Delete.url_name),
     url(r'^zato/cloud/dropbox/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(cloud_dropbox.ping), name='definition-wmq-ping'),
+        login_required(cloud_dropbox.ping), name='cloud-dropbox-ping'),
+    url(r'^zato/cloud/dropbox/change-password/$',
+        login_required(cloud_dropbox.change_password), name='cloud-dropbox-change-password'),
     ]
 
 # ################################################################################################################################

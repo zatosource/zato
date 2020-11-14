@@ -259,7 +259,8 @@ class ChangePassword(ChangePasswordBase):
     def handle(self):
 
         def _auth(instance, secret):
-            instance.secret = secret
+            if secret:
+                instance.secret = self.server.encrypt(secret)
 
         if self.request.input.id:
             instance_id = self.request.input.id
