@@ -15,6 +15,8 @@ from logging import getLogger
 from dropbox import Dropbox as DropboxClient
 
 # Zato
+from zato.common.util.api import get_component_name, parse_extra_into_dict
+from zato.common.util.eval_ import as_list
 from zato.server.connection.wrapper import Wrapper
 
 # ################################################################################################################################
@@ -39,8 +41,22 @@ class CloudDropbox(Wrapper):
 
         with self.update_lock:
 
+            user_agent = '{}/{}'.format(self.config.user_agent, get_component_name('zato.cloud.dropbox'))
+            scope = as_list(self.config.default_scope, ',')
+
+            config = {
+                'user_agent': user_agent,
+                'oauth2_access_token': self.config.oauth2_access_token,
+                'oauth2_access_token_expiration': int(self.config.oauth2_access_token_expiration or 0),
+                'scope': scope,
+                'max_retries_on_error': int(self.config.max_retries_on_error or 0),
+                'max_retries_on_rate_limit': int(self.config.max_retries_on_rate_limit or 0),
+                'timeout': int(self.config.timeout),
+                'headers': parse_extra_into_dict(self.config.http_headers),
+            }
+
             # Create the actual connection object
-            self._client = DropboxClient(self.config.oauth2_access_token)
+            self._client = DropboxClient(**config)
 
             # Confirm the connection was established
             self.ping()
@@ -56,7 +72,7 @@ class CloudDropbox(Wrapper):
 # ################################################################################################################################
 
     def _ping(self):
-        self._client.files_list_folder('')
+        self._client.files_list_folder(self.config.default_directory)
 
 # ################################################################################################################################
 # ################################################################################################################################
