@@ -350,14 +350,16 @@ def tech_account_password(password_clear, salt):
 
 # ################################################################################################################################
 
-def new_cid(bits=96, _random=random.getrandbits):
+def new_cid(bytes=12, _random=random.getrandbits):
     """ Returns a new 96-bit correlation identifier. It's *not* safe to use the ID
     for any cryptographical purposes, it's only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.
     Changed in 2.0: The number is now 28 characters long not 40, like in previous versions.
     Changed in 3.0: The number is now 96 bits rather than 128, 24 characters, with no constant prefix.
     """
-    return hex(_random(bits))[2:-1]
+
+    # Note that we need to convert bytes to bits here.
+    return hex(_random(bytes * 8))[2:]
 
 # ################################################################################################################################
 
