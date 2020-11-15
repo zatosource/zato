@@ -362,7 +362,7 @@ class BaseConnectionContainer(object):
                     data = 'You are not allowed to access this resource'
                     content_type = 'text/plain'
 
-        except Exception as e:
+        except Exception:
             self.logger.warn(format_exc())
             content_type = 'text/plain'
             status = _http_503
