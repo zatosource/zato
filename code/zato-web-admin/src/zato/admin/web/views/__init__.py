@@ -27,7 +27,6 @@ from pytz import UTC
 
 # Python 2/3 compatibility
 from future.utils import iterkeys
-from past.builtins import basestring
 
 # Zato
 try:
@@ -515,10 +514,7 @@ class CreateEdit(_BaseView):
                     if name not in initial_return_data:
                         value = getattr(response.data, name, None)
                         if value:
-                            if isinstance(value, basestring):
-                                value = value.encode('utf-8')
-                            else:
-                                value = str(value)
+                            value = str(value)
                         return_data[name] = value
 
                 self.post_process_return_data(return_data)
