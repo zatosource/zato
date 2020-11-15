@@ -12,10 +12,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from logging import getLogger
 
 # Dropbox
-from dropbox import Dropbox as DropboxClient
+from dropbox import create_session, Dropbox as DropboxClient
 
 # Zato
-from zato.common.util.api import get_component_name, parse_extra_into_dict
+from zato.common.util.api import parse_extra_into_dict
 from zato.common.util.eval_ import as_list
 from zato.server.connection.wrapper import Wrapper
 
@@ -43,11 +43,14 @@ class CloudDropbox(Wrapper):
 
         with self.update_lock:
 
-            user_agent = '{}/{}'.format(self.config.user_agent, get_component_name('zato.cloud.dropbox'))
+            # Create a pool of at most that many connections
+            session = create_session(50)
+
             scope = as_list(self.config.default_scope, ',')
 
             config = {
-                'user_agent': user_agent,
+                'session': session,
+                'user_agent': self.config.user_agent,
                 'oauth2_access_token': self.server.decrypt(self.config.secret),
                 'oauth2_access_token_expiration': int(self.config.oauth2_access_token_expiration or 0),
                 'scope': scope,
@@ -75,7 +78,7 @@ class CloudDropbox(Wrapper):
 # ################################################################################################################################
 
     def _ping(self):
-        self._client.files_list_folder(self.config.default_directory)
+        self._client.check_user()
 
 # ################################################################################################################################
 # ################################################################################################################################

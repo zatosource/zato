@@ -400,8 +400,9 @@ class ServiceStore(object):
                 class_.odb = service_store.server.odb
                 class_.kvdb = service_store.server.worker_store.kvdb
                 class_.pubsub = service_store.server.worker_store.pubsub
-                class_.cloud.openstack.swift = service_store.server.worker_store.worker_config.cloud_openstack_swift
                 class_.cloud.aws.s3 = service_store.server.worker_store.worker_config.cloud_aws_s3
+                class_.cloud.dropbox = service_store.server.worker_store.cloud_dropbox
+                class_.cloud.openstack.swift = service_store.server.worker_store.worker_config.cloud_openstack_swift
                 class_._out_ftp = service_store.server.worker_store.worker_config.out_ftp
                 class_._out_plain_http = service_store.server.worker_store.worker_config.out_plain_http
                 class_.amqp.invoke = service_store.server.worker_store.amqp_invoke # .send is for pre-3.0 backward compat
