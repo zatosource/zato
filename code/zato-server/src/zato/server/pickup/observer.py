@@ -14,13 +14,14 @@ patch_all()
 
 # stdlib
 import logging
+import os
+from traceback import format_exc
 
 # gevent
 from gevent import sleep
 
-# Watchdog
-from watchdog.events import FileCreatedEvent, FileModifiedEvent
-from watchdog.utils.dirsnapshot import DirectorySnapshot, DirectorySnapshotDiff
+# inotify_simple
+from inotify_simple import flags as inotify_flags, INotify
 
 # Zato
 from zato.common.util import spawn_greenlet
@@ -29,6 +30,15 @@ from zato.common.util import spawn_greenlet
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _InotifyEvent:
+    __slots__ = 'src_path'
+
+    def __init__(self, src_path):
+        self.src_path = src_path
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,30 +66,26 @@ class FSOBserver:
         # Local aliases to avoid namespace lookups in self
         timeout = self.timeout
         handler_func = self.event_handler.on_created
-        path = self.path
-        is_recursive = self.is_recursive
 
-        # Take an initial snapshot
-        snapshot = DirectorySnapshot(path, recursive=is_recursive)
+        inotify = INotify()
+        inotify.add_watch(self.path, inotify_flags.CLOSE_WRITE)
 
-        while True:
+        try:
+            while True:
 
-            # The latest snapshot ..
-            new_snapshot = DirectorySnapshot(path, recursive=is_recursive)
-
-            # .. difference between the old and new will return, in particular, new or modified files ..
-            diff = DirectorySnapshotDiff(snapshot, new_snapshot)
-
-            for path_created in diff.files_created:
-                handler_func(FileCreatedEvent(path_created))
-
-            for path_modified in diff.files_modified:
-                handler_func(FileModifiedEvent(path_modified))
-
-            # .. a new snapshot which will be treated as the old one in the next iteration ..
-            snapshot = DirectorySnapshot(path, recursive=is_recursive)
-
-            sleep(timeout)
+                try:
+                    for event in inotify.read():
+                        try:
+                            src_path = os.path.normpath(os.path.join(self.path, event.name))
+                            handler_func(_InotifyEvent(src_path))
+                        except Exception:
+                            logger.warn('Exception in inotify handler `%s`', format_exc())
+                except Exception:
+                    logger.warn('Exception in inotify.read() `%s`', format_exc())
+                finally:
+                    sleep(timeout)
+        except Exception:
+            logger.warn("Exception in inotify observer's main loop `%s`", format_exc())
 
 # ################################################################################################################################
 # ################################################################################################################################
