@@ -94,11 +94,15 @@ class Scheduler(BrokerMessageReceiver):
         """
         name = ctx['name']
 
+        payload = ctx['cb_kwargs']['extra']
+        if isinstance(payload, bytes):
+            payload = payload.decode('utf8')
+
         msg = {
             'action': SCHEDULER_MSG.JOB_EXECUTED.value,
             'name':name,
             'service': ctx['cb_kwargs']['service'],
-            'payload':ctx['cb_kwargs']['extra'],
+            'payload':payload,
             'cid':ctx['cid'],
             'job_type': ctx['type']
         }
