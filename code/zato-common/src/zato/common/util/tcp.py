@@ -13,7 +13,6 @@ import errno
 import socket
 from datetime import datetime, timedelta
 from logging import getLogger
-from sys import platform as sys_platform
 from time import sleep
 
 # ################################################################################################################################
