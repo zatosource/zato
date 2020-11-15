@@ -306,10 +306,11 @@ class OpenStack(object):
 class Cloud(object):
     """ A container for cloud-related connections a service can establish.
     """
-    __slots__ = 'aws', 'openstack'
+    __slots__ = 'aws', 'dropbox', 'openstack'
 
-    def __init__(self, aws=None, openstack=None):
+    def __init__(self, aws=None, dropbox=None, openstack=None):
         self.aws = aws or AWS()
+        self.dropbox = dropbox
         self.openstack = openstack or OpenStack()
 
 # ################################################################################################################################
