@@ -1249,7 +1249,7 @@ class URLData(CyURLData, OAuthDataStore):
             'service_name', 'soap_action', 'soap_version', 'transport', 'url_params_pri', 'url_path', 'sec_use_rbac',
             'cache_type', 'cache_id', 'cache_name', 'cache_expiry', 'content_encoding', 'match_slash'):
 
-            channel_item[name] = msg[name]
+            channel_item[name] = msg.get(name)
 
         if msg.get('security_id'):
             channel_item['sec_type'] = msg['sec_type']
