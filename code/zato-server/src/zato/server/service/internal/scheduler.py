@@ -145,7 +145,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
         msg_action = SCHEDULER_MSG.CREATE.value if action == 'create' else SCHEDULER_MSG.EDIT.value
         msg = {'action': msg_action, 'job_type': job_type,
                'is_active':is_active, 'start_date':start_date.isoformat(),
-               'extra':extra, 'service': service.name,
+               'extra':extra.decode('utf8'), 'service': service.name,
                'id':job.id, 'name': name
                }
 
