@@ -32,7 +32,7 @@ flake8==2.1.0
 fs==2.4.11
 future==0.18.2
 futures==2.1.6
-gevent==20.6.2
+https://github.com/gevent/gevent/archive/20.6.2.zip#egg=gevent
 greenify==0.3.2
 greenlet==0.4.16
 hiredis==0.3.1
@@ -58,7 +58,7 @@ kombu==5.0.2
 ldap3==2.8.1
 lxml==4.5.2
 Mako==0.9.0
-markdown==2.6.7
+markdown==3.3.3
 MarkupSafe==1.1.1
 mccabe==0.2.1
 mock==3.0.5

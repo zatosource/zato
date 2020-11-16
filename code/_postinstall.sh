@@ -12,6 +12,18 @@ then
     exit 1
 fi
 
+function load_basedir()
+{
+    if [[ "$(uname -s)" == 'Darwin' ]]
+    then
+        basedir="$(grealpath .)"
+    else
+        basedir="$(dirname "$(readlink -e "$0")")"
+    fi
+}
+
+load_basedir
+
 PY_BINARY=$1
 # Stamp the release hash.
 git log -n 1 --pretty=format:"%H" > ./release-info/revision.txt
@@ -62,24 +74,24 @@ echo "$VIRTUAL_ENV/zato_extra_paths" >> eggs/easy-install.pth
 ln -fs $VIRTUAL_ENV/zato_extra_paths extlib
 
 # Apply patches.
-patch -p0 -d eggs < patches/butler/__init__.py.diff
-patch -p0 -d eggs < patches/configobj.py.diff
-patch -p0 -d eggs < patches/django/db/models/base.py.diff
-patch -p0 --binary -d eggs < patches/ntlm/HTTPNtlmAuthHandler.py.diff
-patch -p0 -d eggs < patches/pykafka/topic.py.diff
-patch -p0 -d eggs < patches/redis/redis/connection.py.diff
-patch -p0 -d eggs < patches/requests/models.py.diff
-patch -p0 -d eggs < patches/requests/sessions.py.diff
-patch -p0 -d eggs < patches/ws4py/server/geventserver.py.diff
+patch -p0 -d eggs < $basedir/patches/butler/__init__.py.diff
+patch -p0 -d eggs < $basedir/patches/configobj.py.diff
+patch -p0 -d eggs < $basedir/patches/django/db/models/base.py.diff
+patch -p0 --binary -d eggs < $basedir/patches/ntlm/HTTPNtlmAuthHandler.py.diff
+patch -p0 -d eggs < $basedir/patches/pykafka/topic.py.diff
+patch -p0 -d eggs < $basedir/patches/redis/redis/connection.py.diff
+patch -p0 -d eggs < $basedir/patches/requests/models.py.diff
+patch -p0 -d eggs < $basedir/patches/requests/sessions.py.diff
+patch -p0 -d eggs < $basedir/patches/ws4py/server/geventserver.py.diff
 
 #
 # On SUSE, SQLAlchemy installs to lib64 instead of lib.
 #
 if [ "$(type -p zypper)" ]
 then
-    patch -p0 -d eggs64 < patches/sqlalchemy/sql/crud.py.diff
+    patch -p0 -d eggs64 < $basedir/patches/sqlalchemy/sql/crud.py.diff
 else
-    patch -p0 -d eggs < patches/sqlalchemy/sql/crud.py.diff
+    patch -p0 -d eggs < $basedir/patches/sqlalchemy/sql/crud.py.diff
 fi
 
 # Add the 'zato' command ..
