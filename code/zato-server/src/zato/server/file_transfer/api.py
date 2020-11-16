@@ -186,10 +186,12 @@ class FileTransferAPI(object):
 
         # .. stop its main loop ..
         for observer in self.observers: # type: LocalObserver
-            if observer.name == config.old_name:
+            if observer.name == config.name:
                 observer.stop()
                 to_delete = observer
                 break
+        else:
+            raise ValueError('Could not find observer matching name `%s` (%s)', config.name, config.type_)
 
         # .. and delete the object now.
         if to_delete:
@@ -340,12 +342,24 @@ class FileTransferAPI(object):
 
 # ################################################################################################################################
 
-    def run(self):
+    def _run(self, name=None):
         for observer in self.observers: # type: BaseObserver
             try:
+                if name and observer.name != name:
+                    continue
                 observer.start()
             except Exception:
                 logger.warn('File observer `%s` could not be started, path:`%s`, e:`%s`',
                     observer.name, observer.path_list, format_exc())
+
+# ################################################################################################################################
+
+    def run(self):
+        self._run()
+
+# ################################################################################################################################
+
+    def start_observer(self, name):
+        self._run(name)
 
 # ################################################################################################################################

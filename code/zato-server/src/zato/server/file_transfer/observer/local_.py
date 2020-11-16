@@ -22,6 +22,7 @@ from logging import getLogger
 
 # gevent
 from gevent import sleep
+from gevent.lock import RLock
 
 # inotify_simple
 from inotify_simple import flags as inotify_flags, INotify
@@ -68,11 +69,23 @@ def _observe_path_linux(self, path):
     # and we possibly need to wait until it does.
     self.ensure_path_exists(path)
 
+    logger.warn('ADDED WATCH-1 %s', path)
+
     timeout = self.default_timeout
     handler_func = self.event_handler.on_created
 
+    logger.warn('ADDED WATCH-2 %s', path)
+
     inotify = INotify()
-    inotify.add_watch(path, inotify_flags.CLOSE_WRITE)
+
+    logger.warn('ADDED WATCH-3 %s', path)
+
+    with self.lock:
+        result = inotify.add_watch(path, inotify_flags.CLOSE_WRITE)
+        logger.warn('ADDED WATCH-bbb %s', result)
+        sleep(0.1)
+
+    logger.warn('ADDED WATCH-4 %s', path)
 
     try:
         while self.keep_running:
@@ -87,6 +100,7 @@ def _observe_path_linux(self, path):
             except Exception:
                 logger.warn('Exception in inotify.read() `%s`', format_exc())
             finally:
+                print(111, 'Sleeping', self.name)
                 sleep(timeout)
 
         # We get here only when self.keep_running is False = we are to stop
@@ -142,6 +156,11 @@ def _observe_path_non_linux(self, path):
 class LocalObserver(BaseObserver):
     """ A local file-system observer.
     """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.lock = RLock()
+
     if is_linux:
         _observe_func = _observe_path_linux
     else:
@@ -199,9 +218,8 @@ class LocalObserver(BaseObserver):
                 error_found = True
 
                 if idx == 1 or (idx % log_every == 0):
-                    #logger.info('Local file transfer path `%r` does not exist (%s) (c:%s d:%s)',
-                    #    path, self.name, idx, utcnow() - start)
-                    pass
+                    logger.info('Local file transfer path `%r` does not exist (%s) (c:%s d:%s)',
+                        path, self.name, idx, utcnow() - start)
 
             if is_ok:
 
@@ -210,7 +228,7 @@ class LocalObserver(BaseObserver):
                     logger.info('Local file transfer path `%s` found successfully (%s) (c:% d:%s)',
                         path, self.name, idx, utcnow() - start)
             else:
-                sleep(0.15)
+                sleep(6)
 
 # ################################################################################################################################
 
