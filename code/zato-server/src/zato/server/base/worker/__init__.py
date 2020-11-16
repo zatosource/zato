@@ -17,6 +17,7 @@ from copy import deepcopy
 from datetime import datetime
 from errno import ENOENT
 from inspect import isclass
+from os.path import abspath, join as path_join
 from shutil import rmtree
 from tempfile import gettempdir
 from threading import RLock
@@ -117,6 +118,10 @@ if 0:
 # ################################################################################################################################
 
 _data_format_dict = DATA_FORMAT.DICT
+
+# ################################################################################################################################
+
+pickup_conf_item_prefix = 'zato.pickup'
 
 # ################################################################################################################################
 
@@ -866,8 +871,70 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
+    def _convert_pickup_config_to_file_transfer(self, name, config):
+        # type: (dict) -> Bunch
+
+        # Convert paths to full ones
+        pickup_from_list = config.get('pickup_from') or []
+
+        if not pickup_from_list:
+            return
+
+        pickup_from_list = pickup_from_list if isinstance(pickup_from_list, list) else [pickup_from_list]
+        pickup_from_list = [abspath(path_join(self.server.base_dir, elem)) for elem in pickup_from_list]
+
+        move_processed_to = config.get('move_processed_to')
+        if move_processed_to:
+            move_processed_to = abspath(path_join(self.server.base_dir, move_processed_to))
+
+        # Make sure we have lists on input
+        service_list = config.get('services') or []
+        service_list = service_list if isinstance(service_list, list) else [service_list]
+
+        topic_list = config.get('topic_list') or []
+        topic_list = topic_list if isinstance(topic_list, list) else [topic_list]
+
+        return bunchify({
+          'name': name,
+          'is_active': True,
+          'is_internal': True,
+          'data_encoding': config.get('data_encoding') or 'utf-8',
+          'source_type': FILE_TRANSFER.SOURCE_TYPE.LOCAL.id,
+          'pickup_from_list': pickup_from_list,
+          'is_hot_deploy': config.get('is_hot_deploy'),
+          'service_list': service_list,
+          'topic_list': topic_list,
+          'move_processed_to': move_processed_to,
+          'file_patterns': config.get('patterns') or '*',
+          'parse_with': config.get('parse_with'),
+          'should_read_on_pickup': config.get('read_on_pickup', True),
+          'should_parse_on_pickup': config.get('parse_on_pickup', False),
+          'should_delete_after_pickup': config.get('delete_after_pickup', True),
+          'is_case_sensitive': config.get('is_case_sensitive', True),
+          'is_line_by_line': config.get('is_line_by_line', False),
+          'binary_file_patterns': config.get('binary_file_patterns') or [],
+          'outconn_rest_list': [],
+        })
+
+# ################################################################################################################################
+
     def init_file_transfer(self):
 
+        # Create transfer channels based on pickup.conf
+        for key, value in self.server.pickup_config.items(): # type: (str, dict)
+
+            # This is an internal name
+            name = '{}.{}'.format(pickup_conf_item_prefix, key)
+
+            # We need to convert between config formats
+            config = self._convert_pickup_config_to_file_transfer(name, value)
+
+            # Create an observer now
+            if config:
+                #self.file_transfer_api.create(config)
+                self.worker_config.channel_file_transfer[name] = {'config': config}
+
+        # Create file transfer channels stored in the ODB
         for value in self.worker_config.channel_file_transfer.values():
             config = value['config'] # type: dict
 
@@ -1321,6 +1388,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def get_channel_file_transfer_config(self, name):
+        # type: (str) -> dict
         config = self.worker_config.channel_file_transfer[name] # dict
         return config['config']
 

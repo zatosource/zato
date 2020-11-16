@@ -76,7 +76,8 @@ class FileTransferEventHandler:
             event.channel_name = self.channel_name
 
             if self.config.is_hot_deploy:
-                spawn_greenlet(hot_deploy, self.manager.server, event.file_name, event.full_path, self.config.delete_after_pickup)
+                spawn_greenlet(hot_deploy, self.manager.server, event.file_name, event.full_path,
+                    self.config.should_delete_after_pickup)
                 return
 
             if self.config.should_read_on_pickup:
@@ -161,14 +162,20 @@ class FileTransferAPI(object):
         pattern_matcher_list = [globre.compile(elem, flags) for elem in file_patterns]
         self.pattern_matcher_dict[config.name] = pattern_matcher_list
 
-        pickup_from_list = str(config.pickup_from_list) # type: str
-        pickup_from_list = [elem.strip() for elem in pickup_from_list.splitlines()]
+        # This will be a list in the case of pickup.conf and not a list if read from ODB-based file transfer channels
+        if isinstance(config.pickup_from_list, list):
+            pickup_from_list = config.pickup_from_list
+        else:
+            pickup_from_list = str(config.pickup_from_list) # type: str
+            pickup_from_list = [elem.strip() for elem in pickup_from_list.splitlines()]
 
         observer = LocalObserver(config.name, config.is_active, 0.25)
         event_handler = FileTransferEventHandler(self, config.name, config)
         observer.schedule(event_handler, pickup_from_list, recursive=False)
 
         self.observers.append(observer)
+
+        logger.info('Created observer `%s` for `%s`', config.name, observer.path_list)
 
 # ################################################################################################################################
 
