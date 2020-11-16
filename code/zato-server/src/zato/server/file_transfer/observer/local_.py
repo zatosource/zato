@@ -78,6 +78,9 @@ def _observe_path_linux(self, path):
         while self.keep_running:
 
             try:
+                print()
+                print(111, self.path_list)
+                print()
                 for event in inotify.read():
                     try:
                         src_path = os.path.normpath(os.path.join(path, event.name))
@@ -175,6 +178,7 @@ class LocalObserver(BaseObserver):
                 return
 
             if os.path.exists(path):
+
                 if os.path.isdir(path):
                     is_ok = True
                 else:
@@ -189,7 +193,7 @@ class LocalObserver(BaseObserver):
                 error_found = True
 
                 if idx == 1 or (idx % log_every == 0):
-                    logger.warn('Local file transfer path `%s` does not exist (%s) (c:%s d:%s)',
+                    logger.warn('Local file transfer path `%r` does not exist (%s) (c:%s d:%s)',
                         path, self.name, idx, utcnow() - start)
 
             if is_ok:
