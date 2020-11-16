@@ -78,7 +78,7 @@ def _observe_path_linux(self, path):
         while self.keep_running:
 
             try:
-                for event in inotify.read():
+                for event in inotify.read(0):
                     try:
                         src_path = os.path.normpath(os.path.join(path, event.name))
                         handler_func(_InotifyEvent(src_path))
@@ -88,6 +88,10 @@ def _observe_path_linux(self, path):
                 logger.warn('Exception in inotify.read() `%s`', format_exc())
             finally:
                 sleep(timeout)
+
+        # We get here only when self.keep_running is False = we are to stop
+        logger.info('Stopped local file transfer observer `%s` for `%s` (inotify)', self.name, path)
+
     except Exception:
         logger.warn("Exception in inotify observer's main loop `%s`", format_exc())
 
@@ -128,6 +132,9 @@ def _observe_path_non_linux(self, path):
         snapshot = DirectorySnapshot(path, recursive=is_recursive)
 
         sleep(timeout)
+
+    # We get here only when self.keep_running is False = we are to stop
+    logger.info('Stopped local file transfer observer `%s` for `%s` (snapshot)', self.name, self.path)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -172,6 +179,8 @@ class LocalObserver(BaseObserver):
 
             # Honour the main loop's status
             if not self.keep_running:
+                logger.info('Stopped `%s` path lookup function for local file transfer observer `%s` (not found)',
+                    path, self.name)
                 return
 
             if os.path.exists(path):
@@ -190,8 +199,9 @@ class LocalObserver(BaseObserver):
                 error_found = True
 
                 if idx == 1 or (idx % log_every == 0):
-                    logger.info('Local file transfer path `%r` does not exist (%s) (c:%s d:%s)',
-                        path, self.name, idx, utcnow() - start)
+                    #logger.info('Local file transfer path `%r` does not exist (%s) (c:%s d:%s)',
+                    #    path, self.name, idx, utcnow() - start)
+                    pass
 
             if is_ok:
 
@@ -201,6 +211,12 @@ class LocalObserver(BaseObserver):
                         path, self.name, idx, utcnow() - start)
             else:
                 sleep(0.15)
+
+# ################################################################################################################################
+
+    def stop(self):
+        logger.info('Stopping local file transfer observer `%s`', self.name)
+        self.keep_running = False
 
 # ################################################################################################################################
 

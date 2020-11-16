@@ -930,10 +930,10 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             'delete_after_pickup': self.server.hot_deploy_config.delete_after_pickup
         })
 
-        self.worker_config.channel_file_transfer[hot_deploy_name] = {'config': hot_deploy_config}
+        #self.worker_config.channel_file_transfer[hot_deploy_name] = {'config': hot_deploy_config}
 
         # Create transfer channels based on pickup.conf
-        for key, value in self.server.pickup_config.items(): # type: (str, dict)
+        for key, value in {}.items():#self.server.pickup_config.items(): # type: (str, dict)
 
             # This is an internal name
             name = '{}.{}'.format(pickup_conf_item_prefix, key)
@@ -943,7 +943,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
             # Create an observer now
             if config:
-                #self.file_transfer_api.create(config)
+                self.file_transfer_api.create(config)
                 self.worker_config.channel_file_transfer[name] = {'config': config}
 
         # Create file transfer channels stored in the ODB
