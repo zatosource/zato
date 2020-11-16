@@ -1,35 +1,17 @@
+"""
 # -*- coding: utf-8 -*-
 
-"""
-Copyright (C) Zato Source s.r.o. https://zato.io
-
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
-"""
-
-# stdlib
-from logging import getLogger
-
 # Zato
-from .base import BaseFileClient
-
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-logger = getLogger(__name__)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# The 'touch' command cannot be executed for files longer than that many bytes
-touch_max_size = 200_000
+from zato.server.connection.file_client.base import BaseFileClient
+from zato.server.connection.sftp import SFTPIPCFacade
+from zato.server.service import Service
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class FTPFileClient(BaseFileClient):
     def __init__(self, conn, config):
-        # type: (FTPFS) -> None
+        # type: (SFTPConnection) -> None
         super().__init__(config)
         self.conn = conn
 
@@ -79,8 +61,7 @@ class FTPFileClient(BaseFileClient):
 # ################################################################################################################################
 
     def xlist(self, path):
-        """ Returns a list of directories and files for input path.
-        """
+        # Returns a list of directories and files for input path.
         # type: (str) -> list
         '''
         # Response to produce
@@ -118,8 +99,7 @@ class FTPFileClient(BaseFileClient):
 # ################################################################################################################################
 
     def xtouch(self, path):
-        """ Touches a remote file by overwriting its contents with itself.
-        """
+        # Touches a remote file by overwriting its contents with itself.
         '''
         with self.conn._lock:
 
@@ -155,41 +135,7 @@ class FTPFileClient(BaseFileClient):
 # ################################################################################################################################
 # ################################################################################################################################
 
-if __name__ == '__main__':
+class SFTPService1(Service):
+    pass
 
-    # pyfilesystem
-    from fs.ftpfs import FTPFS
-
-    host = 'localhost'
-    user = 'abc'
-    password = 'def'
-    port = 11021
-
-    conn = FTPFS(host, user, password, port=port)
-
-    config = {
-        'encoding': 'utf8'
-    }
-
-    client = FTPFileClient(conn, config)
-
-    #client.create_directory('aaa2')
-    #client.delete_directory('aaa2')
-
-    path = '/aaa2/abc.txt2'
-
-    client.store(path, 'zzzz')
-    client.touch(path)
-
-    result = client.list('/aaa2')
-
-    for item in result['file_list']: # type: dict
-        print(111, item)
-
-    data = client.download(path)
-    print(222, data)
-
-    client.delete_file(path)
-
-# ################################################################################################################################
-# ################################################################################################################################
+"""
