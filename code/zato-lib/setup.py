@@ -36,7 +36,7 @@ ext_modules = [
 ]
 
 setup(
-      name = 'libzato',
+      name = 'zato-lib',
       version = version,
       author = 'Zato Source s.r.o.',
       author_email = 'info@zato.io',
