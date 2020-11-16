@@ -555,6 +555,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.hot_deploy_config.backup_history = int(self.fs_server_config.hot_deploy.backup_history)
         self.hot_deploy_config.backup_format = self.fs_server_config.hot_deploy.backup_format
 
+        # The first name was used prior to v3.2, note pick_up vs. pickup
+        if 'delete_after_pick_up':
+            delete_after_pickup = self.fs_server_config.hot_deploy.get('delete_after_pick_up')
+        else:
+            delete_after_pickup = self.fs_server_config.hot_deploy.get('delete_after_pickup')
+
+        self.hot_deploy_config.delete_after_pickup = delete_after_pickup
+
         # Added in 3.1, hence optional
         max_batch_size = int(self.fs_server_config.hot_deploy.get('max_batch_size', 1000))
 
