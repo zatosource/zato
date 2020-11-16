@@ -303,7 +303,7 @@ class Ping(_BaseService):
             start_time = datetime.utcnow()
 
             try:
-                ping_func(self.request.input.id)
+                ping_func(self.request.input.id, instance.type_)
             except Exception:
                 self.response.payload.info = format_exc()
             else:

@@ -41,6 +41,8 @@ class ChannelFileTransferWrapper(Wrapper):
             #
             # Create file transfer channels here
 
+            logger.warn('WRAPPER._init_impl %s', self.config)
+
             # We can assume we are done building the channel now
             self.is_connected = True
 
