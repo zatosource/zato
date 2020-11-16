@@ -920,6 +920,15 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
     def init_file_transfer(self):
 
+        # Explicitly create configuration for hot-deployment
+        hot_deploy_name = '{}.{}'.format(pickup_conf_item_prefix, 'hot-deploy')
+        hot_deploy_config = self._convert_pickup_config_to_file_transfer(hot_deploy_name, {
+            'is_hot_deploy': True,
+            'patterns': '*.py',
+            'services': 'zato.helpers.input-logger',
+        })
+        self.worker_config.channel_file_transfer[hot_deploy_name] = {'config': hot_deploy_config}
+
         # Create transfer channels based on pickup.conf
         for key, value in self.server.pickup_config.items(): # type: (str, dict)
 
