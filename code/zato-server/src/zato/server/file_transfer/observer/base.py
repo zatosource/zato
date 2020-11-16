@@ -31,9 +31,9 @@ class BaseObserver:
         self.is_recursive = False
         self.keep_running = True
 
-    def start(self):
+    def start(self, *args, **kwargs):
         if self.is_active:
-            spawn_greenlet(self._start)
+            spawn_greenlet(self._start, *args, **kwargs)
         else:
             logger.info('Skipping an inactive file transfer channel `%s` (%s)', self.name, self.path)
 
