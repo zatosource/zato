@@ -175,12 +175,25 @@ class FileTransferAPI(object):
 
         self.observers.append(observer)
 
-        logger.info('Created observer `%s` for `%s`', config.name, observer.path_list)
+        logger.warn('Created observer `%s` for `%s`', config.name, observer.path_list)
 
 # ################################################################################################################################
 
     def delete(self, config):
-        logger.warn('FILE TRANSFER API %s', config)
+
+        # Observer object to delete ..
+        to_delete = None
+
+        # .. stop its main loop ..
+        for observer in self.observers: # type: LocalObserver
+            if observer.name == config.old_name:
+                observer.stop()
+                to_delete = observer
+                break
+
+        # .. and delete the object now.
+        if to_delete:
+            self.observers.remove(observer)
 
 # ################################################################################################################################
 

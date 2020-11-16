@@ -77,22 +77,33 @@ class Generic(WorkerImpl):
             non_generic_type_conn_api = type_conn_api.get(msg.type_)
 
             if non_generic_type_conn_api:
+
+                # Delete the connection ..
                 non_generic_type_conn_api.delete(msg)
+
+                # .. but save its name for later use.
+                conn_name = conn_dict['name']
+
+                # .. keep note of where the connection was defined.
+                delete_from_config = self.get_conn_type_to_config()
+                delete_from = delete_from_config[msg.type_]
             else:
+
+                # Delete the connection ..
                 conn_api.delete()
 
-            self.logger.warn('VVV-1 %s', conn_value)
-            self.logger.warn('VVV-2 %s', conn_dict)
+                # .. but save its name for later use (note that here it in the nested 'config' dict).
+                conn_name = conn_dict['name']
 
-            #del conn_value[conn_dict['name']]
+                # .. keep note of where the connection was defined.
+                delete_from = conn_value
+
+            # Delete the connection from the configuration object
+            del delete_from[conn_name]
 
 # ################################################################################################################################
 
     def _create_generic_connection(self, msg, needs_roundtrip=False, skip=None, raise_exc=True):
-
-        print()
-        print(333, msg)
-        print()
 
         # This roundtrip is needed to re-format msg in the format the underlying .from_bunch expects
         # in case this is a broker message rather than a startup one.
@@ -116,10 +127,6 @@ class Generic(WorkerImpl):
 
         config_attr = self.generic_conn_api[item.type_]
         wrapper = self._generic_conn_handler[item.type_]
-
-        print()
-        print(444, wrapper)
-        print()
 
         config_attr[msg.name] = item_dict
         config_attr[msg.name].conn = wrapper(item_dict, self.server)
@@ -185,10 +192,6 @@ class Generic(WorkerImpl):
 # ################################################################################################################################
 
     def on_broker_msg_GENERIC_CONNECTION_CREATE(self, msg, *args, **kwargs):
-
-        print()
-        print(111, msg)
-        print()
 
         func = self._get_generic_impl_func(msg)
         func(msg)
