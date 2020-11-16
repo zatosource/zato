@@ -925,8 +925,11 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         hot_deploy_config = self._convert_pickup_config_to_file_transfer(hot_deploy_name, {
             'is_hot_deploy': True,
             'patterns': '*.py',
-            'services': 'zato.helpers.input-logger',
+            'services': 'zato.hot-deploy.create',
+            'pickup_from': self.server.hot_deploy_config.pickup_dir,
+            'delete_after_pickup': self.server.hot_deploy_config.delete_after_pickup
         })
+
         self.worker_config.channel_file_transfer[hot_deploy_name] = {'config': hot_deploy_config}
 
         # Create transfer channels based on pickup.conf

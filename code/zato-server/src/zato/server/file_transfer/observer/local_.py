@@ -78,9 +78,6 @@ def _observe_path_linux(self, path):
         while self.keep_running:
 
             try:
-                print()
-                print(111, self.path_list)
-                print()
                 for event in inotify.read():
                     try:
                         src_path = os.path.normpath(os.path.join(path, event.name))
