@@ -12,12 +12,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from bunch import Bunch
 
 # Zato
-from zato.common.api import LDAP
-from zato.common.broker_message import GENERIC
+from zato.common.api import GENERIC, LDAP
+from zato.common.broker_message import GENERIC as GENERIC_BROKER_MSG
 from zato.common.util.api import as_bool, parse_simple_type
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.generic.connection import GenericConnection
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Generic(WorkerImpl):
@@ -28,11 +29,33 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def _find_conn_info(self, item_id):
+    def get_conn_type_to_config(self):
+        """ Returns a map of connection types to objects that actually contain their configuration.
+        """
+        return {
+            GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER: self.worker_config.channel_file_transfer,
+        }
+
+# ################################################################################################################################
+
+    def get_conn_type_to_conn_api(self):
+        """ Returns a map of connection types to objects that actually manage connections.
+        """
+        return {
+            GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER: self.file_transfer_api
+        }
+
+# ################################################################################################################################
+
+    def _find_conn_info(self, item_id, item_conn_type):
+
+        type_config = self.get_conn_type_to_config()
+        config_container = type_config.get(item_conn_type) or self.generic_conn_api # type: dict
+
         found_conn_dict = None
         found_name = None
 
-        for conn_type, value in self.generic_conn_api.items():
+        for conn_type, value in config_container.items():
             for conn_name, conn_dict in value.items():
                 if conn_dict['id'] == item_id:
                     return conn_dict, value
@@ -43,16 +66,33 @@ class Generic(WorkerImpl):
 
     def _delete_generic_connection(self, msg):
 
-        conn_dict, conn_value = self._find_conn_info(msg.id)
+        conn_dict, conn_value = self._find_conn_info(msg.id, msg.type_)
         if not conn_dict:
             raise Exception('Could not find configuration matching input message `{}`'.format(msg))
         else:
-            conn_dict.conn.delete()
-            del conn_value[conn_dict['name']]
+
+            type_conn_api = self.get_conn_type_to_conn_api()
+
+            # This is a connection API object other than what is in self.generic_conn_api
+            non_generic_type_conn_api = type_conn_api.get(msg.type_)
+
+            if non_generic_type_conn_api:
+                non_generic_type_conn_api.delete(msg)
+            else:
+                conn_api.delete()
+
+            self.logger.warn('VVV-1 %s', conn_value)
+            self.logger.warn('VVV-2 %s', conn_dict)
+
+            #del conn_value[conn_dict['name']]
 
 # ################################################################################################################################
 
     def _create_generic_connection(self, msg, needs_roundtrip=False, skip=None, raise_exc=True):
+
+        print()
+        print(333, msg)
+        print()
 
         # This roundtrip is needed to re-format msg in the format the underlying .from_bunch expects
         # in case this is a broker message rather than a startup one.
@@ -77,6 +117,10 @@ class Generic(WorkerImpl):
         config_attr = self.generic_conn_api[item.type_]
         wrapper = self._generic_conn_handler[item.type_]
 
+        print()
+        print(444, wrapper)
+        print()
+
         config_attr[msg.name] = item_dict
         config_attr[msg.name].conn = wrapper(item_dict, self.server)
         config_attr[msg.name].conn.build_wrapper()
@@ -88,7 +132,7 @@ class Generic(WorkerImpl):
         # Find and store connection password/secret for later use
         # if we do not have it already and we will if we are called from ChangePassword.
         if not secret:
-            conn_dict, _ = self._find_conn_info(msg.id)
+            conn_dict, _ = self._find_conn_info(msg.id, msg.type_)
             secret = conn_dict['secret']
 
         # Delete the connection
@@ -100,8 +144,8 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def ping_generic_connection(self, conn_id):
-        conn_dict, _ = self._find_conn_info(conn_id)
+    def ping_generic_connection(self, conn_id, conn_type):
+        conn_dict, _ = self._find_conn_info(conn_id, conn_type)
 
         self.logger.info('About to ping generic connection `%s` (%s)', conn_dict.name, conn_dict.type_)
         conn_dict.conn.ping()
@@ -109,8 +153,8 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def _change_password_generic_connection(self, msg):
-        conn_dict, _ = self._find_conn_info(msg['id'])
+    def _change_password_generic_connection(self, msg, conn_type):
+        conn_dict, _ = self._find_conn_info(msg['id'], conn_type)
 
         # Create a new message without live Python objects
         edit_msg = Bunch()
@@ -124,11 +168,11 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def reconnect_generic(self, conn_id):
-        found_conn_dict, found_name = self._find_conn_info(conn_id)
+    def reconnect_generic(self, conn_id, conn_type):
+        found_conn_dict, found_name = self._find_conn_info(conn_id, conn_type)
 
         edit_msg = Bunch()
-        edit_msg['action'] = GENERIC.CONNECTION_EDIT.value
+        edit_msg['action'] = GENERIC_BROKER_MSG.CONNECTION_EDIT.value
 
         for k, v in found_conn_dict.items():
             if k in ('conn', 'parent'):
@@ -141,6 +185,11 @@ class Generic(WorkerImpl):
 # ################################################################################################################################
 
     def on_broker_msg_GENERIC_CONNECTION_CREATE(self, msg, *args, **kwargs):
+
+        print()
+        print(111, msg)
+        print()
+
         func = self._get_generic_impl_func(msg)
         func(msg)
 

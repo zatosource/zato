@@ -183,14 +183,14 @@ class LocalObserver(BaseObserver):
                     error_found = True
 
                     if idx == 1 or (idx % log_every == 0):
-                        logger.warn('Local file transfer path `%s` is not a directory (%s) (c:% d:%s)',
+                        logger.info('Local file transfer path `%s` is not a directory (%s) (c:% d:%s)',
                             path, self.name, idx, utcnow() - start)
             else:
                 # Indicate that there was an erorr with path
                 error_found = True
 
                 if idx == 1 or (idx % log_every == 0):
-                    logger.warn('Local file transfer path `%r` does not exist (%s) (c:%s d:%s)',
+                    logger.info('Local file transfer path `%r` does not exist (%s) (c:%s d:%s)',
                         path, self.name, idx, utcnow() - start)
 
             if is_ok:
@@ -200,7 +200,7 @@ class LocalObserver(BaseObserver):
                     logger.info('Local file transfer path `%s` found successfully (%s) (c:% d:%s)',
                         path, self.name, idx, utcnow() - start)
             else:
-                sleep(6)
+                sleep(0.15)
 
 # ################################################################################################################################
 

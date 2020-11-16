@@ -1080,10 +1080,17 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def init_generic_connections(self):
+
+        # Some connection types are built elsewhere
+        to_skip = {
+            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP,
+        }
+
         for config_dict in self.worker_config.generic_connection.values():
 
             # Not all generic connections are created here
-            if config_dict['config']['type_'] == COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP:
+            if config_dict['config']['type_'] in to_skip:
                 continue
 
             self._create_generic_connection(bunchify(config_dict['config']), raise_exc=False)

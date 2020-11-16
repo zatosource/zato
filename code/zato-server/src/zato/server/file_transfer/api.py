@@ -179,6 +179,11 @@ class FileTransferAPI(object):
 
 # ################################################################################################################################
 
+    def delete(self, config):
+        logger.warn('FILE TRANSFER API %s', config)
+
+# ################################################################################################################################
+
     def get_py_parser(self, name):
         parts = name.split('.')
         module_path, callable_name = '.'.join(parts[0:-1]), parts[-1]
