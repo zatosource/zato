@@ -24,9 +24,6 @@ from logging import getLogger
 from gevent import sleep
 from gevent.lock import RLock
 
-# inotify_simple
-from inotify_simple import flags as inotify_flags, INotify
-
 # Watchdog
 from watchdog.events import FileCreatedEvent, FileModifiedEvent
 from watchdog.utils.dirsnapshot import DirectorySnapshot, DirectorySnapshotDiff
@@ -39,20 +36,12 @@ from .base import BaseObserver
 # ################################################################################################################################
 # ################################################################################################################################
 
-if 0:
-    from inotify_simple import Event as InotifyEvent
-
-    InotifyEvent = InotifyEvent
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _InotifyEvent:
+class InotifyEvent:
     __slots__ = 'src_path'
 
     def __init__(self, src_path):
@@ -60,51 +49,26 @@ class _InotifyEvent:
 
 # ################################################################################################################################
 
-def _observe_path_linux(self, path):
+def _observe_path_linux(self, path, inotify, inotify_flags, lock_func, wd_to_path_map):
     """ Local observer's main loop for Linux, uses inotify.
     """
     # type: (LocalObserver, str) -> None
-
-    # The local directory may not exist yet at the time when we are starting
-    # and we possibly need to wait until it does.
-    self.ensure_path_exists(path)
-
-    logger.warn('ADDED WATCH-1 %s', path)
-
-    timeout = self.default_timeout
-    handler_func = self.event_handler.on_created
-
-    logger.warn('ADDED WATCH-2 %s', path)
-
-    inotify = INotify()
-
-    logger.warn('ADDED WATCH-3 %s', path)
-
-    with self.lock:
-        result = inotify.add_watch(path, inotify_flags.CLOSE_WRITE)
-        logger.warn('ADDED WATCH-bbb %s', result)
-        sleep(0.1)
-
-    logger.warn('ADDED WATCH-4 %s', path)
-
     try:
-        while self.keep_running:
 
-            try:
-                for event in inotify.read(0):
-                    try:
-                        src_path = os.path.normpath(os.path.join(path, event.name))
-                        handler_func(_InotifyEvent(src_path))
-                    except Exception:
-                        logger.warn('Exception in inotify handler `%s`', format_exc())
-            except Exception:
-                logger.warn('Exception in inotify.read() `%s`', format_exc())
-            finally:
-                print(111, 'Sleeping', self.name)
-                sleep(timeout)
+        # The local directory may not exist yet at the time when we are starting
+        # and we possibly need to wait until it does.
+        #self.ensure_path_exists(path)
 
-        # We get here only when self.keep_running is False = we are to stop
-        logger.info('Stopped local file transfer observer `%s` for `%s` (inotify)', self.name, path)
+        # Create a new watch descriptor
+        wd = inotify.add_watch(path, inotify_flags)
+
+        print()
+        print(111, path, wd)
+        print()
+
+        # .. and map the input path to wd for use in higher-level layers.
+        with lock_func:
+            wd_to_path_map[wd] = path
 
     except Exception:
         logger.warn("Exception in inotify observer's main loop `%s`", format_exc())
@@ -159,7 +123,6 @@ class LocalObserver(BaseObserver):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.lock = RLock()
 
     if is_linux:
         _observe_func = _observe_path_linux
@@ -238,9 +201,9 @@ class LocalObserver(BaseObserver):
 
 # ################################################################################################################################
 
-    def _start(self):
+    def _start(self, *args, **kwargs):
         for path in self.path_list: # type: str
-            spawn_greenlet(self._observe_func, path)
+            spawn_greenlet(self._observe_func, path, *args, **kwargs)
 
 # ################################################################################################################################
 # ################################################################################################################################

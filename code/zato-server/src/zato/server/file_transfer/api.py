@@ -19,12 +19,17 @@ from re import IGNORECASE
 from shutil import copy as shutil_copy
 from traceback import format_exc
 
+# gevent
+from gevent import sleep
+from gevent.lock import RLock
+
 # globre
 import globre
 
 # Zato
 from zato.common.util.api import hot_deploy, new_cid, spawn_greenlet
-from .observer.local_ import LocalObserver
+from zato.common.util.platform_ import is_linux
+from .observer.local_ import LocalObserver, InotifyEvent
 
 # ################################################################################################################################
 
@@ -48,6 +53,7 @@ logger = logging.getLogger(__name__)
 _singleton = object()
 _zato_orig_marker = 'zato_orig_'
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class FileTransferEventHandler:
@@ -109,6 +115,7 @@ class FileTransferEventHandler:
     on_modified = on_created
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class FileTransferEvent(object):
     """ Encapsulates information about a file picked up from file system.
@@ -129,6 +136,7 @@ class FileTransferEvent(object):
         self.parse_error = None   # type: str
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class FileTransferAPI(object):
     """ Manages file transfer observers and callbacks.
@@ -141,6 +149,19 @@ class FileTransferAPI(object):
 
         self.keep_running = True
         self.observers = []
+
+        if is_linux:
+
+            # inotify_simple
+            from inotify_simple import flags as inotify_flags, INotify
+
+            self.inotify_lock = RLock()
+
+            self.inotify = INotify()
+            self.inotify_flags = inotify_flags.CLOSE_WRITE
+
+            self.inotify_wd_to_path = {}
+            self.inotify_path_to_observer_list = {}
 
         # Maps channel name to a list of globre patterns for the channel's directories
         self.pattern_matcher_dict = {}
@@ -174,8 +195,6 @@ class FileTransferAPI(object):
         observer.schedule(event_handler, pickup_from_list, recursive=False)
 
         self.observers.append(observer)
-
-        logger.warn('Created observer `%s` for `%s`', config.name, observer.path_list)
 
 # ################################################################################################################################
 
@@ -342,15 +361,86 @@ class FileTransferAPI(object):
 
 # ################################################################################################################################
 
-    def _run(self, name=None):
+    def _run_linux_inotify_loop(self):
+
+        while self.keep_running:
+
+            try:
+                for event in self.inotify.read(0):
+                    try:
+
+                        dir_name = self.inotify_wd_to_path[event.wd]
+                        src_path = os.path.normpath(os.path.join(dir_name, event.name))
+
+                        observer_list = self.inotify_path_to_observer_list[dir_name] # type: list
+
+                        print(333, observer_list)
+
+                        #
+                        #handler_func(InotifyEvent(src_path))
+                    except Exception:
+                        logger.warn('Exception in inotify handler `%s`', format_exc())
+            except Exception:
+                logger.warn('Exception in inotify.read() `%s`', format_exc())
+            finally:
+                #print(111, 'Sleeping')
+                sleep(0.25)
+
+# ################################################################################################################################
+
+    def _run_linux(self, name=None):
+
+        # Under Linux, for each observer, map each of its watched directories
+        # to the actual observer object so that when an event is emitted
+        # we will know, based on the event's full path, which observers to notify.
+
+        self.inotify_path_to_observer_list = {}
+
+        for observer in self.observers: # type: LocalObserver
+            for path in observer.path_list: # type: str
+                observer_list = self.inotify_path_to_observer_list.setdefault(path, []) # type: list
+                observer_list.append(observer)
+
         for observer in self.observers: # type: BaseObserver
             try:
-                if name and observer.name != name:
+
+                if name and name != observer.name:
                     continue
-                observer.start()
+
+                observer.start(self.inotify, self.inotify_flags, self.inotify_lock, self.inotify_wd_to_path)
+
+                '''
+                print()
+                print(111, observer.name, observer.path_list)
+
+                for path in observer.path_list:
+                    result = self.inotify.add_watch(path, self.inotify_flags)
+                    print(111, result)
+
+                print()
+                '''
+
+                #logger.warn('Created observer `%s` for `%s`', config.name, observer.path_list)
+
             except Exception:
                 logger.warn('File observer `%s` could not be started, path:`%s`, e:`%s`',
                     observer.name, observer.path_list, format_exc())
+
+        spawn_greenlet(self._run_linux_inotify_loop)
+
+# ################################################################################################################################
+
+    def _run_non_linux(self, name):
+        raise NotImplementedError()
+
+# ################################################################################################################################
+
+    def _run(self, name=None):
+
+        if is_linux:
+            self._run_linux(name)
+        else:
+            self._run_non_linux(name)
 
 # ################################################################################################################################
 
