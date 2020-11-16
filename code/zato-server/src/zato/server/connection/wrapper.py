@@ -46,6 +46,7 @@ if typing.TYPE_CHECKING:
 class Wrapper(object):
     """ Base class for non-queue based connections wrappers.
     """
+    needs_self_client = False
     wrapper_type = '<undefined-Wrapper>'
     required_secret_attr = None
     required_secret_label = None
@@ -122,7 +123,12 @@ class Wrapper(object):
 # ################################################################################################################################
 
     def delete(self):
-        if self._client:
+        if self.needs_self_client:
+            if not self._client:
+                return
+            else:
+                self._delete()
+        else:
             self._delete()
 
 # ################################################################################################################################

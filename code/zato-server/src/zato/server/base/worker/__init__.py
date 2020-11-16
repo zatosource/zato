@@ -339,9 +339,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Caches
         self.init_caches()
 
-        # File transfer
-        self.init_file_transfer()
-
         # API keys
         self.update_apikeys()
 
@@ -372,6 +369,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # AMQP
         self.init_amqp()
+
+        # Initialise file transfer-based pickup here because it is required when generic connections are being created
+        self.convert_pickup_to_file_transfer()
 
         # Generic connections
         self.init_generic_connections_config()
@@ -871,100 +871,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def _convert_pickup_config_to_file_transfer(self, name, config):
-        # type: (dict) -> Bunch
-
-        # Convert paths to full ones
-        pickup_from_list = config.get('pickup_from') or []
-
-        if not pickup_from_list:
-            return
-
-        pickup_from_list = pickup_from_list if isinstance(pickup_from_list, list) else [pickup_from_list]
-        pickup_from_list = [abspath(path_join(self.server.base_dir, elem)) for elem in pickup_from_list]
-
-        move_processed_to = config.get('move_processed_to')
-        if move_processed_to:
-            move_processed_to = abspath(path_join(self.server.base_dir, move_processed_to))
-
-        # Make sure we have lists on input
-        service_list = config.get('services') or []
-        service_list = service_list if isinstance(service_list, list) else [service_list]
-
-        topic_list = config.get('topic_list') or []
-        topic_list = topic_list if isinstance(topic_list, list) else [topic_list]
-
-        return bunchify({
-          'name': name,
-          'is_active': True,
-          'is_internal': True,
-          'data_encoding': config.get('data_encoding') or 'utf-8',
-          'source_type': FILE_TRANSFER.SOURCE_TYPE.LOCAL.id,
-          'pickup_from_list': pickup_from_list,
-          'is_hot_deploy': config.get('is_hot_deploy'),
-          'service_list': service_list,
-          'topic_list': topic_list,
-          'move_processed_to': move_processed_to,
-          'file_patterns': config.get('patterns') or '*',
-          'parse_with': config.get('parse_with'),
-          'should_read_on_pickup': config.get('read_on_pickup', True),
-          'should_parse_on_pickup': config.get('parse_on_pickup', False),
-          'should_delete_after_pickup': config.get('delete_after_pickup', True),
-          'is_case_sensitive': config.get('is_case_sensitive', True),
-          'is_line_by_line': config.get('is_line_by_line', False),
-          'binary_file_patterns': config.get('binary_file_patterns') or [],
-          'outconn_rest_list': [],
-        })
-
-# ################################################################################################################################
-
-    def init_file_transfer(self):
-
-        # Explicitly create configuration for hot-deployment
-        hot_deploy_name = '{}.{}'.format(pickup_conf_item_prefix, 'hot-deploy')
-        hot_deploy_config = self._convert_pickup_config_to_file_transfer(hot_deploy_name, {
-            'is_hot_deploy': True,
-            'patterns': '*.py',
-            'services': 'zato.hot-deploy.create',
-            'pickup_from': self.server.hot_deploy_config.pickup_dir,
-            'delete_after_pickup': self.server.hot_deploy_config.delete_after_pickup
-        })
-
-        #self.worker_config.channel_file_transfer[hot_deploy_name] = {'config': hot_deploy_config}
-
-        # Create transfer channels based on pickup.conf
-        for key, value in {}.items():#self.server.pickup_config.items(): # type: (str, dict)
-
-            # This is an internal name
-            name = '{}.{}'.format(pickup_conf_item_prefix, key)
-
-            # We need to convert between config formats
-            config = self._convert_pickup_config_to_file_transfer(name, value)
-
-            # Create an observer now
-            if config:
-                self.file_transfer_api.create(config)
-                self.worker_config.channel_file_transfer[name] = {'config': config}
-
-        # Create file transfer channels stored in the ODB
-        for value in self.worker_config.channel_file_transfer.values():
-            config = value['config'] # type: dict
-
-            # For local file notifications - tell the manager to start this channel only
-            # if this is the very first process among potentially many ones for this server ..
-            if config['source_type'] == FILE_TRANSFER.SOURCE_TYPE.LOCAL.id:
-                config['_start_channel'] = True if self.server.is_starting_first else False
-            else:
-                config['_start_channel'] = True
-
-            # .. and create a new file transfer API object now.
-            self.file_transfer_api.create(config)
-
-        # Start all the file transfer channels.
-        spawn_greenlet(self.file_transfer_api.run)
-
-# ################################################################################################################################
-
     def init_pubsub(self, _srv=PUBSUB.ENDPOINT_TYPE.SERVICE.id):
         """ Sets up all pub/sub endpoints, subscriptions and topics. Also, configures pubsub with getters for each endpoint type.
         """
@@ -1077,13 +983,122 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             wrapper.config['password'] = msg['password']
             wrapper.set_auth()
 
+
+# ################################################################################################################################
+
+    def _convert_pickup_config_to_file_transfer(self, name, config):
+        # type: (dict) -> Bunch
+
+        # Convert paths to full ones
+        pickup_from_list = config.get('pickup_from') or []
+
+        if not pickup_from_list:
+            return
+
+        pickup_from_list = pickup_from_list if isinstance(pickup_from_list, list) else [pickup_from_list]
+        pickup_from_list = [abspath(path_join(self.server.base_dir, elem)) for elem in pickup_from_list]
+
+        move_processed_to = config.get('move_processed_to')
+        if move_processed_to:
+            move_processed_to = abspath(path_join(self.server.base_dir, move_processed_to))
+
+        # Make sure we have lists on input
+        service_list = config.get('services') or []
+        service_list = service_list if isinstance(service_list, list) else [service_list]
+
+        topic_list = config.get('topic_list') or []
+        topic_list = topic_list if isinstance(topic_list, list) else [topic_list]
+
+        return bunchify({
+
+          # Tell the manager to start this channel only
+          # if we are very first process among potentially many ones for this server.
+          '_start_channel': True if self.server.is_starting_first else False,
+
+          'type_': COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER,
+          'name': name,
+          'is_active': True,
+          'is_internal': True,
+          'data_encoding': config.get('data_encoding') or 'utf-8',
+          'source_type': FILE_TRANSFER.SOURCE_TYPE.LOCAL.id,
+          'pickup_from_list': pickup_from_list,
+          'is_hot_deploy': config.get('is_hot_deploy'),
+          'service_list': service_list,
+          'topic_list': topic_list,
+          'move_processed_to': move_processed_to,
+          'file_patterns': config.get('patterns') or '*',
+          'parse_with': config.get('parse_with'),
+          'should_read_on_pickup': config.get('read_on_pickup', True),
+          'should_parse_on_pickup': config.get('parse_on_pickup', False),
+          'should_delete_after_pickup': config.get('delete_after_pickup', True),
+          'is_case_sensitive': config.get('is_case_sensitive', True),
+          'is_line_by_line': config.get('is_line_by_line', False),
+          'binary_file_patterns': config.get('binary_file_patterns') or [],
+          'outconn_rest_list': [],
+        })
+
+# ################################################################################################################################
+
+    def convert_pickup_to_file_transfer(self):
+
+        # Explicitly create configuration for hot-deployment
+        hot_deploy_name = '{}.{}'.format(pickup_conf_item_prefix, 'hot-deploy')
+        hot_deploy_config = self._convert_pickup_config_to_file_transfer(hot_deploy_name, {
+            'is_hot_deploy': True,
+            'patterns': '*.py',
+            'services': 'zato.hot-deploy.create',
+            'pickup_from': self.server.hot_deploy_config.pickup_dir,
+            'delete_after_pickup': self.server.hot_deploy_config.delete_after_pickup
+        })
+
+        # Add hot-deployment to local file transfer
+        self.worker_config.generic_connection[hot_deploy_name] = {'config': hot_deploy_config}
+
+        # Create transfer channels based on pickup.conf
+        for key, value in self.server.pickup_config.items(): # type: (str, dict)
+
+            # This is an internal name
+            name = '{}.{}'.format(pickup_conf_item_prefix, key)
+
+            # We need to convert between config formats
+            config = self._convert_pickup_config_to_file_transfer(name, value)
+
+            if not config:
+                continue
+
+            # Add pickup configuration to local file transfer
+            self.worker_config.generic_connection[name] = {'config': config}
+
+            '''
+            # Create an observer now
+            if config:
+                self.file_transfer_api.create(config)
+                self.worker_config.channel_file_transfer[name] = {'config': config}
+
+        # Create file transfer channels stored in the ODB
+        for value in self.worker_config.channel_file_transfer.values():
+            config = value['config'] # type: dict
+
+            # For local file notifications - tell the manager to start this channel only
+            # if this is the very first process among potentially many ones for this server ..
+            if config['source_type'] == FILE_TRANSFER.SOURCE_TYPE.LOCAL.id:
+                config['_start_channel'] = True if self.server.is_starting_first else False
+            else:
+                config['_start_channel'] = True
+
+            # .. and create a new file transfer API object now.
+            self.file_transfer_api.create(config)
+
+        # Start all the file transfer channels.
+        spawn_greenlet(self.file_transfer_api.run)
+        '''
+
 # ################################################################################################################################
 
     def init_generic_connections(self):
 
         # Some connection types are built elsewhere
         to_skip = {
-            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP,
         }
 
@@ -1408,8 +1423,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
     def get_channel_file_transfer_config(self, name):
         # type: (str) -> dict
-        config = self.worker_config.channel_file_transfer[name] # dict
-        return config['config']
+        return self.generic_conn_api[COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER][name] # dict
 
 # ################################################################################################################################
 

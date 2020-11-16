@@ -29,33 +29,12 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def get_conn_type_to_config(self):
-        """ Returns a map of connection types to objects that actually contain their configuration.
-        """
-        return {
-            GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER: self.worker_config.channel_file_transfer,
-        }
-
-# ################################################################################################################################
-
-    def get_conn_type_to_conn_api(self):
-        """ Returns a map of connection types to objects that actually manage connections.
-        """
-        return {
-            GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER: self.file_transfer_api
-        }
-
-# ################################################################################################################################
-
-    def _find_conn_info(self, item_id, item_conn_type):
-
-        type_config = self.get_conn_type_to_config()
-        config_container = type_config.get(item_conn_type) or self.generic_conn_api # type: dict
+    def _find_conn_info(self, item_id):
 
         found_conn_dict = None
         found_name = None
 
-        for conn_type, value in config_container.items():
+        for conn_type, value in self.generic_conn_api.items():
             for conn_name, conn_dict in value.items():
                 if conn_dict['id'] == item_id:
                     return conn_dict, value
@@ -66,40 +45,18 @@ class Generic(WorkerImpl):
 
     def _delete_generic_connection(self, msg):
 
-        conn_dict, conn_value = self._find_conn_info(msg.id, msg.type_)
+        conn_dict, conn_value = self._find_conn_info(msg.id)
         if not conn_dict:
             raise Exception('Could not find configuration matching input message `{}`'.format(msg))
         else:
 
-            type_conn_api = self.get_conn_type_to_conn_api()
+            # Delete the connection object ..
+            conn = conn_dict.conn
+            conn.delete()
 
-            # This is a connection API object other than what is in self.generic_conn_api
-            non_generic_type_conn_api = type_conn_api.get(msg.type_)
-
-            if non_generic_type_conn_api:
-
-                # Delete the connection ..
-                non_generic_type_conn_api.delete(msg)
-
-                # .. but save its name for later use.
-                conn_name = conn_dict['name']
-
-                # .. keep note of where the connection was defined.
-                delete_from_config = self.get_conn_type_to_config()
-                delete_from = delete_from_config[msg.type_]
-            else:
-
-                # Delete the connection ..
-                conn_api.delete()
-
-                # .. but save its name for later use (note that here it in the nested 'config' dict).
-                conn_name = conn_dict['name']
-
-                # .. keep note of where the connection was defined.
-                delete_from = conn_value
-
-            # Delete the connection from the configuration object
-            del delete_from[conn_name]
+            # .. and delete the connection from the configuration object.
+            conn_name = conn_dict['name']
+            del conn_value[conn_name]
 
 # ################################################################################################################################
 
@@ -120,7 +77,7 @@ class Generic(WorkerImpl):
                     item_dict[key] = msg[key]
 
         item_dict.queue_build_cap = self.server.fs_server_config.misc.queue_build_cap
-        item_dict.auth_url = msg.address
+        item_dict.auth_url = msg.get('address')
 
         # Normalize the contents of the configuration message
         self.generic_normalize_config(item_dict)
@@ -139,7 +96,7 @@ class Generic(WorkerImpl):
         # Find and store connection password/secret for later use
         # if we do not have it already and we will if we are called from ChangePassword.
         if not secret:
-            conn_dict, _ = self._find_conn_info(msg.id, msg.type_)
+            conn_dict, _ = self._find_conn_info(msg.id)
             secret = conn_dict['secret']
 
         # Delete the connection
@@ -151,8 +108,8 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def ping_generic_connection(self, conn_id, conn_type):
-        conn_dict, _ = self._find_conn_info(conn_id, conn_type)
+    def ping_generic_connection(self, conn_id):
+        conn_dict, _ = self._find_conn_info(conn_id)
 
         self.logger.info('About to ping generic connection `%s` (%s)', conn_dict.name, conn_dict.type_)
         conn_dict.conn.ping()
@@ -160,8 +117,8 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def _change_password_generic_connection(self, msg, conn_type):
-        conn_dict, _ = self._find_conn_info(msg['id'], conn_type)
+    def _change_password_generic_connection(self, msg):
+        conn_dict, _ = self._find_conn_info(msg['id'])
 
         # Create a new message without live Python objects
         edit_msg = Bunch()
@@ -175,8 +132,8 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def reconnect_generic(self, conn_id, conn_type):
-        found_conn_dict, found_name = self._find_conn_info(conn_id, conn_type)
+    def reconnect_generic(self, conn_id):
+        found_conn_dict, found_name = self._find_conn_info(conn_id)
 
         edit_msg = Bunch()
         edit_msg['action'] = GENERIC_BROKER_MSG.CONNECTION_EDIT.value
