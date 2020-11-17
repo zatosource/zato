@@ -201,20 +201,32 @@ class FileTransferAPI(object):
     def delete(self, config):
 
         # Observer object to delete ..
-        to_delete = None
+        observer_to_delete = None
+
+        # .. paths under which the observer may be listed (used only under Linux with inotify).
+        observer_path_list = []
 
         # .. stop its main loop ..
         for observer in self.observers: # type: LocalObserver
             if observer.name == config.name:
                 observer.stop()
-                to_delete = observer
+                observer_to_delete = observer
+                observer_path_list[:] = observer.path_list
                 break
         else:
             raise ValueError('Could not find observer matching name `%s` (%s)', config.name, config.type_)
 
-        # .. and delete the object now.
-        if to_delete:
-            self.observers.remove(observer)
+        # .. if the object was found ..
+        if observer_to_delete:
+
+            # .. delete it from the main list..
+            self.observers.remove(observer_to_delete)
+
+            # .. under Linux, delete it from from any references to it among paths being observed via inotify.
+            if is_linux:
+                for path in observer_path_list:
+                    observer_list = self.inotify_path_to_observer_list.get(path) # type: list
+                    observer_list.remove(observer_to_delete)
 
 # ################################################################################################################################
 
