@@ -29,7 +29,8 @@ import globre
 # Zato
 from zato.common.util.api import hot_deploy, new_cid, spawn_greenlet
 from zato.common.util.platform_ import is_linux
-from .observer.local_ import LocalObserver, InotifyEvent
+from .observer.base import BackgroundPathInspector
+from .observer.local_ import LocalObserver, PathCreatedEvent
 
 # ################################################################################################################################
 
@@ -66,12 +67,35 @@ class FileTransferEventHandler:
         self.config = config
 
     def on_created(self, transfer_event):
-        # type: (FileTransferEvent) -> None
+        # type: (PathCreatedEvent) -> None
 
         try:
 
+            # Ignore the event if it points to the directory itself,
+            # as inotify will send CLOSE_WRITE when it is not a creation of a file
+            # but a fact that a directory has been deleted that the event is about.
+            # Note that we issue a log entry only if the path is not one of what
+            # we observe, i.e. when one of our own directories is deleted, we do not log it here.
+
+            # The path must have existed since we are being called
+            # and we need to check why it does not exist anymore ..
+            if not os.path.exists(transfer_event.src_path):
+
+                # .. if it is one of the paths that we observe, it means that it has been just deleted,
+                # so we need to run a background inspector which will wait until it is created once again ..
+                if transfer_event.src_path in self.config.pickup_from_list:
+                    self.manager.wait_for_deleted_path(transfer_event.src_path)
+
+                else:
+                    logger.info('Ignoring local file event; path not found `%s` (%r)', transfer_event.src_path, self.config.name)
+
+                # .. in either case, there is nothing else we can do here.
+                return
+
+            # Get file name to check if we should handle it ..
             file_name = os.path.basename(transfer_event.src_path) # type: str
 
+            # .. return if we should not.
             if not self.manager.should_handle(self.config.name, file_name):
                 return
 
@@ -389,7 +413,7 @@ class FileTransferAPI(object):
 
                         # .. and notify each one.
                         for observer in observer_list: # type: LocalObserver
-                            observer.event_handler.on_created(InotifyEvent(src_path))
+                            observer.event_handler.on_created(PathCreatedEvent(src_path))
 
                     except Exception:
                         logger.warn('Exception in inotify handler `%s`', format_exc())
@@ -412,6 +436,10 @@ class FileTransferAPI(object):
                 observer_list = self.inotify_path_to_observer_list.setdefault(path, []) # type: list
                 observer_list.append(observer)
 
+        # Maps missing paths to all the observers interested in it.
+        missing_path_to_inspector = {}
+
+        # Start the observer objects, creating inotify watch descriptors (wd) in background ..
         for observer in self.observers: # type: BaseObserver
             try:
 
@@ -419,17 +447,69 @@ class FileTransferAPI(object):
                 if name and name != observer.name:
                     continue
 
-                # Start the observer object ..
-                observer.start(self.inotify, self.inotify_flags, self.inotify_lock, self.inotify_wd_to_path)
+                # Quickly check if any of the observer's path is missing and if it is, do not start it now.
+                # Instead, we will run a background task that will wait until the path becomes available and when it is,
+                # it will add start the observer itself.
+                for path in observer.path_list:
+                    if not observer.is_path_valid(path):
+                        path_observer_list = missing_path_to_inspector.setdefault(path, []) # type: list
+                        path_observer_list.append(BackgroundPathInspector(
+                            path, observer, self.inotify, self.inotify_flags, self.inotify_lock, self.inotify_wd_to_path
+                        ))
 
-                # .. and let users know about it.
-                logger.info('Starting local file observer `%s` for `%s` (inotify)', observer.name, observer.path_list)
+                # Start the observer object.
+                observer.start(self.inotify, self.inotify_flags, self.inotify_lock, self.inotify_wd_to_path)
 
             except Exception:
                 logger.warn('File observer `%s` could not be started, path:`%s`, e:`%s`',
                     observer.name, observer.path_list, format_exc())
 
+        # If there are any paths missing for any observer ..
+        if missing_path_to_inspector:
+
+            # .. wait for each such path in background ..
+            self.run_inspectors(missing_path_to_inspector)
+
+        # .. and run the main loop for each watch descriptor created for paths that do exist.
         spawn_greenlet(self._run_linux_inotify_loop)
+
+# ################################################################################################################################
+
+    def get_inspector_list_by_path(self, path):
+        # type: (str) -> dict
+
+        # Maps the input path to inspectors.
+        path_to_inspector = {}
+
+        # For each observer defined ..
+        for observer in self.observers: # type: BaseObserver
+
+            # .. check if our input path is among the paths defined for that observer ..
+            if path in observer.path_list:
+
+                # .. it was, so we append an inspector for the path, pointing to current observer.
+                path_observer_list = path_to_inspector.setdefault(path, []) # type: list
+                path_observer_list.append(BackgroundPathInspector(
+                    path, observer, self.inotify, self.inotify_flags, self.inotify_lock, self.inotify_wd_to_path
+                ))
+
+        return path_to_inspector
+
+# ################################################################################################################################
+
+    def run_inspectors(self, path_to_inspector_list):
+        # type: (dict) -> None
+
+        # Run background inspectors waiting for each path from the list
+        for path, inspector_list in path_to_inspector_list.items(): # type: (str, list)
+            for inspector in inspector_list: # type: BackgroundPathInspector
+                inspector.start()
+
+# ################################################################################################################################
+
+    def wait_for_deleted_path(self, path):
+        path_to_inspector = self.get_inspector_list_by_path(path)
+        self.run_inspectors(path_to_inspector)
 
 # ################################################################################################################################
 
