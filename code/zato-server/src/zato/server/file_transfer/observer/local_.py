@@ -22,7 +22,6 @@ from logging import getLogger
 
 # gevent
 from gevent import sleep
-from gevent.lock import RLock
 
 # Watchdog
 from watchdog.events import FileCreatedEvent, FileModifiedEvent
@@ -61,10 +60,6 @@ def _observe_path_linux(self, path, inotify, inotify_flags, lock_func, wd_to_pat
 
         # Create a new watch descriptor
         wd = inotify.add_watch(path, inotify_flags)
-
-        print()
-        print(111, path, wd)
-        print()
 
         # .. and map the input path to wd for use in higher-level layers.
         with lock_func:
