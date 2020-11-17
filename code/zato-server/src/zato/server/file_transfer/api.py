@@ -196,6 +196,8 @@ class FileTransferAPI(object):
 
         self.observers.append(observer)
 
+        logger.warn('FFF %s %s', observer.name, config)
+
 # ################################################################################################################################
 
     def delete(self, config):
@@ -364,26 +366,26 @@ class FileTransferAPI(object):
     def _run_linux_inotify_loop(self):
 
         while self.keep_running:
-
             try:
                 for event in self.inotify.read(0):
                     try:
 
+                        # Build a full path to the file we are processing
                         dir_name = self.inotify_wd_to_path[event.wd]
                         src_path = os.path.normpath(os.path.join(dir_name, event.name))
 
+                        # Get a list of all observer objects interested in that file ..
                         observer_list = self.inotify_path_to_observer_list[dir_name] # type: list
 
-                        print(333, observer_list)
+                        # .. and notify each one.
+                        for observer in observer_list: # type: LocalObserver
+                            observer.event_handler.on_created(InotifyEvent(src_path))
 
-                        #
-                        #handler_func(InotifyEvent(src_path))
                     except Exception:
                         logger.warn('Exception in inotify handler `%s`', format_exc())
             except Exception:
                 logger.warn('Exception in inotify.read() `%s`', format_exc())
             finally:
-                #print(111, 'Sleeping')
                 sleep(0.25)
 
 # ################################################################################################################################
@@ -393,7 +395,6 @@ class FileTransferAPI(object):
         # Under Linux, for each observer, map each of its watched directories
         # to the actual observer object so that when an event is emitted
         # we will know, based on the event's full path, which observers to notify.
-
         self.inotify_path_to_observer_list = {}
 
         for observer in self.observers: # type: LocalObserver
@@ -408,19 +409,6 @@ class FileTransferAPI(object):
                     continue
 
                 observer.start(self.inotify, self.inotify_flags, self.inotify_lock, self.inotify_wd_to_path)
-
-                '''
-                print()
-                print(111, observer.name, observer.path_list)
-
-                for path in observer.path_list:
-                    result = self.inotify.add_watch(path, self.inotify_flags)
-                    print(111, result)
-
-                print()
-                '''
-
-                #logger.warn('Created observer `%s` for `%s`', config.name, observer.path_list)
 
             except Exception:
                 logger.warn('File observer `%s` could not be started, path:`%s`, e:`%s`',
