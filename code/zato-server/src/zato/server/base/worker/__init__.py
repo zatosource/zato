@@ -56,7 +56,7 @@ from zato.common.json_internal import loads
 from zato.common.match import Matcher
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.util.api import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
-     import_module_from_path, new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, spawn_greenlet, \
+     import_module_from_path, new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, \
      start_connectors, store_tls, update_apikey_username_to_channel, update_bind_port, visit_py_source
 from zato.server.base.parallel.subprocess_.api import StartConfig as SubprocessStartConfig
 from zato.server.base.worker.common import WorkerImpl
@@ -2003,8 +2003,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_broker_msg_HOT_DEPLOY_CREATE_STATIC(self, msg, *args):
-        return self.on_broker_msg_hot_deploy(msg, 'zato.pickup.on-update-static', {'data': msg.data, 'file_name': msg.file_name},
-            'CREATE_STATIC', *args)
+        return self.on_broker_msg_hot_deploy(msg, 'zato.pickup.on-update-static',
+            {'data': msg.data, 'file_name': msg.file_name}, 'CREATE_STATIC', *args)
 
 # ################################################################################################################################
 

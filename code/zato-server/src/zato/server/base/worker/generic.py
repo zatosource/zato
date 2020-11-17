@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from bunch import Bunch
 
 # Zato
-from zato.common.api import GENERIC, LDAP
+from zato.common.api import LDAP
 from zato.common.broker_message import GENERIC as GENERIC_BROKER_MSG
 from zato.common.util.api import as_bool, parse_simple_type
 from zato.server.base.worker.common import WorkerImpl
