@@ -17,7 +17,6 @@ patch_all()
 
 # stdlib
 import os
-from datetime import datetime
 from logging import getLogger
 
 # gevent
@@ -40,7 +39,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class InotifyEvent:
+class PathCreatedEvent:
     __slots__ = 'src_path'
 
     def __init__(self, src_path):
@@ -132,64 +131,6 @@ class LocalObserver(BaseObserver):
 
 # ################################################################################################################################
 
-    def ensure_path_exists(self, path):
-        # type: (str) -> None
-
-        # Local aliases
-        utcnow = datetime.utcnow
-
-        # How many times we have tried to find the correct path and since when
-        idx = 0
-        start = utcnow()
-        log_every = 10
-
-        # A flag indicating if path currently exists
-        is_ok = False
-
-        # This becomes True only if we learn that there is something wrong with path
-        error_found = False
-
-        # Wait until the directory exists (possibly it does already but we do not know it yet)
-        while not is_ok:
-
-            idx += 1
-
-            # Honour the main loop's status
-            if not self.keep_running:
-                logger.info('Stopped `%s` path lookup function for local file transfer observer `%s` (not found)',
-                    path, self.name)
-                return
-
-            if os.path.exists(path):
-
-                if os.path.isdir(path):
-                    is_ok = True
-                else:
-                    # Indicate that there was an erorr with path
-                    error_found = True
-
-                    if idx == 1 or (idx % log_every == 0):
-                        logger.info('Local file transfer path `%s` is not a directory (%s) (c:% d:%s)',
-                            path, self.name, idx, utcnow() - start)
-            else:
-                # Indicate that there was an erorr with path
-                error_found = True
-
-                if idx == 1 or (idx % log_every == 0):
-                    logger.info('Local file transfer path `%r` does not exist (%s) (c:%s d:%s)',
-                        path, self.name, idx, utcnow() - start)
-
-            if is_ok:
-
-                # Log only if had an error previously, otherwise it would emit too much to logs
-                if error_found:
-                    logger.info('Local file transfer path `%s` found successfully (%s) (c:% d:%s)',
-                        path, self.name, idx, utcnow() - start)
-            else:
-                sleep(6)
-
-# ################################################################################################################################
-
     def stop(self):
         logger.info('Stopping local file transfer observer `%s`', self.name)
         self.keep_running = False
@@ -198,7 +139,20 @@ class LocalObserver(BaseObserver):
 
     def _start(self, *args, **kwargs):
         for path in self.path_list: # type: str
-            spawn_greenlet(self._observe_func, path, *args, **kwargs)
+
+            # Start only for paths that are valid - all invalid ones
+            # are handled by a background path inspector.
+            if self.is_path_valid(path):
+                logger.info('Starting local file observer `%s` for `%s` (inotify)', path, self.name)
+                spawn_greenlet(self._observe_func, path, *args, **kwargs)
+            else:
+                logger.info('Skipping invalid path `%s` for `%s` (inotify)', path, self.name)
+
+# ################################################################################################################################
+
+    def is_path_valid(self, path):
+        # type: (str) -> bool
+        return os.path.exists(path) and os.path.isdir(path)
 
 # ################################################################################################################################
 # ################################################################################################################################
