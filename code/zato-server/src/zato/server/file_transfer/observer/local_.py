@@ -69,41 +69,61 @@ def _observe_path_linux(self, path, inotify, inotify_flags, lock_func, wd_to_pat
 
 # ################################################################################################################################
 
-def _observe_path_non_linux(self, path):
+def _observe_path_non_linux(self, path, *args, **kwargs):
     """ Local observer's main loop for systems other than Linux, uses snapshots.
     """
     # type: (LocalObserver, str) -> None
 
-    # The local directory may not exist yet at the time when we are starting
-    # and we possibly need to wait until it does.
-    self.ensure_path_exists(path)
+    try:
 
-    # Local aliases to avoid namespace lookups in self
-    timeout = self.default_timeout
-    handler_func = self.event_handler.on_created
-    is_recursive = self.is_recursive
+        # Local aliases to avoid namespace lookups in self
+        timeout = self.default_timeout
+        handler_func = self.event_handler.on_created
+        is_recursive = self.is_recursive
 
-    # Take an initial snapshot
-    snapshot = DirectorySnapshot(path, recursive=is_recursive)
-
-    while self.keep_running:
-
-        # The latest snapshot ..
-        new_snapshot = DirectorySnapshot(path, recursive=is_recursive)
-
-        # .. difference between the old and new will return, in particular, new or modified files ..
-        diff = DirectorySnapshotDiff(snapshot, new_snapshot)
-
-        for path_created in diff.files_created:
-            handler_func(FileCreatedEvent(path_created))
-
-        for path_modified in diff.files_modified:
-            handler_func(FileModifiedEvent(path_modified))
-
-        # .. a new snapshot which will be treated as the old one in the next iteration ..
+        # Take an initial snapshot
         snapshot = DirectorySnapshot(path, recursive=is_recursive)
 
-        sleep(timeout)
+        while self.keep_running:
+
+            try:
+
+                # The latest snapshot ..
+                new_snapshot = DirectorySnapshot(path, recursive=is_recursive)
+
+                # .. difference between the old and new will return, in particular, new or modified files ..
+                diff = DirectorySnapshotDiff(snapshot, new_snapshot)
+
+                for path_created in diff.files_created:
+                    handler_func(FileCreatedEvent(path_created))
+
+                for path_modified in diff.files_modified:
+                    handler_func(FileModifiedEvent(path_modified))
+
+                # .. a new snapshot which will be treated as the old one in the next iteration ..
+                snapshot = DirectorySnapshot(path, recursive=is_recursive)
+
+            except FileNotFoundError:
+
+                # Log the error ..
+                logger.warn('File not found caught in local file observer main loop `%s` (%s t:%s) e:`%s',
+                    path, format_exc(), self.name, self.observer_type)
+
+                # .. start a background inspector which will wait for the path to become available ..
+                self.manager.wait_for_deleted_path(path)
+
+                # .. and end the main loop.
+                return
+
+            except Exception:
+                logger.warn('Exception in local file observer main loop `%s` e:`%s (%s t:%s)',
+                    path, format_exc(), self.name, self.observer_type)
+            finally:
+                sleep(timeout)
+
+    except Exception:
+        logger.warn('Exception in local file observer `%s` e:`%s (%s t:%s)', path, format_exc(), self.name, self.observer_type)
+
 
     # We get here only when self.keep_running is False = we are to stop
     logger.info('Stopped local file transfer observer `%s` for `%s` (snapshot)', self.name, self.path)
@@ -119,8 +139,10 @@ class LocalObserver(BaseObserver):
         super().__init__(*args, **kwargs)
 
     if is_linux:
+        observer_type = 'inotify'
         _observe_func = _observe_path_linux
     else:
+        observer_type = 'snapshot'
         _observe_func = _observe_path_non_linux
 
     def schedule(self, event_handler, path_list, recursive):
@@ -143,10 +165,10 @@ class LocalObserver(BaseObserver):
             # Start only for paths that are valid - all invalid ones
             # are handled by a background path inspector.
             if self.is_path_valid(path):
-                logger.info('Starting local file observer `%s` for `%s` (inotify)', path, self.name)
+                logger.info('Starting local file observer `%s` for `%s` (%s)', path, self.name, self.observer_type)
                 spawn_greenlet(self._observe_func, path, *args, **kwargs)
             else:
-                logger.info('Skipping invalid path `%s` for `%s` (inotify)', path, self.name)
+                logger.info('Skipping invalid path `%s` for `%s` (%s)', path, self.name, self.observer_type)
 
 # ################################################################################################################################
 

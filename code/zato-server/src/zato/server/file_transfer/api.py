@@ -187,6 +187,12 @@ class FileTransferAPI(object):
             self.inotify_wd_to_path = {}
             self.inotify_path_to_observer_list = {}
 
+            # Inotify is used only under Linux
+            self.observer_start_args = self.inotify, self.inotify_flags, self.inotify_lock, self.inotify_wd_to_path
+
+        else:
+            self.observer_start_args = ()
+
         # Maps channel name to a list of globre patterns for the channel's directories
         self.pattern_matcher_dict = {}
 
@@ -214,7 +220,7 @@ class FileTransferAPI(object):
             pickup_from_list = str(config.pickup_from_list) # type: str
             pickup_from_list = [elem.strip() for elem in pickup_from_list.splitlines()]
 
-        observer = LocalObserver(config.name, config.is_active, 0.25)
+        observer = LocalObserver(self, config.name, config.is_active, 0.25)
         event_handler = FileTransferEventHandler(self, config.name, config)
         observer.schedule(event_handler, pickup_from_list, recursive=False)
 
@@ -424,7 +430,7 @@ class FileTransferAPI(object):
 
 # ################################################################################################################################
 
-    def _run_linux(self, name=None):
+    def _run(self, name=None):
 
         # Under Linux, for each observer, map each of its watched directories
         # to the actual observer object so that when an event is emitted
@@ -453,12 +459,10 @@ class FileTransferAPI(object):
                 for path in observer.path_list:
                     if not observer.is_path_valid(path):
                         path_observer_list = missing_path_to_inspector.setdefault(path, []) # type: list
-                        path_observer_list.append(BackgroundPathInspector(
-                            path, observer, self.inotify, self.inotify_flags, self.inotify_lock, self.inotify_wd_to_path
-                        ))
+                        path_observer_list.append(BackgroundPathInspector(path, observer, *self.observer_start_args))
 
                 # Start the observer object.
-                observer.start(self.inotify, self.inotify_flags, self.inotify_lock, self.inotify_wd_to_path)
+                observer.start(*self.observer_start_args)
 
             except Exception:
                 logger.warn('File observer `%s` could not be started, path:`%s`, e:`%s`',
@@ -467,11 +471,14 @@ class FileTransferAPI(object):
         # If there are any paths missing for any observer ..
         if missing_path_to_inspector:
 
-            # .. wait for each such path in background ..
+            # .. wait for each such path in background.
             self.run_inspectors(missing_path_to_inspector)
 
-        # .. and run the main loop for each watch descriptor created for paths that do exist.
-        spawn_greenlet(self._run_linux_inotify_loop)
+        # Under Linux, run the inotify main loop for each watch descriptor created for paths that do exist.
+        # Note that if we are not on Linux, each observer.start call above already ran a new greenlet with an observer
+        # for a particular directory.
+        if is_linux:
+            spawn_greenlet(self._run_linux_inotify_loop)
 
 # ################################################################################################################################
 
@@ -489,9 +496,7 @@ class FileTransferAPI(object):
 
                 # .. it was, so we append an inspector for the path, pointing to current observer.
                 path_observer_list = path_to_inspector.setdefault(path, []) # type: list
-                path_observer_list.append(BackgroundPathInspector(
-                    path, observer, self.inotify, self.inotify_flags, self.inotify_lock, self.inotify_wd_to_path
-                ))
+                path_observer_list.append(BackgroundPathInspector(path, observer, *self.observer_start_args))
 
         return path_to_inspector
 
@@ -510,20 +515,6 @@ class FileTransferAPI(object):
     def wait_for_deleted_path(self, path):
         path_to_inspector = self.get_inspector_list_by_path(path)
         self.run_inspectors(path_to_inspector)
-
-# ################################################################################################################################
-
-    def _run_non_linux(self, name):
-        raise NotImplementedError()
-
-# ################################################################################################################################
-
-    def _run(self, name=None):
-
-        if is_linux:
-            self._run_linux(name)
-        else:
-            self._run_non_linux(name)
 
 # ################################################################################################################################
 

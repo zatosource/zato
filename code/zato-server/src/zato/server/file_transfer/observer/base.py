@@ -18,6 +18,13 @@ from gevent import sleep
 from zato.common.util.api import spawn_greenlet
 
 # ################################################################################################################################
+
+if 0:
+    from zato.server.file_transfer.api import FileTransferAPI
+
+    FileTransferAPI = FileTransferAPI
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
@@ -26,8 +33,11 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 class BaseObserver:
-    def __init__(self, name, is_active, default_timeout):
-        # type: (str, bool, float) -> None
+    observer_type = '<observer-type-not-set>'
+
+    def __init__(self, manager, name, is_active, default_timeout):
+        # type: (FileTransferAPI, str, bool, float) -> None
+        self.manager = manager
         self.name = name
         self.is_active = is_active
         self.default_timeout = default_timeout
@@ -65,7 +75,7 @@ class BaseObserver:
         # How many times we have tried to find the correct path and since when
         idx = 0
         start = utcnow()
-        log_every = 10
+        log_every = 2
 
         # A flag indicating if path currently exists
         is_ok = False
@@ -80,8 +90,8 @@ class BaseObserver:
 
             # Honour the main loop's status
             if not self.keep_running:
-                logger.info('Stopped `%s` path lookup function for local file transfer observer `%s` (not found)',
-                    path, self.name)
+                logger.info('Stopped `%s` path lookup function for local file transfer observer `%s` (not found) (%s)',
+                    path, self.name, observer.observer_type)
                 return
 
             if os.path.exists(path):
@@ -93,34 +103,34 @@ class BaseObserver:
                     error_found = True
 
                     if idx == 1 or (idx % log_every == 0):
-                        logger.warn('Local file transfer path `%s` is not a directory (%s) (c:% d:%s)',
-                            path, self.name, idx, utcnow() - start)
+                        logger.warn('Local file transfer path `%s` is not a directory (%s) (c:%s d:%s t:%s)',
+                            path, self.name, idx, utcnow() - start, observer.observer_type)
             else:
                 # Indicate that there was an erorr with path
                 error_found = True
 
                 if idx == 1 or (idx % log_every == 0):
-                    logger.info('Local file transfer path `%r` does not exist (%s) (c:%s d:%s)',
-                        path, self.name, idx, utcnow() - start)
+                    logger.warn('Local file transfer path `%r` does not exist (%s) (c:%s d:%s t:%s)',
+                        path, self.name, idx, utcnow() - start, observer.observer_type)
 
             if is_ok:
 
                 # Log only if had an error previously, otherwise it would emit too much to logs ..
                 if error_found:
-                    logger.info('Local file transfer path `%s` found successfully (%s) (c:% d:%s)',
-                        path, self.name, idx, utcnow() - start)
+                    logger.info('Local file transfer path `%s` found successfully (%s) (c:%s d:%s t:%s)',
+                        path, self.name, idx, utcnow() - start, observer.observer_type)
 
                 # .. and start the observer now.
                 observer.start(inotify, inotify_flags, inotify_lock, inotify_wd_to_path)
 
             else:
-                sleep(6)
+                sleep(5)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class BackgroundPathInspector:
-    def __init__(self, path, observer, inotify, inotify_flags, inotify_lock, inotify_wd_to_path):
+    def __init__(self, path, observer, inotify=None, inotify_flags=None, inotify_lock=None, inotify_wd_to_path=None):
         # type: (str, BaseObserver, object, object, object, dict) -> None
         self.path = path
         self.observer = observer
