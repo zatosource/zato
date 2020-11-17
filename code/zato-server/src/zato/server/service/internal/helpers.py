@@ -47,10 +47,17 @@ class InputLogger(Service):
 
 # ################################################################################################################################
 
+class PubInputLogger(InputLogger):
+    """ Same as InputLogger but has a publicly available name
+    """
+    name = 'pub.helpers.input-logger'
+
+# ################################################################################################################################
+
 class RawRequestLogger(Service):
     """ Writes out self.request.raw_request to server logs.
     """
-    name = 'helpers.raw-request-logger'
+    name = 'pub.helpers.raw-request-logger'
 
     def handle(self):
         self.logger.info('Received request: `%s`', self.request.raw_request)
@@ -60,7 +67,7 @@ class RawRequestLogger(Service):
 class IBMMQLogger(Service):
     """ Writes out self.request.raw_request to server logs.
     """
-    name = 'helpers.ibm-mq-logger'
+    name = 'pub.helpers.ibm-mq-logger'
 
     def handle(self):
         template = """

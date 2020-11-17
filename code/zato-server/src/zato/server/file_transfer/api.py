@@ -196,8 +196,6 @@ class FileTransferAPI(object):
 
         self.observers.append(observer)
 
-        logger.warn('FFF %s %s', observer.name, config)
-
 # ################################################################################################################################
 
     def delete(self, config):
@@ -405,10 +403,15 @@ class FileTransferAPI(object):
         for observer in self.observers: # type: BaseObserver
             try:
 
+                # Filter out unneeded names
                 if name and name != observer.name:
                     continue
 
+                # Start the observer object ..
                 observer.start(self.inotify, self.inotify_flags, self.inotify_lock, self.inotify_wd_to_path)
+
+                # .. and let users know about it.
+                logger.info('Starting local file observer `%s` for `%s` (inotify)', observer.name, observer.path_list)
 
             except Exception:
                 logger.warn('File observer `%s` could not be started, path:`%s`, e:`%s`',
