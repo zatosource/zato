@@ -68,6 +68,13 @@ _wsgi_drop_keys = ('ws4py.socket', 'wsgi.errors', 'wsgi.input')
 
 # ################################################################################################################################
 
+class close_code:
+    runtime_invoke_client = 3701
+    runtime_background_ping = 3702
+    unhandled_error = 3703
+
+# ################################################################################################################################
+
 VAULT_TOKEN_HEADER=VAULT.HEADERS.TOKEN_RESPONSE
 
 # ################################################################################################################################
@@ -643,7 +650,7 @@ class WebSocket(_WebSocket):
                         response = self.invoke_client(new_cid(), None, use_send=False)
                     except RuntimeError:
                         logger.warn('Closing connection due to `%s`', format_exc())
-                        self.on_socket_terminated()
+                        self.on_socket_terminated(close_code.runtime_background_ping, 'Background ping runtime error')
 
                     with self.update_lock:
                         if response:
@@ -1046,7 +1053,7 @@ class WebSocket(_WebSocket):
                 msg = 'Cannot send message (socket terminated #2), disconnecting client, cid:`%s`, msg:`%s` conn:`%s`'
                 logger.info(msg, cid, serialized, self.peer_conn_info_pretty)
                 logger_zato.info(msg, cid, serialized, self.peer_conn_info_pretty)
-                self.disconnect_client()
+                self.disconnect_client(cid, close_code.runtime_invoke_client, 'Client invocation runtime error')
                 raise Exception('WSX client disconnected cid:`{}, peer:`{}`'.format(cid, self.peer_conn_info_pretty))
             else:
                 raise
@@ -1072,12 +1079,12 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def disconnect_client(self, _ignored_cid=None):
+    def disconnect_client(self, cid=None, code=None, reason=None):
         """ Disconnects the remote client, cleaning up internal resources along the way.
         """
         self._disconnect_requested = True
-        self._close_connection('Disconnecting client from')
-        self.close()
+        self._close_connection('cid:{}; c:{}; r:{}; Disconnecting client from')
+        self.close(code, reason)
 
 # ################################################################################################################################
 
@@ -1089,11 +1096,11 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def closed(self, _ignored_code=None, _ignored_reason=None):
+    def closed(self, code=None, reason=None):
 
         # Our self.disconnect_client must have cleaned up everything already
         if not self._disconnect_requested:
-            self._close_connection('Closing connection from')
+            self._close_connection('c:{}; r:{}; Closing connection from'.format(code, reason))
 
     on_socket_terminated = closed
 
@@ -1121,7 +1128,7 @@ class WebSocket(_WebSocket):
         logger.info(_msg, peer_info, exc)
         logger_zato.info(_msg, peer_info, exc)
 
-        self.disconnect_client()
+        self.disconnect_client('<unhandled-error>', close_code.runtime_background_ping, 'Unhandled error caught')
 
     def close(self, code=1000, reason='', _msg='Error while closing connection from `%s`, e:`%s`'):
         """ Re-implemented from the base class to be able to catch exceptions in self._write when closing connections.
