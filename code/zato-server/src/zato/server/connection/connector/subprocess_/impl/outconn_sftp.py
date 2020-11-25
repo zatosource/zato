@@ -227,7 +227,7 @@ class SFTPConnection(object):
             out.stderr = out.stderr.decode('utf8')
 
         if out.stdout is not None:
-            out.stdout = out.stdout.decode('utf8'
+            out.stdout = out.stdout.decode('utf8')
 
 # ################################################################################################################################
 
