@@ -450,6 +450,8 @@ class Index(_BaseView):
             else:
                 logger.info('can_invoke_admin_service returned False, not invoking an admin service:[%s]', self.service_name)
 
+            template_name = self.get_template_name() or self.template
+
             return_data['req'] = self.req
             return_data['items'] = self.items
             return_data['item'] = self.item
@@ -460,6 +462,7 @@ class Index(_BaseView):
             return_data['search_form'] = req.zato.search_form
             return_data['meta'] = response.meta if response else {}
             return_data['paginate'] = getattr(self, 'paginate', False)
+            return_data['zato_template_name'] = template_name
 
             view_specific = self.handle()
             if view_specific:
@@ -469,7 +472,7 @@ class Index(_BaseView):
 
             logger.info('Index data for frontend `%s`', return_data)
 
-            return TemplateResponse(req, self.get_template_name() or self.template, return_data)
+            return TemplateResponse(req, template_name, return_data)
 
         except Exception:
             return HttpResponseServerError(format_exc())
