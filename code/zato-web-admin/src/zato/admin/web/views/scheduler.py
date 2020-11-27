@@ -408,6 +408,8 @@ def index(req):
                 logger.error(msg)
                 return HttpResponseServerError(msg)
 
+        template_name = 'zato/scheduler.html'
+
         return_data = {'zato_clusters':req.zato.clusters,
             'cluster_id':req.zato.cluster_id,
             'search_form':req.zato.search_form,
@@ -423,11 +425,12 @@ def index(req):
             'paginate':True,
             'meta': meta,
             'req': req,
+            'zato_template_name': template_name,
             }
 
         return_data.update(get_js_dt_format(req.zato.user_profile))
 
-        return TemplateResponse(req, 'zato/scheduler.html', return_data)
+        return TemplateResponse(req, template_name, return_data)
     except Exception:
         msg = '<pre>Method could not be invoked, e:`{}`</pre>'.format(format_exc())
         logger.error(msg)
