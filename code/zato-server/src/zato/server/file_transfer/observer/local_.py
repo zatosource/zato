@@ -44,11 +44,23 @@ class LocalObserver(BaseObserver):
         super().__init__(*args, **kwargs)
 
         if is_linux:
-            self.observer_type = 'inotify'
+            self.observer_impl_type = 'inotify'
             self._observe_func = self.observe_with_inotify
         else:
-            self.observer_type = 'snapshot'
+            self.observer_impl_type = 'snapshot'
             self._observe_func = self.observe_with_snapshots
+
+# ################################################################################################################################
+
+    def path_exists(self, path):
+        return os.path.exists(path)
+
+# ################################################################################################################################
+
+    def path_is_directory(self, path):
+        return os.path.isdir(path)
+
+# ################################################################################################################################
 
     def schedule(self, event_handler, path_list, recursive):
         # type: (object, list, bool) -> None
@@ -90,10 +102,10 @@ class LocalObserver(BaseObserver):
             # Start only for paths that are valid - all invalid ones
             # are handled by a background path inspector.
             if self.is_path_valid(path):
-                logger.info('Starting local file observer `%s` for `%s` (%s)', path, self.name, self.observer_type)
+                logger.info('Starting local file observer `%s` for `%s` (%s)', path, self.name, self.observer_impl_type)
                 spawn_greenlet(self._observe_func, path, observer_start_args)
             else:
-                logger.info('Skipping invalid path `%s` for `%s` (%s)', path, self.name, self.observer_type)
+                logger.info('Skipping invalid path `%s` for `%s` (%s)', path, self.name, self.observer_impl_type)
 
 # ################################################################################################################################
 
