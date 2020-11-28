@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -1068,30 +1068,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
             # Add pickup configuration to local file transfer
             self.worker_config.generic_connection[name] = {'config': config}
-
-            '''
-            # Create an observer now
-            if config:
-                self.file_transfer_api.create(config)
-                self.worker_config.channel_file_transfer[name] = {'config': config}
-
-        # Create file transfer channels stored in the ODB
-        for value in self.worker_config.channel_file_transfer.values():
-            config = value['config'] # type: dict
-
-            # For local file notifications - tell the manager to start this channel only
-            # if this is the very first process among potentially many ones for this server ..
-            if config['source_type'] == FILE_TRANSFER.SOURCE_TYPE.LOCAL.id:
-                config['_start_channel'] = True if self.server.is_starting_first else False
-            else:
-                config['_start_channel'] = True
-
-            # .. and create a new file transfer API object now.
-            self.file_transfer_api.create(config)
-
-        # Start all the file transfer channels.
-        spawn_greenlet(self.file_transfer_api.run)
-        '''
 
 # ################################################################################################################################
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -258,12 +258,5 @@ class ServiceGateway(Invoke):
     """ Service to invoke other services through.
     """
     name = 'helpers.service-gateway'
-
-# ################################################################################################################################
-
-class ChannelFileTransfer(Service):
-    """ A no-op marker service uses by file transfer channels.
-    """
-    name = 'pub.zato.channel.file.transfer'
 
 # ################################################################################################################################
