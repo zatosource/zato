@@ -29,7 +29,7 @@ from pytz import UTC
 
 # Zato
 from zato.admin.web import from_user_to_utc, from_utc_to_user
-from zato.admin.web.views import get_js_dt_format, get_sample_dt, method_allowed, Delete as _Delete, parse_response_data
+from zato.admin.web.views import get_js_dt_format, method_allowed, Delete as _Delete, parse_response_data
 from zato.admin.settings import job_type_friendly_names
 from zato.admin.web.forms.scheduler import CronStyleSchedulerJobForm, IntervalBasedSchedulerJobForm, OneTimeSchedulerJobForm
 from zato.common.api import SCHEDULER, TRACE1
@@ -421,7 +421,6 @@ def index(req):
             'edit_one_time_form':OneTimeSchedulerJobForm(edit_one_time_prefix, req),
             'edit_interval_based_form':IntervalBasedSchedulerJobForm(edit_interval_based_prefix, req),
             'edit_cron_style_form':CronStyleSchedulerJobForm(edit_cron_style_prefix, req),
-            'sample_dt': get_sample_dt(req.zato.user_profile),
             'paginate':True,
             'meta': meta,
             'req': req,
