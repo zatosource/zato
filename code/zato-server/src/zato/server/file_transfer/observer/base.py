@@ -38,7 +38,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 class BaseObserver:
-    observer_type = '<observer-type-not-set>'
+    observer_impl_type = '<observer-type-not-set>'
 
     def __init__(self, manager, name, is_active, default_timeout):
         # type: (FileTransferAPI, str, bool, float) -> None
@@ -71,6 +71,16 @@ class BaseObserver:
 
 # ################################################################################################################################
 
+    def path_exists(self, path):
+        raise NotImplementedError('Must be implemented by subclasses')
+
+# ################################################################################################################################
+
+    def path_is_directory(self, path):
+        raise NotImplementedError('Must be implemented by subclasses')
+
+# ################################################################################################################################
+
     def wait_for_path(self, path, observer_start_args):
         # type: (str, BaseObserver, object, tuple) -> None
 
@@ -96,12 +106,12 @@ class BaseObserver:
             # Honour the main loop's status
             if not self.keep_running:
                 logger.info('Stopped `%s` path lookup function for local file transfer observer `%s` (not found) (%s)',
-                    path, self.name, self.observer_type)
+                    path, self.name, self.observer_impl_type)
                 return
 
-            if os.path.exists(path):
+            if self.path_exists(path):
 
-                if os.path.isdir(path):
+                if self.path_is_directory(path):
                     is_ok = True
                 else:
                     # Indicate that there was an erorr with path
@@ -109,21 +119,21 @@ class BaseObserver:
 
                     if idx == 1 or (idx % log_every == 0):
                         logger.warn('Local file transfer path `%s` is not a directory (%s) (c:%s d:%s t:%s)',
-                            path, self.name, idx, utcnow() - start, self.observer_type)
+                            path, self.name, idx, utcnow() - start, self.observer_impl_type)
             else:
                 # Indicate that there was an erorr with path
                 error_found = True
 
                 if idx == 1 or (idx % log_every == 0):
                     logger.warn('Local file transfer path `%r` does not exist (%s) (c:%s d:%s t:%s)',
-                        path, self.name, idx, utcnow() - start, self.observer_type)
+                        path, self.name, idx, utcnow() - start, self.observer_impl_type)
 
             if is_ok:
 
                 # Log only if had an error previously, otherwise it would emit too much to logs ..
                 if error_found:
                     logger.info('Local file transfer path `%s` found successfully (%s) (c:%s d:%s t:%s)',
-                        path, self.name, idx, utcnow() - start, self.observer_type)
+                        path, self.name, idx, utcnow() - start, self.observer_impl_type)
 
                 # .. and start the observer now.
                 self.start(observer_start_args)
@@ -171,7 +181,7 @@ class BaseObserver:
 
                     # Log the error ..
                     logger.warn('File not found caught in local file observer main loop `%s` (%s t:%s) e:`%s',
-                        path, format_exc(), self.name, self.observer_type)
+                        path, format_exc(), self.name, self.observer_impl_type)
 
                     # .. start a background inspector which will wait for the path to become available ..
                     self.manager.wait_for_deleted_path(path)
@@ -181,12 +191,12 @@ class BaseObserver:
 
                 except Exception:
                     logger.warn('Exception in local file observer main loop `%s` e:`%s (%s t:%s)',
-                        path, format_exc(), self.name, self.observer_type)
+                        path, format_exc(), self.name, self.observer_impl_type)
                 finally:
                     sleep(timeout)
 
         except Exception:
-            logger.warn('Exception in local file observer `%s` e:`%s (%s t:%s)', path, format_exc(), self.name, self.observer_type)
+            logger.warn('Exception in local file observer `%s` e:`%s (%s t:%s)', path, format_exc(), self.name, self.observer_impl_type)
 
 
         # We get here only when self.keep_running is False = we are to stop
