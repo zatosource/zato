@@ -438,6 +438,7 @@ class FileTransferAPI(object):
         self.inotify_path_to_observer_list = {}
 
         for observer in self.observers: # type: LocalObserver
+
             for path in observer.path_list: # type: str
                 observer_list = self.inotify_path_to_observer_list.setdefault(path, []) # type: list
                 observer_list.append(observer)
@@ -447,6 +448,7 @@ class FileTransferAPI(object):
 
         # Start the observer objects, creating inotify watch descriptors (wd) in background ..
         for observer in self.observers: # type: BaseObserver
+
             try:
 
                 # Filter out unneeded names
@@ -459,10 +461,10 @@ class FileTransferAPI(object):
                 for path in observer.path_list:
                     if not observer.is_path_valid(path):
                         path_observer_list = missing_path_to_inspector.setdefault(path, []) # type: list
-                        path_observer_list.append(BackgroundPathInspector(path, observer, *self.observer_start_args))
+                        path_observer_list.append(BackgroundPathInspector(path, observer, self.observer_start_args))
 
                 # Start the observer object.
-                observer.start(*self.observer_start_args)
+                observer.start(self.observer_start_args)
 
             except Exception:
                 logger.warn('File observer `%s` could not be started, path:`%s`, e:`%s`',
@@ -496,7 +498,7 @@ class FileTransferAPI(object):
 
                 # .. it was, so we append an inspector for the path, pointing to current observer.
                 path_observer_list = path_to_inspector.setdefault(path, []) # type: list
-                path_observer_list.append(BackgroundPathInspector(path, observer, *self.observer_start_args))
+                path_observer_list.append(BackgroundPathInspector(path, observer, self.observer_start_args))
 
         return path_to_inspector
 

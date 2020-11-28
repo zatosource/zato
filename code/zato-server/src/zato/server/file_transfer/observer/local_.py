@@ -11,20 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from traceback import format_exc
 
-# gevent
-from gevent.monkey import patch_all
-patch_all()
-
 # stdlib
 import os
 from logging import getLogger
-
-# gevent
-from gevent import sleep
-
-# Watchdog
-from watchdog.events import FileCreatedEvent, FileModifiedEvent
-from watchdog.utils.dirsnapshot import DirectorySnapshot, DirectorySnapshotDiff
 
 # Zato
 from zato.common.util.api import spawn_greenlet
@@ -46,104 +35,20 @@ class PathCreatedEvent:
         self.src_path = src_path
 
 # ################################################################################################################################
-
-def _observe_path_linux(self, path, inotify, inotify_flags, lock_func, wd_to_path_map):
-    """ Local observer's main loop for Linux, uses inotify.
-    """
-    # type: (LocalObserver, str) -> None
-    try:
-
-        # The local directory may not exist yet at the time when we are starting
-        # and we possibly need to wait until it does.
-        #self.ensure_path_exists(path)
-
-        # Create a new watch descriptor
-        wd = inotify.add_watch(path, inotify_flags)
-
-        # .. and map the input path to wd for use in higher-level layers.
-        with lock_func:
-            wd_to_path_map[wd] = path
-
-    except Exception:
-        logger.warn("Exception in inotify observer's main loop `%s`", format_exc())
-
-# ################################################################################################################################
-
-def _observe_path_non_linux(self, path, *args, **kwargs):
-    """ Local observer's main loop for systems other than Linux, uses snapshots.
-    """
-    # type: (LocalObserver, str) -> None
-
-    try:
-
-        # Local aliases to avoid namespace lookups in self
-        timeout = self.default_timeout
-        handler_func = self.event_handler.on_created
-        is_recursive = self.is_recursive
-
-        # Take an initial snapshot
-        snapshot = DirectorySnapshot(path, recursive=is_recursive)
-
-        while self.keep_running:
-
-            try:
-
-                # The latest snapshot ..
-                new_snapshot = DirectorySnapshot(path, recursive=is_recursive)
-
-                # .. difference between the old and new will return, in particular, new or modified files ..
-                diff = DirectorySnapshotDiff(snapshot, new_snapshot)
-
-                for path_created in diff.files_created:
-                    handler_func(FileCreatedEvent(path_created))
-
-                for path_modified in diff.files_modified:
-                    handler_func(FileModifiedEvent(path_modified))
-
-                # .. a new snapshot which will be treated as the old one in the next iteration ..
-                snapshot = DirectorySnapshot(path, recursive=is_recursive)
-
-            except FileNotFoundError:
-
-                # Log the error ..
-                logger.warn('File not found caught in local file observer main loop `%s` (%s t:%s) e:`%s',
-                    path, format_exc(), self.name, self.observer_type)
-
-                # .. start a background inspector which will wait for the path to become available ..
-                self.manager.wait_for_deleted_path(path)
-
-                # .. and end the main loop.
-                return
-
-            except Exception:
-                logger.warn('Exception in local file observer main loop `%s` e:`%s (%s t:%s)',
-                    path, format_exc(), self.name, self.observer_type)
-            finally:
-                sleep(timeout)
-
-    except Exception:
-        logger.warn('Exception in local file observer `%s` e:`%s (%s t:%s)', path, format_exc(), self.name, self.observer_type)
-
-
-    # We get here only when self.keep_running is False = we are to stop
-    logger.info('Stopped local file transfer observer `%s` for `%s` (snapshot)', self.name, self.path)
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 class LocalObserver(BaseObserver):
     """ A local file-system observer.
     """
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    if is_linux:
-        observer_type = 'inotify'
-        _observe_func = _observe_path_linux
-    else:
-        observer_type = 'snapshot'
-        _observe_func = _observe_path_non_linux
+        if is_linux:
+            self.observer_type = 'inotify'
+            self._observe_func = self.observe_with_inotify
+        else:
+            self.observer_type = 'snapshot'
+            self._observe_func = self.observe_with_snapshots
 
     def schedule(self, event_handler, path_list, recursive):
         # type: (object, list, bool) -> None
@@ -153,20 +58,40 @@ class LocalObserver(BaseObserver):
 
 # ################################################################################################################################
 
+    def observe_with_inotify(self, path, observer_start_args):
+        """ Local observer's main loop for Linux, uses inotify.
+        """
+        # type: (str, tuple) -> None
+        try:
+
+            inotify, inotify_flags, lock_func, wd_to_path_map = observer_start_args
+
+            # Create a new watch descriptor
+            wd = inotify.add_watch(path, inotify_flags)
+
+            # .. and map the input path to wd for use in higher-level layers.
+            with lock_func:
+                wd_to_path_map[wd] = path
+
+        except Exception:
+            logger.warn("Exception in inotify observer's main loop `%s`", format_exc())
+
+# ################################################################################################################################
+
     def stop(self):
         logger.info('Stopping local file transfer observer `%s`', self.name)
         self.keep_running = False
 
 # ################################################################################################################################
 
-    def _start(self, *args, **kwargs):
+    def _start(self, observer_start_args):
         for path in self.path_list: # type: str
 
             # Start only for paths that are valid - all invalid ones
             # are handled by a background path inspector.
             if self.is_path_valid(path):
                 logger.info('Starting local file observer `%s` for `%s` (%s)', path, self.name, self.observer_type)
-                spawn_greenlet(self._observe_func, path, *args, **kwargs)
+                spawn_greenlet(self._observe_func, path, observer_start_args)
             else:
                 logger.info('Skipping invalid path `%s` for `%s` (%s)', path, self.name, self.observer_type)
 
