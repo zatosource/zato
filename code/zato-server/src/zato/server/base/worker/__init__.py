@@ -1080,9 +1080,17 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         for config_dict in self.worker_config.generic_connection.values():
 
+            config_type = config_dict['config']['type_']
+
             # Not all generic connections are created here
-            if config_dict['config']['type_'] in to_skip:
+            if config_type in to_skip:
                 continue
+
+            # With file transfer - we create only local file channels here
+            # because any other one is triggered from our scheduler.
+            if config_type == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER:
+                if config_dict['config']['source_type'] != FILE_TRANSFER.SOURCE_TYPE.LOCAL.id:
+                    continue
 
             self._create_generic_connection(bunchify(config_dict['config']), raise_exc=False)
 
