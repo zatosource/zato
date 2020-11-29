@@ -29,8 +29,8 @@ class GetInfo(Service):
     def handle(self):
 
         # Let's prepare as much as we can upfront.
-        sec_def = self.worker_store.basic_auth_get('admin.invoke').config
-        channel = self.worker_store.get_channel_plain_http('admin.invoke.json')
+        sec_def = self.server.worker_store.basic_auth_get('admin.invoke').config
+        channel = self.server.worker_store.get_channel_rest('admin.invoke.json')
         out = {}
 
         with closing(self.odb.session()) as session:

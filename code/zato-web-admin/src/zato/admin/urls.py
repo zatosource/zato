@@ -637,7 +637,7 @@ urlpatterns += [
     url(r'^zato/definition/kafka/change-password/$',
         login_required(def_kafka.change_password), name='definition-kafka-change-password'),
     url(r'^zato/definition/kafka/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(def_kafka.ping), name='definition-wmq-ping'),
+        login_required(def_kafka.ping), name='definition-kafka-ping'),
     ]
 
 # ################################################################################################################################
@@ -1315,7 +1315,7 @@ urlpatterns += [
 
 urlpatterns += [
 
-    # .. OpenStack - S3
+    # .. AWS - S3
 
     url(r'^zato/cloud/aws/s3/$',
         login_required(cloud_aws_s3.Index()), name=cloud_aws_s3.Index.url_name),

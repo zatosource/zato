@@ -75,7 +75,7 @@ class _CreateEditSIO(AdminSIO):
     input_required = ('name', 'type_', 'is_active', 'is_internal', 'is_channel', 'is_outconn', Int('pool_size'),
         Bool('sec_use_rbac'), 'cluster_id')
     input_optional = ('id', Int('cache_expiry'), 'address', Int('port'), Int('timeout'), 'data_format', 'version',
-        'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id')
+        'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id') + extra_secret_keys
     force_empty_keys = True
 
 # ################################################################################################################################
@@ -94,6 +94,7 @@ class _CreateEdit(_BaseService):
 # ################################################################################################################################
 
     def handle(self):
+
         data = deepcopy(self.request.input)
 
         raw_request = self.request.raw_request
