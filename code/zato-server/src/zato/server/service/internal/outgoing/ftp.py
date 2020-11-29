@@ -16,8 +16,12 @@ from traceback import format_exc
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import OutgoingFTP
 from zato.common.odb.query import out_ftp_list
+from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class _FTPService(AdminService):
     """ A common class for various FTP-related services.
@@ -28,6 +32,9 @@ class _FTPService(AdminService):
         params['action'] = action
         self.broker_client.publish(params)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class GetList(AdminService):
     """ Returns a list of outgoing FTP connections.
     """
@@ -36,16 +43,20 @@ class GetList(AdminService):
     class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_outgoing_ftp_get_list_request'
         response_elem = 'zato_outgoing_ftp_get_list_response'
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'host', 'port')
-        output_optional = ('user', 'acct', 'timeout', Boolean('dircache'))
+        input_required = 'cluster_id'
+        output_required = 'id', 'name', 'is_active', 'host', 'port'
+        output_optional = 'user', 'acct', 'timeout', Boolean('dircache'), 'default_directory'
+        output_repeated = True
 
     def get_data(self, session):
-        return self._search(out_ftp_list, session, self.request.input.cluster_id, False)
+        return elems_with_opaque(self._search(out_ftp_list, session, self.request.input.cluster_id, False))
 
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class Create(_FTPService):
     """ Creates a new outgoing FTP connection.
@@ -53,11 +64,12 @@ class Create(_FTPService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_ftp_create_request'
         response_elem = 'zato_outgoing_ftp_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'host', 'port', Boolean('dircache'))
-        input_optional = ('user', 'acct', 'timeout')
-        output_required = ('id', 'name')
+        input_required = 'cluster_id', 'name', 'is_active', 'host', 'port', Boolean('dircache')
+        input_optional = 'user', 'acct', 'timeout', 'default_directory'
+        output_required = 'id', 'name'
 
     def handle(self):
+
         input = self.request.input
 
         with closing(self.odb.session()) as session:
@@ -67,7 +79,7 @@ class Create(_FTPService):
                 first()
 
             if existing_one:
-                raise Exception('An outgoing FTP connection [{0}] already exists on this cluster'.format(input.name))
+                raise Exception('Outgoing FTP connection `{}` already exists'.format(input.name))
 
             try:
                 item = OutgoingFTP()
@@ -81,6 +93,9 @@ class Create(_FTPService):
                 item.acct = input.acct
                 item.timeout = input.timeout or None
 
+                # Opaque attributes
+                set_instance_opaque_attrs(item, input)
+
                 session.add(item)
                 session.commit()
 
@@ -90,10 +105,13 @@ class Create(_FTPService):
                 self.response.payload.name = item.name
 
             except Exception:
-                self.logger.error('Could not create an outgoing FTP connection, e:`{}`', format_exc())
+                self.logger.error('Outgoing FTP connection could not be created, e:`{}`', format_exc())
                 session.rollback()
 
                 raise
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class Edit(_FTPService):
     """ Updates an outgoing FTP connection.
@@ -101,12 +119,14 @@ class Edit(_FTPService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_ftp_edit_request'
         response_elem = 'zato_outgoing_ftp_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'host', 'port', Boolean('dircache'))
-        input_optional = ('user', 'acct', 'timeout')
-        output_required = ('id', 'name')
+        input_required = 'id', 'cluster_id', 'name', 'is_active', 'host', 'port', Boolean('dircache')
+        input_optional = 'user', 'acct', 'timeout', 'default_directory'
+        output_required = 'id', 'name'
 
     def handle(self):
+
         input = self.request.input
+
         with closing(self.odb.session()) as session:
             existing_one = session.query(OutgoingFTP.id).\
                 filter(OutgoingFTP.cluster_id==input.cluster_id).\
@@ -115,7 +135,7 @@ class Edit(_FTPService):
                 first()
 
             if existing_one:
-                raise Exception('An outgoing FTP connection [{0}] already exists on this cluster'.format(input.name))
+                raise Exception('Outgoing FTP connection `{}` already exists'.format(input.name))
 
             try:
                 item = session.query(OutgoingFTP).filter_by(id=input.id).one()
@@ -133,6 +153,9 @@ class Edit(_FTPService):
                 input.password = item.password
                 input.old_name = old_name
 
+                # Opaque attributes
+                set_instance_opaque_attrs(item, input)
+
                 session.add(item)
                 session.commit()
 
@@ -147,13 +170,16 @@ class Edit(_FTPService):
 
                 raise
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Delete(_FTPService):
     """ Deletes an outgoing FTP connection.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_ftp_delete_request'
         response_elem = 'zato_outgoing_ftp_delete_response'
-        input_required = ('id',)
+        input_required = 'id'
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -174,6 +200,9 @@ class Delete(_FTPService):
 
                 raise
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an outgoing FTP connection.
     """
@@ -186,3 +215,6 @@ class ChangePassword(ChangePasswordBase):
             instance.password = password
 
         self._handle(OutgoingFTP, _auth, OUTGOING.FTP_CHANGE_PASSWORD.value)
+
+# ################################################################################################################################
+# ################################################################################################################################

@@ -1542,7 +1542,6 @@ class CySimpleIO(object):
         exact:set
         prefixes:set
         suffixes:set
-        keep_running:cy.bint = True
 
         config_item:ConfigItem
 
@@ -1553,9 +1552,6 @@ class CySimpleIO(object):
         )
 
         for (ElemClass, config_item) in config_item_to_type:
-
-            if not keep_running:
-                break
 
             exact = config_item.exact
             prefixes = config_item.prefixes
