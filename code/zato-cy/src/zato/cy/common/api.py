@@ -945,11 +945,17 @@ class EMAIL:
             PLAIN = 'plain'
             SSL = 'ssl'
 
+            def __iter__(self):
+                return iter((self.PLAIN, self.SSL))
+
     class SMTP:
         class MODE:
             PLAIN = 'plain'
             SSL = 'ssl'
             STARTTLS = 'starttls'
+
+            def __iter__(self):
+                return iter((self.PLAIN, self.SSL, self.STARTTLS))
 
 # ################################################################################################################################
 # ################################################################################################################################
