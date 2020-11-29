@@ -26,6 +26,7 @@ class ChannelFileTransferWrapper(Wrapper):
     """
     needs_self_client = False
     wrapper_type = 'File transfer channel'
+    build_if_not_active = True
 
     def __init__(self, *args, **kwargs):
         super(ChannelFileTransferWrapper, self).__init__(*args, **kwargs)
