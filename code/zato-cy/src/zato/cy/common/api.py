@@ -1429,6 +1429,7 @@ class FILE_TRANSFER:
 
     class DEFAULT:
         FILE_PATTERNS = '*'
+        ENCODING = 'utf-8'
 
     class SOURCE_TYPE:
         LOCAL = NameId('Local', 'local')
@@ -1634,6 +1635,7 @@ default_internal_modules = {
     'zato.server.service.internal.cache.builtin.pubapi': True,
     'zato.server.service.internal.cache.memcached': True,
     'zato.server.service.internal.channel.amqp_': True,
+    'zato.server.service.internal.channel.file_transfer': True,
     'zato.server.service.internal.channel.jms_wmq': True,
     'zato.server.service.internal.channel.json_rpc': True,
     'zato.server.service.internal.channel.web_socket': True,

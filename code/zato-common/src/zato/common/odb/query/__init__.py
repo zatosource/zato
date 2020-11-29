@@ -730,9 +730,18 @@ def out_sql_list(session, cluster_id, needs_columns=False):
 
 def _out_ftp(session, cluster_id):
     return session.query(
-        OutgoingFTP.id, OutgoingFTP.name, OutgoingFTP.is_active,
-        OutgoingFTP.host, OutgoingFTP.port, OutgoingFTP.user, OutgoingFTP.password,
-        OutgoingFTP.acct, OutgoingFTP.timeout, OutgoingFTP.dircache).\
+        OutgoingFTP.id,
+        OutgoingFTP.name,
+        OutgoingFTP.is_active,
+        OutgoingFTP.host,
+        OutgoingFTP.port,
+        OutgoingFTP.user,
+        OutgoingFTP.password,
+        OutgoingFTP.acct,
+        OutgoingFTP.timeout,
+        OutgoingFTP.dircache,
+        OutgoingFTP.opaque1,
+        ).\
         filter(Cluster.id==OutgoingFTP.cluster_id).\
         filter(Cluster.id==cluster_id).\
         order_by(OutgoingFTP.name)
