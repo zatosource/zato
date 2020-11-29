@@ -49,6 +49,8 @@ class GetAPISpec(Service):
 
     def handle(self):
 
+        self.out.plain_http.get
+
         cluster_id = self.request.input.get('cluster_id')
 
         include = as_list(self.request.input.include, ',')

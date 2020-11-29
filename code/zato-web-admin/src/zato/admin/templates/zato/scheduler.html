@@ -157,19 +157,30 @@
                     <table class="form-data">
 
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
+                            <td style="vertical-align:middle; width:16%">
+                                <label for="id_create-one_time-name">
+                                Name
+                                </label>
+                            </td>
                             <td>{{ create_one_time_form.name }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Active</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_create-one_time-is_active">
+                                Active
+                                </label>
+                            </td>
                             <td>{{ create_one_time_form.is_active }}</td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">
-                                Start date &amp; time<br/>
-                                <span class="form_hint">(e.g. {{ sample_dt }})</span>
+                                <label for="id_create-one_time-start_date">
+                                Start date
+                                <br/>
+                                &amp; time
+                                </label>
                             </td>
                             <td>
                                 <input id="id_create-one_time-start_date" class="required"
@@ -178,11 +189,19 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Service</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_create-one_time-service">
+                                Service
+                                </label>
+                            </td>
                             <td>{{ create_one_time_form.service }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Extra data</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_create-one_time-extra">
+                                Extra data
+                                </label>
+                            </td>
                             <td>{{ create_one_time_form.extra }}</td>
                         </tr>
 
@@ -209,19 +228,28 @@
                     <table class="form-data">
 
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
+                            <td style="vertical-align:middle; width:16%">
+                                <label for="id_edit-one_time-name">
+                                Name
+                                </label>
+                            </td>
                             <td>{{ edit_one_time_form.name }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Active</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-one_time-is_active">
+                                Active
+                                </label>
+                            </td>
                             <td>{{ edit_one_time_form.is_active }}</td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">
+                                <label for="id_edit-one_time-start_date">
                                 Date &amp; time<br/>
-                                <span class="form_hint">(e.g. {{ sample_dt }})</span>
+                                </label>
                             </td>
                             <td>
                                 <input id="id_edit-one_time-start_date" class="required"
@@ -230,11 +258,19 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Service</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-one_time-service">
+                                Service
+                                </label>
+                            </td>
                             <td>{{ edit_one_time_form.service }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Extra data</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-one_time-extra">
+                                Extra data
+                                </label>
+                            </td>
                             <td>{{ edit_one_time_form.extra }}</td>
                         </tr>
 
@@ -261,44 +297,82 @@
                     <table class="form-data">
 
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
+                            <td style="vertical-align:middle; width:14%">
+                                <label for="id_create-interval_based-name">
+                                Name
+                                </label>
+                            </td>
                             <td>{{ create_interval_based_form.name }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Active</td>
-                            <td>{{ create_interval_based_form.is_active }}</td>
-                        </tr>
+                            <td style="vertical-align:middle">
+                            </td>
+                            <td>
+                                <label>
+                                Active
+                                {{ create_interval_based_form.is_active }}
+                                </label>
 
-                        <tr>
-                            <td style="vertical-align:middle">Weeks</td>
-                            <td>{{ create_interval_based_form.weeks }}</td>
-                        </tr>
+                                |
 
-                        <tr>
-                            <td style="vertical-align:middle">Days</td>
-                            <td>{{ create_interval_based_form.days }}</td>
-                        </tr>
+                                <label>
+                                How many repeats
+                                {{ create_interval_based_form.repeats }}
+                                </label>
 
-                        <tr>
-                            <td style="vertical-align:middle">Hours</td>
-                            <td>{{ create_interval_based_form.hours }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Minutes</td>
-                            <td>{{ create_interval_based_form.minutes }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Seconds</td>
-                            <td>{{ create_interval_based_form.seconds }}</td>
+                            </td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">
-                                Start date &amp; time<br/>
-                                <span class="form_hint">(e.g. {{ sample_dt }})</span>
+                                Interval
+                            </td>
+                            <td>
+
+                                <label>
+                                Weeks
+                                {{ create_interval_based_form.weeks }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Days
+                                {{ create_interval_based_form.days }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Hours
+                                {{ create_interval_based_form.hours }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Mins.
+                                {{ create_interval_based_form.minutes }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Secs.
+                                {{ create_interval_based_form.seconds }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_create-interval_based-start_date">
+                                Start date
+                                <br/>
+                                &amp; time
+                                </label>
                             </td>
                             <td>
                                 <input id="id_create-interval_based-start_date" class="required"
@@ -307,16 +381,19 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Number of repeats</td>
-                            <td>{{ create_interval_based_form.repeats }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Service</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_create-interval_based-service">
+                                Service
+                                </label>
+                            </td>
                             <td>{{ create_interval_based_form.service }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Extra data</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_create-interval_based-extra">
+                                Extra data
+                                </label>
+                            </td>
                             <td>{{ create_interval_based_form.extra }}</td>
                         </tr>
 
@@ -342,62 +419,103 @@
                     <table class="form-data">
 
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
+                            <td style="vertical-align:middle; width:14%">
+                                <label for="id_edit-interval_based-name">
+                                Name
+                                </label>
+                            </td>
                             <td>{{ edit_interval_based_form.name }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Active</td>
-                            <td>{{ edit_interval_based_form.is_active }}</td>
-                        </tr>
+                            <td style="vertical-align:middle">
+                            </td>
+                            <td>
+                                <label>
+                                Active
+                                {{ edit_interval_based_form.is_active }}
+                                </label>
 
-                        <tr>
-                            <td style="vertical-align:middle">Weeks</td>
-                            <td>{{ edit_interval_based_form.weeks }}</td>
-                        </tr>
+                                |
 
-                        <tr>
-                            <td style="vertical-align:middle">Days</td>
-                            <td>{{ edit_interval_based_form.days }}</td>
-                        </tr>
+                                <label>
+                                How many repeats
+                                {{ edit_interval_based_form.repeats }}
+                                </label>
 
-                        <tr>
-                            <td style="vertical-align:middle">Hours</td>
-                            <td>{{ edit_interval_based_form.hours }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Minutes</td>
-                            <td>{{ edit_interval_based_form.minutes }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Seconds</td>
-                            <td>{{ edit_interval_based_form.seconds }}</td>
+                            </td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">
-                                Start date &amp; time<br/>
-                                <span class="form_hint">(e.g. {{ sample_dt }})</span>
+                                Interval
                             </td>
                             <td>
-                                <input id="id_edit-interval_based-start_date"
+
+                                <label>
+                                Weeks
+                                {{ edit_interval_based_form.weeks }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Days
+                                {{ edit_interval_based_form.days }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Hours
+                                {{ edit_interval_based_form.hours }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Mins.
+                                {{ edit_interval_based_form.minutes }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Secs.
+                                {{ edit_interval_based_form.seconds }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-interval_based-start_date">
+                                Start date
+                                <br/>
+                                &amp; time
+                                </label>
+                            </td>
+                            <td>
+                                <input id="id_edit-interval_based-start_date" class="required"
                                     name="edit-interval_based-start_date" type="text" />
                             </td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Number of repeats</td>
-                            <td>{{ edit_interval_based_form.repeats }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Service</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-interval_based-service">
+                                Service
+                                </label>
+                            </td>
                             <td>{{ edit_interval_based_form.service }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Extra data</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-interval_based-extra">
+                                Extra data
+                                </label>
+                            </td>
                             <td>{{ edit_interval_based_form.extra }}</td>
                         </tr>
 
@@ -424,19 +542,30 @@
                     <table class="form-data">
 
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_create-cron_style-name">
+                                Name
+                                </label>
+                            </td>
                             <td>{{ create_cron_style_form.name }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Active</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_create-cron_style-is_active">
+                                Active
+                                </label>
+                            </td>
                             <td>{{ create_cron_style_form.is_active }}</td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">
-                                Start date &amp; time<br/>
-                                <span class="form_hint">(e.g. {{ sample_dt }})</span>
+                                <label for="id_create-cron_style-start_date">
+                                Start date
+                                <br/>
+                                &amp; time
+                                </label>
                             </td>
                             <td>
                                 <input id="id_create-cron_style-start_date" class="required"
@@ -445,18 +574,30 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Definition<br/>
+                            <td style="vertical-align:middle">
+                                <label for="id_create-cron_style-cron_definition">
+                                Definition
+                                </label>
+                            <br/>
                             <span class="form_hint">(cron syntax)</span>
                             </td>
                             <td>{{ create_cron_style_form.cron_definition }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Service</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_create-cron_style-service">
+                                Service
+                                </label>
+                            </td>
                             <td>{{ create_cron_style_form.service }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Extra data</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_create-cron_style-extra">
+                                Extra data
+                                </label>
+                            </td>
                             <td>{{ create_cron_style_form.extra }}</td>
                         </tr>
 
@@ -482,19 +623,30 @@
                     <table class="form-data">
 
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-cron_style-name">
+                                Name
+                                </label>
+                            </td>
                             <td>{{ edit_cron_style_form.name }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Active</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-cron_style-is_active">
+                                Active
+                                </label>
+                            </td>
                             <td>{{ edit_cron_style_form.is_active }}</td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">
-                                Start date &amp; time<br/>
-                                <span class="form_hint">(e.g. {{ sample_dt }})</span>
+                                <label for="id_edit-cron_style-start_date">
+                                Start date
+                                <br/>
+                                &amp; time
+                                </label>
                             </td>
                             <td>
                                 <input id="id_edit-cron_style-start_date" class="required"
@@ -503,18 +655,30 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Definition<br/>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-cron_style-cron_definition">
+                                Definition
+                                </label>
+                            <br/>
                             <span class="form_hint">(cron syntax)</span>
                             </td>
                             <td>{{ edit_cron_style_form.cron_definition }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Service</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-cron_style-service">
+                                Service
+                                </label>
+                            </td>
                             <td>{{ edit_cron_style_form.service }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Extra data</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-cron_style-extra">
+                                Extra data
+                                </label>
+                            </td>
                             <td>{{ edit_cron_style_form.extra }}</td>
                         </tr>
 

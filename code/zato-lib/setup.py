@@ -30,7 +30,7 @@ src_files = os.path.join('src', 'cpp', '*.cpp')
 
 ext_modules = [
     Pybind11Extension(
-        'libzato',
+        'zato-lib',
         sorted(glob(src_files))
     )
 ]
