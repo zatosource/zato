@@ -57,7 +57,7 @@ class BaseObserver:
         if self.is_active:
             spawn_greenlet(self._start, observer_start_args)
         else:
-            logger.info('Skipping an inactive file transfer channel `%s` (%s)', self.name, self.path)
+            logger.info('Skipping an inactive file transfer channel `%s` (%s)', self.name, self.path_list)
 
 # ################################################################################################################################
 
@@ -213,7 +213,8 @@ class BackgroundPathInspector:
         self.observer_start_args = observer_start_args
 
     def start(self):
-        spawn_greenlet(self.observer.wait_for_path, self.path, self.observer_start_args)
+        if self.observer.is_active:
+            spawn_greenlet(self.observer.wait_for_path, self.path, self.observer_start_args)
 
 # ################################################################################################################################
 # ################################################################################################################################
