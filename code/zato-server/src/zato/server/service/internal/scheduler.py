@@ -127,7 +127,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
             cron_definition = input.cron_definition.strip()
 
             # Just to make sure it's syntactically correct
-            CronTab(cron_definition).next()
+            CronTab(cron_definition).next(default_utc=False)
 
             if action == 'create':
                 cs_job = CronStyleJob(None, job)
