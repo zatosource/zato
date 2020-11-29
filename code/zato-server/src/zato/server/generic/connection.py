@@ -89,7 +89,7 @@ class GenericConnection(object):
 
         for name in instance.__slots__:
             if name != 'opaque':
-                value = getattr(data, name)
+                value = getattr(data, name, '<no-value-given-{}>'.format(name))
                 setattr(instance, name, value)
         return instance
 

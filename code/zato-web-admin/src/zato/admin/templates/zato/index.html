@@ -30,12 +30,24 @@
     {% comment %} Our CSS must come last {% endcomment %}
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
 
-    {% if not items %}
-        <style type="text/css">
-            .ui-dialog-titlebar {
-                padding-bottom:10px !important;
-            }
-        </style>
+    {% if zato_template_name == "zato/scheduler.html" %}
+
+            <style type="text/css">
+                .ui-dialog-titlebar {
+                    padding-bottom:-4px !important;
+                }
+            </style>
+
+    {% else %}
+
+        {% if not items %}
+            <style type="text/css">
+                .ui-dialog-titlebar {
+                    padding-bottom:10px !important;
+                }
+            </style>
+        {% endif %}
+
     {% endif %}
 
     {% block "extra_css" %}

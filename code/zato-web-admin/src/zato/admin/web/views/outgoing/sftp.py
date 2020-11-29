@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 _sio_required = 'name', 'log_level'
 _sio_optional = 'is_active', 'host', 'port', 'username', 'password', 'identity_file', \
     'ssh_config_file', 'buffer_size', 'is_compression_enabled', 'bandwidth_limit', 'force_ip_type', 'should_flush', \
-    'should_preserve_meta', 'ssh_options', 'sftp_command', 'ping_command'
+    'should_preserve_meta', 'ssh_options', 'sftp_command', 'ping_command', 'default_directory'
 
 # ################################################################################################################################
 # ################################################################################################################################
