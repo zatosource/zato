@@ -24,20 +24,36 @@
         return [
             '_numbering',
             '_selection',
+
+            {% comment %} 1 {% endcomment %}
             'name',
             '_is_active',
             'host',
-            'user',
-            'acct',
-            'timeout',
+
+            {% comment %} 2 {% endcomment %}
+            '_user',
+            '_acct',
+            '_timeout',
+
+            {% comment %} 3 {% endcomment %}
             'port',
-            '_dircache',
+            '_default_directory',
             '_change_password',
+
+            {% comment %} 4 {% endcomment %}
             '_edit',
             '_delete',
             'id',
+
+            {% comment %} 5 {% endcomment %}
             'is_active',
-            'dircache'
+            'dircache',
+            'default_directory',
+
+            {% comment %} 6 {% endcomment %}
+            'user',
+            'acct',
+            'timeout',
         ]
     }
     </script>
@@ -68,17 +84,28 @@
                     <tr class='ignore'>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+
+                        {% comment %} 1 {% endcomment %}
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
                         <th><a href="#">Host</a></th>
+
+                        {% comment %} 2 {% endcomment %}
                         <th><a href="#">User</a></th>
                         <th><a href="#">Accounting info</a></th>
                         <th><a href="#">Timeout</a></th>
+
+                        {% comment %} 3 {% endcomment %}
                         <th><a href="#">Port</a></th>
-                        <th><a href="#">Cache directories</a></th>
+                        <th><a href="#">Default directory</a></th>
+                        <th>&nbsp;</th>
+
+                        {% comment %} 4 {% endcomment %}
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
-                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 5 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -88,27 +115,45 @@
                 {% if items %}
                 {% for item in items %}
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
+
+                        {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.host }}</td>
-                        <td>{{ item.user|default:'' }}</td>
-                        <td>{{ item.acct|default:'' }}</td>
-                        <td>{{ item.timeout|default:'' }}</td>
+
+                        {% comment %} 2 {% endcomment %}
+                        <td>{{ item.user|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>{{ item.acct|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>{{ item.timeout|default:'<span class="form_hint">---</span>' }}</td>
+
+                        {% comment %} 3 {% endcomment %}
                         <td>{{ item.port }}</td>
-                        <td>{{ item.dircache|yesno:'Yes,No' }}</td>
+                        <td>{{ item.default_directory|default:'<span class="form_hint">---</span>' }}</td>
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
+
+                        {% comment %} 4 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.outgoing.ftp.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.ftp.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+
+                        {% comment %} 5 {% endcomment %}
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.dircache }}</td>
+                        <td class='ignore'>{{ item.default_directory }}</td>
+
+                        {% comment %} 6 {% endcomment %}
+                        <td class='ignore'>{{ item.user|default:'' }}</td>
+                        <td class='ignore'>{{ item.acct|default:'' }}</td>
+                        <td class='ignore'>{{ item.timeout|default:'' }}</td>
+
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='16'>No results</td>
+                        <td colspan='17'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -122,44 +167,71 @@
             <div class="bd">
                 <form action="{% url "out-ftp-create" %}" method="post" id="create-form">
                     <table class="form-data">
+
                         <tr>
-                            <td style="vertical-align:middle;width:20%">Name</td>
+                            <td style="vertical-align:middle;width:14%">
+                                <label for="id_name">Name</label>
+                            </td>
                             <td>{{ create_form.name }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Active</td>
-                            <td>{{ create_form.is_active }}</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_is_active">Active</label>
+                            </td>
+                            <td>
+                                {{ create_form.is_active }}
+
+                                |
+
+                                <label for="id_dircache">Cache directories</label>
+                                {{ create_form.dircache }}
+
+                            </td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Host</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_host">Host</label>
+                            </td>
                             <td>{{ create_form.host }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Port</td>
-                            <td>{{ create_form.port }}</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_port">Port</label>
+                            </td>
+                            <td>
+                                {{ create_form.port }}
+
+
+                                |
+
+                                <label for="id_timeout">Timeout <span class='form_hint'>(in seconds)</span></label>
+                                {{ create_form.timeout }}
+
+                            </td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">User</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_user">User</label>
+                            </td>
                             <td>{{ create_form.user }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Accounting info</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_acct">Accounting info</label>
+                            </td>
                             <td>{{ create_form.acct }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Timeout <span class='form_hint'>(seconds)</span></td>
-                            <td>{{ create_form.timeout }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Cache directories</td>
-                            <td>{{ create_form.dircache }}</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_default_directory">Default dir.</label>
+                            </td>
+                            <td>{{ create_form.default_directory }}</td>
                         </tr>
 
                         <tr>
@@ -178,44 +250,71 @@
             <div class="bd">
                 <form action="{% url "out-ftp-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
+
                         <tr>
-                            <td style="vertical-align:middle;width:20%">Name</td>
+                            <td style="vertical-align:middle;width:14%">
+                                <label for="id_edit-name">Name</label>
+                            </td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Active</td>
-                            <td>{{ edit_form.is_active }}</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-is_active">Active</label>
+                            </td>
+                            <td>
+                                {{ edit_form.is_active }}
+
+                                |
+
+                                <label for="id_edit-dircache">Cache directories</label>
+                                {{ edit_form.dircache }}
+
+                            </td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Host</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-host">Host</label>
+                            </td>
                             <td>{{ edit_form.host }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Port</td>
-                            <td>{{ edit_form.port }}</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-port">Port</label>
+                            </td>
+                            <td>
+                                {{ edit_form.port }}
+
+
+                                |
+
+                                <label for="id_edit-timeout">Timeout <span class='form_hint'>(in seconds)</span></label>
+                                {{ edit_form.timeout }}
+
+                            </td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">User</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-user">User</label>
+                            </td>
                             <td>{{ edit_form.user }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Accounting info</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-acct">Accounting info</label>
+                            </td>
                             <td>{{ edit_form.acct }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Timeout <span class='form_hint'>(seconds)</span></td>
-                            <td>{{ edit_form.timeout }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Cache directories</td>
-                            <td>{{ edit_form.dircache }}</td>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-default_directory">Default dir.</label>
+                            </td>
+                            <td>{{ edit_form.default_directory }}</td>
                         </tr>
 
                         <tr>
@@ -224,6 +323,7 @@
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
                         </tr>
+
                     </table>
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />

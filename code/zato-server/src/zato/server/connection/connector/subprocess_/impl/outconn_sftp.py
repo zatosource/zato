@@ -55,7 +55,7 @@ class SFTPConnection(object):
 
     def __init__(self, logger, **config):
         self.logger = logger
-        self.config = bunchify(config)     # type: Bunch
+        self.config = bunchify(config) # type: Bunch
 
         # Reject unknown IP types
         if self.config.force_ip_type:

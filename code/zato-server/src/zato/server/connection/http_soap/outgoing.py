@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from copy import deepcopy
 from datetime import datetime
+from http.client import OK
 from io import StringIO
 from logging import DEBUG, getLogger
 from traceback import format_exc
@@ -101,10 +102,10 @@ class BaseHTTPSOAPWrapper(object):
         except RequestsTimeout:
             raise TimeoutException(cid, format_exc())
 
-    def ping(self, cid, _has_debug=has_debug):
+    def ping(self, cid, return_response=False, log_verbose=False):
         """ Pings a given HTTP/SOAP resource
         """
-        logger.info('About to ping:`%s`', self.config_no_sensitive)
+        logger.info('Pinging:`%s`', self.config_no_sensitive)
 
         # Session object will write some info to it ..
         verbose = StringIO()
@@ -126,7 +127,11 @@ class BaseHTTPSOAPWrapper(object):
         value = verbose.getvalue()
         verbose.close()
 
-        return value
+        if log_verbose:
+            func = logger.info if response.status_code == OK else logger.warn
+            func(value)
+
+        return response if return_response else value
 
     def get_default_content_type(self):
 

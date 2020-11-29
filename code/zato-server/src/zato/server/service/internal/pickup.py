@@ -26,6 +26,7 @@ class _Logger(Service):
     pickup_data_type = None
 
     def handle(self):
+        self.logger.warn('EEE %s', self)
         self.logger.info('%s data received: `%s`', self.pickup_data_type, self.request.raw_request)
 
 # ################################################################################################################################
@@ -39,7 +40,10 @@ class _Updater(Service):
             'action': self.pickup_action.value,
             'msg_type': MESSAGE_TYPE.TO_PARALLEL_ALL,
             'file_name': self.request.raw_request['file_name'],
-            'data': self.request.raw_request['data']
+
+            # We use raw_data to make sure we always have access
+            # to what was saved in the file, even if it is not parsed.
+            'data': self.request.raw_request['raw_data']
         })
 
 # ################################################################################################################################
@@ -55,10 +59,11 @@ class OnUpdateStatic(Service):
         input = self.request.input
         static_config = self.server.static_config
 
-        with self.lock('{}-{}-{}'.format(self.name, self.server.name, input.data)):
+        with self.lock('{}-{}-{}'.format(self.name, self.server.name, input.file_name)):
             with open(os.path.join(static_config.base_dir, input.file_name), 'wb') as f:
                 if input.data:
-                    f.write(input.data)
+                    data = input.data if isinstance(input.data, bytes) else input.data.encode('utf8')
+                    f.write(data)
 
         static_config.read_file(input.file_name)
 
@@ -80,7 +85,7 @@ class OnUpdateUserConf(Service):
     def handle(self):
         input = self.request.input
 
-        with self.lock('{}-{}-{}'.format(self.name, self.server.name, input.data)):
+        with self.lock('{}-{}-{}'.format(self.name, self.server.name, input.file_name)):
             with open(os.path.join(self.server.user_conf_location, input.file_name), 'wb') as f:
                 f.write(input.data)
 
