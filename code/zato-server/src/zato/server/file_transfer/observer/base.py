@@ -7,7 +7,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 from datetime import datetime
 from logging import getLogger
 from traceback import format_exc
@@ -57,7 +56,6 @@ class BaseObserver:
         if self.is_active:
             spawn_greenlet(self._start, observer_start_args)
         else:
-            zzz
             logger.info('Skipping an inactive file transfer channel `%s` (%s)', self.name, self.path_list)
 
 # ################################################################################################################################
