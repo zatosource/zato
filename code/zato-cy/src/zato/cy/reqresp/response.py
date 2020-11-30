@@ -119,7 +119,6 @@ class Response(object):
         """ Strings, lists and tuples are assigned as-is. Dicts as well if SIO is not used. However, if SIO is used
         the dicts are matched and transformed according to the SIO definition.
         """
-
         # 1)
         # This covers dict and subclasses, e.g. Bunch
         if isinstance(value, dict):

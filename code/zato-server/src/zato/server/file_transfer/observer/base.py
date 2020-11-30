@@ -57,6 +57,7 @@ class BaseObserver:
         if self.is_active:
             spawn_greenlet(self._start, observer_start_args)
         else:
+            zzz
             logger.info('Skipping an inactive file transfer channel `%s` (%s)', self.name, self.path_list)
 
 # ################################################################################################################################
