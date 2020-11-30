@@ -120,7 +120,7 @@ class SimpleIOPayload(object):
 
         # First, check if this is not a response from a Zato service wrapped in a response element.
         # If it is, extract the actual inner response first.
-        if len(item) == 1:
+        if isinstance(item, dict) and len(item) == 1:
             response_name:str = list(item.keys())[0] # type: str
             if response_name.startswith('zato') and response_name.endswith('_response'):
                 extract_from = item[response_name]
