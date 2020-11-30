@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from bunch import Bunch
 
 # Zato
-from zato.common.api import LDAP
+from zato.common.api import GENERIC as COMMON_GENERIC, LDAP
 from zato.common.broker_message import GENERIC as GENERIC_BROKER_MSG
 from zato.common.util.api import as_bool, parse_simple_type
 from zato.server.base.worker.common import WorkerImpl
@@ -92,6 +92,11 @@ class Generic(WorkerImpl):
 # ################################################################################################################################
 
     def _edit_generic_connection(self, msg, skip=None, secret=None):
+
+        # Special-case file transfer channels
+        if msg['type_'] == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER:
+            self._edit_file_transfer_channel(msg)
+            return
 
         # Find and store connection password/secret for later use
         # if we do not have it already and we will if we are called from ChangePassword.
@@ -199,5 +204,32 @@ class Generic(WorkerImpl):
             except Exception:
                 self.logger.warn('Could not invoke `%s` with `%r`', func, config)
                 raise
+
+# ################################################################################################################################
+
+    def _edit_file_transfer_channel(self, msg):
+
+        '''
+        print()
+        for key, value in sorted(msg.items()):
+            print(111, key, value)
+        print()
+        '''
+
+        scheduler_job_id = msg.scheduler_job_id
+
+        if scheduler_job_id:
+            response = self.server.invoke('zato.scheduler.job.get-by-id', {
+                'cluster_id': self.server.cluster_id,
+                'id': scheduler_job_id
+                #'name': 'Transfer Invoices Job',
+            }, needs_response=False)
+
+            response = response.getvalue()
+
+            print()
+            print(222, response)
+            print(333, dir(response))
+            print()
 
 # ################################################################################################################################

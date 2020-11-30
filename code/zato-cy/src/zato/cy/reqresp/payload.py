@@ -114,12 +114,21 @@ class SimpleIOPayload(object):
         """ Extract response attributes from a dict.
         """
         extracted:dict = {}
+        extract_from:dict = None
         is_dict:bint = isinstance(item, dict)
-
         name = None
 
+        # First, check if this is not a response from a Zato service wrapped in a response element.
+        # If it is, extract the actual inner response first.
+        if len(item) == 1:
+            response_name:str = list(item.keys())[0] # type: str
+            if response_name.startswith('zato') and response_name.endswith('_response'):
+                extract_from = item[response_name]
+        else:
+            extract_from = item
+
         for name in self.all_output_elem_names:
-            value = item.get(name, _not_given)
+            value = extract_from.get(name, _not_given)
             if value is not _not_given:
                 extracted[name] = value
 
@@ -149,7 +158,7 @@ class SimpleIOPayload(object):
         # we will need possibly to rethink the idea of clearing out the user attributes
         #
         # For now, this is not a concern because, with the exception of WorkerStore._set_service_response_data,
-        # which is no longer doing it, no other component will attempt to do it
+        # which is no longer doing it, no other component will attempt it
         # and this comment is left just in case reconsidering it in the future.
         #
         # #####################################################################################################
@@ -162,9 +171,7 @@ class SimpleIOPayload(object):
         if is_dict:
             dict_attrs:dict = self._extract_payload_attrs_dict(value)
             self.user_attrs_dict.update(dict_attrs)
-
         else:
-
             # Check if this is something that can be explicitly serialised for our purposes
             if hasattr(value, 'to_zato'):
                 value = value.to_zato()
