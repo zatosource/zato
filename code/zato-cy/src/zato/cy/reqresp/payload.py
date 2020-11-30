@@ -114,21 +114,10 @@ class SimpleIOPayload(object):
         """ Extract response attributes from a dict.
         """
         extracted:dict = {}
-        extract_from:dict = None
-        is_dict:bint = isinstance(item, dict)
         name = None
 
-        # First, check if this is not a response from a Zato service wrapped in a response element.
-        # If it is, extract the actual inner response first.
-        if isinstance(item, dict) and len(item) == 1:
-            response_name:str = list(item.keys())[0] # type: str
-            if response_name.startswith('zato') and response_name.endswith('_response'):
-                extract_from = item[response_name]
-        else:
-            extract_from = item
-
         for name in self.all_output_elem_names:
-            value = extract_from.get(name, _not_given)
+            value = item.get(name, _not_given)
             if value is not _not_given:
                 extracted[name] = value
 
@@ -142,8 +131,22 @@ class SimpleIOPayload(object):
 
 # ################################################################################################################################
 
+    @cy.cfunc
+    def _preprocess_payload_attrs(self, value):
+
+        # First, check if this is not a response from a Zato service wrapped in a response element.
+        # If it is, extract the actual inner response first.
+        if isinstance(value, dict) and len(value) == 1:
+            response_name:str = list(value.keys())[0] # type: str
+            if response_name.startswith('zato') and response_name.endswith('_response'):
+                return value[response_name]
+        else:
+            return value
+
+# ################################################################################################################################
+
     @cy.ccall
-    def set_payload_attrs(self, value:object, is_dict:cy.bint):
+    def set_payload_attrs(self, value:object):
         """ Assigns user-defined attributes to what will eventually be a response.
         """
 
@@ -166,6 +169,9 @@ class SimpleIOPayload(object):
         # First, clear out what was potentially set earlier
         self.user_attrs_dict.clear()
         self.user_attrs_list[:] = []
+
+        value = self._preprocess_payload_attrs(value)
+        is_dict:cy.bint = isinstance(value, dict)
 
         # Shortcut in case we know already this is a dict on input
         if is_dict:
