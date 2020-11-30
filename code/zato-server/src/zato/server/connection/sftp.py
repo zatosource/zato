@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from datetime import date, datetime
 from logging import getLogger
+import re
 from tempfile import NamedTemporaryFile
 from time import strptime
 
@@ -291,7 +292,8 @@ class SFTPIPCFacade(object):
         prefix = line[0]         # type: str
         entry_type = EntryType.get_entry_type(prefix)
 
-        permissions = line[1:10] # type: str
+        permissions, _, owner, group, size, month, day, year_time_info, name = re.split(r' +', line[1:], 8)
+        # _ - Ignore hardlinks / directory entries
 
         user_permissions = self._parse_permissions(permissions[:3])   # type: int
         group_permissions = self._parse_permissions(permissions[3:6]) # type: int
@@ -300,49 +302,8 @@ class SFTPIPCFacade(object):
         permissions_oct = '{}{}{}'.format(user_permissions, group_permissions, other_permissions)
         permissions = int(permissions_oct, 8)
 
-        # Move to other entries now
-        line = line[10:].strip()
-
-        # Ignore hardlinks / directory entries
-        line = line.split(' ', 1)
-
-        # line[0] are the very ignored hardlinks and directory entries
-        line = line[1]
-
-        # The next entry is owner
-        line = line.split(' ', 1)
-        owner = line[0]
-
-        # The next entry is group name
-        line = line[1].strip()
-        line = line.split(' ', 1)
-        group = line[0]
-
-        # Next is the entry size
-        line = line[1].strip()
-        line = line.split(' ', 1)
-        size = line[0]
-
-        # Next two tokens are modification date, but only its month and day will be known here
-        line = line[1].strip()
-        line = line.split(' ', 3)
-        line = [elem for elem in line if elem.strip()]
-
-        month = line[0]
-        day = line[1]
-
-        line = line[2:]
-        line = line[0]
-
-        # Next token is either year or hour:minute
-        line = line.split(' ', 1)
-        year_time_info = line[0]
-
-        # We can now combine all date elements to build a full modification time
         last_modified = self._build_last_modified(month, day, year_time_info)
 
-        # Anything left must be our entry name
-        name = line[1].strip()
 
         # Populate everything before returning ..
         out.type = entry_type
