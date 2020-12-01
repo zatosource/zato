@@ -1086,12 +1086,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             if config_type in to_skip:
                 continue
 
-            # With file transfer - we create only local file channels here
-            # because any other one is triggered from our scheduler.
-            if config_type == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER:
-                if config_dict['config']['source_type'] != FILE_TRANSFER.SOURCE_TYPE.LOCAL.id:
-                    continue
-
             self._create_generic_connection(bunchify(config_dict['config']), raise_exc=False)
 
 # ################################################################################################################################
