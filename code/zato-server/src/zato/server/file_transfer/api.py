@@ -172,7 +172,12 @@ class FileTransferAPI(object):
         self.worker_store = worker_store
 
         self.keep_running = True
-        self.observers = []
+
+        # A list of all observer objects
+        self.observer_list = []
+
+        # A mapping of channel_id to an observer object associated with the channel
+        self.observer_dict = {}
 
         if is_linux:
 
@@ -195,6 +200,8 @@ class FileTransferAPI(object):
 
         # Maps channel name to a list of globre patterns for the channel's directories
         self.pattern_matcher_dict = {}
+
+# ################################################################################################################################
 
     def create(self, config):
         # type: (Bunch) -> None
@@ -220,11 +227,18 @@ class FileTransferAPI(object):
             pickup_from_list = str(config.pickup_from_list) # type: str
             pickup_from_list = [elem.strip() for elem in pickup_from_list.splitlines()]
 
-        observer = LocalObserver(self, config.name, config.is_active, 0.25)
-        event_handler = FileTransferEventHandler(self, config.name, config)
-        observer.schedule(event_handler, pickup_from_list, recursive=False)
+        # Create an observer object ..
+        observer = LocalObserver(self, config.id, config.source_type, config.name, config.is_active, 0.25)
 
-        self.observers.append(observer)
+        # .. and add it to data containers ..
+        self.observer_list.append(observer)
+        self.observer_dict[observer.channel_id] = observer
+
+        # .. but do not start any observer other than a local one.
+        # All the non-local ones are triggered from the scheduler.
+        if observer.is_local:
+            event_handler = FileTransferEventHandler(self, config.name, config)
+            observer.schedule(event_handler, pickup_from_list, recursive=False)
 
 # ################################################################################################################################
 
@@ -237,7 +251,7 @@ class FileTransferAPI(object):
         observer_path_list = []
 
         # .. stop its main loop ..
-        for observer in self.observers: # type: LocalObserver
+        for observer in self.observer_list: # type: LocalObserver
             if observer.name == config.name:
                 observer.stop()
                 observer_to_delete = observer
@@ -249,8 +263,11 @@ class FileTransferAPI(object):
         # .. if the object was found ..
         if observer_to_delete:
 
-            # .. delete it from the main list..
-            self.observers.remove(observer_to_delete)
+            # .. delete it from the main list ..
+            self.observer_list.remove(observer_to_delete)
+
+            # .. delete it from the mapping of channels to observers as well ..
+            self.observer_dict.pop(observer_to_delete.channel_id)
 
             # .. under Linux, delete it from from any references to it among paths being observed via inotify.
             if is_linux:
@@ -283,6 +300,12 @@ class FileTransferAPI(object):
         self._parser_cache[parser_name] = parser
 
         return parser
+
+# ################################################################################################################################
+
+    def get_observer_by_channel_id(self, channel_id):
+        # type: (int) -> BaseObserver
+        return self.observer_dict[channel_id]
 
 # ################################################################################################################################
 
@@ -437,19 +460,17 @@ class FileTransferAPI(object):
         # we will know, based on the event's full path, which observers to notify.
         self.inotify_path_to_observer_list = {}
 
-        for observer in self.observers: # type: LocalObserver
-
-            for path in observer.path_list: # type: str
-                observer_list = self.inotify_path_to_observer_list.setdefault(path, []) # type: list
-                observer_list.append(observer)
-
         # Maps missing paths to all the observers interested in it.
         missing_path_to_inspector = {}
 
         # Start the observer objects, creating inotify watch descriptors (wd) in background ..
-        for observer in self.observers: # type: BaseObserver
+        for observer in self.observer_list: # type: BaseObserver
 
             try:
+
+                # Skip non-local observers
+                if not observer.is_local:
+                    continue
 
                 # Filter out unneeded names
                 if name and name != observer.name:
@@ -491,7 +512,7 @@ class FileTransferAPI(object):
         path_to_inspector = {}
 
         # For each observer defined ..
-        for observer in self.observers: # type: BaseObserver
+        for observer in self.observer_list: # type: BaseObserver
 
             # .. check if our input path is among the paths defined for that observer ..
             if path in observer.path_list:

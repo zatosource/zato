@@ -19,6 +19,7 @@ from watchdog.events import FileCreatedEvent, FileModifiedEvent
 from watchdog.utils.dirsnapshot import DirectorySnapshot, DirectorySnapshotDiff
 
 # Zato
+from zato.common.api import FILE_TRANSFER
 from zato.common.util.api import spawn_greenlet
 
 # ################################################################################################################################
@@ -39,9 +40,12 @@ logger = getLogger(__name__)
 class BaseObserver:
     observer_impl_type = '<observer-type-not-set>'
 
-    def __init__(self, manager, name, is_active, default_timeout):
-        # type: (FileTransferAPI, str, bool, float) -> None
+    def __init__(self, manager, channel_id, source_type, name, is_active, default_timeout):
+        # type: (FileTransferAPI, int, str, str, bool, float) -> None
         self.manager = manager
+        self.channel_id = channel_id
+        self.source_type = source_type
+        self.is_local = self.source_type == FILE_TRANSFER.SOURCE_TYPE.LOCAL.id
         self.name = name
         self.is_active = is_active
         self.default_timeout = default_timeout

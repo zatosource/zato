@@ -11,6 +11,7 @@ from bunch import bunchify
 
 # Zato
 from zato.common.api import FILE_TRANSFER
+from zato.common.util.file_transfer import parse_extra_into_list
 from zato.server.base.worker.common import WorkerImpl
 
 # ################################################################################################################################
@@ -82,7 +83,7 @@ class FileTransfer(WorkerImpl):
         if extra:
 
             # .. it will be a semicolon-separated list of IDs ..
-            extra = [elem.strip() for elem in job.extra.split(';')]
+            extra = parse_extra_into_list(job.extra)
 
             # .. turn the list into a set ..
             extra_set.update(extra)
@@ -98,7 +99,7 @@ class FileTransfer(WorkerImpl):
                 pass
 
         # .. serialise the set back to a semicolong-separated list ..
-        extra = '; '.join(sorted(extra_set))
+        extra = '; '.join(sorted(str(elem) for elem in extra_set))
 
         # .. assign it to our job dict ..
         job['extra'] = extra
@@ -121,6 +122,11 @@ class FileTransfer(WorkerImpl):
             for item in self._file_transfer_get_scheduler_job_list():
                 item = bunchify(item)
                 self._file_transfer_modify_scheduler_job(item, None, msg.id, False)
+
+# ################################################################################################################################
+
+    def get_file_transfer_channel_by_id(self, channel_id):
+        return self._find_conn_info(channel_id)
 
 # ################################################################################################################################
 # ################################################################################################################################
