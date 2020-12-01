@@ -1425,7 +1425,8 @@ class MS_SQL:
 
 class FILE_TRANSFER:
 
-    SCHEDULER_SERVICE = 'pub.zato.channel.file-transfer.handler'
+    #SCHEDULER_SERVICE = 'pub.zato.channel.file-transfer.handler'
+    SCHEDULER_SERVICE = 'api.ds.1'
 
     class DEFAULT:
         FILE_PATTERNS = '*'

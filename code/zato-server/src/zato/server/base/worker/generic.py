@@ -36,6 +36,12 @@ class Generic(WorkerImpl):
 
         for conn_type, value in self.generic_conn_api.items():
             for conn_name, conn_dict in value.items():
+
+                print()
+                print(111, repr(conn_dict['id']), repr(item_id))
+                print(222, conn_dict['type_'], conn_dict['name'])
+                print()
+
                 if conn_dict['id'] == item_id:
                     return conn_dict, value
 
@@ -204,32 +210,5 @@ class Generic(WorkerImpl):
             except Exception:
                 self.logger.warn('Could not invoke `%s` with `%r`', func, config)
                 raise
-
-# ################################################################################################################################
-
-    def _edit_file_transfer_channel(self, msg):
-
-        '''
-        print()
-        for key, value in sorted(msg.items()):
-            print(111, key, value)
-        print()
-        '''
-
-        scheduler_job_id = msg.scheduler_job_id
-
-        if scheduler_job_id:
-            response = self.server.invoke('zato.scheduler.job.get-by-id', {
-                'cluster_id': self.server.cluster_id,
-                'id': scheduler_job_id
-                #'name': 'Transfer Invoices Job',
-            }, needs_response=False)
-
-            response = response.getvalue()
-
-            print()
-            print(222, response)
-            print(333, dir(response))
-            print()
 
 # ################################################################################################################################
