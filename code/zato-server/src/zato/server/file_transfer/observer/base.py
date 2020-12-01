@@ -183,7 +183,7 @@ class BaseObserver:
                 except FileNotFoundError:
 
                     # Log the error ..
-                    logger.warn('File not found caught in local file observer main loop `%s` (%s t:%s) e:`%s',
+                    logger.warn('File not found caught in file observer main loop `%s` (%s t:%s) e:`%s',
                         path, format_exc(), self.name, self.observer_impl_type)
 
                     # .. start a background inspector which will wait for the path to become available ..
@@ -193,17 +193,17 @@ class BaseObserver:
                     return
 
                 except Exception:
-                    logger.warn('Exception in local file observer main loop `%s` e:`%s (%s t:%s)',
+                    logger.warn('Exception in file observer main loop `%s` e:`%s (%s t:%s)',
                         path, format_exc(), self.name, self.observer_impl_type)
                 finally:
                     sleep(timeout)
 
         except Exception:
-            logger.warn('Exception in local file observer `%s` e:`%s (%s t:%s)', path, format_exc(), self.name, self.observer_impl_type)
-
+            logger.warn('Exception in file observer `%s` e:`%s (%s t:%s)',
+                path, format_exc(), self.name, self.observer_impl_type)
 
         # We get here only when self.keep_running is False = we are to stop
-        logger.info('Stopped local file transfer observer `%s` for `%s` (snapshot)', self.name, self.path)
+        logger.info('Stopped file transfer observer `%s` for `%s` (snapshot)', self.name, self.path)
 
 # ################################################################################################################################
 # ################################################################################################################################

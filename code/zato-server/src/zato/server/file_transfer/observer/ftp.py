@@ -37,18 +37,14 @@ class PathCreatedEvent:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class LocalObserver(BaseObserver):
-    """ A local file-system observer.
+class FTPObserver(BaseObserver):
+    """ An observer checking remote FTP directories.
     """
+    observer_impl_type = 'ftp-snapshot'
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        if is_linux:
-            self.observer_impl_type = 'local-inotify'
-            self._observe_func = self.observe_with_inotify
-        else:
-            self.observer_impl_type = 'local-snapshot'
-            self._observe_func = self.observe_with_snapshots
+        self._observe_func = self.observe_with_snapshots
 
 # ################################################################################################################################
 
@@ -67,26 +63,6 @@ class LocalObserver(BaseObserver):
         self.event_handler = event_handler
         self.path_list = path_list
         self.is_recursive = recursive
-
-# ################################################################################################################################
-
-    def observe_with_inotify(self, path, observer_start_args):
-        """ Local observer's main loop for Linux, uses inotify.
-        """
-        # type: (str, tuple) -> None
-        try:
-
-            inotify, inotify_flags, lock_func, wd_to_path_map = observer_start_args
-
-            # Create a new watch descriptor
-            wd = inotify.add_watch(path, inotify_flags)
-
-            # .. and map the input path to wd for use in higher-level layers.
-            with lock_func:
-                wd_to_path_map[wd] = path
-
-        except Exception:
-            logger.warn("Exception in inotify observer's main loop `%s`", format_exc())
 
 # ################################################################################################################################
 

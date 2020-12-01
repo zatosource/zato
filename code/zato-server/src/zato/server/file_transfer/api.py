@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2020, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -27,10 +27,12 @@ from gevent.lock import RLock
 import globre
 
 # Zato
+from zato.common.api import FILE_TRANSFER
 from zato.common.util.api import hot_deploy, new_cid, spawn_greenlet
 from zato.common.util.platform_ import is_linux
 from .observer.base import BackgroundPathInspector
 from .observer.local_ import LocalObserver, PathCreatedEvent
+from .observer.ftp import FTPObserver
 
 # ################################################################################################################################
 
@@ -53,6 +55,13 @@ logger = logging.getLogger(__name__)
 
 _singleton = object()
 _zato_orig_marker = 'zato_orig_'
+
+# ################################################################################################################################
+
+source_type_to_observer_class = {
+    FILE_TRANSFER.SOURCE_TYPE.FTP.id:   FTPObserver,
+    FILE_TRANSFER.SOURCE_TYPE.LOCAL.id: LocalObserver,
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -228,11 +237,16 @@ class FileTransferAPI(object):
             pickup_from_list = [elem.strip() for elem in pickup_from_list.splitlines()]
 
         # Create an observer object ..
-        observer = LocalObserver(self, config.id, config.source_type, config.name, config.is_active, 0.25)
+        observer_class = source_type_to_observer_class[config.source_type]
+        observer = observer_class(self, config.id, config.source_type, config.name, config.is_active, 0.25)
 
         # .. and add it to data containers ..
         self.observer_list.append(observer)
-        self.observer_dict[observer.channel_id] = observer
+
+        # .. but do not add it to the mapping dict because locally-defined observers (from pickup.conf)
+        # may not have any ID, or to be more precise, the may have the same ID.
+        if not observer.is_local:
+            self.observer_dict[observer.channel_id] = observer
 
         # .. but do not start any observer other than a local one.
         # All the non-local ones are triggered from the scheduler.
@@ -459,6 +473,12 @@ class FileTransferAPI(object):
         # to the actual observer object so that when an event is emitted
         # we will know, based on the event's full path, which observers to notify.
         self.inotify_path_to_observer_list = {}
+
+        for observer in self.observer_list: # type: LocalObserver
+
+            for path in observer.path_list: # type: str
+                observer_list = self.inotify_path_to_observer_list.setdefault(path, []) # type: list
+                observer_list.append(observer)
 
         # Maps missing paths to all the observers interested in it.
         missing_path_to_inspector = {}
