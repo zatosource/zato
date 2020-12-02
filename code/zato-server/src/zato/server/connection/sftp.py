@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from datetime import date, datetime
 from logging import getLogger
+import re
 from tempfile import NamedTemporaryFile
 from time import strptime
 
@@ -325,17 +326,14 @@ class SFTPIPCFacade(object):
 
         # Next two tokens are modification date, but only its month and day will be known here
         line = line[1].strip()
-        line = line.split(' ', 3)
-        line = [elem for elem in line if elem.strip()]
+        line = re.split(r' +', line, 3)
 
         month = line[0]
         day = line[1]
 
         line = line[2:]
-        line = line[0]
 
         # Next token is either year or hour:minute
-        line = line.split(' ', 1)
         year_time_info = line[0]
 
         # We can now combine all date elements to build a full modification time
