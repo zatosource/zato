@@ -324,11 +324,12 @@ class SFTPIPCFacade(object):
         line = line.split(' ', 1)
         size = line[0]
 
-        # Next two tokens are modification date, but only its month and day will be known here
+        # Split by whitespace into individual elements
         line = line[1].strip()
-        line = line.split(' ', 3)
+        line = line.split(' ', 4)
         line = [elem for elem in line if elem.strip()]
 
+        # Next two tokens are modification date, but only its month and day will be known here
         month = line[0]
         day = line[1]
 
