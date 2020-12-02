@@ -197,3 +197,243 @@ if __name__ == '__main__':
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+'''
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) Zato Source s.r.o. https://zato.io
+
+Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# stdlib
+from logging import getLogger
+from sys import maxsize
+from traceback import format_exc
+
+# gevent
+from gevent import sleep
+
+# Watchdog
+from watchdog.events import FileCreatedEvent, FileModifiedEvent
+from watchdog.utils.dirsnapshot import DirectorySnapshot, DirectorySnapshotDiff
+
+# Zato
+from zato.common.api import FILE_TRANSFER
+from zato.common.util.file_transfer import parse_extra_into_list
+from zato.common.util.api import spawn_greenlet
+from zato.server.connection.file_client.ftp import FTPFileClient
+from zato.server.service import Service
+
+# ################################################################################################################################
+
+if 0:
+    from bunch import Bunch
+    from zato.server.service import Service
+    from zato.server.file_transfer.observer.base import BaseObserver
+
+    BaseObserver = BaseObserver
+    Bunch = Bunch
+    Service = Service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger('zato')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+source_ftp  = FILE_TRANSFER.SOURCE_TYPE.FTP.id
+source_sftp = FILE_TRANSFER.SOURCE_TYPE.SFTP.id
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SnapshotMaker:
+
+    def __init__(self, service, outconn_config):
+        # type: (Service, Bunch)
+        self.service = service
+        self.outconn_config = outconn_config
+
+# ################################################################################################################################
+
+    def get_snapshot(self):
+        raise NotImplementedError('Must be implemented in subclasses')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class FTPSnapshotMaker(SnapshotMaker):
+    def get_snapshot(self):
+        ftp_store = self.service.server.worker_store.worker_config.out_ftp
+        ftp_outconn = ftp_store.get(self.outconn_config.name)
+
+        logger.warn('EEE %s', ftp_outconn)
+
+        '''
+        print()
+        print(111, self.outconn_config)
+        print()
+        '''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SFTPSnapshotMaker(SnapshotMaker):
+    pass
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_dir_snapshot(self, path, is_recursive):
+    """ Returns an implementation-specific snapshot of a directory.
+    """
+    # type: (BaseObserver, str, bool) -> None
+
+    logger.warn('EEE %s %s', path, is_recursive)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def observe_with_snapshots(self, path, max_iters=maxsize, *args, **kwargs):
+    """ An observer's main loop that uses snapshots.
+    """
+    # type: (BaseObserver, str) -> None
+
+    try:
+
+        # Local aliases to avoid namespace lookups in self
+        timeout = self.default_timeout
+        handler_func = self.event_handler.on_created
+        is_recursive = self.is_recursive
+
+        # How many times to run the loop - either given on input or, essentially, infinitely.
+        current_iter = 0
+
+        # Take an initial snapshot
+        snapshot = self.get_dir_snapshot(self, path, is_recursive)
+
+        while self.keep_running:
+
+            if current_iter == max_iters:
+                break
+
+            try:
+
+                # The latest snapshot ..
+                new_snapshot = self.get_dir_snapshot(self, path, is_recursive)
+
+                # .. difference between the old and new will return, in particular, new or modified files ..
+                diff = DirectorySnapshotDiff(snapshot, new_snapshot)
+
+                for path_created in diff.files_created:
+                    handler_func(FileCreatedEvent(path_created))
+
+                for path_modified in diff.files_modified:
+                    handler_func(FileModifiedEvent(path_modified))
+
+                # .. a new snapshot which will be treated as the old one in the next iteration ..
+                snapshot = self.get_dir_snapshot(self, path, is_recursive)
+
+            except FileNotFoundError:
+
+                # Log the error ..
+                logger.warn('File not found caught in %s observer main loop `%s` (%s t:%s) e:`%s',
+                    self.observer_type_name, path, format_exc(), self.name, self.observer_type_impl)
+
+                # .. start a background inspector which will wait for the path to become available ..
+                self.manager.wait_for_deleted_path(path)
+
+                # .. and end the main loop.
+                return
+
+            except Exception:
+                logger.warn('Exception in %s observer main loop `%s` e:`%s (%s t:%s)',
+                    self.observer_type_name, path, format_exc(), self.name, self.observer_type_impl)
+            finally:
+
+                # Update look counter ..
+                current_iter += 1
+
+                # .. and sleep for a moment.
+                sleep(timeout)
+
+    except Exception:
+        logger.warn('Exception in %s observer `%s` e:`%s (%s t:%s)',
+            self.observer_type_name, path, format_exc(), self.name, self.observer_type_impl)
+
+    # We get here only when self.keep_running is False = we are to stop
+    logger.info('Stopped %s transfer observer `%s` for `%s` (snapshot:%s/%s)',
+        self.observer_type_name, self.name, path, current_iter, max_iters)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ChannelFileTransferHandler(Service):
+    """ A no-op marker service uses by file transfer channels.
+    """
+    name = FILE_TRANSFER.SCHEDULER_SERVICE
+
+# ################################################################################################################################
+
+    def run_observer(self, channel_id):
+        # type: (int) -> None
+
+        observer = self.server.worker_store.file_transfer_api.get_observer_by_channel_id(channel_id)
+        observer.get_dir_snapshot = get_dir_snapshot
+        observer.observe_with_snapshots = observe_with_snapshots
+
+        source_type_to_config = {
+            source_ftp:  'out_ftp',
+            source_sftp: 'out_sftp',
+        }
+
+        source_type_to_snapshot_maker_class = {
+            source_ftp:  FTPSnapshotMaker,
+            source_sftp: SFTPSnapshotMaker,
+        }
+
+        source_type = observer.channel_config.source_type
+        source_id   = observer.channel_config.ftp_source_id
+
+        config_key  = source_type_to_config[source_type] # type: str
+        config      = self.server.worker_store.worker_config.get_config_by_item_id(config_key, source_id)
+
+        snapshot_maker_class = source_type_to_snapshot_maker_class[source_type]
+        snapshot_maker = snapshot_maker_class(self, config) # type: (SnapshotMaker)
+
+        snapshot = snapshot_maker.get_snapshot()
+
+        #config_key  = source_type_to_config[source_type]
+        #config_dict = self.server.worker_store.worker_config[config_key]
+
+        #config = config_dict[source_id]
+
+        #self.logger.warn('QQQ %s', config)
+
+        '''
+        for item in observer.path_list: # type: (str)
+            self.logger.warn('ZZZ-2 `%s`', item)
+
+            observer.observe_with_snapshots(observer, item, 1)
+            '''
+
+# ################################################################################################################################
+
+    def handle(self):
+
+        extra = '16;'#; 17' #self.request.raw_request
+
+        # Convert input parameters into a list of channel (observer) IDs ..
+        extra = parse_extra_into_list(extra)
+
+        # .. and run each observer in a new greenlet.
+        for channel_id in extra:
+            spawn_greenlet(self.run_observer, channel_id)
+
+# ################################################################################################################################
+# ################################################################################################################################
+'''
