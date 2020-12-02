@@ -238,7 +238,11 @@ class FileTransferAPI(object):
 
         # Create an observer object ..
         observer_class = source_type_to_observer_class[config.source_type]
-        observer = observer_class(self, config.id, config.source_type, config.name, config.is_active, 0.25)
+        observer = observer_class(self, config, 0.25)
+
+        print()
+        print(111, config)
+        print()
 
         # .. and add it to data containers ..
         self.observer_list.append(observer)
@@ -248,11 +252,9 @@ class FileTransferAPI(object):
         if not observer.is_local:
             self.observer_dict[observer.channel_id] = observer
 
-        # .. but do not start any observer other than a local one.
-        # All the non-local ones are triggered from the scheduler.
-        if observer.is_local:
-            event_handler = FileTransferEventHandler(self, config.name, config)
-            observer.schedule(event_handler, pickup_from_list, recursive=False)
+        # .. finally, set up directories and callbacks for the observer.
+        event_handler = FileTransferEventHandler(self, config.name, config)
+        observer.set_up(event_handler, pickup_from_list, recursive=False)
 
 # ################################################################################################################################
 
