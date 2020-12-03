@@ -208,6 +208,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from logging import getLogger
 from sys import maxsize
 from traceback import format_exc
@@ -217,12 +218,12 @@ from gevent import sleep
 
 # Watchdog
 from watchdog.events import FileCreatedEvent, FileModifiedEvent
-from watchdog.utils.dirsnapshot import DirectorySnapshot, DirectorySnapshotDiff
 
 # Zato
 from zato.common.api import FILE_TRANSFER
 from zato.common.util.file_transfer import parse_extra_into_list
 from zato.common.util.api import spawn_greenlet
+from zato.server.connection.file_client.base import BaseFileClient
 from zato.server.connection.file_client.ftp import FTPFileClient
 from zato.server.service import Service
 
@@ -251,57 +252,128 @@ source_sftp = FILE_TRANSFER.SOURCE_TYPE.SFTP.id
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SnapshotMaker:
+class FileInfo:
+    """ Information about a single file as found by a snapshot maker.
+    """
+    __slots__ = 'full_path', 'name', 'last_modified'
+
+    def __init__(self):
+        self.full_path = ''
+        self.name = ''
+        self.last_modified = None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DirSnapshot:
+    """ Represents the state of a given directory, i.e. a list of files in it.
+    """
+    def __init__(self):
+        self.file_names = set()
+        self._file_set = set()
+
+# ################################################################################################################################
+
+    def add_file_list(self, path, data):
+        # type: (str, list) -> None
+        for item in data: # type: (dict)
+
+            file_info = FileInfo()
+            file_info.full_path = os.path.join(path, item['name'])
+            file_info.name = item['name']
+            file_info.last_modified = item['last_modified']
+
+            self.file_names.add(file_info.name)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DirSnapshotDiff:
+    """ A difference between two DirSnapshot objects, i.e. all the files created and modified.
+    """
+    __slots__ = 'files_created', 'files_modified'
+
+    def __init__(self, old, new):
+        # type: (DirSnapshot, DirSnapshot)
+
+        # These are new for sure ..
+        self.files_created = new.file_names - old.file_names
+
+        # .. now we can prepare a list for files that were potentially modified ..
+        self.files_modified = []
+
+        # .. go through each of the file lists and compare timestamps and their size,
+        # if either is different, it means that the file was modified. In case that
+        # the file was modified but the size remains the size and at the same time
+        # the timestamp is the same too, we will not be able to tell the difference
+        # and the file will not be reported as modified (we would have to download it
+        # and check its contents to cover such a case).
+        for file_info in new.file_names: # type: FileInfo
+            file_info.
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class BaseSnapshotMaker:
 
     def __init__(self, service, outconn_config):
         # type: (Service, Bunch)
         self.service = service
         self.outconn_config = outconn_config
+        self.file_client = None # type: BaseFileClient
+
+    def connect(self):
+        raise NotImplementedError('Must be implemented in subclasses')
 
 # ################################################################################################################################
 
-    def get_snapshot(self):
+    def get_snapshot(self, path, ignored_is_recursive):
         raise NotImplementedError('Must be implemented in subclasses')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class FTPSnapshotMaker(SnapshotMaker):
-    def get_snapshot(self):
+class FTPSnapshotMaker(BaseSnapshotMaker):
+    def connect(self):
+
+        # Extract all the configuration ..
         ftp_store = self.service.server.worker_store.worker_config.out_ftp
         ftp_outconn = ftp_store.get(self.outconn_config.name)
 
-        logger.warn('EEE %s', ftp_outconn)
+        # .. connect to the remote server ..
+        self.file_client = FTPFileClient(ftp_outconn, self.outconn_config)
 
-        '''
-        print()
-        print(111, self.outconn_config)
-        print()
-        '''
+        # .. and confirm that the connection works.
+        self.file_client.ping()
+
+    def get_snapshot(self, path, ignored_is_recursive):
+        # type: (str, bool)
+
+        # First, get a list of files under path ..
+        result = self.file_client.list(path)
+
+        # .. create a new container for the snapshot ..
+        snapshot = DirSnapshot()
+
+        # .. now, populate with what we found ..
+        snapshot.add_file_list(path, result['file_list'])
+
+        # .. and return the result to our caller.
+        return snapshot
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SFTPSnapshotMaker(SnapshotMaker):
+class SFTPSnapshotMaker(BaseSnapshotMaker):
     pass
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_dir_snapshot(self, path, is_recursive):
-    """ Returns an implementation-specific snapshot of a directory.
-    """
-    # type: (BaseObserver, str, bool) -> None
-
-    logger.warn('EEE %s %s', path, is_recursive)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def observe_with_snapshots(self, path, max_iters=maxsize, *args, **kwargs):
+def observe_with_snapshots(self, snapshot_maker, path, max_iters=maxsize, *args, **kwargs):
     """ An observer's main loop that uses snapshots.
     """
-    # type: (BaseObserver, str) -> None
+    # type: (BaseObserver, BaseSnapshotMaker, str, int) -> None
 
     try:
 
@@ -314,7 +386,7 @@ def observe_with_snapshots(self, path, max_iters=maxsize, *args, **kwargs):
         current_iter = 0
 
         # Take an initial snapshot
-        snapshot = self.get_dir_snapshot(self, path, is_recursive)
+        snapshot = snapshot_maker.get_snapshot(path, is_recursive)
 
         while self.keep_running:
 
@@ -323,11 +395,17 @@ def observe_with_snapshots(self, path, max_iters=maxsize, *args, **kwargs):
 
             try:
 
+                logger.warn('SLEEPING')
+                sleep(6)
+
                 # The latest snapshot ..
-                new_snapshot = self.get_dir_snapshot(self, path, is_recursive)
+                new_snapshot = snapshot_maker.get_snapshot(path, is_recursive)
 
                 # .. difference between the old and new will return, in particular, new or modified files ..
-                diff = DirectorySnapshotDiff(snapshot, new_snapshot)
+                diff = DirSnapshotDiff(snapshot, new_snapshot)
+
+                logger.warn('CCC-1 %s', diff.files_created)
+                logger.warn('CCC-2 %s', diff.files_modified)
 
                 for path_created in diff.files_created:
                     handler_func(FileCreatedEvent(path_created))
@@ -336,7 +414,7 @@ def observe_with_snapshots(self, path, max_iters=maxsize, *args, **kwargs):
                     handler_func(FileModifiedEvent(path_modified))
 
                 # .. a new snapshot which will be treated as the old one in the next iteration ..
-                snapshot = self.get_dir_snapshot(self, path, is_recursive)
+                snapshot = snapshot_maker.get_snapshot(path, is_recursive)
 
             except FileNotFoundError:
 
@@ -383,7 +461,6 @@ class ChannelFileTransferHandler(Service):
         # type: (int) -> None
 
         observer = self.server.worker_store.file_transfer_api.get_observer_by_channel_id(channel_id)
-        observer.get_dir_snapshot = get_dir_snapshot
         observer.observe_with_snapshots = observe_with_snapshots
 
         source_type_to_config = {
@@ -403,23 +480,11 @@ class ChannelFileTransferHandler(Service):
         config      = self.server.worker_store.worker_config.get_config_by_item_id(config_key, source_id)
 
         snapshot_maker_class = source_type_to_snapshot_maker_class[source_type]
-        snapshot_maker = snapshot_maker_class(self, config) # type: (SnapshotMaker)
+        snapshot_maker = snapshot_maker_class(self, config) # type: (BaseSnapshotMaker)
+        snapshot_maker.connect()
 
-        snapshot = snapshot_maker.get_snapshot()
-
-        #config_key  = source_type_to_config[source_type]
-        #config_dict = self.server.worker_store.worker_config[config_key]
-
-        #config = config_dict[source_id]
-
-        #self.logger.warn('QQQ %s', config)
-
-        '''
         for item in observer.path_list: # type: (str)
-            self.logger.warn('ZZZ-2 `%s`', item)
-
-            observer.observe_with_snapshots(observer, item, 1)
-            '''
+            observer.observe_with_snapshots(observer, snapshot_maker, item, 1)
 
 # ################################################################################################################################
 
