@@ -2647,6 +2647,59 @@ class SMSTwilio(Base):
 
 # ################################################################################################################################
 
+class GenericObject(Base):
+    """ A generic data object.
+    """
+    __tablename__ = 'generic_object'
+    __table_args__ = (
+        Index('gen_obj_uq_name_type', 'name', 'type_', 'cluster_id', unique=True,
+              mysql_length={'name':191, 'type_':191}),
+        Index('gen_obj_par_id', 'cluster_id', 'parent_id', 'parent_type', unique=False,
+              mysql_length={'parent_id':191, 'parent_type':191}),
+        Index('gen_obj_cat_id', 'cluster_id', 'category_id', unique=False,
+              mysql_length={'category_id':191}),
+        Index('gen_obj_cat_subcat_id', 'cluster_id', 'category_id', 'subcategory_id', unique=False,
+              mysql_length={'category_id':191, 'subcategory_id':191}),
+        Index('gen_obj_cat_name', 'cluster_id', 'category_name', unique=False,
+              mysql_length={'category_name':191}),
+        Index('gen_obj_cat_subc_name', 'cluster_id', 'category_name', 'subcategory_name', unique=False,
+              mysql_length={'category_name':191, 'subcategory_name':191}),
+        Index('gen_obj_par_obj_id', 'cluster_id', 'parent_object_id', unique=False),
+    {})
+
+    id = Column(Integer, Sequence('generic_object_seq'), primary_key=True)
+    name = Column(Text(191), nullable=False)
+
+    type_ = Column(Text(191), nullable=False)
+    subtype = Column(Text(191), nullable=True)
+
+    category_id = Column(Text(191), nullable=True)
+    subcategory_id = Column(Text(191), nullable=True)
+
+    category_name = Column(Text(191), nullable=True)
+    subcategory_name = Column(Text(191), nullable=True)
+
+    # This references back to generic objects
+    parent_object_id = Column(Integer, nullable=True)
+
+    # This may reference objects other than the current model
+    parent_id = Column(Text(191), nullable=True)
+    parent_type = Column(Text(191), nullable=True)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
+    generic_conn_def_id = Column(Integer, ForeignKey('generic_conn_def.id', ondelete='CASCADE'), nullable=True)
+    generic_conn_def_sec_id = Column(Integer, ForeignKey('generic_conn_def_sec.id', ondelete='CASCADE'), nullable=True)
+    generic_conn_id = Column(Integer, ForeignKey('generic_conn.id', ondelete='CASCADE'), nullable=True)
+    generic_conn_sec_id = Column(Integer, ForeignKey('generic_conn_sec.id', ondelete='CASCADE'), nullable=True)
+    generic_conn_client_id = Column(Integer, ForeignKey('generic_conn_client.id', ondelete='CASCADE'), nullable=True)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('generic_object_list', order_by=name, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
 class GenericConnDef(Base):
     """ Generic connection definitions - with details kept in JSON.
     """
@@ -2853,7 +2906,7 @@ class RateLimitState(Base):
     """
     __tablename__ = 'rate_limit_state'
     __table_args__ = (
-        Index('object_idx', 'object_type', 'object_id', 'period', 'last_network', unique=True,
+        Index('rate_lim_obj_idx', 'object_type', 'object_id', 'period', 'last_network', unique=True,
               mysql_length={'object_type':191, 'object_id':191, 'period':191, 'last_network':191}),
     {})
 

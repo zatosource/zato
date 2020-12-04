@@ -184,6 +184,13 @@ def job_list(session, cluster_id, service_name=None, needs_columns=False):
     return q.\
         order_by(Job.name)
 
+def job_by_id(session, cluster_id, job_id):
+    """ A scheduler's job fetched by its ID.
+    """
+    return _job(session, cluster_id).\
+        filter(Job.id==job_id).\
+        one()
+
 def job_by_name(session, cluster_id, name):
     """ A scheduler's job fetched by its name.
     """

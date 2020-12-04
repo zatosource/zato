@@ -1080,8 +1080,10 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         for config_dict in self.worker_config.generic_connection.values():
 
+            config_type = config_dict['config']['type_']
+
             # Not all generic connections are created here
-            if config_dict['config']['type_'] in to_skip:
+            if config_type in to_skip:
                 continue
 
             self._create_generic_connection(bunchify(config_dict['config']), raise_exc=False)
