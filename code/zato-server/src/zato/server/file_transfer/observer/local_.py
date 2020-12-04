@@ -20,7 +20,6 @@ from shutil import copy as shutil_copy
 from watchdog.utils.dirsnapshot import DirectorySnapshot
 
 # Zato
-from zato.common.util.api import spawn_greenlet
 from zato.common.util.platform_ import is_linux
 from .base import BaseObserver
 
@@ -80,14 +79,14 @@ class LocalObserver(BaseObserver):
     def move_file(self, path_from, path_to, _ignored_event, _ignored_snapshot_maker):
         """ Moves a file to a selected directory.
         """
-        shutil_copy(event.full_path, config.move_processed_to)
+        shutil_copy(path_from, path_to)
 
 # ################################################################################################################################
 
     def delete_file(self, path, _ignored_snapshot_maker):
         """ Deletes a file pointed to by path.
         """
-        os.remove(full_path)
+        os.remove(path)
 
 # ################################################################################################################################
 
