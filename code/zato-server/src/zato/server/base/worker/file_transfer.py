@@ -116,12 +116,15 @@ class FileTransfer(WorkerImpl):
         if msg.scheduler_job_id:
             self._file_transfer_modify_scheduler_job(None, msg.scheduler_job_id, msg.id, True)
 
-        # .. otherwise, without a job ID on input, we still need to look them all up
-        # and disassociate our channel from any of the existing jobs.
+        # .. otherwise, without a job ID on input, we still need to look up
+        # all scheduler jobs and disassociate our channel from any of the existing jobs ..
         else:
             for item in self._file_transfer_get_scheduler_job_list():
                 item = bunchify(item)
                 self._file_transfer_modify_scheduler_job(item, None, msg.id, False)
+
+        # .. finally, we can edit the channel itself.
+        self.file_transfer_api.edit(msg)
 
 # ################################################################################################################################
 

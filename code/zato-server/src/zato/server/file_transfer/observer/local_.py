@@ -44,7 +44,7 @@ class PathCreatedEvent:
 class LocalObserver(BaseObserver):
     """ A local file-system observer.
     """
-    observer_type_name = 'local file'
+    observer_type_name = 'local'
     observer_type_name_title = observer_type_name.upper()
     should_wait_for_deleted_paths = True
 
