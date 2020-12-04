@@ -14,6 +14,7 @@ from traceback import format_exc
 # stdlib
 import os
 from logging import getLogger
+from shutil import copy as shutil_copy
 
 # Watchdog
 from watchdog.utils.dirsnapshot import DirectorySnapshot
@@ -73,6 +74,13 @@ class LocalObserver(BaseObserver):
 
     def path_is_directory(self, path, _ignored_snapshot_maker=None):
         return os.path.isdir(path)
+
+# ################################################################################################################################
+
+    def move_file(self, path_from, path_to, _ignored_event, _ignored_snapshot_maker):
+        """ Moves a file to a selected directory.
+        """
+        shutil_copy(event.full_path, config.move_processed_to)
 
 # ################################################################################################################################
 

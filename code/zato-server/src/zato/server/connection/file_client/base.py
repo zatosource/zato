@@ -44,6 +44,10 @@ class BaseFileClient(object):
     def store(self, *args, **kwargs):
         raise NotImplementedError('Must be implemented by subclasses')
 
+    # ftp
+    def move_file(self, *args, **kwargs):
+        raise NotImplementedError('Must be implemented by subclasses')
+
     def delete_file(self, *args, **kwargs):
         raise NotImplementedError('Must be implemented by subclasses')
 

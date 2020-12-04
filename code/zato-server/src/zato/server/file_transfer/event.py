@@ -140,22 +140,22 @@ class FileTransferEventHandler:
                 event.raw_data = raw_data.decode(self.config.data_encoding) # type: str
                 event.has_raw_data = True
 
-                logger.warn('WWW-')
+                logger.warn('WWW-11')
 
                 if self.config.should_parse_on_pickup:
 
                     try:
                         event.data = self.manager.get_parser(self.config.parse_with)(event.raw_data)
                         event.has_data = True
-                    except Exception as e:
-                        event.parse_error = e
+                    except Exception:
+                        event.parse_error = format_exc()
 
             # Invokes all callbacks for the event
             spawn_greenlet(self.manager.invoke_callbacks, event, self.config.service_list, self.config.topic_list,
                 self.config.outconn_rest_list)
 
             # Performs cleanup actions
-            self.manager.post_handle(event.full_path, self.config, observer, snapshot_maker)
+            self.manager.post_handle(event, self.config, observer, snapshot_maker)
 
         except Exception:
             logger.warn('Exception in pickup event handler `%s` (%s) `%s`',
