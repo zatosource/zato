@@ -21,6 +21,13 @@ from zato.common.util.platform_ import is_linux
 from .base import BaseObserver
 
 # ################################################################################################################################
+
+if 0:
+    from zato.server.file_transfer.snapshot import BaseSnapshotMaker
+
+    BaseSnapshotMaker = BaseSnapshotMaker
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
@@ -44,18 +51,16 @@ class FTPObserver(BaseObserver):
     observer_type_name = 'FTP'
     observer_type_name_title = observer_type_name
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        #self._observe_func = self.observe_with_snapshots
+# ################################################################################################################################
+
+    def path_exists(self, path, snapshot_maker):
+        # type: (str, BaseSnapshotMaker) -> bool
+        return snapshot_maker.file_client.path_exists(path)
 
 # ################################################################################################################################
 
-    def path_exists(self, path):
-        raise NotImplementedError()
-
-# ################################################################################################################################
-
-    def path_is_directory(self, path):
+    def path_is_directory(self, path, snapshot_maker):
+        # type: (str, BaseSnapshotMaker) -> bool
         raise NotImplementedError()
 
 # ################################################################################################################################
@@ -63,6 +68,15 @@ class FTPObserver(BaseObserver):
     def is_path_valid(self, path):
         # type: (str) -> bool
         raise NotImplementedError()
+
+
+# ################################################################################################################################
+
+    def delete_file(self, path, snapshot_maker):
+        """ Deletes a file pointed to by path.
+        """
+        # type: (str, BaseSnapshotMaker)
+        snapshot_maker.file_client.delete_file(path)
 
 # ################################################################################################################################
 # ################################################################################################################################

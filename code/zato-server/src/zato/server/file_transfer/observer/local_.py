@@ -45,6 +45,7 @@ class LocalObserver(BaseObserver):
     """
     observer_type_name = 'local file'
     observer_type_name_title = observer_type_name.upper()
+    should_wait_for_deleted_paths = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -65,13 +66,20 @@ class LocalObserver(BaseObserver):
 
 # ################################################################################################################################
 
-    def path_exists(self, path):
+    def path_exists(self, path, _ignored_snapshot_maker=None):
         return os.path.exists(path)
 
 # ################################################################################################################################
 
-    def path_is_directory(self, path):
+    def path_is_directory(self, path, _ignored_snapshot_maker=None):
         return os.path.isdir(path)
+
+# ################################################################################################################################
+
+    def delete_file(self, path, _ignored_snapshot_maker):
+        """ Deletes a file pointed to by path.
+        """
+        os.remove(full_path)
 
 # ################################################################################################################################
 
