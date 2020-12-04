@@ -11,22 +11,28 @@ import os
 from datetime import datetime
 from logging import getLogger
 from traceback import format_exc
+from sys import maxsize
 
 # gevent
 from gevent import sleep
 
 # Watchdog
 from watchdog.events import FileCreatedEvent, FileModifiedEvent
-from watchdog.utils.dirsnapshot import DirectorySnapshot, DirectorySnapshotDiff
 
 # Zato
+from zato.common.api import FILE_TRANSFER
 from zato.common.util.api import spawn_greenlet
+from zato.server.file_transfer.snapshot import DirSnapshotDiff
 
 # ################################################################################################################################
 
 if 0:
+    from bunch import Bunch
     from zato.server.file_transfer.api import FileTransferAPI
+    from zato.server.file_transfer.snapshot import BaseSnapshotMaker
 
+    Bunch = Bunch
+    BaseSnapshotMaker
     FileTransferAPI = FileTransferAPI
 
 # ################################################################################################################################
@@ -38,13 +44,20 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 class BaseObserver:
-    observer_impl_type = '<observer-type-not-set>'
+    observer_type_impl = '<observer-type-impl-not-set>'
+    observer_type_name = '<observer-type-name-not-set>'
+    observer_type_name_title = observer_type_name.upper()
+    should_wait_for_deleted_paths = False
 
-    def __init__(self, manager, name, is_active, default_timeout):
-        # type: (FileTransferAPI, str, bool, float) -> None
+    def __init__(self, manager, channel_config, default_timeout):
+        # type: (FileTransferAPI, Bunch, float) -> None
         self.manager = manager
-        self.name = name
-        self.is_active = is_active
+        self.channel_config = channel_config
+        self.channel_id = channel_config.id
+        self.source_type = channel_config.source_type
+        self.is_local = self.source_type == FILE_TRANSFER.SOURCE_TYPE.LOCAL.id
+        self.name = channel_config.name
+        self.is_active = channel_config.is_active
         self.default_timeout = default_timeout
         self.event_handler = None
         self.path_list = ['<initial-observer>']
@@ -53,31 +66,82 @@ class BaseObserver:
 
 # ################################################################################################################################
 
+    def set_up(self, event_handler, path_list, recursive):
+        # type: (object, list, bool) -> None
+        self.event_handler = event_handler
+        self.path_list = path_list
+        self.is_recursive = recursive
+
+# ################################################################################################################################
+
     def start(self, observer_start_args):
         if self.is_active:
             spawn_greenlet(self._start, observer_start_args)
         else:
-            logger.info('Skipping an inactive file transfer channel `%s` (%s)', self.name, self.path)
+            logger.info('Skipping an inactive file transfer channel `%s` (%s)', self.name, self.path_list)
 
 # ################################################################################################################################
 
-    def _start(self, *args, **kwargs):
-        raise NotImplementedError('Must be implemented by subclasses')
+    def stop(self, needs_log=True):
+        if needs_log:
+            logger.info('Stopping %s file transfer observer `%s`', self.observer_type_name, self.name)
+        self.keep_running = False
+
+# ################################################################################################################################
+
+    def _start(self, observer_start_args):
+        for path in self.path_list: # type: str
+
+            # Start only for paths that are valid - all invalid ones
+            # are handled by a background path inspector.
+            if self.is_path_valid(path):
+                logger.info('Starting %s file observer `%s` for `%s` (%s)',
+                    self.observer_type_name, path, self.name, self.observer_type_impl)
+                spawn_greenlet(self._observe_func, path, observer_start_args)
+            else:
+                logger.info('Skipping invalid path `%s` for `%s` (%s)', path, self.name, self.observer_type_impl)
 
 # ################################################################################################################################
 
     def is_path_valid(self, *args, **kwargs):
+        """ Returns True if path can be used as a source for file transfer (e.g. it exists and it is a directory).
+        """
         raise NotImplementedError('Must be implemented by subclasses')
 
 # ################################################################################################################################
 
-    def path_exists(self, path):
+    def path_exists(self, path, snapshot_maker):
+        """ Returns True if path exists, False otherwise.
+        """
         raise NotImplementedError('Must be implemented by subclasses')
 
 # ################################################################################################################################
 
-    def path_is_directory(self, path):
+    def path_is_directory(self, path, snapshot_maker):
+        """ Returns True if path is a directory, False otherwise.
+        """
         raise NotImplementedError('Must be implemented by subclasses')
+
+# ################################################################################################################################
+
+    def get_dir_snapshot(path, is_recursive):
+        """ Returns an implementation-specific snapshot of a directory.
+        """
+        raise NotImplementedError()
+
+# ################################################################################################################################
+
+    def move_file(self, path_from, path_to, event, snapshot_maker):
+        """ Moves a file to a selected directory.
+        """
+        raise NotImplementedError()
+
+# ################################################################################################################################
+
+    def delete_file(self, path, snapshot_maker):
+        """ Deletes a file pointed to by path.
+        """
+        raise NotImplementedError()
 
 # ################################################################################################################################
 
@@ -105,8 +169,8 @@ class BaseObserver:
 
             # Honour the main loop's status
             if not self.keep_running:
-                logger.info('Stopped `%s` path lookup function for local file transfer observer `%s` (not found) (%s)',
-                    path, self.name, self.observer_impl_type)
+                logger.info('Stopped `%s` path lookup function for %s file transfer observer `%s` (not found) (%s)',
+                    path, self.observer_type_name, self.name, self.observer_type_impl)
                 return
 
             if self.path_exists(path):
@@ -118,22 +182,22 @@ class BaseObserver:
                     error_found = True
 
                     if idx == 1 or (idx % log_every == 0):
-                        logger.warn('Local file transfer path `%s` is not a directory (%s) (c:%s d:%s t:%s)',
-                            path, self.name, idx, utcnow() - start, self.observer_impl_type)
+                        logger.warn('%s transfer path `%s` is not a directory (%s) (c:%s d:%s t:%s)',
+                            self.observer_type_name_title, self.name, idx, utcnow() - start, self.observer_type_impl)
             else:
                 # Indicate that there was an erorr with path
                 error_found = True
 
                 if idx == 1 or (idx % log_every == 0):
-                    logger.warn('Local file transfer path `%r` does not exist (%s) (c:%s d:%s t:%s)',
-                        path, self.name, idx, utcnow() - start, self.observer_impl_type)
+                    logger.warn('%s transfer path `%r` does not exist (%s) (c:%s d:%s t:%s)',
+                        self.observer_type_name_title, path, self.name, idx, utcnow() - start, self.observer_type_impl)
 
             if is_ok:
 
                 # Log only if had an error previously, otherwise it would emit too much to logs ..
                 if error_found:
-                    logger.info('Local file transfer path `%s` found successfully (%s) (c:%s d:%s t:%s)',
-                        path, self.name, idx, utcnow() - start, self.observer_impl_type)
+                    logger.info('%s file transfer path `%s` found successfully (%s) (c:%s d:%s t:%s)',
+                        self.observer_type_name_title, path, self.name, idx, utcnow() - start, self.observer_type_impl)
 
                 # .. and start the observer now.
                 self.start(observer_start_args)
@@ -143,10 +207,10 @@ class BaseObserver:
 
 # ################################################################################################################################
 
-    def observe_with_snapshots(self, path, *args, **kwargs):
+    def observe_with_snapshots(self, snapshot_maker, path, max_iters=maxsize, log_stop_event=True, *args, **kwargs):
         """ An observer's main loop that uses snapshots.
         """
-        # type: (str) -> None
+        # type: (BaseSnapshotMaker, str, int) -> None
 
         try:
 
@@ -155,33 +219,48 @@ class BaseObserver:
             handler_func = self.event_handler.on_created
             is_recursive = self.is_recursive
 
+            # How many times to run the loop - either given on input or, essentially, infinitely.
+            current_iter = 0
+
             # Take an initial snapshot
-            snapshot = DirectorySnapshot(path, recursive=is_recursive)
+            snapshot = snapshot_maker.get_snapshot(path, is_recursive)
 
             while self.keep_running:
 
+                if current_iter == max_iters:
+                    break
+
                 try:
 
+                    logger.warn('SLEEPING %s %s', current_iter, max_iters)
+                    sleep(1)
+
                     # The latest snapshot ..
-                    new_snapshot = DirectorySnapshot(path, recursive=is_recursive)
+                    new_snapshot = snapshot_maker.get_snapshot(path, is_recursive)
 
                     # .. difference between the old and new will return, in particular, new or modified files ..
-                    diff = DirectorySnapshotDiff(snapshot, new_snapshot)
+                    diff = DirSnapshotDiff(snapshot, new_snapshot)
+
+                    logger.warn('CCC-1 %s', diff.files_created)
+                    logger.warn('CCC-2 %s', diff.files_modified)
 
                     for path_created in diff.files_created:
-                        handler_func(FileCreatedEvent(path_created))
+                        full_event_path = os.path.join(path, path_created)
+                        handler_func(FileCreatedEvent(full_event_path), self, snapshot_maker)
 
                     for path_modified in diff.files_modified:
-                        handler_func(FileModifiedEvent(path_modified))
+                        full_event_path = os.path.join(path, path_modified)
+                        handler_func(FileModifiedEvent(full_event_path), self, snapshot_maker)
 
                     # .. a new snapshot which will be treated as the old one in the next iteration ..
-                    snapshot = DirectorySnapshot(path, recursive=is_recursive)
+                    snapshot = snapshot_maker.get_snapshot(path, is_recursive)
 
-                except FileNotFoundError:
+                # Note that this will be caught only with local files not with FTP, SFTP etc.
+                except FileNotFoundError as e:
 
                     # Log the error ..
-                    logger.warn('File not found caught in local file observer main loop `%s` (%s t:%s) e:`%s',
-                        path, format_exc(), self.name, self.observer_impl_type)
+                    logger.warn('Path not found caught in %s file observer main loop (%s) `%s` (%s t:%s)',
+                        self.observer_type_name, path, format_exc(), self.name, self.observer_type_impl)
 
                     # .. start a background inspector which will wait for the path to become available ..
                     self.manager.wait_for_deleted_path(path)
@@ -189,18 +268,24 @@ class BaseObserver:
                     # .. and end the main loop.
                     return
 
-                except Exception:
-                    logger.warn('Exception in local file observer main loop `%s` e:`%s (%s t:%s)',
-                        path, format_exc(), self.name, self.observer_impl_type)
+                except Exception as e:
+                    logger.warn('Exception %s in %s file observer main loop `%s` e:`%s (%s t:%s)',
+                        type(e), self.observer_type_name, path, format_exc(), self.name, self.observer_type_impl)
                 finally:
+
+                    # Update look counter ..
+                    current_iter += 1
+
+                    # .. and sleep for a moment.
                     sleep(timeout)
 
-        except Exception:
-            logger.warn('Exception in local file observer `%s` e:`%s (%s t:%s)', path, format_exc(), self.name, self.observer_impl_type)
+        except Exception as e:
+            logger.warn('Exception in %s file observer `%s` e:`%s (%s t:%s)',
+                self.observer_type_name, path, format_exc(), self.name, self.observer_type_impl)
 
-
-        # We get here only when self.keep_running is False = we are to stop
-        logger.info('Stopped local file transfer observer `%s` for `%s` (snapshot)', self.name, self.path)
+        if log_stop_event:
+            logger.info('Stopped %s file transfer observer `%s` for `%s` (snapshot:%s/%s)',
+                self.observer_type_name, self.name, path, current_iter, max_iters)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -213,7 +298,8 @@ class BackgroundPathInspector:
         self.observer_start_args = observer_start_args
 
     def start(self):
-        spawn_greenlet(self.observer.wait_for_path, self.path, self.observer_start_args)
+        if self.observer.is_active:
+            spawn_greenlet(self.observer.wait_for_path, self.path, self.observer_start_args)
 
 # ################################################################################################################################
 # ################################################################################################################################

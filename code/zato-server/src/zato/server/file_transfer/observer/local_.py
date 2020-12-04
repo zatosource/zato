@@ -14,9 +14,12 @@ from traceback import format_exc
 # stdlib
 import os
 from logging import getLogger
+from shutil import copy as shutil_copy
+
+# Watchdog
+from watchdog.utils.dirsnapshot import DirectorySnapshot
 
 # Zato
-from zato.common.util.api import spawn_greenlet
 from zato.common.util.platform_ import is_linux
 from .base import BaseObserver
 
@@ -40,33 +43,50 @@ class PathCreatedEvent:
 class LocalObserver(BaseObserver):
     """ A local file-system observer.
     """
+    observer_type_name = 'local'
+    observer_type_name_title = observer_type_name.upper()
+    should_wait_for_deleted_paths = True
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         if is_linux:
-            self.observer_impl_type = 'inotify'
+            self.observer_type_impl = 'local-inotify'
             self._observe_func = self.observe_with_inotify
         else:
-            self.observer_impl_type = 'snapshot'
+            self.observer_type_impl = 'local-snapshot'
             self._observe_func = self.observe_with_snapshots
 
 # ################################################################################################################################
 
-    def path_exists(self, path):
+    def get_dir_snapshot(path, is_recursive):
+        """ Returns a directory snapshot (unused under Linux with inotify).
+        """
+        return DirectorySnapshot(path, recursive=is_recursive)
+
+# ################################################################################################################################
+
+    def path_exists(self, path, _ignored_snapshot_maker=None):
         return os.path.exists(path)
 
 # ################################################################################################################################
 
-    def path_is_directory(self, path):
+    def path_is_directory(self, path, _ignored_snapshot_maker=None):
         return os.path.isdir(path)
 
 # ################################################################################################################################
 
-    def schedule(self, event_handler, path_list, recursive):
-        # type: (object, list, bool) -> None
-        self.event_handler = event_handler
-        self.path_list = path_list
-        self.is_recursive = recursive
+    def move_file(self, path_from, path_to, _ignored_event, _ignored_snapshot_maker):
+        """ Moves a file to a selected directory.
+        """
+        shutil_copy(path_from, path_to)
+
+# ################################################################################################################################
+
+    def delete_file(self, path, _ignored_snapshot_maker):
+        """ Deletes a file pointed to by path.
+        """
+        os.remove(path)
 
 # ################################################################################################################################
 
@@ -90,28 +110,9 @@ class LocalObserver(BaseObserver):
 
 # ################################################################################################################################
 
-    def stop(self):
-        logger.info('Stopping local file transfer observer `%s`', self.name)
-        self.keep_running = False
-
-# ################################################################################################################################
-
-    def _start(self, observer_start_args):
-        for path in self.path_list: # type: str
-
-            # Start only for paths that are valid - all invalid ones
-            # are handled by a background path inspector.
-            if self.is_path_valid(path):
-                logger.info('Starting local file observer `%s` for `%s` (%s)', path, self.name, self.observer_impl_type)
-                spawn_greenlet(self._observe_func, path, observer_start_args)
-            else:
-                logger.info('Skipping invalid path `%s` for `%s` (%s)', path, self.name, self.observer_impl_type)
-
-# ################################################################################################################################
-
     def is_path_valid(self, path):
         # type: (str) -> bool
-        return os.path.exists(path) and os.path.isdir(path)
+        return self.path_exists(path) and self.path_is_directory(path)
 
 # ################################################################################################################################
 # ################################################################################################################################
