@@ -7,6 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from datetime import datetime
 from logging import getLogger
 from traceback import format_exc
@@ -17,19 +18,21 @@ from gevent import sleep
 
 # Watchdog
 from watchdog.events import FileCreatedEvent, FileModifiedEvent
-from watchdog.utils.dirsnapshot import DirectorySnapshot, DirectorySnapshotDiff
 
 # Zato
 from zato.common.api import FILE_TRANSFER
 from zato.common.util.api import spawn_greenlet
+from zato.server.file_transfer.snapshot import DirSnapshotDiff
 
 # ################################################################################################################################
 
 if 0:
     from bunch import Bunch
     from zato.server.file_transfer.api import FileTransferAPI
+    from zato.server.file_transfer.snapshot import BaseSnapshotMaker
 
     Bunch = Bunch
+    BaseSnapshotMaker
     FileTransferAPI = FileTransferAPI
 
 # ################################################################################################################################
@@ -44,6 +47,7 @@ class BaseObserver:
     observer_type_impl = '<observer-type-impl-not-set>'
     observer_type_name = '<observer-type-name-not-set>'
     observer_type_name_title = observer_type_name.upper()
+    should_wait_for_deleted_paths = False
 
     def __init__(self, manager, channel_config, default_timeout):
         # type: (FileTransferAPI, Bunch, float) -> None
@@ -105,14 +109,14 @@ class BaseObserver:
 
 # ################################################################################################################################
 
-    def path_exists(self, path):
+    def path_exists(self, path, snapshot_maker):
         """ Returns True if path exists, False otherwise.
         """
         raise NotImplementedError('Must be implemented by subclasses')
 
 # ################################################################################################################################
 
-    def path_is_directory(self, path):
+    def path_is_directory(self, path, snapshot_maker):
         """ Returns True if path is a directory, False otherwise.
         """
         raise NotImplementedError('Must be implemented by subclasses')
@@ -121,6 +125,13 @@ class BaseObserver:
 
     def get_dir_snapshot(path, is_recursive):
         """ Returns an implementation-specific snapshot of a directory.
+        """
+        raise NotImplementedError()
+
+# ################################################################################################################################
+
+    def delete_file(self, path, snapshot_maker):
+        """ Deletes a file pointed to by path.
         """
         raise NotImplementedError()
 
@@ -185,6 +196,88 @@ class BaseObserver:
 
             else:
                 sleep(5)
+
+# ################################################################################################################################
+
+    def observe_with_snapshots(self, snapshot_maker, path, max_iters=maxsize, log_stop_event=True, *args, **kwargs):
+        """ An observer's main loop that uses snapshots.
+        """
+        # type: (BaseSnapshotMaker, str, int) -> None
+
+        try:
+
+            # Local aliases to avoid namespace lookups in self
+            timeout = self.default_timeout
+            handler_func = self.event_handler.on_created
+            is_recursive = self.is_recursive
+
+            # How many times to run the loop - either given on input or, essentially, infinitely.
+            current_iter = 0
+
+            # Take an initial snapshot
+            snapshot = snapshot_maker.get_snapshot(path, is_recursive)
+
+            while self.keep_running:
+
+                if current_iter == max_iters:
+                    break
+
+                try:
+
+                    logger.warn('SLEEPING %s %s', current_iter, max_iters)
+                    sleep(1)
+
+                    # The latest snapshot ..
+                    new_snapshot = snapshot_maker.get_snapshot(path, is_recursive)
+
+                    # .. difference between the old and new will return, in particular, new or modified files ..
+                    diff = DirSnapshotDiff(snapshot, new_snapshot)
+
+                    logger.warn('CCC-1 %s', diff.files_created)
+                    logger.warn('CCC-2 %s', diff.files_modified)
+
+                    for path_created in diff.files_created:
+                        full_event_path = os.path.join(path, path_created)
+                        handler_func(FileCreatedEvent(full_event_path), self, snapshot_maker)
+
+                    for path_modified in diff.files_modified:
+                        full_event_path = os.path.join(path, path_modified)
+                        handler_func(FileModifiedEvent(full_event_path), self, snapshot_maker)
+
+                    # .. a new snapshot which will be treated as the old one in the next iteration ..
+                    snapshot = snapshot_maker.get_snapshot(path, is_recursive)
+
+                # Note that this will be caught only with local files not with FTP, SFTP etc.
+                except FileNotFoundError as e:
+
+                    # Log the error ..
+                    logger.warn('Path not found caught in %s observer main loop (%s) `%s` (%s t:%s)',
+                        self.observer_type_name, path, format_exc(), self.name, self.observer_type_impl)
+
+                    # .. start a background inspector which will wait for the path to become available ..
+                    self.manager.wait_for_deleted_path(path)
+
+                    # .. and end the main loop.
+                    return
+
+                except Exception as e:
+                    logger.warn('Exception %s in %s observer main loop `%s` e:`%s (%s t:%s)',
+                        type(e), self.observer_type_name, path, format_exc(), self.name, self.observer_type_impl)
+                finally:
+
+                    # Update look counter ..
+                    current_iter += 1
+
+                    # .. and sleep for a moment.
+                    sleep(timeout)
+
+        except Exception as e:
+            logger.warn('Exception in %s observer `%s` e:`%s (%s t:%s)',
+                self.observer_type_name, path, format_exc(), self.name, self.observer_type_impl)
+
+        if log_stop_event:
+            logger.info('Stopped %s transfer observer `%s` for `%s` (snapshot:%s/%s)',
+                self.observer_type_name, self.name, path, current_iter, max_iters)
 
 # ################################################################################################################################
 # ################################################################################################################################
