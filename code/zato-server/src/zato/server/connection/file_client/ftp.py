@@ -72,6 +72,12 @@ class FTPFileClient(BaseFileClient):
 
 # ################################################################################################################################
 
+    def move_file(self, path_from, path_to):
+        # type: (str, str)
+        self.conn.move(path_from, path_to)
+
+# ################################################################################################################################
+
     def store(self, path, data):
         # type: (str, object) -> None
         if not isinstance(data, bytes):

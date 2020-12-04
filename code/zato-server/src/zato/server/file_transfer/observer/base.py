@@ -130,6 +130,13 @@ class BaseObserver:
 
 # ################################################################################################################################
 
+    def move_file(self, path_from, path_to, event, snapshot_maker):
+        """ Moves a file to a selected directory.
+        """
+        raise NotImplementedError()
+
+# ################################################################################################################################
+
     def delete_file(self, path, snapshot_maker):
         """ Deletes a file pointed to by path.
         """
