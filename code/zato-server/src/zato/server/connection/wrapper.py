@@ -50,6 +50,7 @@ class Wrapper(object):
     wrapper_type = '<undefined-Wrapper>'
     required_secret_attr = None
     required_secret_label = None
+    build_if_not_active = False
 
     def __init__(self, config, server=None):
         # type: (Bunch, ParallelServer)
@@ -72,8 +73,9 @@ class Wrapper(object):
     def build_wrapper(self, should_spawn=True):
 
         if not self.config.is_active:
-            logger.info('Skipped building an inactive %s (%s)', self.wrapper_type, self.config.name)
-            return
+            if not self.build_if_not_active:
+                logger.info('Skipped building an inactive %s (%s)', self.wrapper_type, self.config.name)
+                return
 
         if self.required_secret_attr:
             if not self.config[self.required_secret_attr]:

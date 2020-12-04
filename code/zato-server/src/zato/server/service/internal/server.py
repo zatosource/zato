@@ -66,7 +66,7 @@ class Edit(AdminService):
                 first()
 
             if existing_one:
-                raise Exception('A server of that name [{0}] already exists on this cluster'.format(self.request.input.name))
+                raise Exception('A server of that name `{}` already exists in this cluster'.format(self.request.input.name))
 
             try:
                 item = session.query(Server).filter_by(id=self.request.input.id).one()
@@ -135,7 +135,7 @@ class Delete(AdminService):
 
                 # Sanity check
                 if server.id == self.server.id:
-                    msg = 'A server cannot delete itself, id:[{}], name:[{}]'.format(server.id, server.name)
+                    msg = 'A server cannot delete itself, id:`{}`, name:`{}`'.format(server.id, server.name)
                     self.logger.error(msg)
                     raise ZatoException(self.cid, msg)
 
