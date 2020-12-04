@@ -82,8 +82,9 @@ class BaseObserver:
 
 # ################################################################################################################################
 
-    def stop(self):
-        logger.info('Stopping %s transfer observer `%s`', self.observer_type_name, self.name)
+    def stop(self, needs_log=True):
+        if needs_log:
+            logger.info('Stopping %s file transfer observer `%s`', self.observer_type_name, self.name)
         self.keep_running = False
 
 # ################################################################################################################################
@@ -94,7 +95,7 @@ class BaseObserver:
             # Start only for paths that are valid - all invalid ones
             # are handled by a background path inspector.
             if self.is_path_valid(path):
-                logger.info('Starting %s observer `%s` for `%s` (%s)',
+                logger.info('Starting %s file observer `%s` for `%s` (%s)',
                     self.observer_type_name, path, self.name, self.observer_type_impl)
                 spawn_greenlet(self._observe_func, path, observer_start_args)
             else:
@@ -168,7 +169,7 @@ class BaseObserver:
 
             # Honour the main loop's status
             if not self.keep_running:
-                logger.info('Stopped `%s` path lookup function for %s transfer observer `%s` (not found) (%s)',
+                logger.info('Stopped `%s` path lookup function for %s file transfer observer `%s` (not found) (%s)',
                     path, self.observer_type_name, self.name, self.observer_type_impl)
                 return
 
@@ -258,7 +259,7 @@ class BaseObserver:
                 except FileNotFoundError as e:
 
                     # Log the error ..
-                    logger.warn('Path not found caught in %s observer main loop (%s) `%s` (%s t:%s)',
+                    logger.warn('Path not found caught in %s file observer main loop (%s) `%s` (%s t:%s)',
                         self.observer_type_name, path, format_exc(), self.name, self.observer_type_impl)
 
                     # .. start a background inspector which will wait for the path to become available ..
@@ -268,7 +269,7 @@ class BaseObserver:
                     return
 
                 except Exception as e:
-                    logger.warn('Exception %s in %s observer main loop `%s` e:`%s (%s t:%s)',
+                    logger.warn('Exception %s in %s file observer main loop `%s` e:`%s (%s t:%s)',
                         type(e), self.observer_type_name, path, format_exc(), self.name, self.observer_type_impl)
                 finally:
 
@@ -279,11 +280,11 @@ class BaseObserver:
                     sleep(timeout)
 
         except Exception as e:
-            logger.warn('Exception in %s observer `%s` e:`%s (%s t:%s)',
+            logger.warn('Exception in %s file observer `%s` e:`%s (%s t:%s)',
                 self.observer_type_name, path, format_exc(), self.name, self.observer_type_impl)
 
         if log_stop_event:
-            logger.info('Stopped %s transfer observer `%s` for `%s` (snapshot:%s/%s)',
+            logger.info('Stopped %s file transfer observer `%s` for `%s` (snapshot:%s/%s)',
                 self.observer_type_name, self.name, path, current_iter, max_iters)
 
 # ################################################################################################################################
