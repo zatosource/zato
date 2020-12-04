@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2020, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -16,7 +16,6 @@ from http.client import OK
 from importlib import import_module
 from mimetypes import guess_type as guess_mime_type
 from re import IGNORECASE
-from shutil import copy as shutil_copy
 from traceback import format_exc
 
 # gevent
@@ -27,20 +26,29 @@ from gevent.lock import RLock
 import globre
 
 # Zato
-from zato.common.util.api import hot_deploy, new_cid, spawn_greenlet
+from zato.common.api import FILE_TRANSFER
+from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.platform_ import is_linux
+from .event import FileTransferEventHandler, singleton
 from .observer.base import BackgroundPathInspector
 from .observer.local_ import LocalObserver, PathCreatedEvent
+from .observer.ftp import FTPObserver
 
 # ################################################################################################################################
 
 if 0:
+    from bunch import Bunch
     from requests import Response
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.worker import WorkerStore
+    from .event import FileTransferEvent
     from .observer.base import BaseObserver
+    from .snapshot import BaseSnapshotMaker
 
     BaseObserver = BaseObserver
+    BaseSnapshotMaker = BaseSnapshotMaker
+    Bunch = Bunch
+    FileTransferEvent
     ParallelServer = ParallelServer
     Response = Response
     WorkerStore = WorkerStore
@@ -51,113 +59,17 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-_singleton = object()
 _zato_orig_marker = 'zato_orig_'
 
 # ################################################################################################################################
-# ################################################################################################################################
 
-class FileTransferEventHandler:
+source_type_ftp   = FILE_TRANSFER.SOURCE_TYPE.FTP.id
+source_type_local = FILE_TRANSFER.SOURCE_TYPE.LOCAL.id
 
-    def __init__(self, manager, channel_name, config):
-        # type: (FileTransferAPI, str, Bunch) -> None
-
-        self.manager = manager
-        self.channel_name = channel_name
-        self.config = config
-
-    def on_created(self, transfer_event):
-        # type: (PathCreatedEvent) -> None
-
-        try:
-
-            # Ignore the event if it points to the directory itself,
-            # as inotify will send CLOSE_WRITE when it is not a creation of a file
-            # but a fact that a directory has been deleted that the event is about.
-            # Note that we issue a log entry only if the path is not one of what
-            # we observe, i.e. when one of our own directories is deleted, we do not log it here.
-
-            # The path must have existed since we are being called
-            # and we need to check why it does not exist anymore ..
-            if not os.path.exists(transfer_event.src_path):
-
-                # .. if it is one of the paths that we observe, it means that it has been just deleted,
-                # so we need to run a background inspector which will wait until it is created once again ..
-                if transfer_event.src_path in self.config.pickup_from_list:
-                    self.manager.wait_for_deleted_path(transfer_event.src_path)
-
-                else:
-                    logger.info('Ignoring local file event; path not found `%s` (%r)', transfer_event.src_path, self.config.name)
-
-                # .. in either case, there is nothing else we can do here.
-                return
-
-            # Get file name to check if we should handle it ..
-            file_name = os.path.basename(transfer_event.src_path) # type: str
-
-            # .. return if we should not.
-            if not self.manager.should_handle(self.config.name, file_name):
-                return
-
-            event = FileTransferEvent()
-            event.full_path = transfer_event.src_path
-            event.base_dir = os.path.dirname(transfer_event.src_path)
-            event.file_name = file_name
-            event.channel_name = self.channel_name
-
-            if self.config.is_hot_deploy:
-                spawn_greenlet(hot_deploy, self.manager.server, event.file_name, event.full_path,
-                    self.config.should_delete_after_pickup)
-                return
-
-            if self.config.should_read_on_pickup:
-
-                f = open(event.full_path, 'rb')
-                event.raw_data = f.read().decode(self.config.data_encoding)
-                event.has_raw_data = True
-                f.close()
-
-                if self.config.should_parse_on_pickup:
-
-                    try:
-                        event.data = self.manager.get_parser(self.config.parse_with)(event.raw_data)
-                        event.has_data = True
-                    except Exception as e:
-                        event.parse_error = e
-
-            # Invokes all callbacks for the event
-            spawn_greenlet(self.manager.invoke_callbacks, event, self.config.service_list, self.config.topic_list,
-                self.config.outconn_rest_list)
-
-            # Performs cleanup actions
-            self.manager.post_handle(event.full_path, self.config)
-
-        except Exception:
-            logger.warn('Exception in pickup event handler `%s` (%s) `%s`',
-                self.config.name, transfer_event.src_path, format_exc())
-
-    on_modified = on_created
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class FileTransferEvent(object):
-    """ Encapsulates information about a file picked up from file system.
-    """
-    __slots__ = ('base_dir', 'file_name', 'full_path', 'channel_name', 'ts_utc', 'raw_data', 'data', 'has_raw_data', 'has_data',
-        'parse_error')
-
-    def __init__(self):
-        self.base_dir = None      # type: str
-        self.file_name = None     # type: str
-        self.full_path = None     # type: str
-        self.channel_name = None  # type: str
-        self.ts_utc = None        # type: str
-        self.raw_data = ''        # type: str
-        self.data = _singleton    # type: str
-        self.has_raw_data = False # type: bool
-        self.has_data = False     # type: bool
-        self.parse_error = None   # type: str
+source_type_to_observer_class = {
+    source_type_ftp:   FTPObserver,
+    source_type_local: LocalObserver,
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -170,9 +82,18 @@ class FileTransferAPI(object):
 
         self.server = server
         self.worker_store = worker_store
+        self.update_lock = RLock()
 
         self.keep_running = True
-        self.observers = []
+
+        # A list of all observer objects
+        self.observer_list = []
+
+        # A mapping of channel_id to an observer object associated with the channel
+        self.observer_dict = {}
+
+        # Caches parser objects by their name
+        self._parser_cache = {}
 
         if is_linux:
 
@@ -196,7 +117,11 @@ class FileTransferAPI(object):
         # Maps channel name to a list of globre patterns for the channel's directories
         self.pattern_matcher_dict = {}
 
-    def create(self, config):
+# ################################################################################################################################
+
+    def _create(self, config):
+        """ Low-level implementation of self.create.
+        """
         # type: (Bunch) -> None
 
         # Ignore internal channels
@@ -220,15 +145,46 @@ class FileTransferAPI(object):
             pickup_from_list = str(config.pickup_from_list) # type: str
             pickup_from_list = [elem.strip() for elem in pickup_from_list.splitlines()]
 
-        observer = LocalObserver(self, config.name, config.is_active, 0.25)
-        event_handler = FileTransferEventHandler(self, config.name, config)
-        observer.schedule(event_handler, pickup_from_list, recursive=False)
+        # Make sure that a parser is given if we are to parse any input ..
+        if config.should_parse_on_pickup:
 
-        self.observers.append(observer)
+            # .. log a warning and disable parsing if no parser was configured when it was expected.
+            if not config.parse_with:
+                logger.warn('Parsing is enabled but no parser is declared for file transfer channel `%s` (%s)',
+                    config.name, config.source_type)
+                config.should_parse_on_pickup = False
+
+        # Create an observer object ..
+        observer_class = source_type_to_observer_class[config.source_type]
+        observer = observer_class(self, config, 0.25)
+
+        # .. and add it to data containers ..
+        self.observer_list.append(observer)
+
+        # .. but do not add it to the mapping dict because locally-defined observers (from pickup.conf)
+        # may not have any ID, or to be more precise, the may have the same ID.
+        if not observer.is_local:
+            self.observer_dict[observer.channel_id] = observer
+
+        # .. finally, set up directories and callbacks for the observer.
+        event_handler = FileTransferEventHandler(self, config.name, config)
+        observer.set_up(event_handler, pickup_from_list, recursive=False)
 
 # ################################################################################################################################
 
-    def delete(self, config):
+    def create(self, config):
+        """ Creates a file transfer channel (but does not start it).
+        """
+        # type: (Bunch) -> None
+        with self.update_lock:
+            self._create(config)
+
+# ################################################################################################################################
+
+    def _delete(self, config):
+        """ Low-level implementation of self.delete.
+        """
+        # type: (Bunch) -> None
 
         # Observer object to delete ..
         observer_to_delete = None
@@ -237,9 +193,10 @@ class FileTransferAPI(object):
         observer_path_list = []
 
         # .. stop its main loop ..
-        for observer in self.observers: # type: LocalObserver
+        for observer in self.observer_list: # type: LocalObserver
             if observer.name == config.name:
-                observer.stop()
+                needs_log = is_linux and observer.is_local
+                observer.stop(needs_log=needs_log)
                 observer_to_delete = observer
                 observer_path_list[:] = observer.path_list
                 break
@@ -249,18 +206,60 @@ class FileTransferAPI(object):
         # .. if the object was found ..
         if observer_to_delete:
 
-            # .. delete it from the main list..
-            self.observers.remove(observer_to_delete)
+            # .. delete it from the main list ..
+            self.observer_list.remove(observer_to_delete)
 
-            # .. under Linux, delete it from from any references to it among paths being observed via inotify.
-            if is_linux:
+            # .. delete it from the mapping of channels to observers as well ..
+            self.observer_dict.pop(observer_to_delete.channel_id)
+
+            # .. for local transfer under Linux, delete it from any references among paths being observed via inotify.
+            if is_linux and config.source_type == source_type_local:
                 for path in observer_path_list:
                     observer_list = self.inotify_path_to_observer_list.get(path) # type: list
                     observer_list.remove(observer_to_delete)
 
 # ################################################################################################################################
 
+    def delete(self, config):
+        """ Deletes a file transfer channel.
+        """
+        # type: (Bunch) -> None
+        with self.update_lock:
+            self._delete(config)
+
+# ################################################################################################################################
+
+    def edit(self, config):
+        """ Edits a file transfer channel by deleting and recreating it.
+        """
+        # type: (Bunch) -> None
+        with self.update_lock:
+
+            # Delte the channel first ..
+            self._delete(config)
+
+            # .. recreate it ..
+            self._create(config)
+
+            # .. and start it if it is enabled ..
+            if config.is_active:
+
+                # .. but only if it is a local one because any other is triggerd by our scheduler ..
+                if config.source_type == source_type_local:
+                    self.start_observer(config.name, True)
+
+            # .. we can now find our new observer object ..
+            observer = self.get_observer_by_channel_id(config.id) # type: BaseObserver
+
+            # .. to finally store a message that we are done.
+            logger.info('%s file observer `%s` set up successfully (%s) (%s)',
+                observer.observer_type_name_title, observer.name, observer.observer_type_impl, observer.path_list)
+
+# ################################################################################################################################
+
     def get_py_parser(self, name):
+        """ Imports a Python object that represents a parser.
+        """
         parts = name.split('.')
         module_path, callable_name = '.'.join(parts[0:-1]), parts[-1]
 
@@ -269,11 +268,15 @@ class FileTransferAPI(object):
 # ################################################################################################################################
 
     def get_service_parser(self, name):
-        raise NotImplementedError('Not implemented in current version')
+        """ Returns a service that will act as a parser.
+        """
+        raise NotImplementedError()
 
 # ################################################################################################################################
 
     def get_parser(self, parser_name):
+        """ Returns a parser by name, possibly an already cached one.
+        """
         if parser_name in self._parser_cache:
             return self._parser_cache[parser_name]
 
@@ -283,6 +286,12 @@ class FileTransferAPI(object):
         self._parser_cache[parser_name] = parser
 
         return parser
+
+# ################################################################################################################################
+
+    def get_observer_by_channel_id(self, channel_id):
+        # type: (int) -> BaseObserver
+        return self.observer_dict[channel_id]
 
 # ################################################################################################################################
 
@@ -305,7 +314,7 @@ class FileTransferAPI(object):
             'channel_name': event.channel_name,
             'ts_utc': datetime.utcnow().isoformat(),
             'raw_data': event.raw_data,
-            'data': event.data if event.data is not _singleton else None,
+            'data': event.data if event.data is not singleton else None,
             'has_raw_data': event.has_raw_data,
             'has_data': event.has_data,
             'parse_error': event.parse_error,
@@ -390,16 +399,15 @@ class FileTransferAPI(object):
 
 # ################################################################################################################################
 
-    def post_handle(self, full_path, config):
+    def post_handle(self, event, config, observer, snapshot_maker):
         """ Runs after callback services have been already invoked, performs clean up if configured to.
         """
-        # type: (str, Bunch) -> None
-
+        # type: (FileTransferEvent, Bunch, BaseObserver, BaseSnapshotMaker) -> None
         if config.move_processed_to:
-            shutil_copy(full_path, config.move_processed_to)
+            observer.move_file(event.full_path, config.move_processed_to, observer, snapshot_maker)
 
         if config.should_delete_after_pickup:
-            os.remove(full_path)
+            observer.delete_file(event.full_path, snapshot_maker)
 
 # ################################################################################################################################
 
@@ -419,7 +427,7 @@ class FileTransferAPI(object):
 
                         # .. and notify each one.
                         for observer in observer_list: # type: LocalObserver
-                            observer.event_handler.on_created(PathCreatedEvent(src_path))
+                            observer.event_handler.on_created(PathCreatedEvent(src_path), observer)
 
                     except Exception:
                         logger.warn('Exception in inotify handler `%s`', format_exc())
@@ -430,14 +438,14 @@ class FileTransferAPI(object):
 
 # ################################################################################################################################
 
-    def _run(self, name=None):
+    def _run(self, name=None, log_after_started=False):
 
         # Under Linux, for each observer, map each of its watched directories
         # to the actual observer object so that when an event is emitted
         # we will know, based on the event's full path, which observers to notify.
         self.inotify_path_to_observer_list = {}
 
-        for observer in self.observers: # type: LocalObserver
+        for observer in self.observer_list: # type: LocalObserver
 
             for path in observer.path_list: # type: str
                 observer_list = self.inotify_path_to_observer_list.setdefault(path, []) # type: list
@@ -447,9 +455,13 @@ class FileTransferAPI(object):
         missing_path_to_inspector = {}
 
         # Start the observer objects, creating inotify watch descriptors (wd) in background ..
-        for observer in self.observers: # type: BaseObserver
+        for observer in self.observer_list: # type: BaseObserver
 
             try:
+
+                # Skip non-local observers
+                if not observer.is_local:
+                    continue
 
                 # Filter out unneeded names
                 if name and name != observer.name:
@@ -465,6 +477,9 @@ class FileTransferAPI(object):
 
                 # Start the observer object.
                 observer.start(self.observer_start_args)
+
+                if log_after_started:
+                    logger.info('Started file observer `%s` path:`%s`', observer.name, observer.path_list)
 
             except Exception:
                 logger.warn('File observer `%s` could not be started, path:`%s`, e:`%s`',
@@ -491,7 +506,7 @@ class FileTransferAPI(object):
         path_to_inspector = {}
 
         # For each observer defined ..
-        for observer in self.observers: # type: BaseObserver
+        for observer in self.observer_list: # type: BaseObserver
 
             # .. check if our input path is among the paths defined for that observer ..
             if path in observer.path_list:
@@ -525,7 +540,7 @@ class FileTransferAPI(object):
 
 # ################################################################################################################################
 
-    def start_observer(self, name):
-        self._run(name)
+    def start_observer(self, name, log_after_started=False):
+        self._run(name, log_after_started)
 
 # ################################################################################################################################
