@@ -9,21 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from logging import getLogger
-from sys import maxsize
-from traceback import format_exc
-
-# gevent
-from gevent import sleep
-
-# Watchdog
-from watchdog.events import FileCreatedEvent, FileModifiedEvent
 
 # Zato
-from zato.common.api import FILE_TRANSFER
-from zato.common.util.api import spawn_greenlet
-from zato.server.connection.file_client.base import BaseFileClient
 from zato.server.connection.file_client.ftp import FTPFileClient
-from zato.server.service import Service
 
 # ################################################################################################################################
 
