@@ -9,15 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from traceback import format_exc
-
-# stdlib
-import os
 from logging import getLogger
 
 # Zato
-from zato.common.util.api import spawn_greenlet
-from zato.common.util.platform_ import is_linux
 from .base import BaseObserver
 
 # ################################################################################################################################
