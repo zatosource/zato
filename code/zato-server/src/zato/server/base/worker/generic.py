@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from bunch import Bunch
 
 # Zato
-from zato.common.api import LDAP
+from zato.common.api import GENERIC as COMMON_GENERIC, LDAP
 from zato.common.broker_message import GENERIC as GENERIC_BROKER_MSG
 from zato.common.util.api import as_bool, parse_simple_type
 from zato.server.base.worker.common import WorkerImpl
@@ -36,6 +36,12 @@ class Generic(WorkerImpl):
 
         for conn_type, value in self.generic_conn_api.items():
             for conn_name, conn_dict in value.items():
+
+                print()
+                print(111, repr(conn_dict['id']), repr(item_id))
+                print(222, conn_dict['type_'], conn_dict['name'])
+                print()
+
                 if conn_dict['id'] == item_id:
                     return conn_dict, value
 
@@ -92,6 +98,11 @@ class Generic(WorkerImpl):
 # ################################################################################################################################
 
     def _edit_generic_connection(self, msg, skip=None, secret=None):
+
+        # Special-case file transfer channels
+        if msg['type_'] == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER:
+            self._edit_file_transfer_channel(msg)
+            return
 
         # Find and store connection password/secret for later use
         # if we do not have it already and we will if we are called from ChangePassword.
