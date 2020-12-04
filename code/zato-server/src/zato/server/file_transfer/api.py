@@ -28,8 +28,9 @@ import globre
 
 # Zato
 from zato.common.api import FILE_TRANSFER
-from zato.common.util.api import hot_deploy, new_cid, spawn_greenlet
+from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.platform_ import is_linux
+from .event import FileTransferEventHandler, singleton
 from .observer.base import BackgroundPathInspector
 from .observer.local_ import LocalObserver, PathCreatedEvent
 from .observer.ftp import FTPObserver
@@ -41,8 +42,10 @@ if 0:
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.worker import WorkerStore
     from .observer.base import BaseObserver
+    from .snapshot import BaseSnapshotMaker
 
     BaseObserver = BaseObserver
+    BaseSnapshotMaker = BaseSnapshotMaker
     ParallelServer = ParallelServer
     Response = Response
     WorkerStore = WorkerStore
@@ -53,7 +56,6 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-_singleton = object()
 _zato_orig_marker = 'zato_orig_'
 
 # ################################################################################################################################
@@ -62,111 +64,6 @@ source_type_to_observer_class = {
     FILE_TRANSFER.SOURCE_TYPE.FTP.id:   FTPObserver,
     FILE_TRANSFER.SOURCE_TYPE.LOCAL.id: LocalObserver,
 }
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class FileTransferEventHandler:
-
-    def __init__(self, manager, channel_name, config):
-        # type: (FileTransferAPI, str, Bunch) -> None
-
-        self.manager = manager
-        self.channel_name = channel_name
-        self.config = config
-
-    def on_created(self, transfer_event):
-        # type: (PathCreatedEvent) -> None
-
-        try:
-
-            # Ignore the event if it points to the directory itself,
-            # as inotify will send CLOSE_WRITE when it is not a creation of a file
-            # but a fact that a directory has been deleted that the event is about.
-            # Note that we issue a log entry only if the path is not one of what
-            # we observe, i.e. when one of our own directories is deleted, we do not log it here.
-
-            # The path must have existed since we are being called
-            # and we need to check why it does not exist anymore ..
-            if not os.path.exists(transfer_event.src_path):
-
-                # .. if it is one of the paths that we observe, it means that it has been just deleted,
-                # so we need to run a background inspector which will wait until it is created once again ..
-                if transfer_event.src_path in self.config.pickup_from_list:
-                    self.manager.wait_for_deleted_path(transfer_event.src_path)
-
-                else:
-                    logger.info('Ignoring local file event; path not found `%s` (%r)', transfer_event.src_path, self.config.name)
-
-                # .. in either case, there is nothing else we can do here.
-                return
-
-            # Get file name to check if we should handle it ..
-            file_name = os.path.basename(transfer_event.src_path) # type: str
-
-            # .. return if we should not.
-            if not self.manager.should_handle(self.config.name, file_name):
-                return
-
-            event = FileTransferEvent()
-            event.full_path = transfer_event.src_path
-            event.base_dir = os.path.dirname(transfer_event.src_path)
-            event.file_name = file_name
-            event.channel_name = self.channel_name
-
-            if self.config.is_hot_deploy:
-                spawn_greenlet(hot_deploy, self.manager.server, event.file_name, event.full_path,
-                    self.config.should_delete_after_pickup)
-                return
-
-            if self.config.should_read_on_pickup:
-
-                f = open(event.full_path, 'rb')
-                event.raw_data = f.read().decode(self.config.data_encoding)
-                event.has_raw_data = True
-                f.close()
-
-                if self.config.should_parse_on_pickup:
-
-                    try:
-                        event.data = self.manager.get_parser(self.config.parse_with)(event.raw_data)
-                        event.has_data = True
-                    except Exception as e:
-                        event.parse_error = e
-
-            # Invokes all callbacks for the event
-            spawn_greenlet(self.manager.invoke_callbacks, event, self.config.service_list, self.config.topic_list,
-                self.config.outconn_rest_list)
-
-            # Performs cleanup actions
-            self.manager.post_handle(event.full_path, self.config)
-
-        except Exception:
-            logger.warn('Exception in pickup event handler `%s` (%s) `%s`',
-                self.config.name, transfer_event.src_path, format_exc())
-
-    on_modified = on_created
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class FileTransferEvent(object):
-    """ Encapsulates information about a file picked up from file system.
-    """
-    __slots__ = ('base_dir', 'file_name', 'full_path', 'channel_name', 'ts_utc', 'raw_data', 'data', 'has_raw_data', 'has_data',
-        'parse_error')
-
-    def __init__(self):
-        self.base_dir = None      # type: str
-        self.file_name = None     # type: str
-        self.full_path = None     # type: str
-        self.channel_name = None  # type: str
-        self.ts_utc = None        # type: str
-        self.raw_data = ''        # type: str
-        self.data = _singleton    # type: str
-        self.has_raw_data = False # type: bool
-        self.has_data = False     # type: bool
-        self.parse_error = None   # type: str
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -239,10 +136,6 @@ class FileTransferAPI(object):
         # Create an observer object ..
         observer_class = source_type_to_observer_class[config.source_type]
         observer = observer_class(self, config, 0.25)
-
-        print()
-        print(111, config)
-        print()
 
         # .. and add it to data containers ..
         self.observer_list.append(observer)
@@ -344,7 +237,7 @@ class FileTransferAPI(object):
             'channel_name': event.channel_name,
             'ts_utc': datetime.utcnow().isoformat(),
             'raw_data': event.raw_data,
-            'data': event.data if event.data is not _singleton else None,
+            'data': event.data if event.data is not singleton else None,
             'has_raw_data': event.has_raw_data,
             'has_data': event.has_data,
             'parse_error': event.parse_error,
@@ -429,16 +322,16 @@ class FileTransferAPI(object):
 
 # ################################################################################################################################
 
-    def post_handle(self, full_path, config):
+    def post_handle(self, full_path, config, observer, snapshot_maker):
         """ Runs after callback services have been already invoked, performs clean up if configured to.
         """
-        # type: (str, Bunch) -> None
+        # type: (str, Bunch, BaseObserver, BaseSnapshotMaker) -> None
 
         if config.move_processed_to:
             shutil_copy(full_path, config.move_processed_to)
 
         if config.should_delete_after_pickup:
-            os.remove(full_path)
+            observer.delete_file(full_path, snapshot_maker)
 
 # ################################################################################################################################
 
@@ -458,7 +351,7 @@ class FileTransferAPI(object):
 
                         # .. and notify each one.
                         for observer in observer_list: # type: LocalObserver
-                            observer.event_handler.on_created(PathCreatedEvent(src_path))
+                            observer.event_handler.on_created(PathCreatedEvent(src_path), observer)
 
                     except Exception:
                         logger.warn('Exception in inotify handler `%s`', format_exc())
@@ -572,3 +465,90 @@ class FileTransferAPI(object):
         self._run(name)
 
 # ################################################################################################################################
+
+'''
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) Zato Source s.r.o. https://zato.io
+
+Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# Zato
+from zato.common.api import FILE_TRANSFER
+from zato.common.util.api import spawn_greenlet
+from zato.common.util.file_transfer import parse_extra_into_list
+from zato.server.file_transfer.snapshot import FTPSnapshotMaker, SFTPSnapshotMaker
+from zato.server.service import Service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.server.file_transfer.observer.base import BaseObserver
+
+    BaseObserver = BaseObserver
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+source_ftp  = FILE_TRANSFER.SOURCE_TYPE.FTP.id
+source_sftp = FILE_TRANSFER.SOURCE_TYPE.SFTP.id
+
+source_type_to_config = {
+    source_ftp:  'out_ftp',
+    source_sftp: 'out_sftp',
+}
+
+source_type_to_snapshot_maker_class = {
+    source_ftp:  FTPSnapshotMaker,
+    source_sftp: SFTPSnapshotMaker,
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ChannelFileTransferHandler(Service):
+    """ A no-op marker service uses by file transfer channels.
+    """
+    name = FILE_TRANSFER.SCHEDULER_SERVICE
+
+# ################################################################################################################################
+
+    def run_observer(self, channel_id):
+        # type: (int) -> None
+
+        observer = self.server.worker_store.file_transfer_api.get_observer_by_channel_id(channel_id) # type: BaseObserver
+
+        source_type = observer.channel_config.source_type   # type: str
+        source_id   = observer.channel_config.ftp_source_id # type: int
+
+        config_key  = source_type_to_config[source_type] # type: str
+        config      = self.server.worker_store.worker_config.get_config_by_item_id(config_key, source_id)
+
+        snapshot_maker_class = source_type_to_snapshot_maker_class[source_type]
+        snapshot_maker = snapshot_maker_class(self, config) # type: (BaseSnapshotMaker)
+        snapshot_maker.connect()
+
+        for item in observer.path_list: # type: (str)
+            observer.observe_with_snapshots(snapshot_maker, item, 5, False)
+
+# ################################################################################################################################
+
+    def handle(self):
+
+        extra = '16;'#; 17' #self.request.raw_request
+
+        # Convert input parameters into a list of channel (observer) IDs ..
+        extra = parse_extra_into_list(extra)
+
+        self.logger.warn('QQQ %s', self)
+
+        # .. and run each observer in a new greenlet.
+        for channel_id in extra:
+            spawn_greenlet(self.run_observer, channel_id)
+
+# ################################################################################################################################
+# ################################################################################################################################
+'''

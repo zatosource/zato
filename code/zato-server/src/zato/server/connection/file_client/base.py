@@ -56,6 +56,10 @@ class BaseFileClient(object):
         raise NotImplementedError('Must be implemented by subclasses')
 
     # ftp
+    def path_exists(self, *args, **kwargs):
+        raise NotImplementedError('Must be implemented by subclasses')
+
+    # ftp
     def ping(self, *args, **kwargs):
         raise NotImplementedError('Must be implemented by subclasses')
 
