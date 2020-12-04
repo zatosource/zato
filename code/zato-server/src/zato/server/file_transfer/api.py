@@ -16,7 +16,6 @@ from http.client import OK
 from importlib import import_module
 from mimetypes import guess_type as guess_mime_type
 from re import IGNORECASE
-from shutil import copy as shutil_copy
 from traceback import format_exc
 
 # gevent
@@ -38,14 +37,18 @@ from .observer.ftp import FTPObserver
 # ################################################################################################################################
 
 if 0:
+    from bunch import Bunch
     from requests import Response
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.worker import WorkerStore
+    from .event import FileTransferEvent
     from .observer.base import BaseObserver
     from .snapshot import BaseSnapshotMaker
 
     BaseObserver = BaseObserver
     BaseSnapshotMaker = BaseSnapshotMaker
+    Bunch = Bunch
+    FileTransferEvent
     ParallelServer = ParallelServer
     Response = Response
     WorkerStore = WorkerStore
@@ -84,6 +87,9 @@ class FileTransferAPI(object):
 
         # A mapping of channel_id to an observer object associated with the channel
         self.observer_dict = {}
+
+        # Caches parser objects by their name
+        self._parser_cache = {}
 
         if is_linux:
 
@@ -133,6 +139,15 @@ class FileTransferAPI(object):
             pickup_from_list = str(config.pickup_from_list) # type: str
             pickup_from_list = [elem.strip() for elem in pickup_from_list.splitlines()]
 
+        # Make sure that a parser is given if we are to parse any input ..
+        if config.should_parse_on_pickup:
+
+            # .. log a warning and disable parsing if no parser was configured when it was expected.
+            if not config.parse_with:
+                logger.warn('Parsing is enabled but no parser is declared for file transfer channel `%s` (%s)',
+                    config.name, config.source_type)
+                config.should_parse_on_pickup = False
+
         # Create an observer object ..
         observer_class = source_type_to_observer_class[config.source_type]
         observer = observer_class(self, config, 0.25)
@@ -152,6 +167,8 @@ class FileTransferAPI(object):
 # ################################################################################################################################
 
     def delete(self, config):
+
+        z
 
         # Observer object to delete ..
         observer_to_delete = None
@@ -322,16 +339,15 @@ class FileTransferAPI(object):
 
 # ################################################################################################################################
 
-    def post_handle(self, full_path, config, observer, snapshot_maker):
+    def post_handle(self, event, config, observer, snapshot_maker):
         """ Runs after callback services have been already invoked, performs clean up if configured to.
         """
-        # type: (str, Bunch, BaseObserver, BaseSnapshotMaker) -> None
-
+        # type: (FileTransferEvent, Bunch, BaseObserver, BaseSnapshotMaker) -> None
         if config.move_processed_to:
-            shutil_copy(full_path, config.move_processed_to)
+            observer.move_file(event.full_path, config.move_processed_to, observer, snapshot_maker)
 
         if config.should_delete_after_pickup:
-            observer.delete_file(full_path, snapshot_maker)
+            observer.delete_file(event.full_path, snapshot_maker)
 
 # ################################################################################################################################
 
@@ -465,90 +481,3 @@ class FileTransferAPI(object):
         self._run(name)
 
 # ################################################################################################################################
-
-'''
-# -*- coding: utf-8 -*-
-
-"""
-Copyright (C) Zato Source s.r.o. https://zato.io
-
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
-"""
-
-# Zato
-from zato.common.api import FILE_TRANSFER
-from zato.common.util.api import spawn_greenlet
-from zato.common.util.file_transfer import parse_extra_into_list
-from zato.server.file_transfer.snapshot import FTPSnapshotMaker, SFTPSnapshotMaker
-from zato.server.service import Service
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from zato.server.file_transfer.observer.base import BaseObserver
-
-    BaseObserver = BaseObserver
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-source_ftp  = FILE_TRANSFER.SOURCE_TYPE.FTP.id
-source_sftp = FILE_TRANSFER.SOURCE_TYPE.SFTP.id
-
-source_type_to_config = {
-    source_ftp:  'out_ftp',
-    source_sftp: 'out_sftp',
-}
-
-source_type_to_snapshot_maker_class = {
-    source_ftp:  FTPSnapshotMaker,
-    source_sftp: SFTPSnapshotMaker,
-}
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class ChannelFileTransferHandler(Service):
-    """ A no-op marker service uses by file transfer channels.
-    """
-    name = FILE_TRANSFER.SCHEDULER_SERVICE
-
-# ################################################################################################################################
-
-    def run_observer(self, channel_id):
-        # type: (int) -> None
-
-        observer = self.server.worker_store.file_transfer_api.get_observer_by_channel_id(channel_id) # type: BaseObserver
-
-        source_type = observer.channel_config.source_type   # type: str
-        source_id   = observer.channel_config.ftp_source_id # type: int
-
-        config_key  = source_type_to_config[source_type] # type: str
-        config      = self.server.worker_store.worker_config.get_config_by_item_id(config_key, source_id)
-
-        snapshot_maker_class = source_type_to_snapshot_maker_class[source_type]
-        snapshot_maker = snapshot_maker_class(self, config) # type: (BaseSnapshotMaker)
-        snapshot_maker.connect()
-
-        for item in observer.path_list: # type: (str)
-            observer.observe_with_snapshots(snapshot_maker, item, 5, False)
-
-# ################################################################################################################################
-
-    def handle(self):
-
-        extra = '16;'#; 17' #self.request.raw_request
-
-        # Convert input parameters into a list of channel (observer) IDs ..
-        extra = parse_extra_into_list(extra)
-
-        self.logger.warn('QQQ %s', self)
-
-        # .. and run each observer in a new greenlet.
-        for channel_id in extra:
-            spawn_greenlet(self.run_observer, channel_id)
-
-# ################################################################################################################################
-# ################################################################################################################################
-'''
