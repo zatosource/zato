@@ -69,8 +69,6 @@ class FileTransferEventHandler:
 
         try:
 
-            logger.warn('WWW-1')
-
             # Ignore the event if it points to the directory itself,
             # as inotify will send CLOSE_WRITE when it is not a creation of a file
             # but a fact that a directory has been deleted that the event is about.
@@ -81,36 +79,26 @@ class FileTransferEventHandler:
             # and we need to check why it does not exist anymore ..
             if not observer.path_exists(transfer_event.src_path, snapshot_maker):
 
-                logger.warn('WWW-2-1 %s', observer)
-                logger.warn('WWW-2-2 %s', snapshot_maker)
-
                 # .. if this type of an observer does not wait for paths, we can return immediately ..
                 if not observer.should_wait_for_deleted_paths:
-                    logger.warn('WWW-3 %s', transfer_event.src_path)
                     return
 
                 # .. if it is one of the paths that we observe, it means that it has been just deleted,
                 # so we need to run a background inspector which will wait until it is created once again ..
                 if transfer_event.src_path in self.config.pickup_from_list:
-                    logger.warn('WWW-4')
                     self.manager.wait_for_deleted_path(transfer_event.src_path)
 
                 else:
-                    logger.warn('WWW-5')
                     logger.info('Ignoring local file event; path not found `%s` (%r)', transfer_event.src_path, self.config.name)
 
                 # .. in either case, there is nothing else we can do here.
-                logger.warn('WWW-6')
                 return
 
             # Get file name to check if we should handle it ..
             file_name = os.path.basename(transfer_event.src_path) # type: str
 
-            logger.warn('WWW-7')
-
             # .. return if we should not.
             if not self.manager.should_handle(self.config.name, file_name):
-                logger.warn('WWW-8')
                 return
 
             event = FileTransferEvent()
@@ -119,14 +107,10 @@ class FileTransferEventHandler:
             event.file_name = file_name
             event.channel_name = self.channel_name
 
-            logger.warn('WWW-9')
-
             if self.config.is_hot_deploy:
                 spawn_greenlet(hot_deploy, self.manager.server, event.file_name, event.full_path,
                     self.config.should_delete_after_pickup)
                 return
-
-            logger.warn('WWW-10')
 
             if self.config.should_read_on_pickup:
 
@@ -139,8 +123,6 @@ class FileTransferEventHandler:
 
                 event.raw_data = raw_data.decode(self.config.data_encoding) # type: str
                 event.has_raw_data = True
-
-                logger.warn('WWW-11')
 
                 if self.config.should_parse_on_pickup:
 
