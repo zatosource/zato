@@ -63,9 +63,12 @@ _zato_orig_marker = 'zato_orig_'
 
 # ################################################################################################################################
 
+source_type_ftp   = FILE_TRANSFER.SOURCE_TYPE.FTP.id
+source_type_local = FILE_TRANSFER.SOURCE_TYPE.LOCAL.id
+
 source_type_to_observer_class = {
-    FILE_TRANSFER.SOURCE_TYPE.FTP.id:   FTPObserver,
-    FILE_TRANSFER.SOURCE_TYPE.LOCAL.id: LocalObserver,
+    source_type_ftp:   FTPObserver,
+    source_type_local: LocalObserver,
 }
 
 # ################################################################################################################################
@@ -79,6 +82,7 @@ class FileTransferAPI(object):
 
         self.server = server
         self.worker_store = worker_store
+        self.update_lock = RLock()
 
         self.keep_running = True
 
@@ -115,7 +119,9 @@ class FileTransferAPI(object):
 
 # ################################################################################################################################
 
-    def create(self, config):
+    def _create(self, config):
+        """ Low-level implementation of self.create.
+        """
         # type: (Bunch) -> None
 
         # Ignore internal channels
@@ -166,9 +172,19 @@ class FileTransferAPI(object):
 
 # ################################################################################################################################
 
-    def delete(self, config):
+    def create(self, config):
+        """ Creates a file transfer channel (but does not start it).
+        """
+        # type: (Bunch) -> None
+        with self.update_lock:
+            self._create(config)
 
-        z
+# ################################################################################################################################
+
+    def _delete(self, config):
+        """ Low-level implementation of self.delete.
+        """
+        # type: (Bunch) -> None
 
         # Observer object to delete ..
         observer_to_delete = None
@@ -179,7 +195,8 @@ class FileTransferAPI(object):
         # .. stop its main loop ..
         for observer in self.observer_list: # type: LocalObserver
             if observer.name == config.name:
-                observer.stop()
+                needs_log = is_linux and observer.is_local
+                observer.stop(needs_log=needs_log)
                 observer_to_delete = observer
                 observer_path_list[:] = observer.path_list
                 break
@@ -195,15 +212,54 @@ class FileTransferAPI(object):
             # .. delete it from the mapping of channels to observers as well ..
             self.observer_dict.pop(observer_to_delete.channel_id)
 
-            # .. under Linux, delete it from from any references to it among paths being observed via inotify.
-            if is_linux:
+            # .. for local transfer under Linux, delete it from any references among paths being observed via inotify.
+            if is_linux and config.source_type == source_type_local:
                 for path in observer_path_list:
                     observer_list = self.inotify_path_to_observer_list.get(path) # type: list
                     observer_list.remove(observer_to_delete)
 
 # ################################################################################################################################
 
+    def delete(self, config):
+        """ Deletes a file transfer channel.
+        """
+        # type: (Bunch) -> None
+        with self.update_lock:
+            self._delete(config)
+
+# ################################################################################################################################
+
+    def edit(self, config):
+        """ Edits a file transfer channel by deleting and recreating it.
+        """
+        # type: (Bunch) -> None
+        with self.update_lock:
+
+            # Delte the channel first ..
+            self._delete(config)
+
+            # .. recreate it ..
+            self._create(config)
+
+            # .. and start it if it is enabled ..
+            if config.is_active:
+
+                # .. but only if it is a local one because any other is triggerd by our scheduler ..
+                if config.source_type == source_type_local:
+                    self.start_observer(config.name, True)
+
+            # .. we can now find our new observer object ..
+            observer = self.get_observer_by_channel_id(config.id) # type: BaseObserver
+
+            # .. to finally store a message that we are done.
+            logger.info('%s file observer `%s` set up successfully (%s) (%s)',
+                observer.observer_type_name_title, observer.name, observer.observer_type_impl, observer.path_list)
+
+# ################################################################################################################################
+
     def get_py_parser(self, name):
+        """ Imports a Python object that represents a parser.
+        """
         parts = name.split('.')
         module_path, callable_name = '.'.join(parts[0:-1]), parts[-1]
 
@@ -212,11 +268,15 @@ class FileTransferAPI(object):
 # ################################################################################################################################
 
     def get_service_parser(self, name):
-        raise NotImplementedError('Not implemented in current version')
+        """ Returns a service that will act as a parser.
+        """
+        raise NotImplementedError()
 
 # ################################################################################################################################
 
     def get_parser(self, parser_name):
+        """ Returns a parser by name, possibly an already cached one.
+        """
         if parser_name in self._parser_cache:
             return self._parser_cache[parser_name]
 
@@ -378,7 +438,7 @@ class FileTransferAPI(object):
 
 # ################################################################################################################################
 
-    def _run(self, name=None):
+    def _run(self, name=None, log_after_started=False):
 
         # Under Linux, for each observer, map each of its watched directories
         # to the actual observer object so that when an event is emitted
@@ -417,6 +477,9 @@ class FileTransferAPI(object):
 
                 # Start the observer object.
                 observer.start(self.observer_start_args)
+
+                if log_after_started:
+                    logger.info('Started file observer `%s` path:`%s`', observer.name, observer.path_list)
 
             except Exception:
                 logger.warn('File observer `%s` could not be started, path:`%s`, e:`%s`',
@@ -477,7 +540,7 @@ class FileTransferAPI(object):
 
 # ################################################################################################################################
 
-    def start_observer(self, name):
-        self._run(name)
+    def start_observer(self, name, log_after_started=False):
+        self._run(name, log_after_started)
 
 # ################################################################################################################################
