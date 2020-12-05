@@ -84,6 +84,11 @@ class DirSnapshotDiff:
         # .. now we can prepare a list for files that were potentially modified ..
         self.files_modified = set()
 
+        print()
+        print(111, previous_snapshot.file_data)
+        print(222, current_snapshot.file_data)
+        print()
+
         # .. go through each file in the current snapshot and compare its timestamps and file size
         # with what was found the previous time. If either is different,
         # it means that the file was modified. In case that the file was modified
@@ -124,6 +129,33 @@ class BaseSnapshotMaker:
 
     def get_file_data(self, path):
         raise NotImplementedError('Must be implemented in subclasses')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class LocalSnapshotMaker(BaseSnapshotMaker):
+    def connect(self):
+        # Not used with local snapshots
+        pass
+
+    def get_snapshot(self, path, ignored_is_recursive):
+        # type: (str, bool) -> DirSnapshot
+
+        # Output to return
+        snapshot = DirSnapshot()
+
+        # All files found in path
+        file_list = []
+
+        for item in os.listdir(path): # type: str
+            full_path = os.path.abspath(os.path.join(path, item))
+            if os.path.isfile(full_path):
+                stat = os.path.stat(full_path)
+                file_list.append(item)
+
+        snapshot.add_file_list(path, file_list)
+
+        return snapshot
 
 # ################################################################################################################################
 # ################################################################################################################################
