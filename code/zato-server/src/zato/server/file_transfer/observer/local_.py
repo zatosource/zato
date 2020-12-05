@@ -20,6 +20,7 @@ from shutil import copy as shutil_copy
 from watchdog.utils.dirsnapshot import DirectorySnapshot
 
 # Zato
+from zato.common.api import FILE_TRANSFER
 from zato.common.util.platform_ import is_linux
 from .base import BaseObserver
 
@@ -44,17 +45,17 @@ class LocalObserver(BaseObserver):
     """ A local file-system observer.
     """
     observer_type_name = 'local'
-    observer_type_name_title = observer_type_name.upper()
+    observer_type_name_title = observer_type_name.title()
     should_wait_for_deleted_paths = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         if is_linux:
-            self.observer_type_impl = 'local-inotify'
+            self.observer_type_impl = FILE_TRANSFER.SOURCE_TYPE_IMPL.LOCAL_INOTIFY
             self._observe_func = self.observe_with_inotify
         else:
-            self.observer_type_impl = 'local-snapshot'
+            self.observer_type_impl = FILE_TRANSFER.SOURCE_TYPE_IMPL.LOCAL_SNAPSHOT
             self._observe_func = self.observe_with_snapshots
 
 # ################################################################################################################################
