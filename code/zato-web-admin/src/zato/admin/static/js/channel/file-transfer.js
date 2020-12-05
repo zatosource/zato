@@ -127,10 +127,20 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
         source_html = 'Local';
     }
     else if(item.source_type == 'ftp') {
-        source_html = `<a href="/zato/outgoing/ftp/?cluster=${item.cluster_id}&amp;query=${item.ftp_source_name}">${item.ftp_source_name}</a>`;
+        if(item.ftp_source_name) {
+            source_html = `<a href="/zato/outgoing/ftp/?cluster=${item.cluster_id}&amp;query=${item.ftp_source_name}">${item.ftp_source_name}</a>`;
+        }
+        else {
+            source_html = 'FTP <span class="form_hint"><br/>(No connection assigned)</span>';
+        }
     }
     else if(item.source_type == 'sftp') {
-        source_html = `<a href="/zato/outgoing/sftp/?cluster=${item.cluster_id}&amp;type_=outconn-sftp&amp;query=${item.sftp_source_name}">${item.sftp_source_name}</a>`;
+        if(item.sftp_source_name) {
+            source_html = `<a href="/zato/outgoing/sftp/?cluster=${item.cluster_id}&amp;type_=outconn-sftp&amp;query=${item.sftp_source_name}">${item.sftp_source_name}</a>`;
+        }
+        else {
+            source_html = 'SFTP <span class="form_hint"><br/>(No connection assigned)</span>';
+        }
     }
 
     pickup_from_list_html += String.replace(item.pickup_from_list.replace("\n", "<br/>"));
