@@ -11,9 +11,16 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Zato
 from zato.admin.web.forms.channel.file_transfer import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, get_outconn_rest_list, Index as _Index
-from zato.common.api import GENERIC
+from zato.common.api import FILE_TRANSFER, GENERIC
 from zato.common.json_internal import dumps
 from zato.common.model import FileTransferChannel
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+source_type_ftp   = FILE_TRANSFER.SOURCE_TYPE.FTP.id
+source_type_local = FILE_TRANSFER.SOURCE_TYPE.LOCAL.id
+source_type_sftp  = FILE_TRANSFER.SOURCE_TYPE.SFTP.id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -177,6 +184,28 @@ class _CreateEdit(CreateEdit):
                 'outconn_rest_name': outconn_rest_name,
                 'cluster_id': cluster_id
             })
+
+
+        # Get human-readable names of the source for this channel
+        if self.input.source_type == source_type_local:
+            # Nothing to do in this case
+            pass
+
+        elif self.input.source_type == source_type_ftp:
+
+            if self.input.ftp_source_id:
+                response = self.req.zato.client.invoke('zato.outgoing.ftp.get-by-id', {
+                    'cluster_id': cluster_id,
+                    'id': self.input.ftp_source_id,
+                })
+
+                return_data['ftp_source_name'] = response.data['name']
+
+        elif self.input.source_type == source_type_sftp:
+            raise NotImplementedError()
+
+        else:
+            raise ValueError('Unknown self.input.source_type')
 
         #
         # Return data

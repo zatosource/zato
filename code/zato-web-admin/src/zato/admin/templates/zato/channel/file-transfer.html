@@ -190,9 +190,17 @@
                             {% if item.source_type == "local" %}
                                 Local
                             {% elif item.source_type == "ftp" %}
-                                <a href="{% url "out-ftp" %}?cluster={{ cluster_id }}&amp;query={{ item.ftp_source_name }}">{{ item.ftp_source_name }}</a>
+                                {% if item.ftp_source_name %}
+                                    <a href="{% url "out-ftp" %}?cluster={{ cluster_id }}&amp;query={{ item.ftp_source_name }}">{{ item.ftp_source_name }}</a>
+                                {% else %}
+                                    FTP <span class="form_hint"><br/>(No connection assigned)</span>
+                                {% endif %}
                             {% elif item.source_type == "sftp" %}
-                                <a href="{% url "out-sftp" %}?cluster={{ cluster_id }}&amp;type_=outconn-sftp&amp;query={{ item.sftp_source_name }}">{{ item.sftp_source_name }}</a>
+                                {% if item.sftp_source_name %}
+                                    <a href="{% url "out-sftp" %}?cluster={{ cluster_id }}&amp;type_=outconn-sftp&amp;query={{ item.sftp_source_name }}">{{ item.sftp_source_name }}</a>
+                                {% else %}
+                                    SFTP <span class="form_hint"><br/>(No connection assigned)</span>
+                                {% endif %}
                             {% endif %}
                         </td>
 
