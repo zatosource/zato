@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from datetime import datetime
 from logging import getLogger
 
 # Zato
@@ -37,11 +38,11 @@ class FileInfo:
     """
     __slots__ = 'full_path', 'name', 'size', 'last_modified'
 
-    def __init__(self):
-        self.full_path = ''
-        self.name = ''
-        self.size = -1
-        self.last_modified = None
+    def __init__(self, full_path='', name='', size=-1, last_modified=None):
+        self.full_path = full_path
+        self.name = name
+        self.size = size
+        self.last_modified = last_modified
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -83,11 +84,6 @@ class DirSnapshotDiff:
 
         # .. now we can prepare a list for files that were potentially modified ..
         self.files_modified = set()
-
-        print()
-        print(111, previous_snapshot.file_data)
-        print(222, current_snapshot.file_data)
-        print()
 
         # .. go through each file in the current snapshot and compare its timestamps and file size
         # with what was found the previous time. If either is different,
@@ -150,8 +146,12 @@ class LocalSnapshotMaker(BaseSnapshotMaker):
         for item in os.listdir(path): # type: str
             full_path = os.path.abspath(os.path.join(path, item))
             if os.path.isfile(full_path):
-                stat = os.path.stat(full_path)
-                file_list.append(item)
+                stat = os.stat(full_path)
+                file_list.append({
+                    'name': item,
+                    'size': stat.st_size,
+                    'last_modified': datetime.fromtimestamp(stat.st_mtime)
+                })
 
         snapshot.add_file_list(path, file_list)
 
