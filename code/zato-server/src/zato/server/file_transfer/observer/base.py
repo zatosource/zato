@@ -232,18 +232,11 @@ class BaseObserver:
 
                 try:
 
-                    if 'services' in path:
-                        logger.warn('SLEEPING %s %s %s', path, current_iter, max_iters)
-
                     # The latest snapshot ..
                     new_snapshot = snapshot_maker.get_snapshot(path, is_recursive)
 
                     # .. difference between the old and new will return, in particular, new or modified files ..
                     diff = DirSnapshotDiff(snapshot, new_snapshot)
-
-                    if 'services' in path:
-                        logger.warn('CCC-1 %s', diff.files_created)
-                        logger.warn('CCC-2 %s', diff.files_modified)
 
                     for path_created in diff.files_created:
                         full_event_path = os.path.join(path, path_created)
