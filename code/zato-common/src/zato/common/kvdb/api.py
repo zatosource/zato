@@ -23,7 +23,7 @@ from cryptography.fernet import InvalidToken
 from past.builtins import basestring
 
 # Zato
-from zato.cy.common.api import KVDB as _KVDB, NONCE_STORE
+from zato.common.api import KVDB as _KVDB, NONCE_STORE
 from zato.common.util.kvdb import has_redis_sentinels
 
 # ################################################################################################################################
