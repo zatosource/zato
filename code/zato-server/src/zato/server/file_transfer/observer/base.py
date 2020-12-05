@@ -207,7 +207,7 @@ class BaseObserver:
 
 # ################################################################################################################################
 
-    def observe_with_snapshots(self, snapshot_maker, path, max_iters=maxsize, log_stop_event=True, *args, **kwargs):
+    def observe_with_snapshots(self, snapshot_maker, path, max_iters, log_stop_event=True, *args, **kwargs):
         """ An observer's main loop that uses snapshots.
         """
         # type: (BaseSnapshotMaker, str, int) -> None
@@ -232,8 +232,8 @@ class BaseObserver:
 
                 try:
 
-                    logger.warn('SLEEPING %s %s', current_iter, max_iters)
-                    sleep(1)
+                    if 'services' in path:
+                        logger.warn('SLEEPING %s %s %s', path, current_iter, max_iters)
 
                     # The latest snapshot ..
                     new_snapshot = snapshot_maker.get_snapshot(path, is_recursive)
@@ -241,8 +241,9 @@ class BaseObserver:
                     # .. difference between the old and new will return, in particular, new or modified files ..
                     diff = DirSnapshotDiff(snapshot, new_snapshot)
 
-                    logger.warn('CCC-1 %s', diff.files_created)
-                    logger.warn('CCC-2 %s', diff.files_modified)
+                    if 'services' in path:
+                        logger.warn('CCC-1 %s', diff.files_created)
+                        logger.warn('CCC-2 %s', diff.files_modified)
 
                     for path_created in diff.files_created:
                         full_event_path = os.path.join(path, path_created)

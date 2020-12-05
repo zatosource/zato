@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from platform import system as platform_system
 
-is_linux = platform_system().lower() == 'linux'
+is_linux = False #platform_system().lower() == 'linux'
 
 # For pyflakes
 is_linux = is_linux
