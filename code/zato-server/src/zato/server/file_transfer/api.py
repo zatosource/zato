@@ -204,14 +204,14 @@ class FileTransferAPI(object):
 
         # .. stop its main loop ..
         for observer in self.observer_list: # type: LocalObserver
-            if observer.name == config.name:
+            if observer.channel_id == config.id:
                 needs_log = observer.is_local and (not prefer_inotify)
                 observer.stop(needs_log=needs_log)
                 observer_to_delete = observer
                 observer_path_list[:] = observer.path_list
                 break
         else:
-            raise ValueError('Could not find observer matching name `%s` (%s)', config.name, config.type_)
+            raise ValueError('Could not find observer matching ID `%s` (%s)', config.id, config.type_)
 
         # .. if the object was found ..
         if observer_to_delete:
