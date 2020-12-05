@@ -349,13 +349,6 @@
                             <td>
 
                             <label>
-                            Line-by-line
-                            {{ create_form.is_line_by_line }}
-                            </label>
-
-                            |
-
-                            <label>
                             Case sens.
                             {{ create_form.is_case_sensitive }}
                             </label>
@@ -365,6 +358,13 @@
                             <label>
                             Hot deploy
                             {{ create_form.is_hot_deploy }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Encoding
+                            {{ create_form.data_encoding }}
                             </label>
 
                             </td>
@@ -405,22 +405,6 @@
                             </td>
                             <td>
                                 {{ create_form.file_patterns }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_data_encoding">Encoding</label>
-                            </td>
-                            <td>
-
-                                {{ create_form.data_encoding }}
-
-                                |
-
-                                <label>
-                                    Binary {{ create_form.binary_file_patterns }}
-                                </label>
                             </td>
                         </tr>
 
@@ -534,13 +518,6 @@
                             <td>
 
                             <label>
-                            Line-by-line
-                            {{ edit_form.is_line_by_line }}
-                            </label>
-
-                            |
-
-                            <label>
                             Case sens.
                             {{ edit_form.is_case_sensitive }}
                             </label>
@@ -550,6 +527,13 @@
                             <label>
                             Hot deploy
                             {{ edit_form.is_hot_deploy }}
+                            </label>
+
+                            |
+
+                            Encoding
+                            <label>
+                            {{ edit_form.data_encoding }}
                             </label>
 
                             </td>
@@ -591,22 +575,6 @@
                             </td>
                             <td>
                                 {{ edit_form.file_patterns }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_data_encoding">Encoding</label>
-                            </td>
-                            <td>
-
-                                {{ edit_form.data_encoding }}
-
-                                |
-
-                                <label>
-                                    Binary {{ edit_form.binary_file_patterns }}
-                                </label>
                             </td>
                         </tr>
 
