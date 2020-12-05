@@ -81,6 +81,9 @@ source_type_to_snapshot_maker_class = {
     source_type_sftp:  SFTPSnapshotMaker,
 }
 
+# Under Linux, we prefer to use inotify instead of snapshots.
+prefer_inotify = is_linux
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -99,7 +102,8 @@ class FileTransferAPI(object):
         # A list of all observer objects
         self.observer_list = []
 
-        # A mapping of channel_id to an observer object associated with the channel
+        # A mapping of channel_id to an observer object associated with the channel.
+        # Note that only non-inotify observers are added here.
         self.observer_dict = {}
 
         # Caches parser objects by their name
@@ -161,14 +165,15 @@ class FileTransferAPI(object):
 
         # Create an observer object ..
         observer_class = source_type_to_observer_class[config.source_type]
-        observer = observer_class(self, config, 1)
+        observer = observer_class(self, config, 1) # type: BaseObserver
 
         # .. and add it to data containers ..
         self.observer_list.append(observer)
 
         # .. but do not add it to the mapping dict because locally-defined observers (from pickup.conf)
         # may not have any ID, or to be more precise, the may have the same ID.
-        if not observer.is_local:
+
+        if not observer.is_notify:
             self.observer_dict[observer.channel_id] = observer
 
         # .. finally, set up directories and callbacks for the observer.
@@ -200,7 +205,7 @@ class FileTransferAPI(object):
         # .. stop its main loop ..
         for observer in self.observer_list: # type: LocalObserver
             if observer.name == config.name:
-                needs_log = is_linux and observer.is_local
+                needs_log = observer.is_local and (not prefer_inotify)
                 observer.stop(needs_log=needs_log)
                 observer_to_delete = observer
                 observer_path_list[:] = observer.path_list
@@ -215,10 +220,11 @@ class FileTransferAPI(object):
             self.observer_list.remove(observer_to_delete)
 
             # .. delete it from the mapping of channels to observers as well ..
-            self.observer_dict.pop(observer_to_delete.channel_id)
+            if not observer_to_delete.is_local:
+                self.observer_dict.pop(observer_to_delete.channel_id)
 
             # .. for local transfer under Linux, delete it from any references among paths being observed via inotify.
-            if is_linux and config.source_type == source_type_local:
+            if prefer_inotify and config.source_type == source_type_local:
                 for path in observer_path_list:
                     observer_list = self.inotify_path_to_observer_list.get(path) # type: list
                     observer_list.remove(observer_to_delete)
@@ -480,12 +486,13 @@ class FileTransferAPI(object):
                         path_observer_list = missing_path_to_inspector.setdefault(path, []) # type: list
                         path_observer_list.append(BackgroundPathInspector(path, observer, self.observer_start_args))
 
-                # Run the observer object immediately if it is a non-Linux one ..
-                if not is_linux:
-                    self._run_observer(observer)
+                # Inotify-based observers are set up here but their main loop is in _run_linux_inotify_loop ..
+                if prefer_inotify:
+                    observer.start(self.observer_start_args)
 
-                # .. but any other will staet
-                #observer.start(self.observer_start_args)
+                # .. whereas snapshot observers are started here.
+                else:
+                    self._run_snapshot_observer(observer)
 
                 if log_after_started:
                     logger.info('Started file observer `%s` path:`%s`', observer.name, observer.path_list)
@@ -503,7 +510,7 @@ class FileTransferAPI(object):
         # Under Linux, run the inotify main loop for each watch descriptor created for paths that do exist.
         # Note that if we are not on Linux, each observer.start call above already ran a new greenlet with an observer
         # for a particular directory.
-        if is_linux:
+        if prefer_inotify:
             spawn_greenlet(self._run_linux_inotify_loop)
 
 # ################################################################################################################################
@@ -554,7 +561,7 @@ class FileTransferAPI(object):
 
 # ################################################################################################################################
 
-    def _run_observer(self, observer, max_iters=maxsize):
+    def _run_snapshot_observer(self, observer, max_iters=maxsize):
         # type: (BaseObserver, int) -> None
 
         source_type = observer.channel_config.source_type   # type: str
@@ -575,9 +582,9 @@ class FileTransferAPI(object):
 
 # ################################################################################################################################
 
-    def run_observer_by_channel_id(self, channel_id, max_iters):
+    def run_snapshot_observer(self, channel_id, max_iters):
         # type: (int, int) -> None
         observer = self.get_observer_by_channel_id(channel_id) # type: BaseObserver
-        self._run_observer(observer, max_iters)
+        self._run_snapshot_observer(observer, max_iters)
 
 # ################################################################################################################################
