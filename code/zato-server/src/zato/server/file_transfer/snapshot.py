@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from datetime import datetime
 from logging import getLogger
 
 # Zato
@@ -37,11 +38,11 @@ class FileInfo:
     """
     __slots__ = 'full_path', 'name', 'size', 'last_modified'
 
-    def __init__(self):
-        self.full_path = ''
-        self.name = ''
-        self.size = -1
-        self.last_modified = None
+    def __init__(self, full_path='', name='', size=-1, last_modified=None):
+        self.full_path = full_path
+        self.name = name
+        self.size = size
+        self.last_modified = last_modified
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -124,6 +125,43 @@ class BaseSnapshotMaker:
 
     def get_file_data(self, path):
         raise NotImplementedError('Must be implemented in subclasses')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class LocalSnapshotMaker(BaseSnapshotMaker):
+    def connect(self):
+        # Not used with local snapshots
+        pass
+
+    def get_snapshot(self, path, ignored_is_recursive):
+        # type: (str, bool) -> DirSnapshot
+
+        # Output to return
+        snapshot = DirSnapshot()
+
+        # All files found in path
+        file_list = []
+
+        for item in os.listdir(path): # type: str
+            full_path = os.path.abspath(os.path.join(path, item))
+            if os.path.isfile(full_path):
+                stat = os.stat(full_path)
+                file_list.append({
+                    'name': item,
+                    'size': stat.st_size,
+                    'last_modified': datetime.fromtimestamp(stat.st_mtime)
+                })
+
+        snapshot.add_file_list(path, file_list)
+
+        return snapshot
+
+# ################################################################################################################################
+
+    def get_file_data(self, path):
+        with open(path, 'rb') as f:
+            return f.read()
 
 # ################################################################################################################################
 # ################################################################################################################################
