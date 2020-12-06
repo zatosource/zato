@@ -36,12 +36,6 @@ class Generic(WorkerImpl):
 
         for conn_type, value in self.generic_conn_api.items():
             for conn_name, conn_dict in value.items():
-
-                print()
-                print(111, repr(conn_dict['id']), repr(item_id))
-                print(222, conn_dict['type_'], conn_dict['name'])
-                print()
-
                 if conn_dict['id'] == item_id:
                     return conn_dict, value
 

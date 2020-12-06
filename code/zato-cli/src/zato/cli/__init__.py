@@ -593,9 +593,9 @@ class ZatoCommand(object):
         from io import StringIO
 
         # Zato
-        from zato.common.util import api as util_api
+        from zato.common.util.file_system import fs_safe_now
 
-        now = util_api.fs_safe_now() # noqa
+        now = fs_safe_now() # noqa
         file_name = 'zato.{}.config'.format(now)
         file_args = StringIO()
 

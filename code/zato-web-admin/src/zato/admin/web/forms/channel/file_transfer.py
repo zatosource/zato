@@ -38,7 +38,7 @@ class CreateForm(forms.Form):
     parse_with = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
 
     should_read_on_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    should_parse_on_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    should_parse_on_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
     should_delete_after_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     source_type = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:15%'}))
@@ -74,8 +74,8 @@ class CreateForm(forms.Form):
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    read_on_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    parse_on_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    delete_after_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    should_read_on_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    should_parse_on_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    should_delete_after_pickup = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
 # ################################################################################################################################
