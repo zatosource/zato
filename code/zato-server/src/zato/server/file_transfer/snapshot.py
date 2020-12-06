@@ -19,16 +19,24 @@ from zato.server.connection.file_client.ftp import FTPFileClient
 if 0:
     from bunch import Bunch
     from zato.server.service import Service
+    from zato.server.connection.ftp import FTPStore
     from zato.server.file_transfer.observer.base import BaseObserver
 
     BaseObserver = BaseObserver
     Bunch = Bunch
+    FTPStore = FTPStore
     Service = Service
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger('zato')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# This must be more than 1 because 1 second is the minimum time between two invocations of a scheduled job.
+default_interval = 1.1
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -105,10 +113,10 @@ class DirSnapshotDiff:
 
 class BaseSnapshotMaker:
 
-    def __init__(self, service, outconn_config):
+    def __init__(self, service, channel_config):
         # type: (Service, Bunch)
         self.service = service
-        self.outconn_config = outconn_config
+        self.channel_config = channel_config
         self.file_client = None # type: BaseFileClient
 
 # ################################################################################################################################
@@ -170,11 +178,11 @@ class FTPSnapshotMaker(BaseSnapshotMaker):
     def connect(self):
 
         # Extract all the configuration ..
-        ftp_store = self.service.server.worker_store.worker_config.out_ftp
-        ftp_outconn = ftp_store.get(self.outconn_config.name)
+        ftp_store = self.service.server.worker_store.worker_config.out_ftp # type: FTPStore
+        ftp_outconn = ftp_store.get_by_id(self.channel_config.ftp_source_id)
 
         # .. connect to the remote server ..
-        self.file_client = FTPFileClient(ftp_outconn, self.outconn_config)
+        self.file_client = FTPFileClient(ftp_outconn, self.channel_config)
 
         # .. and confirm that the connection works.
         self.file_client.ping()
