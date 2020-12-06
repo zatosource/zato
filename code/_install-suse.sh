@@ -19,7 +19,6 @@ sudo zypper install -y \
 
 curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
 $PY_BINARY -m pip install       \
-    --use-feature=2020-resolver \
     --no-warn-script-location   \
     -U virtualenv
 
