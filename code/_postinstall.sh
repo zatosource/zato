@@ -17,30 +17,28 @@ PY_BINARY=$1
 git log -n 1 --pretty=format:"%H" > ./release-info/revision.txt
 
 $PY_BINARY -m pip install \
-    --use-feature=2020-resolver \
     --no-warn-script-location   \
     -U setuptools pip
 
 $PY_BINARY -m pip install \
-    --use-feature=2020-resolver \
     --no-warn-script-location   \
     -r requirements.txt
 
 # zato-common must be first.
-$PY_BINARY -m pip install --use-feature=2020-resolver \
-    -e ./zato-common    \
-    -e ./zato-agent     \
-    -e ./zato-broker    \
-    -e ./zato-cli       \
-    -e ./zato-client    \
-    -e ./zato-cy        \
-    -e ./zato-distlock  \
-    -e ./zato-lib       \
-    -e ./zato-scheduler \
-    -e ./zato-server    \
-    -e ./zato-web-admin \
-    -e ./zato-zmq       \
-    -e ./zato-sso       \
+$PY_BINARY -m pip install \
+    -e ./zato-common      \
+    -e ./zato-agent       \
+    -e ./zato-broker      \
+    -e ./zato-cli         \
+    -e ./zato-client      \
+    -e ./zato-cy          \
+    -e ./zato-distlock    \
+    -e ./zato-lib         \
+    -e ./zato-scheduler   \
+    -e ./zato-server      \
+    -e ./zato-web-admin   \
+    -e ./zato-zmq         \
+    -e ./zato-sso         \
     -e ./zato-testing
 
 # Emulate zc.buildout's split-out eggs directory for simpler local development.
