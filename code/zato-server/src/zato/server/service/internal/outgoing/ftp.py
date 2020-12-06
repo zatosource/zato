@@ -15,10 +15,16 @@ from traceback import format_exc
 # Zato
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import OutgoingFTP
-from zato.common.odb.query import out_ftp_list
+from zato.common.odb.query import out_ftp, out_ftp_list
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_get_output_required = 'id', 'name', 'is_active', 'host', 'port'
+_get_output_optional = 'user', 'acct', 'timeout', Boolean('dircache'), 'default_directory'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,6 +41,27 @@ class _FTPService(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class GetByID(AdminService):
+    """ Returns an FTP connection by its ID.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_outgoing_ftp_get_by_id_request'
+        response_elem = None
+        input_required = 'cluster_id', 'id'
+        output_required = _get_output_required
+        output_optional = _get_output_optional
+        output_repeated = False
+
+    def get_data(self, session):
+        return out_ftp(session, self.server.cluster_id, self.request.input.id)
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            self.response.payload = self.get_data(session)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class GetList(AdminService):
     """ Returns a list of outgoing FTP connections.
     """
@@ -44,8 +71,8 @@ class GetList(AdminService):
         request_elem = 'zato_outgoing_ftp_get_list_request'
         response_elem = 'zato_outgoing_ftp_get_list_response'
         input_required = 'cluster_id'
-        output_required = 'id', 'name', 'is_active', 'host', 'port'
-        output_optional = 'user', 'acct', 'timeout', Boolean('dircache'), 'default_directory'
+        output_required = _get_output_required
+        output_optional = _get_output_optional
         output_repeated = True
 
     def get_data(self, session):

@@ -11,7 +11,6 @@ import os
 from datetime import datetime
 from logging import getLogger
 from traceback import format_exc
-from sys import maxsize
 
 # gevent
 from gevent import sleep
@@ -56,6 +55,7 @@ class BaseObserver:
         self.channel_id = channel_config.id
         self.source_type = channel_config.source_type
         self.is_local = self.source_type == FILE_TRANSFER.SOURCE_TYPE.LOCAL.id
+        self.is_notify = self.observer_type_impl == FILE_TRANSFER.SOURCE_TYPE_IMPL.LOCAL_INOTIFY
         self.name = channel_config.name
         self.is_active = channel_config.is_active
         self.default_timeout = default_timeout
@@ -207,7 +207,7 @@ class BaseObserver:
 
 # ################################################################################################################################
 
-    def observe_with_snapshots(self, snapshot_maker, path, max_iters=maxsize, log_stop_event=True, *args, **kwargs):
+    def observe_with_snapshots(self, snapshot_maker, path, max_iters, log_stop_event=True, *args, **kwargs):
         """ An observer's main loop that uses snapshots.
         """
         # type: (BaseSnapshotMaker, str, int) -> None
@@ -232,17 +232,11 @@ class BaseObserver:
 
                 try:
 
-                    logger.warn('SLEEPING %s %s', current_iter, max_iters)
-                    sleep(1)
-
                     # The latest snapshot ..
                     new_snapshot = snapshot_maker.get_snapshot(path, is_recursive)
 
                     # .. difference between the old and new will return, in particular, new or modified files ..
                     diff = DirSnapshotDiff(snapshot, new_snapshot)
-
-                    logger.warn('CCC-1 %s', diff.files_created)
-                    logger.warn('CCC-2 %s', diff.files_modified)
 
                     for path_created in diff.files_created:
                         full_event_path = os.path.join(path, path_created)
@@ -284,7 +278,7 @@ class BaseObserver:
                 self.observer_type_name, path, format_exc(), self.name, self.observer_type_impl)
 
         if log_stop_event:
-            logger.info('Stopped %s file transfer observer `%s` for `%s` (snapshot:%s/%s)',
+            logger.warn('Stopped %s file transfer observer `%s` for `%s` (snapshot:%s/%s)',
                 self.observer_type_name, self.name, path, current_iter, max_iters)
 
 # ################################################################################################################################

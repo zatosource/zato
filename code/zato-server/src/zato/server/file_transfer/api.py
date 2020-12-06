@@ -16,6 +16,7 @@ from http.client import OK
 from importlib import import_module
 from mimetypes import guess_type as guess_mime_type
 from re import IGNORECASE
+from sys import maxsize
 from traceback import format_exc
 
 # gevent
@@ -29,10 +30,11 @@ import globre
 from zato.common.api import FILE_TRANSFER
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.platform_ import is_linux
-from .event import FileTransferEventHandler, singleton
-from .observer.base import BackgroundPathInspector
-from .observer.local_ import LocalObserver, PathCreatedEvent
-from .observer.ftp import FTPObserver
+from zato.server.file_transfer.event import FileTransferEventHandler, singleton
+from zato.server.file_transfer.observer.base import BackgroundPathInspector
+from zato.server.file_transfer.observer.local_ import LocalObserver, PathCreatedEvent
+from zato.server.file_transfer.observer.ftp import FTPObserver
+from zato.server.file_transfer.snapshot import FTPSnapshotMaker, LocalSnapshotMaker, SFTPSnapshotMaker
 
 # ################################################################################################################################
 
@@ -41,9 +43,9 @@ if 0:
     from requests import Response
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.worker import WorkerStore
-    from .event import FileTransferEvent
-    from .observer.base import BaseObserver
-    from .snapshot import BaseSnapshotMaker
+    from zato.server.file_transfer.event import FileTransferEvent
+    from zato.server.file_transfer.observer.base import BaseObserver
+    from zato.server.file_transfer.snapshot import BaseSnapshotMaker
 
     BaseObserver = BaseObserver
     BaseSnapshotMaker = BaseSnapshotMaker
@@ -59,17 +61,28 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-_zato_orig_marker = 'zato_orig_'
-
-# ################################################################################################################################
-
 source_type_ftp   = FILE_TRANSFER.SOURCE_TYPE.FTP.id
 source_type_local = FILE_TRANSFER.SOURCE_TYPE.LOCAL.id
+source_type_sftp  = FILE_TRANSFER.SOURCE_TYPE.SFTP.id
 
 source_type_to_observer_class = {
     source_type_ftp:   FTPObserver,
     source_type_local: LocalObserver,
 }
+
+source_type_to_config = {
+    source_type_ftp:  'out_ftp',
+    source_type_sftp: 'out_sftp',
+}
+
+source_type_to_snapshot_maker_class = {
+    source_type_ftp:   FTPSnapshotMaker,
+    source_type_local: LocalSnapshotMaker,
+    source_type_sftp:  SFTPSnapshotMaker,
+}
+
+# Under Linux, we prefer to use inotify instead of snapshots.
+prefer_inotify = is_linux
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -89,7 +102,8 @@ class FileTransferAPI(object):
         # A list of all observer objects
         self.observer_list = []
 
-        # A mapping of channel_id to an observer object associated with the channel
+        # A mapping of channel_id to an observer object associated with the channel.
+        # Note that only non-inotify observers are added here.
         self.observer_dict = {}
 
         # Caches parser objects by their name
@@ -123,11 +137,6 @@ class FileTransferAPI(object):
         """ Low-level implementation of self.create.
         """
         # type: (Bunch) -> None
-
-        # Ignore internal channels
-        if config.name.startswith(_zato_orig_marker):
-            return
-
         flags = globre.EXACT
 
         if not config.is_case_sensitive:
@@ -156,14 +165,15 @@ class FileTransferAPI(object):
 
         # Create an observer object ..
         observer_class = source_type_to_observer_class[config.source_type]
-        observer = observer_class(self, config, 0.25)
+        observer = observer_class(self, config, 1) # type: BaseObserver
 
         # .. and add it to data containers ..
         self.observer_list.append(observer)
 
         # .. but do not add it to the mapping dict because locally-defined observers (from pickup.conf)
         # may not have any ID, or to be more precise, the may have the same ID.
-        if not observer.is_local:
+
+        if not observer.is_notify:
             self.observer_dict[observer.channel_id] = observer
 
         # .. finally, set up directories and callbacks for the observer.
@@ -194,14 +204,14 @@ class FileTransferAPI(object):
 
         # .. stop its main loop ..
         for observer in self.observer_list: # type: LocalObserver
-            if observer.name == config.name:
-                needs_log = is_linux and observer.is_local
+            if observer.channel_id == config.id:
+                needs_log = observer.is_local and (not prefer_inotify)
                 observer.stop(needs_log=needs_log)
                 observer_to_delete = observer
                 observer_path_list[:] = observer.path_list
                 break
         else:
-            raise ValueError('Could not find observer matching name `%s` (%s)', config.name, config.type_)
+            raise ValueError('Could not find observer matching ID `%s` (%s)', config.id, config.type_)
 
         # .. if the object was found ..
         if observer_to_delete:
@@ -210,10 +220,11 @@ class FileTransferAPI(object):
             self.observer_list.remove(observer_to_delete)
 
             # .. delete it from the mapping of channels to observers as well ..
-            self.observer_dict.pop(observer_to_delete.channel_id)
+            if not observer_to_delete.is_local:
+                self.observer_dict.pop(observer_to_delete.channel_id)
 
             # .. for local transfer under Linux, delete it from any references among paths being observed via inotify.
-            if is_linux and config.source_type == source_type_local:
+            if prefer_inotify and config.source_type == source_type_local:
                 for path in observer_path_list:
                     observer_list = self.inotify_path_to_observer_list.get(path) # type: list
                     observer_list.remove(observer_to_delete)
@@ -475,8 +486,13 @@ class FileTransferAPI(object):
                         path_observer_list = missing_path_to_inspector.setdefault(path, []) # type: list
                         path_observer_list.append(BackgroundPathInspector(path, observer, self.observer_start_args))
 
-                # Start the observer object.
-                observer.start(self.observer_start_args)
+                # Inotify-based observers are set up here but their main loop is in _run_linux_inotify_loop ..
+                if prefer_inotify:
+                    observer.start(self.observer_start_args)
+
+                # .. whereas snapshot observers are started here.
+                else:
+                    self._run_snapshot_observer(observer)
 
                 if log_after_started:
                     logger.info('Started file observer `%s` path:`%s`', observer.name, observer.path_list)
@@ -494,7 +510,7 @@ class FileTransferAPI(object):
         # Under Linux, run the inotify main loop for each watch descriptor created for paths that do exist.
         # Note that if we are not on Linux, each observer.start call above already ran a new greenlet with an observer
         # for a particular directory.
-        if is_linux:
+        if prefer_inotify:
             spawn_greenlet(self._run_linux_inotify_loop)
 
 # ################################################################################################################################
@@ -542,5 +558,33 @@ class FileTransferAPI(object):
 
     def start_observer(self, name, log_after_started=False):
         self._run(name, log_after_started)
+
+# ################################################################################################################################
+
+    def _run_snapshot_observer(self, observer, max_iters=maxsize):
+        # type: (BaseObserver, int) -> None
+
+        source_type = observer.channel_config.source_type   # type: str
+
+        '''
+        source_id   = observer.channel_config.ftp_source_id # type: int
+
+        config_key  = source_type_to_config[source_type] # type: str
+        config      = self.server.worker_store.worker_config.get_config_by_item_id(config_key, source_id)
+        '''
+
+        snapshot_maker_class = source_type_to_snapshot_maker_class[source_type]
+        snapshot_maker = snapshot_maker_class(self, observer.channel_config) # type: (BaseSnapshotMaker)
+        snapshot_maker.connect()
+
+        for item in observer.path_list: # type: (str)
+            spawn_greenlet(observer.observe_with_snapshots, snapshot_maker, item, max_iters, False)
+
+# ################################################################################################################################
+
+    def run_snapshot_observer(self, channel_id, max_iters):
+        # type: (int, int) -> None
+        observer = self.get_observer_by_channel_id(channel_id) # type: BaseObserver
+        self._run_snapshot_observer(observer, max_iters)
 
 # ################################################################################################################################

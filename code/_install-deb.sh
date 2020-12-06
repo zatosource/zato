@@ -28,7 +28,7 @@ then
 fi
 
 curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
-$PY_BINARY -m pip install --use-feature=2020-resolver -U virtualenv
+$PY_BINARY -m pip install -U virtualenv
 
 $PY_BINARY -m virtualenv .
 source ./bin/activate
