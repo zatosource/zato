@@ -165,7 +165,7 @@ class FileTransferAPI(object):
 
         # Create an observer object ..
         observer_class = source_type_to_observer_class[config.source_type]
-        observer = observer_class(self, config, 1) # type: BaseObserver
+        observer = observer_class(self, config) # type: BaseObserver
 
         # .. and add it to data containers ..
         self.observer_list.append(observer)
@@ -286,7 +286,7 @@ class FileTransferAPI(object):
 # ################################################################################################################################
 
     def get_parser(self, parser_name):
-        """ Returns a parser by name, possibly an already cached one.
+        """ Returns a parser by name (may possibly return an already cached one).
         """
         if parser_name in self._parser_cache:
             return self._parser_cache[parser_name]
