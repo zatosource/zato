@@ -165,7 +165,7 @@ class FileTransferAPI(object):
 
         # Create an observer object ..
         observer_class = source_type_to_observer_class[config.source_type]
-        observer = observer_class(self, config, 1) # type: BaseObserver
+        observer = observer_class(self, config) # type: BaseObserver
 
         # .. and add it to data containers ..
         self.observer_list.append(observer)
@@ -286,7 +286,7 @@ class FileTransferAPI(object):
 # ################################################################################################################################
 
     def get_parser(self, parser_name):
-        """ Returns a parser by name, possibly an already cached one.
+        """ Returns a parser by name (may possibly return an already cached one).
         """
         if parser_name in self._parser_cache:
             return self._parser_cache[parser_name]
@@ -565,15 +565,8 @@ class FileTransferAPI(object):
         # type: (BaseObserver, int) -> None
 
         source_type = observer.channel_config.source_type   # type: str
-
-        '''
-        source_id   = observer.channel_config.ftp_source_id # type: int
-
-        config_key  = source_type_to_config[source_type] # type: str
-        config      = self.server.worker_store.worker_config.get_config_by_item_id(config_key, source_id)
-        '''
-
         snapshot_maker_class = source_type_to_snapshot_maker_class[source_type]
+
         snapshot_maker = snapshot_maker_class(self, observer.channel_config) # type: (BaseSnapshotMaker)
         snapshot_maker.connect()
 
