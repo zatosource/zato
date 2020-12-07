@@ -19,8 +19,9 @@ from dateutil.parser import parse as dt_parse
 # Zato
 from zato.common.api import FILE_TRANSFER, GENERIC
 from zato.common.json_ import dumps
-from zato.common.odb.query.generic import FileTransferWrapper
+from zato.common.odb.query.generic import FTPFileTransferWrapper, SFTPFileTransferWrapper
 from zato.server.connection.file_client.ftp import FTPFileClient
+from zato.server.connection.file_client.sftp import SFTPFileClient
 
 # ################################################################################################################################
 
@@ -155,10 +156,6 @@ class DirSnapshotDiff:
             previous = previous_snapshot.file_data.get(current.name) # type: FileInfo
             if previous:
 
-                #logger.warn('VVV-1 %s %s %s', previous.name, previous.size, previous.last_modified)
-                #logger.warn('VVV-2 %s %s %s', current.name, current.size, current.last_modified)
-                #logger.info('-------')
-
                 size_differs = current.size != previous.size
                 last_modified_differs = current.last_modified != previous.last_modified
 
@@ -168,7 +165,7 @@ class DirSnapshotDiff:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class BaseSnapshotMaker:
+class AbstractSnapshotMaker:
 
     def __init__(self, file_transfer_api, channel_config):
         # type: (FileTransferAPI, Bunch)
@@ -201,7 +198,7 @@ class BaseSnapshotMaker:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class LocalSnapshotMaker(BaseSnapshotMaker):
+class LocalSnapshotMaker(AbstractSnapshotMaker):
     def connect(self):
         # Not used with local snapshots
         pass
@@ -238,15 +235,39 @@ class LocalSnapshotMaker(BaseSnapshotMaker):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class FTPSnapshotMaker(BaseSnapshotMaker):
+class BaseSnapshotMaker(AbstractSnapshotMaker):
+    """ Functionality shared by FTP and SFTP.
+    """
+    transfer_wrapper_class = None
+    worker_config_out_name = '<invalid-worker_config_out_name>'
+    source_id_attr_name = '<invalid-source_id_attr_name>'
+    file_client_class = None
+    has_get_by_id = False
+
+# ################################################################################################################################
+
     def connect(self):
 
         # Extract all the configuration ..
-        ftp_store = self.file_transfer_api.server.worker_store.worker_config.out_ftp # type: FTPStore
-        ftp_outconn = ftp_store.get_by_id(self.channel_config.ftp_source_id)
+        store = getattr(self.file_transfer_api.server.worker_store.worker_config, self.worker_config_out_name)
+        source_id = int(self.channel_config[self.source_id_attr_name])
+
+        # Some connection types will directly expose this method ..
+        if self.has_get_by_id:
+            outconn = store.get_by_id(source_id)
+
+        # .. while some will not.
+        else:
+            for value in store.values():
+                config = value['config']
+                if config['id'] == source_id:
+                    outconn = value.conn
+                    break
+            else:
+                raise ValueError('ID not found in `{}`'.format(store.values()))
 
         # .. connect to the remote server ..
-        self.file_client = FTPFileClient(ftp_outconn, self.channel_config)
+        self.file_client = self.file_client_class(outconn, self.channel_config)
 
         # .. and confirm that the connection works.
         self.file_client.ping()
@@ -262,8 +283,9 @@ class FTPSnapshotMaker(BaseSnapshotMaker):
         # .. create a new container for the snapshot ..
         snapshot = DirSnapshot(path)
 
-        # .. now, populate with what we found ..
-        snapshot.add_file_list(result['file_list'])
+        if result:
+            # .. now, populate with what we found ..
+            snapshot.add_file_list(result['file_list'])
 
         # .. and return the result.
         return snapshot
@@ -284,7 +306,7 @@ class FTPSnapshotMaker(BaseSnapshotMaker):
             # we can create a new SQL session here.
             if needs_store:
                 session = self.odb.session()
-                wrapper = FileTransferWrapper(session, self.file_transfer_api.server.cluster_id)
+                wrapper = self.transfer_wrapper_class(session, self.file_transfer_api.server.cluster_id)
 
             # If this is the observer's initial snapshot ..
             if is_initial:
@@ -310,26 +332,6 @@ class FTPSnapshotMaker(BaseSnapshotMaker):
             # .. and return the result to our caller.
             return snapshot
 
-            # .. if the snapshot is an initial one, store in the database for later use ..
-            '''
-            if is_initial:
-                with closing(self.odb.session()) as session:
-
-                    # Wrapper object for accessing snapshot data
-                    wrapper = FileTransferWrapper(session, self.file_transfer_api.server.cluster_id)
-
-
-
-                    # Main data to store
-                    opaque = snapshot.to_json()
-
-                    # Store the initial state
-                    wrapper.store(name, opaque)
-                    '''
-
-            # .. and return the result to our caller.
-            #return snapshot
-
         except Exception:
             logger.warn('Exception caught in get_snapshot (%s), e:`%s`', self.channel_config.source_type, format_exc())
             raise
@@ -347,8 +349,21 @@ class FTPSnapshotMaker(BaseSnapshotMaker):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class FTPSnapshotMaker(BaseSnapshotMaker):
+    transfer_wrapper_class = FTPFileTransferWrapper
+    worker_config_out_name = 'out_ftp'
+    source_id_attr_name = 'ftp_source_id'
+    file_client_class = FTPFileClient
+    has_get_by_id = True
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class SFTPSnapshotMaker(BaseSnapshotMaker):
-    pass
+    transfer_wrapper_class = SFTPFileTransferWrapper
+    worker_config_out_name = 'out_sftp'
+    source_id_attr_name = 'sftp_source_id'
+    file_client_class = SFTPFileClient
 
 # ################################################################################################################################
 # ################################################################################################################################
