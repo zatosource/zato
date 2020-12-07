@@ -31,8 +31,8 @@ from zato.common.api import FILE_TRANSFER
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.platform_ import is_linux
 from zato.server.file_transfer.event import FileTransferEventHandler, singleton
-from zato.server.file_transfer.observer.base import BackgroundPathInspector
-from zato.server.file_transfer.observer.local_ import LocalObserver, PathCreatedEvent
+from zato.server.file_transfer.observer.base import BackgroundPathInspector, PathCreatedEvent
+from zato.server.file_transfer.observer.local_ import LocalObserver
 from zato.server.file_transfer.observer.ftp import FTPObserver
 from zato.server.file_transfer.snapshot import FTPSnapshotMaker, LocalSnapshotMaker, SFTPSnapshotMaker
 
