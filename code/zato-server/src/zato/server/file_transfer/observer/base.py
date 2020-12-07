@@ -223,7 +223,6 @@ class BaseObserver:
             current_iter = 0
 
             # Take an initial snapshot
-            logger.warn('AAA #1')
             snapshot = snapshot_maker.get_snapshot(path, is_recursive, True, True)
 
             while self.keep_running:
@@ -233,18 +232,11 @@ class BaseObserver:
 
                 try:
 
-                    # Sleep for a moment first to make sure we can notice updates triggered by scheduler's jobs.
-                    sleep(1)
-
                     # The latest snapshot ..
-                    #logger.warn('AAA #2')
                     new_snapshot = snapshot_maker.get_snapshot(path, is_recursive, False, False)
 
                     # .. difference between the old and new will return, in particular, new or modified files ..
                     diff = DirSnapshotDiff(snapshot, new_snapshot)
-
-                    #logger.warn('QQQ-1 %s', diff.files_created)
-                    #logger.warn('QQQ-2 %s', diff.files_modified)
 
                     for path_created in diff.files_created:
                         full_event_path = os.path.join(path, path_created)
@@ -277,6 +269,12 @@ class BaseObserver:
 
                     # Update loop counter after we completed current iteration
                     current_iter += 1
+
+                    # Sleep for a while but only if we are a local observer because any other
+                    # will be triggered from the scheduler and we treat the scheduler job's interval
+                    # as the sleep time.
+                    if self.is_local:
+                        sleep(1)
 
         except Exception as e:
             logger.warn('Exception in %s file observer `%s` e:`%s (%s t:%s)',
