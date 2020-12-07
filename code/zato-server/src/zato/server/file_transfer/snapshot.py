@@ -8,24 +8,28 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from contextlib import closing
 from datetime import datetime
 from logging import getLogger
 
 # Zato
+from zato.common.api import FILE_TRANSFER, GENERIC
+from zato.common.json_ import dumps
+from zato.common.odb.query.generic import FileTransferWrapper
 from zato.server.connection.file_client.ftp import FTPFileClient
 
 # ################################################################################################################################
 
 if 0:
     from bunch import Bunch
-    from zato.server.service import Service
     from zato.server.connection.ftp import FTPStore
+    from zato.server.file_transfer.api import FileTransferAPI
     from zato.server.file_transfer.observer.base import BaseObserver
 
     BaseObserver = BaseObserver
     Bunch = Bunch
+    FileTransferAPI = FileTransferAPI
     FTPStore = FTPStore
-    Service = Service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,6 +57,16 @@ class FileInfo:
         self.last_modified = last_modified
 
 # ################################################################################################################################
+
+    def to_dict(self):
+        return {
+            'full_path': self.full_path,
+            'name': self.name,
+            'size': self.size,
+            'last_modified': self.last_modified.isoformat(),
+        }
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class DirSnapshot:
@@ -60,7 +74,6 @@ class DirSnapshot:
     """
     def __init__(self):
         self.file_data = {}
-        self._file_set = set()
 
 # ################################################################################################################################
 
@@ -75,6 +88,23 @@ class DirSnapshot:
             file_info.last_modified = item['last_modified']
 
             self.file_data[file_info.name] = file_info
+
+# ################################################################################################################################
+
+    def to_dict(self):
+        dir_snapshot_file_list = []
+        out = {'dir_snapshot_file_list': dir_snapshot_file_list}
+
+        for value in self.file_data.values(): # type: (FileInfo)
+            value_as_dict = value.to_dict()
+            dir_snapshot_file_list.append(value_as_dict)
+
+        return out
+
+# ################################################################################################################################
+
+    def to_json(self):
+        return dumps(self.to_dict())
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -102,6 +132,11 @@ class DirSnapshotDiff:
         for current in current_snapshot.file_data.values(): # type: FileInfo
             previous = previous_snapshot.file_data.get(current.name) # type: FileInfo
             if previous:
+
+                #logger.warn('VVV-1 %s %s %s', previous.name, previous.size, previous.last_modified)
+                #logger.warn('VVV-2 %s %s %s', current.name, current.size, current.last_modified)
+                #logger.info('-------')
+
                 size_differs = current.size != previous.size
                 last_modified_differs = current.last_modified != previous.last_modified
 
@@ -113,11 +148,12 @@ class DirSnapshotDiff:
 
 class BaseSnapshotMaker:
 
-    def __init__(self, service, channel_config):
-        # type: (Service, Bunch)
-        self.service = service
+    def __init__(self, file_transfer_api, channel_config):
+        # type: (FileTransferAPI, Bunch)
+        self.file_transfer_api = file_transfer_api
         self.channel_config = channel_config
         self.file_client = None # type: BaseFileClient
+        self.odb = self.file_transfer_api.server.odb
 
 # ################################################################################################################################
 
@@ -126,13 +162,19 @@ class BaseSnapshotMaker:
 
 # ################################################################################################################################
 
-    def get_snapshot(self, path, ignored_is_recursive):
+    def get_snapshot(self, *args, **kwargs):
         raise NotImplementedError('Must be implemented in subclasses')
 
 # ################################################################################################################################
 
-    def get_file_data(self, path):
+    def get_file_data(self, *args, **kwargs):
         raise NotImplementedError('Must be implemented in subclasses')
+
+# ################################################################################################################################
+
+    def store_snapshot(self, snapshot):
+        # type: (DirSnapshot) -> None
+        pass
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -142,7 +184,7 @@ class LocalSnapshotMaker(BaseSnapshotMaker):
         # Not used with local snapshots
         pass
 
-    def get_snapshot(self, path, ignored_is_recursive):
+    def get_snapshot(self, path, *args, **kwargs):
         # type: (str, bool) -> DirSnapshot
 
         # Output to return
@@ -178,7 +220,7 @@ class FTPSnapshotMaker(BaseSnapshotMaker):
     def connect(self):
 
         # Extract all the configuration ..
-        ftp_store = self.service.server.worker_store.worker_config.out_ftp # type: FTPStore
+        ftp_store = self.file_transfer_api.server.worker_store.worker_config.out_ftp # type: FTPStore
         ftp_outconn = ftp_store.get_by_id(self.channel_config.ftp_source_id)
 
         # .. connect to the remote server ..
@@ -189,7 +231,7 @@ class FTPSnapshotMaker(BaseSnapshotMaker):
 
 # ################################################################################################################################
 
-    def get_snapshot(self, path, ignored_is_recursive):
+    def get_snapshot(self, path, ignored_is_recursive, is_initial=False, needs_store=False):
         # type: (str, bool) -> DirSnapshot
 
         # First, get a list of files under path ..
@@ -200,6 +242,22 @@ class FTPSnapshotMaker(BaseSnapshotMaker):
 
         # .. now, populate with what we found ..
         snapshot.add_file_list(path, result['file_list'])
+
+        # .. if the snapshot is an initial one, store in the database for later use ..
+        if is_initial:
+            with closing(self.odb.session()) as session:
+
+                # Wrapper object for accessing snapshot data
+                wrapper = FileTransferWrapper(session, self.file_transfer_api.server.cluster_id)
+
+                # A combination of our channel's ID and directory we are checking is unique
+                name = '{}; {}'.format(self.channel_config.id, path)
+
+                # Main data to store
+                opaque = snapshot.to_json()
+
+                # Store the initial state
+                wrapper.store(name, opaque)
 
         # .. and return the result to our caller.
         return snapshot

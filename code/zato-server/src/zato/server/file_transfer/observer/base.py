@@ -223,23 +223,28 @@ class BaseObserver:
             current_iter = 0
 
             # Take an initial snapshot
-            snapshot = snapshot_maker.get_snapshot(path, is_recursive)
+            logger.warn('AAA #1')
+            snapshot = snapshot_maker.get_snapshot(path, is_recursive, True)
 
             while self.keep_running:
-
-                # Sleep for a moment first to make sure we can notice updates triggered by scheduler's jobs.
-                sleep(self.sleep_time)
 
                 if current_iter == max_iters:
                     break
 
                 try:
 
+                    # Sleep for a moment first to make sure we can notice updates triggered by scheduler's jobs.
+                    sleep(5)
+
                     # The latest snapshot ..
+                    #logger.warn('AAA #2')
                     new_snapshot = snapshot_maker.get_snapshot(path, is_recursive)
 
                     # .. difference between the old and new will return, in particular, new or modified files ..
                     diff = DirSnapshotDiff(snapshot, new_snapshot)
+
+                    #logger.warn('QQQ-1 %s', diff.files_created)
+                    #logger.warn('QQQ-2 %s', diff.files_modified)
 
                     for path_created in diff.files_created:
                         full_event_path = os.path.join(path, path_created)
