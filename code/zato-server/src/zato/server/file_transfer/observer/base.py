@@ -255,8 +255,11 @@ class BaseObserver:
                         full_event_path = os.path.join(path, path_modified)
                         handler_func(FileModifiedEvent(full_event_path), self, snapshot_maker)
 
-                    # .. a new snapshot which will be treated as the old one in the next iteration ..
-                    snapshot = snapshot_maker.get_snapshot(path, is_recursive, False, True)
+                    # .. a new snapshot which will be treated as the old one in the next iteration,
+                    # but make only if we are to loop more than once because otherwise this new snapshot
+                    # would not be used for anything anyway.
+                    if max_iters > 1:
+                        snapshot = snapshot_maker.get_snapshot(path, is_recursive, False, True)
 
                 # Note that this will be caught only with local files not with FTP, SFTP etc.
                 except FileNotFoundError as e:
