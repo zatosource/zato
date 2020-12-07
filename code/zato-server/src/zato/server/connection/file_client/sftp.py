@@ -23,7 +23,7 @@ logger = getLogger('zato')
 # ################################################################################################################################
 
 def ensure_path_exists(*ignored_args, **ignored_kwargs):
-    def _inner(self, path):
+    def _inner(self, path, *ignored_inner_args, **ignored_inner_kwargs):
         # type: (SFTPFileClient, str)
         if not self.conn.exists(path):
             raise PathAccessException('Path `{}` could not be accessed'.format(path))
@@ -44,17 +44,20 @@ class SFTPFileClient(BaseFileClient):
 
 # ################################################################################################################################
 
+    @ensure_path_exists
     def delete_directory(self, path):
         self.conn.delete_directory(path)
 
 # ################################################################################################################################
 
+    @ensure_path_exists
     def get(self, path):
         # (str) -> str
         return self.conn.download(path)
 
 # ################################################################################################################################
 
+    @ensure_path_exists
     def store(self, path, data):
         # type: (str, object) -> None
         self.conn.write(data, path)
@@ -63,6 +66,7 @@ class SFTPFileClient(BaseFileClient):
 
 # ################################################################################################################################
 
+    @ensure_path_exists
     def delete_file(self, path):
         self.conn.delete_file(path)
 

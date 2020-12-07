@@ -20,6 +20,7 @@ from dateutil.parser import parse as dt_parse
 from zato.common.api import FILE_TRANSFER, GENERIC
 from zato.common.json_ import dumps
 from zato.common.odb.query.generic import FTPFileTransferWrapper, SFTPFileTransferWrapper
+from zato.server.connection.file_client.base import PathAccessException
 from zato.server.connection.file_client.ftp import FTPFileClient
 from zato.server.connection.file_client.sftp import SFTPFileClient
 
@@ -140,13 +141,21 @@ class DirSnapshotDiff:
     def __init__(self, previous_snapshot, current_snapshot):
         # type: (DirSnapshot, DirSnapshot)
 
-        # These are new for sure ..
-        self.files_created = set(current_snapshot.file_data) - set(previous_snapshot.file_data)
 
-        # .. now we can prepare a list for files that were potentially modified ..
+        # These will be new for sure ..
+        self.files_created = set()
+
+        # .. used to prepare a list of files that were potentially modified.
         self.files_modified = set()
 
-        # .. go through each file in the current snapshot and compare its timestamps and file size
+        # We require for both snapshots to exist, otherwise we just return.
+        if not (previous_snapshot and current_snapshot):
+            return
+
+        # New files ..
+        self.files_created = set(current_snapshot.file_data) - set(previous_snapshot.file_data)
+
+        # .. now, go through each file in the current snapshot and compare its timestamps and file size
         # with what was found the previous time. If either is different,
         # it means that the file was modified. In case that the file was modified
         # but the size remains the size and at the same time the timestamp is the same too,
@@ -331,6 +340,10 @@ class BaseSnapshotMaker(AbstractSnapshotMaker):
 
             # .. and return the result to our caller.
             return snapshot
+
+        except PathAccessException as e:
+            logger.warn('%s. File transfer channel `%s` (%s); e:`%s`',
+                e.args[0], self.channel_config.name, self.channel_config.source_type, format_exc())
 
         except Exception:
             logger.warn('Exception caught in get_snapshot (%s), e:`%s`', self.channel_config.source_type, format_exc())
