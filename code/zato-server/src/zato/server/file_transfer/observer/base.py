@@ -21,7 +21,7 @@ from watchdog.events import FileCreatedEvent, FileModifiedEvent
 # Zato
 from zato.common.api import FILE_TRANSFER
 from zato.common.util.api import spawn_greenlet
-from zato.server.file_transfer.snapshot import DirSnapshotDiff
+from zato.server.file_transfer.snapshot import default_interval, DirSnapshotDiff
 
 # ################################################################################################################################
 
@@ -48,7 +48,7 @@ class BaseObserver:
     observer_type_name_title = observer_type_name.upper()
     should_wait_for_deleted_paths = False
 
-    def __init__(self, manager, channel_config, default_timeout):
+    def __init__(self, manager, channel_config):
         # type: (FileTransferAPI, Bunch, float) -> None
         self.manager = manager
         self.channel_config = channel_config
@@ -58,7 +58,7 @@ class BaseObserver:
         self.is_notify = self.observer_type_impl == FILE_TRANSFER.SOURCE_TYPE_IMPL.LOCAL_INOTIFY
         self.name = channel_config.name
         self.is_active = channel_config.is_active
-        self.default_timeout = default_timeout
+        self.sleep_time = default_interval
         self.event_handler = None
         self.path_list = ['<initial-observer>']
         self.is_recursive = False
@@ -215,7 +215,7 @@ class BaseObserver:
         try:
 
             # Local aliases to avoid namespace lookups in self
-            timeout = self.default_timeout
+            timeout = self.sleep_time
             handler_func = self.event_handler.on_created
             is_recursive = self.is_recursive
 
@@ -223,7 +223,7 @@ class BaseObserver:
             current_iter = 0
 
             # Take an initial snapshot
-            snapshot = snapshot_maker.get_snapshot(path, is_recursive)
+            snapshot = snapshot_maker.get_snapshot(path, is_recursive, True, True)
 
             while self.keep_running:
 
@@ -233,7 +233,7 @@ class BaseObserver:
                 try:
 
                     # The latest snapshot ..
-                    new_snapshot = snapshot_maker.get_snapshot(path, is_recursive)
+                    new_snapshot = snapshot_maker.get_snapshot(path, is_recursive, False, False)
 
                     # .. difference between the old and new will return, in particular, new or modified files ..
                     diff = DirSnapshotDiff(snapshot, new_snapshot)
@@ -247,7 +247,7 @@ class BaseObserver:
                         handler_func(FileModifiedEvent(full_event_path), self, snapshot_maker)
 
                     # .. a new snapshot which will be treated as the old one in the next iteration ..
-                    snapshot = snapshot_maker.get_snapshot(path, is_recursive)
+                    snapshot = snapshot_maker.get_snapshot(path, is_recursive, False, True)
 
                 # Note that this will be caught only with local files not with FTP, SFTP etc.
                 except FileNotFoundError as e:
@@ -267,11 +267,14 @@ class BaseObserver:
                         type(e), self.observer_type_name, path, format_exc(), self.name, self.observer_type_impl)
                 finally:
 
-                    # Update look counter ..
+                    # Update loop counter after we completed current iteration
                     current_iter += 1
 
-                    # .. and sleep for a moment.
-                    sleep(timeout)
+                    # Sleep for a while but only if we are a local observer because any other
+                    # will be triggered from the scheduler and we treat the scheduler job's interval
+                    # as the sleep time.
+                    if self.is_local:
+                        sleep(1)
 
         except Exception as e:
             logger.warn('Exception in %s file observer `%s` e:`%s (%s t:%s)',
