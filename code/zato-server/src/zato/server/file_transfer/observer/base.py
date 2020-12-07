@@ -224,7 +224,7 @@ class BaseObserver:
 
             # Take an initial snapshot
             logger.warn('AAA #1')
-            snapshot = snapshot_maker.get_snapshot(path, is_recursive, True)
+            snapshot = snapshot_maker.get_snapshot(path, is_recursive, True, True)
 
             while self.keep_running:
 
@@ -234,11 +234,11 @@ class BaseObserver:
                 try:
 
                     # Sleep for a moment first to make sure we can notice updates triggered by scheduler's jobs.
-                    sleep(5)
+                    sleep(1)
 
                     # The latest snapshot ..
                     #logger.warn('AAA #2')
-                    new_snapshot = snapshot_maker.get_snapshot(path, is_recursive)
+                    new_snapshot = snapshot_maker.get_snapshot(path, is_recursive, False, False)
 
                     # .. difference between the old and new will return, in particular, new or modified files ..
                     diff = DirSnapshotDiff(snapshot, new_snapshot)
@@ -255,7 +255,7 @@ class BaseObserver:
                         handler_func(FileModifiedEvent(full_event_path), self, snapshot_maker)
 
                     # .. a new snapshot which will be treated as the old one in the next iteration ..
-                    snapshot = snapshot_maker.get_snapshot(path, is_recursive)
+                    snapshot = snapshot_maker.get_snapshot(path, is_recursive, False, True)
 
                 # Note that this will be caught only with local files not with FTP, SFTP etc.
                 except FileNotFoundError as e:
