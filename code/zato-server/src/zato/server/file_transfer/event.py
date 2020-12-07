@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from io import StringIO
 from logging import getLogger
 from traceback import format_exc
 
@@ -63,6 +64,14 @@ class FileTransferEventHandler:
         self.manager = manager
         self.channel_name = channel_name
         self.config = config
+
+        # Some parsers will require for input data to be a StringIO objects instead of plain str.
+        self.config.parser_needs_string_io = self._check_if_parser_needs_string_io(self.config)
+
+    def _check_if_parser_needs_string_io(self, config):
+        return config.should_parse_on_pickup and \
+               config.parse_with and \
+               config.parse_with == 'py:csv.reader'
 
     def on_created(self, transfer_event, observer, snapshot_maker=None):
         # type: (PathCreatedEvent, BaseObserver, BaseSnapshotMaker) -> None
@@ -127,10 +136,14 @@ class FileTransferEventHandler:
                 if self.config.should_parse_on_pickup:
 
                     try:
-                        event.data = self.manager.get_parser(self.config.parse_with)(event.raw_data)
+                        data_to_parse = StringIO(event.raw_data) if self.config.parser_needs_string_io else event.raw_data
+                        parser = self.manager.get_parser(self.config.parse_with)
+                        event.data = parser(data_to_parse)
                         event.has_data = True
                     except Exception:
-                        event.parse_error = format_exc()
+                        exception = format_exc()
+                        event.parse_error = exception
+                        logger.warn('File transfer parsing error (%s) e:`%s`', self.config.name, exception)
 
             # Invokes all callbacks for the event
             spawn_greenlet(self.manager.invoke_callbacks, event, self.config.service_list, self.config.topic_list,
