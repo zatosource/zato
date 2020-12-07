@@ -406,14 +406,14 @@ class Client(object):
 
 # ################################################################################################################################
 
-    def invoke(self, request):
+    def invoke(self, request, timeout=5):
         if self.needs_auth and (not self.is_authenticated):
             raise Exception('Client is not authenticated')
 
         request_id = MSG_PREFIX.INVOKE_SERVICE.format(uuid4().hex)
         spawn(self.send, request_id, ServiceInvokeRequest(request_id, request, self.config, self.auth_token))
 
-        response = self._wait_for_response(request_id)
+        response = self._wait_for_response(request_id, wait_time=timeout)
 
         if not response:
             logger.warn('No response to invocation request `%s`', request_id)
