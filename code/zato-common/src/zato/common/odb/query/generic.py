@@ -66,8 +66,6 @@ class GenericObjectWrapper:
             filter(self.model_class.cluster_id==self.cluster_id).\
             one()
 
-        logger.warn('YYY %s', dir(item))
-
         return get_dict_with_opaque(item)
 
 # ################################################################################################################################
@@ -117,17 +115,6 @@ class GenericObjectWrapper:
 
         already_exists = self.exists(name)
         query = self.update(name, opaque) if already_exists else self.create(name, opaque)
-
-        print()
-        logger.warn('ZZZ-1 %s', already_exists)
-        logger.warn('ZZZ-2 %s', name)
-        logger.warn('ZZZ-2b %s', self.type_)
-        logger.warn('ZZZ-3 %s', opaque)
-        logger.warn('ZZZ-4 %s', query)
-
-        if already_exists:
-            logger.warn('ZZZ-5 %s', self.get(name))
-        print()
 
         self.session.execute(query)
         self.session.commit()
