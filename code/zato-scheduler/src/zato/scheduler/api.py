@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -159,7 +159,7 @@ class Scheduler(BrokerMessageReceiver):
             interval = Interval(days=days, hours=hours, minutes=minutes, seconds=seconds)
 
         job = Job(id, name, job_type, interval, start_time, cb_kwargs=cb_kwargs, max_repeats=max_repeats,
-            is_active=is_active, cron_definition=cron_definition, old_name=old_name)
+            is_active=is_active, cron_definition=cron_definition, service=service, extra=extra, old_name=old_name)
 
         func = self.sched.create if is_create else self.sched.edit
         func(job, **kwargs)
