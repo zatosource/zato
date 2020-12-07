@@ -34,6 +34,7 @@ from zato.server.file_transfer.event import FileTransferEventHandler, singleton
 from zato.server.file_transfer.observer.base import BackgroundPathInspector, PathCreatedEvent
 from zato.server.file_transfer.observer.local_ import LocalObserver
 from zato.server.file_transfer.observer.ftp import FTPObserver
+from zato.server.file_transfer.observer.sftp import SFTPObserver
 from zato.server.file_transfer.snapshot import FTPSnapshotMaker, LocalSnapshotMaker, SFTPSnapshotMaker
 
 # ################################################################################################################################
@@ -68,6 +69,7 @@ source_type_sftp  = FILE_TRANSFER.SOURCE_TYPE.SFTP.id
 source_type_to_observer_class = {
     source_type_ftp:   FTPObserver,
     source_type_local: LocalObserver,
+    source_type_sftp:  SFTPObserver,
 }
 
 source_type_to_config = {
