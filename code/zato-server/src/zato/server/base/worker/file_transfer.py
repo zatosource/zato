@@ -90,7 +90,7 @@ class FileTransfer(WorkerImpl):
 
         # .. now, we can just add or remove our own key, no matter if extra existed or not ..
         if is_add:
-            extra_set.add(channel_id)
+            extra_set.add(int(channel_id))
         else:
             try:
                 extra_set.remove(channel_id)
@@ -103,6 +103,9 @@ class FileTransfer(WorkerImpl):
 
         # .. assign it to our job dict ..
         job['extra'] = extra
+
+        self.logger.warn('EEE-1 %s', extra_set)
+        self.logger.warn('EEE-2 %s', extra)
 
         # .. and save it back in ODB.
         self._file_transfer_save_scheduler_job(job)
