@@ -564,6 +564,9 @@ class FileTransferAPI(object):
     def _run_snapshot_observer(self, observer, max_iters=maxsize):
         # type: (BaseObserver, int) -> None
 
+        if not observer.is_active:
+            return
+
         source_type = observer.channel_config.source_type   # type: str
         snapshot_maker_class = source_type_to_snapshot_maker_class[source_type]
 
