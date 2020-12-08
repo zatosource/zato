@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from datetime import datetime
-from functools import wraps
 from logging import getLogger
 from traceback import format_exc
 
@@ -287,7 +286,7 @@ class BaseObserver:
                     # will be triggered from the scheduler and we treat the scheduler job's interval
                     # as the sleep time.
                     if self.is_local:
-                        sleep(1)
+                        sleep(timeout)
 
         except Exception as e:
             logger.warn('Exception in %s file observer `%s` e:`%s (%s t:%s)',

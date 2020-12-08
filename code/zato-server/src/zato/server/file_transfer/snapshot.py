@@ -8,7 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from contextlib import closing
 from datetime import datetime
 from logging import getLogger
 from traceback import format_exc
@@ -17,7 +16,6 @@ from traceback import format_exc
 from dateutil.parser import parse as dt_parse
 
 # Zato
-from zato.common.api import FILE_TRANSFER, GENERIC
 from zato.common.json_ import dumps
 from zato.common.odb.query.generic import FTPFileTransferWrapper, SFTPFileTransferWrapper
 from zato.server.connection.file_client.base import PathAccessException

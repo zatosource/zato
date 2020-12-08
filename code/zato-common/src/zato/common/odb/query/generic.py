@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from logging import getLogger
 
 # SQLAlchemy
-from sqlalchemy import and_, exists, insert, select, update
+from sqlalchemy import and_, exists, insert, update
 
 # Zato
 from zato.common.api import GENERIC, FILE_TRANSFER

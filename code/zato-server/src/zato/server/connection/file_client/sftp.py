@@ -12,15 +12,14 @@ from logging import getLogger
 
 # Zato
 from zato.server.connection.file_client.base import BaseFileClient, PathAccessException
-from zato.server.connection.sftp import SFTPIPCFacade
-from zato.server.service import Service
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.server.connection.sftp import SFTPInfo
+    from zato.server.connection.sftp import SFTPIPCFacade, SFTPInfo
 
+    SFTPIPCFacade = SFTPIPCFacade
     SFTPInfo = SFTPInfo
 
 # ################################################################################################################################
@@ -73,8 +72,6 @@ class SFTPFileClient(BaseFileClient):
     def store(self, path, data):
         # type: (str, object) -> None
         self.conn.write(data, path)
-
-        import struct
 
 # ################################################################################################################################
 
