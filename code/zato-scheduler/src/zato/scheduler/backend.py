@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -27,7 +27,7 @@ from paodate import Delta
 from future.utils import iterkeys, itervalues
 
 # Zato
-from zato.common.api import SCHEDULER
+from zato.common.api import FILE_TRANSFER, SCHEDULER
 from zato.common.util.api import add_scheduler_jobs, add_startup_jobs, asbool, make_repr, new_cid, spawn_greenlet
 
 # ################################################################################################################################
@@ -60,7 +60,8 @@ class Interval(object):
 
 class Job(object):
     def __init__(self, id, name, type, interval, start_time=None, callback=None, cb_kwargs=None, max_repeats=None,
-            on_max_repeats_reached_cb=None, is_active=True, clone_start_time=False, cron_definition=None, old_name=None):
+            on_max_repeats_reached_cb=None, is_active=True, clone_start_time=False, cron_definition=None, service=None,
+            extra=None, old_name=None):
         self.id = id
         self.name = name
         self.type = type
@@ -71,6 +72,8 @@ class Job(object):
         self.on_max_repeats_reached_cb = on_max_repeats_reached_cb
         self.is_active = is_active
         self.cron_definition = cron_definition
+        self.service = service
+        self.extra = extra
 
         # This is used by the edit action to be able to discern if an edit did not include a rename
         self.old_name = old_name
@@ -114,7 +117,8 @@ class Job(object):
         is_active = is_active if is_active is not None else self.is_active
 
         return Job(self.id, self.name, self.type, self.interval, self.start_time, self.callback, self.cb_kwargs,
-            self.max_repeats, self.on_max_repeats_reached_cb, is_active, True, self.cron_definition)
+            self.max_repeats, self.on_max_repeats_reached_cb, is_active, True, self.cron_definition, self.service,
+            self.extra)
 
     def get_start_time(self, start_time):
         """ Converts initial start time to the time the job should be invoked next.
@@ -263,6 +267,12 @@ class Job(object):
 
         # OK, we're ready
         try:
+
+            # If we are a job that triggers file transfer channels we do not start
+            # unless our extra data is filled in. Otherwise, we would not trigger any transfer anyway.
+            if self.service == FILE_TRANSFER.SCHEDULER_SERVICE and (not self.extra):
+                logger.warn('Skipped file transfer job `%s` without extra set `%s` (%s)', self.name, self.extra, self.service)
+                return
 
             if not self.start_time:
                 logger.warn('Job `%s` cannot start without start_time set', self.name)
