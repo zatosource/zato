@@ -31,11 +31,11 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class FTPObserver(BaseObserver):
-    """ An observer checking remote FTP directories.
+class SFTPObserver(BaseObserver):
+    """ An observer checking remote SFTP directories.
     """
-    observer_type_impl = 'ftp-snapshot'
-    observer_type_name = 'FTP'
+    observer_type_impl = 'sftp-snapshot'
+    observer_type_name = 'SFTP'
     observer_type_name_title = observer_type_name
 
 # ################################################################################################################################
