@@ -274,11 +274,15 @@ class SFTPIPCFacade(object):
             today = datetime.today()
             mod_date = strptime('{}-{}'.format(month, day), '%b-%d')
 
+            hour, minute = year_hour_info.split(':')
+            hour = int(hour)
+            minute = int(minute)
+
             # If modification month is bigger than current one, it means that it must have been already
             # in the previous year. Otherwise, it was in the same year we have today.
             mod_year = today.year - 1 if mod_date.tm_mon > today.month else today.year
 
-            return date(mod_year, mod_date.tm_mon, mod_date.tm_mday)
+            return datetime(mod_year, mod_date.tm_mon, mod_date.tm_mday, hour, minute)
 
 # ################################################################################################################################
 
