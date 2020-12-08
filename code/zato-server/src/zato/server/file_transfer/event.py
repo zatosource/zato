@@ -130,7 +130,7 @@ class FileTransferEventHandler:
                     raw_data = f.read()
                     f.close
 
-                event.raw_data = raw_data.decode(self.config.data_encoding) # type: str
+                event.raw_data = raw_data if isinstance(raw_data, str) else raw_data.decode(self.config.data_encoding) # type: str
                 event.has_raw_data = True
 
                 if self.config.should_parse_on_pickup:
