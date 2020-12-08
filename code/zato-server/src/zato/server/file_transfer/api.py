@@ -31,9 +31,10 @@ from zato.common.api import FILE_TRANSFER
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.platform_ import is_linux
 from zato.server.file_transfer.event import FileTransferEventHandler, singleton
-from zato.server.file_transfer.observer.base import BackgroundPathInspector
-from zato.server.file_transfer.observer.local_ import LocalObserver, PathCreatedEvent
+from zato.server.file_transfer.observer.base import BackgroundPathInspector, PathCreatedEvent
+from zato.server.file_transfer.observer.local_ import LocalObserver
 from zato.server.file_transfer.observer.ftp import FTPObserver
+from zato.server.file_transfer.observer.sftp import SFTPObserver
 from zato.server.file_transfer.snapshot import FTPSnapshotMaker, LocalSnapshotMaker, SFTPSnapshotMaker
 
 # ################################################################################################################################
@@ -68,6 +69,7 @@ source_type_sftp  = FILE_TRANSFER.SOURCE_TYPE.SFTP.id
 source_type_to_observer_class = {
     source_type_ftp:   FTPObserver,
     source_type_local: LocalObserver,
+    source_type_sftp:  SFTPObserver,
 }
 
 source_type_to_config = {
@@ -563,6 +565,9 @@ class FileTransferAPI(object):
 
     def _run_snapshot_observer(self, observer, max_iters=maxsize):
         # type: (BaseObserver, int) -> None
+
+        if not observer.is_active:
+            return
 
         source_type = observer.channel_config.source_type   # type: str
         snapshot_maker_class = source_type_to_snapshot_maker_class[source_type]
