@@ -65,7 +65,7 @@ class SFTPFileClient(BaseFileClient):
     @ensure_path_exists
     def get(self, path):
         # (str) -> str
-        return self.conn.download(path)
+        return self.conn.read(path)
 
 # ################################################################################################################################
 
@@ -105,7 +105,14 @@ class SFTPFileClient(BaseFileClient):
             else:
                 directory_list.append(item.to_dict(False))
 
+        self.sort_result(out)
         return out
+
+# ################################################################################################################################
+
+    def path_exists(self, path):
+        # type: (str) -> bool
+        return self.conn.exists(path)
 
 # ################################################################################################################################
 
