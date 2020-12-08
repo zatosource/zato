@@ -42,6 +42,15 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+class PathCreatedEvent:
+    __slots__ = 'src_path'
+
+    def __init__(self, src_path):
+        self.src_path = src_path
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class BaseObserver:
     observer_type_impl = '<observer-type-impl-not-set>'
     observer_type_name = '<observer-type-name-not-set>'
@@ -238,6 +247,9 @@ class BaseObserver:
                     # .. difference between the old and new will return, in particular, new or modified files ..
                     diff = DirSnapshotDiff(snapshot, new_snapshot)
 
+                    #logger.warn('CCC-1 %s', diff.files_created)
+                    #logger.warn('CCC-2 %s', diff.files_modified)
+
                     for path_created in diff.files_created:
                         full_event_path = os.path.join(path, path_created)
                         handler_func(FileCreatedEvent(full_event_path), self, snapshot_maker)
@@ -246,7 +258,7 @@ class BaseObserver:
                         full_event_path = os.path.join(path, path_modified)
                         handler_func(FileModifiedEvent(full_event_path), self, snapshot_maker)
 
-                    # .. a new snapshot which will be treated as the old one in the next iteration ..
+                    # .. a new snapshot which will be treated as the old one in the next iteration
                     snapshot = snapshot_maker.get_snapshot(path, is_recursive, False, True)
 
                 # Note that this will be caught only with local files not with FTP, SFTP etc.
@@ -274,7 +286,7 @@ class BaseObserver:
                     # will be triggered from the scheduler and we treat the scheduler job's interval
                     # as the sleep time.
                     if self.is_local:
-                        sleep(1)
+                        sleep(timeout)
 
         except Exception as e:
             logger.warn('Exception in %s file observer `%s` e:`%s (%s t:%s)',
