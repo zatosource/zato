@@ -7,6 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from functools import wraps
 from logging import getLogger
 
 # Zato
@@ -17,17 +18,28 @@ from zato.server.service import Service
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.server.connection.sftp import SFTPInfo
+
+    SFTPInfo = SFTPInfo
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = getLogger('zato')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def ensure_path_exists(*ignored_args, **ignored_kwargs):
-    def _inner(self, path, *ignored_inner_args, **ignored_inner_kwargs):
+def ensure_path_exists(func):
+    @wraps(func)
+    def inner(self, path, *args, **kwargs):
         # type: (SFTPFileClient, str)
         if not self.conn.exists(path):
             raise PathAccessException('Path `{}` could not be accessed'.format(path))
-    return _inner
+        else:
+            return func(self, path, *args, **kwargs)
+    return inner
 
 # ################################################################################################################################
 
@@ -79,7 +91,21 @@ class SFTPFileClient(BaseFileClient):
         # type: (str) -> list
         result = self.conn.list(path)
 
-        return result
+        file_list = []
+        directory_list = []
+
+        out = {
+            'file_list': file_list,
+            'directory_list': directory_list
+        }
+
+        for item in result: # type: SFTPInfo
+            if item.is_file:
+                file_list.append(item.to_dict(False))
+            else:
+                directory_list.append(item.to_dict(False))
+
+        return out
 
 # ################################################################################################################################
 
