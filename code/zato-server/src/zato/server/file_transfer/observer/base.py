@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from datetime import datetime
+from functools import wraps
 from logging import getLogger
 from traceback import format_exc
 
@@ -247,6 +248,9 @@ class BaseObserver:
                     # .. difference between the old and new will return, in particular, new or modified files ..
                     diff = DirSnapshotDiff(snapshot, new_snapshot)
 
+                    #logger.warn('CCC-1 %s', diff.files_created)
+                    #logger.warn('CCC-2 %s', diff.files_modified)
+
                     for path_created in diff.files_created:
                         full_event_path = os.path.join(path, path_created)
                         handler_func(FileCreatedEvent(full_event_path), self, snapshot_maker)
@@ -255,11 +259,8 @@ class BaseObserver:
                         full_event_path = os.path.join(path, path_modified)
                         handler_func(FileModifiedEvent(full_event_path), self, snapshot_maker)
 
-                    # .. a new snapshot which will be treated as the old one in the next iteration,
-                    # but make only if we are to loop more than once because otherwise this new snapshot
-                    # would not be used for anything anyway.
-                    if max_iters > 1:
-                        snapshot = snapshot_maker.get_snapshot(path, is_recursive, False, True)
+                    # .. a new snapshot which will be treated as the old one in the next iteration
+                    snapshot = snapshot_maker.get_snapshot(path, is_recursive, False, True)
 
                 # Note that this will be caught only with local files not with FTP, SFTP etc.
                 except FileNotFoundError as e:
