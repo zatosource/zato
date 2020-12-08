@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from logging import getLogger
 
 # SQLAlchemy
-from sqlalchemy import and_, exists, insert, select, update
+from sqlalchemy import and_, exists, insert, update
 
 # Zato
 from zato.common.api import GENERIC, FILE_TRANSFER
@@ -64,9 +64,9 @@ class GenericObjectWrapper:
             filter(self.model_class.name==name).\
             filter(self.model_class.type_==self.type_).\
             filter(self.model_class.cluster_id==self.cluster_id).\
-            one()
+            first()
 
-        return get_dict_with_opaque(item)
+        return get_dict_with_opaque(item) if item else None
 
 # ################################################################################################################################
 
@@ -124,7 +124,12 @@ class GenericObjectWrapper:
 
 class FileTransferWrapper(GenericObjectWrapper):
     type_ = GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER
+
+class FTPFileTransferWrapper(FileTransferWrapper):
     subtype = FILE_TRANSFER.SOURCE_TYPE.FTP.id
+
+class SFTPFileTransferWrapper(FileTransferWrapper):
+    subtype = FILE_TRANSFER.SOURCE_TYPE.SFTP.id
 
 # ################################################################################################################################
 # ################################################################################################################################

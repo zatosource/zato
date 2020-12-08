@@ -117,9 +117,6 @@ class WritableKeyedTuple(object):
 # ################################################################################################################################
 
     def __repr__(self):
-        inner = [(key, getattr(self._elem, key)) for key in self._elem.keys()]
-        outer = [(key, getattr(self, key)) for key in dir(self) if not key.startswith('_')]
-
         return '<WritableKeyedTuple at {}>'.format(hex(id(self)))
 
 # ################################################################################################################################

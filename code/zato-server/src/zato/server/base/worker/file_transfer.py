@@ -104,9 +104,6 @@ class FileTransfer(WorkerImpl):
         # .. assign it to our job dict ..
         job['extra'] = extra
 
-        self.logger.warn('EEE-1 %s', extra_set)
-        self.logger.warn('EEE-2 %s', extra)
-
         # .. and save it back in ODB.
         self._file_transfer_save_scheduler_job(job)
 

@@ -16,11 +16,12 @@ from traceback import format_exc
 from zato.common.util.api import hot_deploy, spawn_greenlet
 
 if 0:
-    from zato.server.file_transfer.observer.base import BaseObserver
+    from zato.server.file_transfer.observer.base import BaseObserver, PathCreatedEvent
     from zato.server.file_transfer.snapshot import BaseSnapshotMaker
 
     BaseObserver = BaseObserver
     BaseSnapshotMaker = BaseSnapshotMaker
+    PathCreatedEvent = PathCreatedEvent
 
 # ################################################################################################################################
 # ################################################################################################################################_s
@@ -130,7 +131,7 @@ class FileTransferEventHandler:
                     raw_data = f.read()
                     f.close
 
-                event.raw_data = raw_data.decode(self.config.data_encoding) # type: str
+                event.raw_data = raw_data if isinstance(raw_data, str) else raw_data.decode(self.config.data_encoding) # type: str
                 event.has_raw_data = True
 
                 if self.config.should_parse_on_pickup:
