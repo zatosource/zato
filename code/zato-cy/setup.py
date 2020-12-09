@@ -43,7 +43,6 @@ setup(
           Extension(name='zato.simpleio',            sources=['src/zato/cy/simpleio.py']),
           Extension(name='zato.url_dispatcher',      sources=['src/zato/cy/url_dispatcher.pyx']),
           Extension(name='zato.util_convert',        sources=['src/zato/cy/util/convert.pyx']),
-          Extension(name='zato.cy.common.api',       sources=['src/zato/cy/common/api.py']),
         ], annotate=True, language_level=3),
 
       zip_safe = False,

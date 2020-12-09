@@ -14,9 +14,6 @@ from smtplib import SMTP_PORT
 # Django
 from django import forms
 
-# Python 2/3 compatibility
-from future.utils import iteritems
-
 # Zato
 from zato.common.api import EMAIL
 
@@ -35,7 +32,7 @@ class CreateForm(forms.Form):
 
     def __init__(self, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
-        self.fields['mode'].choices = ((value.value, key) for (key, value) in iteritems(EMAIL.SMTP.MODE))
+        self.fields['mode'].choices = ((item, item) for item in EMAIL.SMTP.MODE())
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())

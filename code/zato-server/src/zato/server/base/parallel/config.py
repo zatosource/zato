@@ -128,11 +128,6 @@ class ConfigLoader(object):
         query = self.odb.get_channel_amqp_list(server.cluster.id, True)
         self.config.channel_amqp = ConfigDict.from_query('channel_amqp', query, decrypt_func=self.decrypt)
 
-        # File transfer
-        query = self.odb.get_channel_file_transfer_list(server.cluster.id, True)
-        self.config.channel_file_transfe = ConfigDict.from_query(
-            'channel_file_transfe', query, decrypt_func=self.decrypt, drop_opaque=True)
-
         # IBM MQ
         query = self.odb.get_channel_wmq_list(server.cluster.id, True)
         self.config.channel_wmq = ConfigDict.from_query('channel_wmq', query, decrypt_func=self.decrypt)

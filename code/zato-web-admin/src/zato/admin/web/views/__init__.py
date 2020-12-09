@@ -36,7 +36,7 @@ except ImportError:
 
 from zato.admin.settings import ssl_key_file, ssl_cert_file, ssl_ca_certs, LB_AGENT_CONNECT_TIMEOUT
 from zato.admin.web import from_utc_to_user
-from zato.common.api import SEC_DEF_TYPE_NAME, ZATO_NONE, ZATO_SEC_USE_RBAC
+from zato.common.api import CONNECTION, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
 from zato.common.util.api import get_lb_client as _get_lb_client
@@ -88,6 +88,31 @@ def get_definition_list(client, cluster, def_type):
     """ Returns all definitions of a given type existing on a given cluster.
     """
     return _get_list(client, cluster, 'zato.definition.{}.get-list'.format(def_type))
+
+# ################################################################################################################################
+
+def get_outconn_rest_list(req, name_to_id=False):
+    """ Returns a list of all outgoing REST connections.
+    """
+    out = {}
+    response = req.zato.client.invoke('zato.http-soap.get-list', {
+        'cluster_id': req.zato.cluster_id,
+        'connection': CONNECTION.OUTGOING,
+        'transport': URL_TYPE.PLAIN_HTTP,
+    })
+
+    for item in response:
+
+        if name_to_id:
+            key   = item.name
+            value = item.id
+        else:
+            key   = item.id
+            value = item.name
+
+        out[key] = value
+
+    return out
 
 # ################################################################################################################################
 
@@ -425,6 +450,8 @@ class Index(_BaseView):
             else:
                 logger.info('can_invoke_admin_service returned False, not invoking an admin service:[%s]', self.service_name)
 
+            template_name = self.get_template_name() or self.template
+
             return_data['req'] = self.req
             return_data['items'] = self.items
             return_data['item'] = self.item
@@ -435,6 +462,7 @@ class Index(_BaseView):
             return_data['search_form'] = req.zato.search_form
             return_data['meta'] = response.meta if response else {}
             return_data['paginate'] = getattr(self, 'paginate', False)
+            return_data['zato_template_name'] = template_name
 
             view_specific = self.handle()
             if view_specific:
@@ -444,7 +472,7 @@ class Index(_BaseView):
 
             logger.info('Index data for frontend `%s`', return_data)
 
-            return TemplateResponse(req, self.get_template_name() or self.template, return_data)
+            return TemplateResponse(req, template_name, return_data)
 
         except Exception:
             return HttpResponseServerError(format_exc())

@@ -31,6 +31,13 @@ from zato.common.util.sql import ElemsWithOpaqueMaker
 
 # ################################################################################################################################
 
+if 0:
+    from zato.server.connection.ftp import FTPStore
+
+    FTPStore = FTPStore
+
+# ################################################################################################################################
+
 logger = getLogger(__name__)
 
 # ################################################################################################################################
@@ -266,7 +273,7 @@ class ConfigStore(object):
     def __init__(self):
 
         # Outgoing connections
-        self.out_ftp = None   # type: ConfigDict
+        self.out_ftp = None   # type: FTPStore
         self.out_sftp = None  # type: ConfigDict
         self.out_odoo = None  # type: ConfigDict
         self.out_soap = None  # type: ConfigDict
