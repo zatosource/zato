@@ -322,12 +322,12 @@ class Attrs(type):
 # ################################################################################################################################
 
 class DATA_FORMAT(Attrs):
-    DICT = 'dict'
-    XML = 'xml'
-    JSON = 'json'
     CSV = 'csv'
+    DICT = 'dict'
+    JSON = 'json'
     POST = 'post'
     SOAP = 'soap'
+    XML = 'xml'
 
     def __iter__(self):
         # Note that DICT and other attributes aren't included because they're never exposed to external world as-is,
