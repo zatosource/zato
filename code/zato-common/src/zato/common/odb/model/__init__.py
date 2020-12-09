@@ -2676,6 +2676,9 @@ class GenericObject(Base):
     category_id = Column(Text(191), nullable=True)
     subcategory_id = Column(Text(191), nullable=True)
 
+    creation_time = Column(DateTime, nullable=False)
+    last_modified = Column(DateTime, nullable=False)
+
     category_name = Column(Text(191), nullable=True)
     subcategory_name = Column(Text(191), nullable=True)
 

@@ -119,8 +119,8 @@ class GetList(_BaseGet):
     class SimpleIO(GetListAdminSIO, _BaseGet.SimpleIO):
         request_elem = 'zato_http_soap_get_list_request'
         response_elem = 'zato_http_soap_get_list_response'
-        input_required = ('cluster_id',)
-        input_optional = GetListAdminSIO.input_optional + ('connection', 'transport')
+        input_required = 'cluster_id'
+        input_optional = GetListAdminSIO.input_optional + ('connection', 'transport', 'data_format')
         output_optional = _BaseGet.SimpleIO.output_optional + ('connection', 'transport')
         output_repeated = True
 
