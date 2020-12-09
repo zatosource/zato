@@ -90,6 +90,14 @@ has_trace1 = logger.isEnabledFor(TRACE1)
 
 # ################################################################################################################################
 
+# For backward compatibility we ignore certain modules
+internal_to_ignore = []
+
+# STOMP was removed in 3.2
+internal_to_ignore.append('stomp')
+
+# ################################################################################################################################
+
 _unsupported_pickle_protocol_msg = 'unsupported pickle protocol:'
 
 # ################################################################################################################################
@@ -935,8 +943,20 @@ class ServiceStore(object):
 
         items = items if isinstance(items, (list, tuple)) else [items]
         to_process = []
+        should_skip = False
 
         for item in items:
+
+            for ignored_name in internal_to_ignore:
+                if ignored_name in item:
+                    should_skip = True
+                    break
+            else:
+                should_skip = False
+
+            if should_skip:
+                continue
+
             if has_debug:
                 logger.debug('About to import services from:`%s`', item)
 

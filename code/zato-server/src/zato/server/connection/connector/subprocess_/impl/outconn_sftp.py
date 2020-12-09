@@ -55,7 +55,7 @@ class SFTPConnection(object):
 
     def __init__(self, logger, **config):
         self.logger = logger
-        self.config = bunchify(config)     # type: Bunch
+        self.config = bunchify(config) # type: Bunch
 
         # Reject unknown IP types
         if self.config.force_ip_type:
@@ -216,9 +216,18 @@ class SFTPConnection(object):
 
     def encode_out(self, out):
         # type: (SFTPOutput) -> None
-        out.command = [elem.decode('utf8') for elem in out.command[:]]
-        out.stderr = out.stderr.decode('utf8')
-        out.stdout = out.stdout.decode('utf8')
+
+        # We need to check for None below, particularly in stderr and stdout,
+        # because they both can be an empty bytes object.
+
+        if out.command is not None:
+            out.command = [elem.decode('utf8') for elem in out.command[:]]
+
+        if out.stderr is not None:
+            out.stderr = out.stderr.decode('utf8')
+
+        if out.stdout is not None:
+            out.stdout = out.stdout.decode('utf8')
 
 # ################################################################################################################################
 

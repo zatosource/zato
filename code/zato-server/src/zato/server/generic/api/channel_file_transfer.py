@@ -24,7 +24,9 @@ logger = getLogger(__name__)
 class ChannelFileTransferWrapper(Wrapper):
     """ Represents a file transfer channel.
     """
+    needs_self_client = False
     wrapper_type = 'File transfer channel'
+    build_if_not_active = True
 
     def __init__(self, *args, **kwargs):
         super(ChannelFileTransferWrapper, self).__init__(*args, **kwargs)
@@ -36,18 +38,21 @@ class ChannelFileTransferWrapper(Wrapper):
 
         with self.update_lock:
 
-            #
-            # ZZZ
-            #
-            # Create file transfer channels here
+            # Create a new observer ..
+            self.server.worker_store.file_transfer_api.create(self.config)
+
+            # .. and start it now.
+            self.server.worker_store.file_transfer_api.start_observer(self.config.name)
 
             # We can assume we are done building the channel now
             self.is_connected = True
 
 # ################################################################################################################################
 
-    def _delete(self):
-        self._client.close()
+    def delete(self):
+        """ This is overridden from Wrapper.delete because we do not have self._client.
+        """
+        self.server.worker_store.file_transfer_api.delete(self.config)
 
 # ################################################################################################################################
 

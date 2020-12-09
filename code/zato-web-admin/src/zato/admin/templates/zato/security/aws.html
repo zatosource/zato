@@ -49,9 +49,9 @@
     {% if cluster_id %}
 
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.security.aws.create()">Create a new AWS definition</a>
+            <a href="javascript:$.fn.zato.security.aws.create()">Create a new AWS security definition</a>
         </div>
-        
+
         <div id="markup">
             <table id="data-table">
                 <thead>
@@ -99,7 +99,7 @@
                 <form action="{% url "security-aws-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
+                            <td style="vertical-align:middle; width:10%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
                         <tr>
@@ -124,7 +124,7 @@
                 <form action="{% url "security-aws-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
+                            <td style="vertical-align:middle; width:10%">Name</td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
                         <tr>
@@ -150,7 +150,7 @@
                 <form action="{% url "security-aws-change-password" %}" method="post" id="change_password-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
+                            <td style="vertical-align:middle; width:15%">Name</td>
                             <td id="change-password-name"></td>
                         </tr>
                         <tr>
@@ -159,7 +159,7 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Confirm access key</td>
-                            <td>{{ change_password_form.password2 }} 
+                            <td>{{ change_password_form.password2 }}
                                 <input type="hidden" id="id_change_password-id" name="id" />
                                 <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
                             </td>

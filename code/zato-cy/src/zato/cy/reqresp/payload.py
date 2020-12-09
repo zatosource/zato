@@ -114,8 +114,6 @@ class SimpleIOPayload(object):
         """ Extract response attributes from a dict.
         """
         extracted:dict = {}
-        is_dict:bint = isinstance(item, dict)
-
         name = None
 
         for name in self.all_output_elem_names:
@@ -133,8 +131,22 @@ class SimpleIOPayload(object):
 
 # ################################################################################################################################
 
+    @cy.cfunc
+    def _preprocess_payload_attrs(self, value):
+
+        # First, check if this is not a response from a Zato service wrapped in a response element.
+        # If it is, extract the actual inner response first.
+        if isinstance(value, dict) and len(value) == 1:
+            response_name:str = list(value.keys())[0] # type: str
+            if response_name.startswith('zato') and response_name.endswith('_response'):
+                return value[response_name]
+        else:
+            return value
+
+# ################################################################################################################################
+
     @cy.ccall
-    def set_payload_attrs(self, value:object, is_dict:cy.bint):
+    def set_payload_attrs(self, value:object):
         """ Assigns user-defined attributes to what will eventually be a response.
         """
 
@@ -149,7 +161,7 @@ class SimpleIOPayload(object):
         # we will need possibly to rethink the idea of clearing out the user attributes
         #
         # For now, this is not a concern because, with the exception of WorkerStore._set_service_response_data,
-        # which is no longer doing it, no other component will attempt to do it
+        # which is no longer doing it, no other component will attempt it
         # and this comment is left just in case reconsidering it in the future.
         #
         # #####################################################################################################
@@ -158,13 +170,14 @@ class SimpleIOPayload(object):
         self.user_attrs_dict.clear()
         self.user_attrs_list[:] = []
 
+        value = self._preprocess_payload_attrs(value)
+        is_dict:cy.bint = isinstance(value, dict)
+
         # Shortcut in case we know already this is a dict on input
         if is_dict:
             dict_attrs:dict = self._extract_payload_attrs_dict(value)
             self.user_attrs_dict.update(dict_attrs)
-
         else:
-
             # Check if this is something that can be explicitly serialised for our purposes
             if hasattr(value, 'to_zato'):
                 value = value.to_zato()

@@ -12,12 +12,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from bunch import Bunch
 
 # Zato
-from zato.common.api import LDAP
-from zato.common.broker_message import GENERIC
+from zato.common.api import GENERIC as COMMON_GENERIC, LDAP
+from zato.common.broker_message import GENERIC as GENERIC_BROKER_MSG
 from zato.common.util.api import as_bool, parse_simple_type
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.generic.connection import GenericConnection
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Generic(WorkerImpl):
@@ -29,6 +30,7 @@ class Generic(WorkerImpl):
 # ################################################################################################################################
 
     def _find_conn_info(self, item_id):
+
         found_conn_dict = None
         found_name = None
 
@@ -47,8 +49,14 @@ class Generic(WorkerImpl):
         if not conn_dict:
             raise Exception('Could not find configuration matching input message `{}`'.format(msg))
         else:
-            conn_dict.conn.delete()
-            del conn_value[conn_dict['name']]
+
+            # Delete the connection object ..
+            conn = conn_dict.conn
+            conn.delete()
+
+            # .. and delete the connection from the configuration object.
+            conn_name = conn_dict['name']
+            del conn_value[conn_name]
 
 # ################################################################################################################################
 
@@ -69,7 +77,7 @@ class Generic(WorkerImpl):
                     item_dict[key] = msg[key]
 
         item_dict.queue_build_cap = self.server.fs_server_config.misc.queue_build_cap
-        item_dict.auth_url = msg.address
+        item_dict.auth_url = msg.get('address')
 
         # Normalize the contents of the configuration message
         self.generic_normalize_config(item_dict)
@@ -84,6 +92,11 @@ class Generic(WorkerImpl):
 # ################################################################################################################################
 
     def _edit_generic_connection(self, msg, skip=None, secret=None):
+
+        # Special-case file transfer channels
+        if msg['type_'] == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER:
+            self._edit_file_transfer_channel(msg)
+            return
 
         # Find and store connection password/secret for later use
         # if we do not have it already and we will if we are called from ChangePassword.
@@ -128,7 +141,7 @@ class Generic(WorkerImpl):
         found_conn_dict, found_name = self._find_conn_info(conn_id)
 
         edit_msg = Bunch()
-        edit_msg['action'] = GENERIC.CONNECTION_EDIT.value
+        edit_msg['action'] = GENERIC_BROKER_MSG.CONNECTION_EDIT.value
 
         for k, v in found_conn_dict.items():
             if k in ('conn', 'parent'):
@@ -141,6 +154,7 @@ class Generic(WorkerImpl):
 # ################################################################################################################################
 
     def on_broker_msg_GENERIC_CONNECTION_CREATE(self, msg, *args, **kwargs):
+
         func = self._get_generic_impl_func(msg)
         func(msg)
 
