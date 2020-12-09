@@ -1,0 +1,647 @@
+
+{% extends "zato/index.html" %}
+
+{% block html_title %}File transfer{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    {% if items %}
+    <style type="text/css">
+        .ui-dialog-titlebar {
+            margin-bottom:-4px !important;
+        }
+    </style>
+    {% endif %}
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/channel/file-transfer.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+
+            {% comment %} 1 {% endcomment %}
+            'name',
+            '_is_active',
+            '_source_html',
+
+            {% comment %} 2 {% endcomment %}
+            '_pickup_from_html',
+            '_move_processed_to_html',
+
+            {% comment %} 3 {% endcomment %}
+            '_recipient',
+            '_edit',
+            '_delete',
+
+            {% comment %} 4 {% endcomment %}
+            'id',
+            'is_active',
+
+            {% comment %} 5 {% endcomment %}
+            'should_read_on_pickup',
+            'service_list',
+            'topic_list',
+
+            {% comment %} 6 {% endcomment %}
+            'should_parse_on_pickup',
+            'parse_with',
+            'should_delete_after_pickup',
+
+            {% comment %} 7 {% endcomment %}
+            'is_internal',
+            'source_type',
+            'ftp_source_id',
+
+            {% comment %} 8 {% endcomment %}
+            'sftp_source_id',
+            'file_patterns',
+            'scheduler_job_id',
+
+            {% comment %} 9 {% endcomment %}
+            'is_line_by_line',
+
+            {% comment %} 10 {% endcomment %}
+            'pickup_from_list',
+            'ftp_source_name',
+            'sftp_source_name',
+
+            {% comment %} 11 {% endcomment %}
+            'is_case_sensitive',
+            'move_processed_to',
+            'is_hot_deploy',
+
+            {% comment %} 12 {% endcomment %}
+            'binary_file_patterns',
+            'data_encoding',
+            'outconn_rest_list',
+
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">File transfer</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% with has_generic="1" generic_type="channel-file-transfer" %}
+    {% include "zato/search-form.html" with page_prompt="Show channels"%}
+{% endwith %}
+
+
+    {% if cluster_id %}
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.channel.file_transfer.create()">Create a new channel</a>
+        </div>
+
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        {% comment %} 1 {% endcomment %}
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+                        <th><a href="#">Source</a></th>
+
+                        {% comment %} 2 {% endcomment %}
+                        <th><a href="#">From</a></th>
+                        <th><a href="#">To</a></th>
+
+                        {% comment %} 3 {% endcomment %}
+                        <th style="min-width:30%"><a href="#">Recipients</a></th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        {% comment %} 4 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 5 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 6 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 7 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 8 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 9 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 10 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 11 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 12 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        {% comment %} 1 {% endcomment %}
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>
+                            {% if item.source_type == "local" %}
+                                Local
+                            {% elif item.source_type == "ftp" %}
+                                {% if item.ftp_source_name %}
+                                    <a href="{% url "out-ftp" %}?cluster={{ cluster_id }}&amp;query={{ item.ftp_source_name }}">{{ item.ftp_source_name }}</a>
+                                {% else %}
+                                    FTP <span class="form_hint"><br/>(No connection assigned)</span>
+                                {% endif %}
+                            {% elif item.source_type == "sftp" %}
+                                {% if item.sftp_source_name %}
+                                    <a href="{% url "out-sftp" %}?cluster={{ cluster_id }}&amp;type_=outconn-sftp&amp;query={{ item.sftp_source_name }}">{{ item.sftp_source_name }}</a>
+                                {% else %}
+                                    SFTP <span class="form_hint"><br/>(No connection assigned)</span>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+
+                        {% comment %} 2 {% endcomment %}
+                        <td>
+                            {{ item.pickup_from_list|linebreaks }}
+                            {{ item.file_patterns }}
+                        </td>
+                        <td>{{ item.move_processed_to|default:'<span class="form_hint">---</span>' }}</td>
+
+                        {% comment %} 3 {% endcomment %}
+
+                        <td>
+                            {% if item.service_list or item.topic_list or item.outconn_rest_list_by_name %}
+
+                                {% for service_name in item.service_list %}
+                                    <span class="form_hint">S</span>→
+                                        <a href="{% url "service-overview" service_name %}?cluster={{ cluster_id }}">{{ service_name }}</a>
+                                    <br/>
+                                {% endfor %}
+
+                                {% for topic_name in item.topic_list %}
+                                    <span class="form_hint">T</span>→
+                                        <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id}}&amp;query={{ topic_name }}">{{ topic_name }}</a>
+                                    <br/>
+                                {% endfor %}
+
+                                {% for outconn_rest_name in item.outconn_rest_list_by_name %}
+                                    <span class="form_hint">R</span>→
+                                        <a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=plain_http&amp;query={{ outconn_rest_name }}">{{ outconn_rest_name }}</a>
+                                    <br/>
+                                {% endfor %}
+
+                            {% else %}
+                                <span class="form_hint">---</span>
+                            {% endif %}
+                        </td>
+
+                        <td><a href="javascript:$.fn.zato.channel.file_transfer.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.channel.file_transfer.delete_('{{ item.id }}')">Delete</a></td>
+
+                        {% comment %} 4 {% endcomment %}
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
+
+                        {% comment %} 5 {% endcomment %}
+                        <td class='ignore'>{{ item.should_read_on_pickup }}</td>
+                        <td class='ignore'>{{ item.service_list_json|default:"[]" }}</td>
+                        <td class='ignore'>{{ item.topic_list_json|default:"[]" }}</td>
+
+                        {% comment %} 6 {% endcomment %}
+                        <td class='ignore'>{{ item.should_parse_on_pickup }}</td>
+                        <td class='ignore'>{{ item.parse_with }}</td>
+                        <td class='ignore'>{{ item.should_delete_after_pickup }}</td>
+
+                        {% comment %} 7 {% endcomment %}
+                        <td class='ignore'>{{ item.is_internal }}</td>
+                        <td class='ignore'>{{ item.source_type }}</td>
+                        <td class='ignore'>{{ item.ftp_source_id }}</td>
+
+                        {% comment %} 8 {% endcomment %}
+                        <td class='ignore'>{{ item.sftp_source_id }}</td>
+                        <td class='ignore'>{{ item.file_patterns }}</td>
+                        <td class='ignore'>{{ item.scheduler_job_id }}</td>
+
+                        {% comment %} 9 {% endcomment %}
+                        <td class='ignore'>{{ item.is_line_by_line }}</td>
+
+                        {% comment %} 10 {% endcomment %}
+                        <td class='ignore'>{{ item.pickup_from_list }}</td>
+                        <td class='ignore'>{{ item.ftp_source_name }}</td>
+                        <td class='ignore'>{{ item.sftp_source_name }}</td>
+
+                        {% comment %} 11 {% endcomment %}
+                        <td class='ignore'>{{ item.is_case_sensitive }}</td>
+                        <td class='ignore'>{{ item.move_processed_to }}</td>
+                        <td class='ignore'>{{ item.is_hot_deploy }}</td>
+
+                        {% comment %} 12 {% endcomment %}
+                        <td class='ignore'>{{ item.binary_file_patterns }}</td>
+                        <td class='ignore'>{{ item.data_encoding }}</td>
+                        <td class='ignore'>{{ item.outconn_rest_list_json|default:"[]" }}</td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='31'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "channel-file-transfer-create" %}" method="post" id="create-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:14%">
+                                <label for="id_name">Name</label>
+                            </td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                            </td>
+                            <td>
+
+                            <label>
+                                Active
+                                {{ create_form.is_active }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Read
+                            {{ create_form.should_read_on_pickup }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Parse
+                            {{ create_form.should_parse_on_pickup }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Delete
+                            {{ create_form.should_delete_after_pickup }}
+                            </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                            </td>
+                            <td>
+
+                            <label>
+                            Case sens.
+                            {{ create_form.is_case_sensitive }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Hot deploy
+                            {{ create_form.is_hot_deploy }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Encoding
+                            {{ create_form.data_encoding }}
+                            </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_source_type">Source</label>
+                            </td>
+                            <td>
+                                {{ create_form.source_type }}
+                                {{ create_form.ftp_source_id }}
+                                {{ create_form.sftp_source_id }}
+                            </td>
+                        </tr>
+
+                        <tr id="tr_create_scheduler_job_id" class="hidden">
+                            <td style="vertical-align:middle">
+                                <label for="id_scheduler_job_id">Schedule</label>
+                            </td>
+                            <td>
+                                {{ create_form.scheduler_job_id }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_pickup_from">Dir. from</label>
+                            </td>
+                            <td>
+                                {{ create_form.pickup_from_list }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_file_patterns">Files</label>
+                            </td>
+                            <td>
+                                {{ create_form.file_patterns }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_move_processed_to">Proc. to</label>
+                            </td>
+                            <td>{{ create_form.move_processed_to }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_parse_with">Parse with</label>
+                            </td>
+                            <td>{{ create_form.parse_with }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle" colspan="2">
+                                Send to ↓
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_service_list">Service</label>
+                            </td>
+                            <td>
+                                {{ create_form.service_list }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_topic_list">Topic</label>
+                            </td>
+                            <td>{{ create_form.topic_list }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_outconn_rest_list">REST</label>
+                            </td>
+                            <td>
+                                {{ create_form.outconn_rest_list }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_ftp_source_name" name="ftp_source_name" />
+                    <input type="hidden" id="id_sftp_source_name" name="sftp_source_name" />
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "channel-file-transfer-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:14%">
+                                <label for="id_edit-name">Name</label>
+                            </td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                            </td>
+                            <td>
+
+                            <label>
+                                Active
+                                {{ edit_form.is_active }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Read
+                            {{ edit_form.should_read_on_pickup }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Parse
+                            {{ edit_form.should_parse_on_pickup }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Delete
+                            {{ edit_form.should_delete_after_pickup }}
+                            </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                            </td>
+                            <td>
+
+                            <label>
+                            Case sens.
+                            {{ edit_form.is_case_sensitive }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Hot deploy
+                            {{ edit_form.is_hot_deploy }}
+                            </label>
+
+                            |
+
+                            Encoding
+                            <label>
+                            {{ edit_form.data_encoding }}
+                            </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-source_type">Source</label>
+                            </td>
+                            <td>
+                                {{ edit_form.source_type }}
+                                {{ edit_form.ftp_source_id }}
+                                {{ edit_form.sftp_source_id }}
+                            </td>
+                        </tr>
+
+
+                        <tr id="tr_edit_scheduler_job_id" class="hidden">
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-scheduler_job_id">Schedule</label>
+                            </td>
+                            <td>
+                                {{ edit_form.scheduler_job_id }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-pickup_from_list">Dir. from</label>
+                            </td>
+                            <td>
+                                {{ edit_form.pickup_from_list }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-file_patterns">Files</label>
+                            </td>
+                            <td>
+                                {{ edit_form.file_patterns }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-move_processed_to">Proc. to</label>
+                            </td>
+                            <td>{{ edit_form.move_processed_to }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-parse_with">Parse with</label>
+                            </td>
+                            <td>{{ edit_form.parse_with }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle" colspan="2">
+                                Send to ↓
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-service_list">Service</label>
+                            </td>
+                            <td>
+                                {{ edit_form.service_list }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-topic_list">Topic</label>
+                            </td>
+                            <td>{{ edit_form.topic_list }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_outconn_rest_list">REST</label>
+                            </td>
+                            <td>
+                                {{ edit_form.outconn_rest_list }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-ftp_source_name" name="ftp_source_name" />
+                    <input type="hidden" id="id_edit-sftp_source_name" name="sftp_source_name" />
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+    {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}
+
