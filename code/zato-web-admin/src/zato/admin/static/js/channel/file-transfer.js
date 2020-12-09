@@ -17,7 +17,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.ChannelFileTransfer;
     $.fn.zato.data_table.new_row_func = $.fn.zato.channel.file_transfer.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'source_type', 'pickup_from', 'file_patterns']);
+    $.fn.zato.data_table.setup_forms(['name', 'source_type', 'pickup_from_list', 'file_patterns']);
 
     $('#id_source_type').change(function() {
         $.fn.zato.channel.file_transfer.on_source_type_changed('');
@@ -38,20 +38,35 @@ $.fn.zato.channel.file_transfer.on_source_type_changed = function(prefix) {
 
     if(source_type) {
 
-        let ftp = $(id_prefix + 'ftp_source_id');
-        let sftp = $(id_prefix + 'sftp_source_id');
+        let ftp       = $(id_prefix + 'ftp_source_id');
+        let sftp      = $(id_prefix + 'sftp_source_id');
 
-        if(source_type=='local') {
+        let scheduler_create_row = $('#tr_create_scheduler_job_id');
+        let scheduler_edit_row = $('#tr_edit_scheduler_job_id');
+
+        if(source_type == 'local') {
+
+            scheduler_create_row.addClass('hidden');
+            scheduler_edit_row.addClass('hidden');
+
             ftp.addClass('hidden');
             sftp.addClass('hidden');
         }
 
-        else if(source_type=='ftp') {
+        else if(source_type == 'ftp') {
+
+            scheduler_create_row.removeClass('hidden');
+            scheduler_edit_row.removeClass('hidden');
+
             ftp.removeClass('hidden');
             sftp.addClass('hidden');
         }
 
-        else if(source_type=='sftp') {
+        else if(source_type == 'sftp') {
+
+            scheduler_create_row.removeClass('hidden');
+            scheduler_edit_row.removeClass('hidden');
+
             sftp.removeClass('hidden');
             ftp.addClass('hidden');
         }
@@ -72,13 +87,24 @@ $.fn.zato.channel.file_transfer.edit = function(id) {
     let source_type = $('#id_edit-'+ instance.source_type +'_source_id');
     source_type.removeClass('hidden');
 
+    if(instance.source_type != "local") {
+
+        let scheduler_create_row = $('#tr_create_scheduler_job_id');
+        let scheduler_edit_row = $('#tr_edit_scheduler_job_id');
+
+        scheduler_create_row.removeClass('hidden');
+        scheduler_edit_row.removeClass('hidden');
+    };
+
     $('#id_edit-ftp_source_name').val(instance.ftp_source_name);
     $('#id_edit-sftp_source_name').val(instance.sftp_source_name);
 
     $.fn.zato.data_table.multirow.remove_multirow_added();
     $.fn.zato.data_table.edit('edit', 'Update the file transfer channel', id, false);
-    $.fn.zato.data_table.multirow.populate_select_field('service_list', JSON.parse(instance.service_list_json));
-    $.fn.zato.data_table.multirow.populate_select_field('topic_list', JSON.parse(instance.topic_list_json));
+
+    $.fn.zato.data_table.multirow.populate_field('service_list', instance.service_list);
+    $.fn.zato.data_table.multirow.populate_field('topic_list', instance.topic_list);
+    $.fn.zato.data_table.multirow.populate_field('outconn_rest_list', instance.outconn_rest_list);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -94,30 +120,32 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     let cluster_id = $(document).getUrlParam('cluster');
 
     let source_html = $.fn.zato.empty_value;
-    let pickup_from_html = '';
-    let recipients_html = '';
+    let pickup_from_list_html = '';
+    let recipients_html = data.recipients_html || '<span class="form_hint">---</span>';
 
     if(item.source_type == 'local') {
         source_html = 'Local';
     }
     else if(item.source_type == 'ftp') {
-        source_html = `<a href="/zato/outgoing/ftp/?cluster=${item.cluster_id}&amp;query=${item.ftp_source_name}">${item.ftp_source_name}</a>`;
-    }
-    else if(item.source_type == 'sftp') {
-        source_html = `<a href="/zato/outgoing/sftp/?cluster=${item.cluster_id}&amp;type_=outconn-sftp&amp;query=${item.sftp_source_name}">${item.sftp_source_name}</a>`;
-    }
-
-    pickup_from_html += item.pickup_from;
-    pickup_from_html += '<br/>';
-    pickup_from_html += item.file_patterns;
-
-    if(item.service_list || item.topic_list) {
-
-        for(let idx=0; idx < item.service_list.length; idx++) {
-            let service_name = item.service_list[idx];
-            console.log('QQQ '+ service_name);
+        if(item.ftp_source_name) {
+            source_html = `<a href="/zato/outgoing/ftp/?cluster=${item.cluster_id}&amp;query=${item.ftp_source_name}">${item.ftp_source_name}</a>`;
+        }
+        else {
+            source_html = 'FTP <span class="form_hint"><br/>(No connection assigned)</span>';
         }
     }
+    else if(item.source_type == 'sftp') {
+        if(item.sftp_source_name) {
+            source_html = `<a href="/zato/outgoing/sftp/?cluster=${item.cluster_id}&amp;type_=outconn-sftp&amp;query=${item.sftp_source_name}">${item.sftp_source_name}</a>`;
+        }
+        else {
+            source_html = 'SFTP <span class="form_hint"><br/>(No connection assigned)</span>';
+        }
+    }
+
+    pickup_from_list_html += String.replace(item.pickup_from_list.replace("\n", "<br/>"));
+    pickup_from_list_html += '<br/>';
+    pickup_from_list_html += item.file_patterns;
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
@@ -128,7 +156,7 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     row += String.format('<td>{0}</td>', source_html);
 
     // 2
-    row += String.format('<td>{0}</td>', pickup_from_html);
+    row += String.format('<td>{0}</td>', pickup_from_list_html);
     row += String.format('<td>{0}</td>', item.move_processed_to ? item.move_processed_to : $.fn.zato.empty_value);
 
     // 3
@@ -139,16 +167,16 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     // 4
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", item.is_active);
-    row += String.format("<td class='ignore'>{0}</td>", item.service_list);
 
     // 5
-    row += String.format("<td class='ignore'>{0}</td>", item.topic_list);
-    row += String.format("<td class='ignore'>{0}</td>", item.read_on_pickup);
+    row += String.format("<td class='ignore'>{0}</td>", item.should_read_on_pickup);
+    row += String.format("<td class='ignore'>{0}</td>", data.service_list);
+    row += String.format("<td class='ignore'>{0}</td>", data.topic_list);
 
     // 6
-    row += String.format("<td class='ignore'>{0}</td>", item.parse_on_pickup);
+    row += String.format("<td class='ignore'>{0}</td>", item.should_parse_on_pickup);
     row += String.format("<td class='ignore'>{0}</td>", item.parse_with);
-    row += String.format("<td class='ignore'>{0}</td>", item.delete_after_pickup);
+    row += String.format("<td class='ignore'>{0}</td>", item.should_delete_after_pickup);
 
     // 7
     row += String.format("<td class='ignore'>{0}</td>", item.is_internal);
@@ -161,14 +189,22 @@ $.fn.zato.channel.file_transfer.data_table.new_row = function(item, data, includ
     row += String.format("<td class='ignore'>{0}</td>", item.scheduler_job_id);
 
     // 9
-    row += String.format("<td class='ignore'>{0}</td>", item.service_list_json);
-    row += String.format("<td class='ignore'>{0}</td>", item.topic_list_json);
-    row += String.format("<td class='ignore'>{0}</td>", item.line_by_line);
+    row += String.format("<td class='ignore'>{0}</td>", item.is_line_by_line);
 
     // 10
-    row += String.format("<td class='ignore'>{0}</td>", item.pickup_from);
+    row += String.format("<td class='ignore'>{0}</td>", item.pickup_from_list);
     row += String.format("<td class='ignore'>{0}</td>", item.ftp_source_name);
     row += String.format("<td class='ignore'>{0}</td>", item.sftp_source_name);
+
+    // 11
+    row += String.format("<td class='ignore'>{0}</td>", item.is_case_sensitive);
+    row += String.format("<td class='ignore'>{0}</td>", item.move_processed_to);
+    row += String.format("<td class='ignore'>{0}</td>", item.is_hot_deploy);
+
+    // 12
+    row += String.format("<td class='ignore'>{0}</td>", item.binary_file_patterns);
+    row += String.format("<td class='ignore'>{0}</td>", item.data_encoding);
+    row += String.format("<td class='ignore'>{0}</td>", data.outconn_rest_list);
 
     if(include_tr) {
         row += '</tr>';

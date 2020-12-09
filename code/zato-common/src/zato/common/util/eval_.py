@@ -16,30 +16,32 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 true_values  =  'true', 'yes',  'on', 'y', 't', '1'
 false_values = 'false',  'no', 'off', 'n', 'f', '0'
 
-def as_bool(object_):
+def as_bool(data):
 
-    if isinstance(object_, (str, bytes)):
-        object_ = object_.strip().lower()
-        if object_ in true_values:
+    if isinstance(data, (str, bytes)):
+        data = data.strip().lower()
+        if data in true_values:
             return True
-        elif object_ in false_values:
+        elif data in false_values:
+            return False
+        elif data == '':
             return False
         else:
-            raise ValueError('String is not true/false: %r' % object_)
+            raise ValueError('String is not true/false: %r' % data)
 
-    return bool(object_)
+    return bool(data)
 
-def as_list(object_, sep=None, strip=True):
-    if isinstance(object_, (str, bytes)):
-        lst = object_.split(sep)
+def as_list(data, sep=None, strip=True):
+    if isinstance(data, (str, bytes)):
+        lst = data.split(sep)
         if strip:
             lst = [v.strip() for v in lst]
         return lst
-    elif isinstance(object_, (list, tuple)):
-        return object_
-    elif object_ is None:
+    elif isinstance(data, (list, tuple)):
+        return data
+    elif data is None:
         return []
     else:
-        return [object_]
+        return [data]
 
 # ################################################################################################################################

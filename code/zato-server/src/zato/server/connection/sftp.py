@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -13,6 +13,7 @@ from datetime import date, datetime
 from logging import getLogger
 from tempfile import NamedTemporaryFile
 from time import strptime
+from traceback import format_exc
 
 # gevent
 from gevent.fileobject import FileObjectThread
@@ -273,11 +274,15 @@ class SFTPIPCFacade(object):
             today = datetime.today()
             mod_date = strptime('{}-{}'.format(month, day), '%b-%d')
 
+            hour, minute = year_hour_info.split(':')
+            hour = int(hour)
+            minute = int(minute)
+
             # If modification month is bigger than current one, it means that it must have been already
             # in the previous year. Otherwise, it was in the same year we have today.
             mod_year = today.year - 1 if mod_date.tm_mon > today.month else today.year
 
-            return date(mod_year, mod_date.tm_mon, mod_date.tm_mday)
+            return datetime(mod_year, mod_date.tm_mon, mod_date.tm_mday, hour, minute)
 
 # ################################################################################################################################
 
@@ -323,19 +328,18 @@ class SFTPIPCFacade(object):
         line = line.split(' ', 1)
         size = line[0]
 
-        # Next two tokens are modification date, but only its month and day will be known here
+        # Split by whitespace into individual elements
         line = line[1].strip()
-        line = line.split(' ', 3)
+        line = line.split(' ', 4)
         line = [elem for elem in line if elem.strip()]
 
+        # Next two tokens are modification date, but only its month and day will be known here
         month = line[0]
         day = line[1]
 
         line = line[2:]
-        line = line[0]
 
         # Next token is either year or hour:minute
-        line = line.split(' ', 1)
         year_time_info = line[0]
 
         # We can now combine all date elements to build a full modification time
@@ -597,7 +601,7 @@ class SFTPIPCFacade(object):
         # The remote location exists so we either need to delete it (overwrite=True) or raise an error (overwrite=False)
         if info:
             if overwrite:
-                self.delete_by_type[info.type](remote_path, log_level)
+                self.delete_by_type(remote_path, info.type, log_level)
             else:
                 raise ValueError('Cannot upload, location `{}` already exists ({})'.format(remote_path, info.to_dict()))
 
@@ -615,21 +619,29 @@ class SFTPIPCFacade(object):
 
 # ################################################################################################################################
 
-    def write(self, data, remote_path, mode='w+b', overwrite=False, log_level=0):
+    def write(self, data, remote_path, mode='w+b', overwrite=False, log_level=0, encoding='utf8'):
 
         # Will raise an exception or delete the remote location, depending on what is needed
         self._overwrite_if_needed(remote_path, overwrite, log_level)
+
+        # Data to be written must be always bytes
+        data = data if isinstance(data, bytes) else data.encode(encoding)
 
         # A temporary file to write data to ..
         with NamedTemporaryFile(mode, suffix='zato-sftp-write.txt') as local_path:
 
             # .. wrap the file in separate thread so as not to block the event loop.
-            thread_file = FileObjectThread(local_path)
+            thread_file = FileObjectThread(local_path, mode=mode)
             thread_file.write(data)
+            thread_file.flush()
 
             try:
                 # Data written out, we can now upload it to the remote location
                 self.upload(local_path.name, remote_path, False, overwrite, log_level, False)
+
+            except Exception:
+                logger.warn('Exception in SFTP write method `%s`', format_exc())
+
             finally:
                 # Now we can close the file too
                 thread_file.close()

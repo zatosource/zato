@@ -184,6 +184,13 @@ def job_list(session, cluster_id, service_name=None, needs_columns=False):
     return q.\
         order_by(Job.name)
 
+def job_by_id(session, cluster_id, job_id):
+    """ A scheduler's job fetched by its ID.
+    """
+    return _job(session, cluster_id).\
+        filter(Job.id==job_id).\
+        one()
+
 def job_by_name(session, cluster_id, name):
     """ A scheduler's job fetched by its name.
     """
@@ -730,9 +737,18 @@ def out_sql_list(session, cluster_id, needs_columns=False):
 
 def _out_ftp(session, cluster_id):
     return session.query(
-        OutgoingFTP.id, OutgoingFTP.name, OutgoingFTP.is_active,
-        OutgoingFTP.host, OutgoingFTP.port, OutgoingFTP.user, OutgoingFTP.password,
-        OutgoingFTP.acct, OutgoingFTP.timeout, OutgoingFTP.dircache).\
+        OutgoingFTP.id,
+        OutgoingFTP.name,
+        OutgoingFTP.is_active,
+        OutgoingFTP.host,
+        OutgoingFTP.port,
+        OutgoingFTP.user,
+        OutgoingFTP.password,
+        OutgoingFTP.acct,
+        OutgoingFTP.timeout,
+        OutgoingFTP.dircache,
+        OutgoingFTP.opaque1,
+        ).\
         filter(Cluster.id==OutgoingFTP.cluster_id).\
         filter(Cluster.id==cluster_id).\
         order_by(OutgoingFTP.name)
