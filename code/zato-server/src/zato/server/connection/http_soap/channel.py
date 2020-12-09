@@ -126,7 +126,8 @@ soap_error = """<?xml version='1.0' encoding='UTF-8'?>
 
 # ################################################################################################################################
 
-response_404 = 'URL not found `{}` (Method:{}; Accept:{}; CID:{})'
+response_404     = 'URL not found (CID:{})'
+response_404_log = 'URL not found `%s` (Method:%s; Accept:%s; CID:%s)'
 
 # ################################################################################################################################
 
@@ -235,7 +236,7 @@ class RequestDispatcher(object):
 # ################################################################################################################################
 
     def dispatch(self, cid, req_timestamp, wsgi_environ, worker_store, _status_response=status_response,
-        no_url_match=(None, False), _response_404=response_404, _has_debug=_has_debug,
+        no_url_match=(None, False), _response_404=response_404, _response_404_log=response_404_log, _has_debug=_has_debug,
         _http_soap_action='HTTP_SOAPACTION', _stringio=StringIO, _gzipfile=GzipFile, _accept_any_http=accept_any_http,
         _accept_any_internal=accept_any_internal, _rate_limit_type_http=RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP,
         _rate_limit_type_sso_user=RATE_LIMIT.OBJECT_TYPE.SSO_USER, _stack_format=stack_format, _exc_sep='*' * 80,
@@ -445,11 +446,17 @@ class RequestDispatcher(object):
 
         # This is 404, no such URL path and SOAP action is not known either.
         else:
-            response = _response_404.format(path_info,
-                wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid)
+
+            # Indicate HTTP 404
             wsgi_environ['zato.http.response.status'] = _status_not_found
 
-            logger.error(response)
+            # This is returned to the caller - note that it does not echo back the URL requested ..
+            response = _response_404.format(cid)
+
+            # .. this goes to logs and it includes the URL sent by the client.
+            logger.error(_response_404_log, path_info, wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid)
+
+            # This is the payload for the caller
             return response
 
 # ################################################################################################################################
