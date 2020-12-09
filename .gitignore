@@ -31,6 +31,8 @@ code/zato-cy/src/zato/cy/*.c
 code/zato-cy/src/zato/cy/*.html
 code/zato-cy/src/zato/cy/*/*.c
 code/zato-cy/src/zato/cy/*/*.html
+code/zato-hl7/src/zato/hl7/cy/*.c
+code/zato-hl7/src/zato/hl7/cy/*.html
 code/zato-web-admin/src/zato/admin/static/css/.sass-cache/
 code/zato_extra_paths/*
 code/zato-exeagent
