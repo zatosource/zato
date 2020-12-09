@@ -29,7 +29,7 @@ class Index(_Index):
     method_allowed = 'GET'
     url_name = 'channel-hl7-rest'
     template = 'zato/channel/hl7/rest.html'
-    service_name = 'zato.generic.connection.get-list'
+    service_name = 'zato.http-soap.get-list'
     output_class = FileTransferChannel
     paginate = True
 

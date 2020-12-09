@@ -710,6 +710,10 @@ def http_soap_list(session, cluster_id, connection=None, transport=None, return_
     if not return_internal:
         q = q.filter(not_(HTTPSOAP.name.startswith('zato')))
 
+    data_format = kwargs.get('data_format') # type: str
+    if data_format:
+        q = q.filter(HTTPSOAP.data_format==data_format)
+
     return q
 
 # ################################################################################################################################
