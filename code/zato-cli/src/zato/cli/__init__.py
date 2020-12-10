@@ -622,7 +622,14 @@ class ZatoCommand(object):
         from zato.common.util import api as util_api
         from zato.common.util.api import get_engine_url
 
-        connect_args = {'application_name':util_api.get_component_name('enmasse')} if args.odb_type == 'postgresql' else {}
+        if args.odb_type.startswith('postgresql'):
+            connect_args = {}
+        else:
+            connect_args = {'application_name':util_api.get_component_name('enmasse')}
+
+        if args.odb_type == 'postgresql':
+            args.odb_type = 'postgresql+pg8000'
+
         return sqlalchemy.create_engine(get_engine_url(args), connect_args=connect_args)
 
 # ################################################################################################################################
