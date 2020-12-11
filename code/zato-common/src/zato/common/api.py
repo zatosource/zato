@@ -324,15 +324,16 @@ class Attrs(type):
 class DATA_FORMAT(Attrs):
     CSV = 'csv'
     DICT = 'dict'
+    HL7  = 'hl7'
     JSON = 'json'
     POST = 'post'
     SOAP = 'soap'
     XML = 'xml'
 
     def __iter__(self):
-        # Note that DICT and other attributes aren't included because they're never exposed to external world as-is,
+        # Note that DICT and other attributes aren't included because they're never exposed to the external world as-is,
         # they may at most only used so that services can invoke each other directly
-        return iter((self.XML, self.JSON, self.CSV, self.POST))
+        return iter((self.XML, self.JSON, self.CSV, self.POST, self.HL7))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1439,6 +1440,22 @@ class FILE_TRANSFER:
     class SOURCE_TYPE_IMPL:
         LOCAL_INOTIFY  = 'local-inotify'
         LOCAL_SNAPSHOT = 'local-snapshot'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class HL7:
+    class Const:
+        """ Various HL7-related constants.
+        """
+        class Version:
+
+            # A generic v2 message, without an indication of a specific release.
+            v2 = 'hl7-v2'
+
+        class ImplClass:
+            hl7apy = 'hl7apy'
+            zato   = 'Zato'
 
 # ################################################################################################################################
 # ################################################################################################################################

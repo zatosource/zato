@@ -712,7 +712,7 @@ def http_soap_list(session, cluster_id, connection=None, transport=None, return_
 
     data_format = kwargs.get('data_format') # type: str
     if data_format:
-        q = q.filter(HTTPSOAP.data_format==data_format)
+        q = q.filter(HTTPSOAP.data_format.startswith(data_format))
 
     return q
 
