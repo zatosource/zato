@@ -11,9 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Zato
 from zato.admin.web.forms.channel.file_transfer import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, get_outconn_rest_list, Index as _Index
-from zato.common.api import FILE_TRANSFER, GENERIC
+from zato.common.api import FILE_TRANSFER, GENERIC, HL7
 from zato.common.json_internal import dumps
-from zato.common.model import FileTransferChannel
+from zato.common.model import HL7Channel
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,16 +30,19 @@ class Index(_Index):
     url_name = 'channel-hl7-rest'
     template = 'zato/channel/hl7/rest.html'
     service_name = 'zato.http-soap.get-list'
-    output_class = FileTransferChannel
+    output_class = HL7Channel
     paginate = True
 
+    def get_initial_input(self):
+        return {
+            'data_format': HL7.Const.Version.v2
+        }
+
     class SimpleIO(_Index.SimpleIO):
-        input_required = 'cluster_id', 'type_'
-        output_required = 'id', 'name', 'is_active', 'source_type', 'pickup_from_list'
-        output_optional = 'service_list', 'topic_list', 'move_processed_to', 'file_patterns', 'parse_with', 'should_read_on_pickup', \
-            'should_parse_on_pickup', 'should_delete_after_pickup', 'ftp_source_id', 'sftp_source_id', 'scheduler_job_id', \
-            'ftp_source_name', 'sftp_source_name', 'is_case_sensitive', 'is_line_by_line', 'is_hot_deploy', \
-            'binary_file_patterns', 'data_encoding', 'outconn_rest_list'
+        input_required = 'cluster_id', 'data_format'
+        output_required = 'id', 'name', 'is_active', 'is_internal', 'url_path', 'service_id', 'service_name', 'security_id', \
+            'security_name'
+        output_optional = '', '', '', '', '', '', '', '', '', '', '', ''
         output_repeated = True
 
 # ################################################################################################################################
@@ -53,8 +56,13 @@ class Index(_Index):
 # ################################################################################################################################
 
     def on_before_append_item(self, item):
-        # type: (FileTransferChannel) -> FileTransferChannel
+        # type: (HL7Channel) -> HL7Channel
 
+        print()
+        print(111, item)
+        print()
+
+        '''
         if item.service_list:
             item.service_list = item.service_list if isinstance(item.service_list, list) else [item.service_list]
             item.service_list = sorted(item.service_list)
@@ -74,6 +82,7 @@ class Index(_Index):
                 [item.outconn_rest_list]
             item.outconn_rest_list_by_name = sorted(all_outconn_rest_list[int(elem)] for elem in item.outconn_rest_list if elem)
             item.outconn_rest_list_json = dumps(item.outconn_rest_list)
+        '''
 
         return item
 
