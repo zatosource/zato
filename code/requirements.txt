@@ -83,6 +83,7 @@ portalocker==0.5.7
 posix-ipc==1.0.0
 prettytable==0.7.2
 psutil==5.7.2
+psycopg2==2.8.6 
 py-cpuinfo==3.3.0
 pyaml==20.4.0
 pyasn1==0.4.8
