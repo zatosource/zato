@@ -9,18 +9,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.admin.web.forms.channel.file_transfer import CreateForm, EditForm
+from zato.admin.web.forms.channel.hl7.rest import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, get_outconn_rest_list, Index as _Index
-from zato.common.api import FILE_TRANSFER, GENERIC, HL7
+from zato.common.api import HL7
 from zato.common.json_internal import dumps
 from zato.common.model import HL7Channel
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-source_type_ftp   = FILE_TRANSFER.SOURCE_TYPE.FTP.id
-source_type_local = FILE_TRANSFER.SOURCE_TYPE.LOCAL.id
-source_type_sftp  = FILE_TRANSFER.SOURCE_TYPE.SFTP.id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -118,112 +111,7 @@ class _CreateEdit(CreateEdit):
 
         return value
 
-    def post_process_return_data(self, return_data):
-
-        service_list_html = ''
-        topic_list_html   = ''
-        outconn_rest_list_html   = ''
-
-        cluster_id = self.input_dict['cluster_id']
-        service_list = sorted(set(self.input_dict['service_list'] or []))
-        topic_list = sorted(set(self.input_dict['topic_list'] or []))
-        outconn_rest_list = self.input_dict['outconn_rest_list'] or []
-
-        if outconn_rest_list:
-
-            # All REST outgoing connections for the cluster
-            all_outconn_rest_list = get_outconn_rest_list(self.req)
-
-            outconn_rest_list = outconn_rest_list if isinstance(outconn_rest_list, list) else [outconn_rest_list]
-            outconn_rest_list = sorted(set(all_outconn_rest_list[int(elem)] for elem in outconn_rest_list if elem))
-
-        #
-        # Services
-        #
-
-        for service_name in service_list:
-
-            if not service_name:
-                continue
-
-            # The list of services as HTML
-            service_list_html += """
-            <span class="form_hint">S</span>→
-                <a href="/zato/service/overview/{service_name}/?cluster={cluster_id}">{service_name}</a>
-            <br/>
-            """.format(**{
-                'service_name': service_name,
-                'cluster_id': cluster_id
-            })
-
-        #
-        # Topics
-        #
-
-        for topic_name in topic_list:
-
-            if not topic_name:
-                continue
-
-            # The list of topics as HTML
-            topic_list_html += """
-            <span class="form_hint">T</span>→
-                <a href="/zato/pubsub/topic/?cluster={cluster_id}&amp;query={topic_name}">{topic_name}</a>
-            <br/>
-            """.format(**{
-                'topic_name': topic_name,
-                'cluster_id': cluster_id
-            })
-
-        #
-        # REST
-        #
-
-        for outconn_rest_name in outconn_rest_list:
-
-            if not outconn_rest_name:
-                continue
-
-            # The list of REST outconns as HTML
-            outconn_rest_list_html += """
-            <span class="form_hint">R</span>→
-                <a href="/zato/http-soap/?cluster={cluster_id}&amp;connection=outgoing&amp;transport=plain_http&amp;query={outconn_rest_name}">{outconn_rest_name}</a>
-            <br/>
-            """.format(**{
-                'outconn_rest_name': outconn_rest_name,
-                'cluster_id': cluster_id
-            })
-
-
-        # Get human-readable names of the source for this channel
-        if self.input.source_type == source_type_local:
-            # Nothing to do in this case
-            pass
-
-        elif self.input.source_type == source_type_ftp:
-
-            if self.input.ftp_source_id:
-                response = self.req.zato.client.invoke('zato.outgoing.ftp.get-by-id', {
-                    'cluster_id': cluster_id,
-                    'id': self.input.ftp_source_id,
-                })
-
-                return_data['ftp_source_name'] = response.data['name']
-
-        elif self.input.source_type == source_type_sftp:
-            raise NotImplementedError()
-
-        else:
-            raise ValueError('Unknown self.input.source_type')
-
-        #
-        # Return data
-        #
-
-        return_data['recipients_html'] = service_list_html + topic_list_html + outconn_rest_list_html
-        return_data['service_list'] = service_list
-        return_data['topic_list'] = topic_list
-        return_data['outconn_rest_list'] = outconn_rest_list
+# ################################################################################################################################
 
     def success_message(self, item):
         return 'Successfully {} file transfer channel `{}`'.format(self.verb, item.name)
@@ -232,14 +120,14 @@ class _CreateEdit(CreateEdit):
 # ################################################################################################################################
 
 class Create(_CreateEdit):
-    url_name = 'channel-file-transfer-create'
+    url_name = 'channel-hl7-rest-create'
     service_name = 'zato.generic.connection.create'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Edit(_CreateEdit):
-    url_name = 'channel-file-transfer-edit'
+    url_name = 'channel-hl7-rest-edit'
     form_prefix = 'edit-'
     service_name = 'zato.generic.connection.edit'
 
@@ -247,7 +135,7 @@ class Edit(_CreateEdit):
 # ################################################################################################################################
 
 class Delete(_Delete):
-    url_name = 'channel-file-transfer-delete'
+    url_name = 'channel-hl7-rest-delete'
     error_message = 'Could not delete file transfer channel'
     service_name = 'zato.generic.connection.delete'
 
