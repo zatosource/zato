@@ -919,9 +919,9 @@ urlpatterns += [
     url(r'^zato/channel/hl7/mllp/$',
         login_required(channel_hl7_rest.Index()), name=channel_hl7_rest.Index.url_name),
     url(r'^zato/channel/hl7/mllp/create/$',
-        login_required(channel_hl7_rest.Create()), name='channel-hl7-mllp-create'),
+        login_required(channel_hl7_rest.Create()), name=channel_hl7_rest.Create.url_name),
     url(r'^zato/channel/hl7/mllp/edit/$',
-        login_required(channel_hl7_rest.Edit()), name='channel-hl7-mllp-edit'),
+        login_required(channel_hl7_rest.Edit()), name=channel_hl7_rest.Edit.url_name),
     url(r'^zato/channel/hl7/mllp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_hl7_rest.Delete()), name=channel_hl7_rest.Delete.url_name),
     ]
@@ -934,9 +934,9 @@ urlpatterns += [
 url(r'^zato/channel/hl7/rest/$',
     login_required(channel_hl7_rest.Index()), name=channel_hl7_rest.Index.url_name),
 url(r'^zato/channel/hl7/rest/create/$',
-    login_required(channel_hl7_rest.Create()), name='channel-hl7-rest-create'),
+    login_required(channel_hl7_rest.Create()), name=channel_hl7_rest.Create.url_name),
 url(r'^zato/channel/hl7/rest/edit/$',
-    login_required(channel_hl7_rest.Edit()), name='channel-amqp-hl7-rest'),
+    login_required(channel_hl7_rest.Edit()), name=channel_hl7_rest.Edit.url_name),
 url(r'^zato/channel/hl7/rest/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
     login_required(channel_hl7_rest.Delete()), name=channel_hl7_rest.Delete.url_name),
 ]
