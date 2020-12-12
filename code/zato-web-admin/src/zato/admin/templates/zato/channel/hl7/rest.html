@@ -1,7 +1,7 @@
 
 {% extends "zato/index.html" %}
 
-{% block html_title %}File transfer{% endblock %}
+{% block html_title %}HL7 REST Channels{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -93,7 +93,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">File transfer</h2>
+<h2 class="zato">HL7 REST channels</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -101,14 +101,12 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% with has_generic="1" generic_type="channel-file-transfer" %}
-    {% include "zato/search-form.html" with page_prompt="Show channels"%}
-{% endwith %}
+{% include "zato/search-form.html" with page_prompt="Show channels"%}
 
 
     {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.channel.file_transfer.create()">Create a new channel</a>
+            <a href="javascript:$.fn.zato.channel.hl7.rest.create()">Create a new channel</a>
         </div>
 
 
@@ -240,8 +238,8 @@
                             {% endif %}
                         </td>
 
-                        <td><a href="javascript:$.fn.zato.channel.file_transfer.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.channel.file_transfer.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.channel.hl7.rest.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.channel.hl7.rest.delete_('{{ item.id }}')">Delete</a></td>
 
                         {% comment %} 4 {% endcomment %}
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -301,157 +299,62 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "channel-file-transfer-create" %}" method="post" id="create-form">
+                <form action="{% url "channel-hl7-rest-create" %}" method="post" id="create-form">
                     <table class="form-data">
+
                         <tr>
-                            <td style="vertical-align:middle;width:14%">
-                                <label for="id_name">Name</label>
+                            <td style="vertical-align:middle;width:12%">
+                                <label for="id_create-name">
+                                Name
+                                </label>
                             </td>
                             <td>{{ create_form.name }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">
-                            </td>
+                            <td></td>
                             <td>
 
-                            <label>
+                                <label>
                                 Active
                                 {{ create_form.is_active }}
-                            </label>
+                                </label>
 
-                            |
+                                |
 
-                            <label>
-                            Read
-                            {{ create_form.should_read_on_pickup }}
-                            </label>
-
-                            |
-
-                            <label>
-                            Parse
-                            {{ create_form.should_parse_on_pickup }}
-                            </label>
-
-                            |
-
-                            <label>
-                            Delete
-                            {{ create_form.should_delete_after_pickup }}
-                            </label>
+                                <label>
+                                HL7 version
+                                {{ create_form.hl7_version }}
+                                </label>
 
                             </td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">
+                            <td style="vertical-align:middle;width:12%">
+                                <label for="id_create-name">
+                                URL path
+                                </label>
                             </td>
-                            <td>
-
-                            <label>
-                            Case sens.
-                            {{ create_form.is_case_sensitive }}
-                            </label>
-
-                            |
-
-                            <label>
-                            Hot deploy
-                            {{ create_form.is_hot_deploy }}
-                            </label>
-
-                            |
-
-                            <label>
-                            Encoding
-                            {{ create_form.data_encoding }}
-                            </label>
-
-                            </td>
+                            <td>{{ create_form.url_path }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_source_type">Source</label>
+                            <td style="vertical-align:middle;width:12%">
+                                <label for="id_create-name">
+                                Service
+                                </label>
                             </td>
-                            <td>
-                                {{ create_form.source_type }}
-                                {{ create_form.ftp_source_id }}
-                                {{ create_form.sftp_source_id }}
-                            </td>
-                        </tr>
-
-                        <tr id="tr_create_scheduler_job_id" class="hidden">
-                            <td style="vertical-align:middle">
-                                <label for="id_scheduler_job_id">Schedule</label>
-                            </td>
-                            <td>
-                                {{ create_form.scheduler_job_id }}
-                            </td>
+                            <td>{{ create_form.service }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_pickup_from">Dir. from</label>
+                            <td style="vertical-align:middle;width:12%">
+                                <label for="id_create-name">
+                                Security definition
+                                </label>
                             </td>
-                            <td>
-                                {{ create_form.pickup_from_list }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_file_patterns">Files</label>
-                            </td>
-                            <td>
-                                {{ create_form.file_patterns }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_move_processed_to">Proc. to</label>
-                            </td>
-                            <td>{{ create_form.move_processed_to }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_parse_with">Parse with</label>
-                            </td>
-                            <td>{{ create_form.parse_with }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle" colspan="2">
-                                Send to ↓
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_service_list">Service</label>
-                            </td>
-                            <td>
-                                {{ create_form.service_list }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_topic_list">Topic</label>
-                            </td>
-                            <td>{{ create_form.topic_list }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                                <label for="id_outconn_rest_list">REST</label>
-                            </td>
-                            <td>
-                                {{ create_form.outconn_rest_list }}
-                            </td>
+                            <td>{{ create_form.security }}</td>
                         </tr>
 
                         <tr>
@@ -459,18 +362,20 @@
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
+
                         </tr>
                     </table>
-                    <input type="hidden" id="id_ftp_source_name" name="ftp_source_name" />
-                    <input type="hidden" id="id_sftp_source_name" name="sftp_source_name" />
+
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" name="connection" value="channel" />
+                    <input type="hidden" name="transport" value="plain_http" />
                 </form>
             </div>
         </div>
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "channel-file-transfer-edit" %}" method="post" id="edit-form">
+                <form action="{% url "channel-hl7-rest-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:14%">

@@ -1,9 +1,9 @@
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.data_table.ChannelFileTransfer = new Class({
+$.fn.zato.data_table.HL7RESTChannel = new Class({
     toString: function() {
-        var s = '<ChannelFileTransfer id:{0} name:{1} is_active:{2}>';
+        var s = '<HL7RESTChannel id:{0} name:{1} is_active:{2}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)',
                                 this.is_active ? this.is_active : '(none)');
@@ -14,97 +14,22 @@ $.fn.zato.data_table.ChannelFileTransfer = new Class({
 
 $(document).ready(function() {
     $('#data-table').tablesorter();
-    $.fn.zato.data_table.class_ = $.fn.zato.data_table.ChannelFileTransfer;
+    $.fn.zato.data_table.class_ = $.fn.zato.data_table.HL7RESTChannel;
     $.fn.zato.data_table.new_row_func = $.fn.zato.channel.hl7.rest.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'source_type', 'pickup_from_list', 'file_patterns']);
-
-    $('#id_source_type').change(function() {
-        $.fn.zato.channel.hl7.rest.on_source_type_changed('');
-    });
-
-    $('#id_edit-source_type').change(function() {
-        $.fn.zato.channel.hl7.rest.on_source_type_changed('edit-');
-    });
-
+    $.fn.zato.data_table.setup_forms(['name', 'url_path', 'service_id', 'security_id', 'hl7_version']);
 })
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.hl7.rest.on_source_type_changed = function(prefix) {
-
-    let id_prefix = '#id_'+ prefix;
-    let source_type = $(id_prefix + 'source_type').val();
-
-    if(source_type) {
-
-        let ftp       = $(id_prefix + 'ftp_source_id');
-        let sftp      = $(id_prefix + 'sftp_source_id');
-
-        let scheduler_create_row = $('#tr_create_scheduler_job_id');
-        let scheduler_edit_row = $('#tr_edit_scheduler_job_id');
-
-        if(source_type == 'local') {
-
-            scheduler_create_row.addClass('hidden');
-            scheduler_edit_row.addClass('hidden');
-
-            ftp.addClass('hidden');
-            sftp.addClass('hidden');
-        }
-
-        else if(source_type == 'ftp') {
-
-            scheduler_create_row.removeClass('hidden');
-            scheduler_edit_row.removeClass('hidden');
-
-            ftp.removeClass('hidden');
-            sftp.addClass('hidden');
-        }
-
-        else if(source_type == 'sftp') {
-
-            scheduler_create_row.removeClass('hidden');
-            scheduler_edit_row.removeClass('hidden');
-
-            sftp.removeClass('hidden');
-            ftp.addClass('hidden');
-        }
-    }
-}
-
-// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 $.fn.zato.channel.hl7.rest.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create a new file transfer channel', null);
+    $.fn.zato.data_table._create_edit('create', 'Create a new HL7 REST channel', null);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.channel.hl7.rest.edit = function(id) {
-
-    let instance = $.fn.zato.data_table.data[id];
-    let source_type = $('#id_edit-'+ instance.source_type +'_source_id');
-    source_type.removeClass('hidden');
-
-    if(instance.source_type != "local") {
-
-        let scheduler_create_row = $('#tr_create_scheduler_job_id');
-        let scheduler_edit_row = $('#tr_edit_scheduler_job_id');
-
-        scheduler_create_row.removeClass('hidden');
-        scheduler_edit_row.removeClass('hidden');
-    };
-
-    $('#id_edit-ftp_source_name').val(instance.ftp_source_name);
-    $('#id_edit-sftp_source_name').val(instance.sftp_source_name);
-
-    $.fn.zato.data_table.multirow.remove_multirow_added();
-    $.fn.zato.data_table.edit('edit', 'Update the file transfer channel', id, false);
-
-    $.fn.zato.data_table.multirow.populate_field('service_list', instance.service_list);
-    $.fn.zato.data_table.multirow.populate_field('topic_list', instance.topic_list);
-    $.fn.zato.data_table.multirow.populate_field('outconn_rest_list', instance.outconn_rest_list);
+    $.fn.zato.data_table._create_edit('edit', 'Update the HL7 REST channel', id);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
