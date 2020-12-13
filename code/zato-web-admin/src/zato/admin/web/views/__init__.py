@@ -347,17 +347,20 @@ class Index(_BaseView):
         input_elems = list(iterkeys(self.req.GET)) + list(iterkeys(self.req.zato.args))
 
         if not self.cluster_id:
+            logger.info('Value missing; self.cluster_id `%s`', self.cluster_id)
             return False
 
         for elem in self.SimpleIO.input_required:
             if elem == 'cluster_id':
                 continue
             if not elem in input_elems:
+                logger.info('Elem `%s` not in input_elems `%s`', elem, input_elems)
                 return False
             value = self.req.GET.get(elem)
             if not value:
                 value = self.req.zato.args.get(elem)
                 if not value:
+                    logger.info('Elem `%s` not in self.req.zato.args `%s`', elem, self.req.zato.args)
                     return False
         return True
 

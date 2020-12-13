@@ -293,6 +293,9 @@ class NameId:
         self.name = name
         self.id = id or name
 
+    def __repr__(self):
+        return '<{} at {}; name={}; id={}>'.format(self.__class__.__name__, hex(id(self)), self.name, self.id)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -1451,7 +1454,10 @@ class HL7:
         class Version:
 
             # A generic v2 message, without an indication of a specific release.
-            v2 = 'hl7-v2'
+            v2 = NameId('v2.x', 'hl7-v2')
+
+            def __iter__(self):
+                return iter((self.v2,))
 
         class ImplClass:
             hl7apy = 'hl7apy'

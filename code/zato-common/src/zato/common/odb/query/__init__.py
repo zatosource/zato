@@ -102,7 +102,7 @@ def query_wrapper(func):
         # depending on whether columns are needed or not.
         needs_columns = args[-1]
 
-        tool = _SearchWrapper(func(*args), **kwargs)
+        tool = _SearchWrapper(func(*args, **kwargs), **kwargs)
         result = _SearchResults(tool.q, tool.q.all(), tool.q.statement.columns, tool.total)
 
         if needs_columns:
@@ -696,7 +696,8 @@ def http_soap(session, cluster_id, item_id=None, name=None):
     return q.one()
 
 @query_wrapper
-def http_soap_list(session, cluster_id, connection=None, transport=None, return_internal=True, needs_columns=False, **kwargs):
+def http_soap_list(session, cluster_id, connection=None, transport=None, return_internal=True, data_format=None,
+    needs_columns=False, *args, **kwargs):
     """ HTTP/SOAP connections, both channels and outgoing ones.
     """
     q = _http_soap(session, cluster_id)
@@ -710,7 +711,6 @@ def http_soap_list(session, cluster_id, connection=None, transport=None, return_
     if not return_internal:
         q = q.filter(not_(HTTPSOAP.name.startswith('zato')))
 
-    data_format = kwargs.get('data_format') # type: str
     if data_format:
         q = q.filter(HTTPSOAP.data_format.startswith(data_format))
 

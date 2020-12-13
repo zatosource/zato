@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Zato
 from zato.admin.web.forms.channel.hl7.rest import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, get_outconn_rest_list, Index as _Index
-from zato.common.api import HL7
+from zato.common.api import CONNECTION, DATA_FORMAT, HL7, URL_TYPE
 from zato.common.json_internal import dumps
 from zato.common.model import HL7Channel
 
@@ -28,14 +28,15 @@ class Index(_Index):
 
     def get_initial_input(self):
         return {
-            'data_format': HL7.Const.Version.v2
+            'connection': CONNECTION.CHANNEL,
+            'transport': URL_TYPE.PLAIN_HTTP,
+            'data_format': DATA_FORMAT.HL7
         }
 
     class SimpleIO(_Index.SimpleIO):
-        input_required = 'cluster_id', 'data_format'
-        output_required = 'id', 'name', 'is_active', 'is_internal', 'url_path', 'service_id', 'service_name', 'security_id', \
-            'security_name'
-        output_optional = '', '', '', '', '', '', '', '', '', '', '', ''
+        input_required = 'cluster_id',
+        output_required = 'id', 'name', 'is_active', 'is_internal', 'hl7_version', 'url_path', 'service', 'security', \
+            'data_format'
         output_repeated = True
 
 # ################################################################################################################################
@@ -47,81 +48,31 @@ class Index(_Index):
         }
 
 # ################################################################################################################################
-
-    def on_before_append_item(self, item):
-        # type: (HL7Channel) -> HL7Channel
-
-        print()
-        print(111, item)
-        print()
-
-        '''
-        if item.service_list:
-            item.service_list = item.service_list if isinstance(item.service_list, list) else [item.service_list]
-            item.service_list = sorted(item.service_list)
-            item.service_list_json = dumps(item.service_list)
-
-        if item.topic_list:
-            item.topic_list = item.topic_list if isinstance(item.topic_list, list) else [item.topic_list]
-            item.topic_list = sorted(item.topic_list)
-            item.topic_list_json = dumps(item.topic_list)
-
-        if item.outconn_rest_list:
-
-            # All REST outgoing connections for the cluster
-            all_outconn_rest_list = get_outconn_rest_list(self.req)
-
-            item.outconn_rest_list = item.outconn_rest_list if isinstance(item.outconn_rest_list, list) else \
-                [item.outconn_rest_list]
-            item.outconn_rest_list_by_name = sorted(all_outconn_rest_list[int(elem)] for elem in item.outconn_rest_list if elem)
-            item.outconn_rest_list_json = dumps(item.outconn_rest_list)
-        '''
-
-        return item
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_active', 'source_type', 'pickup_from_list'
-        input_optional = 'service_list', 'topic_list', 'move_processed_to', 'file_patterns', 'parse_with', 'should_read_on_pickup', \
-            'should_parse_on_pickup', 'should_delete_after_pickup', 'ftp_source_id', 'sftp_source_id', 'scheduler_job_id', \
-            'is_case_sensitive', 'is_line_by_line', 'is_hot_deploy', 'binary_file_patterns', 'data_encoding', \
-            'outconn_rest_list'
+        input_required = 'name', 'is_active', 'is_internal', 'hl7_version', 'url_path', 'service', 'security', 'data_format'
         output_required = 'id', 'name'
 
     def populate_initial_input_dict(self, initial_input_dict):
-        initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER
-        initial_input_dict['is_internal'] = False
-        initial_input_dict['is_channel'] = True
-        initial_input_dict['is_outconn'] = False
-        initial_input_dict['sec_use_rbac'] = False
-        initial_input_dict['pool_size'] = 1
-
-    def pre_process_item(self, name, value):
-        if name in ('service_list', 'topic_list', 'outconn_rest_list'):
-            if value:
-                if isinstance(value, list):
-                    value = sorted(set(elem for elem in value if elem))
-                else:
-                    value = [value] if value else []
-
-        return value
+        initial_input_dict['connection'] = CONNECTION.CHANNEL
+        initial_input_dict['transport'] = URL_TYPE.PLAIN_HTTP
+        initial_input_dict['data_format'] = HL7.Const.Version.v2.id
 
 # ################################################################################################################################
 
     def success_message(self, item):
-        return 'Successfully {} file transfer channel `{}`'.format(self.verb, item.name)
+        return 'Successfully {} HL7 REST channel `{}`'.format(self.verb, item.name)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Create(_CreateEdit):
     url_name = 'channel-hl7-rest-create'
-    service_name = 'zato.generic.connection.create'
+    service_name = 'zato.http-soap.create'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -129,15 +80,15 @@ class Create(_CreateEdit):
 class Edit(_CreateEdit):
     url_name = 'channel-hl7-rest-edit'
     form_prefix = 'edit-'
-    service_name = 'zato.generic.connection.edit'
+    service_name = 'zato.http-soap.edit'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Delete(_Delete):
     url_name = 'channel-hl7-rest-delete'
-    error_message = 'Could not delete file transfer channel'
-    service_name = 'zato.generic.connection.delete'
+    error_message = 'Could not delete HL7 REST channel'
+    service_name = 'zato.http-soap.delete'
 
 # ################################################################################################################################
 # ################################################################################################################################
