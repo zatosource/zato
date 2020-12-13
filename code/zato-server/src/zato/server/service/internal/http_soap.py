@@ -125,9 +125,13 @@ class GetList(_BaseGet):
         output_repeated = True
 
     def get_data(self, session):
-        return elems_with_opaque(self._search(http_soap_list, session, self.request.input.cluster_id,
+        result = self._search(http_soap_list, session, self.request.input.cluster_id,
             self.request.input.connection, self.request.input.transport,
-            asbool(self.server.fs_server_config.misc.return_internal_objects), False))
+            asbool(self.server.fs_server_config.misc.return_internal_objects),
+            self.request.input.get('data_format'),
+            False,
+            )
+        return elems_with_opaque(result)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -194,7 +198,7 @@ class Create(_CreateEdit):
             'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
             List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
-            Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac')
+            Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac'), 'hl7_version'
         output_required = ('id', 'name')
 
     def handle(self):
