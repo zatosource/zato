@@ -354,7 +354,7 @@
                                 Security definition
                                 </label>
                             </td>
-                            <td>{{ create_form.security }}</td>
+                            <td>{{ create_form.security_id }}</td>
                         </tr>
 
                         <tr>
@@ -367,8 +367,6 @@
                     </table>
 
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
-                    <input type="hidden" name="connection" value="channel" />
-                    <input type="hidden" name="transport" value="plain_http" />
                 </form>
             </div>
         </div>

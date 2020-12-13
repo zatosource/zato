@@ -10,14 +10,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from hl7apy.parser import parse_message as hl7apy_parse_message
 
 # Zato
-from zato.hl7.common import Const
+from zato.common.api import HL7
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 # Maps HL7 versions and implementation classes to parse functions.
 _parse_func_map = {
-    Const.Version.v2: {
+    HL7.Const.Version.v2.id: {
         Const.ImplClass.hl7apy: hl7apy_parse_message
     }
 }
