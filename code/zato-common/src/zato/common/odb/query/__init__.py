@@ -53,6 +53,18 @@ def count(session, q):
 
 # ################################################################################################################################
 
+class _QueryConfig:
+
+    @staticmethod
+    def supports_kwargs(query_func):
+        """ Returns True if the given query func supports kwargs, False otherwise.
+        """
+        return query_func in (
+            http_soap_list,
+        )
+
+# ################################################################################################################################
+
 class _SearchWrapper(object):
     """ Wraps results in pagination and/or filters out objects by their name or other attributes.
     """
@@ -102,7 +114,12 @@ def query_wrapper(func):
         # depending on whether columns are needed or not.
         needs_columns = args[-1]
 
-        tool = _SearchWrapper(func(*args, **kwargs), **kwargs)
+        if _QueryConfig.supports_kwargs(func):
+            result = func(*args, **kwargs)
+        else:
+            result = func(*args)
+
+        tool = _SearchWrapper(result, **kwargs)
         result = _SearchResults(tool.q, tool.q.all(), tool.q.statement.columns, tool.total)
 
         if needs_columns:
