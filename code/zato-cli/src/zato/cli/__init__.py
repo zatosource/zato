@@ -627,9 +627,6 @@ class ZatoCommand(object):
         else:
             connect_args = {'application_name':util_api.get_component_name('enmasse')}
 
-        if args.odb_type == 'postgresql':
-            args.odb_type = 'postgresql+pg8000'
-
         return sqlalchemy.create_engine(get_engine_url(args), connect_args=connect_args)
 
 # ################################################################################################################################
