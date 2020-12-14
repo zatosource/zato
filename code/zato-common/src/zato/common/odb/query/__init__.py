@@ -217,6 +217,21 @@ def job_by_name(session, cluster_id, name):
 
 # ################################################################################################################################
 
+def _sec_base(session, cluster_id):
+    return session.query(
+        SecurityBase.id,
+        SecurityBase.is_active,
+        SecurityBase.sec_type,
+        SecurityBase.name,
+        SecurityBase.username).\
+        filter(SecurityBase.cluster_id==Cluster.id).\
+        filter(Cluster.id==cluster_id)
+
+def sec_base(session, cluster_id, sec_base_id):
+    return _sec_base(session, cluster_id).\
+        filter(SecurityBase.id==sec_base_id).\
+        one()
+
 @query_wrapper
 def apikey_security_list(session, cluster_id, needs_columns=False):
     """ All the API keys.

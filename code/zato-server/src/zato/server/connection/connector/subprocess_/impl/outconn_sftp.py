@@ -315,10 +315,6 @@ class SFTPConnectionContainer(BaseConnectionContainer):
             out['command_no'] = connection.command_no
             out['response_time'] = str(_utcnow() - start_time)
 
-        print()
-        print(111, out)
-        print()
-
         return Response(data=dumps(out))
 
 # ################################################################################################################################
