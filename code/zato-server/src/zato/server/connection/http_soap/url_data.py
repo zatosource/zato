@@ -274,10 +274,11 @@ class URLData(CyURLData, OAuthDataStore):
 
         if not result:
             if enforce_auth:
-                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`, sec-wall code:`{}`, description:`{}`\n'.format(
+                msg_log = 'Unauthorized; path_info:`{}`, cid:`{}`, sec-wall code:`{}`, description:`{}`\n'.format(
                     path_info, cid, result.code, result.description)
-                logger.error(msg)
-                raise Unauthorized(cid, msg, 'Basic realm="{}"'.format(sec_def.realm))
+                msg_exc = 'Unauthorized; cid={}'.format(cid)
+                logger.error(msg_log)
+                raise Unauthorized(cid, msg_exc, 'Basic realm="{}"'.format(sec_def.realm))
             else:
                 return False
 
