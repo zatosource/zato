@@ -240,11 +240,58 @@ def get_security_id_from_select(params, prefix, field_name='security'):
 
 # ################################################################################################################################
 
+def build_sec_def_link(cluster_id, sec_type, sec_name):
+
+    sec_type_name = SEC_DEF_TYPE_NAME[sec_type]
+    sec_type = sec_type.replace('_', '-')
+    url_path = django_url_reverse('security-{}'.format(sec_type))
+
+    link = """
+    {sec_type_name}
+    <br/>
+    <a href="{url_path}?cluster={cluster_id}&amp;query={sec_name}">{sec_name}</a>
+    """.format(**{
+           'cluster_id': cluster_id,
+           'sec_type_name': sec_type_name,
+           'sec_name': sec_name,
+           'url_path': url_path,
+        }).strip()
+
+    return link
+
+# ################################################################################################################################
+
+def build_sec_def_link_by_input(req, cluster_id, input_data):
+    # type: (dict) -> str
+
+    if input_data['security_id']:
+
+        security_id = extract_security_id(input_data)
+        sec_response = id_only_service(req, 'zato.security.get-by-id', security_id).data
+
+        return build_sec_def_link(cluster_id, sec_response.sec_type, sec_response.name)
+
+# ################################################################################################################################
+
 class _BaseView(object):
     method_allowed = 'method_allowed-must-be-defined-in-a-subclass'
     service_name = None
     async_invoke = False
     form_prefix = ''
+
+    def __init__(self):
+        self.req = None
+        self.cluster_id = None
+
+    def __call__(self, req, *args, **kwargs):
+        self.req = req
+        for k, v in kwargs.items():
+            self.req.zato.args[k] = v
+        self.cluster_id = None
+        self.fetch_cluster_id()
+
+    def build_sec_def_link_by_input(self, input_data):
+        return build_sec_def_link_by_input(self.req, self.cluster_id, input_data)
 
     def on_before_append_item(self, item):
         return item
@@ -273,17 +320,6 @@ class _BaseView(object):
 
         if cluster_id:
             self.cluster_id = cluster_id
-
-    def __init__(self):
-        self.req = None
-        self.cluster_id = None
-
-    def __call__(self, req, *args, **kwargs):
-        self.req = req
-        for k, v in kwargs.items():
-            self.req.zato.args[k] = v
-        self.cluster_id = None
-        self.fetch_cluster_id()
 
     def populate_initial_input_dict(self, initial_input_dict):
         """ May be overridden by subclasses if needed.
@@ -718,13 +754,7 @@ def extract_security_id(item):
         return
     else:
         security_id = security_id.split('/')
-
-        print(111, security_id)
-
         security_id = security_id[1]
-
-        print(222, security_id)
-
         return int(security_id)
 
 # ################################################################################################################################
