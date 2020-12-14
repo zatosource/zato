@@ -338,23 +338,6 @@ class DATA_FORMAT(Attrs):
         # they may at most only used so that services can invoke each other directly
         return iter((self.XML, self.JSON, self.CSV, self.POST, self.HL7))
 
-# ################################################################################################################################
-# ################################################################################################################################
-
-# TODO: SIMPLE_IO.FORMAT should be done away with in favour of plain DATA_FORMAT
-class SIMPLE_IO:
-
-    class FORMAT(Attrs):
-        JSON = DATA_FORMAT.JSON
-        XML = DATA_FORMAT.XML
-
-    COMMON_FORMAT = OrderedDict()
-    COMMON_FORMAT[DATA_FORMAT.JSON] = 'JSON'
-    COMMON_FORMAT[DATA_FORMAT.XML] = 'XML'
-
-    HTTP_SOAP_FORMAT = OrderedDict()
-    HTTP_SOAP_FORMAT[DATA_FORMAT.JSON] = 'JSON'
-    HTTP_SOAP_FORMAT[DATA_FORMAT.XML] = 'XML'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1454,7 +1437,7 @@ class HL7:
         class Version:
 
             # A generic v2 message, without an indication of a specific release.
-            v2 = NameId('v2.x', 'hl7-v2')
+            v2 = NameId('HL7 v2', 'hl7-v2')
 
             def __iter__(self):
                 return iter((self.v2,))
@@ -1462,6 +1445,25 @@ class HL7:
         class ImplClass:
             hl7apy = 'hl7apy'
             zato   = 'Zato'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# TODO: SIMPLE_IO.FORMAT should be removed with in favour of plain DATA_FORMAT
+class SIMPLE_IO:
+
+    class FORMAT(Attrs):
+        JSON = DATA_FORMAT.JSON
+        XML = DATA_FORMAT.XML
+
+    COMMON_FORMAT = OrderedDict()
+    COMMON_FORMAT[DATA_FORMAT.JSON] = 'JSON'
+    COMMON_FORMAT[DATA_FORMAT.XML] = 'XML'
+
+    HTTP_SOAP_FORMAT = OrderedDict()
+    HTTP_SOAP_FORMAT[DATA_FORMAT.JSON] = 'JSON'
+    HTTP_SOAP_FORMAT[DATA_FORMAT.XML] = 'XML'
+    HTTP_SOAP_FORMAT[HL7.Const.Version.v2.id] = HL7.Const.Version.v2.name
 
 # ################################################################################################################################
 # ################################################################################################################################
