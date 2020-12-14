@@ -35,8 +35,8 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id',
-        output_required = 'id', 'name', 'is_active', 'is_internal', 'hl7_version', 'url_path', 'service', 'security', \
-            'data_format'
+        output_required = 'id', 'name', 'is_active', 'is_internal', 'hl7_version', 'url_path', 'service_name', 'security_name', \
+            'security_id', 'data_format'
         output_repeated = True
 
 # ################################################################################################################################
