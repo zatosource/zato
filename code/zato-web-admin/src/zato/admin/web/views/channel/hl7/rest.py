@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from zato.admin.web.forms.channel.hl7.rest import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, extract_security_id, get_outconn_rest_list, \
      id_only_service, Index as _Index
-from zato.common.api import CONNECTION, DATA_FORMAT, HL7, SEC_DEF_TYPE, URL_TYPE
+from zato.common.api import CONNECTION, DATA_FORMAT, HL7, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, URL_TYPE
 from zato.common.json_internal import dumps
 from zato.common.model import HL7Channel
 
@@ -38,8 +38,15 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id',
         output_required = 'id', 'name', 'is_active', 'is_internal', 'hl7_version', 'url_path', 'service_name', 'security_name', \
-            'security_id', 'data_format'
+            'security_id', 'sec_type', 'sec_type_name', 'data_format'
         output_repeated = True
+
+
+# ################################################################################################################################
+
+    def on_before_append_item(self, item):
+        item.sec_type_name = SEC_DEF_TYPE_NAME[item.sec_type]
+        return item
 
 # ################################################################################################################################
 
@@ -83,16 +90,19 @@ class _CreateEdit(CreateEdit):
             security_id = extract_security_id(input_data)
             sec_response = id_only_service(self.req, 'zato.security.get-by-id', security_id).data
 
-            sec_type = sec_response.sec_type.replace('_', '-')
+            sec_type = sec_response.sec_type
+            sec_type_name = SEC_DEF_TYPE_NAME[sec_type]
+
+            sec_type = sec_type.replace('_', '-')
             url_path = django_url_reverse('security-{}'.format(sec_type))
 
             link = """
-            {sec_type}
+            {sec_type_name}
             <br/>
-            <a href="{url_path}?cluster_id={cluster_id}">{sec_name}</a>
+            <a href="{url_path}?cluster={cluster_id}&amp;query={sec_name}">{sec_name}</a>
             """.format(**{
                    'cluster_id': self.cluster_id,
-                   'sec_type': sec_type,
+                   'sec_type_name': sec_type_name,
                    'sec_name': sec_response.name,
                    'url_path': url_path,
                 }).strip()
