@@ -22,9 +22,10 @@ from zato.common.api import HL7
 class CreateForm(DataFormatForm):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    should_parse_on_input = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     hl7_version = forms.ChoiceField(widget=forms.Select())
-    json_path = forms.CharField(widget=forms.TextInput(attrs={'style':'width:42%'}))
-    url_path = forms.CharField(initial='/', widget=forms.TextInput(attrs={'style':'width:70%'}))
+    json_path = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    url_path = forms.CharField(initial='/', widget=forms.TextInput(attrs={'style':'width:100%'}))
     service = forms.ChoiceField(widget=forms.Select(attrs={'class':'required', 'style':'width:100%'}))
     security_id = forms.ChoiceField(widget=forms.Select())
 
