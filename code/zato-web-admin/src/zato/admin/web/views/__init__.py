@@ -264,7 +264,8 @@ def build_sec_def_link(cluster_id, sec_type, sec_name):
 def build_sec_def_link_by_input(req, cluster_id, input_data):
     # type: (dict) -> str
 
-    if input_data['security_id']:
+    security_id = input_data.get('security_id')
+    if security_id and security_id != ZATO_NONE:
 
         security_id = extract_security_id(input_data)
         sec_response = id_only_service(req, 'zato.security.get-by-id', security_id).data
@@ -753,9 +754,12 @@ def extract_security_id(item):
     if not security_id:
         return
     else:
-        security_id = security_id.split('/')
-        security_id = security_id[1]
-        return int(security_id)
+        if security_id == ZATO_NONE:
+            return security_id
+        else:
+            security_id = security_id.split('/')
+            security_id = security_id[1]
+            return int(security_id)
 
 # ################################################################################################################################
 
