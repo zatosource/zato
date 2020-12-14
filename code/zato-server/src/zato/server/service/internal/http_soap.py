@@ -121,7 +121,7 @@ class GetList(_BaseGet):
         response_elem = 'zato_http_soap_get_list_response'
         input_required = 'cluster_id'
         input_optional = GetListAdminSIO.input_optional + ('connection', 'transport', 'data_format')
-        output_optional = _BaseGet.SimpleIO.output_optional + ('connection', 'transport')
+        output_optional = _BaseGet.SimpleIO.output_optional + ('connection', 'transport', 'hl7_version')
         output_repeated = True
 
     def get_data(self, session):
