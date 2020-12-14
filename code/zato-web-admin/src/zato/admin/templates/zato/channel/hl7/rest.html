@@ -49,6 +49,9 @@
             'is_active',
             'service',
             'security_id',
+
+            {% comment %} 5 {% endcomment %}
+            'json_path',
         ]
     }
     </script>
@@ -99,6 +102,9 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 5 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -137,6 +143,9 @@
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.service_name }}</td>
                         <td class='ignore'>{{ item.sec_type }}/{{ item.security_id }}</td>
+
+                        {% comment %} 4 {% endcomment %}
+                        <td class='ignore'>{{ item.json_path }}</td>
 
                     </tr>
                 {% endfor %}
@@ -181,6 +190,13 @@
                                 <label>
                                 HL7 version
                                 {{ create_form.hl7_version }}
+                                </label>
+
+                                |
+
+                                <label>
+                                JSON path
+                                {{ create_form.json_path }}
                                 </label>
 
                             </td>
@@ -256,6 +272,13 @@
                                 <label>
                                 HL7 version
                                 {{ edit_form.hl7_version }}
+                                </label>
+
+                                |
+
+                                <label>
+                                JSON path
+                                {{ edit_form.json_path }}
                                 </label>
 
                             </td>

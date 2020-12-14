@@ -23,6 +23,7 @@ class CreateForm(DataFormatForm):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     hl7_version = forms.ChoiceField(widget=forms.Select())
+    json_path = forms.CharField(widget=forms.TextInput(attrs={'style':'width:41%'}))
     url_path = forms.CharField(initial='/', widget=forms.TextInput(attrs={'style':'width:70%'}))
     service = forms.ChoiceField(widget=forms.Select(attrs={'class':'required', 'style':'width:100%'}))
     security_id = forms.ChoiceField(widget=forms.Select())

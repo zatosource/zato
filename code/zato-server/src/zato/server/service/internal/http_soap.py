@@ -89,7 +89,8 @@ class _BaseGet(AdminService):
             'url_params_pri', 'params_pri', 'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), \
             'content_type', Boolean('sec_use_rbac'), 'cache_id', 'cache_name', Integer('cache_expiry'), 'cache_type', \
             'content_encoding', Boolean('match_slash'), 'http_accept', List('service_whitelist'), 'is_rate_limit_active', \
-                'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
+                'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def'), \
+                'hl7_version', 'json_path'
 
 # ################################################################################################################################
 
@@ -121,7 +122,7 @@ class GetList(_BaseGet):
         response_elem = 'zato_http_soap_get_list_response'
         input_required = 'cluster_id'
         input_optional = GetListAdminSIO.input_optional + ('connection', 'transport', 'data_format')
-        output_optional = _BaseGet.SimpleIO.output_optional + ('connection', 'transport', 'hl7_version')
+        output_optional = _BaseGet.SimpleIO.output_optional + ('connection', 'transport')
         output_repeated = True
 
     def get_data(self, session):
@@ -198,7 +199,7 @@ class Create(_CreateEdit):
             'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
             List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
-            Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac'), 'hl7_version'
+            Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac'), 'hl7_version', 'json_path'
         output_required = ('id', 'name')
 
     def handle(self):
@@ -338,7 +339,7 @@ class Edit(_CreateEdit):
             'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
             List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
-            Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac')
+            Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac'), 'hl7_version', 'json_path'
         output_required = 'id', 'name'
 
     def handle(self):
