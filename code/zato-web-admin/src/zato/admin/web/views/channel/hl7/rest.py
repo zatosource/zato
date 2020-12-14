@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from zato.admin.web.forms.channel.hl7.rest import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, extract_security_id, get_outconn_rest_list, \
      id_only_service, Index as _Index
-from zato.common.api import CONNECTION, DATA_FORMAT, HL7, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, URL_TYPE
+from zato.common.api import CONNECTION, DATA_FORMAT, HL7, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE
 from zato.common.json_internal import dumps
 from zato.common.model import HL7Channel
 
@@ -42,11 +42,12 @@ class Index(_Index):
         output_optional = 'json_path', 'should_parse_on_input'
         output_repeated = True
 
-
 # ################################################################################################################################
 
     def on_before_append_item(self, item):
-        item.sec_type_name = SEC_DEF_TYPE_NAME[item.sec_type]
+        if item.security_id and item.security_id != ZATO_NONE:
+            item.sec_type_name = SEC_DEF_TYPE_NAME[item.sec_type]
+
         return item
 
 # ################################################################################################################################
@@ -80,6 +81,7 @@ class _CreateEdit(CreateEdit):
 
     def pre_process_input_dict(self, input_dict):
         input_dict['security_id'] = extract_security_id(input_dict)
+
 # ################################################################################################################################
 
     def post_process_return_data(self, return_data):
