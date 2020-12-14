@@ -144,7 +144,13 @@
                         {% comment %} 4 {% endcomment %}
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.service_name }}</td>
-                        <td class='ignore'>{{ item.sec_type }}/{{ item.security_id }}</td>
+                        <td class='ignore'>
+                            {% if item.sec_type %}
+                                {{ item.sec_type }}/{{ item.security_id }}
+                            {% else %}
+                            ZATO_NONE
+                            {% endif %}
+                        </td>
 
                         {% comment %} 4 {% endcomment %}
                         <td class='ignore'>{{ item.json_path }}</td>
@@ -264,7 +270,7 @@
 
                         <tr>
                             <td style="vertical-align:middle;width:14%">
-                                <label for="id_name">
+                                <label for="id_edit-name">
                                 Name
                                 </label>
                             </td>
@@ -298,7 +304,7 @@
                         </tr>
                         <tr>
                             <td>
-                                <label for="id_json_path">
+                                <label for="id_edit-json_path">
                                 JSON path
                                 </label>
                             </td>
@@ -309,7 +315,7 @@
 
                         <tr>
                             <td style="vertical-align:middle;width:12%">
-                                <label for="id_url_path">
+                                <label for="id_edit-url_path">
                                 URL path
                                 </label>
                             </td>
@@ -318,7 +324,7 @@
 
                         <tr>
                             <td style="vertical-align:middle;width:12%">
-                                <label for="id_service">
+                                <label for="id_edit-service">
                                 Service
                                 </label>
                             </td>
@@ -327,7 +333,7 @@
 
                         <tr>
                             <td style="vertical-align:middle;width:12%">
-                                <label for="id_security_id">
+                                <label for="id_edit-security_id">
                                 Security definition
                                 </label>
                             </td>

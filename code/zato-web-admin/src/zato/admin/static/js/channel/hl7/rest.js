@@ -55,7 +55,7 @@ $.fn.zato.channel.hl7.rest.data_table.new_row = function(item, data, include_tr)
     // 2
     row += String.format('<td>{0}</td>', item.url_path);
     row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(item.service, cluster_id));
-    row += String.format('<td>{0}</td>', data.sec_def_link);
+    row += String.format('<td>{0}</td>', data.sec_def_link || $.fn.zato.empty_value);
 
     // 3
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.hl7.rest.edit('{0}')\">Edit</a>", item.id));
