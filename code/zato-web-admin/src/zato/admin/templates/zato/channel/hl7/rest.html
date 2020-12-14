@@ -52,6 +52,7 @@
 
             {% comment %} 5 {% endcomment %}
             'json_path',
+            'should_parse_on_input',
         ]
     }
     </script>
@@ -105,6 +106,7 @@
 
                         {% comment %} 5 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -146,6 +148,7 @@
 
                         {% comment %} 4 {% endcomment %}
                         <td class='ignore'>{{ item.json_path }}</td>
+                        <td class='ignore'>{{ item.should_parse_on_input }}</td>
 
                     </tr>
                 {% endfor %}
@@ -168,8 +171,8 @@
                     <table class="form-data">
 
                         <tr>
-                            <td style="vertical-align:middle;width:12%">
-                                <label for="id_create-name">
+                            <td style="vertical-align:middle;width:14%">
+                                <label for="id_name">
                                 Name
                                 </label>
                             </td>
@@ -188,23 +191,33 @@
                                 |
 
                                 <label>
-                                HL7 ver.
+                                HL7 version
                                 {{ create_form.hl7_version }}
                                 </label>
 
                                 |
 
                                 <label>
-                                JSON path
-                                {{ create_form.json_path }}
+                                Parse on input
+                                {{ create_form.should_parse_on_input }}
                                 </label>
 
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="id_json_path">
+                                JSON path
+                                </label>
+                            </td>
+                            <td>
+                                {{ create_form.json_path }}
                             </td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle;width:12%">
-                                <label for="id_create-name">
+                                <label for="id_url_path">
                                 URL path
                                 </label>
                             </td>
@@ -213,7 +226,7 @@
 
                         <tr>
                             <td style="vertical-align:middle;width:12%">
-                                <label for="id_create-name">
+                                <label for="id_service">
                                 Service
                                 </label>
                             </td>
@@ -222,7 +235,7 @@
 
                         <tr>
                             <td style="vertical-align:middle;width:12%">
-                                <label for="id_create-name">
+                                <label for="id_security_id">
                                 Security definition
                                 </label>
                             </td>
@@ -250,8 +263,8 @@
                     <table class="form-data">
 
                         <tr>
-                            <td style="vertical-align:middle;width:12%">
-                                <label for="id_create-name">
+                            <td style="vertical-align:middle;width:14%">
+                                <label for="id_name">
                                 Name
                                 </label>
                             </td>
@@ -270,23 +283,33 @@
                                 |
 
                                 <label>
-                                HL7 ver.
+                                HL7 version
                                 {{ edit_form.hl7_version }}
                                 </label>
 
                                 |
 
                                 <label>
-                                JSON path
-                                {{ edit_form.json_path }}
+                                Parse on input
+                                {{ edit_form.should_parse_on_input }}
                                 </label>
 
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="id_json_path">
+                                JSON path
+                                </label>
+                            </td>
+                            <td>
+                                {{ edit_form.json_path }}
                             </td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle;width:12%">
-                                <label for="id_create-name">
+                                <label for="id_url_path">
                                 URL path
                                 </label>
                             </td>
@@ -295,7 +318,7 @@
 
                         <tr>
                             <td style="vertical-align:middle;width:12%">
-                                <label for="id_create-name">
+                                <label for="id_service">
                                 Service
                                 </label>
                             </td>
@@ -304,7 +327,7 @@
 
                         <tr>
                             <td style="vertical-align:middle;width:12%">
-                                <label for="id_create-name">
+                                <label for="id_security_id">
                                 Security definition
                                 </label>
                             </td>
