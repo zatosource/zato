@@ -6,12 +6,14 @@ Copyright (C) Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# Zato
+from zato.common.api import HL7
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-
-impl_class_all     = {Const.ImplClass.hl7apy, Const.ImplClass.zato}
-impl_class_current = {Const.ImplClass.hl7apy}
+impl_class_all     = {HL7.Const.ImplClass.hl7apy, HL7.Const.ImplClass.zato}
+impl_class_current = {HL7.Const.ImplClass.hl7apy}
 
 # ################################################################################################################################
 # ################################################################################################################################

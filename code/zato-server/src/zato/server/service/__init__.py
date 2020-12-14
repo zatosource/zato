@@ -631,7 +631,7 @@ class Service(object):
         # (though possibly with attributes), checking for 'not payload' alone won't suffice - this evaluates
         # to False so we'd be parsing the payload again superfluously.
         if not isinstance(payload, ObjectifiedElement) and not payload:
-            payload = payload_from_request(cid, raw_request, data_format, transport)
+            payload = payload_from_request(cid, raw_request, data_format, transport, kwargs.get('channel_item'))
 
         job_type = kwargs.get('job_type')
         channel_params = kwargs.get('channel_params', {})
