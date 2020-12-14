@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
@@ -17,18 +15,42 @@ from zato.common.odb import query
 from zato.server.service import Boolean, Integer, List
 from zato.server.service.internal import AdminService, GetListAdminSIO
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+output_required = 'id', 'name', 'is_active', 'sec_type'
+output_optional = 'username', 'realm', 'password_type', Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'), \
+    Integer('reject_expiry_limit'),  Integer('nonce_freshness_time'), 'proto_version', 'sig_method', Integer('max_nonce_log')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetByID(AdminService):
+    """ Returns a single security definition by its ID.
+    """
+    class SimpleIO(GetListAdminSIO):
+        response_elem = None
+        input_required = 'cluster_id', 'id'
+        output_required = output_required
+        output_optional = output_optional
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            self.response.payload = query.sec_base(session, self.request.input.cluster_id, self.request.input.id)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class GetList(AdminService):
     """ Returns a list of all security definitions available.
     """
     class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_security_get_list_request'
         response_elem = 'zato_security_get_list_response'
-        input_required = ('cluster_id',)
+        input_required = 'cluster_id'
         input_optional = GetListAdminSIO.input_optional + (List('sec_type'), Boolean('needs_internal', default=True))
-        output_required = ('id', 'name', 'is_active', 'sec_type')
-        output_optional = ('username', 'realm', 'password_type',
-            Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'), Integer('reject_expiry_limit'),
-            Integer('nonce_freshness_time'), 'proto_version', 'sig_method', Integer('max_nonce_log'))
+        output_required = output_required
+        output_optional = output_optional
         output_repeated = True
 
     def handle(self):
@@ -74,3 +96,5 @@ class GetList(AdminService):
 
                     self.response.payload.append(definition)
 
+# ################################################################################################################################
+# ################################################################################################################################

@@ -290,7 +290,10 @@ class _BaseView(object):
         """
 
     def get_sec_def_list(self, sec_type):
-        return SecurityList.from_service(self.req.zato.client, self.req.zato.cluster.id, sec_type)
+        if self.req.zato.get('client'):
+            return SecurityList.from_service(self.req.zato.client, self.req.zato.cluster.id, sec_type)
+        else:
+            return []
 
     def set_input(self, req=None, default_attrs=('cur_page', 'query')):
         req = req or self.req
@@ -377,7 +380,6 @@ class Index(_BaseView):
         """ May be overridden by subclasses to dynamically decide which template to use,
         otherwise self.template will be employed.
         """
-
     def invoke_admin_service(self):
         if self.req.zato.get('cluster'):
             func = self.req.zato.client.invoke_async if self.async_invoke else self.req.zato.client.invoke
@@ -522,6 +524,7 @@ class CreateEdit(_BaseView):
                         input_dict[name] = value
 
             self.input_dict.update(input_dict)
+            self.pre_process_input_dict(self.input_dict)
 
             logger.info('Request self.input_dict %s', self.input_dict)
             logger.info('Request self.SimpleIO.input_required %s', self.SimpleIO.input_required)
@@ -560,6 +563,9 @@ class CreateEdit(_BaseView):
 
         except Exception:
             return HttpResponseServerError(format_exc())
+
+    def pre_process_input_dict(self, input_dict):
+        pass
 
     def pre_process_item(self, name, value):
         return value
@@ -639,7 +645,9 @@ class SecurityList(object):
 
 def id_only_service(req, service, id, error_template='{}', initial=None):
     try:
-        request = {}
+        request = {
+            'cluster_id': req.zato.cluster_id,
+        }
 
         if id:
             request['id'] = id
@@ -702,10 +710,29 @@ def upload_to_server(req, cluster_id, service, error_msg_template):
 
 # ################################################################################################################################
 
+def extract_security_id(item):
+    # type: (dict) -> int
+    security_id = item.get('security_id') # type: str
+
+    if not security_id:
+        return
+    else:
+        security_id = security_id.split('/')
+
+        print(111, security_id)
+
+        security_id = security_id[1]
+
+        print(222, security_id)
+
+        return int(security_id)
+
+# ################################################################################################################################
+
 def get_http_channel_security_id(item):
     _security_id = item.security_id
     if _security_id:
-        security_id = '{0}/{1}'.format(item.sec_type, _security_id)
+        security_id = '{}/{}'.format(item.sec_type, _security_id)
     else:
         if item.sec_use_rbac:
             security_id = ZATO_SEC_USE_RBAC
