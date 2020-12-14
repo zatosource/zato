@@ -10,8 +10,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Zato
 from zato.admin.web.forms.channel.hl7.rest import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, get_outconn_rest_list, Index as _Index
-from zato.common.api import CONNECTION, DATA_FORMAT, HL7, URL_TYPE
+from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, extract_security_id, get_outconn_rest_list, \
+     id_only_service, Index as _Index
+from zato.common.api import CONNECTION, DATA_FORMAT, HL7, SEC_DEF_TYPE, URL_TYPE
 from zato.common.json_internal import dumps
 from zato.common.model import HL7Channel
 
@@ -27,6 +28,7 @@ class Index(_Index):
     paginate = True
 
     def get_initial_input(self):
+
         return {
             'connection': CONNECTION.CHANNEL,
             'transport': URL_TYPE.PLAIN_HTTP,
@@ -42,9 +44,10 @@ class Index(_Index):
 # ################################################################################################################################
 
     def handle(self):
+        security_list = self.get_sec_def_list(SEC_DEF_TYPE.BASIC_AUTH)
         return {
-            'create_form': CreateForm(req=self.req),
-            'edit_form': EditForm(prefix='edit', req=self.req),
+            'create_form': CreateForm(security_list, req=self.req),
+            'edit_form': EditForm(security_list, prefix='edit', req=self.req),
         }
 
 # ################################################################################################################################
@@ -54,13 +57,52 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_active', 'is_internal', 'hl7_version', 'url_path', 'service', 'security', 'data_format'
+        input_required = 'name', 'is_active', 'is_internal', 'hl7_version', 'url_path', 'service', 'security_id', 'data_format'
         output_required = 'id', 'name'
+
+# ################################################################################################################################
 
     def populate_initial_input_dict(self, initial_input_dict):
         initial_input_dict['connection'] = CONNECTION.CHANNEL
         initial_input_dict['transport'] = URL_TYPE.PLAIN_HTTP
         initial_input_dict['data_format'] = HL7.Const.Version.v2.id
+
+# ################################################################################################################################
+
+    def pre_process_input_dict(self, input_dict):
+        input_dict['security_id'] = extract_security_id(input_dict)
+
+
+# ################################################################################################################################
+
+    def build_sec_def_link(self, input_data):
+        # type: (dict) -> str
+
+        if input_data['security_id']:
+
+            security_id = extract_security_id(input_data)
+            sec_response = id_only_service(self.req, 'zato.security.get-by-id', security_id).data
+
+            sec_type = sec_response.sec_type.replace('_', '-')
+            url_path = django_url_reverse('security-{}'.format(sec_type))
+
+            link = """
+            {sec_type}
+            <br/>
+            <a href="{url_path}?cluster_id={cluster_id}">{sec_name}</a>
+            """.format(**{
+                   'cluster_id': self.cluster_id,
+                   'sec_type': sec_type,
+                   'sec_name': sec_response.name,
+                   'url_path': url_path,
+                }).strip()
+
+            return link
+
+# ################################################################################################################################
+
+    def post_process_return_data(self, return_data):
+        return_data['sec_def_link'] = self.build_sec_def_link(self.input)
 
 # ################################################################################################################################
 
