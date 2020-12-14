@@ -78,41 +78,10 @@ class _CreateEdit(CreateEdit):
 
     def pre_process_input_dict(self, input_dict):
         input_dict['security_id'] = extract_security_id(input_dict)
-
-
-# ################################################################################################################################
-
-    def build_sec_def_link(self, input_data):
-        # type: (dict) -> str
-
-        if input_data['security_id']:
-
-            security_id = extract_security_id(input_data)
-            sec_response = id_only_service(self.req, 'zato.security.get-by-id', security_id).data
-
-            sec_type = sec_response.sec_type
-            sec_type_name = SEC_DEF_TYPE_NAME[sec_type]
-
-            sec_type = sec_type.replace('_', '-')
-            url_path = django_url_reverse('security-{}'.format(sec_type))
-
-            link = """
-            {sec_type_name}
-            <br/>
-            <a href="{url_path}?cluster={cluster_id}&amp;query={sec_name}">{sec_name}</a>
-            """.format(**{
-                   'cluster_id': self.cluster_id,
-                   'sec_type_name': sec_type_name,
-                   'sec_name': sec_response.name,
-                   'url_path': url_path,
-                }).strip()
-
-            return link
-
 # ################################################################################################################################
 
     def post_process_return_data(self, return_data):
-        return_data['sec_def_link'] = self.build_sec_def_link(self.input)
+        return_data['sec_def_link'] = self.build_sec_def_link_by_input(self.input)
 
 # ################################################################################################################################
 
