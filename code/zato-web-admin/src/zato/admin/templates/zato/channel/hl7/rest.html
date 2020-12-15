@@ -1,0 +1,405 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block html_title %}HL7 REST Channels{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    {% if items %}
+    <style type="text/css">
+        .ui-dialog-titlebar {
+            margin-bottom:-4px !important;
+        }
+    </style>
+    {% endif %}
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/channel/hl7/rest.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+
+            {% comment %} 1 {% endcomment %}
+            'name',
+            '_is_active',
+            'hl7_version',
+
+            {% comment %} 2 {% endcomment %}
+            'url_path',
+            '_service',
+            '_security',
+
+            {% comment %} 3 {% endcomment %}
+            '_edit',
+            '_delete',
+            'id',
+
+            {% comment %} 4 {% endcomment %}
+            'is_active',
+            'service',
+            'security_id',
+
+            {% comment %} 5 {% endcomment %}
+            'json_path',
+            'should_parse_on_input',
+            'should_validate',
+
+            {% comment %} 6 {% endcomment %}
+            'data_encoding',
+            'should_return_errors',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">HL7 REST channels</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% include "zato/search-form.html" with page_prompt="Show channels"%}
+
+
+    {% if cluster_id %}
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.channel.hl7.rest.create()">Create a new channel</a>
+        </div>
+
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        {% comment %} 1 {% endcomment %}
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+                        <th><a href="#">Version</a></th>
+
+                        {% comment %} 2 {% endcomment %}
+                        <th><a href="#">URL path</a></th>
+                        <th><a href="#">Service</a></th>
+                        <th><a href="#">Security</a></th>
+
+                        {% comment %} 3 {% endcomment %}
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 4 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 5 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 6 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        {% comment %} 1 {% endcomment %}
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.hl7_version }}</td>
+
+                        {% comment %} 2 {% endcomment %}
+                        <td>{{ item.url_path }}</td>
+                        <td><a href="{% url "service-overview" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
+                        <td>
+                            {% if item.security_name %}
+                                {{ item.sec_type_name }}
+                                <br/>
+                                <a href="{% url "security-basic-auth" %}?cluster={{ cluster_id }}&amp;query={{ item.security_name }}">
+                                    {{ item.security_name }}
+                                </a>
+                            {% else %}
+                                <span class="form_hint">---</span>
+                            {% endif %}
+                        </td>
+
+                        {% comment %} 3 {% endcomment %}
+                        <td><a href="javascript:$.fn.zato.channel.hl7.rest.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.channel.hl7.rest.delete_('{{ item.id }}')">Delete</a></td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+
+                        {% comment %} 4 {% endcomment %}
+                        <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.service_name }}</td>
+                        <td class='ignore'>
+                            {% if item.sec_type %}
+                                {{ item.sec_type }}/{{ item.security_id }}
+                            {% else %}
+                            ZATO_NONE
+                            {% endif %}
+                        </td>
+
+                        {% comment %} 5 {% endcomment %}
+                        <td class='ignore'>{{ item.json_path }}</td>
+                        <td class='ignore'>{{ item.should_parse_on_input }}</td>
+                        <td class='ignore'>{{ item.should_validate }}</td>
+
+                        {% comment %} 6 {% endcomment %}
+                        <td class='ignore'>{{ item.data_encoding }}</td>
+                        <td class='ignore'>{{ item.should_return_errors }}</td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='14'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "channel-hl7-rest-create" %}" method="post" id="create-form">
+
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle;width:14%">
+                                <label for="id_name">
+                                Name
+                                </label>
+                            </td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td></td>
+                            <td>
+
+                                <label>
+                                Active
+                                {{ create_form.is_active }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Ver.
+                                {{ create_form.hl7_version }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Parse
+                                {{ create_form.should_parse_on_input }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Validate
+                                {{ create_form.should_validate }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Return err.
+                                {{ create_form.should_return_errors }}
+                                </label>
+
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="id_json_path">
+                                JSON path
+                                </label>
+                            </td>
+                            <td>
+                                {{ create_form.json_path }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle;width:12%">
+                                <label for="id_url_path">
+                                URL path
+                                </label>
+                            </td>
+                            <td>{{ create_form.url_path }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle;width:12%">
+                                <label for="id_service">
+                                Service
+                                </label>
+                            </td>
+                            <td>{{ create_form.service }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle;width:12%">
+                                <label for="id_security_id">
+                                Security definition
+                                </label>
+                            </td>
+                            <td>{{ create_form.security_id }}</td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+
+                        </tr>
+                    </table>
+
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "channel-hl7-rest-edit" %}" method="post" id="edit-form">
+
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle;width:14%">
+                                <label for="id_edit-name">
+                                Name
+                                </label>
+                            </td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td></td>
+                            <td>
+
+                                <label>
+                                Active
+                                {{ edit_form.is_active }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Ver.
+                                {{ edit_form.hl7_version }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Parse
+                                {{ edit_form.should_parse_on_input }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Validate
+                                {{ edit_form.should_validate }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Return err.
+                                {{ edit_form.should_return_errors }}
+                                </label>
+
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label for="id_edit-json_path">
+                                JSON path
+                                </label>
+                            </td>
+                            <td>
+                                {{ edit_form.json_path }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle;width:12%">
+                                <label for="id_edit-url_path">
+                                URL path
+                                </label>
+                            </td>
+                            <td>{{ edit_form.url_path }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle;width:12%">
+                                <label for="id_edit-service">
+                                Service
+                                </label>
+                            </td>
+                            <td>{{ edit_form.service }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle;width:12%">
+                                <label for="id_edit-security_id">
+                                Security definition
+                                </label>
+                            </td>
+                            <td>{{ edit_form.security_id }}</td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+
+                        </tr>
+                    </table>
+
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+    {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}
+
