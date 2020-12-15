@@ -53,6 +53,10 @@
             {% comment %} 5 {% endcomment %}
             'json_path',
             'should_parse_on_input',
+            'should_validate',
+
+            {% comment %} 6 {% endcomment %}
+            'data_encoding',
         ]
     }
     </script>
@@ -107,6 +111,10 @@
                         {% comment %} 5 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 6 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -152,9 +160,13 @@
                             {% endif %}
                         </td>
 
-                        {% comment %} 4 {% endcomment %}
+                        {% comment %} 5 {% endcomment %}
                         <td class='ignore'>{{ item.json_path }}</td>
                         <td class='ignore'>{{ item.should_parse_on_input }}</td>
+                        <td class='ignore'>{{ item.should_validate }}</td>
+
+                        {% comment %} 6 {% endcomment %}
+                        <td class='ignore'>{{ item.data_encoding }}</td>
 
                     </tr>
                 {% endfor %}

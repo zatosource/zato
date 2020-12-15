@@ -491,7 +491,13 @@ def payload_from_request(cid, request, data_format, transport, channel_item):
         #
         elif data_format == _data_format_hl7_v2:
             payload = hl7_get_payload_from_request(
-                request, channel_item['hl7_version'], channel_item['json_path'], channel_item['should_parse_on_input'])
+                request,
+                channel_item.hl7_version,
+                channel_item.data_encoding,
+                channel_item.json_path,
+                channel_item.should_parse_on_input,
+                channel_item.should_validate
+            )
 
         #
         # Other data formats

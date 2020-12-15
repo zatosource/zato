@@ -70,6 +70,10 @@ $.fn.zato.channel.hl7.rest.data_table.new_row = function(item, data, include_tr)
     // 5
     row += String.format("<td class='ignore'>{0}</td>", item.json_path);
     row += String.format("<td class='ignore'>{0}</td>", item.should_parse_on_input);
+    row += String.format("<td class='ignore'>{0}</td>", item.should_validate);
+
+    // 6
+    row += String.format("<td class='ignore'>{0}</td>", item.data_encoding);
 
     if(include_tr) {
         row += '</tr>';
