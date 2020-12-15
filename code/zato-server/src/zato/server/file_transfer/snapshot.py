@@ -287,10 +287,6 @@ class BaseSnapshotMaker(AbstractSnapshotMaker):
         # First, get a list of files under path ..
         result = self.file_client.list(path)
 
-        #logger.warn('ZZZ-1 %s', self.file_client.list)
-        #logger.warn('ZZZ-2 %s', path)
-        #logger.warn('ZZZ-3 %s', result)
-
         # .. create a new container for the snapshot ..
         snapshot = DirSnapshot(path)
 
