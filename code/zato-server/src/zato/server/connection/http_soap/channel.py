@@ -30,9 +30,10 @@ from six import PY3
 from past.builtins import basestring, unicode
 
 # Zato
-from zato.common.api import CHANNEL, DATA_FORMAT, JSON_RPC, HTTP_SOAP, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, \
+from zato.common.api import CHANNEL, DATA_FORMAT, JSON_RPC, HL7, HTTP_SOAP, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, \
      URL_PARAMS_PRIORITY, URL_TYPE, ZATO_ERROR, ZATO_NONE, ZATO_OK
 from zato.common.exception import HTTP_RESPONSES
+from zato.common.hl7 import HL7Exception
 from zato.common.json_internal import dumps, loads
 from zato.common.json_schema import DictError as JSONSchemaDictError, ValidationException as JSONSchemaValidationException
 from zato.common.rate_limiting.common import AddressNotAllowed, BaseException as RateLimitingException, RateLimitReached
@@ -79,6 +80,10 @@ _status_method_not_allowed = '{} {}'.format(METHOD_NOT_ALLOWED, HTTP_RESPONSES[M
 _status_unauthorized = '{} {}'.format(UNAUTHORIZED, HTTP_RESPONSES[UNAUTHORIZED])
 _status_forbidden = '{} {}'.format(FORBIDDEN, HTTP_RESPONSES[FORBIDDEN])
 _status_too_many_requests = '{} {}'.format(TOO_MANY_REQUESTS, HTTP_RESPONSES[TOO_MANY_REQUESTS])
+
+# ################################################################################################################################
+
+_data_format_hl7 = HL7.Const.Version.v2.id
 
 # ################################################################################################################################
 
@@ -131,9 +136,11 @@ response_404_log = 'URL not found `%s` (Method:%s; Accept:%s; CID:%s)'
 
 # ################################################################################################################################
 
-def client_json_error(cid, faultstring):
-    zato_env = {'zato_env':{'result':ZATO_ERROR, 'cid':cid, 'details':faultstring}}
-    return dumps(zato_env)
+def client_json_error(cid, details):
+    message = {'result':'Error', 'cid':cid}
+    if details:
+        message['details'] = details
+    return dumps(message)
 
 # ################################################################################################################################
 
@@ -148,8 +155,9 @@ def server_soap_error(cid, faultstring):
 # ################################################################################################################################
 
 client_error_wrapper = {
-    'json': client_json_error,
-    'soap': client_soap_error,
+    DATA_FORMAT.JSON: client_json_error,
+    DATA_FORMAT.SOAP: client_soap_error,
+    HL7.Const.Version.v2.id: client_json_error,
 }
 
 # ################################################################################################################################
@@ -240,7 +248,7 @@ class RequestDispatcher(object):
         _http_soap_action='HTTP_SOAPACTION', _stringio=StringIO, _gzipfile=GzipFile, _accept_any_http=accept_any_http,
         _accept_any_internal=accept_any_internal, _rate_limit_type_http=RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP,
         _rate_limit_type_sso_user=RATE_LIMIT.OBJECT_TYPE.SSO_USER, _stack_format=stack_format, _exc_sep='*' * 80,
-        _jwt=_jwt, _sso_ext_auth=_sso_ext_auth):
+        _jwt=_jwt, _sso_ext_auth=_sso_ext_auth, _data_format_hl7=_data_format_hl7):
 
         # Needed as one of the first steps
         http_method = wsgi_environ['REQUEST_METHOD']
@@ -416,6 +424,10 @@ class RequestDispatcher(object):
                     elif isinstance(e, RateLimitingException):
                         response, status_code, status = self._on_rate_limiting_exception(cid, e, channel_item)
 
+                    # HL7
+                    elif channel_item['data_format'] == _data_format_hl7:
+                        response, status_code, status = self._on_hl7_exception(cid, e, channel_item)
+
                     else:
                         status_code = INTERNAL_SERVER_ERROR
                         response = _format_exc if self.return_tracebacks else self.default_error_message
@@ -472,9 +484,19 @@ class RequestDispatcher(object):
             status_code = FORBIDDEN
             status = _status_forbidden
 
-        error_wrapper = get_client_error_wrapper(channel_item['transport'], channel_item['data_format'] or _json)
+        return 'Error {}'.format(status), status_code, status
 
-        return error_wrapper(cid, 'Error {}'.format(status)), status_code, status
+# ################################################################################################################################
+
+    def _on_hl7_exception(self, cid, e, channel_item, _json=DATA_FORMAT.JSON):
+        # type: (unicode, HL7Exception, dict) -> (unicode, int, unicode)
+
+        if channel_item['should_return_errors'] and isinstance(e, HL7Exception):
+            details = '`{}`; data:`{}`'.format(e.args[0], e.data)
+        else:
+            details = ''
+
+        return details, BAD_REQUEST, _status_bad_request
 
 # ################################################################################################################################
 

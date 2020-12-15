@@ -68,7 +68,7 @@ class HTTPHandler(object):
         # Any exception at this point must be a server-side error
         except Exception:
             tb = format_exc()
-            wsgi_environ['zato.http.response.status'] = b'%s %s' % (INTERNAL_SERVER_ERROR, str(responses[INTERNAL_SERVER_ERROR]))
+            wsgi_environ['zato.http.response.status'] = b'%s %s' % (bytes(INTERNAL_SERVER_ERROR), str(responses[INTERNAL_SERVER_ERROR]))
             error_msg = b'`%s` Exception caught `%s`' % (cid, tb)
             logger.error(error_msg)
             payload = error_msg if self.return_tracebacks else self.default_error_message

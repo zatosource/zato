@@ -27,15 +27,20 @@ PID|||56782445^^^UAReg^PI||KLEINSAMPLE^BARRY^Q^JR||19620910|M||2028-9^^HL70005^R
 PV1||I|W^389^1^UABH^^^^3||||12345^MORGAN^REX^J^^^MD^0010^UAMC^L||67890^GRAINGER^LUCY^X^^^MD^0010^UAMC^L|MED|||||A0||13579^POTTER^SHERMAN^T^^^MD^0010^UAMC^L|||||||||||||||||||||||||||200605290900
 """.strip().replace('\n', '\r')
 
+        f = open('/tmp/hl7.txt', 'wb')
+        f.write(data.encode('utf8'))
+        f.close()
+
         impl_class = HL7.Const.ImplClass.hl7apy
         version    = HL7.Const.Version.v2.id
 
+        data_encoding         = 'utf8'
         json_path             = None
         should_parse_on_input = True
         should_validate       = True
         needs_error_report    = True
 
-        result = get_payload_from_request(data, version, json_path, should_parse_on_input, should_validate)
+        result = get_payload_from_request(data, data_encoding, version, json_path, should_parse_on_input, should_validate)
 
         #
         # Check MSH
