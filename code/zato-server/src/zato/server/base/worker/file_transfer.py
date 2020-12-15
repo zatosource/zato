@@ -64,11 +64,11 @@ class FileTransfer(WorkerImpl):
 
 # ################################################################################################################################
 
-    def _file_transfer_modify_scheduler_job(self, job, job_id, channel_id, is_add):
+    def _file_transfer_modify_scheduler_job(self, job, job_id, channel_id, add_or_remove):
         """ Finds a job along with its extra data and either adds or removes a file transfer channel for it.
         """
-        # We store IDs as string objects
-        channel_id = str(channel_id)
+        # We store IDs as string objects but we compare then as integers
+        channel_id = int(channel_id)
 
         # Get a scheduler's job by its id if we were not given a job on input
         job = job or self._file_transfer_get_scheduler_job_by_id(job_id)
@@ -89,8 +89,8 @@ class FileTransfer(WorkerImpl):
             extra_set.update(extra)
 
         # .. now, we can just add or remove our own key, no matter if extra existed or not ..
-        if is_add:
-            extra_set.add(int(channel_id))
+        if add_or_remove:
+            extra_set.add(channel_id)
         else:
             try:
                 extra_set.remove(channel_id)
@@ -109,6 +109,23 @@ class FileTransfer(WorkerImpl):
 
 # ################################################################################################################################
 
+    def _create_file_transfer_channel(self, msg):
+
+        # Our caller in generic.py has already created the channel object
+        # so we only need to associate ourselves with a scheduler's job, if any.
+        if msg.scheduler_job_id:
+            self._file_transfer_modify_scheduler_job(None, msg.scheduler_job_id, msg.id, True)
+
+# ################################################################################################################################
+
+    def _disassociate_channel_from_scheduler_jobs(self, msg):
+
+        for item in self._file_transfer_get_scheduler_job_list():
+            item = bunchify(item)
+            self._file_transfer_modify_scheduler_job(item, None, msg.id, False)
+
+# ################################################################################################################################
+
     def _edit_file_transfer_channel(self, msg):
         # type: (Bunch) -> None
 
@@ -119,12 +136,18 @@ class FileTransfer(WorkerImpl):
         # .. otherwise, without a job ID on input, we still need to look up
         # all scheduler jobs and disassociate our channel from any of the existing jobs ..
         else:
-            for item in self._file_transfer_get_scheduler_job_list():
-                item = bunchify(item)
-                self._file_transfer_modify_scheduler_job(item, None, msg.id, False)
+            self._disassociate_channel_from_scheduler_jobs(msg)
 
         # .. finally, we can edit the channel itself.
         self.file_transfer_api.edit(msg)
+
+# ################################################################################################################################
+
+    def _delete_file_transfer_channel(self, msg):
+
+        # Our caller in generic.py has already created the channel object
+        # so we only need to disassociate ourselves with a scheduler's job, if any.
+        self._disassociate_channel_from_scheduler_jobs(msg)
 
 # ################################################################################################################################
 
