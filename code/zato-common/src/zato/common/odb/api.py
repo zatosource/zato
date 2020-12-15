@@ -908,7 +908,7 @@ class ODBManager(SessionWrapper):
         """ Returns the list of all HTTP/SOAP connections.
         """
         with closing(self.session()) as session:
-            return query.http_soap_list(session, cluster_id, connection, transport, True, needs_columns)
+            return query.http_soap_list(session, cluster_id, connection, transport, True, None, needs_columns)
 
 # ################################################################################################################################
 
