@@ -39,7 +39,7 @@ class Index(_Index):
         input_required = 'cluster_id',
         output_required = 'id', 'name', 'is_active', 'is_internal', 'hl7_version', 'url_path', 'service_name', 'security_name', \
             'security_id', 'sec_type', 'sec_type_name', 'data_format',
-        output_optional = 'json_path', 'should_parse_on_input'
+        output_optional = 'json_path', 'should_parse_on_input', 'should_validate'
         output_repeated = True
 
 # ################################################################################################################################
@@ -67,7 +67,7 @@ class _CreateEdit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'name', 'is_internal', 'hl7_version', 'url_path', 'service', 'security_id', 'data_format'
-        input_optional = 'is_active', 'should_parse_on_input', 'json_path'
+        input_optional = 'is_active', 'json_path', 'should_parse_on_input', 'should_validate'
         output_required = 'id', 'name'
 
 # ################################################################################################################################

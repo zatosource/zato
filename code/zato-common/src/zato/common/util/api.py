@@ -444,7 +444,7 @@ def get_body_payload(body):
 
 # ################################################################################################################################
 
-def payload_from_request(cid, request, data_format, transport, channel_item):
+def payload_from_request(cid, request, data_format, transport, channel_item=None):
     """ Converts a raw request to a payload suitable for usage with SimpleIO.
     """
     if request is not None:
