@@ -21,6 +21,11 @@ from zato.server.generic.connection import GenericConnection
 # ################################################################################################################################
 # ################################################################################################################################
 
+_channel_file_transfer = COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Generic(WorkerImpl):
     """ Handles broker messages destined for generic objects, such as connections.
     """
@@ -58,10 +63,9 @@ class Generic(WorkerImpl):
             conn_name = conn_dict['name']
             del conn_value[conn_name]
 
-            # Run a special path for file transfer channels
-            if msg['type_'] == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER:
-                self._delete_file_transfer_channel(msg)
-                return
+        # Run a special path for file transfer channels
+        if msg['type_'] == _channel_file_transfer:
+            self._delete_file_transfer_channel(msg)
 
 # ################################################################################################################################
 
@@ -97,7 +101,7 @@ class Generic(WorkerImpl):
         if not is_starting:
 
             # Run a special path for file transfer channels
-            if msg['type_'] == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER:
+            if msg['type_'] == _channel_file_transfer:
                 self._create_file_transfer_channel(msg)
 
 # ################################################################################################################################
@@ -105,7 +109,7 @@ class Generic(WorkerImpl):
     def _edit_generic_connection(self, msg, skip=None, secret=None):
 
         # Special-case file transfer channels
-        if msg['type_'] == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER:
+        if msg['type_'] == _channel_file_transfer:
             self._edit_file_transfer_channel(msg)
             return
 
