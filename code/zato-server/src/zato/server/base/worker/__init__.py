@@ -1086,7 +1086,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             if config_type in to_skip:
                 continue
 
-            self._create_generic_connection(bunchify(config_dict['config']), raise_exc=False)
+            self._create_generic_connection(bunchify(config_dict['config']), raise_exc=False, is_starting=True)
 
 # ################################################################################################################################
 
