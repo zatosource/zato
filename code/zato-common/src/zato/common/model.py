@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Unlike zato.common.odb.model - this place is where DB-independent models are kept,
-# regardless if they're backed by an SQL database or not.
+# regardless if they are backed by an SQL database or not.
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -20,8 +20,6 @@ class FileTransferChannel(object):
         self.id   = None      # type: int
         self.name = None      # type: str
         self.is_active = None # type: bool
-        self.id = None        # type: int
-        self.name = None      # type: str
 
         self.is_hot_deploy = None # type: bool
         self.source_type = None   # type: str
@@ -73,3 +71,14 @@ class FileTransferChannel(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class HL7Channel:
+    def __init__(self):
+        self._config_attrs = []
+        self.id   = None      # type: int
+        self.name = None      # type: str
+        self.is_active = None # type: bool
+        self.sec_type = None  # type: str
+        self.security_id = None # type: str
+
+# ################################################################################################################################
+# ################################################################################################################################
