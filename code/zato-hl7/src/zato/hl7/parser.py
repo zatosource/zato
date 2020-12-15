@@ -22,29 +22,26 @@ _parse_func_map = {
     }
 }
 
-# ################################################################################################################################
-# ################################################################################################################################
-
-def get_payload_from_request(data:str, version:str, json_path:str, should_parse_on_input:bool):
-
-    print()
-    print(111, data)
-    print(222, version)
-    print(333, json_path)
-    print(444, should_parse_on_input)
-    print()
+_impl_class = HL7.Const.ImplClass.hl7apy
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-def parse(data:str, impl_class:str, version:str, should_validate:bool):
+def get_payload_from_request(data, version, json_path, should_parse_on_input, should_validate):
+    """ Parses a channel message into an HL7 one.
+    """
+    # type: (str, str, str, bool, bool)
+    return parse(data, _impl_class, version, should_validate)
+
+# ################################################################################################################################
+
+def parse(data, impl_class, version, should_validate):
     """ Parses input data in the specified HL7 version using implementation pointed to be impl_class.
     """
     impl_dict = _parse_func_map[version] # type: dict
     parse_func = impl_dict[impl_class]
 
-    print(444, data)
-
-    return parse_func(data)
+    return parse_func(data, force_validation=should_validate)
 
 # ################################################################################################################################
 # ################################################################################################################################
