@@ -57,6 +57,7 @@
 
             {% comment %} 6 {% endcomment %}
             'data_encoding',
+            'should_return_errors',
         ]
     }
     </script>
@@ -167,6 +168,7 @@
 
                         {% comment %} 6 {% endcomment %}
                         <td class='ignore'>{{ item.data_encoding }}</td>
+                        <td class='ignore'>{{ item.should_return_errors }}</td>
 
                     </tr>
                 {% endfor %}
@@ -209,7 +211,7 @@
                                 |
 
                                 <label>
-                                Version
+                                Ver.
                                 {{ create_form.hl7_version }}
                                 </label>
 
@@ -225,6 +227,13 @@
                                 <label>
                                 Validate
                                 {{ create_form.should_validate }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Return err.
+                                {{ create_form.should_return_errors }}
                                 </label>
 
                             </td>
@@ -308,7 +317,7 @@
                                 |
 
                                 <label>
-                                Version
+                                Ver.
                                 {{ edit_form.hl7_version }}
                                 </label>
 
@@ -324,6 +333,13 @@
                                 <label>
                                 Validate
                                 {{ edit_form.should_validate }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Return err.
+                                {{ edit_form.should_return_errors }}
                                 </label>
 
                             </td>

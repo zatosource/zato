@@ -90,7 +90,7 @@ class _BaseGet(AdminService):
             'content_type', Boolean('sec_use_rbac'), 'cache_id', 'cache_name', Integer('cache_expiry'), 'cache_type', \
             'content_encoding', Boolean('match_slash'), 'http_accept', List('service_whitelist'), 'is_rate_limit_active', \
                 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def'), \
-                'hl7_version', 'json_path', 'should_parse_on_input', 'should_validate'
+                'hl7_version', 'json_path', 'should_parse_on_input', 'should_validate', 'should_return_errors'
 
 # ################################################################################################################################
 
@@ -200,7 +200,7 @@ class Create(_CreateEdit):
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
             List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
             Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac'), 'hl7_version', 'json_path', \
-            'should_parse_on_input', 'should_parse_on_input'
+            'should_parse_on_input', 'should_validate', 'should_return_errors'
         output_required = ('id', 'name')
 
     def handle(self):
@@ -341,7 +341,7 @@ class Edit(_CreateEdit):
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
             List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
             Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac'), 'hl7_version', 'json_path', \
-            'should_parse_on_input', 'should_parse_on_input'
+            'should_parse_on_input', 'should_validate', 'should_return_errors'
         output_required = 'id', 'name'
 
     def handle(self):

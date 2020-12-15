@@ -74,6 +74,7 @@ $.fn.zato.channel.hl7.rest.data_table.new_row = function(item, data, include_tr)
 
     // 6
     row += String.format("<td class='ignore'>{0}</td>", item.data_encoding);
+    row += String.format("<td class='ignore'>{0}</td>", item.should_return_errors);
 
     if(include_tr) {
         row += '</tr>';
