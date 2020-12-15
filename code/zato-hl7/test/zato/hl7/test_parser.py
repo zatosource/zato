@@ -11,35 +11,37 @@ from unittest import TestCase
 
 # Zato
 from zato.common.api import HL7
-from zato.hl7.parser import parse as hl7_parse
+from zato.hl7.parser import get_payload_from_request
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ParserTestCase(TestCase):
 
-    def test_parser(self):
+    def test_get_payload_from_request(self):
 
         data = """
-MSH|^~\&|REGADT|MCM|RSP1P8|MCM|203901051530|SEC|ADT^A41^ADT_A39|00000005|P|2.8|
-EVN|A41|200301051530
-PID|11|22|MR1^^^XYZ||EVERYWOMAN^EVE||19501010|M|||123 NORTH STREET^^NY^NY^10021||(212)111-3333|||S||ACCT1
-MRG|MR1^^^XYZ||ACCT2
-""".strip()
+MSH|^~\&|MegaReg|XYZHospC|SuperOE|XYZImgCtr|20060529090131-0500||ADT^A01^ADT_A01|01052901|P|2.5
+EVN||200605290901||||200605290900
+PID|||56782445^^^UAReg^PI||KLEINSAMPLE^BARRY^Q^JR||19620910|M||2028-9^^HL70005^RA99113^^XYZ|260 GOODWIN CREST DRIVE^^BIRMINGHAM^AL^35209^^M~NICKELL’S PICKLES^10000 W 100TH AVE^BIRMINGHAM^AL^35200^^O|||||||0105I30001^^^99DEF^AN
+PV1||I|W^389^1^UABH^^^^3||||12345^MORGAN^REX^J^^^MD^0010^UAMC^L||67890^GRAINGER^LUCY^X^^^MD^0010^UAMC^L|MED|||||A0||13579^POTTER^SHERMAN^T^^^MD^0010^UAMC^L|||||||||||||||||||||||||||200605290900
+""".strip().replace('\n', '\r')
 
         impl_class = HL7.Const.ImplClass.hl7apy
         version    = HL7.Const.Version.v2.id
 
-        should_validate    = True
-        needs_error_report = True
+        json_path             = None
+        should_parse_on_input = True
+        should_validate       = True
+        needs_error_report    = True
 
-        result = hl7_parse(data, impl_class, version, should_validate)
+        result = get_payload_from_request(data, version, json_path, should_parse_on_input, should_validate)
 
         #
         # Check MSH
         #
 
-        msh = result.MSH[0]
+        msh = result.MSH
         self.assertEquals(msh.field_separator.value, '|')
 
         #
@@ -47,28 +49,21 @@ MRG|MR1^^^XYZ||ACCT2
         #
 
         evn = result.EVN
-
-        print()
-        print(111, evn)
-        print(222, dir(evn))
-        print()
+        self.assertEquals(evn.recorded_date_time.value, '200605290901')
 
         #
         # Check PID
         #
 
-        pid = result.pid
-
-
-        print()
-        print(444, repr(pid.element_name), repr(pid.value))
-        print()
+        pid = result.PID
+        self.assertEquals(pid.patient_address.city.value, 'BIRMINGHAM')
 
         #
-        # Check MRG
+        # Check PV1
         #
 
-        mrg = result.MRG
+        pv1 = result.PV1
+        self.assertEquals(pv1.assigned_patient_location.facility.value, 'UABH')
 
 # ################################################################################################################################
 # ################################################################################################################################
