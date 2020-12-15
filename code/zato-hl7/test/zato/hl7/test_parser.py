@@ -31,14 +31,12 @@ PV1||I|W^389^1^UABH^^^^3||||12345^MORGAN^REX^J^^^MD^0010^UAMC^L||67890^GRAINGER^
         f.write(data.encode('utf8'))
         f.close()
 
-        impl_class = HL7.Const.ImplClass.hl7apy
         version    = HL7.Const.Version.v2.id
 
         data_encoding         = 'utf8'
         json_path             = None
         should_parse_on_input = True
         should_validate       = True
-        needs_error_report    = True
 
         result = get_payload_from_request(data, data_encoding, version, json_path, should_parse_on_input, should_validate)
 
