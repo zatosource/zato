@@ -1248,7 +1248,8 @@ class URLData(CyURLData, OAuthDataStore):
         for name in('connection', 'content_type', 'data_format', 'host', 'id', 'has_rbac', 'impl_name', 'is_active',
             'is_internal', 'merge_url_params_req', 'method', 'name', 'params_pri', 'ping_method', 'pool_size', 'service_id',
             'service_name', 'soap_action', 'soap_version', 'transport', 'url_params_pri', 'url_path', 'sec_use_rbac',
-            'cache_type', 'cache_id', 'cache_name', 'cache_expiry', 'content_encoding', 'match_slash'):
+            'cache_type', 'cache_id', 'cache_name', 'cache_expiry', 'content_encoding', 'match_slash', 'hl7_version',
+            'json_path', 'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding'):
 
             channel_item[name] = msg.get(name)
 

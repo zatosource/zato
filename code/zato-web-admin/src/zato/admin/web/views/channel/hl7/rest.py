@@ -76,6 +76,7 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['connection'] = CONNECTION.CHANNEL
         initial_input_dict['transport'] = URL_TYPE.PLAIN_HTTP
         initial_input_dict['data_format'] = HL7.Const.Version.v2.id
+        initial_input_dict['data_encoding'] = 'utf-8'
 
 # ################################################################################################################################
 
