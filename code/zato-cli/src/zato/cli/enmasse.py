@@ -1445,7 +1445,7 @@ class Enmasse(ManageCommand):
     def load_input(self):
 
         # stdlib
-        import os
+        import os, sys
 
         _, _, ext = self.args.input.rpartition('.')
         codec_class = self.CODEC_BY_EXTENSION.get(ext.lower())
