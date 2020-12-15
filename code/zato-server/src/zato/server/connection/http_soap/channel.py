@@ -31,7 +31,7 @@ from past.builtins import basestring, unicode
 
 # Zato
 from zato.common.api import CHANNEL, DATA_FORMAT, JSON_RPC, HL7, HTTP_SOAP, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, \
-     URL_PARAMS_PRIORITY, URL_TYPE, ZATO_ERROR, ZATO_NONE, ZATO_OK
+     URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE, ZATO_OK
 from zato.common.exception import HTTP_RESPONSES
 from zato.common.hl7 import HL7Exception
 from zato.common.json_internal import dumps, loads

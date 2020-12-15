@@ -12,7 +12,6 @@ from traceback import format_exc
 
 # hl7apy
 from hl7apy.parser import parse_message as hl7apy_parse_message
-from hl7apy.exceptions import ParserError as HL7APYParserError
 
 # Zato
 from zato.common.api import HL7
