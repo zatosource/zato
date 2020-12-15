@@ -42,6 +42,9 @@ if 0:
     # Arrow
     from arrow import Arrow
 
+    # hl7apy
+    from hl7apy.core import Message as hl7apy_Message
+
     # Kombu
     from kombu.message import Message as KombuAMQPMessage
 
@@ -67,6 +70,7 @@ if 0:
     CySimpleIO = CySimpleIO
     EMailAPI = EMailAPI
     FTPStore = FTPStore
+    hl7apy_Message = hl7apy_Message
     KombuAMQPMessage = KombuAMQPMessage
     Logger = Logger
     PoolStore = PoolStore
@@ -171,12 +175,23 @@ WebSphereMQRequestData = IBMMQRequestData
 
 # ################################################################################################################################
 
+class HL7RequestData(object):
+    """ Details of an individual HL7 request.
+    """
+    __slots__ = 'data',
+
+    def __init__(self, data):
+        # type: (hl7apy_Message) -> None
+        self.data = data
+
+# ################################################################################################################################
+
 class Request(object):
     """ Wraps a service request and adds some useful meta-data.
     """
     __slots__ = ('logger', 'payload', 'raw_request', 'input', 'cid', 'data_format', 'transport',
         'encrypt_func', 'encrypt_secrets', 'bytes_to_str_encoding', '_wsgi_environ', 'channel_params',
-        'merge_channel_params', 'http', 'amqp', 'wmq', 'ibm_mq', 'enforce_string_encoding')
+        'merge_channel_params', 'http', 'amqp', 'wmq', 'ibm_mq', 'hl7', 'enforce_string_encoding')
 
     def __init__(self, logger, simple_io_config=None, data_format=None, transport=None):
         # type: (Logger, object, str, str)
@@ -193,6 +208,7 @@ class Request(object):
         self.merge_channel_params = True
         self.amqp = None # type: AMQPRequestData
         self.wmq = self.ibm_mq = None # type: IBMMQRequestData
+        self.hl7 = None # type: HL7RequestData
         self.encrypt_func = None
         self.encrypt_secrets = True
         self.bytes_to_str_encoding = None # type: str

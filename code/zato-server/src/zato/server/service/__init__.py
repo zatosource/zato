@@ -32,7 +32,7 @@ from zato.common.py23_ import maxint
 
 # Zato
 from zato.bunch import Bunch
-from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, PUBSUB, WEB_SOCKET, \
+from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, PUBSUB, WEB_SOCKET, \
      zato_no_op_marker
 from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL, SERVICE
 from zato.common.exception import Inactive, Reportable, ZatoException
@@ -51,8 +51,8 @@ from zato.server.pattern.fanout import FanOut
 from zato.server.pattern.invoke_retry import InvokeRetry
 from zato.server.pattern.parallel import ParallelExec
 from zato.server.pubsub import PubSub
-from zato.server.service.reqresp import AMQPRequestData, Cloud, Definition, IBMMQRequestData, InstantMessaging, Outgoing, \
-     Request
+from zato.server.service.reqresp import AMQPRequestData, Cloud, Definition, HL7RequestData, IBMMQRequestData, InstantMessaging, \
+     Outgoing, Request
 
 # Zato - Cython
 from zato.cy.reqresp.response import Response
@@ -631,7 +631,7 @@ class Service(object):
         # (though possibly with attributes), checking for 'not payload' alone won't suffice - this evaluates
         # to False so we'd be parsing the payload again superfluously.
         if not isinstance(payload, ObjectifiedElement) and not payload:
-            payload = payload_from_request(cid, raw_request, data_format, transport)
+            payload = payload_from_request(cid, raw_request, data_format, transport, kwargs.get('channel_item'))
 
         job_type = kwargs.get('job_type')
         channel_params = kwargs.get('channel_params', {})
@@ -1166,8 +1166,9 @@ class Service(object):
              wmq_ctx=None,          # type: object
              channel_info=None,     # type: ChannelInfo
              _wsgi_channels=_wsgi_channels, # type: object
-             _AMQP=CHANNEL.AMQP,       # type: str
-             _WMQ=CHANNEL.WEBSPHERE_MQ # type: str
+             _AMQP=CHANNEL.AMQP,        # type: str
+             _WMQ=CHANNEL.WEBSPHERE_MQ, # type: str
+             _HL7v2=HL7.Const.Version.v2.id,
              ):
         """ Takes a service instance and updates it with the current request's context data.
         """
@@ -1177,8 +1178,6 @@ class Service(object):
         service.request.payload = payload
         service.request.raw_request = raw_request
         service.transport = transport
-        #service.request.simple_io_config = simple_io_config
-        #service.response.simple_io_config = simple_io_config
         service.data_format = data_format
         service.wsgi_environ = wsgi_environ or {}
         service.job_type = job_type
@@ -1191,7 +1190,6 @@ class Service(object):
             service.request.channel_params.update(channel_params)
 
         service.request.merge_channel_params = merge_channel_params
-        #service.request.params_priority = params_priority
         service.in_reply_to = in_reply_to
         service.environ = environ or {}
 
@@ -1200,8 +1198,12 @@ class Service(object):
 
         if channel_type == _AMQP:
             service.request.amqp = AMQPRequestData(channel_item['amqp_msg'])
+
         elif channel_type == _WMQ:
             service.request.wmq = service.request.ibm_mq = IBMMQRequestData(wmq_ctx)
+
+        elif data_format == _HL7v2:
+            service.request.hl7 = HL7RequestData(payload)
 
         service.channel = service.chan = channel_info or ChannelInfo(
             channel_item.get('id'), channel_item.get('name'), channel_type,

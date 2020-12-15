@@ -58,9 +58,14 @@ class Generic(WorkerImpl):
             conn_name = conn_dict['name']
             del conn_value[conn_name]
 
+            # Run a special path for file transfer channels
+            if msg['type_'] == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER:
+                self._delete_file_transfer_channel(msg)
+                return
+
 # ################################################################################################################################
 
-    def _create_generic_connection(self, msg, needs_roundtrip=False, skip=None, raise_exc=True):
+    def _create_generic_connection(self, msg, needs_roundtrip=False, skip=None, raise_exc=True, is_starting=False):
 
         # This roundtrip is needed to re-format msg in the format the underlying .from_bunch expects
         # in case this is a broker message rather than a startup one.
@@ -88,6 +93,12 @@ class Generic(WorkerImpl):
         config_attr[msg.name] = item_dict
         config_attr[msg.name].conn = wrapper(item_dict, self.server)
         config_attr[msg.name].conn.build_wrapper()
+
+        if not is_starting:
+
+            # Run a special path for file transfer channels
+            if msg['type_'] == COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER:
+                self._create_file_transfer_channel(msg)
 
 # ################################################################################################################################
 

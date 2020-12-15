@@ -109,6 +109,15 @@ class FileTransfer(WorkerImpl):
 
 # ################################################################################################################################
 
+    def _create_file_transfer_channel(self, msg):
+
+        # Our caller in generic.py has already created the channel object
+        # so we only need to associate ourselves with a scheduler's job, if any.
+        if msg.scheduler_job_id:
+            self._file_transfer_modify_scheduler_job(None, msg.scheduler_job_id, msg.id, True)
+
+# ################################################################################################################################
+
     def _edit_file_transfer_channel(self, msg):
         # type: (Bunch) -> None
 
