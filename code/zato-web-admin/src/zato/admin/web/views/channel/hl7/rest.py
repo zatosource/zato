@@ -75,6 +75,8 @@ class _CreateEdit(CreateEdit):
     def populate_initial_input_dict(self, initial_input_dict):
         initial_input_dict['connection'] = CONNECTION.CHANNEL
         initial_input_dict['transport'] = URL_TYPE.PLAIN_HTTP
+        initial_input_dict['should_validate'] = True
+        initial_input_dict['should_parse_on_input'] = True
         initial_input_dict['data_format'] = HL7.Const.Version.v2.id
         initial_input_dict['data_encoding'] = 'utf-8'
 
