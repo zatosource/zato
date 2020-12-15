@@ -164,14 +164,23 @@
                         <li>
                             <span class="like-a">Channels &rarr;</span>
                             <ul>
-                                <li class='wide'><a href="{% url "channel-amqp" %}?cluster={{ cluster_id|default:'' }}">AMQP</a></li>
-                                <li class='wide'><a href="{% url "channel-file-transfer" %}?cluster={{ cluster_id|default:'' }}&amp;type_=channel-file-transfer">File transfer</a></li>
-                                <li class='wide'><a href="{% url "channel-jms-wmq" %}?cluster={{ cluster_id|default:'' }}">IBM MQ</a></li>
-                                <li class='wide'><a href="{% url "channel-json-rpc" %}?cluster={{ cluster_id|default:'' }}">JSON-RPC</a></li>
-                                <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=channel&amp;transport=plain_http">REST</a></li>
-                                <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=channel&amp;transport=soap">SOAP</a></li>
-                                <li class='wide'><a href="{% url "channel-web-socket" %}?cluster={{ cluster_id|default:'' }}">WebSockets</a></li>
-                                <li class='wide'><a href="{% url "channel-zmq" %}?cluster={{ cluster_id|default:'' }}">ZeroMQ</a></li>
+                                <li><a href="{% url "channel-amqp" %}?cluster={{ cluster_id|default:'' }}">AMQP</a></li>
+                                <li><a href="{% url "channel-file-transfer" %}?cluster={{ cluster_id|default:'' }}&amp;type_=channel-file-transfer">File transfer</a></li>
+
+                                <li>
+                                    <span class="like-a">HL7 &rarr;</span>
+                                    <ul>
+                                        <li><a href="{% url "channel-hl7-rest" %}?cluster={{ cluster_id|default:'' }}">MLLP</a></li>
+                                        <li><a href="{% url "channel-hl7-rest" %}?cluster={{ cluster_id|default:'' }}">REST</a></li>
+                                    </ul>
+                                </li>
+
+                                <li><a href="{% url "channel-jms-wmq" %}?cluster={{ cluster_id|default:'' }}">IBM MQ</a></li>
+                                <li><a href="{% url "channel-json-rpc" %}?cluster={{ cluster_id|default:'' }}">JSON-RPC</a></li>
+                                <li><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=channel&amp;transport=plain_http">REST</a></li>
+                                <li><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=channel&amp;transport=soap">SOAP</a></li>
+                                <li><a href="{% url "channel-web-socket" %}?cluster={{ cluster_id|default:'' }}">WebSockets</a></li>
+                                <li><a href="{% url "channel-zmq" %}?cluster={{ cluster_id|default:'' }}">ZeroMQ</a></li>
                             </ul>
                         </li>
                         <li>
@@ -217,6 +226,7 @@
                                 </li>
                                 <li><a href="{% url "notif-sql" %}?cluster={{ cluster_id|default:'' }}">SQL</a></li>
                             </ul>
+                        </li>
                         <li>
                             <span class="like-a">Queries &rarr;</span>
                             <ul>

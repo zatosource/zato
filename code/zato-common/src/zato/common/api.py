@@ -293,6 +293,9 @@ class NameId:
         self.name = name
         self.id = id or name
 
+    def __repr__(self):
+        return '<{} at {}; name={}; id={}>'.format(self.__class__.__name__, hex(id(self)), self.name, self.id)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -322,35 +325,19 @@ class Attrs(type):
 # ################################################################################################################################
 
 class DATA_FORMAT(Attrs):
-    DICT = 'dict'
-    XML = 'xml'
-    JSON = 'json'
     CSV = 'csv'
+    DICT = 'dict'
+    HL7  = 'hl7'
+    JSON = 'json'
     POST = 'post'
     SOAP = 'soap'
+    XML = 'xml'
 
     def __iter__(self):
-        # Note that DICT and other attributes aren't included because they're never exposed to external world as-is,
+        # Note that DICT and other attributes aren't included because they're never exposed to the external world as-is,
         # they may at most only used so that services can invoke each other directly
-        return iter((self.XML, self.JSON, self.CSV, self.POST))
+        return iter((self.XML, self.JSON, self.CSV, self.POST, self.HL7))
 
-# ################################################################################################################################
-# ################################################################################################################################
-
-# TODO: SIMPLE_IO.FORMAT should be done away with in favour of plain DATA_FORMAT
-class SIMPLE_IO:
-
-    class FORMAT(Attrs):
-        JSON = DATA_FORMAT.JSON
-        XML = DATA_FORMAT.XML
-
-    COMMON_FORMAT = OrderedDict()
-    COMMON_FORMAT[DATA_FORMAT.JSON] = 'JSON'
-    COMMON_FORMAT[DATA_FORMAT.XML] = 'XML'
-
-    HTTP_SOAP_FORMAT = OrderedDict()
-    HTTP_SOAP_FORMAT[DATA_FORMAT.JSON] = 'JSON'
-    HTTP_SOAP_FORMAT[DATA_FORMAT.XML] = 'XML'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1439,6 +1426,44 @@ class FILE_TRANSFER:
     class SOURCE_TYPE_IMPL:
         LOCAL_INOTIFY  = 'local-inotify'
         LOCAL_SNAPSHOT = 'local-snapshot'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class HL7:
+    class Const:
+        """ Various HL7-related constants.
+        """
+        class Version:
+
+            # A generic v2 message, without an indication of a specific release.
+            v2 = NameId('HL7 v2', 'hl7-v2')
+
+            def __iter__(self):
+                return iter((self.v2,))
+
+        class ImplClass:
+            hl7apy = 'hl7apy'
+            zato   = 'Zato'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# TODO: SIMPLE_IO.FORMAT should be removed with in favour of plain DATA_FORMAT
+class SIMPLE_IO:
+
+    class FORMAT(Attrs):
+        JSON = DATA_FORMAT.JSON
+        XML = DATA_FORMAT.XML
+
+    COMMON_FORMAT = OrderedDict()
+    COMMON_FORMAT[DATA_FORMAT.JSON] = 'JSON'
+    COMMON_FORMAT[DATA_FORMAT.XML] = 'XML'
+
+    HTTP_SOAP_FORMAT = OrderedDict()
+    HTTP_SOAP_FORMAT[DATA_FORMAT.JSON] = 'JSON'
+    HTTP_SOAP_FORMAT[DATA_FORMAT.XML] = 'XML'
+    HTTP_SOAP_FORMAT[HL7.Const.Version.v2.id] = HL7.Const.Version.v2.name
 
 # ################################################################################################################################
 # ################################################################################################################################
