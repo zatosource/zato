@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -22,6 +22,7 @@ from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
 from zato.admin.web.views.cache import memcached_ as cache_memcached
 from zato.admin.web.views.channel import amqp_ as channel_amqp
 from zato.admin.web.views.channel import file_transfer as channel_file_transfer
+from zato.admin.web.views.channel.hl7 import rest as channel_hl7_rest
 from zato.admin.web.views.channel import jms_wmq as channel_jms_wmq
 from zato.admin.web.views.channel import json_rpc as channel_json_rpc
 from zato.admin.web.views.channel import web_socket as channel_web_socket
@@ -909,6 +910,36 @@ urlpatterns += [
     url(r'^zato/channel/file-transfer/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_file_transfer.Delete()), name=channel_file_transfer.Delete.url_name),
     ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. HL7 - MLLP
+    url(r'^zato/channel/hl7/mllp/$',
+        login_required(channel_hl7_rest.Index()), name=channel_hl7_rest.Index.url_name),
+    url(r'^zato/channel/hl7/mllp/create/$',
+        login_required(channel_hl7_rest.Create()), name=channel_hl7_rest.Create.url_name),
+    url(r'^zato/channel/hl7/mllp/edit/$',
+        login_required(channel_hl7_rest.Edit()), name=channel_hl7_rest.Edit.url_name),
+    url(r'^zato/channel/hl7/mllp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(channel_hl7_rest.Delete()), name=channel_hl7_rest.Delete.url_name),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+# .. HL7 - REST
+url(r'^zato/channel/hl7/rest/$',
+    login_required(channel_hl7_rest.Index()), name=channel_hl7_rest.Index.url_name),
+url(r'^zato/channel/hl7/rest/create/$',
+    login_required(channel_hl7_rest.Create()), name=channel_hl7_rest.Create.url_name),
+url(r'^zato/channel/hl7/rest/edit/$',
+    login_required(channel_hl7_rest.Edit()), name=channel_hl7_rest.Edit.url_name),
+url(r'^zato/channel/hl7/rest/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+    login_required(channel_hl7_rest.Delete()), name=channel_hl7_rest.Delete.url_name),
+]
 
 # ################################################################################################################################
 

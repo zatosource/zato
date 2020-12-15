@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -103,7 +103,7 @@ if PY3:
     from functools import cmp_to_key
 
 # Zato
-from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, \
+from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, HL7, KVDB, MISC, \
      SECRET_SHADOW, SIMPLE_IO, TLS, TRACE1, zato_no_op_marker, ZATO_NOT_GIVEN, ZMQ
 from zato.common.broker_message import SERVICE
 from zato.common.const import SECRETS
@@ -116,6 +116,7 @@ from zato.common.util.eval_ import as_bool, as_list
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.logging_ import ColorFormatter
 from zato.common.xml_ import soap_body_path, soap_body_xpath
+from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_request
 
 # ################################################################################################################################
 
@@ -142,6 +143,13 @@ ColorFormatter = ColorFormatter
 
 asbool = as_bool
 aslist = as_list
+
+# ################################################################################################################################
+
+_data_format_json      = DATA_FORMAT.JSON
+_data_format_json_like = DATA_FORMAT.JSON, DATA_FORMAT.DICT
+_data_format_xml       = DATA_FORMAT.XML
+_data_format_hl7_v2    = HL7.Const.Version.v2.id
 
 # ################################################################################################################################
 
@@ -314,11 +322,9 @@ def tech_account_password(password_clear, salt):
 # ################################################################################################################################
 
 def new_cid(bytes=12, _random=random.getrandbits):
-    """ Returns a new 96-bit correlation identifier. It's *not* safe to use the ID
-    for any cryptographical purposes, it's only meant to be used as a conveniently
+    """ Returns a new 96-bit correlation identifier. It is *not* safe to use the ID
+    for any cryptographical purposes; it is only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.
-    Changed in 2.0: The number is now 28 characters long not 40, like in previous versions.
-    Changed in 3.0: The number is now 96 bits rather than 128, 24 characters, with no constant prefix.
     """
 
     # Note that we need to convert bytes to bits here.
@@ -438,11 +444,31 @@ def get_body_payload(body):
 
 # ################################################################################################################################
 
-def payload_from_request(cid, request, data_format, transport):
+def payload_from_request(cid, request, data_format, transport, channel_item=None):
     """ Converts a raw request to a payload suitable for usage with SimpleIO.
     """
     if request is not None:
-        if data_format == DATA_FORMAT.XML:
+
+        #
+        # JSON and dicts
+        #
+        if data_format in _data_format_json_like:
+            if not request:
+                return ''
+            if isinstance(request, basestring) and data_format == _data_format_json:
+                try:
+                    request = request.decode('utf8') if isinstance(request, bytes) else request
+                    payload = loads(request)
+                except ValueError:
+                    logger.warn('Could not parse request as JSON:`%s`, e:`%s`', request, format_exc())
+                    raise
+            else:
+                payload = request
+
+        #
+        # XML
+        #
+        elif data_format == _data_format_xml:
             if transport == 'soap':
                 if isinstance(request, objectify.ObjectifiedElement):
                     soap = request
@@ -459,18 +485,24 @@ def payload_from_request(cid, request, data_format, transport):
                     payload = objectify.fromstring('<empty/>')
                 else:
                     payload = objectify.fromstring(request)
-        elif data_format in(DATA_FORMAT.DICT, DATA_FORMAT.JSON):
-            if not request:
-                return ''
-            if isinstance(request, basestring) and data_format == DATA_FORMAT.JSON:
-                try:
-                    request = request.decode('utf8') if isinstance(request, bytes) else request
-                    payload = loads(request)
-                except ValueError:
-                    logger.warn('Could not parse request as JSON:`{}`, e:`{}`'.format(request, format_exc()))
-                    raise
-            else:
-                payload = request
+
+        #
+        # HL7 v2
+        #
+        elif data_format == _data_format_hl7_v2:
+
+            payload = hl7_get_payload_from_request(
+                request,
+                channel_item.data_encoding,
+                channel_item.hl7_version,
+                channel_item.json_path,
+                channel_item.should_parse_on_input,
+                channel_item.should_validate
+            )
+
+        #
+        # Other data formats
+        #
         else:
             payload = request
     else:
