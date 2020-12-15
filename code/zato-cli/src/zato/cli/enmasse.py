@@ -1024,6 +1024,10 @@ class ObjectManager(object):
 # ################################################################################################################################
 
     def _refresh_services(self):
+
+        # Bunch
+        from bunch import Bunch
+
         response = self.client.invoke('zato.service.get-list', {
             'cluster_id': self.client.cluster_id,
             'name_filter': '*'
@@ -1150,6 +1154,9 @@ class ObjectManager(object):
 
     def get_objects_by_type(self, item_type):
 
+        # Bunch
+        from bunch import Bunch
+
         # Zato
         from zato.common.const import SECRETS
 
@@ -1202,6 +1209,9 @@ class ObjectManager(object):
 # ################################################################################################################################
 
     def _refresh_objects(self):
+
+        # Bunch
+        from bunch import Bunch
 
         # Python 2/3 compatibility
         from future.utils import iteritems
@@ -1327,6 +1337,10 @@ class InputParser(object):
 # ################################################################################################################################
 
     def parse_def_sec(self, item, results):
+
+        # Bunch
+        from bunch import Bunch
+
         # While reading old enmasse files, expand def_sec entries out to their original service type.
         sec_type = item.pop('type', None)
         if sec_type is None:
@@ -1340,8 +1354,7 @@ class InputParser(object):
         if sec_type not in service_names:
             raw = (sec_type, service_names, item)
             results.add_error(raw, ERROR_INVALID_SEC_DEF_TYPE,
-                              "Invalid type '{}', must be one of '{}' (def_sec)",
-                              sec_type, service_names)
+                "Invalid type '{}', must be one of '{}' (def_sec)", sec_type, service_names)
             return
 
         self.json.setdefault(sec_type, []).append(Bunch(item))
@@ -1349,6 +1362,10 @@ class InputParser(object):
 # ################################################################################################################################
 
     def parse_item(self, item_type, item, results):
+
+        # Bunch
+        from bunch import Bunch
+
         if self.is_include(item):
             self.load_include(item_type, item, results)
         elif item_type == 'def_sec':
@@ -1428,7 +1445,7 @@ class Enmasse(ManageCommand):
     def load_input(self):
 
         # stdlib
-        import os
+        import os, sys
 
         _, _, ext = self.args.input.rpartition('.')
         codec_class = self.CODEC_BY_EXTENSION.get(ext.lower())
@@ -1453,6 +1470,9 @@ class Enmasse(ManageCommand):
         # stdlib
         import os
         from time import sleep
+
+        # Bunch
+        from bunch import Bunch
 
         # Zato
         from zato.cli.check_config import CheckConfig
