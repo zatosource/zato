@@ -24,6 +24,7 @@ class CreateForm(DataFormatForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     should_parse_on_input = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     should_validate = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    should_return_errors = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     hl7_version = forms.ChoiceField(widget=forms.Select())
     data_encoding = forms.CharField(widget=forms.TextInput(attrs={'style':'width:30%'}))
     json_path = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
