@@ -170,7 +170,7 @@
                                 <li>
                                     <span class="like-a">HL7 &rarr;</span>
                                     <ul>
-                                        <li><a href="{% url "channel-hl7-rest" %}?cluster={{ cluster_id|default:'' }}">MLLP</a></li>
+                                        <li><a href="{% url "channel-hl7-mllp" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-hl7-mllp">MLLP</a></li>
                                         <li><a href="{% url "channel-hl7-rest" %}?cluster={{ cluster_id|default:'' }}">REST</a></li>
                                     </ul>
                                 </li>
