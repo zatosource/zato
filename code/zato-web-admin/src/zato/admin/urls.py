@@ -22,6 +22,7 @@ from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
 from zato.admin.web.views.cache import memcached_ as cache_memcached
 from zato.admin.web.views.channel import amqp_ as channel_amqp
 from zato.admin.web.views.channel import file_transfer as channel_file_transfer
+from zato.admin.web.views.channel.hl7 import mllp as channel_hl7_mllp
 from zato.admin.web.views.channel.hl7 import rest as channel_hl7_rest
 from zato.admin.web.views.channel import jms_wmq as channel_jms_wmq
 from zato.admin.web.views.channel import json_rpc as channel_json_rpc
@@ -917,13 +918,13 @@ urlpatterns += [
 
     # .. HL7 - MLLP
     url(r'^zato/channel/hl7/mllp/$',
-        login_required(channel_hl7_rest.Index()), name=channel_hl7_rest.Index.url_name),
+        login_required(channel_hl7_mllp.Index()), name=channel_hl7_mllp.Index.url_name),
     url(r'^zato/channel/hl7/mllp/create/$',
-        login_required(channel_hl7_rest.Create()), name=channel_hl7_rest.Create.url_name),
+        login_required(channel_hl7_mllp.Create()), name=channel_hl7_mllp.Create.url_name),
     url(r'^zato/channel/hl7/mllp/edit/$',
-        login_required(channel_hl7_rest.Edit()), name=channel_hl7_rest.Edit.url_name),
+        login_required(channel_hl7_mllp.Edit()), name=channel_hl7_mllp.Edit.url_name),
     url(r'^zato/channel/hl7/mllp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(channel_hl7_rest.Delete()), name=channel_hl7_rest.Delete.url_name),
+        login_required(channel_hl7_mllp.Delete()), name=channel_hl7_mllp.Delete.url_name),
     ]
 
 # ################################################################################################################################
