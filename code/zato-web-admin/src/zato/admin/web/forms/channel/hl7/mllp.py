@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_security_select, add_select, add_services
+from zato.admin.web.forms import add_select, add_services
 from zato.common.api import HL7
 
 # ################################################################################################################################
@@ -26,15 +26,11 @@ class CreateForm(forms.Form):
     should_return_errors = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     hl7_version = forms.ChoiceField(widget=forms.Select())
     data_encoding = forms.CharField(widget=forms.TextInput(attrs={'style':'width:30%'}))
-    json_path = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    url_path = forms.CharField(initial='/', widget=forms.TextInput(attrs={'style':'width:100%'}))
+    tcp_port = forms.CharField(initial=HL7.Default.mllp_tcp_port, widget=forms.TextInput(attrs={'style':'width:13%'}))
     service = forms.ChoiceField(widget=forms.Select(attrs={'class':'required', 'style':'width:100%'}))
-    security_id = forms.ChoiceField(widget=forms.Select())
 
-    def __init__(self, security_list=[], prefix=None, post_data=None, req=None):
+    def __init__(self, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
-
-        add_security_select(self, security_list, field_name='security_id', needs_rbac=False)
         add_select(self, 'hl7_version', HL7.Const.Version(), needs_initial_select=False)
         add_services(self, req)
 
