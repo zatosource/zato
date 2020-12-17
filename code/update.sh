@@ -9,4 +9,6 @@ source ./_common.sh
 echo "*** Downloading updates ***"
 git -C $CURDIR pull
 
-pip_install
+pip_install $CURDIR
+
+apply_patches $CURDIR
