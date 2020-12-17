@@ -12,7 +12,7 @@ then
     exit 1
 fi
 
-source _common.sh
+source ./_common.sh
 
 PY_BINARY=$1
 # Stamp the release hash.
