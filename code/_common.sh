@@ -34,11 +34,8 @@ function pip_install() {
     # Path to code/ can be specified
     localpath="${1:-.}"
 
-    echo "$localpath"
-    exit 1
-
     echo "*** Installing updates ***"
-    current_path
+
     $localpath/bin/pip install \
         --no-warn-script-location   \
         -r requirements.txt
