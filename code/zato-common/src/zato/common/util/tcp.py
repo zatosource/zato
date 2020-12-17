@@ -15,6 +15,10 @@ from datetime import datetime, timedelta
 from logging import getLogger
 from time import sleep
 
+# gevent
+from gevent import socket
+from gevent.server import StreamServer
+
 # ################################################################################################################################
 
 logger = getLogger('zato')
@@ -122,4 +126,46 @@ def wait_until_port_free(port, timeout=2, interval=0.1):
     """
     return _wait_for_port(port, timeout, interval, False)
 
+# ################################################################################################################################
+
+def get_fqdn_by_ip(ip_address, default, log_msg_prefix):
+    # type: (str, str) -> str
+    try:
+        host = socket.gethostbyaddr(ip_address)[0]
+        return socket.getfqdn(host)
+    except Exception:
+        logger.warn('%s exception in FQDN lookup `%s`', log_msg_prefix, format_exc())
+        return '(unknown-{}-fqdn)'.format(default)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ZatoStreamServer(StreamServer):
+
+    # These two methods are reimplemented from gevent.server to make it possible to use SO_REUSEPORT.
+
+    @classmethod
+    def get_listener(self, address, backlog=None, family=None):
+        if backlog is None:
+            backlog = self.backlog
+        return ZatoStreamServer._make_socket(address, backlog=backlog, reuse_addr=self.reuse_addr, family=family)
+
+    @staticmethod
+    def _make_socket(address, backlog=50, reuse_addr=None, family=socket.AF_INET):
+        sock = socket.socket(family=family)
+        if reuse_addr is not None:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, reuse_addr)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        try:
+            sock.bind(address)
+        except socket.error as e:
+            strerror = getattr(e, 'strerror', None)
+            if strerror is not None:
+                e.strerror = strerror + ': ' + repr(address)
+            raise
+        sock.listen(backlog)
+        sock.setblocking(0)
+        return sock
+
+# ################################################################################################################################
 # ################################################################################################################################
