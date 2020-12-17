@@ -23,9 +23,9 @@ function apply_patches() {
     #
     if [[ -e "$localpath/eggs64" && "$(type -p zypper)" ]]
     then
-        patch --forward -p0 -d $localpath/eggs64 < $localpath/patches/sqlalchemy/sql/crud.py.diff
+        patch --forward -p0 -d $localpath/eggs64 < $localpath/patches/sqlalchemy/sql/crud.py.diff || true
     else
-        patch --forward -p0 -d $localpath/eggs < $localpath/patches/sqlalchemy/sql/crud.py.diff
+        patch --forward -p0 -d $localpath/eggs < $localpath/patches/sqlalchemy/sql/crud.py.diff || true
     fi
 }
 
