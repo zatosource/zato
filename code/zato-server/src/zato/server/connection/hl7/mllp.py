@@ -7,11 +7,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 from logging import getLogger
+from socket import timeout as SocketTimeoutException
 from traceback import format_exc
 
 # gevent
-from gevent import sleep, socket
+from gevent import sleep, socket, Timeout
 
 # hl7apy
 from hl7apy.mllp import AbstractHandler as hl7apy_AbstractHandler, MLLPServer as hl7apy_MLLPServer
@@ -28,6 +30,10 @@ if 0:
     socket = socket
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 # ################################################################################################################################
 
 logger = getLogger('zato')
@@ -124,12 +130,18 @@ class HL7MLLPServer:
         self.keep_running = True
         self.impl = None # type: ZatoStreamServer
         self.max_msg_size = 1_000_000 # In bytes
-        self.read_buffer_size = 2048
+        self.read_buffer_size = 20#48
 
 # ################################################################################################################################
 
     def start(self):
+
+        logger.info('IMPL #1')
+
         self.impl = ZatoStreamServer(self.address, self.handle)
+
+        logger.info('IMPL #2')
+
         self.impl.serve_forever()
 
 # ################################################################################################################################
@@ -140,13 +152,7 @@ class HL7MLLPServer:
         # Wraps all the metadata about the connection
         conn_ctx = ConnCtx(self.name, socket, peer_address)
 
-        logger.warn('New HL7 MLLP connection; %s', conn_ctx.get_conn_pretty_info())
-
-        # To make fewer namespace lookups
-        _read_buffer_size = self.read_buffer_size
-        _max_msg_size = self.max_msg_size
-        _socket_recv = conn_ctx.socket.recv
-        _socket_settimeout = conn_ctx.socket.settimeout
+        logger.info('New HL7 MLLP connection; %s', conn_ctx.get_conn_pretty_info())
 
         # Current message whose contents we are accumulating
         _buffer = []
@@ -154,70 +160,138 @@ class HL7MLLPServer:
         # Details of the current message
         msg_ctx = MsgCtx()
 
+        # Indicates whether the last .recv call indicated that the remote end disconnected,
+        # and if so, this tells us to enter a short sleep period.
+        has_timeout = False
+
+        # To make fewer namespace lookups
+        _sleep = sleep
+        _max_msg_size = self.max_msg_size
+
+        _run_callback = self._run_callback
+        _read_buffer_size = self.read_buffer_size
+        _check_header = self._check_header
+        _check_footer = self._check_footer
+        _close_connection = self._close_connection
+        _msg_ctx_reset = msg_ctx.reset
+        _buffer_append = _buffer.append
+        _buffer_join_func = b''.join
+
+        _socket_recv = conn_ctx.socket.recv
+        _socket_send = conn_ctx.socket.send
+        _socket_settimeout = conn_ctx.socket.settimeout
+
         # Run the main loop
         while self.keep_running:
+
+            # In each iteration, assume that no data was received
+            data = None
 
             # Check whether reading the data would not exceed our message size limit
             new_size = msg_ctx.msg_size + _read_buffer_size
             if new_size > _max_msg_size:
                 reason = 'message would exceed max. size allowed `{}` > `{}`'.format(new_size, _max_msg_size)
-                self._close_connection(conn_ctx, reason)
+                _close_connection(conn_ctx, reason)
                 return
 
             # Receive data from the other end
-            _socket_settimeout(2)
-            data = _socket_recv(self.read_buffer_size)
+            _socket_settimeout(0.1)
 
-            # If we are here, it means that the recv call succeeded so we can increase the message size
-            # by how many bytes were actually read from the socket.
-            msg_ctx.msg_size = len(data)
+            # Try to receive some data from the socket ..
+            try:
 
-            # The first byte may be a header and we need to check whether we require it or not at this stage of parsing.
-            # This method will close the connection if anything to do with header parsing is invalid.
-            if not self._check_header(conn_ctx, msg_ctx, data):
-                return
+                # .. read data in ..
+                data = _socket_recv(_read_buffer_size)
 
-            # This is a valid message so we can append data to our current buffer
-            _buffer.append(data)
+                # if data was received, it means that there was no timeout ..
+                if data:
+                    has_timeout = False
 
-            # Now, check if we already have received the whole message, as indicated by the presence of its footer.
-            # Note that at this point we already know that the header was correct.
-            if not self._check_footer(conn_ctx, msg_ctx, data, _buffer):
-                return
+                # .. otherwise, since we did not time out but there is not data,
+                # it means that the remote end disconnected.
+                else:
+                    reason = 'remote end disconnected; `{}` '.format(data)
+                    _close_connection(conn_ctx, reason)
+                    return
 
-            # If we have a footer, this means that the message is complete and our callback can process it
-            if msg_ctx.meta['has_footer']:
-
-                # Produce the message to invoke the callback with ..
-                _buffer_data = b''.join(_buffer)
-
-                # .. remove the header and footer ..
-                _buffer_data = _buffer_data[1:-2]
-
-                # .. asign the actual business data to message ..
-                msg_ctx.data = _buffer_data
-
-                # .. invoke the callback ..
-                self._run_callback(msg_ctx)
-
-                # .. and reset the message to make it possible to handle a new one.
-                msg_ctx.reset()
+            # .. catch timeouts here but no other exception type ..
+            except SocketTimeoutException as e:
+                has_timeout = True
 
             else:
-                aaa
+                # Receiving an empty string means that the client disconnected
+                # in which case we close the connection too.
+                needs_sleep = False
+
+            #
+            # If a timeout occurred, it means that we have potentially received the whole message already.
+            #
+            if has_timeout:
+
+                # Confirm if we already have received the whole message, as indicated by the presence of its footer.
+                # Note that at this point we still do not know if the header was received so we must check it too.
+                if msg_ctx.meta['has_header']:
+                    if not _check_footer(conn_ctx, msg_ctx, data, _buffer):
+                        return
+
+                    # If we have a footer, this means that the message is complete and our callback can process it
+                    if msg_ctx.meta['has_footer']:
+
+                        self._handle_complete_message(_buffer, _buffer_join_func, msg_ctx, _msg_ctx_reset,
+                            _socket_send, _run_callback)
+
+            #
+            # No timeout and some data was received means that we are still receiving the message from the socket.
+            #
+            else:
+
+                # If we are here, it means that the recv call succeeded so we can increase the message size
+                # by how many bytes were actually read from the socket.
+                msg_ctx.msg_size += len(data)
+
+                # The first byte may be a header and we need to check whether we require it or not at this stage of parsing.
+                # This method will close the connection if anything to do with header parsing is invalid.
+                if not _check_header(conn_ctx, msg_ctx, data):
+                    return
+
+                # This is a valid message so we can append data to our current buffer
+                _buffer_append(data)
+
+# ################################################################################################################################
+
+    def _handle_complete_message(self, _buffer, _buffer_join_func, msg_ctx, _msg_ctx_reset, _socket_send, _run_callback):
+
+        # Produce the message to invoke the callback with ..
+        _buffer_data = _buffer_join_func(_buffer)
+
+        # .. remove the header and footer ..
+        _buffer_data = _buffer_data[1:-2]
+
+        # .. asign the actual business data to message ..
+        msg_ctx.data = _buffer_data
+
+        # .. invoke the callback ..
+        response = _run_callback(msg_ctx)
+
+        # .. write the response back ..
+        _socket_send(response)
+
+        # .. and reset the message to make it possible to handle a new one.
+        _msg_ctx_reset()
 
 # ################################################################################################################################
 
     def _run_callback(self, msg_ctx):
         # type: MsgCtx -> None
-        logger.warn('Handling new message `%r`', msg_ctx.to_dict())
-        bbb
+        logger.info('Handling new message `%r`', msg_ctx.to_dict())
+
+        return b'BBB'
 
 # ################################################################################################################################
 
     def _close_connection(self, conn_ctx, reason):
         # type: str -> None
-        logger.warn('Closing connection %s; %s', conn_ctx.get_conn_pretty_info(), reason)
+        logger.info('Closing connection %s; %s', conn_ctx.get_conn_pretty_info(), reason)
         conn_ctx.socket.close()
 
 # ################################################################################################################################
@@ -287,7 +361,7 @@ def main():
 
     def on_message(msg):
         # type: (str)
-        logger.warn('MSG RECEIVED %s', msg)
+        logger.info('MSG RECEIVED %s', msg)
 
     server = HL7MLLPServer(address, name)
     server.start()
