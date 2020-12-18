@@ -8,24 +8,24 @@ function apply_patches() {
     localpath="${1:-.}"
 
     # Apply patches.
-    patch -p0 -d $localpath/eggs < $localpath/patches/butler/__init__.py.diff
-    patch -p0 -d $localpath/eggs < $localpath/patches/configobj.py.diff
-    patch -p0 -d $localpath/eggs < $localpath/patches/django/db/models/base.py.diff
-    patch -p0 --binary -d $localpath/eggs < $localpath/patches/ntlm/HTTPNtlmAuthHandler.py.diff
-    patch -p0 -d $localpath/eggs < $localpath/patches/pykafka/topic.py.diff
-    patch -p0 -d $localpath/eggs < $localpath/patches/redis/redis/connection.py.diff
-    patch -p0 -d $localpath/eggs < $localpath/patches/requests/models.py.diff
-    patch -p0 -d $localpath/eggs < $localpath/patches/requests/sessions.py.diff
-    patch -p0 -d $localpath/eggs < $localpath/patches/ws4py/server/geventserver.py.diff
+    patch --forward -p0 -d $localpath/eggs < $localpath/patches/butler/__init__.py.diff
+    patch --forward -p0 -d $localpath/eggs < $localpath/patches/configobj.py.diff
+    patch --forward -p0 -d $localpath/eggs < $localpath/patches/django/db/models/base.py.diff
+    patch --forward -p0 --binary -d $localpath/eggs < $localpath/patches/ntlm/HTTPNtlmAuthHandler.py.diff
+    patch --forward -p0 -d $localpath/eggs < $localpath/patches/pykafka/topic.py.diff
+    patch --forward -p0 -d $localpath/eggs < $localpath/patches/redis/redis/connection.py.diff
+    patch --forward -p0 -d $localpath/eggs < $localpath/patches/requests/models.py.diff
+    patch --forward -p0 -d $localpath/eggs < $localpath/patches/requests/sessions.py.diff
+    patch --forward -p0 -d $localpath/eggs < $localpath/patches/ws4py/server/geventserver.py.diff
 
     #
     # On SUSE, SQLAlchemy installs to lib64 instead of lib.
     #
     if [[ -e "$localpath/eggs64" && "$(type -p zypper)" ]]
     then
-        patch -p0 -d $localpath/eggs64 < $localpath/patches/sqlalchemy/sql/crud.py.diff
+        patch --forward -p0 -d $localpath/eggs64 < $localpath/patches/sqlalchemy/sql/crud.py.diff || true
     else
-        patch -p0 -d $localpath/eggs < $localpath/patches/sqlalchemy/sql/crud.py.diff
+        patch --forward -p0 -d $localpath/eggs < $localpath/patches/sqlalchemy/sql/crud.py.diff || true
     fi
 }
 
