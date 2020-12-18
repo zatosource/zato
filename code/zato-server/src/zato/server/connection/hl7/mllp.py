@@ -26,19 +26,16 @@ from zato.common.util.tcp import get_fqdn_by_ip, ZatoStreamServer
 # ################################################################################################################################
 
 if 0:
+    from bunch import Bunch
     from gevent._socket3 import socket
 
+    Bunch = Bunch
     socket = socket
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-# ################################################################################################################################
-
-logger = getLogger('zato')
-logger_hl7 = getLogger('zato_hl7')
 
 # ################################################################################################################################
 
@@ -55,6 +52,19 @@ class _MsgTypeStats:
     """ Represents transfer statistics for each message type.
     """
     __slots__ = ('msg_type',) + _stats_attrs
+
+    def __init__(self):
+        self.msg_type = None
+        self.total_bytes = -1
+        self.total_messages = -1
+        self.avg_msg_size = -1
+        self.first_transferred = None
+        self.last_transferred = None
+
+    def to_dict(self):
+        out = {}
+        for name in self.__slots__:
+            out[name] = getattr(self, name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -74,7 +84,7 @@ class ConnCtx:
         self.peer_ip = peer_address[0]   # type: str
         self.peer_port = peer_address[1] # type: int
 
-        # Total bytes transferred via this connections
+        # Total bytes transferred via this connection
         self.total_bytes = 0
 
         # How many messages this connection transported
@@ -155,36 +165,47 @@ class HL7MLLPServer:
 
 # ################################################################################################################################
 
-    def __init__(self, address, name):
-        # type: (str, str)
-        self.address = address
-        self.name = name
+    def __init__(self, config):
+        # type: (Bunch)
+        self.config = config
+        self.address = config.address
+        self.name = config.name
+
         self.keep_running = True
         self.impl = None # type: ZatoStreamServer
-        self.max_msg_size = 1_000_000 # In bytes
-        self.read_buffer_size = 20#48
+        self.logger = getLogger('zato')
 
 # ################################################################################################################################
 
     def start(self):
 
-        logger.info('IMPL #1')
-
+        # Create a new server connection ..
         self.impl = ZatoStreamServer(self.address, self.handle)
 
-        logger.info('IMPL #2')
+        # .. log info that we are starting ..
+        self.logger.info('Starting %s connection `%s` (%s)', _server_type, self.name, self.address)
 
+        # .. and start to serve.
         self.impl.serve_forever()
 
 # ################################################################################################################################
 
     def handle(self, socket, peer_address):
+        try:
+            self._handle(socket, peer_address)
+        except Exception:
+            self.logger.warn('Exception in %s (%s %s); e:`%s`', self._handle, socket, peer_address, format_exc())
+            raise
+
+# ################################################################################################################################
+
+    def _handle(self, socket, peer_address):
         # type: (socket, tuple)
 
         # Wraps all the metadata about the connection
         conn_ctx = ConnCtx(self.name, socket, peer_address)
 
-        logger.info('New HL7 MLLP connection; %s', conn_ctx.get_conn_pretty_info())
+        self.logger.info('New HL7 MLLP connection; %s', conn_ctx.get_conn_pretty_info())
 
         # Current message whose contents we are accumulating
         _buffer = []
@@ -198,10 +219,11 @@ class HL7MLLPServer:
 
         # To make fewer namespace lookups
         _sleep = sleep
-        _max_msg_size = self.max_msg_size
+        _max_msg_size = self.config.max_msg_size         # type: int
+        _read_buffer_size = self.config.read_buffer_size # type: int
+        _recv_timeout = self.config.recv_timeout         # type: float
 
         _run_callback = self._run_callback
-        _read_buffer_size = self.read_buffer_size
         _check_header = self._check_header
         _check_footer = self._check_footer
         _close_connection = self._close_connection
@@ -227,7 +249,7 @@ class HL7MLLPServer:
                 return
 
             # Receive data from the other end
-            _socket_settimeout(0.1)
+            _socket_settimeout(_recv_timeout)
 
             # Try to receive some data from the socket ..
             try:
@@ -249,11 +271,6 @@ class HL7MLLPServer:
             # .. catch timeouts here but no other exception type ..
             except SocketTimeoutException as e:
                 has_timeout = True
-
-            else:
-                # Receiving an empty string means that the client disconnected
-                # in which case we close the connection too.
-                needs_sleep = False
 
             #
             # If a timeout occurred, it means that we have potentially received the whole message already.
@@ -315,7 +332,7 @@ class HL7MLLPServer:
 
     def _run_callback(self, msg_ctx):
         # type: MsgCtx -> None
-        logger.info('Handling new message `%r`', msg_ctx.to_dict())
+        self.logger.info('Handling new message `%r`', msg_ctx.to_dict())
 
         return b'BBB'
 
@@ -323,7 +340,7 @@ class HL7MLLPServer:
 
     def _close_connection(self, conn_ctx, reason):
         # type: str -> None
-        logger.info('Closing connection; %s; %s', reason, conn_ctx.get_conn_pretty_info())
+        self.logger.info('Closing connection; %s; %s', reason, conn_ctx.get_conn_pretty_info())
         conn_ctx.socket.close()
 
 # ################################################################################################################################
@@ -386,16 +403,22 @@ class HL7MLLPServer:
 
 def main():
 
-    name = 'Hello HL7 MLLP'
-    host = '0.0.0.0'
-    port = 30191
-    address = '{}:{}'.format(host, port)
+    # Bunch
+    from bunch import bunchify
 
     def on_message(msg):
         # type: (str)
-        logger.info('MSG RECEIVED %s', msg)
+        self.logger.info('MSG RECEIVED %s', msg)
 
-    server = HL7MLLPServer(address, name)
+    config = bunchify({
+        'name': 'Hello HL7 MLLP',
+        'address': '0.0.0.0:30191',
+        'max_msg_size': 1_000_000,
+        'read_buffer_size': 64,
+        'recv_timeout': 0.25,
+    })
+
+    server = HL7MLLPServer(config)
     server.start()
 
 # ################################################################################################################################
