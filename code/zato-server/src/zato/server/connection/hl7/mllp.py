@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from datetime import datetime
 from logging import getLogger
 from socket import timeout as SocketTimeoutException
 from traceback import format_exc
@@ -44,21 +45,52 @@ logger_hl7 = getLogger('zato_hl7')
 _server_type = 'HL7 MLLP'
 
 # ################################################################################################################################
+
+_stats_attrs = 'total_bytes', 'total_messages', 'avg_msg_size', 'first_transferred', 'last_transferred'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _MsgTypeStats:
+    """ Represents transfer statistics for each message type.
+    """
+    __slots__ = ('msg_type',) + _stats_attrs
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ConnCtx:
     """ Details of an individual remote connection to a server.
     """
-    __slots__ = 'conn_id', 'conn_name', 'socket', 'peer_ip', 'peer_port', 'peer_fqdn', 'local_ip', 'local_port', 'local_fqdn'
+    __slots__ = ('conn_id', 'conn_name', 'socket', 'peer_ip', 'peer_port', 'peer_fqdn', 'local_ip', \
+        'local_port', 'local_fqdn', 'stats_per_msg_type') + _stats_attrs
 
     def __init__(self, conn_name, socket, peer_address):
         # type: (socket, tuple)
 
-        self.conn_id = 'z7m{}'.format(new_cid(5))
+        self.conn_id = 'z7m.{}'.format(new_cid(5))
         self.conn_name = conn_name
         self.socket = socket
         self.peer_ip = peer_address[0]   # type: str
         self.peer_port = peer_address[1] # type: int
+
+        # Total bytes transferred via this connections
+        self.total_bytes = 0
+
+        # How many messages this connection transported
+        self.total_messages = 0
+
+        # Average message size
+        self.avg_msg_size = 0
+
+        # When the connection was started
+        self.first_transferred = datetime.utcnow()
+
+        # When the connection was last used
+        self.last_transferred = self.first_transferred
+
+        # Statistics broken down by each message type, e.g. ADT
+        self.stats_per_msg_type = {}
 
         self.peer_fqdn = get_fqdn_by_ip(self.peer_ip, 'peer', _server_type)
         self.local_ip, self.local_port, self.local_fqdn = self._get_local_conn_info('local')
@@ -210,7 +242,7 @@ class HL7MLLPServer:
                 # .. otherwise, since we did not time out but there is not data,
                 # it means that the remote end disconnected.
                 else:
-                    reason = 'remote end disconnected; `{}` '.format(data)
+                    reason = 'remote end disconnected; `{}`'.format(data)
                     _close_connection(conn_ctx, reason)
                     return
 
@@ -291,7 +323,7 @@ class HL7MLLPServer:
 
     def _close_connection(self, conn_ctx, reason):
         # type: str -> None
-        logger.info('Closing connection %s; %s', conn_ctx.get_conn_pretty_info(), reason)
+        logger.info('Closing connection; %s; %s', reason, conn_ctx.get_conn_pretty_info())
         conn_ctx.socket.close()
 
 # ################################################################################################################################
