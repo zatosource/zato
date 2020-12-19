@@ -95,16 +95,34 @@ class CommandStore(object):
     def load_full_parser(self):
 
         # Zato
-        from zato.cli import apispec as apispec_mod, ca_create_ca as ca_create_ca_mod, \
-             ca_create_lb_agent as ca_create_lb_agent_mod, \
-             ca_create_scheduler as ca_create_scheduler_mod, ca_create_server as ca_create_server_mod, \
-             ca_create_web_admin as ca_create_web_admin_mod, cache as cache_mod, check_config as check_config_mod, \
-             component_version as component_version_mod, create_cluster as create_cluster_mod, \
-             create_lb as create_lb_mod, create_odb as create_odb_mod, create_scheduler as create_scheduler_mod, \
-             create_server as create_server_mod, create_web_admin as create_web_admin_mod, crypto as crypto_mod, \
-             delete_odb as delete_odb_mod, enmasse as enmasse_mod, FromConfig, info as info_mod, \
-             quickstart as quickstart_mod, service as service_mod, sso as sso_mod, \
-             stop as stop_mod, wait as wait_mod, web_admin_auth as web_admin_auth_mod
+        from zato.cli import \
+             apispec             as apispec_mod,             \
+             ca_create_ca        as ca_create_ca_mod,        \
+             ca_create_lb_agent  as ca_create_lb_agent_mod,  \
+             ca_create_scheduler as ca_create_scheduler_mod, \
+             ca_create_server    as ca_create_server_mod,    \
+             ca_create_web_admin as ca_create_web_admin_mod, \
+             cache               as cache_mod,               \
+             check_config        as check_config_mod,        \
+             component_version   as component_version_mod,   \
+             create_cluster      as create_cluster_mod,      \
+             create_lb           as create_lb_mod,           \
+             create_odb          as create_odb_mod,          \
+             create_scheduler    as create_scheduler_mod,    \
+             create_server       as create_server_mod,       \
+             create_web_admin    as create_web_admin_mod,    \
+             crypto              as crypto_mod,              \
+             delete_odb          as delete_odb_mod,          \
+             enmasse             as enmasse_mod,             \
+             FromConfig,                                     \
+             hl7_                as hl7_mod,                 \
+             info                as info_mod,                \
+             quickstart          as quickstart_mod,          \
+             service             as service_mod,             \
+             sso                 as sso_mod,                 \
+             stop                as stop_mod,                \
+             wait                as wait_mod,                \
+             web_admin_auth      as web_admin_auth_mod
 
         parser, base_parser, subs, formatter_class = self.build_core_parser()
         self._add_version(parser)
@@ -294,11 +312,28 @@ class CommandStore(object):
         hash = subs.add_parser('hash', description='Updates Zato components and users')
         hash_subs = hash.add_subparsers()
 
+        #
+        # from-config-file
+        #
+        from_config = subs.add_parser('from-config', description=FromConfig.__doc__, parents=[base_parser])
+        from_config.add_argument('path', help='Path to a Zato command config file')
+        from_config.set_defaults(command='from_config')
+
         # .. hash info
 
         hash_get_rounds = hash_subs.add_parser('get-rounds', description=crypto_mod.GetHashRounds.__doc__, parents=[base_parser])
         hash_get_rounds.set_defaults(command='hash_get_rounds')
         self.add_opts(hash_get_rounds, crypto_mod.GetHashRounds.opts)
+
+        #
+        # hl7
+        #
+        hl7 = subs.add_parser('hl7', description='HL7-related commands')
+        hl7_subs = hl7.add_subparsers()
+
+        hl7_mllp_send = hl7_subs.add_parser('mllp-send', description=hl7_mod.MLLPSend.__doc__, parents=[base_parser])
+        hl7_mllp_send.set_defaults(command='hl7_mllp_send')
+        self.add_opts(hl7_mllp_send, hl7_mod.MLLPSend.opts)
 
         #
         # info
@@ -307,13 +342,6 @@ class CommandStore(object):
         info.add_argument('path', help='Path to a Zato component')
         info.set_defaults(command='info')
         self.add_opts(info, info_mod.Info.opts)
-
-        #
-        # from-config-file
-        #
-        from_config = subs.add_parser('from-config', description=FromConfig.__doc__, parents=[base_parser])
-        from_config.add_argument('path', help='Path to a Zato command config file')
-        from_config.set_defaults(command='from_config')
 
         #
         # reset-totp-key

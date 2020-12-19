@@ -336,6 +336,7 @@ command_imports = (
     ('enmasse', 'zato.cli.enmasse.Enmasse'),
     ('from_config', 'zato.cli.FromConfig'),
     ('hash_get_rounds', 'zato.cli.crypto.GetHashRounds'),
+    ('hl7_mllp_send', 'zato.cli.hl7_.MLLPSend'),
     ('info', 'zato.cli.info.Info'),
     ('reset_totp_key', 'zato.cli.web_admin_auth.ResetTOTPKey'),
     ('quickstart_create', 'zato.cli.quickstart.Create'),
@@ -420,6 +421,7 @@ class ZatoCommand(object):
         NOT_A_ZATO_SCHEDULER = 26
         CACHE_KEY_NOT_FOUND = 27
         SERVER_TIMEOUT = 28
+        PARAMETER_MISSING = 29
 
 # ################################################################################################################################
 
@@ -706,7 +708,7 @@ class ZatoCommand(object):
                     if name == '--secret-key':
                         continue
 
-                    # Don't required password on SQLite
+                    # Don't require passwords with SQLite
                     if 'odb' in name and args.odb_type == 'sqlite':
                         continue
 
