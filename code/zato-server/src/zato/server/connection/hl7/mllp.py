@@ -126,10 +126,10 @@ class ConnCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class MsgCtx:
-    """ Details of an individual message received from a remote connection.
+class RequestCtx:
+    """ Details of an individual request message received from a remote connection.
     """
-    __slots__ = 'msg_id', 'conn_id', 'msg_size', 'data', 'meta'
+    __slots__ = 'msg_id', 'conn_id', 'msg_size', 'data', 'meta', 'response'
 
 # ################################################################################################################################
 
@@ -139,6 +139,7 @@ class MsgCtx:
         self.msg_size = None # type: int
         self.data = b''
         self.meta = {}
+        self.response = None # type: ResponseCtx
         self.reset()
 
 # ################################################################################################################################
@@ -159,6 +160,12 @@ class MsgCtx:
             'msg_size': self.msg_size,
             'data': self.data,
         }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ResponseCtx:
+    pass
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -224,8 +231,8 @@ class HL7MLLPServer:
         _buffer = []
 
         # Details of the current message
-        msg_ctx = MsgCtx()
-        msg_ctx.conn_id = conn_ctx.conn_id
+        request_ctx = RequestCtx()
+        request_ctx.conn_id = conn_ctx.conn_id
 
         # Indicates whether the last .recv call indicated that the remote end disconnected,
         # and if so, this tells us to enter a short sleep period.
@@ -245,7 +252,7 @@ class HL7MLLPServer:
         _check_header = self._check_header
         _check_footer = self._check_footer
         _close_connection = self._close_connection
-        _msg_ctx_reset = msg_ctx.reset
+        _request_ctx_reset = request_ctx.reset
         _buffer_append = _buffer.append
         _buffer_join_func = b''.join
 
@@ -260,7 +267,7 @@ class HL7MLLPServer:
             data = None
 
             # Check whether reading the data would not exceed our message size limit
-            new_size = msg_ctx.msg_size + _read_buffer_size
+            new_size = request_ctx.msg_size + _read_buffer_size
             if new_size > _max_msg_size:
                 reason = 'message would exceed max. size allowed `{}` > `{}`'.format(new_size, _max_msg_size)
                 _close_connection(conn_ctx, reason)
@@ -300,20 +307,20 @@ class HL7MLLPServer:
 
                 # Confirm if we already have received the whole message, as indicated by the presence of its footer.
                 # Note that at this point we still do not know if the header was received so we must check it too.
-                if msg_ctx.meta['has_start_seq']:
-                    if not _check_footer(conn_ctx, msg_ctx, data, _buffer):
+                if request_ctx.meta['has_start_seq']:
+                    if not _check_footer(conn_ctx, request_ctx, data, _buffer):
                         return
 
                     # If we have a footer, this means that the message is complete and our callback can process it
-                    if msg_ctx.meta['has_end_seq']:
+                    if request_ctx.meta['has_end_seq']:
 
                         # Update our runtime metadata ..
-                        conn_ctx.total_bytes += msg_ctx.msg_size
+                        conn_ctx.total_bytes += request_ctx.msg_size
                         conn_ctx.total_messages += 1
                         conn_ctx.last_transferred = _datetime_utcnow()
 
                         # .. and invoke the handler and return the response.
-                        self._handle_complete_message(_buffer, _buffer_join_func, conn_ctx, msg_ctx, _msg_ctx_reset,
+                        self._handle_complete_message(_buffer, _buffer_join_func, conn_ctx, request_ctx, _request_ctx_reset,
                             _socket_send, _run_callback)
 
             #
@@ -323,11 +330,11 @@ class HL7MLLPServer:
 
                 # If we are here, it means that the recv call succeeded so we can increase the message size
                 # by how many bytes were actually read from the socket.
-                msg_ctx.msg_size += len(data)
+                request_ctx.msg_size += len(data)
 
                 # The first byte may be a header and we need to check whether we require it or not at this stage of parsing.
                 # This method will close the connection if anything to do with header parsing is invalid.
-                if not _check_header(conn_ctx, msg_ctx, data):
+                if not _check_header(conn_ctx, request_ctx, data):
                     return
 
                 # This is a valid message so we can append data to our current buffer
@@ -335,9 +342,9 @@ class HL7MLLPServer:
 
 # ################################################################################################################################
 
-    def _handle_complete_message(self, _buffer, _buffer_join_func, conn_ctx, msg_ctx, _msg_ctx_reset,
+    def _handle_complete_message(self, _buffer, _buffer_join_func, conn_ctx, request_ctx, _request_ctx_reset,
             _socket_send, _run_callback):
-        # type: (bytes, object, ConnCtx, MsgCtx, object, object, object)
+        # type: (bytes, object, ConnCtx, RequestCtx, object, object, object)
 
         # Produce the message to invoke the callback with ..
         _buffer_data = _buffer_join_func(_buffer)
@@ -346,27 +353,27 @@ class HL7MLLPServer:
         _buffer_data = _buffer_data[1:-2]
 
         # .. asign the actual business data to message ..
-        msg_ctx.data = _buffer_data
+        request_ctx.data = _buffer_data
 
         # .. invoke the callback ..
-        response = _run_callback(conn_ctx, msg_ctx)
+        response = _run_callback(conn_ctx, request_ctx)
 
         # .. write the response back ..
         _socket_send(response)
 
         # .. and reset the message to make it possible to handle a new one.
-        _msg_ctx_reset()
+        _request_ctx_reset()
 
 # ################################################################################################################################
 
-    def _run_callback(self, conn_ctx, msg_ctx):
-        # type: (ConnCtx, MsgCtx) -> None
+    def _run_callback(self, conn_ctx, request_ctx):
+        # type: (ConnCtx, RequestCtx) -> None
         if self.should_log_messages:
             self._logger_info('Handling new HL7 MLLP message (c:%s; %s; %s; s=%d); `%r`',
-                conn_ctx.total_messages, conn_ctx.conn_id, msg_ctx.msg_id, msg_ctx.msg_size, msg_ctx.to_dict())
+                conn_ctx.total_messages, conn_ctx.conn_id, request_ctx.msg_id, request_ctx.msg_size, request_ctx.to_dict())
         else:
             self._logger_info('Handling new HL7 MLLP message (c:%s; %s; %s; s=%d)',
-                conn_ctx.total_messages, conn_ctx.conn_id, msg_ctx.msg_id, msg_ctx.msg_size)
+                conn_ctx.total_messages, conn_ctx.conn_id, request_ctx.msg_id, request_ctx.msg_size)
 
         return b'BBB'
 
@@ -379,12 +386,12 @@ class HL7MLLPServer:
 
 # ################################################################################################################################
 
-    def _check_meta(self, conn_ctx, msg_ctx, data, bytes_to_check, meta_attr, has_meta_attr, meta_seq):
-        # type: (ConnCtx, MsgCtx, bytes, bytes, str, bool, bytes) -> bool
+    def _check_meta(self, conn_ctx, request_ctx, data, bytes_to_check, meta_attr, has_meta_attr, meta_seq):
+        # type: (ConnCtx, RequestCtx, bytes, bytes, str, bool, bytes) -> bool
 
         # If we already have the meta element then we do not expect another one
         # while we are still processing the same message and if one is found, we close the connection.
-        if msg_ctx.meta[has_meta_attr]:
+        if request_ctx.meta[has_meta_attr]:
             if bytes_to_check == meta_seq:
                 reason = 'unexpected {} found `{!r}` == `{!r}` in data `{!r}`'.format(meta_attr, bytes_to_check, meta_seq, data)
                 self._close_connection(conn_ctx, reason)
@@ -399,24 +406,24 @@ class HL7MLLPServer:
                 return
 
         # If we are here, it means that the meta attribute is correct
-        msg_ctx.meta[has_meta_attr] = True
+        request_ctx.meta[has_meta_attr] = True
         return True
 
 # ################################################################################################################################
 
-    def _check_header(self, conn_ctx, msg_ctx, data):
+    def _check_header(self, conn_ctx, request_ctx, data):
 
         bytes_to_check = data[:1]
         meta_attr = 'header'
         has_meta_attr  = 'has_start_seq'
         meta_seq = self.start_seq
 
-        return self._check_meta(conn_ctx, msg_ctx, data, bytes_to_check, meta_attr, has_meta_attr, meta_seq)
+        return self._check_meta(conn_ctx, request_ctx, data, bytes_to_check, meta_attr, has_meta_attr, meta_seq)
 
 # ################################################################################################################################
 
-    def _check_footer(self, conn_ctx, msg_ctx, data, buffer):
-        # type: (ConnCtx, MsgCtx, list) -> bool
+    def _check_footer(self, conn_ctx, request_ctx, data, buffer):
+        # type: (ConnCtx, RequestCtx, list) -> bool
 
         #
         # The last two bytes will possibly contain the footer.
@@ -430,7 +437,7 @@ class HL7MLLPServer:
         has_meta_attr  = 'has_end_seq'
         meta_seq = self.end_seq
 
-        return self._check_meta(conn_ctx, msg_ctx, data, bytes_to_check, meta_attr, has_meta_attr, meta_seq)
+        return self._check_meta(conn_ctx, request_ctx, data, bytes_to_check, meta_attr, has_meta_attr, meta_seq)
 
 # ################################################################################################################################
 # ################################################################################################################################
