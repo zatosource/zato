@@ -40,10 +40,15 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # ################################################################################################################################
 
 _server_type = 'HL7 MLLP'
+_stats_attrs = 'total_bytes', 'total_messages', 'avg_msg_size', 'first_transferred', 'last_transferred'
 
 # ################################################################################################################################
 
-_stats_attrs = 'total_bytes', 'total_messages', 'avg_msg_size', 'first_transferred', 'last_transferred'
+def new_conn_id(pattern='zhc{}', id_len=5, _new_cid=new_cid):
+    return pattern.format(_new_cid(id_len))
+
+def new_msg_id(pattern='zhm{}', id_len=6, _new_cid=new_cid):
+    return pattern.format(_new_cid(id_len))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,10 +80,10 @@ class ConnCtx:
     __slots__ = ('conn_id', 'conn_name', 'socket', 'peer_ip', 'peer_port', 'peer_fqdn', 'local_ip', \
         'local_port', 'local_fqdn', 'stats_per_msg_type') + _stats_attrs
 
-    def __init__(self, conn_name, socket, peer_address):
+    def __init__(self, conn_name, socket, peer_address, _new_conn_id=new_conn_id):
         # type: (socket, tuple)
 
-        self.conn_id = 'z7m.{}'.format(new_cid(5))
+        self.conn_id = _new_conn_id()
         self.conn_name = conn_name
         self.socket = socket
         self.peer_ip = peer_address[0]   # type: str
@@ -89,9 +94,6 @@ class ConnCtx:
 
         # How many messages this connection transported
         self.total_messages = 0
-
-        # Average message size
-        self.avg_msg_size = 0
 
         # When the connection was started
         self.first_transferred = datetime.utcnow()
@@ -108,9 +110,9 @@ class ConnCtx:
 # ################################################################################################################################
 
     def get_conn_pretty_info(self):
-        return '{}; `{}:{}` ({}) to `{}:{}` ({}) ({})'.format(
+        return '{}; `{}:{}` ({}) to `{}:{}` ({}) ({}) (c:{}; b:{})'.format(
             self.conn_id, self.peer_ip, self.peer_port, self.peer_fqdn,
-            self.local_ip, self.local_port, self.local_fqdn, self.conn_name)
+            self.local_ip, self.local_port, self.local_fqdn, self.conn_name, self.total_messages, self.total_bytes)
 
 # ################################################################################################################################
 
@@ -127,11 +129,13 @@ class ConnCtx:
 class MsgCtx:
     """ Details of an individual message received from a remote connection.
     """
-    __slots__ = 'msg_size', 'data', 'meta'
+    __slots__ = 'msg_id', 'conn_id', 'msg_size', 'data', 'meta'
 
 # ################################################################################################################################
 
-    def __init__(self):
+    def __init__(self, _new_msg_id=new_msg_id):
+        self.conn_id = '<conn-id-not-given>'
+        self.msg_id = None   # type: str
         self.msg_size = None # type: int
         self.data = b''
         self.meta = {}
@@ -139,18 +143,20 @@ class MsgCtx:
 
 # ################################################################################################################################
 
-    def reset(self):
+    def reset(self, _new_msg_id=new_msg_id):
+        self.msg_id = _new_msg_id()
         self.msg_size = 0
         self.data = b''
-        self.meta['has_header'] = False
-        self.meta['has_footer'] = False
+        self.meta['has_start_seq'] = False
+        self.meta['has_end_seq'] = False
 
 # ################################################################################################################################
 
     def to_dict(self):
         return {
+            'conn_id': self.conn_id,
+            'msg_id': self.msg_id,
             'msg_size': self.msg_size,
-            'meta': self.meta,
             'data': self.data,
         }
 
@@ -160,8 +166,8 @@ class MsgCtx:
 class HL7MLLPServer:
     """ Each instance of this class handles an individual HL7 MLLP connection in handle_connection.
     """
-    header_seq = b'\x0b'
-    footer_seq   = b'\x1c\x0d'
+    start_seq = b'\x0b'
+    end_seq   = b'\x1c\x0d'
 
 # ################################################################################################################################
 
@@ -170,10 +176,17 @@ class HL7MLLPServer:
         self.config = config
         self.address = config.address
         self.name = config.name
+        self.should_log_messages = config.should_log_messages # type: bool
 
         self.keep_running = True
         self.impl = None # type: ZatoStreamServer
+
         self.logger = getLogger('zato')
+        self.logger.setLevel(config.logging_level)
+
+        self._logger_info = self.logger.info
+        self._logger_debug = self.logger.debug
+        self._has_debug_log = self.logger.isEnabledFor(logging.DEBUG)
 
 # ################################################################################################################################
 
@@ -183,7 +196,7 @@ class HL7MLLPServer:
         self.impl = ZatoStreamServer(self.address, self.handle)
 
         # .. log info that we are starting ..
-        self.logger.info('Starting %s connection `%s` (%s)', _server_type, self.name, self.address)
+        self._logger_info('Starting %s connection `%s` (%s)', _server_type, self.name, self.address)
 
         # .. and start to serve.
         self.impl.serve_forever()
@@ -205,13 +218,14 @@ class HL7MLLPServer:
         # Wraps all the metadata about the connection
         conn_ctx = ConnCtx(self.name, socket, peer_address)
 
-        self.logger.info('New HL7 MLLP connection; %s', conn_ctx.get_conn_pretty_info())
+        self._logger_info('New HL7 MLLP connection; %s', conn_ctx.get_conn_pretty_info())
 
         # Current message whose contents we are accumulating
         _buffer = []
 
         # Details of the current message
         msg_ctx = MsgCtx()
+        msg_ctx.conn_id = conn_ctx.conn_id
 
         # Indicates whether the last .recv call indicated that the remote end disconnected,
         # and if so, this tells us to enter a short sleep period.
@@ -219,9 +233,13 @@ class HL7MLLPServer:
 
         # To make fewer namespace lookups
         _sleep = sleep
+        _datetime_utcnow = datetime.utcnow
         _max_msg_size = self.config.max_msg_size         # type: int
         _read_buffer_size = self.config.read_buffer_size # type: int
         _recv_timeout = self.config.recv_timeout         # type: float
+
+        _has_debug_log = self._has_debug_log
+        _log_debug = self._logger_debug
 
         _run_callback = self._run_callback
         _check_header = self._check_header
@@ -257,6 +275,9 @@ class HL7MLLPServer:
                 # .. read data in ..
                 data = _socket_recv(_read_buffer_size)
 
+                if _has_debug_log:
+                    _log_debug('HL7 MLLP data received by `%s` (%d) -> `%s`', conn_ctx.conn_id, len(data), data)
+
                 # if data was received, it means that there was no timeout ..
                 if data:
                     has_timeout = False
@@ -279,14 +300,20 @@ class HL7MLLPServer:
 
                 # Confirm if we already have received the whole message, as indicated by the presence of its footer.
                 # Note that at this point we still do not know if the header was received so we must check it too.
-                if msg_ctx.meta['has_header']:
+                if msg_ctx.meta['has_start_seq']:
                     if not _check_footer(conn_ctx, msg_ctx, data, _buffer):
                         return
 
                     # If we have a footer, this means that the message is complete and our callback can process it
-                    if msg_ctx.meta['has_footer']:
+                    if msg_ctx.meta['has_end_seq']:
 
-                        self._handle_complete_message(_buffer, _buffer_join_func, msg_ctx, _msg_ctx_reset,
+                        # Update our runtime metadata ..
+                        conn_ctx.total_bytes += msg_ctx.msg_size
+                        conn_ctx.total_messages += 1
+                        conn_ctx.last_transferred = _datetime_utcnow()
+
+                        # .. and invoke the handler and return the response.
+                        self._handle_complete_message(_buffer, _buffer_join_func, conn_ctx, msg_ctx, _msg_ctx_reset,
                             _socket_send, _run_callback)
 
             #
@@ -308,7 +335,9 @@ class HL7MLLPServer:
 
 # ################################################################################################################################
 
-    def _handle_complete_message(self, _buffer, _buffer_join_func, msg_ctx, _msg_ctx_reset, _socket_send, _run_callback):
+    def _handle_complete_message(self, _buffer, _buffer_join_func, conn_ctx, msg_ctx, _msg_ctx_reset,
+            _socket_send, _run_callback):
+        # type: (bytes, object, ConnCtx, MsgCtx, object, object, object)
 
         # Produce the message to invoke the callback with ..
         _buffer_data = _buffer_join_func(_buffer)
@@ -320,7 +349,7 @@ class HL7MLLPServer:
         msg_ctx.data = _buffer_data
 
         # .. invoke the callback ..
-        response = _run_callback(msg_ctx)
+        response = _run_callback(conn_ctx, msg_ctx)
 
         # .. write the response back ..
         _socket_send(response)
@@ -330,9 +359,14 @@ class HL7MLLPServer:
 
 # ################################################################################################################################
 
-    def _run_callback(self, msg_ctx):
-        # type: MsgCtx -> None
-        self.logger.info('Handling new message `%r`', msg_ctx.to_dict())
+    def _run_callback(self, conn_ctx, msg_ctx):
+        # type: (ConnCtx, MsgCtx) -> None
+        if self.should_log_messages:
+            self._logger_info('Handling new HL7 MLLP message (c:%s; %s; %s; s=%d); `%r`',
+                conn_ctx.total_messages, conn_ctx.conn_id, msg_ctx.msg_id, msg_ctx.msg_size, msg_ctx.to_dict())
+        else:
+            self._logger_info('Handling new HL7 MLLP message (c:%s; %s; %s; s=%d)',
+                conn_ctx.total_messages, conn_ctx.conn_id, msg_ctx.msg_id, msg_ctx.msg_size)
 
         return b'BBB'
 
@@ -340,7 +374,7 @@ class HL7MLLPServer:
 
     def _close_connection(self, conn_ctx, reason):
         # type: str -> None
-        self.logger.info('Closing connection; %s; %s', reason, conn_ctx.get_conn_pretty_info())
+        self._logger_info('Closing connection; %s; %s', reason, conn_ctx.get_conn_pretty_info())
         conn_ctx.socket.close()
 
 # ################################################################################################################################
@@ -374,8 +408,8 @@ class HL7MLLPServer:
 
         bytes_to_check = data[:1]
         meta_attr = 'header'
-        has_meta_attr  = 'has_header'
-        meta_seq = self.header_seq
+        has_meta_attr  = 'has_start_seq'
+        meta_seq = self.start_seq
 
         return self._check_meta(conn_ctx, msg_ctx, data, bytes_to_check, meta_attr, has_meta_attr, meta_seq)
 
@@ -393,8 +427,8 @@ class HL7MLLPServer:
         bytes_to_check = buffer[-1][-2:] # type: bytes
 
         meta_attr = 'footer'
-        has_meta_attr  = 'has_footer'
-        meta_seq = self.footer_seq
+        has_meta_attr  = 'has_end_seq'
+        meta_seq = self.end_seq
 
         return self._check_meta(conn_ctx, msg_ctx, data, bytes_to_check, meta_attr, has_meta_attr, meta_seq)
 
@@ -408,7 +442,7 @@ def main():
 
     def on_message(msg):
         # type: (str)
-        self.logger.info('MSG RECEIVED %s', msg)
+        self._logger_info('MSG RECEIVED %s', msg)
 
     config = bunchify({
         'name': 'Hello HL7 MLLP',
@@ -416,6 +450,9 @@ def main():
         'max_msg_size': 1_000_000,
         'read_buffer_size': 64,
         'recv_timeout': 0.25,
+        'logging_level': 'INFO',
+        'should_log_messages': 1,
+        'last_msg_log_size': 10,
     })
 
     server = HL7MLLPServer(config)
