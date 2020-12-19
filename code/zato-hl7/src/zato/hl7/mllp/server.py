@@ -170,13 +170,9 @@ class ResponseCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class HL7MLLPServer:
+class Server:
     """ Each instance of this class handles an individual HL7 MLLP connection in handle_connection.
     """
-    start_seq = b'\x0b'
-    end_seq   = b'\x1c\x0d'
-
-# ################################################################################################################################
 
     def __init__(self, config):
         # type: (Bunch)
@@ -184,6 +180,9 @@ class HL7MLLPServer:
         self.address = config.address
         self.name = config.name
         self.should_log_messages = config.should_log_messages # type: bool
+
+        self.start_seq = config.start_seq
+        self.end_seq   = config.end_seq
 
         self.keep_running = True
         self.impl = None # type: ZatoStreamServer
@@ -240,7 +239,6 @@ class HL7MLLPServer:
 
         # To make fewer namespace lookups
         _sleep = sleep
-        _datetime_utcnow = datetime.utcnow
         _max_msg_size = self.config.max_msg_size         # type: int
         _read_buffer_size = self.config.read_buffer_size # type: int
         _recv_timeout = self.config.recv_timeout         # type: float
@@ -285,43 +283,45 @@ class HL7MLLPServer:
                 if _has_debug_log:
                     _log_debug('HL7 MLLP data received by `%s` (%d) -> `%s`', conn_ctx.conn_id, len(data), data)
 
-                # if data was received, it means that there was no timeout ..
+                # if data was received, it means that there was no timeout which means that we can expect more to come
+                # which in turn means that we should not process yet what we have received so far ..
                 if data:
-                    has_timeout = False
+                    start_processing = False
 
-                # .. otherwise, since we did not time out but there is not data,
-                # it means that the remote end disconnected.
+                # .. otherwise, since we did not time out but there is not data, it means that the remote end disconnected ..
                 else:
+
+                    # .. however, it is still possible that we have a message to handle (even if the client is no more) ..
+                    if _check_footer(conn_ctx, request_ctx, data, _buffer):
+
+                        # .. invokes the handler but does not return the response ..
+                        self._handle_complete_message(False, _buffer, _buffer_join_func, conn_ctx, request_ctx,
+                            _request_ctx_reset, _socket_send, _run_callback)
+
+                    # .. and now, we can close the connection because the client is no longer available.
                     reason = 'remote end disconnected; `{}`'.format(data)
                     _close_connection(conn_ctx, reason)
                     return
 
             # .. catch timeouts here but no other exception type ..
             except SocketTimeoutException as e:
-                has_timeout = True
+                start_processing = True
 
             #
             # If a timeout occurred, it means that we have potentially received the whole message already.
             #
-            if has_timeout:
+            if start_processing:
 
                 # Confirm if we already have received the whole message, as indicated by the presence of its footer.
                 # Note that at this point we still do not know if the header was received so we must check it too.
                 if request_ctx.meta['has_start_seq']:
-                    if not _check_footer(conn_ctx, request_ctx, data, _buffer):
-                        return
 
                     # If we have a footer, this means that the message is complete and our callback can process it
                     if request_ctx.meta['has_end_seq']:
 
-                        # Update our runtime metadata ..
-                        conn_ctx.total_bytes += request_ctx.msg_size
-                        conn_ctx.total_messages += 1
-                        conn_ctx.last_transferred = _datetime_utcnow()
-
-                        # .. and invoke the handler and return the response.
-                        self._handle_complete_message(_buffer, _buffer_join_func, conn_ctx, request_ctx, _request_ctx_reset,
-                            _socket_send, _run_callback)
+                        # Invokes the handler and return the response.
+                        self._handle_complete_message(True, _buffer, _buffer_join_func, conn_ctx, request_ctx,
+                            _request_ctx_reset, _socket_send, _run_callback)
 
             #
             # No timeout and some data was received means that we are still receiving the message from the socket.
@@ -342,9 +342,14 @@ class HL7MLLPServer:
 
 # ################################################################################################################################
 
-    def _handle_complete_message(self, _buffer, _buffer_join_func, conn_ctx, request_ctx, _request_ctx_reset,
-            _socket_send, _run_callback):
-        # type: (bytes, object, ConnCtx, RequestCtx, object, object, object)
+    def _handle_complete_message(self, needs_response, _buffer, _buffer_join_func, conn_ctx, request_ctx, _request_ctx_reset,
+            _socket_send, _run_callback, _datetime_utcnow=datetime.utcnow):
+        # type: (bool, bytes, object, ConnCtx, RequestCtx, object, object, object, object)
+
+        # Update our runtime metadata first.
+        conn_ctx.total_bytes += request_ctx.msg_size
+        conn_ctx.total_messages += 1
+        conn_ctx.last_transferred = _datetime_utcnow()
 
         # Produce the message to invoke the callback with ..
         _buffer_data = _buffer_join_func(_buffer)
@@ -457,12 +462,14 @@ def main():
         'max_msg_size': 1_000_000,
         'read_buffer_size': 64,
         'recv_timeout': 0.25,
-        'logging_level': 'INFO',
-        'should_log_messages': 1,
+        'logging_level': 'DEBUG',
+        'should_log_messages': True,
         'last_msg_log_size': 10,
+        'start_seq': b'\x0b',
+        'end_seq': b'\x1c\x0d'
     })
 
-    server = HL7MLLPServer(config)
+    server = Server(config)
     server.start()
 
 # ################################################################################################################################

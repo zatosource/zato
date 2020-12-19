@@ -422,6 +422,7 @@ class ZatoCommand(object):
         CACHE_KEY_NOT_FOUND = 27
         SERVER_TIMEOUT = 28
         PARAMETER_MISSING = 29
+        PATH_NOT_A_FILE = 30
 
 # ################################################################################################################################
 

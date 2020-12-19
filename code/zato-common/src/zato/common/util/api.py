@@ -969,6 +969,27 @@ def register_diag_handlers():
 
 # ################################################################################################################################
 
+def parse_tcp_address(address):
+    # type: (str) -> (str, int)
+
+    # First, let's reverse it in case input contains an IPv6 address ..
+    address = address[::-1] # type: str
+
+    # .. now, split on the first colon to give the information we seek ..
+    port, host = address.split(':', 1)
+
+    # .. reverse the values back
+    host = host[::-1]
+    port = port[::-1]
+
+    # .. port needs to be an integer ..
+    port = int(port)
+
+    # .. and now we can return the result.
+    return host, port
+
+# ################################################################################################################################
+
 def parse_simple_type(value, convert_bool=True):
     if convert_bool:
         try:
