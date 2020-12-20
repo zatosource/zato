@@ -8,16 +8,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from logging import getLogger
 from socket import timeout as SocketTimeoutException
 from traceback import format_exc
 
 # gevent
 from gevent import sleep, socket, Timeout
-
-# hl7apy
-from hl7apy.mllp import AbstractHandler as hl7apy_AbstractHandler, MLLPServer as hl7apy_MLLPServer
 
 # Zato
 from zato.common.util.api import new_cid
@@ -170,25 +167,25 @@ class ResponseCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Server:
-    """ Each instance of this class handles an individual HL7 MLLP connection in handle_connection.
+class SocketReader:
+    """ Instance of this class reads HL7 MLLP messages either on demand or as a long-running server process.
     """
 
     def __init__(self, config):
-        # type: (Bunch)
+        # type: (dict)
         self.config = config
-        self.address = config.address
-        self.name = config.name
-        self.should_log_messages = config.should_log_messages # type: bool
+        self.address = config['address']
+        self.name = config['name']
+        self.should_log_messages = config['should_log_messages'] # type: bool
 
-        self.start_seq = config.start_seq
-        self.end_seq   = config.end_seq
+        self.start_seq = config['start_seq']
+        self.end_seq   = config['end_seq']
 
         self.keep_running = True
         self.impl = None # type: ZatoStreamServer
 
         self.logger = getLogger('zato')
-        self.logger.setLevel(config.logging_level)
+        self.logger.setLevel(config['logging_level'])
 
         self._logger_info = self.logger.info
         self._logger_debug = self.logger.debug
@@ -209,25 +206,39 @@ class Server:
 
 # ################################################################################################################################
 
-    def handle(self, socket, peer_address):
+    def handle(self, socket, peer_address, max_wait_time=None, max_msg_size=None, read_buffer_size=None, recv_timeout=None,
+        buffer=None):
+        # type: (socket, tuple, float, int, int, int, list) -> None
         try:
-            self._handle(socket, peer_address)
+            return self._handle(
+                socket,
+                peer_address,
+                max_wait_time,
+                max_msg_size or self.config['max_msg_size'],
+                read_buffer_size or self.config['read_buffer_size'],
+                recv_timeout or self.config['recv_timeout'],
+                buffer)
         except Exception:
             self.logger.warn('Exception in %s (%s %s); e:`%s`', self._handle, socket, peer_address, format_exc())
             raise
 
 # ################################################################################################################################
 
-    def _handle(self, socket, peer_address):
-        # type: (socket, tuple)
+    def _handle(self, socket, peer_address, max_wait_time, max_msg_size, read_buffer_size, recv_timeout, buffer=None,
+        _utcnow=datetime.utcnow, _timedelta=timedelta):
+        # type: (socket, tuple, float, int, int, int, list, object, object) -> None
 
         # Wraps all the metadata about the connection
         conn_ctx = ConnCtx(self.name, socket, peer_address)
 
-        self._logger_info('New HL7 MLLP connection; %s', conn_ctx.get_conn_pretty_info())
+        self._logger_info('Waiting for HL7 MLLP data from %s (buff:%s)', conn_ctx.get_conn_pretty_info(), buffer)
 
         # Current message whose contents we are accumulating
-        _buffer = []
+        buffer = buffer or []
+
+        # By default, we loop until self.keep_running is True. But our callers
+        # may also tell us to loop until that many seconds lapsed.
+        run_until = _utcnow() + _timedelta(seconds=max_wait_time) if max_wait_time else None
 
         # Details of the current message
         request_ctx = RequestCtx()
@@ -239,19 +250,17 @@ class Server:
 
         # To make fewer namespace lookups
         _sleep = sleep
-        _max_msg_size = self.config.max_msg_size         # type: int
-        _read_buffer_size = self.config.read_buffer_size # type: int
-        _recv_timeout = self.config.recv_timeout         # type: float
 
         _has_debug_log = self._has_debug_log
         _log_debug = self._logger_debug
+        _log_info = self._logger_info
 
         _run_callback = self._run_callback
         _check_header = self._check_header
         _check_footer = self._check_footer
         _close_connection = self._close_connection
         _request_ctx_reset = request_ctx.reset
-        _buffer_append = _buffer.append
+        _buffer_append = buffer.append
         _buffer_join_func = b''.join
 
         _socket_recv = conn_ctx.socket.recv
@@ -261,24 +270,28 @@ class Server:
         # Run the main loop
         while self.keep_running:
 
+            if run_until:
+                if _utcnow() >= run_until:
+                    return
+
             # In each iteration, assume that no data was received
             data = None
 
             # Check whether reading the data would not exceed our message size limit
-            new_size = request_ctx.msg_size + _read_buffer_size
-            if new_size > _max_msg_size:
+            new_size = request_ctx.msg_size + read_buffer_size
+            if new_size > max_msg_size:
                 reason = 'message would exceed max. size allowed `{}` > `{}`'.format(new_size, _max_msg_size)
                 _close_connection(conn_ctx, reason)
                 return
 
             # Receive data from the other end
-            _socket_settimeout(_recv_timeout)
+            _socket_settimeout(recv_timeout)
 
             # Try to receive some data from the socket ..
             try:
 
                 # .. read data in ..
-                data = _socket_recv(_read_buffer_size)
+                data = _socket_recv(read_buffer_size)
 
                 if _has_debug_log:
                     _log_debug('HL7 MLLP data received by `%s` (%d) -> `%s`', conn_ctx.conn_id, len(data), data)
@@ -292,10 +305,10 @@ class Server:
                 else:
 
                     # .. however, it is still possible that we have a message to handle (even if the client is no more) ..
-                    if _check_footer(conn_ctx, request_ctx, data, _buffer):
+                    if _check_footer(conn_ctx, request_ctx, data, buffer):
 
                         # .. invokes the handler but does not return the response ..
-                        self._handle_complete_message(False, _buffer, _buffer_join_func, conn_ctx, request_ctx,
+                        self._handle_complete_message(False, buffer, _buffer_join_func, conn_ctx, request_ctx,
                             _request_ctx_reset, _socket_send, _run_callback)
 
                     # .. and now, we can close the connection because the client is no longer available.
@@ -320,7 +333,7 @@ class Server:
                     if request_ctx.meta['has_end_seq']:
 
                         # Invokes the handler and return the response.
-                        self._handle_complete_message(True, _buffer, _buffer_join_func, conn_ctx, request_ctx,
+                        self._handle_complete_message(True, buffer, _buffer_join_func, conn_ctx, request_ctx,
                             _request_ctx_reset, _socket_send, _run_callback)
 
             #
@@ -342,17 +355,17 @@ class Server:
 
 # ################################################################################################################################
 
-    def _handle_complete_message(self, needs_response, _buffer, _buffer_join_func, conn_ctx, request_ctx, _request_ctx_reset,
-            _socket_send, _run_callback, _datetime_utcnow=datetime.utcnow):
+    def _handle_complete_message(self, needs_response, buffer, _buffer_join_func, conn_ctx, request_ctx, _request_ctx_reset,
+            _socket_send, _run_callback, _utcnow=datetime.utcnow):
         # type: (bool, bytes, object, ConnCtx, RequestCtx, object, object, object, object)
 
         # Update our runtime metadata first.
         conn_ctx.total_bytes += request_ctx.msg_size
         conn_ctx.total_messages += 1
-        conn_ctx.last_transferred = _datetime_utcnow()
+        conn_ctx.last_transferred = _utcnow()
 
         # Produce the message to invoke the callback with ..
-        _buffer_data = _buffer_join_func(_buffer)
+        _buffer_data = _buffer_join_func(buffer)
 
         # .. remove the header and footer ..
         _buffer_data = _buffer_data[1:-2]
@@ -362,6 +375,8 @@ class Server:
 
         # .. invoke the callback ..
         response = _run_callback(conn_ctx, request_ctx)
+
+        self._logger_info('ZZZ %s', response)
 
         # .. write the response back ..
         _socket_send(response)
@@ -380,7 +395,7 @@ class Server:
             self._logger_info('Handling new HL7 MLLP message (c:%s; %s; %s; s=%d)',
                 conn_ctx.total_messages, conn_ctx.conn_id, request_ctx.msg_id, request_ctx.msg_size)
 
-        return b'BBB'
+        return b'1234567890'
 
 # ################################################################################################################################
 
@@ -469,8 +484,8 @@ def main():
         'end_seq': b'\x1c\x0d'
     })
 
-    server = Server(config)
-    server.start()
+    reader = SocketReader(config)
+    reader.start()
 
 # ################################################################################################################################
 
