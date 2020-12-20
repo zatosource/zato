@@ -16,7 +16,6 @@ from bunch import bunchify
 
 # Zato
 from zato.common.util.api import parse_tcp_address
-from zato.hl7.mllp.reader import SocketReader
 
 # ################################################################################################################################
 
@@ -50,16 +49,6 @@ class Client:
 
         self.host, self.port = parse_tcp_address(self.address) # type (str, int)
 
-        # This is used for reading responses from the server
-        self.reader = SocketReader({
-            'address': '<socket-reader-client-unused-address>',
-            'name': self.name,
-            'should_log_messages': self.should_log_messages,
-            'logging_level': self.config.logging_level,
-            'start_seq': self.start_seq,
-            'end_seq': self.end_seq,
-        })
-
     def send(self, data):
         # type: (bytes) -> bytes
 
@@ -74,22 +63,6 @@ class Client:
 
             # .. send our data ..
             sock.send(msg)
-
-            # .. buffer that the response will be written to ..
-            buffer = []
-
-            # .. wait for response, if any ..
-            self.reader.handle(
-                sock,
-                sock.getpeername(),
-                self.max_wait_time,
-                self.max_msg_size,
-                self.config.read_buffer_size,
-                self.config.recv_timeout,
-                buffer
-            )
-
-            print(111, buffer)
 
 # ################################################################################################################################
 # ################################################################################################################################
