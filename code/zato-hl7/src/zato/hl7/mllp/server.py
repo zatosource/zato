@@ -13,9 +13,6 @@ from logging import getLogger
 from socket import timeout as SocketTimeoutException
 from traceback import format_exc
 
-# gevent
-from gevent import sleep, socket, Timeout
-
 # Zato
 from zato.common.util.api import new_cid
 from zato.common.util.tcp import get_fqdn_by_ip, ZatoStreamServer
@@ -24,7 +21,7 @@ from zato.common.util.tcp import get_fqdn_by_ip, ZatoStreamServer
 
 if 0:
     from bunch import Bunch
-    from gevent._socket3 import socket
+    from gevent import socket
 
     Bunch = Bunch
     socket = socket
@@ -231,12 +228,7 @@ class SocketReader:
         request_ctx = RequestCtx()
         request_ctx.conn_id = conn_ctx.conn_id
 
-        # Indicates whether the last .recv call indicated that the remote end disconnected,
-        # and if so, this tells us to enter a short sleep period.
-        has_timeout = False
-
         # To make fewer namespace lookups
-        _sleep = sleep
         _max_msg_size = self.config.max_msg_size         # type: int
         _read_buffer_size = self.config.read_buffer_size # type: int
         _recv_timeout = self.config.recv_timeout         # type: float
@@ -246,7 +238,6 @@ class SocketReader:
 
         _run_callback = self._run_callback
         _check_header = self._check_header
-        _check_footer = self._check_footer
         _close_connection = self._close_connection
         _request_ctx_reset = request_ctx.reset
         _buffer_append = _buffer.append
@@ -286,7 +277,8 @@ class SocketReader:
                     _log_debug('HL7 MLLP data received by `%s` (%d) -> `%s`', conn_ctx.conn_id, len(data), data)
 
             # .. catch timeouts here but no other exception type ..
-            except SocketTimeoutException as e:
+            except SocketTimeoutException:
+                # That is fine, we simply did not get any data in this iteration
                 pass
 
             # .. no timeout = we may have received some data from the socket ..
@@ -480,7 +472,7 @@ def main():
 
     def on_message(msg):
         # type: (str)
-        self._logger_info('MSG RECEIVED %s', msg)
+        raise Exception(msg)
 
     config = bunchify({
         'name': 'Hello HL7 MLLP',

@@ -7,9 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import logging
 import socket
-from socket import timeout as SocketTimeoutException
 
 # Bunch
 from bunch import bunchify
@@ -22,10 +20,8 @@ from zato.common.util.tcp import parse_address, read_from_socket, SocketReaderCt
 
 if 0:
     from bunch import Bunch
-    from gevent._socket3 import socket
 
     Bunch = Bunch
-    socket = socket
 
 # ################################################################################################################################
 # ################################################################################################################################
