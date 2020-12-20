@@ -164,7 +164,7 @@ class ResponseCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SocketReader:
+class HL7MLLPServer:
     """ Each instance of this class handles an individual HL7 MLLP connection in handle_connection.
     """
 
@@ -487,7 +487,7 @@ def main():
         'end_seq': b'\x1c\x0d'
     })
 
-    reader = SocketReader(config)
+    reader = HL7MLLPServer(config)
     reader.start()
 
 # ################################################################################################################################
