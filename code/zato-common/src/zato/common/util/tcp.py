@@ -194,13 +194,6 @@ def read_from_socket(ctx, _utcnow=datetime.utcnow, _timedelta=timedelta):
     # No data received yet
     data = '<initial-no-data>'
 
-    print()
-    print(111, _should_log_messages)
-    print(222, _recv_timeout)
-    print(333, _read_buffer_size)
-    print(444, _read_buffer_size)
-    print()
-
     # Run the main loop
     while _utcnow() < wait_until:
 
@@ -213,8 +206,6 @@ def read_from_socket(ctx, _utcnow=datetime.utcnow, _timedelta=timedelta):
         try:
             _socket_settimeout(_recv_timeout)
             data = _socket_recv(_read_buffer_size)
-
-            print(222, data)
 
             if _should_log_messages:
                 _log_debug('Data received by `%s` (%d) -> `%s`', _conn_id, len(data), data)
