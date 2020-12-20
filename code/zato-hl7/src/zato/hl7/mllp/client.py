@@ -15,7 +15,8 @@ from socket import timeout as SocketTimeoutException
 from bunch import bunchify
 
 # Zato
-from zato.common.util.api import parse_tcp_address
+from zato.common.util.api import new_cid
+from zato.common.util.tcp import parse_address, read_from_socket, SocketReaderCtx
 
 # ################################################################################################################################
 
@@ -47,7 +48,7 @@ class Client:
         self.start_seq = config.start_seq
         self.end_seq   = config.end_seq
 
-        self.host, self.port = parse_tcp_address(self.address) # type (str, int)
+        self.host, self.port = parse_address(self.address) # type (str, int)
 
     def send(self, data):
         # type: (bytes) -> bytes
@@ -64,6 +65,22 @@ class Client:
             # .. send our data ..
             sock.send(msg)
 
+            # .. encapsulate configuration for our socket reader function ..
+            ctx = SocketReaderCtx(
+                new_cid(),
+                sock,
+                self.max_wait_time,
+                self.max_msg_size,
+                2048,
+                0.1,
+                self.should_log_messages
+            )
+
+            # .. wait for the response ..
+            result = read_from_socket(ctx)
+
+            print(999, result)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -77,7 +94,7 @@ def send_data(address, data):
         'address': address,
         'start_seq': b'\x0b',
         'end_seq': b'\x1c\x0d',
-        'max_wait_time': 0.5,
+        'max_wait_time': 3,
         'max_msg_size': 2_000_000,
         'read_buffer_size': 2048,
         'recv_timeout': 0.25,

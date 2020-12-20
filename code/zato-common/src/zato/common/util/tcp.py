@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import errno
 from datetime import datetime, timedelta
 from logging import getLogger
+from socket import timeout as SocketTimeoutException
 from time import sleep
 
 # gevent
@@ -28,16 +29,21 @@ logger = getLogger('zato')
 class SocketReaderCtx:
     """ Configuration and context used to read that from sockets via read_from_socket.
     """
-    __slots__ = 'conn_id', 'socket', 'log_debug', 'max_msg_size', 'read_buffer_size', 'recv_timeout'
+    __slots__ = 'conn_id', 'socket', 'max_wait_time', 'max_msg_size', 'read_buffer_size', 'recv_timeout', \
+        'should_log_messages', 'buffer', 'is_ok', 'reason'
 
-    def __init__(self, conn_id, socket, log_debug, max_msg_size, read_buffer_size, recv_timeout):
-        # type: (str, socket, object, int, int, int)
+    def __init__(self, conn_id, socket, max_wait_time, max_msg_size, read_buffer_size, recv_timeout, should_log_messages):
+        # type: (str, socket, int, int, int, int, object)
         self.conn_id = conn_id
         self.socket = socket
-        self.log_debug = log_debug
+        self.max_wait_time = max_wait_time
         self.max_msg_size = max_msg_size
         self.read_buffer_size = read_buffer_size
         self.recv_timeout = recv_timeout
+        self.should_log_messages = should_log_messages
+        self.buffer = []
+        self.is_ok = False
+        self.reason = ''
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -156,34 +162,102 @@ def get_fqdn_by_ip(ip_address, default, log_msg_prefix):
 
 # ################################################################################################################################
 
-def read_from_socket(ctx):
+def read_from_socket(ctx, _utcnow=datetime.utcnow, _timedelta=timedelta):
     """ Reads data from an already connected TCP socket.
     """
     # type: (SocketReaderCtx) -> bytes
+    ctx.conn_id
 
-    if _has_debug_log:
-        _log_debug('Data received by `%s` (%d) -> `%s`', conn_ctx.conn_id, len(data), data)
+    # Local aliases
+    _should_log_messages = ctx.should_log_messages
+
+    _log_info = logger.warn
+    _log_debug = logger.warn
+
+    _conn_id          = ctx.conn_id
+    _max_msg_size     = ctx.max_msg_size
+    _read_buffer_size = ctx.read_buffer_size
+    _recv_timeout     = ctx.recv_timeout
+
+    _socket_recv       = ctx.socket.recv
+    _socket_settimeout = ctx.socket.settimeout
+
+    # Wait for that many seconds
+    wait_until = _utcnow() + timedelta(seconds=ctx.max_wait_time)
+
+    # How many bytes have we read so far
+    msg_size = 0
+
+    # Buffer to accumulate data in
+    buffer = []
+
+    # No data received yet
+    data = '<initial-no-data>'
+
+    print()
+    print(111, _should_log_messages)
+    print(222, _recv_timeout)
+    print(333, _read_buffer_size)
+    print(444, _read_buffer_size)
+    print()
 
     # Run the main loop
-    while self.keep_running:
-
-        # In each iteration, assume that no data was received
-        data = None
+    while _utcnow() < wait_until:
 
         # Check whether reading the data would not exceed our message size limit
-        new_size = request_ctx.msg_size + _read_buffer_size
+        new_size = msg_size + _read_buffer_size
         if new_size > _max_msg_size:
-            reason = 'message would exceed max. size allowed `{}` > `{}`'.format(new_size, _max_msg_size)
-            _close_connection(conn_ctx, reason)
-            return
+            reason = 'Message would exceed max. size allowed `{}` > `{}`'.format(new_size, _max_msg_size)
+            raise ValueError(reason)
 
-        _socket_settimeout(_recv_timeout)
-        data = _socket_recv(_read_buffer_size)
+        try:
+            _socket_settimeout(_recv_timeout)
+            data = _socket_recv(_read_buffer_size)
 
-        if data:
-            start_processing = False
+            print(222, data)
+
+            if _should_log_messages:
+                _log_debug('Data received by `%s` (%d) -> `%s`', _conn_id, len(data), data)
+
+        except SocketTimeoutException:
+            # This is fine, we just iterate until wait_until time.
+            pass
         else:
-            zzz
+            # Some data was received ..
+            if data:
+                buffer.append(data)
+
+            # .. otherwise, the remote end disconnected so we can end.
+            break
+
+    # If we are here, it means that we have all the data needed so we can just return it now
+    result = b''.join(buffer)
+
+    if _should_log_messages:
+        _log_info('Returning result from `%s` (%d) -> `%s`', _conn_id, len(result), result)
+
+    return result
+
+# ################################################################################################################################
+
+def parse_address(address):
+    # type: (str) -> (str, int)
+
+    # First, let's reverse it in case input contains an IPv6 address ..
+    address = address[::-1] # type: str
+
+    # .. now, split on the first colon to give the information we seek ..
+    port, host = address.split(':', 1)
+
+    # .. reverse the values back
+    host = host[::-1]
+    port = port[::-1]
+
+    # .. port needs to be an integer ..
+    port = int(port)
+
+    # .. and now we can return the result.
+    return host, port
 
 # ################################################################################################################################
 # ################################################################################################################################

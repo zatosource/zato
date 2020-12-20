@@ -178,8 +178,9 @@ class SocketReader:
         self.name = config.name
         self.should_log_messages = config.should_log_messages # type: bool
 
-        self.start_seq = config.start_seq
-        self.end_seq   = config.end_seq
+        self.start_seq   = config.start_seq
+        self.end_seq     = config.end_seq
+        self.end_seq_len = len(config.end_seq)
 
         self.keep_running = True
         self.impl = None # type: ZatoStreamServer
@@ -249,6 +250,7 @@ class SocketReader:
         _close_connection = self._close_connection
         _request_ctx_reset = request_ctx.reset
         _buffer_append = _buffer.append
+        _buffer_len    = _buffer.__len__
         _buffer_join_func = b''.join
 
         _socket_recv = conn_ctx.socket.recv
@@ -280,6 +282,89 @@ class SocketReader:
                 if _has_debug_log:
                     _log_debug('HL7 MLLP data received by `%s` (%d) -> `%s`', conn_ctx.conn_id, len(data), data)
 
+            # .. catch timeouts here but no other exception type ..
+            except SocketTimeoutException as e:
+                pass
+
+            # .. no timeout = we may have received some data from the socket ..
+            else:
+
+                # .. something was received so we can append it to our buffer ..
+                if data:
+
+                    # If we are here, it means that the recv call succeeded so we can increase the message size
+                    # by how many bytes were actually read from the socket.
+                    request_ctx.msg_size += len(data)
+
+                    # The first byte may be a header and we need to check whether we require it or not at this stage of parsing.
+                    # This method will close the connection if anything to do with header parsing is invalid.
+                    if not _check_header(conn_ctx, request_ctx, data):
+                        return
+
+                    # This is a valid message so we can append data to our current buffer ..
+                    _buffer_append(data)
+
+                    # .. the line that have just received may have been part of a footer
+                    # or the footer itself so we need to check it ..
+
+                    # .. but we need to take into account the fact that the footer has been split into two or more
+                    # segments. For instance, the previous segment of bytes returned by _socket_recv
+                    # ended with the first byte of end_seq and now we have received the second byte.
+                    # E.g. our _read_buffer_size is 2048 and if the overall message happens to be 2049 bytes
+                    # then the first byte of end_seq will be in the buffer already and the data currently
+                    # received contains the second byte. Note that if someone uses end_seq longer than two bytes
+                    # this will still work because our _read_buffer_size is always at least 2048 bytes
+                    # so end_seq may be split across two segments at most (unless someone uses a multi-kilobyte end_seq,
+                    # which is not something to be expected).
+
+                    # First, try to check if data currently received ends in end_seq ..
+                    if self._points_to_full_message(data):
+
+                        # .. it is a match so it means that data was the last part of a message that we can already process ..
+                        zzz
+
+                    # .. otherwise, try to check if in combination with the previous segment,
+                    # the data received now points to a full message. However, for this to work
+                    # we require that there be at least one previous segment - otherwise we are the first one
+                    # and if we were the ending one we would have been caught in the if above ..
+                    else:
+                        if _buffer_len() > 1:
+
+                            # Index -1 is our own segment (data) previously appended,
+                            # which is why we use -2 to get the segment preceeding it.
+                            last_data = _buffer[-2]
+                            concatenated = last_data + data
+
+                            # .. now that we have it concatenated, check if that indicates that a full message
+                            # is already received.
+                            if self._points_to_full_message(concatenated):
+                                aaa
+
+                    #_check_footer(conn_ctx, request_ctx, data, _buffer)
+
+                    '''
+                    # .. check if we have a complete message now to handle ..
+                    if _check_header(conn_ctx, request_ctx, data):
+                        if _check_footer(conn_ctx, request_ctx, data, _buffer):
+
+                            print()
+                            print(111, _buffer)
+                            print()
+
+                            return
+                        else:
+                            return
+                    else:
+                        return
+                    '''
+
+                # No data received = remote end is no longer connected.
+                else:
+                    reason = 'remote end disconnected; `{}`'.format(data)
+                    _close_connection(conn_ctx, reason)
+                    return
+
+            '''
                 # if data was received, it means that there was no timeout which means that we can expect more to come
                 # which in turn means that we should not process yet what we have received so far ..
                 if data:
@@ -336,6 +421,20 @@ class SocketReader:
 
                 # This is a valid message so we can append data to our current buffer
                 _buffer_append(data)
+                '''
+
+# ################################################################################################################################
+
+    def _points_to_full_message(self, data):
+        """ Returns True if input bytes indicate that we have a full message from the socket.
+        """
+        # type: (bytes) -> bool
+
+        # Get as many bytes from data as we expected for our end_seq to be the length of ..
+        data_last_bytes = data[-self.end_seq_len:]
+
+        # .. return True if the last bytes point to our having a complete message to process.
+        return data_last_bytes == self.end_seq
 
 # ################################################################################################################################
 
@@ -457,7 +556,7 @@ def main():
         'name': 'Hello HL7 MLLP',
         'address': '0.0.0.0:30191',
         'max_msg_size': 1_000_000,
-        'read_buffer_size': 64,
+        'read_buffer_size': 291,
         'recv_timeout': 0.25,
         'logging_level': 'DEBUG',
         'should_log_messages': True,
