@@ -444,25 +444,6 @@ class HL7MLLPServer:
         return self._check_meta(conn_ctx, request_ctx, data, bytes_to_check, meta_attr, has_meta_attr, meta_seq)
 
 # ################################################################################################################################
-
-    def _check_footer(self, conn_ctx, request_ctx, data, buffer):
-        # type: (ConnCtx, RequestCtx, list) -> bool
-
-        #
-        # The last two bytes will possibly contain the footer.
-        #
-        # [-1] -> last data element in the buffer (possibly the only one)
-        # [2:] -> two last bytes of the last data element above
-        #
-        bytes_to_check = buffer[-1][-2:] # type: bytes
-
-        meta_attr = 'footer'
-        has_meta_attr  = 'has_end_seq'
-        meta_seq = self.end_seq
-
-        return self._check_meta(conn_ctx, request_ctx, data, bytes_to_check, meta_attr, has_meta_attr, meta_seq)
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 def main():
