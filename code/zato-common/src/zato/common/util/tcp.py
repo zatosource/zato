@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import errno
-import socket
 from datetime import datetime, timedelta
 from logging import getLogger
 from time import sleep
@@ -23,6 +22,24 @@ from gevent.server import StreamServer
 
 logger = getLogger('zato')
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SocketReaderCtx:
+    """ Configuration and context used to read that from sockets via read_from_socket.
+    """
+    __slots__ = 'conn_id', 'socket', 'log_debug', 'max_msg_size', 'read_buffer_size', 'recv_timeout'
+
+    def __init__(self, conn_id, socket, log_debug, max_msg_size, read_buffer_size, recv_timeout):
+        # type: (str, socket, object, int, int, int)
+        self.conn_id = conn_id
+        self.socket = socket
+        self.log_debug = log_debug
+        self.max_msg_size = max_msg_size
+        self.read_buffer_size = read_buffer_size
+        self.recv_timeout = recv_timeout
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def get_free_port(start=30000):
@@ -136,6 +153,37 @@ def get_fqdn_by_ip(ip_address, default, log_msg_prefix):
     except Exception:
         logger.warn('%s exception in FQDN lookup `%s`', log_msg_prefix, format_exc())
         return '(unknown-{}-fqdn)'.format(default)
+
+# ################################################################################################################################
+
+def read_from_socket(ctx):
+    """ Reads data from an already connected TCP socket.
+    """
+    # type: (SocketReaderCtx) -> bytes
+
+    if _has_debug_log:
+        _log_debug('Data received by `%s` (%d) -> `%s`', conn_ctx.conn_id, len(data), data)
+
+    # Run the main loop
+    while self.keep_running:
+
+        # In each iteration, assume that no data was received
+        data = None
+
+        # Check whether reading the data would not exceed our message size limit
+        new_size = request_ctx.msg_size + _read_buffer_size
+        if new_size > _max_msg_size:
+            reason = 'message would exceed max. size allowed `{}` > `{}`'.format(new_size, _max_msg_size)
+            _close_connection(conn_ctx, reason)
+            return
+
+        _socket_settimeout(_recv_timeout)
+        data = _socket_recv(_read_buffer_size)
+
+        if data:
+            start_processing = False
+        else:
+            zzz
 
 # ################################################################################################################################
 # ################################################################################################################################
