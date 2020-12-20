@@ -257,6 +257,9 @@ class SocketReader:
         _socket_send = conn_ctx.socket.send
         _socket_settimeout = conn_ctx.socket.settimeout
 
+        _handle_complete_message_args = (_buffer, _buffer_join_func, conn_ctx, request_ctx, _request_ctx_reset,
+            _socket_send, _run_callback)
+
         # Run the main loop
         while self.keep_running:
 
@@ -321,7 +324,7 @@ class SocketReader:
                     if self._points_to_full_message(data):
 
                         # .. it is a match so it means that data was the last part of a message that we can already process ..
-                        zzz
+                        self._handle_complete_message(True, *_handle_complete_message_args)
 
                     # .. otherwise, try to check if in combination with the previous segment,
                     # the data received now points to a full message. However, for this to work
@@ -338,90 +341,13 @@ class SocketReader:
                             # .. now that we have it concatenated, check if that indicates that a full message
                             # is already received.
                             if self._points_to_full_message(concatenated):
-                                aaa
-
-                    #_check_footer(conn_ctx, request_ctx, data, _buffer)
-
-                    '''
-                    # .. check if we have a complete message now to handle ..
-                    if _check_header(conn_ctx, request_ctx, data):
-                        if _check_footer(conn_ctx, request_ctx, data, _buffer):
-
-                            print()
-                            print(111, _buffer)
-                            print()
-
-                            return
-                        else:
-                            return
-                    else:
-                        return
-                    '''
+                                self._handle_complete_message(True, *_handle_complete_message_args)
 
                 # No data received = remote end is no longer connected.
                 else:
                     reason = 'remote end disconnected; `{}`'.format(data)
                     _close_connection(conn_ctx, reason)
                     return
-
-            '''
-                # if data was received, it means that there was no timeout which means that we can expect more to come
-                # which in turn means that we should not process yet what we have received so far ..
-                if data:
-                    start_processing = False
-
-                # .. otherwise, since we did not time out but there is not data, it means that the remote end disconnected ..
-                else:
-
-                    # .. however, it is still possible that we have a message to handle (even if the client is no more) ..
-                    if _check_footer(conn_ctx, request_ctx, data, _buffer):
-
-                        # .. invokes the handler but does not return the response ..
-                        self._handle_complete_message(False, _buffer, _buffer_join_func, conn_ctx, request_ctx,
-                            _request_ctx_reset, _socket_send, _run_callback)
-
-                    # .. and now, we can close the connection because the client is no longer available.
-                    reason = 'remote end disconnected; `{}`'.format(data)
-                    _close_connection(conn_ctx, reason)
-                    return
-
-            # .. catch timeouts here but no other exception type ..
-            except SocketTimeoutException as e:
-                start_processing = True
-
-            #
-            # If a timeout occurred, it means that we have potentially received the whole message already.
-            #
-            if start_processing:
-
-                # Confirm if we already have received the whole message, as indicated by the presence of its footer.
-                # Note that at this point we still do not know if the header was received so we must check it too.
-                if request_ctx.meta['has_start_seq']:
-
-                    # If we have a footer, this means that the message is complete and our callback can process it
-                    if request_ctx.meta['has_end_seq']:
-
-                        # Invokes the handler and return the response.
-                        self._handle_complete_message(True, _buffer, _buffer_join_func, conn_ctx, request_ctx,
-                            _request_ctx_reset, _socket_send, _run_callback)
-
-            #
-            # No timeout and some data was received means that we are still receiving the message from the socket.
-            #
-            else:
-
-                # If we are here, it means that the recv call succeeded so we can increase the message size
-                # by how many bytes were actually read from the socket.
-                request_ctx.msg_size += len(data)
-
-                # The first byte may be a header and we need to check whether we require it or not at this stage of parsing.
-                # This method will close the connection if anything to do with header parsing is invalid.
-                if not _check_header(conn_ctx, request_ctx, data):
-                    return
-
-                # This is a valid message so we can append data to our current buffer
-                _buffer_append(data)
-                '''
 
 # ################################################################################################################################
 
@@ -458,6 +384,10 @@ class SocketReader:
 
         # .. invoke the callback ..
         response = _run_callback(conn_ctx, request_ctx)
+
+        if self.should_log_messages:
+            self._logger_info('Sending HL7 MLLP response to `%s` -> `%s` (c:%s; s=%d)',
+                request_ctx.msg_id, response, conn_ctx.conn_id, len(response))
 
         # .. write the response back ..
         _socket_send(response)
