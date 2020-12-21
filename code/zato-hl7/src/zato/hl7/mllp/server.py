@@ -476,7 +476,7 @@ class HL7MLLPServer:
         _buffer_data = _buffer_join_func(_buffer)
 
         # .. remove the header and footer ..
-        _buffer_data = _buffer_data[1:-2]
+        _buffer_data = _buffer_data[self.start_seq_len:-self.end_seq_len]
 
         # .. asign the actual business data to message ..
         request_ctx.data = _buffer_data
