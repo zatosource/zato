@@ -36,9 +36,9 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id', 'type_'
         output_required = 'id', 'name', 'is_active', 'source_type', 'pickup_from_list'
-        output_optional = 'service_list', 'topic_list', 'move_processed_to', 'file_patterns', 'parse_with', 'should_read_on_pickup', \
-            'should_parse_on_pickup', 'should_delete_after_pickup', 'ftp_source_id', 'sftp_source_id', 'scheduler_job_id', \
-            'ftp_source_name', 'sftp_source_name', 'is_case_sensitive', 'is_line_by_line', 'is_hot_deploy', \
+        output_optional = 'service_list', 'topic_list', 'move_processed_to', 'file_patterns', 'parse_with', \
+            'should_read_on_pickup', 'should_parse_on_pickup', 'should_delete_after_pickup', 'ftp_source_id', 'sftp_source_id', \
+            'scheduler_job_id', 'ftp_source_name', 'sftp_source_name', 'is_case_sensitive', 'is_line_by_line', 'is_hot_deploy', \
             'binary_file_patterns', 'data_encoding', 'outconn_rest_list'
         output_repeated = True
 

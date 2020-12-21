@@ -82,6 +82,7 @@ from zato.server.connection.vault import VaultConnAPI
 from zato.server.ext.zunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from zato.server.file_transfer.api import FileTransferAPI
 from zato.server.generic.api.channel_file_transfer import ChannelFileTransferWrapper
+from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper
 from zato.server.generic.api.cloud_dropbox import CloudDropbox
 from zato.server.generic.api.def_kafka import DefKafkaWrapper
 from zato.server.generic.api.outconn_im_slack import OutconnIMSlackWrapper
@@ -196,8 +197,11 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # To expedite look-ups
         self._simple_types = simple_types
 
-        # Generic connections - FTP channels
+        # Generic connections - File transfer channels
         self.channel_file_transfer = {}
+
+        # Generic connections - HL7 MLLP
+        self.channel_hl7_mllp = {}
 
         # Generic connections - Kafka definitions
         self.def_kafka = {}
@@ -271,6 +275,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER: self.channel_file_transfer,
+            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: self.channel_hl7_mllp,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX: self.cloud_dropbox,
             COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: self.def_kafka,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK: self.outconn_im_slack,
@@ -282,6 +287,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         self._generic_conn_handler = {
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER: ChannelFileTransferWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: ChannelHL7MLLPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX: CloudDropbox,
             COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: DefKafkaWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK: OutconnIMSlackWrapper,
@@ -1095,6 +1101,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Local aliases
         channel_file_transfer_map = self.generic_impl_func_map.setdefault(
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER, {})
+        channel_hl7_mllp_map = self.generic_impl_func_map.setdefault(
+            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP, {})
         cloud_dropbox_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX, {})
         def_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA, {})
         outconn_im_slack_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK, {})
@@ -1107,6 +1115,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # These generic connections are regular - they use common API methods for such connections
         regular_maps = [
             channel_file_transfer_map,
+            channel_hl7_mllp_map,
             cloud_dropbox_map,
             def_kafka_map,
             outconn_im_slack_map,
