@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from collections import deque
 from datetime import datetime
 from logging import getLogger
 from socket import timeout as SocketTimeoutException
@@ -573,14 +574,24 @@ def main():
     config = bunchify({
         'name': 'Hello HL7 MLLP',
         'address': '0.0.0.0:30191',
+
         'max_msg_size': 1_000_000,
         'read_buffer_size': 2048,
         'recv_timeout': 0.25,
+
         'logging_level': 'DEBUG',
         'should_log_messages': True,
         'last_msg_log_size': 10,
+
         'start_seq': b'\x0b',
-        'end_seq': b'\x1c\x0d'
+        'end_seq': b'\x1c\x0d',
+
+        'history_max_received': 10,
+        'history_max_sent': 10,
+
+        'history_max_bytes_received': None,
+        'history_max_bytes_sent': 2,
+
     })
 
     reader = HL7MLLPServer(config)
