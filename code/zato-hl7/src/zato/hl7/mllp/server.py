@@ -168,6 +168,9 @@ class HL7MLLPServer:
     """ Each instance of this class handles an individual HL7 MLLP connection in handle_connection.
     """
 
+    # We will never read less that many bytes from client sockets
+    min_read_buffer_size = 2048
+
     def __init__(self, config):
         # type: (Bunch)
         self.config = config
@@ -175,7 +178,10 @@ class HL7MLLPServer:
         self.name = config.name
         self.should_log_messages = config.should_log_messages # type: bool
 
-        self.start_seq   = config.start_seq
+        self.start_seq     = config.start_seq
+        self.start_seq_len = len(config.start_seq)
+        self.start_seq_len_eq_one = self.start_seq_len == 1
+
         self.end_seq     = config.end_seq
         self.end_seq_len = len(config.end_seq)
 
@@ -228,10 +234,15 @@ class HL7MLLPServer:
         request_ctx = RequestCtx()
         request_ctx.conn_id = conn_ctx.conn_id
 
+        # To indicate if message header is already checked or not
+        _needs_header_check = True
+
         # To make fewer namespace lookups
         _max_msg_size = self.config.max_msg_size         # type: int
-        _read_buffer_size = self.config.read_buffer_size # type: int
         _recv_timeout = self.config.recv_timeout         # type: float
+
+        # We do not want for this to be too small
+        _read_buffer_size = max(self.config.read_buffer_size, self.min_read_buffer_size) # type: int
 
         _has_debug_log = self._has_debug_log
         _log_debug = self._logger_debug
@@ -291,13 +302,59 @@ class HL7MLLPServer:
                     # by how many bytes were actually read from the socket.
                     request_ctx.msg_size += len(data)
 
+                    # At this point we either do not have all the bytes required to check the header
+                    # or the header is already checked, so we can just append data to our current buffer ..
+                    _buffer_append(data)
+
                     # The first byte may be a header and we need to check whether we require it or not at this stage of parsing.
                     # This method will close the connection if anything to do with header parsing is invalid.
-                    if not _check_header(conn_ctx, request_ctx, data):
-                        return
+                    if _needs_header_check:
 
-                    # This is a valid message so we can append data to our current buffer ..
-                    _buffer_append(data)
+                        # If we have a single-byte header, we can check it immediately. This is because
+                        # we received some data, which means one byte at the very least, so we can go ahead
+                        # with checking the header ..
+                        if self.start_seq_len_eq_one:
+                            if not _check_header(conn_ctx, request_ctx, data):
+                                return
+                            else:
+                                _needs_header_check = False
+
+                        # .. but if we have a multi-byte header, we need to ensure we have already
+                        # read as many bytes as there are in the expected header. We do it by iterating
+                        # over the buffer of bytes received so far and concatenating them until we have
+                        # at least as many bytes as there are in the header to check.
+                        else:
+                            to_check_buffer = []
+                            to_check_len = 0
+
+                            # Go through each, potentially multi-byte, element in the buffer so far ..
+                            for elem in _buffer:
+
+                                # .. break if we have already all the bytes that we need ..
+                                if to_check_len >= self.start_seq_len:
+                                    break
+
+                                # .. otherwise, append bytes from the current element
+                                # and increase the bytes read so far counter.
+                                else:
+                                    to_check_buffer.append(elem)
+                                    to_check_len += len(elem)
+
+                            # We still need to check if we have the full header worth of bytes already ..
+                            if to_check_len >= self.start_seq_len:
+
+                                # .. and if we do, we can look up the header now.
+                                to_check = b''.join(to_check_buffer)
+
+                                if not _check_header(conn_ctx, request_ctx, to_check):
+                                    return
+                                else:
+                                    _needs_header_check = False
+
+                            else:
+                                # .. otherwise, if we do not have enough bytes,
+                                # we do nothing and this block is added to make it explicit that it is the case.
+                                pass
 
                     # .. the line that have just received may have been part of a footer
                     # or the footer itself so we need to check it ..
@@ -315,6 +372,13 @@ class HL7MLLPServer:
                     # First, try to check if data currently received ends in end_seq ..
                     if self._points_to_full_message(data):
 
+                        # .. even if it does, make sure we have a header already and reject the message otherwise ..
+                        if _needs_header_check:
+                            reason = 'end bytes `{}` received without a preceeding header `{}` (#1)'.format(
+                                self.end_seq, self.start_seq)
+                            self._close_connection(conn_ctx, reason)
+                            return
+
                         # .. it is a match so it means that data was the last part of a message that we can already process ..
                         self._handle_complete_message(True, *_handle_complete_message_args)
 
@@ -323,6 +387,7 @@ class HL7MLLPServer:
                     # we require that there be at least one previous segment - otherwise we are the first one
                     # and if we were the ending one we would have been caught in the if above ..
                     else:
+
                         if _buffer_len() > 1:
 
                             # Index -1 is our own segment (data) previously appended,
@@ -333,6 +398,15 @@ class HL7MLLPServer:
                             # .. now that we have it concatenated, check if that indicates that a full message
                             # is already received.
                             if self._points_to_full_message(concatenated):
+
+                                # Again, even if it does but have not received the header yet,
+                                # we need to reject the whole message.
+                                if _needs_header_check:
+                                    reason = 'end bytes `{}` received without a preceeding header `{}` (#2)'.format(
+                                        self.end_seq, self.start_seq)
+                                    self._close_connection(conn_ctx, reason)
+                                    return
+
                                 self._handle_complete_message(True, *_handle_complete_message_args)
 
                 # No data received = remote end is no longer connected.
@@ -436,7 +510,7 @@ class HL7MLLPServer:
 
     def _check_header(self, conn_ctx, request_ctx, data):
 
-        bytes_to_check = data[:1]
+        bytes_to_check = data[:self.start_seq_len]
         meta_attr = 'header'
         has_meta_attr  = 'has_start_seq'
         meta_seq = self.start_seq
@@ -459,7 +533,7 @@ def main():
         'name': 'Hello HL7 MLLP',
         'address': '0.0.0.0:30191',
         'max_msg_size': 1_000_000,
-        'read_buffer_size': 291,
+        'read_buffer_size': 2048,
         'recv_timeout': 0.25,
         'logging_level': 'DEBUG',
         'should_log_messages': True,
