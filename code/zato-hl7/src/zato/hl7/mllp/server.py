@@ -34,7 +34,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # ################################################################################################################################
 
 _server_type = 'HL7 MLLP'
-_stats_attrs = 'total_bytes', 'total_messages', 'avg_msg_size', 'first_transferred', 'last_transferred'
+_stats_attrs = 'total_bytes_received', 'total_messages_received', 'avg_msg_size_received', 'first_received', 'last_received', \
+               'total_bytes_sent',     'total_messages_sent',     'avg_msg_size_sent',     'first_sent',     'last_sent'
 
 # ################################################################################################################################
 
@@ -54,11 +55,18 @@ class _MsgTypeStats:
 
     def __init__(self):
         self.msg_type = None
-        self.total_bytes = -1
-        self.total_messages = -1
-        self.avg_msg_size = -1
-        self.first_transferred = None
-        self.last_transferred = None
+
+        self.total_bytes_received = -1
+        self.total_messages_received = -1
+        self.avg_msg_size_received = -1
+        self.first_received = None
+        self.last_received = None
+
+        self.total_bytes_sent = -1
+        self.total_messages_sent = -1
+        self.avg_msg_sent_size = -1
+        self.first_sent = None
+        self.last_sent = None
 
     def to_dict(self):
         out = {}
@@ -83,30 +91,55 @@ class ConnCtx:
         self.peer_ip = peer_address[0]   # type: str
         self.peer_port = peer_address[1] # type: int
 
-        # Total bytes transferred via this connection
-        self.total_bytes = 0
-
-        # How many messages this connection transported
-        self.total_messages = 0
-
-        # When the connection was started
-        self.first_transferred = datetime.utcnow()
-
-        # When the connection was last used
-        self.last_transferred = self.first_transferred
-
         # Statistics broken down by each message type, e.g. ADT
         self.stats_per_msg_type = {}
 
         self.peer_fqdn = get_fqdn_by_ip(self.peer_ip, 'peer', _server_type)
         self.local_ip, self.local_port, self.local_fqdn = self._get_local_conn_info('local')
 
+        #
+        # Data received
+        #
+
+        # Total bytes received via this connection
+        self.total_bytes_received = 0
+
+        # How many messages this connection received
+        self.total_messages_received = 0
+
+        # When the connection first time received a message
+        self.first_received = datetime.utcnow()
+
+        # When the connection last time received a message
+        self.last_received = self.first_received
+
+        #
+        # Data sent
+        #
+
+        # Total bytes sent via this connection
+        self.total_bytes_sent = 0
+
+        # How many messages this connection sent
+        self.total_messages_sent = 0
+
+        # When the connection first time sent a message
+        self.first_sent = None
+
+        # When the connection last time sent a message
+        self.last_sent = None
+
 # ################################################################################################################################
 
     def get_conn_pretty_info(self):
-        return '{}; `{}:{}` ({}) to `{}:{}` ({}) ({}) (c:{}; b:{})'.format(
+        return '{}; `{}:{}` ({}) to `{}:{}` ({}) ({}) (rm:{}; rb:{}; sm:{}; sb:{})'.format(
             self.conn_id, self.peer_ip, self.peer_port, self.peer_fqdn,
-            self.local_ip, self.local_port, self.local_fqdn, self.conn_name, self.total_messages, self.total_bytes)
+            self.local_ip, self.local_port, self.local_fqdn, self.conn_name,
+            self.total_messages_received,
+            self.total_bytes_received,
+            self.total_messages_sent,
+            self.total_bytes_sent
+        )
 
 # ################################################################################################################################
 
@@ -434,10 +467,10 @@ class HL7MLLPServer:
             _socket_send, _run_callback, _datetime_utcnow=datetime.utcnow):
         # type: (bool, bytes, object, ConnCtx, RequestCtx, object, object, object, object)
 
-        # Update our runtime metadata first.
-        conn_ctx.total_bytes += request_ctx.msg_size
-        conn_ctx.total_messages += 1
-        conn_ctx.last_transferred = _datetime_utcnow()
+        # Update our runtime metadata first (data received).
+        conn_ctx.total_bytes_received += request_ctx.msg_size
+        conn_ctx.total_messages_received += 1
+        conn_ctx.last_received = _datetime_utcnow()
 
         # Produce the message to invoke the callback with ..
         _buffer_data = _buffer_join_func(_buffer)
@@ -458,6 +491,14 @@ class HL7MLLPServer:
         # .. write the response back ..
         _socket_send(response)
 
+        # .. update our runtime metadata first (data sent) ..
+        conn_ctx.total_bytes_sent += len(response)
+        conn_ctx.total_messages_sent += 1
+        conn_ctx.last_sent = _datetime_utcnow()
+
+        if not conn_ctx.first_sent:
+            conn_ctx.first_sent = conn_ctx.last_sent
+
         # .. and reset the message to make it possible to handle a new one.
         _request_ctx_reset()
 
@@ -467,10 +508,10 @@ class HL7MLLPServer:
         # type: (ConnCtx, RequestCtx) -> None
         if self.should_log_messages:
             self._logger_info('Handling new HL7 MLLP message (c:%s; %s; %s; s=%d); `%r`',
-                conn_ctx.total_messages, conn_ctx.conn_id, request_ctx.msg_id, request_ctx.msg_size, request_ctx.to_dict())
+                conn_ctx.total_messages_received, conn_ctx.conn_id, request_ctx.msg_id, request_ctx.msg_size, request_ctx.to_dict())
         else:
             self._logger_info('Handling new HL7 MLLP message (c:%s; %s; %s; s=%d)',
-                conn_ctx.total_messages, conn_ctx.conn_id, request_ctx.msg_id, request_ctx.msg_size)
+                conn_ctx.total_messages_received, conn_ctx.conn_id, request_ctx.msg_id, request_ctx.msg_size)
 
         return b'BBB'
 
