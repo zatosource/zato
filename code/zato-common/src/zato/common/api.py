@@ -1182,6 +1182,7 @@ class GENERIC:
     class CONNECTION:
         class TYPE:
             CHANNEL_FILE_TRANSFER = 'channel-file-transfer'
+            CHANNEL_HL7_MLLP = 'channel-hl7-mllp'
             CLOUD_DROPBOX = 'cloud-dropbox'
             DEF_KAFKA = 'def-kafka'
             OUTCONN_IM_SLACK = 'outconn-im-slack'
@@ -1431,9 +1432,18 @@ class FILE_TRANSFER:
 # ################################################################################################################################
 
 class HL7:
+
+    class Default:
+        """ Default values for HL7 objects.
+        """
+
+        # Default TCP port for MLLP connections
+        mllp_tcp_port = 30901
+
     class Const:
         """ Various HL7-related constants.
         """
+
         class Version:
 
             # A generic v2 message, without an indication of a specific release.
