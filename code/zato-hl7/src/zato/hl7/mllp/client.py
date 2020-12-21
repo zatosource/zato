@@ -65,7 +65,8 @@ class Client:
             sock.connect((self.host, self.port))
 
             # .. send our data ..
-            sock.send(msg)
+            for item in msg:
+                sock.send(chr(item).encode('utf8'))
 
             # .. encapsulate configuration for our socket reader function ..
             ctx = SocketReaderCtx(
