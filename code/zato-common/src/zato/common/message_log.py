@@ -22,10 +22,18 @@ from zato.common.api import GENERIC
 event_attrs    = 'data', 'timestamp', 'msg_id', 'in_reply_to', 'type_', 'object_id', 'conn_id'
 
 transfer_attrs = 'total_bytes_received', 'total_messages_received', 'avg_msg_size_received', 'first_received', 'last_received', \
-                 'total_bytes_sent',     'total_messages_sent',     'avg_msg_size_sent',     'first_sent',     'last_sent'
+                 'total_bytes_sent',     'total_messages_sent',     'avg_msg_size_sent',     'first_sent',     'last_sent',     \
+                 'data',
 
 config_attrs   = 'type_', 'object_id', 'max_len_messages_received',      'max_len_messages_sent',     \
                                        'max_bytes_per_message_received', 'max_bytes_per_message_sent'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DataDirection:
+    received = 'received'
+    sent     = 'sent'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -88,10 +96,16 @@ class LogContainerConfig:
 class LogContainer:
     """ Stores messages for a specific object, e.g. an individual REST or HL7 channel.
     """
-    __slots__ = config_attrs +  transfer_attrs
+    __slots__ = config_attrs +  transfer_attrs + ('lock',)
 
-    def __init__(self, config):
+    def __init__(self, config, _received=DataDirection.received, _sent=DataDirection.sent):
         # type: (LogContainerConfig)
+
+        # To serialise access to the underlying storage
+        self.lock = {
+            _received: RLock(),
+            _sent: RLock()
+        }
 
         self.type_ = config.type_
         self.object_id = config.object_id
@@ -114,8 +128,16 @@ class LogContainer:
         self.last_sent           = None # type: datetime
 
         # These two deques are where the actual data is kept
-        self.messages_received = deque(maxlen=self.max_len_messages_received)
-        self.messages_sent     = deque(maxlen=self.max_len_messages_sent)
+        self.messages = {}
+        self.messages[_received] = deque(maxlen=self.max_len_messages_received)
+        self.messages[_sent]     = deque(maxlen=self.max_len_messages_sent)
+
+# ################################################################################################################################
+
+    def store(self, data, direction):
+        with self.lock[direction]:
+            storage = self.messages[direction] # type: deque
+            storage.append(data)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -129,11 +151,7 @@ class MessageLog:
         self.lock = RLock()
 
         # The main log - keys are object types, values are dicts mapping object IDs to LogContainer objects
-        self._log = {
-            'rest': {
-                '1': LogContainer()
-            }
-        }
+        self._log = {}
 
 # ################################################################################################################################
 
@@ -199,6 +217,28 @@ class MessageLog:
         with self.lock:
             self._delete_container(config)
             self._create_container(config)
+
+# ################################################################################################################################
+
+    def _store_data(self, data, direction):
+        # type: (_DataEvent, str) -> None
+
+        # At this point we assume that all the dicts and containers already exist
+        container_dict = self._log[data.type_]
+        container = container_dict[data.object_id] # type: LogContainer
+        container.store(data, direction)
+
+# ################################################################################################################################
+
+    def store_data_received(self, data, direction=DataDirection.received):
+        # type: (DataReceived, str) -> None
+        self._store_data(data, direction)
+
+# ################################################################################################################################
+
+    def store_data_sent(self, data, direction=DataDirection.sent):
+        # type: (DataSent, str) -> None
+        self._store_data(data, direction)
 
 # ################################################################################################################################
 # ################################################################################################################################
