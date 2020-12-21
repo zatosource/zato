@@ -544,7 +544,7 @@ class HTTPSOAP(Base):
     is_active = Column(Boolean(), nullable=False)
     is_internal = Column(Boolean(), nullable=False)
 
-    connection = Column(String(200), nullable=False)
+    connection = Column(String(20), nullable=False)
     transport = Column(String(200), nullable=False)
 
     host = Column(String(200), nullable=True)
@@ -1697,7 +1697,7 @@ class NotificationOpenStackSwift(Notification):
 
     id = Column(Integer, ForeignKey('notif.id'), primary_key=True)
 
-    containers = Column(String(20000), nullable=False)
+    containers = Column(String(16380), nullable=False)
 
     def_id = Column(Integer, ForeignKey('os_swift.id'), primary_key=True)
     definition = relationship(
