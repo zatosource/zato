@@ -625,7 +625,7 @@ class ZatoCommand(object):
         from zato.common.util import api as util_api
         from zato.common.util.api import get_engine_url
 
-        if args.odb_type.startswith('postgresql'):
+        if not args.odb_type.startswith('postgresql'):
             connect_args = {}
         else:
             connect_args = {'application_name':util_api.get_component_name('enmasse')}
