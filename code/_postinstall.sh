@@ -12,6 +12,8 @@ then
     exit 1
 fi
 
+source ./_common.sh
+
 PY_BINARY=$1
 # Stamp the release hash.
 git log -n 1 --pretty=format:"%H" > ./release-info/revision.txt
@@ -20,27 +22,7 @@ $PY_BINARY -m pip install \
     --no-warn-script-location   \
     -U setuptools pip
 
-$PY_BINARY -m pip install \
-    --no-warn-script-location   \
-    -r requirements.txt
-
-# zato-common must be first.
-$PY_BINARY -m pip install \
-    -e ./zato-common      \
-    -e ./zato-agent       \
-    -e ./zato-broker      \
-    -e ./zato-cli         \
-    -e ./zato-client      \
-    -e ./zato-cy          \
-    -e ./zato-distlock    \
-    -e ./zato-hl7         \
-    -e ./zato-lib         \
-    -e ./zato-scheduler   \
-    -e ./zato-server      \
-    -e ./zato-web-admin   \
-    -e ./zato-zmq         \
-    -e ./zato-sso         \
-    -e ./zato-testing
+pip_install $VIRTUAL_ENV/
 
 # Emulate zc.buildout's split-out eggs directory for simpler local development.
 ln -fs $VIRTUAL_ENV/lib/python*/site-packages $VIRTUAL_ENV/eggs
@@ -60,26 +42,7 @@ echo "$VIRTUAL_ENV/zato_extra_paths" >> eggs/easy-install.pth
 # Create a symlink to zato_extra_paths to make it easier to type it out
 ln -fs $VIRTUAL_ENV/zato_extra_paths extlib
 
-# Apply patches.
-patch -p0 -d eggs < patches/butler/__init__.py.diff
-patch -p0 -d eggs < patches/configobj.py.diff
-patch -p0 -d eggs < patches/django/db/models/base.py.diff
-patch -p0 --binary -d eggs < patches/ntlm/HTTPNtlmAuthHandler.py.diff
-patch -p0 -d eggs < patches/pykafka/topic.py.diff
-patch -p0 -d eggs < patches/redis/redis/connection.py.diff
-patch -p0 -d eggs < patches/requests/models.py.diff
-patch -p0 -d eggs < patches/requests/sessions.py.diff
-patch -p0 -d eggs < patches/ws4py/server/geventserver.py.diff
-
-#
-# On SUSE, SQLAlchemy installs to lib64 instead of lib.
-#
-if [ "$(type -p zypper)" ]
-then
-    patch -p0 -d eggs64 < patches/sqlalchemy/sql/crud.py.diff
-else
-    patch -p0 -d eggs < patches/sqlalchemy/sql/crud.py.diff
-fi
+apply_patches $VIRTUAL_ENV/
 
 # Add the 'zato' command ..
 cat > $VIRTUAL_ENV/bin/zato <<-EOF
