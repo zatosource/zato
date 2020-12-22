@@ -19,11 +19,11 @@ from zato.common.api import GENERIC
 # ################################################################################################################################
 # ################################################################################################################################
 
-event_attrs    = 'data', 'timestamp', 'msg_id', 'in_reply_to', 'type_', 'object_id', 'conn_id'
+event_attrs    = 'direction', 'data', 'timestamp', 'msg_id', 'in_reply_to', 'type_', 'object_id', 'conn_id'
 
 transfer_attrs = 'total_bytes_received', 'total_messages_received', 'avg_msg_size_received', 'first_received', 'last_received', \
                  'total_bytes_sent',     'total_messages_sent',     'avg_msg_size_sent',     'first_sent',     'last_sent',     \
-                 'data',
+                 'data', 'messages'
 
 config_attrs   = 'type_', 'object_id', 'max_len_messages_received',      'max_len_messages_sent',     \
                                        'max_bytes_per_message_received', 'max_bytes_per_message_sent'
@@ -38,8 +38,9 @@ class DataDirection:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _DataEvent:
-    def __init__(self, _utcnow=datetime.utcnow):
+class DataEvent:
+    def __init__(self, direction, _utcnow=datetime.utcnow):
+        self.direction = ''
         self.data = ''
         self.timestamp = _utcnow()
         self.msg_id = ''
@@ -50,7 +51,7 @@ class _DataEvent:
 
         # This will be the other half of a request or response,
         # e.g. it will link DataSent to DataReceived or ther other way around.
-        self.counterpart = None # type: _DataEvent
+        self.counterpart = None # type: DataEvent
 
 # ################################################################################################################################
 
@@ -63,20 +64,26 @@ class _DataEvent:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class DataSent(_DataEvent):
+class DataSent(DataEvent):
     """ An individual piece of data sent by Zato to a remote end.
     This can be a request or a reply to a previous one sent by an API client.
     """
     __slots__ = event_attrs
 
+    def __init__(self, _direction=DataDirection.sent):
+        super().__init__(_direction)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-class DataReceived(_DataEvent):
+class DataReceived(DataEvent):
     """ An individual piece of data received by Zato from a remote end.
     This can be a request or a reply to a previous one sent by an API client.
     """
     __slots__ = event_attrs
+
+    def __init__(self, _direction=DataDirection.received):
+        super().__init__(_direction)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -139,8 +146,8 @@ class LogContainer:
 # ################################################################################################################################
 
     def store(self, data, direction):
-        with self.lock[direction]:
-            storage = self.messages[direction] # type: deque
+        with self.lock[data.direction]:
+            storage = self.messages[data.direction] # type: deque
             storage.append(data)
 
 # ################################################################################################################################
@@ -224,25 +231,25 @@ class MessageLog:
 
 # ################################################################################################################################
 
-    def _store_data(self, data, direction):
-        # type: (_DataEvent, str) -> None
+    def store_data(self, data):
+        # type: (DataEvent) -> None
 
         # At this point we assume that all the dicts and containers already exist
         container_dict = self._log[data.type_]
         container = container_dict[data.object_id] # type: LogContainer
-        container.store(data, direction)
+        container.store(data)
 
 # ################################################################################################################################
 
-    def store_data_received(self, data, direction=DataDirection.received):
-        # type: (DataReceived, str) -> None
-        self._store_data(data, direction)
+    def store_data_received(self, data):
+        # type: (DataReceived) -> None
+        self.store_data(data)
 
 # ################################################################################################################################
 
-    def store_data_sent(self, data, direction=DataDirection.sent):
-        # type: (DataSent, str) -> None
-        self._store_data(data, direction)
+    def store_data_sent(self, data):
+        # type: (DataSent) -> None
+        self.store_data(data)
 
 # ################################################################################################################################
 # ################################################################################################################################
