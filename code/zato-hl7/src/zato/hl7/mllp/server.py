@@ -16,7 +16,7 @@ from traceback import format_exc
 
 # Zato
 from zato.common.api import GENERIC
-from zato.common.message_log import DataReceived, DataSent
+from zato.common.audit_log import DataReceived, DataSent
 from zato.common.util.api import new_cid
 from zato.common.util.tcp import get_fqdn_by_ip, ZatoStreamServer
 
@@ -25,12 +25,12 @@ from zato.common.util.tcp import get_fqdn_by_ip, ZatoStreamServer
 if 0:
     from bunch import Bunch
     from gevent import socket
-    from zato.common.message_log import DataEvent, MessageLog, LogContainerConfig
+    from zato.common.audit_log import DataEvent, AuditLog, LogContainerConfig
 
     Bunch = Bunch
     DataEvent = DataEvent
     LogContainerConfig = LogContainerConfig
-    MessageLog = MessageLog
+    AuditLog = AuditLog
     socket = socket
 
 # ################################################################################################################################
@@ -146,11 +146,11 @@ class HL7MLLPServer:
     # We will never read less that many bytes from client sockets
     min_read_buffer_size = 2048
 
-    def __init__(self, config, message_log):
-        # type: (Bunch, MessageLog)
+    def __init__(self, config, audit_log):
+        # type: (Bunch, AuditLog)
         self.config = config
         self.object_id = config.id # type: str
-        self.message_log = message_log
+        self.audit_log = audit_log
         self.address = config.address
         self.name = config.name
         self.should_log_messages = config.should_log_messages # type: bool
@@ -453,7 +453,7 @@ class HL7MLLPServer:
         data_event.msg_id = request_ctx.msg_id
 
         # .. and store it in our log.
-        self.message_log.store_data(data_event)
+        self.audit_log.store_data(data_event)
 
 # ################################################################################################################################
 
@@ -530,7 +530,7 @@ def main():
     from bunch import bunchify
 
     # Zato
-    from zato.common.message_log import MessageLog, LogContainerConfig
+    from zato.common.audit_log import AuditLog, LogContainerConfig
 
     def on_message(msg):
         # type: (str)
@@ -562,10 +562,10 @@ def main():
 
     log_container_config = LogContainerConfig()
 
-    message_log = MessageLog()
-    message_log.create_container(log_container_config)
+    audit_log = AuditLog()
+    audit_log.create_container(log_container_config)
 
-    reader = HL7MLLPServer(config, message_log)
+    reader = HL7MLLPServer(config, audit_log)
     reader.start()
 
 # ################################################################################################################################
