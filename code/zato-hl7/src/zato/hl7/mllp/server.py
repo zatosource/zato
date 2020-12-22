@@ -25,9 +25,10 @@ from zato.common.util.tcp import get_fqdn_by_ip, ZatoStreamServer
 if 0:
     from bunch import Bunch
     from gevent import socket
-    from zato.common.message_log import MessageLog, LogContainerConfig
+    from zato.common.message_log import DataEvent, MessageLog, LogContainerConfig
 
     Bunch = Bunch
+    DataEvent = DataEvent
     LogContainerConfig = LogContainerConfig
     MessageLog = MessageLog
     socket = socket
@@ -148,6 +149,7 @@ class HL7MLLPServer:
     def __init__(self, config, message_log):
         # type: (Bunch, MessageLog)
         self.config = config
+        self.object_id = config.id # type: str
         self.message_log = message_log
         self.address = config.address
         self.name = config.name
@@ -409,12 +411,8 @@ class HL7MLLPServer:
             _socket_send, _run_callback, _datetime_utcnow=datetime.utcnow):
         # type: (bool, bytes, object, ConnCtx, RequestCtx, object, object, object, object)
 
-        '''
         # Update our runtime metadata first (data received).
-        conn_ctx.total_bytes_received += request_ctx.msg_size
-        conn_ctx.total_messages_received += 1
-        conn_ctx.last_received = _datetime_utcnow()
-        '''
+        self._store_data_received(request_ctx)
 
         # Produce the message to invoke the callback with ..
         _buffer_data = _buffer_join_func(_buffer)
@@ -435,28 +433,37 @@ class HL7MLLPServer:
         # .. write the response back ..
         _socket_send(response)
 
-        '''
         # .. update our runtime metadata first (data sent) ..
-        conn_ctx.total_bytes_sent += len(response)
-        conn_ctx.total_messages_sent += 1
-        conn_ctx.last_sent = _datetime_utcnow()
-
-        if not conn_ctx.first_sent:
-            conn_ctx.first_sent = conn_ctx.last_sent
-            '''
+        self._store_data_sent(request_ctx)
 
         # .. and reset the message to make it possible to handle a new one.
         _request_ctx_reset()
 
 # ################################################################################################################################
 
-    def _store_data_sent(self, request_ctx, event_class=DataSent, _conn_type=conn_type):
-        # type: (RequestCtx, DataSent, str) -> DataSent
-        instance = event_class()
-        instance.data = request_ctx.data
-        instance.type_ = _conn_type
-        instance.conn_id = request_ctx.conn_id
-        instance.msg_id = request_ctx.msg_id
+    def _store_data(self, request_ctx, _DataEventClass, _conn_type=conn_type):
+        # type: (RequestCtx, DataEvent, str) -> None
+
+        # Create and fill out details of the new event ..
+        data_event = _DataEventClass()
+        data_event.data = request_ctx.data
+        data_event.type_ = _conn_type
+        data_event.object_id = self.object_id
+        data_event.conn_id = request_ctx.conn_id
+        data_event.msg_id = request_ctx.msg_id
+
+        # .. and store it in our log.
+        self.message_log.store_data(data_event)
+
+# ################################################################################################################################
+
+    def _store_data_received(self, request_ctx, event_class=DataReceived):
+        self._store_data(request_ctx, event_class)
+
+# ################################################################################################################################
+
+    def _store_data_sent(self, request_ctx, event_class=DataSent):
+        self._store_data(request_ctx, event_class)
 
 # ################################################################################################################################
 
@@ -530,6 +537,7 @@ def main():
         raise Exception(msg)
 
     config = bunchify({
+        'id': '123',
         'name': 'Hello HL7 MLLP',
         'address': '0.0.0.0:30191',
 
@@ -557,7 +565,7 @@ def main():
     message_log = MessageLog()
     message_log.create_container(log_container_config)
 
-    reader = HL7MLLPServer(config)
+    reader = HL7MLLPServer(config, message_log)
     reader.start()
 
 # ################################################################################################################################
