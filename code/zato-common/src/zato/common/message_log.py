@@ -39,14 +39,18 @@ class DataDirection:
 # ################################################################################################################################
 
 class _DataEvent:
-    def __init__(self):
+    def __init__(self, _utcnow=datetime.utcnow):
         self.data = ''
-        self.timestamp = None # type: datetime
+        self.timestamp = _utcnow()
         self.msg_id = ''
         self.in_reply_to = ''
         self.type_ = ''
         self.object_id = ''
         self.conn_id = ''
+
+        # This will be the other half of a request or response,
+        # e.g. it will link DataSent to DataReceived or ther other way around.
+        self.counterpart = None # type: _DataEvent
 
 # ################################################################################################################################
 
