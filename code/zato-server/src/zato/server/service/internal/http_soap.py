@@ -17,7 +17,7 @@ from paste.util.converters import asbool
 
 # Zato
 from zato.common.api import AuditLog, CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
-     HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
+     HL7, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.exception import ZatoException
@@ -225,6 +225,10 @@ class Create(_CreateEdit):
         input.soap_action = input.soap_action if input.soap_action else ''
         input.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
 
+        # For HL7
+        input.data_encoding = input.get('data_encoding') or 'utf-8'
+        input.hl7_version = input.get('hl7_version') or HL7.Const.Version.v2.id
+
         if input.content_encoding and input.content_encoding != 'gzip':
             raise Exception('Content encoding must be empty or equal to `gzip`')
 
@@ -368,6 +372,10 @@ class Edit(_CreateEdit):
         input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
         input.soap_action = input.soap_action if input.soap_action else ''
 
+        # For HL7
+        input.data_encoding = input.get('data_encoding') or 'utf-8'
+        input.hl7_version = input.get('hl7_version') or HL7.Const.Version.v2.id
+
         if input.content_encoding and input.content_encoding != 'gzip':
             raise Exception('Content encoding must be empty or equal to `gzip`')
 
@@ -438,7 +446,6 @@ class Edit(_CreateEdit):
                 item.has_rbac = input.get('has_rbac') or input.sec_use_rbac or False
                 item.content_type = input.get('content_type')
                 item.sec_use_rbac = input.sec_use_rbac
-
                 item.cache_id = input.get('cache_id') or None
                 item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
