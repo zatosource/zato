@@ -112,8 +112,8 @@
                 'rate_limit_check_parent_def',
             {% endifequal %}
 
-            'is_sent_active',
-            'is_received_active',
+            'is_audit_log_sent_active',
+            'is_audit_log_received_active',
             'max_len_messages_sent',
 
             'max_len_messages_received',
@@ -185,8 +185,8 @@
                         {% endifequal %}
 
                         <!-- 12,13,13a -->
+                        <th><a href="#">Audit log</a></th>
                         {% ifequal connection 'channel' %}
-                            <th><a href="#">Method</a></th>
                             <th class='ignore'>&nbsp;</th> {% comment %} service {% endcomment %}
                             <th class='ignore'>&nbsp;</th> {% comment %} content_encoding {% endcomment %}
                         {% endifequal %}
@@ -315,8 +315,12 @@
                         {% endifequal %}
 
                         <!-- 12,13,13a -->
+                        <td>
+
+                            <a href="{% url "audit-log" "http-soap" item.id %}?cluster={{ cluster_id }}">View</a>
+
+                        </td>
                         {% ifequal connection 'channel' %}
-                            <td>{{ item.method|default:'<span class="form_hint">---</span>' }}</td>
                             <td class='ignore'>{{ item.service_name }}</td>
                             <td class='ignore'>{{ item.content_encoding|default:'' }}</td>
                         {% endifequal %}
@@ -382,8 +386,8 @@
                         {% endifequal %}
 
                         <!-- 36 -->
-                        <td class='ignore'>{{ item.is_sent_active }}</td>
-                        <td class='ignore'>{{ item.is_received_active }}</td>
+                        <td class='ignore'>{{ item.is_audit_log_sent_active }}</td>
+                        <td class='ignore'>{{ item.is_audit_log_received_active }}</td>
                         <td class='ignore'>{{ item.max_len_messages_sent|default:"" }}</td>
 
                         <!-- 37 -->
@@ -395,6 +399,8 @@
                         <td class='ignore'>{{ item.hl7_version|default:"" }}</td>
                         <td class='ignore'>{{ item.json_path|default:"" }}</td>
                         <td class='ignore'>{{ item.data_encoding|default:"" }}</td>
+
+                        <!-- 39 -->
 
                     </tr>
                 {% endfor %}
