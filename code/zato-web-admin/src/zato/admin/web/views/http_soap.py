@@ -52,7 +52,7 @@ CACHE_TYPE = {
 
 generic_attrs = ('is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def',
     'is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', 'max_len_messages_received',
-    'max_bytes_per_message_sent', 'max_bytes_per_message_received')
+    'max_bytes_per_message_sent', 'max_bytes_per_message_received', 'hl7_version', 'json_path', 'data_encoding')
 
 _max_len_messages = AuditLog.Default.max_len_messages
 _max_data_stored_per_message = AuditLog.Default.max_data_stored_per_message
@@ -94,6 +94,10 @@ def _get_edit_create_message(params, prefix=''):
         'cache_id': params.get(prefix + 'cache_id'),
         'cache_expiry': params.get(prefix + 'cache_expiry'),
         'content_encoding': params.get(prefix + 'content_encoding'),
+
+        'hl7_version': params.get(prefix + 'hl7_version'),
+        'json_path': params.get(prefix + 'json_path'),
+        'data_encoding': params.get(prefix + 'data_encoding'),
 
         'is_rate_limit_active': params.get(prefix + 'is_rate_limit_active'),
         'rate_limit_type': params.get(prefix + 'rate_limit_type'),

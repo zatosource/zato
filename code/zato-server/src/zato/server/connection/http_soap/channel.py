@@ -346,10 +346,10 @@ class RequestDispatcher(object):
                     data_event.msg_id = cid
 
                     # .. and store it in the audit log.
-                    #self.server.audit_log.store_data_received(data_event)
+                    self.server.audit_log.store_data_received(data_event)
 
                     print()
-                    #print(111, self.server.audit_log._log['http-soap']['694'].to_dict())
+                    print(111, self.server.audit_log._log['http-soap']['694'].to_dict())
                     #wsgi_environ['wsgi.input'].buf.seek(0)
                     print(222, wsgi_environ['wsgi.input'].buf.read(1024))
                     print()

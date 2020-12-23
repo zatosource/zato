@@ -119,6 +119,11 @@
             'max_len_messages_received',
             'max_bytes_per_message_sent',
             'max_bytes_per_message_received',
+
+            'hl7_version',
+            'json_path',
+            'data_encoding',
+
         ]
     }
     </script>
@@ -256,6 +261,11 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        <!-- 38 -->
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
                 </thead>
 
                 <tbody>
@@ -380,6 +390,11 @@
                         <td class='ignore'>{{ item.max_len_messages_received|default:"" }}</td>
                         <td class='ignore'>{{ item.max_bytes_per_message_sent|default:"" }}</td>
                         <td class='ignore'>{{ item.max_bytes_per_message_received|default:"" }}</td>
+
+                        <!-- 38 -->
+                        <td class='ignore'>{{ item.hl7_version|default:"" }}</td>
+                        <td class='ignore'>{{ item.json_path|default:"" }}</td>
+                        <td class='ignore'>{{ item.data_encoding|default:"" }}</td>
 
                     </tr>
                 {% endfor %}
@@ -592,6 +607,11 @@
                     <input type="hidden" id="id_cache_type" name="cache_type" />
                     <input type="hidden" name="connection" value="{{ connection }}" />
                     <input type="hidden" name="transport" value="{{ transport }}" />
+
+                    {{ create_form.hl7_version }}
+                    {{ create_form.json_path }}
+                    {{ create_form.data_encoding }}
+
                 </form>
             </div>
         </div>
@@ -793,6 +813,11 @@
                     <input type="hidden" id="id_edit-cache_type" name="edit-cache_type" />
                     <input type="hidden" name="connection" value="{{ connection }}" />
                     <input type="hidden" name="transport" value="{{ transport }}" />
+
+                    {{ edit_form.hl7_version }}
+                    {{ edit_form.json_path }}
+                    {{ edit_form.data_encoding }}
+
                 </form>
             </div>
         </div>

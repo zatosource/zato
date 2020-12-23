@@ -69,6 +69,10 @@ class CreateForm(DataFormatForm, WithAuditLog):
     rate_limit_def = forms.CharField(widget=forms.Textarea(
         attrs={'style':'overflow:auto; width:100%; white-space: pre-wrap;height:100px'}))
 
+    hl7_version = forms.CharField(widget=forms.HiddenInput())
+    json_path = forms.CharField(widget=forms.HiddenInput())
+    data_encoding = forms.CharField(widget=forms.HiddenInput())
+
     def __init__(self, security_list=[], sec_tls_ca_cert_list={}, cache_list=[], soap_versions=SOAP_VERSIONS,
             prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
