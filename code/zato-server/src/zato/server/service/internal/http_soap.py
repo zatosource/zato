@@ -91,7 +91,9 @@ class _BaseGet(AdminService):
             'content_encoding', Boolean('match_slash'), 'http_accept', List('service_whitelist'), 'is_rate_limit_active', \
                 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def'), \
                 'hl7_version', 'json_path', 'should_parse_on_input', 'should_validate', 'should_return_errors', \
-                'data_encoding'
+                'data_encoding', 'is_sent_active', 'is_received_active', \
+                Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
+                Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received')
 
 # ################################################################################################################################
 
@@ -201,7 +203,10 @@ class Create(_CreateEdit):
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
             List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
             Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac'), 'hl7_version', 'json_path', \
-            'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding'
+            'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
+            'is_sent_active', 'is_received_active', \
+            Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
+            Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received')
         output_required = ('id', 'name')
 
     def handle(self):
@@ -342,7 +347,10 @@ class Edit(_CreateEdit):
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
             List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
             Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac'), 'hl7_version', 'json_path', \
-            'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding'
+            'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
+            'is_sent_active', 'is_received_active', \
+            Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
+            Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received')
         output_required = 'id', 'name'
 
     def handle(self):

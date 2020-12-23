@@ -124,7 +124,7 @@ class LogContainer:
         self.max_len_messages_received      = config.max_len_messages_received
         self.max_len_messages_sent          = config.max_len_messages_sent
         self.max_bytes_per_message_received = config.max_bytes_per_message_received
-        self.max_bytes_per_message_sent     = config.max_len_messages_sent
+        self.max_bytes_per_message_sent     = config.max_bytes_per_message_sent
 
         self.total_bytes_received    = 0
         self.total_messages_received = 0
