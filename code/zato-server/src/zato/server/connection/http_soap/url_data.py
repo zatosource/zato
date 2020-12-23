@@ -89,6 +89,7 @@ class URLData(CyURLData, OAuthDataStore):
                  vault_conn_sec_config=None, kvdb=None, broker_client=None, odb=None, json_pointer_store=None, xpath_store=None,
                  jwt_secret=None, vault_conn_api=None):
         super(URLData, self).__init__(channel_data)
+
         self.worker = worker # type: WorkerStore
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config # type: dict
@@ -132,6 +133,10 @@ class URLData(CyURLData, OAuthDataStore):
 
         # Needs always to be sorted by name in case of conflicts in paths resolution
         self.sort_channel_data()
+
+        # Set up audit log
+        for channel_item in channel_data:
+            self._set_up_audit_log(channel_item, False)
 
 # ################################################################################################################################
 
@@ -1255,6 +1260,8 @@ class URLData(CyURLData, OAuthDataStore):
 
             channel_item[name] = msg.get(name)
 
+            print(888, name, msg.get(name))
+
         if msg.get('security_id'):
             channel_item['sec_type'] = msg['sec_type']
             channel_item['security_id'] = msg['security_id']
@@ -1297,6 +1304,17 @@ class URLData(CyURLData, OAuthDataStore):
 
         return sec_info
 
+
+# ################################################################################################################################
+
+    def _set_up_audit_log(self, channel_item, is_edit):
+        # type: (dict, bool)
+
+        # Set up audit log if it is enabled
+        if channel_item.get('is_audit_log_sent_active') or channel_item.get('is_audit_log_received_active'):
+            self.worker.server.set_up_object_audit_log(
+                CHANNEL.HTTP_SOAP, channel_item['id'], channel_item, is_edit)
+
 # ################################################################################################################################
 
     def _create_channel(self, msg, old_data):
@@ -1320,10 +1338,8 @@ class URLData(CyURLData, OAuthDataStore):
             self.worker.server.set_up_object_rate_limiting(
                 RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP, channel_item['name'], config=channel_item)
 
-        # Set up audit log if it is enabled
-        if channel_item.get('is_audit_log_sent_active') or channel_item.get('is_audit_log_received_active'):
-            self.worker.server.set_up_object_audit_log(
-                CHANNEL.HTTP_SOAP, channel_item['id'], channel_item, is_edit)
+        # Set up audit log
+        self._set_up_audit_log(channel_item, is_edit)
 
 # ################################################################################################################################
 
