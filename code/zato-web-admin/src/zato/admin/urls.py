@@ -15,7 +15,7 @@ from django.views.static import serve as django_static_serve
 
 # Zato
 from zato.admin import settings
-from zato.admin.web.views import account, cluster, http_soap, kvdb, load_balancer, main, scheduler, service, stats
+from zato.admin.web.views import account, audit_log, cluster, http_soap, kvdb, load_balancer, main, scheduler, service, stats
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
@@ -186,6 +186,29 @@ urlpatterns += [
     url(r'^zato/service/slow-response/(?P<service_name>.*)/$',
         login_required(service.slow_response), name='service-slow-response'),
     ]
+
+# ################################################################################################################################
+# ################################################################################################################################
+# #
+# #   Audit
+# #
+# ################################################################################################################################
+# ################################################################################################################################
+
+urlpatterns += [
+
+    url(r'^zato/audit-log/(?P<type_>.*)/(?P<object_id>.*)/$',
+        login_required(audit_log.Index()), name=audit_log.Index.url_name),
+
+    url(r'^zato/audit-log/clear/(?P<direction>.*)/(?P<object_name>.*)/(?P<object_id>.*)/$',
+        login_required(audit_log.clear), name='audit-clear'),
+
+    url(r'^zato/audit-log/event/(?P<object_name>.*)/(?P<object_id>.*)/(?P<event_id>.*)/$',
+        login_required(audit_log.event_details), name='audit-event-details'),
+
+    url(r'^zato/audit-log/event/delete/(?P<object_name>.*)/(?P<object_id>.*)/(?P<event_id>.*)/$',
+        login_required(audit_log.delete_event), name='audit-event-delete'),
+]
 
 # ################################################################################################################################
 # ################################################################################################################################
