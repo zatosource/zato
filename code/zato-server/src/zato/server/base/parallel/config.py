@@ -488,7 +488,7 @@ class ConfigLoader(object):
         # type: (str, str, dict)
 
         # For type completion
-        audit_log = self.worker_store.audit_log # type: AuditLog
+        audit_log = self.audit_log # type: AuditLog
 
         # Prepare a new configuration object for that log ..
         log_config = LogContainerConfig()
