@@ -16,7 +16,7 @@ from future.utils import iteritems
 from past.builtins import basestring
 
 # Zato
-from zato.common.api import DELEGATED_TO_RBAC, RATE_LIMIT, SIMPLE_IO, TLS, ZATO_NONE, ZATO_SEC_USE_RBAC
+from zato.common.api import AuditLog, DELEGATED_TO_RBAC, RATE_LIMIT, SIMPLE_IO, TLS, ZATO_NONE, ZATO_SEC_USE_RBAC
 
 # ################################################################################################################################
 
@@ -298,6 +298,25 @@ class WithRateLimiting(forms.Form):
         super(WithRateLimiting, self).__init__(*args, **kwargs)
 
         add_select(self, 'rate_limit_type', RATE_LIMIT.TYPE(), needs_initial_select=False)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class WithAuditLog(forms.Form):
+    is_sent_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_received_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+
+    max_len_messages_sent = forms.CharField(
+        initial=AuditLog.Default.max_len_messages, widget=forms.TextInput(attrs={'style':'width:10%'}))
+
+    max_len_messages_received = forms.CharField(
+        initial=AuditLog.Default.max_len_messages, widget=forms.TextInput(attrs={'style':'width:10%'}))
+
+    max_bytes_per_message_sent = forms.CharField(
+        initial=AuditLog.Default.max_data_stored_per_message, widget=forms.TextInput(attrs={'style':'width:13%'}))
+
+    max_bytes_per_message_received = forms.CharField(
+        initial=AuditLog.Default.max_data_stored_per_message, widget=forms.TextInput(attrs={'style':'width:13%'}))
 
 # ################################################################################################################################
 # ################################################################################################################################

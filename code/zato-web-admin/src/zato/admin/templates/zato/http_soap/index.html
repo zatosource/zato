@@ -112,6 +112,13 @@
                 'rate_limit_check_parent_def',
             {% endifequal %}
 
+            'is_sent_active',
+            'is_received_active',
+            'max_len_messages_sent',
+
+            'max_len_messages_received',
+            'max_bytes_per_message_sent',
+            'max_bytes_per_message_received',
         ]
     }
     </script>
@@ -231,12 +238,23 @@
                           {% endifequal %}
                         {% endifequal %}
 
+                        <!-- 35 -->
                         {% ifequal connection 'channel' %}
                             <th class='ignore'>&nbsp;</th>
                             <th class='ignore'>&nbsp;</th>
                             <th class='ignore'>&nbsp;</th>
                             <th class='ignore'>&nbsp;</th>
                         {% endifequal %}
+
+                        <!-- 36 -->
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <!-- 37 -->
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -345,12 +363,23 @@
                           {% endifequal %}
                         {% endifequal %}
 
+                        <!-- 35 -->
                         {% ifequal connection 'channel' %}
                             <td class='ignore'>{{ item.is_rate_limit_active }}</td>
                             <td class='ignore'>{{ item.rate_limit_type }}</td>
                             <td class='ignore'>{{ item.rate_limit_def }}</td>
                             <td class='ignore'>{{ item.rate_limit_check_parent_def }}</td>
                         {% endifequal %}
+
+                        <!-- 36 -->
+                        <td class='ignore'>{{ item.is_sent_active }}</td>
+                        <td class='ignore'>{{ item.is_received_active }}</td>
+                        <td class='ignore'>{{ item.max_len_messages_sent|default:"" }}</td>
+
+                        <!-- 37 -->
+                        <td class='ignore'>{{ item.max_len_messages_received|default:"" }}</td>
+                        <td class='ignore'>{{ item.max_bytes_per_message_sent|default:"" }}</td>
+                        <td class='ignore'>{{ item.max_bytes_per_message_received|default:"" }}</td>
 
                     </tr>
                 {% endfor %}
@@ -540,8 +569,9 @@
                         </tr>
 
                         {% include "zato/include/rate-limiting/create.html" %}
-
                         {% endifequal %}
+
+                        {% include "zato/include/audit-log/create.html" %}
 
                         {% ifequal connection 'outgoing' %}
                         <tr>
@@ -740,8 +770,9 @@
                         </tr>
 
                         {% include "zato/include/rate-limiting/edit.html" %}
-
                         {% endifequal %}
+
+                        {% include "zato/include/audit-log/edit.html" %}
 
                         {% ifequal connection 'outgoing' %}
                         <tr>
