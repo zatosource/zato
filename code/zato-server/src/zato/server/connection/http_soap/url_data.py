@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -22,7 +22,7 @@ from six import PY2
 
 # Zato
 from zato.bunch import Bunch
-from zato.common.api import CONNECTION, DATA_FORMAT, MISC, RATE_LIMIT, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
+from zato.common.api import CHANNEL, CONNECTION, DATA_FORMAT, MISC, RATE_LIMIT, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
 from zato.common.vault_ import VAULT
 from zato.common.broker_message import code_to_name, SECURITY, VAULT as VAULT_BROKER_MSG
 from zato.common.dispatch import dispatcher
@@ -1303,6 +1303,10 @@ class URLData(CyURLData, OAuthDataStore):
         """ Creates a new channel, both its core data and the related security definition.
         Clears out URL cache for that entry, if it existed at all.
         """
+
+        # If we are editing an object, old_data will be populated, otherwise, it is an empty dict
+        is_edit = bool(old_data)
+
         match_target = get_match_target(msg, http_methods_allowed_re=self.worker.server.http_methods_allowed_re)
         channel_item = self._channel_item_from_msg(msg, match_target, old_data)
         self.channel_data.append(channel_item)
@@ -1319,7 +1323,7 @@ class URLData(CyURLData, OAuthDataStore):
         # Set up audit log if it is enabled
         if channel_item.get('is_audit_log_sent_active') or channel_item.get('is_audit_log_received_active'):
             self.worker.server.set_up_object_audit_log(
-                RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP, channel_item['id'], config=channel_item)
+                CHANNEL.HTTP_SOAP, channel_item['id'], channel_item, is_edit)
 
 # ################################################################################################################################
 

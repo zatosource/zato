@@ -484,7 +484,7 @@ class ConfigLoader(object):
 
 # ################################################################################################################################
 
-    def set_up_object_audit_log(self, object_type, object_id, config):
+    def set_up_object_audit_log(self, object_type, object_id, config, is_edit):
         # type: (str, str, dict)
 
         # For type completion
@@ -503,8 +503,9 @@ class ConfigLoader(object):
         log_config.max_bytes_per_message_sent     = int(config['max_len_messages_sent']) * 1000
         log_config.max_bytes_per_message_received = int(config['max_len_messages_received']) * 1000
 
-        # .. and now we can create our audit log container.
-        audit_log.create_container(log_config)
+        # .. and now we can create our audit log container
+        func = audit_log.edit_container if is_edit else audit_log.create_container
+        func(log_config)
 
 # ################################################################################################################################
 
