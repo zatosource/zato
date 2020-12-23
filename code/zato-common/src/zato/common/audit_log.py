@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from gevent.lock import RLock
 
 # Zato
-from zato.common.api import GENERIC
+from zato.common.api import CHANNEL, GENERIC
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -162,7 +162,11 @@ class AuditLog:
         self.lock = RLock()
 
         # The main log - keys are object types, values are dicts mapping object IDs to LogContainer objects
-        self._log = {}
+        self._log = {
+            CHANNEL.HTTP_SOAP: {},
+            CHANNEL.WEB_SOCKET: {},
+            GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: {},
+        }
 
 # ################################################################################################################################
 
@@ -202,17 +206,18 @@ class AuditLog:
 
         # Get the mapping of object types to object IDs ..
         try:
-            container_dict = self._log[config.type_]
+            container_dict = self._log[config.type_] # type: dict
         except KeyError:
-            raise ValueError('Container type not found `{}` ({})'.format(config.type_, config.object_id))
+            raise ValueError('Container type not found `{}` among `{}` ({})'.format(
+                config.type_, sorted(self._log), config.object_id))
 
         # No KeyError = we recognised that type ..
 
-        # .. so we can now try to delete that container by its object's ID
-        try:
-            del container_dict[config.object_id]
-        except KeyError:
-            raise ValueError('Object container not found `{}` ({})'.format(config.type_, config.object_id))
+        # .. so we can now try to delete that container by its object's ID.
+        # Note that we use .pop on purpose - e.g. when a server has just started,
+        # it may not have any such object yet but the user may already try to edit
+        # the object this log is attached to already. Using .pop ignores non-existing keys.
+        container_dict.pop(config.object_id, None)
 
 # ################################################################################################################################
 
