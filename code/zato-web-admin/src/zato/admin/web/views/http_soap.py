@@ -51,7 +51,7 @@ CACHE_TYPE = {
 }
 
 generic_attrs = ('is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def',
-    'is_sent_active', 'is_received_active', 'max_len_messages_sent', 'max_len_messages_received',
+    'is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', 'max_len_messages_received',
     'max_bytes_per_message_sent', 'max_bytes_per_message_received')
 
 _max_len_messages = AuditLog.Default.max_len_messages
@@ -100,8 +100,8 @@ def _get_edit_create_message(params, prefix=''):
         'rate_limit_def': params.get(prefix + 'rate_limit_def'),
         'rate_limit_check_parent_def': params.get(prefix + 'rate_limit_check_parent_def'),
 
-        'is_sent_active': params.get(prefix + 'is_sent_active') or False,
-        'is_received_active': params.get(prefix + 'is_received_active') or False,
+        'is_audit_log_sent_active': params.get(prefix + 'is_audit_log_sent_active') or False,
+        'is_audit_log_received_active': params.get(prefix + 'is_audit_log_received_active') or False,
 
         'max_len_messages_sent': params.get(prefix + 'max_len_messages_sent') or _max_len_messages,
         'max_len_messages_received': params.get(prefix + 'max_len_messages_received') or _max_len_messages,
@@ -109,10 +109,6 @@ def _get_edit_create_message(params, prefix=''):
         'max_bytes_per_message_sent': params.get(prefix + 'max_bytes_per_message_sent') or _max_data_stored_per_message,
         'max_bytes_per_message_received': params.get(prefix + 'max_bytes_per_message_received') or _max_data_stored_per_message,
     }
-
-    print()
-    print(111, message)
-    print()
 
     return message
 

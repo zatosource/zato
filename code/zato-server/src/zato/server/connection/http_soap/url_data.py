@@ -1249,7 +1249,9 @@ class URLData(CyURLData, OAuthDataStore):
             'is_internal', 'merge_url_params_req', 'method', 'name', 'params_pri', 'ping_method', 'pool_size', 'service_id',
             'service_name', 'soap_action', 'soap_version', 'transport', 'url_params_pri', 'url_path', 'sec_use_rbac',
             'cache_type', 'cache_id', 'cache_name', 'cache_expiry', 'content_encoding', 'match_slash', 'hl7_version',
-            'json_path', 'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding'):
+            'json_path', 'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding',
+            'is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', 'max_len_messages_received',
+            'max_bytes_per_message_sent', 'max_bytes_per_message_received'):
 
             channel_item[name] = msg.get(name)
 
@@ -1309,9 +1311,15 @@ class URLData(CyURLData, OAuthDataStore):
         self._remove_from_cache(match_target)
         self.sort_channel_data()
 
-        # Set up rate limiting
-        self.worker.server.set_up_object_rate_limiting(
-            RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP, channel_item['name'], config=channel_item)
+        # Set up rate limiting, if it is enabled
+        if channel_item.get('is_rate_limit_active'):
+            self.worker.server.set_up_object_rate_limiting(
+                RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP, channel_item['name'], config=channel_item)
+
+        # Set up audit log if it is enabled
+        if channel_item.get('is_audit_log_sent_active') or channel_item.get('is_audit_log_received_active'):
+            self.worker.server.set_up_object_audit_log(
+                RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP, channel_item['id'], config=channel_item)
 
 # ################################################################################################################################
 
@@ -1359,8 +1367,7 @@ class URLData(CyURLData, OAuthDataStore):
         """
         with self.url_sec_lock:
             # Only edits have 'old_name', creates don't. So for edits we delete
-            # the channel and later recreate it while creates, obviously,
-            # get to creation only.
+            # the channel and later recreate it while create actions do not have anything to delete.
             if msg.get('old_name'):
                 old_data = self._delete_channel(msg)
             else:

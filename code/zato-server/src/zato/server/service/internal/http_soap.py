@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -16,7 +16,7 @@ from traceback import format_exc
 from paste.util.converters import asbool
 
 # Zato
-from zato.common.api import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
+from zato.common.api import AuditLog, CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.broker_message import CHANNEL, OUTGOING
@@ -29,6 +29,11 @@ from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_se
      set_instance_opaque_attrs
 from zato.server.service import Boolean, Integer, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+
+# ################################################################################################################################
+
+_max_len_messages = AuditLog.Default.max_len_messages
+_max_data_stored_per_message = AuditLog.Default.max_data_stored_per_message
 
 # ################################################################################################################################
 
@@ -91,7 +96,7 @@ class _BaseGet(AdminService):
             'content_encoding', Boolean('match_slash'), 'http_accept', List('service_whitelist'), 'is_rate_limit_active', \
                 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def'), \
                 'hl7_version', 'json_path', 'should_parse_on_input', 'should_validate', 'should_return_errors', \
-                'data_encoding', 'is_sent_active', 'is_received_active', \
+                'data_encoding', 'is_audit_log_sent_active', 'is_audit_log_received_active', \
                 Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
                 Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received')
 
@@ -204,7 +209,7 @@ class Create(_CreateEdit):
             List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
             Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac'), 'hl7_version', 'json_path', \
             'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
-            'is_sent_active', 'is_received_active', \
+            'is_audit_log_sent_active', 'is_audit_log_received_active', \
             Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
             Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received')
         output_required = ('id', 'name')
@@ -348,7 +353,7 @@ class Edit(_CreateEdit):
             List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
             Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac'), 'hl7_version', 'json_path', \
             'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
-            'is_sent_active', 'is_received_active', \
+            'is_audit_log_sent_active', 'is_audit_log_received_active', \
             Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
             Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received')
         output_required = 'id', 'name'
@@ -433,6 +438,7 @@ class Edit(_CreateEdit):
                 item.has_rbac = input.get('has_rbac') or input.sec_use_rbac or False
                 item.content_type = input.get('content_type')
                 item.sec_use_rbac = input.sec_use_rbac
+
                 item.cache_id = input.get('cache_id') or None
                 item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
@@ -481,6 +487,7 @@ class Edit(_CreateEdit):
                     action = CHANNEL.HTTP_SOAP_CREATE_EDIT.value
                 else:
                     action = OUTGOING.HTTP_SOAP_CREATE_EDIT.value
+
                 self.notify_worker_threads(input, action)
 
                 self.response.payload.id = item.id
