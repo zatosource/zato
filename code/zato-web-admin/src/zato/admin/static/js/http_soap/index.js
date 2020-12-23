@@ -81,6 +81,9 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     var is_rate_limit_active = $.fn.zato.like_bool(data.is_rate_limit_active) == true;
     var rate_limit_check_parent_def = $.fn.zato.like_bool(data.rate_limit_check_parent_def) == true;
 
+    var is_sent_active = $.fn.zato.like_bool(data.is_sent_active) == true;
+    var is_received_active = $.fn.zato.like_bool(data.is_received_active) == true;
+
     var method_tr = '';
     var soap_action_tr = '';
     var soap_version_tr = '';
@@ -212,13 +215,23 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         }
     }
 
-    /* 35,36,37,38 */
+    /* 35 */
     if(is_channel) {
         row += String.format("<td class='ignore'>{0}</td>", is_rate_limit_active);
         row += String.format("<td class='ignore'>{0}</td>", data.rate_limit_type);
         row += String.format("<td class='ignore'>{0}</td>", data.rate_limit_def);
         row += String.format("<td class='ignore'>{0}</td>", rate_limit_check_parent_def);
     }
+
+    /* 36 */
+    row += String.format("<td class='ignore'>{0}</td>", is_sent_active);
+    row += String.format("<td class='ignore'>{0}</td>", is_received_active);
+    row += String.format("<td class='ignore'>{0}</td>", data.max_len_messages_sent);
+
+    /* 37 */
+    row += String.format("<td class='ignore'>{0}</td>", data.max_len_messages_received);
+    row += String.format("<td class='ignore'>{0}</td>", data.max_bytes_per_message_sent);
+    row += String.format("<td class='ignore'>{0}</td>", data.max_bytes_per_message_received);
 
     if(include_tr) {
         row += '</tr>';
