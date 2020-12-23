@@ -303,8 +303,8 @@ class WithRateLimiting(forms.Form):
 # ################################################################################################################################
 
 class WithAuditLog(forms.Form):
-    is_sent_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    is_received_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_audit_log_sent_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_audit_log_received_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
     max_len_messages_sent = forms.CharField(
         initial=AuditLog.Default.max_len_messages, widget=forms.TextInput(attrs={'style':'width:10%'}))
