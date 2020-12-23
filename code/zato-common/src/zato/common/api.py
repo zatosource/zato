@@ -1196,6 +1196,11 @@ class GENERIC:
 # ################################################################################################################################
 
 class AuditLog:
+
+    class Direction:
+        received = 'received'
+        sent     = 'sent'
+
     class Default:
         max_len_messages = 50
         max_data_stored_per_message = 500 # In kilobytes

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -32,6 +32,7 @@ from past.builtins import basestring, unicode
 # Zato
 from zato.common.api import CHANNEL, DATA_FORMAT, JSON_RPC, HL7, HTTP_SOAP, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, \
      URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE, ZATO_OK
+from zato.common.audit_log import DataReceived, DataSent
 from zato.common.exception import HTTP_RESPONSES
 from zato.common.hl7 import HL7Exception
 from zato.common.json_internal import dumps, loads
@@ -248,7 +249,7 @@ class RequestDispatcher(object):
         _http_soap_action='HTTP_SOAPACTION', _stringio=StringIO, _gzipfile=GzipFile, _accept_any_http=accept_any_http,
         _accept_any_internal=accept_any_internal, _rate_limit_type_http=RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP,
         _rate_limit_type_sso_user=RATE_LIMIT.OBJECT_TYPE.SSO_USER, _stack_format=stack_format, _exc_sep='*' * 80,
-        _jwt=_jwt, _sso_ext_auth=_sso_ext_auth, _data_format_hl7=_data_format_hl7):
+        _jwt=_jwt, _sso_ext_auth=_sso_ext_auth, _data_format_hl7=_data_format_hl7, _channel=CHANNEL.HTTP_SOAP):
 
         # Needed as one of the first steps
         http_method = wsgi_environ['REQUEST_METHOD']
@@ -332,6 +333,26 @@ class RequestDispatcher(object):
                 if channel_item.get('is_rate_limit_active'):
                     self.server.rate_limiting.check_limit(
                         cid, _rate_limit_type_http, channel_item['name'], wsgi_environ['zato.http.remote_addr'])
+
+                # Store data in audit log now - again, just like we rate limiting, we did not want to do it too soon.
+                if channel_item.get('is_audit_log_received_active'):
+
+                    # Describe our event ..
+                    data_event = DataReceived()
+                    data_event.type_ = _channel
+                    data_event.object_id = channel_item['id']
+                    data_event.data = payload
+                    data_event.timestamp = req_timestamp
+                    data_event.msg_id = cid
+
+                    # .. and store it in the audit log.
+                    #self.server.audit_log.store_data_received(data_event)
+
+                    print()
+                    #print(111, self.server.audit_log._log['http-soap']['694'].to_dict())
+                    #wsgi_environ['wsgi.input'].buf.seek(0)
+                    print(222, wsgi_environ['wsgi.input'].buf.read(1024))
+                    print()
 
                 # Security definition-based checks went fine but it is still possible
                 # that this sec_def is linked to an SSO user whose rate limits we need to check.
