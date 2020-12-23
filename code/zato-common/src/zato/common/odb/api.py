@@ -716,7 +716,7 @@ class ODBManager(SessionWrapper):
                     # Common things first
                     result[target].sec_def.id = sec_def.id
                     result[target].sec_def.name = sec_def.name
-                    result[target].sec_def.password = self.decrypt_func(sec_def.password)
+                    result[target].sec_def.password = self.decrypt_func(sec_def.password or '')
                     result[target].sec_def.sec_type = item.sec_type
 
                     if item.sec_type == SEC_DEF_TYPE.BASIC_AUTH:

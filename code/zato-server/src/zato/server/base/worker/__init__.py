@@ -49,7 +49,6 @@ from zato.common import broker_message
 from zato.common.api import CHANNEL, CONNECTION, DATA_FORMAT, FILE_TRANSFER, GENERIC as COMMON_GENERIC, \
      HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, simple_types, URL_TYPE, TRACE1, \
      ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
-from zato.common.audit_log import AuditLog
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
@@ -188,9 +187,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.pubsub = PubSub(self.server.cluster_id, self.server)
         self.rbac = RBAC()
         self.worker_idx = int(os.environ['ZATO_SERVER_WORKER_IDX'])
-
-        # Audit log
-        self.audit_log = AuditLog()
 
         # Which services can be invoked
         self.invoke_matcher = Matcher()

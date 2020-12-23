@@ -14,10 +14,14 @@ from datetime import datetime, timedelta
 from gevent.lock import RLock
 
 # Zato
-from zato.common.api import CHANNEL, GENERIC
+from zato.common.api import AuditLog as CommonAuditLog, CHANNEL, GENERIC
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+_sent     = CommonAuditLog.Direction.sent
+_received = CommonAuditLog.Direction.received
+
 
 event_attrs    = 'direction', 'data', 'timestamp', 'msg_id', 'in_reply_to', 'type_', 'object_id', 'conn_id'
 
@@ -31,16 +35,9 @@ config_attrs   = 'type_', 'object_id', 'max_len_messages_received',      'max_le
 # ################################################################################################################################
 # ################################################################################################################################
 
-class DataDirection:
-    received = 'received'
-    sent     = 'sent'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class DataEvent:
     def __init__(self, direction, _utcnow=datetime.utcnow):
-        self.direction = ''
+        self.direction = direction
         self.data = ''
         self.timestamp = _utcnow()
         self.msg_id = ''
@@ -70,7 +67,7 @@ class DataSent(DataEvent):
     """
     __slots__ = event_attrs
 
-    def __init__(self, _direction=DataDirection.sent):
+    def __init__(self, _direction=_sent):
         super().__init__(_direction)
 
 # ################################################################################################################################
@@ -82,7 +79,7 @@ class DataReceived(DataEvent):
     """
     __slots__ = event_attrs
 
-    def __init__(self, _direction=DataDirection.received):
+    def __init__(self, _direction=_received):
         super().__init__(_direction)
 
 # ################################################################################################################################
@@ -109,28 +106,23 @@ class LogContainer:
     """
     __slots__ = config_attrs +  transfer_attrs + ('lock',)
 
-    def __init__(self, config, _received=DataDirection.received, _sent=DataDirection.sent):
+    def __init__(self, config, _sent=_sent, _received=_received):
         # type: (LogContainerConfig)
 
         # To serialise access to the underlying storage
         self.lock = {
+            _sent: RLock(),
             _received: RLock(),
-            _sent: RLock()
         }
 
         self.type_ = config.type_
         self.object_id = config.object_id
 
-        self.max_len_messages_received      = config.max_len_messages_received
         self.max_len_messages_sent          = config.max_len_messages_sent
-        self.max_bytes_per_message_received = config.max_bytes_per_message_received
-        self.max_bytes_per_message_sent     = config.max_bytes_per_message_sent
+        self.max_len_messages_received      = config.max_len_messages_received
 
-        self.total_bytes_received    = 0
-        self.total_messages_received = 0
-        self.avg_msg_size_received   = 0
-        self.first_received          = None # type: datetime
-        self.last_received           = None # type: datetime
+        self.max_bytes_per_message_sent     = config.max_bytes_per_message_sent
+        self.max_bytes_per_message_received = config.max_bytes_per_message_received
 
         self.total_bytes_sent    = 0
         self.total_messages_sent = 0
@@ -138,17 +130,39 @@ class LogContainer:
         self.first_sent          = None # type: datetime
         self.last_sent           = None # type: datetime
 
+        self.total_bytes_received    = 0
+        self.total_messages_received = 0
+        self.avg_msg_size_received   = 0
+        self.first_received          = None # type: datetime
+        self.last_received           = None # type: datetime
+
         # These two deques are where the actual data is kept
         self.messages = {}
-        self.messages[_received] = deque(maxlen=self.max_len_messages_received)
         self.messages[_sent]     = deque(maxlen=self.max_len_messages_sent)
+        self.messages[_received] = deque(maxlen=self.max_len_messages_received)
 
 # ################################################################################################################################
 
-    def store(self, data, direction):
-        with self.lock[data.direction]:
-            storage = self.messages[data.direction] # type: deque
-            storage.append(data)
+    def store(self, data_event):
+        with self.lock[data_event.direction]:
+            storage = self.messages[data_event.direction] # type: deque
+            storage.append(data_event)
+
+# ################################################################################################################################
+
+    def to_dict(self, _sent=_sent, _received=_received):
+        out = {
+            _sent: [],
+            _received: []
+        }
+
+        for name in (_sent, _received):
+            messages = out[name]
+            with self.lock[name]:
+                for message in self.messages[name]: # type: DataEvent
+                    messages.append(message.to_dict())
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -236,25 +250,28 @@ class AuditLog:
 
 # ################################################################################################################################
 
-    def store_data(self, data):
+    def store_data(self, data_event):
         # type: (DataEvent) -> None
 
+        # We always store IDs as string objects
+        data_event.object_id = str(data_event.object_id)
+
         # At this point we assume that all the dicts and containers already exist
-        container_dict = self._log[data.type_]
-        container = container_dict[data.object_id] # type: LogContainer
-        container.store(data)
+        container_dict = self._log[data_event.type_]
+        container = container_dict[data_event.object_id] # type: LogContainer
+        container.store(data_event)
 
 # ################################################################################################################################
 
-    def store_data_received(self, data):
+    def store_data_received(self, data_event):
         # type: (DataReceived) -> None
-        self.store_data(data)
+        self.store_data(data_event)
 
 # ################################################################################################################################
 
-    def store_data_sent(self, data):
+    def store_data_sent(self, data_event):
         # type: (DataSent) -> None
-        self.store_data(data)
+        self.store_data(data_event)
 
 # ################################################################################################################################
 # ################################################################################################################################
