@@ -1,6 +1,7 @@
 {% extends "zato/index.html" %}
+{% load extras %}
 
-{% block html_title %}Cache definitions (built-in){% endblock %}
+{% block html_title %}Message log: {{ object_name }}{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -18,29 +19,28 @@
     <script>
     $.fn.zato.data_table.get_columns = function() {
         return [
+            {% comment %} 1 {% endcomment %}
             '_numbering',
             '_selection',
-            'name',
-            '_is_active',
-            '_is_default',
 
-            'cur_size',
-            'max_size',
-            'max_item_size',
-            '_extend_expiry_on_get',
-            '_extend_expiry_on_set',
+            {% comment %} 2 {% endcomment %}
+            'timestamp',
+            'direction',
+            'msg_id',
 
-            '_create',
-            '_clear',
-            '_edit',
+            {% comment %} 3 {% endcomment %}
+            'in_reply_to',
+            '_server',
+            '_details',
+
+            {% comment %} 4 {% endcomment %}
             '_delete',
             'id',
+            'server_name',
 
-            'is_active',
-            'is_default',
-            'extend_expiry_on_get',
-            'extend_expiry_on_set',
-            'cache_id',
+            {% comment %} 5 {% endcomment %}
+            'server_pid',
+
         ]
     }
     </script>
@@ -48,7 +48,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Cache definitions : built-in</h2>
+<h2 class="zato">Message log: {{ object_name }} <span class="form_hint">({{ object_type_label }})</span></h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -56,76 +56,72 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% include "zato/search-form.html" with page_prompt="Show definitions"%}
-
-
     {% if cluster_id %}
 
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.cache.builtin.create()">Create a new definition</a>
+            <a href="javascript:$.fn.zato.cache.audit_log.create()">Clear audit log</a>
         </div>
 
         <div id="markup">
             <table id="data-table">
                 <thead>
                     <tr class='ignore'>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th><a href="#">Name</a></th>
-                        <th><a href="#">Active</a></th>
-                        <th><a href="#">Default</a></th>
 
-                        <th><a href="#">Current size</a></th>
-                        <th><a href="#">Max size</a></th>
-                        <th><a href="#">Max item size</a></th>
-                        <th><a href="#">Extend exp. on get</a></th>
-                        <th><a href="#">Extend exp. on set</a></th>
+                        {% comment %} 1 {% endcomment %}
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
 
+                        {% comment %} 2 {% endcomment %}
+                        <th><a href="#">Timestamp</a></th>
+                        <th><a href="#">Direction</a></th>
+                        <th><a href="#">Msg ID</a></th>
+
+                        {% comment %} 3 {% endcomment %}
+                        <th><a href="#">In reply to</a></th>
+                        <th><a href="#">Server</a></th>
                         <th>&nbsp;</th>
+
+                        {% comment %} 4 {% endcomment %}
                         <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        {% comment %} 5 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
+
                 </thead>
 
                 <tbody>
                 {% if items %}
                 {% for item in items %}
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.cache_id }}'>
+
+                        {% comment %} 1 {% endcomment %}
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td><a href="{% url "cache-builtin-get-entries" item.cache_id %}?cluster=1">{{ item.name }}</a></td>
-                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.is_default|yesno:'Yes,No' }}</td>
 
-                        <td id="cache_current_size_{{ item.cache_id }}">{{ item.current_size }}</td>
-                        <td>{{ item.max_size }}</td>
-                        <td>{{ item.max_item_size }}</td>
-                        <td>{{ item.extend_expiry_on_get|yesno:'Yes,No' }}</td>
-                        <td>{{ item.extend_expiry_on_set|yesno:'Yes,No'  }}</td>
+                        {% comment %} 2 {% endcomment %}
+                        <td>{{ item.timestamp }}</td>
+                        <td>{{ item.direction }}</td>
+                        <td>{{ item.msg_id }}</td>
 
-                        <td><a href="{% url "cache-builtin-create-entry" item.cache_id cluster_id %}">Add a new entry</a></td>
-                        <td><a href="javascript:$.fn.zato.cache.builtin.clear('{{ item.cache_id }}')">Clear</a></td>
-                        <td><a href="javascript:$.fn.zato.cache.builtin.edit('{{ item.cache_id }}')">Edit</a></td>
-                        <td>{% if item.is_default %}<span class="form_hint">Delete</span>{% else %}<a href="javascript:$.fn.zato.cache.builtin.delete_('{{ item.cache_id }}')">Delete</a>{% endif %}</td>
-                        <td class='ignore item_id_{{ item.cache_id }}'>{{ item.cache_id }}</td>
+                        {% comment %} 3 {% endcomment %}
+                        <td>{{ item.in_reply_to|no_value_indicator }}</td>
+                        <td>{{ item.server_name }}:{{ item.server_pid }}</td>
+                        <td><a href="#">Details</a></td>
 
-                        <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.is_default }}</td>
-                        <td class='ignore'>{{ item.extend_expiry_on_get }}</td>
-                        <td class='ignore'>{{ item.extend_expiry_on_set }}</td>
-                        <td class='ignore'>{{ item.cache_id }}</td>
+                        {% comment %} 4 {% endcomment %}
+                        <td><a href="#">Delete</a></td>
+                        <td class='ignore item_id_{{ item.event_id }}'>{{ item.event_id }}</td>
+                        <td class='ignore'>{{ item.server_name }}</td>
+
+                        {% comment %} 5 {% endcomment %}
+                        <td class='ignore'>{{ item.server_pid }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='20'>No results</td>
+                        <td colspan='12'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -134,131 +130,6 @@
         </div>
 
 {% include "zato/paginate/action-panel.html" %}
-
-        <div id="create-div" class='data-popup ignore'>
-            <div class="bd">
-                <form action="{% url "cache-builtin-create" %}" method="post" id="create-form">
-                    <table class="form-data">
-                        <tr>
-                            <td style="vertical-align:middle; width:20%">Name</td>
-                            <td>{{ create_form.name }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Options</td>
-                            <td>
-                                <label>Active {{ create_form.is_active }}</label>
-                                |
-                                <label>Default {{ create_form.is_default }}</label>
-                                </td>
-                        </tr>
-
-
-                            <td style="vertical-align:middle">Max size</td>
-                            <td>
-                                {{ create_form.max_size }}
-                                <span class="form_hint">
-                                    0=No limits, default: {{ default_max_size }}
-                                </span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Max item size</td>
-                            <td>
-                                {{ create_form.max_item_size }}
-                                <span class="form_hint">
-                                    0=No limits, default: {{ default_max_item_size }} (characters or bytes)
-                                </span>
-                            </td>
-                        </tr>
-
-
-                        <tr>
-                            <td style="vertical-align:middle">Extend expiration
-                            </td>
-                            <td>
-                                <label>On get {{ create_form.extend_expiry_on_get }}</label>
-                                |
-                                <label>On set {{ create_form.extend_expiry_on_set }}</label>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td colspan="2" style="text-align:right">
-                                <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
-                            </td>
-                        </tr>
-                    </table>
-                    <input type="hidden" name="cache_type" value="builtin" />
-                    <input type="hidden" id="id_sync_method" name="sync_method" value="in-background" />
-                    <input type="hidden" id="id_persistent_storage" name="persistent_storage" value="no-persistent-storage" />
-                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
-                    {{ create_form.cache_id }}
-                </form>
-            </div>
-        </div>
-
-        <div id="edit-div" class='data-popup ignore'>
-            <div class="bd">
-                <form action="{% url "cache-builtin-edit" %}" method="post" id="edit-form">
-                    <table class="form-data">
-                        <tr>
-                        <tr>
-                            <td style="vertical-align:middle; width:20%">Name</td>
-                            <td>{{ edit_form.name }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Options</td>
-                            <td>
-                                <label>Active {{ edit_form.is_active }}</label>
-                                |
-                                <label>Default {{ edit_form.is_default }}</label>
-                                </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Max size</td>
-                            <td>
-                                {{ edit_form.max_size }}
-                                <span class="form_hint">
-                                    0=No limits, default: {{ default_max_size }}
-                                </span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Max item size</td>
-                            <td>
-                                {{ edit_form.max_item_size }}
-                                <span class="form_hint">
-                                    0=No limits, default: {{ default_max_item_size }} (characters or bytes)
-                                </span>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Extend expiration
-                            </td>
-                            <td>
-                                <label>On get {{ edit_form.extend_expiry_on_get }}</label>
-                                |
-                                <label>On set {{ edit_form.extend_expiry_on_set }}</label>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td colspan="2" style="text-align:right">
-                                <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
-                            </td>
-                        </tr>
-                    </table>
-                    <input type="hidden" id="id_edit-cache_type" name="edit-cache_type" value="builtin" />
-                    <input type="hidden" id="id_edit-sync_method" name="edit-sync_method" value="in-background" />
-                    <input type="hidden" id="id_edit-persistent_storage" name="edit-persistent_storage" value="no-persistent-storage" />
-                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
-                    <input type="hidden" id="id_edit-id" name="id" />
-                    {{ edit_form.cache_id }}
-                </form>
-            </div>
-        </div>
 
     {% endif %} {% comment %}cluster_id{% endcomment %}
 
