@@ -153,7 +153,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += soap_version_tr;
     }
 
-    row += String.format('<td>{0}11</td>', item.method ? item.method : $.fn.zato.empty_value);
+    row += String.format('<td><a href="/zato/audit-log/http-soap/{0}/?cluster={1}">View</a></td>', item.id, cluster_id);
 
     /* 12,13,13a */
     if(is_channel) {

@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
+from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.cache.builtin import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, invoke_service_with_json_response, \
      method_allowed
@@ -20,16 +21,18 @@ from zato.common.model import AuditLogEvent
 class Index(_Index):
     method_allowed = 'GET'
     url_name = 'audit-log'
-    template = 'zato/audit/index.html'
-    service_name = 'zato.audit-log.get-list'
+    template = 'zato/audit-log/index.html'
+    service_name = 'audit-log.get-list'
     output_class = AuditLogEvent
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id',)
-        output_required = ('cache_id', 'name', 'is_active', 'is_default', 'max_size', 'max_item_size', 'extend_expiry_on_get',
-            'extend_expiry_on_set', 'sync_method', 'persistent_storage', 'cache_type', 'current_size')
+        input_required = 'cluster_id', 'type_', 'object_id', 'object_name', 'object_type_label'
+        output_required = 'server_name', 'server_pid', 'type_', 'object_id', 'conn_id', 'direction', 'data', 'timestamp', \
+            'msg_id', 'in_reply_to',
         output_repeated = True
+
+    def on_before_append_item(self, item):
 
     def handle(self):
         return {
@@ -37,6 +40,11 @@ class Index(_Index):
             'edit_form': EditForm(prefix='edit'),
             'default_max_size': CACHE.DEFAULT.MAX_SIZE,
             'default_max_item_size': CACHE.DEFAULT.MAX_ITEM_SIZE,
+            'cluster_id': self.input.cluster_id,
+            'type_': self.input.type_,
+            'object_id': self.input.object_id,
+            'object_name': self.input.object_name,
+            'object_type_label': self.input.object_type_label,
         }
 
 # ################################################################################################################################
