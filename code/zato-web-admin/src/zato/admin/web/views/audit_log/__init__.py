@@ -29,10 +29,20 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id', 'type_', 'object_id', 'object_name', 'object_type_label'
         output_required = 'server_name', 'server_pid', 'type_', 'object_id', 'conn_id', 'direction', 'data', 'timestamp', \
-            'msg_id', 'in_reply_to',
+            'timestamp_utc', 'msg_id', 'in_reply_to',
         output_repeated = True
 
     def on_before_append_item(self, item):
+        # type: (AuditLogEvent)
+        item.timestamp_utc = item.timestamp
+        item.timestamp = from_utc_to_user(item.timestamp+'+00:00', self.req.zato.user_profile)
+
+        print()
+        print(111, item.timestamp)
+        print(222, item.timestamp_utc)
+        print()
+
+        return item
 
     def handle(self):
         return {

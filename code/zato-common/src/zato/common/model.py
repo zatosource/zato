@@ -93,7 +93,8 @@ class AuditLogEvent:
         self.conn_id = ''
         self.direction = ''
         self.data = ''
-        self.timestamp = None
+        self.timestamp = None # type: str
+        self.timestamp_utc = None
         self.msg_id = ''
         self.in_reply_to = ''
 
