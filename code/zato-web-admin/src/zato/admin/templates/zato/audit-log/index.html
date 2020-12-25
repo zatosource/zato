@@ -101,7 +101,13 @@
                         <td class="impexp"><input type="checkbox" /></td>
 
                         {% comment %} 2 {% endcomment %}
-                        <td>{{ item.timestamp }}</td>
+                        <td style="width:10%">
+                            <a
+                                id="a_timestamp_{{ item.id }}"
+                                href="javascript:$.fn.zato.toggle_time('timestamp_{{ item.id }}', '{{ item.timestamp }}', '{{ item.timestamp_utc }}')">{{ item.timestamp }}
+                            </a>
+                        </td>
+
                         <td>{{ item.direction }}</td>
                         <td>{{ item.msg_id }}</td>
 
