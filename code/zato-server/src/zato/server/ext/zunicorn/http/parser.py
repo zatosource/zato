@@ -64,11 +64,6 @@ class Parser(object):
         # Discard any unread body of the previous message
         if self.mesg:
             data = self.mesg.body.read(8192)
-
-            #print()
-            #print(111, data)
-            #print()
-
             while data:
                 data = self.mesg.body.read(8192)
 
@@ -77,12 +72,6 @@ class Parser(object):
         self.mesg = self.mesg_class(self.cfg, self.unreader, self.req_count)
         if not self.mesg:
             raise StopIteration()
-
-        #print()
-        #print(222, self.mesg)
-        #print(333, self.mesg_class)
-        #print(444, self.req_count)
-        #print()
 
         return self.mesg
 
