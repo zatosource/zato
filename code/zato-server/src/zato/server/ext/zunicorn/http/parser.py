@@ -65,10 +65,9 @@ class Parser(object):
         if self.mesg:
             data = self.mesg.body.read(8192)
 
-
-            print()
-            print(111, data)
-            print()
+            #print()
+            #print(111, data)
+            #print()
 
             while data:
                 data = self.mesg.body.read(8192)
@@ -79,11 +78,11 @@ class Parser(object):
         if not self.mesg:
             raise StopIteration()
 
-        print()
-        print(222, self.mesg)
-        print(333, self.mesg_class)
-        print(444, self.req_count)
-        print()
+        #print()
+        #print(222, self.mesg)
+        #print(333, self.mesg_class)
+        #print(444, self.req_count)
+        #print()
 
         return self.mesg
 
