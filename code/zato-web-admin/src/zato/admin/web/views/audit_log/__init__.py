@@ -22,26 +22,21 @@ class Index(_Index):
     method_allowed = 'GET'
     url_name = 'audit-log'
     template = 'zato/audit-log/index.html'
-    service_name = 'audit-log.get-list'
+    service_name = 'zato.audit-log.event.get-list'
     output_class = AuditLogEvent
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id', 'type_', 'object_id', 'object_name', 'object_type_label'
         output_required = 'server_name', 'server_pid', 'type_', 'object_id', 'conn_id', 'direction', 'data', 'timestamp', \
-            'timestamp_utc', 'msg_id', 'in_reply_to',
+            'timestamp_utc', 'msg_id', 'in_reply_to', 'event_id'
+        output_optional = 'data',
         output_repeated = True
 
     def on_before_append_item(self, item):
         # type: (AuditLogEvent)
         item.timestamp_utc = item.timestamp
         item.timestamp = from_utc_to_user(item.timestamp+'+00:00', self.req.zato.user_profile)
-
-        print()
-        print(111, item.timestamp)
-        print(222, item.timestamp_utc)
-        print()
-
         return item
 
     def handle(self):
@@ -62,7 +57,7 @@ class Index(_Index):
 @method_allowed('POST')
 def clear(req):
     return invoke_service_with_json_response(
-        req, 'zato.cache.builtin.clear',
+        req, 'zato.audit-log.event.clear',
         {
             'cluster_id':req.POST['cluster_id'],
             'cache_id':req.POST['cache_id']
