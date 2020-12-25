@@ -1679,6 +1679,7 @@ class WebSphereMQCallData:
 default_internal_modules = {
     'zato.server.service.internal': True,
     'zato.server.service.internal.apispec': True,
+    'zato.server.service.internal.audit_log': True,
     'zato.server.service.internal.cache.builtin': True,
     'zato.server.service.internal.cache.builtin.entry': True,
     'zato.server.service.internal.cache.builtin.pubapi': True,

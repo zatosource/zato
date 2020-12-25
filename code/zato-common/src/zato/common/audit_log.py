@@ -15,6 +15,7 @@ from gevent.lock import RLock
 
 # Zato
 from zato.common.api import AuditLog as CommonAuditLog, CHANNEL, GENERIC
+from zato.common.util.api import new_cid
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -23,7 +24,7 @@ _sent     = CommonAuditLog.Direction.sent
 _received = CommonAuditLog.Direction.received
 
 
-event_attrs    = 'direction', 'data', 'timestamp', 'msg_id', 'in_reply_to', 'type_', 'object_id', 'conn_id'
+event_attrs    = 'direction', 'data', 'event_id', 'timestamp', 'msg_id', 'in_reply_to', 'type_', 'object_id', 'conn_id'
 
 transfer_attrs = 'total_bytes_received', 'total_messages_received', 'avg_msg_size_received', 'first_received', 'last_received', \
                  'total_bytes_sent',     'total_messages_sent',     'avg_msg_size_sent',     'first_sent',     'last_sent',     \
@@ -35,9 +36,16 @@ config_attrs   = 'type_', 'object_id', 'max_len_messages_received',      'max_le
 # ################################################################################################################################
 # ################################################################################################################################
 
+def new_event_id(prefix='zae', _new_cid=new_cid):
+    return '{}{}'.format(prefix, _new_cid())
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class DataEvent:
-    def __init__(self, direction, _utcnow=datetime.utcnow):
+    def __init__(self, direction, _utcnow=datetime.utcnow, _new_event_id=new_event_id):
         self.direction = direction
+        self.event_id = _new_event_id()
         self.data = ''
         self.timestamp = _utcnow()
         self.msg_id = ''
@@ -181,6 +189,14 @@ class AuditLog:
             CHANNEL.WEB_SOCKET: {},
             GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: {},
         }
+
+# ################################################################################################################################
+
+    def get_container(self, type_, object_id):
+        # type: (str, str) -> LogContainer
+
+        # Note that below we ignore any key errors, effectively silently dropping invalid requests.
+        return self._log.get(type_, {}).get(object_id, [])
 
 # ################################################################################################################################
 

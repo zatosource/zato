@@ -226,9 +226,6 @@ class Request(Message):
         # get request line
         line, rbuf = self.read_line(unreader, buf, self.limit_request_line)
 
-        #print(333, line)
-        #print(444, rbuf)
-
         # proxy protocol
         if self.proxy_protocol(bytes_to_str(line)):
             # get next request line
@@ -262,11 +259,6 @@ class Request(Message):
             return b""
 
         self.headers = self.parse_headers(data[:idx])
-
-        #print()
-        #print(666, self.headers)
-        #print(777, data[:idx])
-        #print()
 
         ret = data[idx + 4:]
         buf = None

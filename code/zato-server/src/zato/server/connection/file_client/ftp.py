@@ -200,10 +200,10 @@ if __name__ == '__main__':
     result = client.list('/aaa2')
 
     for item in result['file_list']: # type: dict
-        print(111, item)
+        print('ITEM', item)
 
     data = client.download(path)
-    print(222, data)
+    print('DATA', data)
 
     client.delete_file(path)
 

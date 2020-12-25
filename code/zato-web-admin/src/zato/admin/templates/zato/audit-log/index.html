@@ -31,7 +31,7 @@
             {% comment %} 3 {% endcomment %}
             'in_reply_to',
             '_server',
-            '_details',
+            '_data',
 
             {% comment %} 4 {% endcomment %}
             '_delete',
@@ -40,6 +40,8 @@
 
             {% comment %} 5 {% endcomment %}
             'server_pid',
+            'event_id',
+            'data',
 
         ]
     }
@@ -58,9 +60,11 @@
 
     {% if cluster_id %}
 
+        {% comment %}
         <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.cache.audit_log.create()">Clear audit log</a>
         </div>
+        {% endcomment %}
 
         <div id="markup">
             <table id="data-table">
@@ -79,14 +83,15 @@
                         {% comment %} 3 {% endcomment %}
                         <th><a href="#">In reply to</a></th>
                         <th><a href="#">Server</a></th>
-                        <th>&nbsp;</th>
+                        <th>Data</th>
 
                         {% comment %} 4 {% endcomment %}
-                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
                         {% comment %} 5 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
                 </thead>
@@ -103,8 +108,8 @@
                         {% comment %} 2 {% endcomment %}
                         <td style="width:10%">
                             <a
-                                id="a_timestamp_{{ item.id }}"
-                                href="javascript:$.fn.zato.toggle_time('timestamp_{{ item.id }}', '{{ item.timestamp }}', '{{ item.timestamp_utc }}')">{{ item.timestamp }}
+                                id="a_timestamp_{{ item.event_id }}"
+                                href="javascript:$.fn.zato.toggle_time('timestamp_{{ item.event_id }}', '{{ item.timestamp }}', '{{ item.timestamp_utc }}')">{{ item.timestamp }}
                             </a>
                         </td>
 
@@ -114,15 +119,18 @@
                         {% comment %} 3 {% endcomment %}
                         <td>{{ item.in_reply_to|no_value_indicator }}</td>
                         <td>{{ item.server_name }}:{{ item.server_pid }}</td>
-                        <td><a href="#">Details</a></td>
+                        <td style="width:50%">
+                            <textarea style="width:100%; height:130px">{{ item.data }}</textarea>
+                        </td>
 
                         {% comment %} 4 {% endcomment %}
-                        <td><a href="#">Delete</a></td>
+                        <td class='ignore'></td>
                         <td class='ignore item_id_{{ item.event_id }}'>{{ item.event_id }}</td>
                         <td class='ignore'>{{ item.server_name }}</td>
 
                         {% comment %} 5 {% endcomment %}
                         <td class='ignore'>{{ item.server_pid }}</td>
+                        <td class='ignore'>{{ item.event_id }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
