@@ -202,7 +202,6 @@ class WebSocket(_WebSocket):
         self.is_audit_log_received_active = self.config.is_audit_log_received_active # type: bool
 
         if self.is_audit_log_sent_active or is_audit_log_received_active:
-
             self.parallel_server.set_up_object_audit_log(_audit_msg_type, self.pub_client_id, self.config, False)
 
         # This will be populated by the on_vault_mount_point_needed hook
@@ -1124,6 +1123,10 @@ class WebSocket(_WebSocket):
 
         self.unregister_auth_client()
         del self.container.clients[self.pub_client_id]
+
+        # Unregister the client from audit log
+        if self.is_audit_log_sent_active or self.is_audit_log_received_active:
+            self.parallel_server.audit_log.delete_container(_audit_msg_type, self.pub_client_id)
 
 # ################################################################################################################################
 

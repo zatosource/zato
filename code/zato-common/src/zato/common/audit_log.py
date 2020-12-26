@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from gevent.lock import RLock
 
 # Zato
-from zato.common.api import AuditLog as CommonAuditLog, CHANNEL, GENERIC
+from zato.common.api import AuditLog as CommonAuditLog, CHANNEL, GENERIC, WEB_SOCKET
 from zato.common.util.api import new_cid
 
 # ################################################################################################################################
@@ -154,6 +154,11 @@ class LogContainer:
 
 # ################################################################################################################################
 
+    #def __repr__(self):
+    #    return str(self.to_dict())
+
+# ################################################################################################################################
+
     def store(self, data_event):
         with self.lock[data_event.direction]:
 
@@ -196,6 +201,7 @@ class AuditLog:
             CHANNEL.HTTP_SOAP: {},
             CHANNEL.WEB_SOCKET: {},
             GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: {},
+            WEB_SOCKET.AUDIT_KEY: {},
         }
 
 # ################################################################################################################################
@@ -236,40 +242,39 @@ class AuditLog:
 
 # ################################################################################################################################
 
-    def _delete_container(self, config):
-        # type: (LogContainerConfig)
+    def _delete_container(self, type_, object_id):
+        # type: (str, str)
 
         # Make sure the object ID is a string (it can be an int)
-        config.object_id = str(config.object_id)
+        object_id = str(object_id)
 
         # Get the mapping of object types to object IDs ..
         try:
-            container_dict = self._log[config.type_] # type: dict
+            container_dict = self._log[type_] # type: dict
         except KeyError:
-            raise ValueError('Container type not found `{}` among `{}` ({})'.format(
-                config.type_, sorted(self._log), config.object_id))
+            raise ValueError('Container type not found `{}` among `{}` ({})'.format(type_, sorted(self._log), object_id))
 
         # No KeyError = we recognised that type ..
 
         # .. so we can now try to delete that container by its object's ID.
         # Note that we use .pop on purpose - e.g. when a server has just started,
-        # it may not have any such object yet but the user may already try to edit
+        # it may not have any such an object yet but the user may already try to edit
         # the object this log is attached to already. Using .pop ignores non-existing keys.
-        container_dict.pop(config.object_id, None)
+        container_dict.pop(object_id, None)
 
 # ################################################################################################################################
 
-    def delete_container(self, config):
-        # type: (LogContainerConfig)
+    def delete_container(self, type_, object_id):
+        # type: (str, str)
         with self.lock:
-            self._delete_container(config)
+            self._delete_container(type_, object_id)
 
 # ################################################################################################################################
 
     def edit_container(self, config):
         # type: (LogContainerConfig)
         with self.lock:
-            self._delete_container(config)
+            self._delete_container(config.type_, config.object_id)
             self._create_container(config)
 
 # ################################################################################################################################

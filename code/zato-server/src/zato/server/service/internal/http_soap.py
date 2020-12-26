@@ -27,7 +27,7 @@ from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
 from zato.common.rate_limiting import DefinitionParser
 from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_security_by_id, parse_instance_opaque_attr, \
      set_instance_opaque_attrs
-from zato.server.service import Boolean, Integer, List
+from zato.server.service import AsIs, Boolean, Integer, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
@@ -202,7 +202,7 @@ class Create(_CreateEdit):
         request_elem = 'zato_http_soap_create_request'
         response_elem = 'zato_http_soap_create_response'
         input_required = 'cluster_id', 'name', 'is_active', 'connection', 'transport', 'is_internal', 'url_path'
-        input_optional = 'service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format', \
+        input_optional = 'service', AsIs('security_id'), 'method', 'soap_action', 'soap_version', 'data_format', \
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri', \
             'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
@@ -350,7 +350,7 @@ class Edit(_CreateEdit):
         request_elem = 'zato_http_soap_edit_request'
         response_elem = 'zato_http_soap_edit_response'
         input_required = 'id', 'cluster_id', 'name', 'is_active', 'connection', 'transport', 'url_path'
-        input_optional = 'service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format', \
+        input_optional = 'service', AsIs('security_id'), 'method', 'soap_action', 'soap_version', 'data_format', \
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri', \
             'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
@@ -541,6 +541,7 @@ class Delete(AdminService, _HTTPSOAPService):
                     action = OUTGOING.HTTP_SOAP_DELETE.value
 
                 self.notify_worker_threads({
+                    'id': self.request.input.id,
                     'name':old_name,
                     'transport':old_transport,
                     'old_url_path':old_url_path,
