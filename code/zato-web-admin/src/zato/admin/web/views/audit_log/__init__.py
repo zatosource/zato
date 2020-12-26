@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Zato
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.cache.builtin import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, invoke_service_with_json_response, \
+from zato.admin.web.views import Index as _Index, invoke_service_with_json_response, \
      method_allowed
 from zato.common.api import CACHE
 from zato.common.model import AuditLogEvent
