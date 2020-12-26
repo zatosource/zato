@@ -1097,6 +1097,9 @@ class IPC:
 # ################################################################################################################################
 
 class WEB_SOCKET:
+
+    AUDIT_KEY = 'wsx-connection'
+
     class DEFAULT:
         NEW_TOKEN_TIMEOUT = 5
         TOKEN_TTL = 3600

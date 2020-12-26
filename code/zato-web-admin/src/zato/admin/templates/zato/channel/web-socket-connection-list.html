@@ -23,14 +23,23 @@
     <script>
     $.fn.zato.data_table.get_columns = function() {
         return [
+
+            // 1
             '_numbering',
             '_selection',
+
+            // 2
             '_client',
             '_remote',
             '_local',
+
+            // 3
             '_connection_time',
-            '_sub_count',
+            '_audit_log',
+            '_pub_sub',
             '_invoke',
+
+            // 4
             '_delete',
             'id',
             'name',
@@ -60,14 +69,23 @@
             <table id="data-table">
                 <thead>
                     <tr class='ignore'>
+
+                        {% comment %} 1 {% endcomment %}
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+
+                        {% comment %} 2 {% endcomment %}
                         <th><a href="#">Client</a></th>
                         <th><a href="#">Remote</a></th>
                         <th><a href="#">Local</a></th>
+
+                        {% comment %} 3 {% endcomment %}
                         <th><a href="#">Connection time</a></th>
+                        <th>Message log</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+
+                        {% comment %} 4 {% endcomment %}
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -77,8 +95,12 @@
                 {% if items %}
                 {% for item in items %}
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+
+                        {% comment %} 1 {% endcomment %}
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
+
+                        {% comment %} 2 {% endcomment %}
                         <td style="vertical-align:middle">
                             {{ item.pub_client_id }}
                             <br/>
@@ -106,16 +128,21 @@
                             <br/>
                             {{ item.server_name }}:{{ item.server_proc_pid }}
                         </td>
+
+                        {% comment %} 3 {% endcomment %}
                         <td style="vertical-align:middle; min-width:120px">
                             <a
                                 id="a_connection_time_{{ item.id }}"
                                 href="javascript:$.fn.zato.toggle_time('connection_time_{{ item.id }}', '{{ item.connection_time }}', '{{ item.connection_time_utc }}')">{{ item.connection_time }}
                             </a>
                         </td>
-
+                        <td style="vertical-align:middle">
+                            <a href="{% url "audit-log" "wsx-connection" item.pub_client_id %}?cluster={{ cluster_id }}&amp;object_name={{ item.pub_client_id }}&amp;object_type_label=WebSocket channel">View</a>
+                        </td>
                         <td style="vertical-align:middle"><a href="{% url "channel-web-socket-connection-sub-key-data-list" item.id %}?cluster={{ cluster_id }}&amp;conn_id={{ conn_id }}&amp;channel_name={{ channel_name }}">Pub/sub</a></td>
-
                         <td style="vertical-align:middle"><a href="{% url "channel-web-socket-invoke" conn_id item.pub_client_id item.ext_client_id item.ext_client_name|slugify channel_id channel_name %}?cluster={{ cluster_id }}">Invoke</a></td>
+
+                        {% comment %} 4 {% endcomment %}
                         <td style="vertical-align:middle"><a href="javascript:$.fn.zato.channel.wsx.connection_list.disconnect('{{ item.id }}')">Close</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.ext_client_id }} - {{ item.pub_client_id }}</td>

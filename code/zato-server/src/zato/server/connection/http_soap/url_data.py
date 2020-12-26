@@ -1260,8 +1260,6 @@ class URLData(CyURLData, OAuthDataStore):
 
             channel_item[name] = msg.get(name)
 
-            print(888, name, msg.get(name))
-
         if msg.get('security_id'):
             channel_item['sec_type'] = msg['sec_type']
             channel_item['security_id'] = msg['security_id']
@@ -1377,6 +1375,8 @@ class URLData(CyURLData, OAuthDataStore):
 
         # Delete rate limiting configuration
         self.worker.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP, msg.name)
+
+        self.worker.server.audit_log.delete_container
 
         return old_data
 
