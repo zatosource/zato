@@ -1376,7 +1376,8 @@ class URLData(CyURLData, OAuthDataStore):
         # Delete rate limiting configuration
         self.worker.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP, msg.name)
 
-        self.worker.server.audit_log.delete_container
+        # Delete audit log configuration
+        self.worker.server.audit_log.delete_container(CHANNEL.HTTP_SOAP, msg.id)
 
         return old_data
 
