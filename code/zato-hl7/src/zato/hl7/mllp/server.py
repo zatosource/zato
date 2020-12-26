@@ -8,7 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from collections import deque
 from datetime import datetime
 from logging import getLogger
 from socket import timeout as SocketTimeoutException
