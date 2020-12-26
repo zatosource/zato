@@ -196,7 +196,7 @@ class AuditLog:
         # type: (str, str) -> LogContainer
 
         # Note that below we ignore any key errors, effectively silently dropping invalid requests.
-        return self._log.get(type_, {}).get(object_id, [])
+        return self._log.get(type_, {}).get(object_id)
 
 # ################################################################################################################################
 
