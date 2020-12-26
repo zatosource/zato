@@ -262,6 +262,7 @@ class Request(Message):
 
         ret = data[idx + 4:]
         buf = None
+
         return ret
 
     def read_line(self, unreader, buf, limit=0):

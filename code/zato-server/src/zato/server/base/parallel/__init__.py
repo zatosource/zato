@@ -32,6 +32,7 @@ from zato.bunch import Bunch
 from zato.common.api import DATA_FORMAT, default_internal_modules, KVDB, RATE_LIMIT, SERVER_STARTUP, SERVER_UP_STATUS, \
      ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
+from zato.common.audit_log import AuditLog
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.const import SECRETS
 from zato.common.ipc.api import IPCAPI
@@ -182,6 +183,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.has_posix_ipc = True
         self.user_config = Bunch()
         self.stderr_path = None # type: str
+
+        # Audit log
+        self.audit_log = AuditLog()
 
         # Current state of subprocess-based connectors
         self.subproc_current_state = SubprocessCurrentState()

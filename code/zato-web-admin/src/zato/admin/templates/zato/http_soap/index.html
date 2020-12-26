@@ -112,6 +112,18 @@
                 'rate_limit_check_parent_def',
             {% endifequal %}
 
+            'is_audit_log_sent_active',
+            'is_audit_log_received_active',
+            'max_len_messages_sent',
+
+            'max_len_messages_received',
+            'max_bytes_per_message_sent',
+            'max_bytes_per_message_received',
+
+            'hl7_version',
+            'json_path',
+            'data_encoding',
+
         ]
     }
     </script>
@@ -173,8 +185,8 @@
                         {% endifequal %}
 
                         <!-- 12,13,13a -->
+                        <th><a href="#">Message log</a></th>
                         {% ifequal connection 'channel' %}
-                            <th><a href="#">Method</a></th>
                             <th class='ignore'>&nbsp;</th> {% comment %} service {% endcomment %}
                             <th class='ignore'>&nbsp;</th> {% comment %} content_encoding {% endcomment %}
                         {% endifequal %}
@@ -231,12 +243,28 @@
                           {% endifequal %}
                         {% endifequal %}
 
+                        <!-- 35 -->
                         {% ifequal connection 'channel' %}
                             <th class='ignore'>&nbsp;</th>
                             <th class='ignore'>&nbsp;</th>
                             <th class='ignore'>&nbsp;</th>
                             <th class='ignore'>&nbsp;</th>
                         {% endifequal %}
+
+                        <!-- 36 -->
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <!-- 37 -->
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <!-- 38 -->
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -287,8 +315,10 @@
                         {% endifequal %}
 
                         <!-- 12,13,13a -->
+                        <td>
+                            <a href="{% url "audit-log" "http-soap" item.id %}?cluster={{ cluster_id }}&amp;object_name={{ item.name }}&amp;object_type_label={% ifequal transport 'soap' %}SOAP{% else %}REST{% endifequal %} {% ifequal connection 'channel' %}channel{% else %}outgoing connection{% endifequal %}">View</a>
+                        </td>
                         {% ifequal connection 'channel' %}
-                            <td>{{ item.method|default:'<span class="form_hint">---</span>' }}</td>
                             <td class='ignore'>{{ item.service_name }}</td>
                             <td class='ignore'>{{ item.content_encoding|default:'' }}</td>
                         {% endifequal %}
@@ -345,12 +375,30 @@
                           {% endifequal %}
                         {% endifequal %}
 
+                        <!-- 35 -->
                         {% ifequal connection 'channel' %}
                             <td class='ignore'>{{ item.is_rate_limit_active }}</td>
                             <td class='ignore'>{{ item.rate_limit_type }}</td>
                             <td class='ignore'>{{ item.rate_limit_def }}</td>
                             <td class='ignore'>{{ item.rate_limit_check_parent_def }}</td>
                         {% endifequal %}
+
+                        <!-- 36 -->
+                        <td class='ignore'>{{ item.is_audit_log_sent_active }}</td>
+                        <td class='ignore'>{{ item.is_audit_log_received_active }}</td>
+                        <td class='ignore'>{{ item.max_len_messages_sent|default:audit_max_len_messages }}</td>
+
+                        <!-- 37 -->
+                        <td class='ignore'>{{ item.max_len_messages_received|default:audit_max_len_messages }}</td>
+                        <td class='ignore'>{{ item.max_bytes_per_message_sent|default:audit_max_data_stored_per_message }}</td>
+                        <td class='ignore'>{{ item.max_bytes_per_message_received|default:audit_max_data_stored_per_message }}</td>
+
+                        <!-- 38 -->
+                        <td class='ignore'>{{ item.hl7_version|default:"" }}</td>
+                        <td class='ignore'>{{ item.json_path|default:"" }}</td>
+                        <td class='ignore'>{{ item.data_encoding|default:"" }}</td>
+
+                        <!-- 39 -->
 
                     </tr>
                 {% endfor %}
@@ -540,8 +588,9 @@
                         </tr>
 
                         {% include "zato/include/rate-limiting/create.html" %}
-
                         {% endifequal %}
+
+                        {% include "zato/include/audit-log/create.html" %}
 
                         {% ifequal connection 'outgoing' %}
                         <tr>
@@ -562,6 +611,11 @@
                     <input type="hidden" id="id_cache_type" name="cache_type" />
                     <input type="hidden" name="connection" value="{{ connection }}" />
                     <input type="hidden" name="transport" value="{{ transport }}" />
+
+                    {{ create_form.hl7_version }}
+                    {{ create_form.json_path }}
+                    {{ create_form.data_encoding }}
+
                 </form>
             </div>
         </div>
@@ -740,8 +794,9 @@
                         </tr>
 
                         {% include "zato/include/rate-limiting/edit.html" %}
-
                         {% endifequal %}
+
+                        {% include "zato/include/audit-log/edit.html" %}
 
                         {% ifequal connection 'outgoing' %}
                         <tr>
@@ -762,6 +817,11 @@
                     <input type="hidden" id="id_edit-cache_type" name="edit-cache_type" />
                     <input type="hidden" name="connection" value="{{ connection }}" />
                     <input type="hidden" name="transport" value="{{ transport }}" />
+
+                    {{ edit_form.hl7_version }}
+                    {{ edit_form.json_path }}
+                    {{ edit_form.data_encoding }}
+
                 </form>
             </div>
         </div>

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,7 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, time
+import logging
+import time
+from json import dumps, loads
 from traceback import format_exc
 
 # Bunch
@@ -27,7 +29,6 @@ from builtins import bytes
 # Zato
 from zato.common.api import BROKER, ZATO_NONE
 from zato.common.broker_message import KEYS, MESSAGE_TYPE, TOPICS
-from zato.common.json_internal import dumps, loads
 from zato.common.kvdb.api import LuaContainer
 from zato.common.util.api import new_cid, spawn_greenlet
 
@@ -198,6 +199,13 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
                 self.ready = True
 
         def publish(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL, *ignored_args, **ignored_kwargs):
+
+            # Make sure we do not publish bytes
+            if isinstance(msg, dict):
+                for key, value in list(msg.items()):
+                    if isinstance(value, bytes):
+                        msg[key] = value.decode('utf8')
+
             msg['msg_type'] = msg_type
             topic = TOPICS[msg_type]
             msg = dumps(msg)

@@ -1,0 +1,89 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}{% ifequal action "create" %}Add a new entry{% else %}Update an entry{% endifequal %}{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.form.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/cache/builtin/entry.js"></script>
+
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Cache definitions : built-in : <a href="{% url "cache-builtin" %}?cluster={{ cluster_id }}&amp;highlight={{ cache_id }}">{{ cache.name }}</a></h2>
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+<div id="markup">
+    <table id="data-table">
+        <tr>
+            <td class='inline_header'>{% ifequal action "create" %} Add a new entry {% endifequal %}</td>
+        </tr>
+        <tr>
+            <td>
+                <form id="cache_entry_form" action="{% url form_action cache_id cluster_id %}" method="post">
+                {% csrf_token %}
+                    Key
+                    <br/>
+                    {{ form.key }}
+                    <br/><br/>
+
+                    Value
+                    <br/>
+                    {{ form.value }}
+                    <br/><br/>
+
+                    <table>
+                        <tr>
+                            <td>Key data type</td>
+                            <td>{{ form.key_data_type }}</td>
+                        </tr>
+                        <tr>
+                            <td>Value data type</td>
+                            <td>{{ form.value_data_type }}</td>
+                        </tr>
+                        <tr>
+                            <td>Expiry
+                            <br/>
+                            <span class="form_hint">
+                            (0=unlimited)
+                            </span>
+                            </td>
+                            <td>{{ form.expiry }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Replace existing</td>
+                            <td>{{ form.replace_existing }}</td>
+                        </tr>
+                    </table>
+
+                    <input type="hidden" id="cache_id" name="cache_id" value="{{ cache_id }}" />
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+
+                    <input type="hidden" id="action" name="action" value="{{ action }}" />
+
+                    {% ifequal action "edit" %}
+                        {{ form.old_key }}
+                    {% endifequal %}
+
+                    <div style="text-align:right">
+                        <input type="submit" value="Submit" />
+                    </div>
+
+                </form>
+            </td>
+        </tr>
+    </table>
+</div>
+
+
+{% endblock %}
