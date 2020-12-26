@@ -30,8 +30,9 @@ transfer_attrs = 'total_bytes_received', 'total_messages_received', 'avg_msg_siz
                  'total_bytes_sent',     'total_messages_sent',     'avg_msg_size_sent',     'first_sent',     'last_sent',     \
                  'data', 'messages'
 
-config_attrs   = 'type_', 'object_id', 'max_len_messages_received',      'max_len_messages_sent',     \
-                                       'max_bytes_per_message_received', 'max_bytes_per_message_sent'
+config_attrs   = 'type_', 'object_id', 'max_len_messages_received',      'max_len_messages_sent',      \
+                                       'max_bytes_per_message_received', 'max_bytes_per_message_sent', \
+                                       'max_bytes_per_message',
 
 # ################################################################################################################################
 # ################################################################################################################################
