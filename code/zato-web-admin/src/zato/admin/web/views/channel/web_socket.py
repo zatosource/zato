@@ -20,13 +20,18 @@ from django.template.response import TemplateResponse
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.channel.web_socket import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
-from zato.common.api import ZATO_NONE
+from zato.common.api import AuditLog, ZATO_NONE
 from zato.common.json_internal import dumps
 from zato.common.odb.model import ChannelWebSocket
 
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+
+_max_len_messages = AuditLog.Default.max_len_messages
+_max_data_stored_per_message = AuditLog.Default.max_data_stored_per_message
 
 # ################################################################################################################################
 
@@ -88,6 +93,8 @@ class Index(_Index):
         return {
             'create_form': CreateForm(sec_list, req=self.req),
             'edit_form': EditForm(sec_list, prefix='edit', req=self.req),
+            'audit_max_len_messages': _max_len_messages,
+            'audit_max_data_stored_per_message': _max_data_stored_per_message,
         }
 
 # ################################################################################################################################

@@ -386,12 +386,12 @@
                         <!-- 36 -->
                         <td class='ignore'>{{ item.is_audit_log_sent_active }}</td>
                         <td class='ignore'>{{ item.is_audit_log_received_active }}</td>
-                        <td class='ignore'>{{ item.max_len_messages_sent|default:"" }}</td>
+                        <td class='ignore'>{{ item.max_len_messages_sent|default:audit_max_len_messages }}</td>
 
                         <!-- 37 -->
-                        <td class='ignore'>{{ item.max_len_messages_received|default:"" }}</td>
-                        <td class='ignore'>{{ item.max_bytes_per_message_sent|default:"" }}</td>
-                        <td class='ignore'>{{ item.max_bytes_per_message_received|default:"" }}</td>
+                        <td class='ignore'>{{ item.max_len_messages_received|default:audit_max_len_messages }}</td>
+                        <td class='ignore'>{{ item.max_bytes_per_message_sent|default:audit_max_data_stored_per_message }}</td>
+                        <td class='ignore'>{{ item.max_bytes_per_message_received|default:audit_max_data_stored_per_message }}</td>
 
                         <!-- 38 -->
                         <td class='ignore'>{{ item.hl7_version|default:"" }}</td>
