@@ -129,8 +129,10 @@ class LogContainer:
         self.max_len_messages_sent          = config.max_len_messages_sent
         self.max_len_messages_received      = config.max_len_messages_received
 
-        self.max_bytes_per_message_sent     = config.max_bytes_per_message_sent
-        self.max_bytes_per_message_received = config.max_bytes_per_message_received
+        self.max_bytes_per_message = {
+            _sent:     config.max_bytes_per_message_sent,
+            _received: config.max_bytes_per_message_received,
+        }
 
         self.total_bytes_sent    = 0
         self.total_messages_sent = 0
@@ -153,6 +155,11 @@ class LogContainer:
 
     def store(self, data_event):
         with self.lock[data_event.direction]:
+
+            # Make sure we do not exceed our limit of bytes stored
+            max_len = self.max_bytes_per_message[data_event.direction]
+            data_event.data = data_event.data[:max_len]
+
             storage = self.messages[data_event.direction] # type: deque
             storage.append(data_event)
 
