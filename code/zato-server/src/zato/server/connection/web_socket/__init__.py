@@ -33,6 +33,7 @@ from past.builtins import basestring
 
 # Zato
 from zato.common.api import CHANNEL, DATA_FORMAT, PUBSUB, SEC_DEF_TYPE, WEB_SOCKET
+from zato.common.audit_log import DataReceived, DataSent
 from zato.common.exception import ParsingException, Reportable
 from zato.common.json_internal import loads
 from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
@@ -48,8 +49,10 @@ from zato.server.pubsub.task import PubSubTool
 # ################################################################################################################################
 
 if 0:
+    from zato.common.audit_log import DataEvent
     from zato.server.base.parallel import ParallelServer
 
+    DataEvent = DataEvent
     ParallelServer = ParallelServer
 
 # ################################################################################################################################
@@ -89,6 +92,7 @@ hook_type_to_method = {
 # ################################################################################################################################
 
 _cannot_send = 'Cannot send on a terminated websocket'
+_audit_msg_type = WEB_SOCKET.AUDIT_KEY
 
 # ################################################################################################################################
 
@@ -127,6 +131,10 @@ class WebSocket(_WebSocket):
 
         # Note: configuration object is shared by all WebSockets and any writes will be visible to all of them
         self.config = config
+
+        # These may be string objects
+        self.config.max_len_messages_sent     = int(self.config.max_len_messages_sent)
+        self.config.max_len_messages_received = int(self.config.max_len_messages_received)
 
         # For later reference
         self.initial_http_wsgi_environ = wsgi_environ
@@ -188,6 +196,13 @@ class WebSocket(_WebSocket):
         self.pings_missed_threshold = self.config.get('pings_missed_threshold', 5)
         self.user_data = Bunch() # Arbitrary user-defined data
         self._disconnect_requested = False # Have we been asked to disconnect this client?
+
+        # Audit log configuration
+        self.is_audit_log_sent_active     = self.config.is_audit_log_sent_active     # type: bool
+        self.is_audit_log_received_active = self.config.is_audit_log_received_active # type: bool
+
+        if self.is_audit_log_sent_active or self.is_audit_log_received_active:
+            self.parallel_server.set_up_object_audit_log(_audit_msg_type, self.pub_client_id, self.config, False)
 
         # This will be populated by the on_vault_mount_point_needed hook
         self.vault_mount_point = None
@@ -609,7 +624,7 @@ class WebSocket(_WebSocket):
             return
 
         try:
-            self.send(Forbidden(cid, data).serialize(self._json_dump_func))
+            self.send(Forbidden(cid, data).serialize(self._json_dump_func), cid, None)
         except AttributeError as e:
             # Catch a lower-level exception which may be raised in case the client
             # disconnected and we did not manage to send the Forbidden message.
@@ -765,7 +780,7 @@ class WebSocket(_WebSocket):
             response = self.create_session(cid, request)
             if response:
                 self.register_auth_client()
-                self.send(response)
+                self.send(response, cid, None)
                 logger.info(
                     'Client %s logged in successfully to %s (%s) (%s)', self.pub_client_id, self._local_address,
                     self.config.name, self.peer_conn_info_pretty)
@@ -853,7 +868,7 @@ class WebSocket(_WebSocket):
             self.python_id, self.pub_client_id, self.ext_client_id, self.ext_client_name, self.peer_conn_info_pretty)
 
         try:
-            self.send(serialized)
+            self.send(serialized, msg.cid, cid)
         except AttributeError as e:
             if e.args[0] == "'NoneType' object has no attribute 'text_message'":
                 _msg = 'Service response discarded (client disconnected), cid:`%s`, msg.meta:`%s`'
@@ -923,7 +938,8 @@ class WebSocket(_WebSocket):
             now = _now()
             self.last_seen = now
 
-            logger.info('Request received cid:`%s`, client:`%s`', cid, self.pub_client_id)
+            if self.is_audit_log_received_active:
+                self._store_audit_log_data(DataReceived, data, cid)
 
             # If client is authenticated, allow it to re-authenticate, which grants a new token, or to invoke a service.
             # Otherwise, authentication is required.
@@ -968,6 +984,7 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def received_message(self, message):
+
         logger.info('Received message %r to `%s` from `%s` `%s` `%s` `%s`', message.data,
             self.python_id, self.pub_client_id, self.ext_client_id, self.ext_client_name, self.peer_conn_info_pretty)
 
@@ -975,6 +992,33 @@ class WebSocket(_WebSocket):
             self._received_message(message.data)
         except Exception:
             logger.warn(format_exc())
+
+# ################################################################################################################################
+
+    def send(self, data='', cid=None, in_reply_to=None):
+
+        if self.is_audit_log_received_active:
+            self._store_audit_log_data(DataSent, data, cid, in_reply_to)
+
+        # Call the super-class that will actually send the message.
+        super().send(data)
+
+# ################################################################################################################################
+
+    def _store_audit_log_data(self, event_class, data, cid, in_reply_to=None, _utcnow=datetime.utcnow):
+        # type: (DataEvent, str, str, str, object) -> None
+
+        # Describe our event ..
+        data_event = event_class()
+        data_event.type_ = _audit_msg_type
+        data_event.object_id = self.pub_client_id
+        data_event.data = data if isinstance(data, basestring) else str(data)
+        data_event.timestamp = _utcnow()
+        data_event.msg_id = cid
+        data_event.in_reply_to = in_reply_to
+
+        # .. and store it in the audit log.
+        self.parallel_server.audit_log.store_data(data_event)
 
 # ################################################################################################################################
 
@@ -1047,7 +1091,10 @@ class WebSocket(_WebSocket):
                 self.python_id, self.pub_client_id, self.ext_client_id, self.ext_client_name, self.peer_conn_info_pretty)
 
         try:
-            (self.send if use_send else self.ping)(serialized)
+            if use_send:
+                self.send(serialized, cid, msg.in_reply_to)
+            else:
+                self.ping(serialized)
         except RuntimeError as e:
             if str(e) == _cannot_send:
                 msg = 'Cannot send message (socket terminated #2), disconnecting client, cid:`%s`, msg:`%s` conn:`%s`'
@@ -1076,6 +1123,10 @@ class WebSocket(_WebSocket):
 
         self.unregister_auth_client()
         del self.container.clients[self.pub_client_id]
+
+        # Unregister the client from audit log
+        if self.is_audit_log_sent_active or self.is_audit_log_received_active:
+            self.parallel_server.audit_log.delete_container(_audit_msg_type, self.pub_client_id)
 
 # ################################################################################################################################
 
@@ -1108,9 +1159,12 @@ class WebSocket(_WebSocket):
 
     def ponged(self, msg, _loads=loads, _action=WEB_SOCKET.ACTION.CLIENT_RESPONSE):
 
+        # Audit log comes first
+        if self.is_audit_log_received_active:
+            self._store_audit_log_data(DataReceived, msg.data, None)
+
         # Pretend it's an actual response from the client,
         # we cannot use in_reply_to because pong messages are 1:1 copies of ping ones.
-        # TODO: Use lxml for XML eventually but for now we are always using JSON
         self.responses_received[_loads(msg.data.decode('utf8'))['meta']['id']] = True
 
         # Since we received a pong response, it means that the peer is connected,

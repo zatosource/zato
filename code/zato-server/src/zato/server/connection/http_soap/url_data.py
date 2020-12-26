@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -22,7 +22,7 @@ from six import PY2
 
 # Zato
 from zato.bunch import Bunch
-from zato.common.api import CONNECTION, DATA_FORMAT, MISC, RATE_LIMIT, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
+from zato.common.api import CHANNEL, CONNECTION, DATA_FORMAT, MISC, RATE_LIMIT, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
 from zato.common.vault_ import VAULT
 from zato.common.broker_message import code_to_name, SECURITY, VAULT as VAULT_BROKER_MSG
 from zato.common.dispatch import dispatcher
@@ -89,6 +89,7 @@ class URLData(CyURLData, OAuthDataStore):
                  vault_conn_sec_config=None, kvdb=None, broker_client=None, odb=None, json_pointer_store=None, xpath_store=None,
                  jwt_secret=None, vault_conn_api=None):
         super(URLData, self).__init__(channel_data)
+
         self.worker = worker # type: WorkerStore
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config # type: dict
@@ -132,6 +133,10 @@ class URLData(CyURLData, OAuthDataStore):
 
         # Needs always to be sorted by name in case of conflicts in paths resolution
         self.sort_channel_data()
+
+        # Set up audit log
+        for channel_item in channel_data:
+            self._set_up_audit_log(channel_item, False)
 
 # ################################################################################################################################
 
@@ -1249,7 +1254,9 @@ class URLData(CyURLData, OAuthDataStore):
             'is_internal', 'merge_url_params_req', 'method', 'name', 'params_pri', 'ping_method', 'pool_size', 'service_id',
             'service_name', 'soap_action', 'soap_version', 'transport', 'url_params_pri', 'url_path', 'sec_use_rbac',
             'cache_type', 'cache_id', 'cache_name', 'cache_expiry', 'content_encoding', 'match_slash', 'hl7_version',
-            'json_path', 'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding'):
+            'json_path', 'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding',
+            'is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', 'max_len_messages_received',
+            'max_bytes_per_message_sent', 'max_bytes_per_message_received'):
 
             channel_item[name] = msg.get(name)
 
@@ -1295,12 +1302,27 @@ class URLData(CyURLData, OAuthDataStore):
 
         return sec_info
 
+
+# ################################################################################################################################
+
+    def _set_up_audit_log(self, channel_item, is_edit):
+        # type: (dict, bool)
+
+        # Set up audit log if it is enabled
+        if channel_item.get('is_audit_log_sent_active') or channel_item.get('is_audit_log_received_active'):
+            self.worker.server.set_up_object_audit_log(
+                CHANNEL.HTTP_SOAP, channel_item['id'], channel_item, is_edit)
+
 # ################################################################################################################################
 
     def _create_channel(self, msg, old_data):
         """ Creates a new channel, both its core data and the related security definition.
         Clears out URL cache for that entry, if it existed at all.
         """
+
+        # If we are editing an object, old_data will be populated, otherwise, it is an empty dict
+        is_edit = bool(old_data)
+
         match_target = get_match_target(msg, http_methods_allowed_re=self.worker.server.http_methods_allowed_re)
         channel_item = self._channel_item_from_msg(msg, match_target, old_data)
         self.channel_data.append(channel_item)
@@ -1309,9 +1331,13 @@ class URLData(CyURLData, OAuthDataStore):
         self._remove_from_cache(match_target)
         self.sort_channel_data()
 
-        # Set up rate limiting
-        self.worker.server.set_up_object_rate_limiting(
-            RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP, channel_item['name'], config=channel_item)
+        # Set up rate limiting, if it is enabled
+        if channel_item.get('is_rate_limit_active'):
+            self.worker.server.set_up_object_rate_limiting(
+                RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP, channel_item['name'], config=channel_item)
+
+        # Set up audit log
+        self._set_up_audit_log(channel_item, is_edit)
 
 # ################################################################################################################################
 
@@ -1350,6 +1376,9 @@ class URLData(CyURLData, OAuthDataStore):
         # Delete rate limiting configuration
         self.worker.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP, msg.name)
 
+        # Delete audit log configuration
+        self.worker.server.audit_log.delete_container(CHANNEL.HTTP_SOAP, msg.id)
+
         return old_data
 
 # ################################################################################################################################
@@ -1359,8 +1388,7 @@ class URLData(CyURLData, OAuthDataStore):
         """
         with self.url_sec_lock:
             # Only edits have 'old_name', creates don't. So for edits we delete
-            # the channel and later recreate it while creates, obviously,
-            # get to creation only.
+            # the channel and later recreate it while create actions do not have anything to delete.
             if msg.get('old_name'):
                 old_data = self._delete_channel(msg)
             else:

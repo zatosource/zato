@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -16,8 +16,8 @@ from traceback import format_exc
 from paste.util.converters import asbool
 
 # Zato
-from zato.common.api import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
-     HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
+from zato.common.api import AuditLog, CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
+     HL7, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.exception import ZatoException
@@ -27,8 +27,13 @@ from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
 from zato.common.rate_limiting import DefinitionParser
 from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_security_by_id, parse_instance_opaque_attr, \
      set_instance_opaque_attrs
-from zato.server.service import Boolean, Integer, List
+from zato.server.service import AsIs, Boolean, Integer, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+
+# ################################################################################################################################
+
+_max_len_messages = AuditLog.Default.max_len_messages
+_max_data_stored_per_message = AuditLog.Default.max_data_stored_per_message
 
 # ################################################################################################################################
 
@@ -91,7 +96,9 @@ class _BaseGet(AdminService):
             'content_encoding', Boolean('match_slash'), 'http_accept', List('service_whitelist'), 'is_rate_limit_active', \
                 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def'), \
                 'hl7_version', 'json_path', 'should_parse_on_input', 'should_validate', 'should_return_errors', \
-                'data_encoding'
+                'data_encoding', 'is_audit_log_sent_active', 'is_audit_log_received_active', \
+                Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
+                Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received')
 
 # ################################################################################################################################
 
@@ -195,13 +202,16 @@ class Create(_CreateEdit):
         request_elem = 'zato_http_soap_create_request'
         response_elem = 'zato_http_soap_create_response'
         input_required = 'cluster_id', 'name', 'is_active', 'connection', 'transport', 'is_internal', 'url_path'
-        input_optional = 'service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format', \
+        input_optional = 'service', AsIs('security_id'), 'method', 'soap_action', 'soap_version', 'data_format', \
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri', \
             'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
             List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
             Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac'), 'hl7_version', 'json_path', \
-            'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding'
+            'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
+            'is_audit_log_sent_active', 'is_audit_log_received_active', \
+            Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
+            Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received')
         output_required = ('id', 'name')
 
     def handle(self):
@@ -214,6 +224,10 @@ class Create(_CreateEdit):
         input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
         input.soap_action = input.soap_action if input.soap_action else ''
         input.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
+
+        # For HL7
+        input.data_encoding = input.get('data_encoding') or 'utf-8'
+        input.hl7_version = input.get('hl7_version') or HL7.Const.Version.v2.id
 
         if input.content_encoding and input.content_encoding != 'gzip':
             raise Exception('Content encoding must be empty or equal to `gzip`')
@@ -336,13 +350,16 @@ class Edit(_CreateEdit):
         request_elem = 'zato_http_soap_edit_request'
         response_elem = 'zato_http_soap_edit_response'
         input_required = 'id', 'cluster_id', 'name', 'is_active', 'connection', 'transport', 'url_path'
-        input_optional = 'service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format', \
+        input_optional = 'service', AsIs('security_id'), 'method', 'soap_action', 'soap_version', 'data_format', \
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri', \
             'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
             List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
             Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac'), 'hl7_version', 'json_path', \
-            'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding'
+            'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
+            'is_audit_log_sent_active', 'is_audit_log_received_active', \
+            Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
+            Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received')
         output_required = 'id', 'name'
 
     def handle(self):
@@ -354,6 +371,10 @@ class Edit(_CreateEdit):
         input.sec_use_rbac = input.get('sec_use_rbac') or (input.security_id == ZATO_SEC_USE_RBAC)
         input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
         input.soap_action = input.soap_action if input.soap_action else ''
+
+        # For HL7
+        input.data_encoding = input.get('data_encoding') or 'utf-8'
+        input.hl7_version = input.get('hl7_version') or HL7.Const.Version.v2.id
 
         if input.content_encoding and input.content_encoding != 'gzip':
             raise Exception('Content encoding must be empty or equal to `gzip`')
@@ -473,6 +494,7 @@ class Edit(_CreateEdit):
                     action = CHANNEL.HTTP_SOAP_CREATE_EDIT.value
                 else:
                     action = OUTGOING.HTTP_SOAP_CREATE_EDIT.value
+
                 self.notify_worker_threads(input, action)
 
                 self.response.payload.id = item.id
@@ -519,6 +541,7 @@ class Delete(AdminService, _HTTPSOAPService):
                     action = OUTGOING.HTTP_SOAP_DELETE.value
 
                 self.notify_worker_threads({
+                    'id': self.request.input.id,
                     'name':old_name,
                     'transport':old_transport,
                     'old_url_path':old_url_path,
