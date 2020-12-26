@@ -35,6 +35,11 @@ _max_data_stored_per_message = AuditLog.Default.max_data_stored_per_message
 
 # ################################################################################################################################
 
+generic_attrs = ('is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', \
+    'max_len_messages_received', 'max_bytes_per_message_sent', 'max_bytes_per_message_received')
+
+# ################################################################################################################################
+
 class WSXConnection(object):
     def __init__(self):
         self.id = None
@@ -73,6 +78,7 @@ class Index(_Index):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'address', 'service_name', 'token_format', 'data_format',
             'security_id', 'sec_type', 'new_token_wait_time', 'token_ttl')
+        output_optional = generic_attrs
         output_repeated = True
 
     def on_before_append_item(self, item):
@@ -105,6 +111,7 @@ class _CreateEdit(CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_active', 'address', 'service_name', 'token_format', 'data_format', 'is_internal',
             'security_id', 'new_token_wait_time', 'token_ttl')
+        input_optional = generic_attrs
         output_required = ('id', 'name')
 
     def on_after_set_input(self):
