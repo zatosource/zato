@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from datetime import datetime
 from gzip import GzipFile
 from hashlib import sha256
 from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, UNAUTHORIZED
@@ -249,7 +250,8 @@ class RequestDispatcher(object):
         _http_soap_action='HTTP_SOAPACTION', _stringio=StringIO, _gzipfile=GzipFile, _accept_any_http=accept_any_http,
         _accept_any_internal=accept_any_internal, _rate_limit_type_http=RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP,
         _rate_limit_type_sso_user=RATE_LIMIT.OBJECT_TYPE.SSO_USER, _stack_format=stack_format, _exc_sep='*' * 80,
-        _jwt=_jwt, _sso_ext_auth=_sso_ext_auth, _data_format_hl7=_data_format_hl7, _channel=CHANNEL.HTTP_SOAP):
+        _jwt=_jwt, _sso_ext_auth=_sso_ext_auth, _data_format_hl7=_data_format_hl7, _channel=CHANNEL.HTTP_SOAP,
+        _utcnow=datetime.utcnow):
 
         # Needed as one of the first steps
         http_method = wsgi_environ['REQUEST_METHOD']
@@ -334,7 +336,7 @@ class RequestDispatcher(object):
                     self.server.rate_limiting.check_limit(
                         cid, _rate_limit_type_http, channel_item['name'], wsgi_environ['zato.http.remote_addr'])
 
-                # Store data in audit log now - again, just like we rate limiting, we did not want to do it too soon.
+                # Store data received in audit log now - again, just like we rate limiting, we did not want to do it too soon.
                 if channel_item.get('is_audit_log_received_active'):
 
                     # Describe our event ..
@@ -392,6 +394,21 @@ class RequestDispatcher(object):
                     s.close()
 
                     wsgi_environ['zato.http.response.headers']['Content-Encoding'] = 'gzip'
+
+                # Store data sent in audit
+                if channel_item.get('is_audit_log_sent_active'):
+
+                    # Describe our event ..
+                    data_event = DataSent()
+                    data_event.type_ = _channel
+                    data_event.object_id = channel_item['id']
+                    data_event.data = response.payload
+                    data_event.timestamp = _utcnow()
+                    data_event.msg_id = 'zrp{}'.format(cid) # This is a response to this CID
+                    data_event.in_reply_to = cid
+
+                    # .. and store it in the audit log.
+                    self.server.audit_log.store_data_sent(data_event)
 
                 # Finally, return payload to the client
                 return response.payload
