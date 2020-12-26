@@ -42,6 +42,9 @@ if 0:
 
 # ################################################################################################################################
 
+generic_attrs = ['is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', \
+    'max_len_messages_received', 'max_bytes_per_message_sent', 'max_bytes_per_message_received']
+
 elem = 'channel_web_socket'
 model = ChannelWebSocket
 label = 'a WebSocket channel'
@@ -50,8 +53,8 @@ broker_message = CHANNEL
 broker_message_prefix = 'WEB_SOCKET_'
 list_func = channel_web_socket_list
 skip_input_params = ['service_id', 'is_out']
-create_edit_input_required_extra = ['service_name']
-output_optional_extra = ['sec_type']
+create_edit_input_required_extra = ['service_name'] + generic_attrs
+output_optional_extra = ['sec_type', 'service_name'] + generic_attrs
 
 # ################################################################################################################################
 

@@ -16,6 +16,7 @@ from logging import getLogger
 # Zato
 from zato.bunch import Bunch
 from zato.common.api import RATE_LIMIT
+from zato.common.audit_log import LogContainerConfig
 from zato.common.const import SECRETS
 from zato.common.util.api import asbool
 from zato.common.util.sql import elems_with_opaque
@@ -24,6 +25,14 @@ from zato.server.config import ConfigDict
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.url_dispatcher import Matcher
 
+# ################################################################################################################################
+
+if 0:
+    from zato.common.audit_log import AuditLog
+
+    AuditLog = AuditLog
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
@@ -416,7 +425,7 @@ class ConfigLoader(object):
                 self.set_up_object_rate_limiting(_sec_def, object_name, config_store_name)
 
         for item in self.config['http_soap']: # type: dict
-            # Do not try to set up rate limiting if we know there is no configuration for it available
+            # Set up rate limiting only if we know there is configuration for it available
             if 'is_rate_limit_active' in item:
                 self.set_up_object_rate_limiting(_http_soap, item['name'], config=item)
 
@@ -472,6 +481,31 @@ class ConfigLoader(object):
                 self.rate_limiting.delete(object_info.type_, object_info.name)
 
         return is_rate_limit_active
+
+# ################################################################################################################################
+
+    def set_up_object_audit_log(self, object_type, object_id, config, is_edit):
+        # type: (str, str, dict)
+
+        # For type completion
+        audit_log = self.audit_log # type: AuditLog
+
+        # Prepare a new configuration object for that log ..
+        log_config = LogContainerConfig()
+
+        log_config.type_ = object_type
+        log_config.object_id = object_id
+
+        log_config.max_len_messages_sent     = config['max_len_messages_sent']
+        log_config.max_len_messages_received = config['max_len_messages_received']
+
+        # .. convert both from kilobytes to bytes (we use kB = 1,000 bytes rather than KB = 1,024 bytes) ..
+        log_config.max_bytes_per_message_sent     = int(config['max_len_messages_sent']) * 1000
+        log_config.max_bytes_per_message_received = int(config['max_len_messages_received']) * 1000
+
+        # .. and now we can create our audit log container
+        func = audit_log.edit_container if is_edit else audit_log.create_container
+        func(log_config)
 
 # ################################################################################################################################
 

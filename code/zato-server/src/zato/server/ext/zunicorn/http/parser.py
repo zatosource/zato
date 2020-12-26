@@ -72,6 +72,7 @@ class Parser(object):
         self.mesg = self.mesg_class(self.cfg, self.unreader, self.req_count)
         if not self.mesg:
             raise StopIteration()
+
         return self.mesg
 
     next = __next__
