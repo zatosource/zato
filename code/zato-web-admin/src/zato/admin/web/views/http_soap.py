@@ -262,6 +262,8 @@ def index(req):
         'default_http_ping_method':DEFAULT_HTTP_PING_METHOD,
         'default_http_pool_size':DEFAULT_HTTP_POOL_SIZE,
         'default_http_timeout':MISC.DEFAULT_HTTP_TIMEOUT,
+        'audit_max_len_messages': _max_len_messages,
+        'audit_max_data_stored_per_message': _max_data_stored_per_message,
         'paginate':True,
         'meta': meta,
         'req':req
