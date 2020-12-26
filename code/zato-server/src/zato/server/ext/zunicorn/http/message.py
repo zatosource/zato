@@ -34,7 +34,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 """
 
-import re
+import regex as re
 import socket
 from errno import ENOTCONN
 
@@ -54,12 +54,13 @@ MAX_HEADERS = 32768
 DEFAULT_MAX_HEADERFIELD_SIZE = 8190
 
 HEADER_RE = re.compile(r"[\x00-\x1F\x7F()<>@,;:\[\]={} \t\\\"]")
-METH_RE = re.compile(r"[A-Z0-9$-_.]{3,20}")
+METHOD_RE = re.compile(r"[A-Z0-9$-_.]{3,20}")
 VERSION_RE = re.compile(r"HTTP/(\d+)\.(\d+)")
 
 
 class Message(object):
-    def __init__(self, cfg, unreader):
+    def __init__(self, cfg, unreader, MAX_HEADERS=MAX_HEADERS,
+            DEFAULT_MAX_HEADERFIELD_SIZE=DEFAULT_MAX_HEADERFIELD_SIZE):
         self.cfg = cfg
         self.unreader = unreader
         self.version = None
@@ -69,13 +70,8 @@ class Message(object):
         self.scheme = "https" if cfg.is_ssl else "http"
 
         # set headers limits
-        self.limit_request_fields = cfg.limit_request_fields
-        if (self.limit_request_fields <= 0
-            or self.limit_request_fields > MAX_HEADERS):
-            self.limit_request_fields = MAX_HEADERS
-        self.limit_request_field_size = cfg.limit_request_field_size
-        if self.limit_request_field_size < 0:
-            self.limit_request_field_size = DEFAULT_MAX_HEADERFIELD_SIZE
+        self.limit_request_fields = MAX_HEADERS
+        self.limit_request_field_size = DEFAULT_MAX_HEADERFIELD_SIZE
 
         # set max header buffer size
         max_header_field_size = self.limit_request_field_size or DEFAULT_MAX_HEADERFIELD_SIZE
@@ -89,7 +85,7 @@ class Message(object):
     def parse(self, unreader):
         raise NotImplementedError()
 
-    def parse_headers(self, data):
+    def parse_headers(self, data, bytes_to_str=bytes_to_str):
         cfg = self.cfg
         headers = []
 
@@ -112,12 +108,17 @@ class Message(object):
 
         # Parse headers into key/value pairs paying attention
         # to continuation lines.
+
+        self_limit_request_fields = self.limit_request_fields
+        self_limit_request_field_size = self.limit_request_field_size
+        lines_pop = lines.pop
+
         while lines:
-            if len(headers) >= self.limit_request_fields:
+            if len(headers) >= self_limit_request_fields:
                 raise LimitRequestHeaders("limit request headers fields")
 
             # Parse initial header name : value pair.
-            curr = lines.pop(0)
+            curr = lines_pop(0)
             header_length = len(curr)
             if curr.find(":") < 0:
                 raise InvalidHeader(curr.strip())
@@ -130,15 +131,15 @@ class Message(object):
 
             # Consume value continuation lines
             while lines and lines[0].startswith((" ", "\t")):
-                curr = lines.pop(0)
+                curr = lines_pop(0)
                 header_length += len(curr)
-                if header_length > self.limit_request_field_size > 0:
+                if header_length > self_limit_request_field_size > 0:
                     raise LimitRequestHeaders("limit request headers "
                             + "fields size")
                 value.append(curr)
             value = ''.join(value).rstrip()
 
-            if header_length > self.limit_request_field_size > 0:
+            if header_length > self_limit_request_field_size > 0:
                 raise LimitRequestHeaders("limit request headers fields size")
 
             if name in secure_scheme_headers:
@@ -211,7 +212,7 @@ class Request(Message):
         self.proxy_protocol_info = None
         super(Request, self).__init__(cfg, unreader)
 
-    def get_data(self, unreader, buf, stop=False):
+    def get_data(self, unreader, buf, stop=False, NoMoreData=NoMoreData):
         data = unreader.read()
         if not data:
             if stop:
@@ -219,7 +220,7 @@ class Request(Message):
             raise NoMoreData(buf.getvalue())
         buf.write(data)
 
-    def parse(self, unreader):
+    def parse(self, unreader, BytesIO=BytesIO):
         buf = BytesIO()
         self.get_data(unreader, buf, stop=True)
 
@@ -227,11 +228,12 @@ class Request(Message):
         line, rbuf = self.read_line(unreader, buf, self.limit_request_line)
 
         # proxy protocol
-        if self.proxy_protocol(bytes_to_str(line)):
-            # get next request line
-            buf = BytesIO()
-            buf.write(rbuf)
-            line, rbuf = self.read_line(unreader, buf, self.limit_request_line)
+        if self.cfg.proxy_protocol:
+            if self.proxy_protocol(bytes_to_str(line)):
+                # get next request line
+                buf = BytesIO()
+                buf.write(rbuf)
+                line, rbuf = self.read_line(unreader, buf, self.limit_request_line)
 
         self.parse_request_line(line)
         buf = BytesIO()
@@ -242,13 +244,19 @@ class Request(Message):
         idx = data.find(b"\r\n\r\n")
 
         done = data[:2] == b"\r\n"
+
+        data_find = data.find
+        self_get_data = self.get_data
+        buf_get_value = buf.getvalue
+        self_max_buffer_headers = self.max_buffer_headers
+
         while True:
-            idx = data.find(b"\r\n\r\n")
+            idx = data_find(b"\r\n\r\n")
             done = data[:2] == b"\r\n"
 
             if idx < 0 and not done:
-                self.get_data(unreader, buf)
-                data = buf.getvalue()
+                self_get_data(unreader, buf)
+                data = buf_getvalue()
                 if len(data) > self.max_buffer_headers:
                     raise LimitRequestHeaders("max buffer headers")
             else:
@@ -267,9 +275,12 @@ class Request(Message):
 
     def read_line(self, unreader, buf, limit=0):
         data = buf.getvalue()
+        data_find = data.find
+        self_get_data = self.get_data
+        buf_getvalue = buf.getvalue
 
         while True:
-            idx = data.find(b"\r\n")
+            idx = data_find(b"\r\n")
             if idx >= 0:
                 # check if the request line is too large
                 if idx > limit > 0:
@@ -277,8 +288,8 @@ class Request(Message):
                 break
             elif len(data) - 2 > limit > 0:
                 raise LimitRequestLine(len(data), limit)
-            self.get_data(unreader, buf)
-            data = buf.getvalue()
+            self_get_data(unreader, buf)
+            data = buf_getvalue()
 
         return (data[:idx],  # request line,
                 data[idx + 2:])  # residue in the buffer, skip \r\n
@@ -362,13 +373,15 @@ class Request(Message):
             "proxy_port": d_port
         }
 
-    def parse_request_line(self, line_bytes):
+    def parse_request_line(self, line_bytes, METHOD_RE=METHOD_RE, VERSION_RE=VERSION_RE,
+            split_request_uri=split_request_uri, bytes_to_str=bytes_to_str):
+
         bits = [bytes_to_str(bit) for bit in line_bytes.split(None, 2)]
         if len(bits) != 3:
             raise InvalidRequestLine(bytes_to_str(line_bytes))
 
         # Method
-        if not METH_RE.match(bits[0]):
+        if not METHOD_RE.match(bits[0]):
             raise InvalidRequestMethod(bits[0])
         self.method = bits[0].upper()
 
@@ -389,7 +402,7 @@ class Request(Message):
             raise InvalidHTTPVersion(bits[2])
         self.version = (int(match.group(1)), int(match.group(2)))
 
-    def set_body_reader(self):
+    def set_body_reader(self, EOFReader=EOFReader, Body=Body, LengthReader=LengthReader):
         super(Request, self).set_body_reader()
         if isinstance(self.body.reader, EOFReader):
             self.body = Body(LengthReader(self.unreader, 0))
