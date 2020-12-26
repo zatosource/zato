@@ -8,13 +8,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from collections import deque
 from datetime import datetime
 from logging import getLogger
 from socket import timeout as SocketTimeoutException
 from traceback import format_exc
 
 # Zato
+from zato.common.api import GENERIC
+from zato.common.audit_log import DataReceived, DataSent
 from zato.common.util.api import new_cid
 from zato.common.util.tcp import get_fqdn_by_ip, ZatoStreamServer
 
@@ -23,8 +24,12 @@ from zato.common.util.tcp import get_fqdn_by_ip, ZatoStreamServer
 if 0:
     from bunch import Bunch
     from gevent import socket
+    from zato.common.audit_log import DataEvent, AuditLog, LogContainerConfig
 
     Bunch = Bunch
+    DataEvent = DataEvent
+    LogContainerConfig = LogContainerConfig
+    AuditLog = AuditLog
     socket = socket
 
 # ################################################################################################################################
@@ -34,9 +39,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 # ################################################################################################################################
 
-_server_type = 'HL7 MLLP'
-_stats_attrs = 'total_bytes_received', 'total_messages_received', 'avg_msg_size_received', 'first_received', 'last_received', \
-               'total_bytes_sent',     'total_messages_sent',     'avg_msg_size_sent',     'first_sent',     'last_sent'
+conn_type   = GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP
+server_type = 'HL7 MLLP'
 
 # ################################################################################################################################
 
@@ -49,39 +53,11 @@ def new_msg_id(pattern='zhm{}', id_len=6, _new_cid=new_cid):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _MsgTypeStats:
-    """ Represents transfer statistics for each message type.
-    """
-    __slots__ = ('msg_type',) + _stats_attrs
-
-    def __init__(self):
-        self.msg_type = None
-
-        self.total_bytes_received = -1
-        self.total_messages_received = -1
-        self.avg_msg_size_received = -1
-        self.first_received = None
-        self.last_received = None
-
-        self.total_bytes_sent = -1
-        self.total_messages_sent = -1
-        self.avg_msg_sent_size = -1
-        self.first_sent = None
-        self.last_sent = None
-
-    def to_dict(self):
-        out = {}
-        for name in self.__slots__:
-            out[name] = getattr(self, name)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class ConnCtx:
     """ Details of an individual remote connection to a server.
     """
     __slots__ = ('conn_id', 'conn_name', 'socket', 'peer_ip', 'peer_port', 'peer_fqdn', 'local_ip', \
-        'local_port', 'local_fqdn', 'stats_per_msg_type') + _stats_attrs
+        'local_port', 'local_fqdn', 'stats_per_msg_type')
 
     def __init__(self, conn_name, socket, peer_address, _new_conn_id=new_conn_id):
         # type: (socket, tuple)
@@ -95,51 +71,15 @@ class ConnCtx:
         # Statistics broken down by each message type, e.g. ADT
         self.stats_per_msg_type = {}
 
-        self.peer_fqdn = get_fqdn_by_ip(self.peer_ip, 'peer', _server_type)
+        self.peer_fqdn = get_fqdn_by_ip(self.peer_ip, 'peer', server_type)
         self.local_ip, self.local_port, self.local_fqdn = self._get_local_conn_info('local')
-
-        #
-        # Data received
-        #
-
-        # Total bytes received via this connection
-        self.total_bytes_received = 0
-
-        # How many messages this connection received
-        self.total_messages_received = 0
-
-        # When the connection first time received a message
-        self.first_received = datetime.utcnow()
-
-        # When the connection last time received a message
-        self.last_received = self.first_received
-
-        #
-        # Data sent
-        #
-
-        # Total bytes sent via this connection
-        self.total_bytes_sent = 0
-
-        # How many messages this connection sent
-        self.total_messages_sent = 0
-
-        # When the connection first time sent a message
-        self.first_sent = None
-
-        # When the connection last time sent a message
-        self.last_sent = None
 
 # ################################################################################################################################
 
     def get_conn_pretty_info(self):
-        return '{}; `{}:{}` ({}) to `{}:{}` ({}) ({}) (rm:{}; rb:{}; sm:{}; sb:{})'.format(
+        return '{}; `{}:{}` ({}) to `{}:{}` ({}) ({})'.format(
             self.conn_id, self.peer_ip, self.peer_port, self.peer_fqdn,
             self.local_ip, self.local_port, self.local_fqdn, self.conn_name,
-            self.total_messages_received,
-            self.total_bytes_received,
-            self.total_messages_sent,
-            self.total_bytes_sent
         )
 
 # ################################################################################################################################
@@ -147,7 +87,7 @@ class ConnCtx:
     def _get_local_conn_info(self, default_local_fqdn):
         # type: (str) -> tuple
         local_ip, local_port = self.socket.getsockname()
-        local_fqdn = get_fqdn_by_ip(local_ip, default_local_fqdn, _server_type)
+        local_fqdn = get_fqdn_by_ip(local_ip, default_local_fqdn, server_type)
 
         return local_ip, local_port, local_fqdn
 
@@ -205,9 +145,11 @@ class HL7MLLPServer:
     # We will never read less that many bytes from client sockets
     min_read_buffer_size = 2048
 
-    def __init__(self, config):
-        # type: (Bunch)
+    def __init__(self, config, audit_log):
+        # type: (Bunch, AuditLog)
         self.config = config
+        self.object_id = config.id # type: str
+        self.audit_log = audit_log
         self.address = config.address
         self.name = config.name
         self.should_log_messages = config.should_log_messages # type: bool
@@ -237,7 +179,7 @@ class HL7MLLPServer:
         self.impl = ZatoStreamServer(self.address, self.handle)
 
         # .. log info that we are starting ..
-        self._logger_info('Starting %s connection `%s` (%s)', _server_type, self.name, self.address)
+        self._logger_info('Starting %s connection `%s` (%s)', server_type, self.name, self.address)
 
         # .. and start to serve.
         self.impl.serve_forever()
@@ -469,9 +411,7 @@ class HL7MLLPServer:
         # type: (bool, bytes, object, ConnCtx, RequestCtx, object, object, object, object)
 
         # Update our runtime metadata first (data received).
-        conn_ctx.total_bytes_received += request_ctx.msg_size
-        conn_ctx.total_messages_received += 1
-        conn_ctx.last_received = _datetime_utcnow()
+        self._store_data_received(request_ctx)
 
         # Produce the message to invoke the callback with ..
         _buffer_data = _buffer_join_func(_buffer)
@@ -493,15 +433,36 @@ class HL7MLLPServer:
         _socket_send(response)
 
         # .. update our runtime metadata first (data sent) ..
-        conn_ctx.total_bytes_sent += len(response)
-        conn_ctx.total_messages_sent += 1
-        conn_ctx.last_sent = _datetime_utcnow()
-
-        if not conn_ctx.first_sent:
-            conn_ctx.first_sent = conn_ctx.last_sent
+        self._store_data_sent(request_ctx)
 
         # .. and reset the message to make it possible to handle a new one.
         _request_ctx_reset()
+
+# ################################################################################################################################
+
+    def _store_data(self, request_ctx, _DataEventClass, _conn_type=conn_type):
+        # type: (RequestCtx, DataEvent, str) -> None
+
+        # Create and fill out details of the new event ..
+        data_event = _DataEventClass()
+        data_event.data = request_ctx.data
+        data_event.type_ = _conn_type
+        data_event.object_id = self.object_id
+        data_event.conn_id = request_ctx.conn_id
+        data_event.msg_id = request_ctx.msg_id
+
+        # .. and store it in our log.
+        self.audit_log.store_data(data_event)
+
+# ################################################################################################################################
+
+    def _store_data_received(self, request_ctx, event_class=DataReceived):
+        self._store_data(request_ctx, event_class)
+
+# ################################################################################################################################
+
+    def _store_data_sent(self, request_ctx, event_class=DataSent):
+        self._store_data(request_ctx, event_class)
 
 # ################################################################################################################################
 
@@ -567,11 +528,15 @@ def main():
     # Bunch
     from bunch import bunchify
 
+    # Zato
+    from zato.common.audit_log import AuditLog, LogContainerConfig
+
     def on_message(msg):
         # type: (str)
         raise Exception(msg)
 
     config = bunchify({
+        'id': '123',
         'name': 'Hello HL7 MLLP',
         'address': '0.0.0.0:30191',
 
@@ -594,7 +559,12 @@ def main():
 
     })
 
-    reader = HL7MLLPServer(config)
+    log_container_config = LogContainerConfig()
+
+    audit_log = AuditLog()
+    audit_log.create_container(log_container_config)
+
+    reader = HL7MLLPServer(config, audit_log)
     reader.start()
 
 # ################################################################################################################################

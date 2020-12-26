@@ -17,3 +17,7 @@ html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abb
     font-weight:500;
     margin-left:2px;
 }
+
+#data-table * tr.odd:hover, #data-table * tr.even:hover{
+    background-color:#ff8;
+}
