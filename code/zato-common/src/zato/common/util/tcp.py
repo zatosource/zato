@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 from logging import getLogger
 from socket import timeout as SocketTimeoutException
 from time import sleep
+from traceback import format_exc
 
 # gevent
 from gevent import socket
