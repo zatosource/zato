@@ -114,7 +114,7 @@
                         </td>
 
                         <td>{{ item.direction }}</td>
-                        <td>{{ item.msg_id }}</td>
+                        <td>{{ item.msg_id|no_value_indicator }}</td>
 
                         {% comment %} 3 {% endcomment %}
                         <td>{{ item.in_reply_to|no_value_indicator }}</td>
