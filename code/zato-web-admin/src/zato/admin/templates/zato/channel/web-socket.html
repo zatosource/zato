@@ -23,21 +23,44 @@
     <script>
     $.fn.zato.data_table.get_columns = function() {
         return [
+
+            {% comment %} 1 {% endcomment %}
             '_numbering',
             '_selection',
+
+            {% comment %} 2 {% endcomment %}
             'name',
             '_is_active',
             'address',
+
+            {% comment %} 3 {% endcomment %}
             'service_name',
             '_connections',
             '_edit',
+
+            {% comment %} 4 {% endcomment %}
             '_delete',
             'id',
             'data_format',
+
+            {% comment %} 5 {% endcomment %}
             'is_active',
             'security_id',
             'new_token_wait_time',
+
+            {% comment %} 6 {% endcomment %}
             'token_ttl',
+
+            {% comment %} 7 {% endcomment %}
+            'is_audit_log_sent_active',
+            'is_audit_log_received_active',
+            'max_len_messages_sent',
+
+            {% comment %} 8 {% endcomment %}
+            'max_len_messages_received',
+            'max_bytes_per_message_sent',
+            'max_bytes_per_message_received',
+
         ]
     }
     </script>
@@ -66,17 +89,35 @@
             <table id="data-table">
                 <thead>
                     <tr class='ignore'>
+
+                        {% comment %} 1 {% endcomment %}
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+
+                        {% comment %} 2 {% endcomment %}
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
                         <th><a href="#">Address</a></th>
+
+                        {% comment %} 3 {% endcomment %}
                         <th><a href="#">Service</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+
+                        {% comment %} 4 {% endcomment %}
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 5 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 6 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 7 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -86,26 +127,49 @@
                 {% if items %}
                 {% for item in items %}
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+
+                        {% comment %} 1 {% endcomment %}
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
+
+                        {% comment %} 2 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.address }}</td>
+
+                        {% comment %} 3 {% endcomment %}
                         <td><a href="{% url "service-overview" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
                         <td><a href="{% url "channel-web-socket-connection-list" item.id %}?cluster={{ cluster_id }}&amp;channel_name={{ item.name }}">Connections</a></td>
                         <td><a href="javascript:$.fn.zato.channel.wsx.edit('{{ item.id }}')">Edit</a></td>
+
+                        {% comment %} 4 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.channel.wsx.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.data_format }}</td>
+
+                        {% comment %} 5 {% endcomment %}
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.security_id }}</td>
                         <td class='ignore'>{{ item.new_token_wait_time }}</td>
+
+                        {% comment %} 6 {% endcomment %}
                         <td class='ignore'>{{ item.token_ttl }}</td>
+
+                        {% comment %} 7 {% endcomment %}
+                        <td class='ignore'>{{ item.is_audit_log_sent_active }}</td>
+                        <td class='ignore'>{{ item.is_audit_log_received_active }}</td>
+                        <td class='ignore'>{{ item.max_len_messages_sent|default:audit_max_len_messages }}</td>
+
+                        {% comment %} 8 {% endcomment %}
+                        <td class='ignore'>{{ item.max_len_messages_received|default:audit_max_len_messages }}</td>
+                        <td class='ignore'>{{ item.max_bytes_per_message_sent|default:audit_max_data_stored_per_message }}</td>
+                        <td class='ignore'>{{ item.max_bytes_per_message_received|default:audit_max_data_stored_per_message }}</td>
+
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='14'>No results</td>
+                        <td colspan='21'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -120,7 +184,7 @@
                 <form action="{% url "channel-web-socket-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:14%">Name</td>
+                            <td style="vertical-align:middle;width:18%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
 
@@ -155,6 +219,7 @@
                             <span class="form_hint">(in seconds)</span>
                             </td>
                         </tr>
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
@@ -174,7 +239,7 @@
                 <form action="{% url "channel-web-socket-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:14%">Name</td>
+                            <td style="vertical-align:middle;width:18%">Name</td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
 
@@ -209,6 +274,9 @@
                             <span class="form_hint">(in seconds)</span>
                             </td>
                         </tr>
+
+                        {% include "zato/include/audit-log/edit.html" %}
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />

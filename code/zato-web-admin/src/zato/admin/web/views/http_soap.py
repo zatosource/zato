@@ -21,7 +21,7 @@ from django.template.response import TemplateResponse
 from zato.admin.web.forms.http_soap import SearchForm, CreateForm, EditForm
 from zato.admin.web.views import get_http_channel_security_id, get_security_id_from_select, get_tls_ca_cert_list, \
      id_only_service, method_allowed, parse_response_data, SecurityList
-from zato.common.api import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, DELEGATED_TO_RBAC, \
+from zato.common.api import AuditLog, CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, DELEGATED_TO_RBAC, \
      HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, SOAP_CHANNEL_VERSIONS, \
      SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE
 from zato.common.exception import ZatoException
@@ -50,13 +50,20 @@ CACHE_TYPE = {
     CACHE.TYPE.MEMCACHED: 'Memcached',
 }
 
+generic_attrs = ('is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def',
+    'is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', 'max_len_messages_received',
+    'max_bytes_per_message_sent', 'max_bytes_per_message_received', 'hl7_version', 'json_path', 'data_encoding')
+
+_max_len_messages = AuditLog.Default.max_len_messages
+_max_data_stored_per_message = AuditLog.Default.max_data_stored_per_message
+
 def _get_edit_create_message(params, prefix=''):
     """ A bunch of attributes that can be used by both 'edit' and 'create' actions
     for channels and outgoing connections.
     """
     security_id = get_security_id_from_select(params, prefix)
 
-    return {
+    message = {
         'is_internal': False,
         'connection': params['connection'],
         'transport': params['transport'],
@@ -87,11 +94,27 @@ def _get_edit_create_message(params, prefix=''):
         'cache_id': params.get(prefix + 'cache_id'),
         'cache_expiry': params.get(prefix + 'cache_expiry'),
         'content_encoding': params.get(prefix + 'content_encoding'),
+
+        'hl7_version': params.get(prefix + 'hl7_version'),
+        'json_path': params.get(prefix + 'json_path'),
+        'data_encoding': params.get(prefix + 'data_encoding'),
+
         'is_rate_limit_active': params.get(prefix + 'is_rate_limit_active'),
         'rate_limit_type': params.get(prefix + 'rate_limit_type'),
         'rate_limit_def': params.get(prefix + 'rate_limit_def'),
         'rate_limit_check_parent_def': params.get(prefix + 'rate_limit_check_parent_def'),
+
+        'is_audit_log_sent_active': params.get(prefix + 'is_audit_log_sent_active') or False,
+        'is_audit_log_received_active': params.get(prefix + 'is_audit_log_received_active') or False,
+
+        'max_len_messages_sent': params.get(prefix + 'max_len_messages_sent') or _max_len_messages,
+        'max_len_messages_received': params.get(prefix + 'max_len_messages_received') or _max_len_messages,
+
+        'max_bytes_per_message_sent': params.get(prefix + 'max_bytes_per_message_sent') or _max_data_stored_per_message,
+        'max_bytes_per_message_received': params.get(prefix + 'max_bytes_per_message_received') or _max_data_stored_per_message,
     }
+
+    return message
 
 def _edit_create_response(req, id, verb, transport, connection, name):
 
@@ -219,7 +242,7 @@ def index(req):
                     cache_id=item.cache_id, cache_name=cache_name, cache_type=item.cache_type, cache_expiry=item.cache_expiry,
                     content_encoding=item.content_encoding, match_slash=match_slash, http_accept=http_accept)
 
-            for name in 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def':
+            for name in generic_attrs:
                 setattr(http_soap, name, item.get(name))
 
             items.append(http_soap)
@@ -239,6 +262,8 @@ def index(req):
         'default_http_ping_method':DEFAULT_HTTP_PING_METHOD,
         'default_http_pool_size':DEFAULT_HTTP_POOL_SIZE,
         'default_http_timeout':MISC.DEFAULT_HTTP_TIMEOUT,
+        'audit_max_len_messages': _max_len_messages,
+        'audit_max_data_stored_per_message': _max_data_stored_per_message,
         'paginate':True,
         'meta': meta,
         'req':req

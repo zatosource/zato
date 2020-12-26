@@ -1097,6 +1097,9 @@ class IPC:
 # ################################################################################################################################
 
 class WEB_SOCKET:
+
+    AUDIT_KEY = 'wsx-connection'
+
     class DEFAULT:
         NEW_TOKEN_TIMEOUT = 5
         TOKEN_TTL = 3600
@@ -1191,6 +1194,19 @@ class GENERIC:
             OUTCONN_MONGODB = 'outconn-mongodb'
             OUTCONN_SFTP = 'outconn-sftp'
             OUTCONN_WSX = 'outconn-wsx'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class AuditLog:
+
+    class Direction:
+        received = 'received'
+        sent     = 'sent'
+
+    class Default:
+        max_len_messages = 50
+        max_data_stored_per_message = 500 # In kilobytes
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1666,6 +1682,7 @@ class WebSphereMQCallData:
 default_internal_modules = {
     'zato.server.service.internal': True,
     'zato.server.service.internal.apispec': True,
+    'zato.server.service.internal.audit_log': True,
     'zato.server.service.internal.cache.builtin': True,
     'zato.server.service.internal.cache.builtin.entry': True,
     'zato.server.service.internal.cache.builtin.pubapi': True,
