@@ -4,7 +4,7 @@
 from operator import itemgetter
 
 # Zato
-from zato.server.service import AsIs, Int, Service, Unicode
+from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -22,7 +22,7 @@ class GetEventList(AdminService):
     name = 'zato.audit-log.event.get-list'
 
     class SimpleIO:
-        input_optional = 'cluster_id', 'type_', Unicode('object_id')
+        input_optional = 'cluster_id', 'type_', AsIs('object_id')
         output_optional = 'server_name', 'server_pid', 'type_', AsIs('object_id'), 'direction', 'timestamp', \
             AsIs('msg_id'), AsIs('event_id'), AsIs('conn_id'), 'in_reply_to', 'data', Int('data_len')
 

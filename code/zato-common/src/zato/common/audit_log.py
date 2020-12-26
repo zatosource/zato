@@ -8,7 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from collections import deque
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # gevent
 from gevent.lock import RLock
