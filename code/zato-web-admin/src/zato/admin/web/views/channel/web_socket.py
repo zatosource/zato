@@ -20,13 +20,23 @@ from django.template.response import TemplateResponse
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.channel.web_socket import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
-from zato.common.api import ZATO_NONE
+from zato.common.api import AuditLog, ZATO_NONE
 from zato.common.json_internal import dumps
 from zato.common.odb.model import ChannelWebSocket
 
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+
+_max_len_messages = AuditLog.Default.max_len_messages
+_max_data_stored_per_message = AuditLog.Default.max_data_stored_per_message
+
+# ################################################################################################################################
+
+generic_attrs = ('is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', \
+    'max_len_messages_received', 'max_bytes_per_message_sent', 'max_bytes_per_message_received')
 
 # ################################################################################################################################
 
@@ -68,6 +78,7 @@ class Index(_Index):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'address', 'service_name', 'token_format', 'data_format',
             'security_id', 'sec_type', 'new_token_wait_time', 'token_ttl')
+        output_optional = generic_attrs
         output_repeated = True
 
     def on_before_append_item(self, item):
@@ -88,6 +99,8 @@ class Index(_Index):
         return {
             'create_form': CreateForm(sec_list, req=self.req),
             'edit_form': EditForm(sec_list, prefix='edit', req=self.req),
+            'audit_max_len_messages': _max_len_messages,
+            'audit_max_data_stored_per_message': _max_data_stored_per_message,
         }
 
 # ################################################################################################################################
@@ -98,6 +111,7 @@ class _CreateEdit(CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_active', 'address', 'service_name', 'token_format', 'data_format', 'is_internal',
             'security_id', 'new_token_wait_time', 'token_ttl')
+        input_optional = generic_attrs
         output_required = ('id', 'name')
 
     def on_after_set_input(self):

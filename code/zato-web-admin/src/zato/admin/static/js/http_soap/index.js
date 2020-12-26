@@ -81,7 +81,9 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     var is_rate_limit_active = $.fn.zato.like_bool(data.is_rate_limit_active) == true;
     var rate_limit_check_parent_def = $.fn.zato.like_bool(data.rate_limit_check_parent_def) == true;
 
-    var method_tr = '';
+    var is_audit_log_sent_active = $.fn.zato.like_bool(data.is_audit_log_sent_active) == true;
+    var is_audit_log_received_active = $.fn.zato.like_bool(data.is_audit_log_received_active) == true;
+
     var soap_action_tr = '';
     var soap_version_tr = '';
     var service_tr = '';
@@ -100,8 +102,6 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
 
     if(is_channel) {
         service_tr += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(item.service, cluster_id));
-        method_tr += String.format('<td>{0}</td>', item.method ? item.method : $.fn.zato.empty_value);
-
         merge_url_params_req_tr += String.format('<td class="ignore">{0}</td>', merge_url_params_req);
         url_params_pri_tr += String.format('<td class="ignore">{0}</td>', item.url_params_pri);
         params_pri_tr += String.format('<td class="ignore">{0}</td>', item.params_pri);
@@ -153,9 +153,10 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += soap_version_tr;
     }
 
+    row += String.format('<td><a href="/zato/audit-log/http-soap/{0}/?cluster={1}">View</a></td>', item.id, cluster_id);
+
     /* 12,13,13a */
     if(is_channel) {
-        row += method_tr;
         row += String.format("<td class='ignore'>{0}</td>", item.service);
         row += String.format("<td class='ignore'>{0}</td>", item.content_encoding);
     }
@@ -212,13 +213,23 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         }
     }
 
-    /* 35,36,37,38 */
+    /* 35 */
     if(is_channel) {
         row += String.format("<td class='ignore'>{0}</td>", is_rate_limit_active);
         row += String.format("<td class='ignore'>{0}</td>", data.rate_limit_type);
         row += String.format("<td class='ignore'>{0}</td>", data.rate_limit_def);
         row += String.format("<td class='ignore'>{0}</td>", rate_limit_check_parent_def);
     }
+
+    /* 36 */
+    row += String.format("<td class='ignore'>{0}</td>", is_audit_log_sent_active);
+    row += String.format("<td class='ignore'>{0}</td>", is_audit_log_received_active);
+    row += String.format("<td class='ignore'>{0}</td>", data.max_len_messages_sent);
+
+    /* 37 */
+    row += String.format("<td class='ignore'>{0}</td>", data.max_len_messages_received);
+    row += String.format("<td class='ignore'>{0}</td>", data.max_bytes_per_message_sent);
+    row += String.format("<td class='ignore'>{0}</td>", data.max_bytes_per_message_received);
 
     if(include_tr) {
         row += '</tr>';

@@ -49,6 +49,7 @@ if ({}.__proto__){
 $.namespace('zato');
 $.namespace('zato.account');
 $.namespace('zato.account.basic_settings');
+$.namespace('zato.audit_log');
 $.namespace('zato.cache');
 $.namespace('zato.cache.builtin');
 $.namespace('zato.cache.builtin.entries');
