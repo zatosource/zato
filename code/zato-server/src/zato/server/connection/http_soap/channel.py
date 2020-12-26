@@ -262,7 +262,7 @@ class RequestDispatcher(object):
         http_accept = http_accept if isinstance(http_accept, unicode) else http_accept.decode('utf8')
 
         # Needed in later steps
-        path_info = wsgi_environ['PATH_INFO'] if PY3 else wsgi_environ['PATH_INFO'].decode('utf8')
+        path_info = wsgi_environ['PATH_INFO']
 
         # Immediately reject the request if it is not a support HTTP method, no matter what channel
         # it would have otherwise matched.
@@ -573,7 +573,8 @@ class RequestHandler(object):
 
 # ################################################################################################################################
 
-    def create_channel_params(self, path_params, channel_item, wsgi_environ, raw_request, post_data=None, _has_debug=_has_debug):
+    def create_channel_params(self, path_params, channel_item, wsgi_environ, raw_request, post_data=None, _has_debug=_has_debug,
+        QS_OVER_PATH=URL_PARAMS_PRIORITY.QS_OVER_PATH):
         """ Collects parameters specific to this channel (HTTP) and updates wsgi_environ
         with HTTP-specific data.
         """
@@ -587,7 +588,7 @@ class RequestHandler(object):
             # data format was set for channel.
             post = self._get_flattened(raw_request) if not channel_item.data_format else {}
 
-        if channel_item.url_params_pri == URL_PARAMS_PRIORITY.QS_OVER_PATH:
+        if channel_item.url_params_pri == QS_OVER_PATH:
             if _qs:
                 path_params.update((key, value) for key, value in _qs.items())
             channel_params = path_params
@@ -715,14 +716,16 @@ class RequestHandler(object):
 
 # ################################################################################################################################
 
-    def set_payload(self, response, data_format, transport, service_instance):
+    def set_payload(self, response, data_format, transport, service_instance, _sio_json=SIMPLE_IO.FORMAT.JSON,
+        _url_type_soap=URL_TYPE.SOAP, _dict_like=(DATA_FORMAT.JSON, DATA_FORMAT.DICT), _AdminService=AdminService,
+        _dumps=dumps, _basestring=basestring):
         """ Sets the actual payload to represent the service's response out of what the service produced.
         This includes converting dictionaries into JSON, adding Zato metadata and wrapping the mesasge in SOAP if need be.
         """
         # type: (Response, str, str, Service)
 
         if isinstance(service_instance, AdminService):
-            if data_format == SIMPLE_IO.FORMAT.JSON:
+            if data_format == _sio_json:
                 zato_env = {'zato_env':{'result':response.result, 'cid':service_instance.cid, 'details':response.result_details}}
                 if response.payload:
                     payload = response.payload.getvalue(False)
@@ -733,25 +736,25 @@ class RequestHandler(object):
                 response.payload = dumps(payload)
 
             else:
-                if transport == URL_TYPE.SOAP:
+                if transport == _url_type_soap:
                     zato_message_template = zato_message_soap
                 else:
                     zato_message_template = zato_message_declaration_uni
 
                 if response.payload:
-                    if not isinstance(response.payload, basestring):
+                    if not isinstance(response.payload, _basestring):
                         response.payload = self._get_xml_admin_payload(service_instance, zato_message_template, response.payload)
                 else:
                     response.payload = self._get_xml_admin_payload(service_instance, zato_message_template, None)
         else:
-            if not isinstance(response.payload, basestring):
-                if isinstance(response.payload, dict) and data_format in (DATA_FORMAT.JSON, DATA_FORMAT.DICT):
+            if not isinstance(response.payload, _basestring):
+                if isinstance(response.payload, dict) and data_format in _dict_like:
                     response.payload = dumps(response.payload)
                 else:
                     response.payload = response.payload.getvalue() if response.payload else ''
 
-        if transport == URL_TYPE.SOAP:
-            if not isinstance(service_instance, AdminService):
+        if transport == _url_type_soap:
+            if not isinstance(service_instance, _AdminService):
                 if self.use_soap_envelope:
                     response.payload = soap_doc.format(body=response.payload)
 
