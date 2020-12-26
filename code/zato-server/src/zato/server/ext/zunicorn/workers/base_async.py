@@ -62,14 +62,14 @@ class AsyncWorker(base.Worker):
         # some workers will need to overload this function to raise a StopIteration
         return respiter == ALREADY_HANDLED
 
-    def handle(self, listener, client, addr):
+    def handle(self, listener, client, addr, RequestParser=http.RequestParser, util_close=util.close):
         req = None
         try:
-            parser = http.RequestParser(self.cfg, client)
+            parser = RequestParser(self.cfg, client)
             try:
                 listener_name = listener.getsockname()
                 if not self.cfg.keepalive:
-                    req = six.next(parser)
+                    req = next(parser)
                     self.handle_request(listener_name, req, client, addr)
                 else:
                     # keepalive loop
@@ -77,7 +77,7 @@ class AsyncWorker(base.Worker):
                     while True:
                         req = None
                         with self.timeout_ctx():
-                            req = six.next(parser)
+                            req = next(parser)
                         if not req:
                             break
                         if req.proxy_protocol_info:
@@ -115,28 +115,21 @@ class AsyncWorker(base.Worker):
         except Exception as e:
             self.handle_error(req, client, addr, e)
         finally:
-            util.close(client)
+            util_close(client)
 
-    def handle_request(self, listener_name, req, sock, addr):
-        request_start = datetime.now()
+    def handle_request(self, listener_name, req, sock, addr, ALREADY_HANDLED=ALREADY_HANDLED):
         environ = {}
         resp = None
         try:
-            self.cfg.pre_request(self, req)
-            resp, environ = wsgi.create(req, sock, addr,
-                    listener_name, self.cfg)
+            resp, environ = wsgi.create(req, sock, addr, listener_name, self.cfg)
             environ["wsgi.multithread"] = True
             self.nr += 1
-            if self.alive and self.nr >= self.max_requests:
-                self.log.info("Autorestarting worker after current request.")
-                resp.force_close()
-                self.alive = False
 
             if not self.cfg.keepalive:
                 resp.force_close()
 
             respiter = self.wsgi(environ, resp.start_response)
-            if self.is_already_handled(respiter):
+            if respiter == ALREADY_HANDLED:
                 return False
             try:
                 if isinstance(respiter, environ['wsgi.file_wrapper']):
@@ -145,8 +138,6 @@ class AsyncWorker(base.Worker):
                     for item in respiter:
                         resp.write(item)
                 resp.close()
-                request_time = datetime.now() - request_start
-                self.log.access(resp, req, environ, request_time)
             finally:
                 if hasattr(respiter, "close"):
                     respiter.close()
@@ -170,9 +161,5 @@ class AsyncWorker(base.Worker):
                     pass
                 raise StopIteration()
             raise
-        finally:
-            try:
-                self.cfg.post_request(self, req, environ, resp)
-            except Exception:
-                self.log.exception("Exception in post_request hook")
+
         return True
