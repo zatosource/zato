@@ -11,14 +11,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from datetime import datetime
 from http.client import FORBIDDEN, NOT_FOUND, OK
+from json import dumps
 from logging import getLogger
 from traceback import format_exc
 
 # Bunch
 from bunch import Bunch
-
-# pyrapidjson
-from rapidjson import dumps
 
 # Zato
 from zato.common.api import DATA_FORMAT
@@ -33,8 +31,8 @@ logger = getLogger('zato')
 
 xml_error_template = '<?xml version="1.0" encoding="utf-8"?><error>{}</error>'
 
-copy_forbidden = b'You are not authorized to access this resource'
-copy_not_found = b'Not found'
+copy_forbidden = 'You are not authorized to access this resource'
+copy_not_found = 'Not found'
 
 error_response = {
 
@@ -140,7 +138,7 @@ class ServerMessage(object):
                         data = data[response_key]
                 else:
                     data = self.data
-                msg['data'] = data
+                msg['data'] = data if isinstance(data, str) else data.decode('utf8')
             return _dumps_func(msg)
         except Exception:
             logger.warn('Exception while serializing message `%r`, e:`%s`', msg, format_exc())
