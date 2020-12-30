@@ -38,6 +38,7 @@
             {% comment %} 2 {% endcomment %}
             'tcp_port',
             '_service',
+            '_audit_log',
 
             {% comment %} 3 {% endcomment %}
             '_edit',
@@ -108,6 +109,7 @@
                         {% comment %} 2 {% endcomment %}
                         <th><a href="#">Port</a></th>
                         <th><a href="#">Service</a></th>
+                        <th><a href="#">Message log</a></th>
 
                         {% comment %} 3 {% endcomment %}
                         <th>&nbsp;</th>
@@ -153,6 +155,9 @@
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.tcp_port }}</td>
                         <td><a href="{% url "service-overview" item.service %}?cluster={{ cluster_id }}">{{ item.service }}</a></td>
+                        <td>
+                            <a href="{% url "audit-log" "channel-hl7-mllp" item.id %}?cluster={{ cluster_id }}&amp;object_name={{ item.name }}&amp;object_type_label=Channel&nbsp;HL7&nbsp;MLLP">View</a>
+                        </td>
 
                         {% comment %} 3 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.channel.hl7.mllp.edit('{{ item.id }}')">Edit</a></td>
@@ -174,12 +179,12 @@
                         {% comment %} 7 {% endcomment %}
                         <td class='ignore'>{{ item.is_audit_log_sent_active }}</td>
                         <td class='ignore'>{{ item.is_audit_log_received_active }}</td>
-                        <td class='ignore'>{{ item.max_len_messages_sent }}</td>
+                        <td class='ignore'>{{ item.max_len_messages_sent|default:"" }}</td>
 
                         {% comment %} 8 {% endcomment %}
-                        <td class='ignore'>{{ item.max_len_messages_received }}</td>
-                        <td class='ignore'>{{ item.max_bytes_per_message_sent }}</td>
-                        <td class='ignore'>{{ item.max_bytes_per_message_received }}</td>
+                        <td class='ignore'>{{ item.max_len_messages_received|default:"" }}</td>
+                        <td class='ignore'>{{ item.max_bytes_per_message_sent|default:"" }}</td>
+                        <td class='ignore'>{{ item.max_bytes_per_message_received|default:"" }}</td>
 
                     </tr>
                 {% endfor %}

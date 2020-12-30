@@ -11,6 +11,7 @@ import logging
 from datetime import datetime
 from logging import getLogger
 from socket import timeout as SocketTimeoutException
+from time import sleep
 from traceback import format_exc
 
 # Zato
@@ -24,11 +25,10 @@ from zato.common.util.tcp import get_fqdn_by_ip, ZatoStreamServer
 if 0:
     from bunch import Bunch
     from gevent import socket
-    from zato.common.audit_log import DataEvent, AuditLog, LogContainerConfig
+    from zato.common.audit_log import DataEvent, AuditLog
 
     Bunch = Bunch
     DataEvent = DataEvent
-    LogContainerConfig = LogContainerConfig
     AuditLog = AuditLog
     socket = socket
 
@@ -47,7 +47,7 @@ server_type = 'HL7 MLLP'
 def new_conn_id(pattern='zhc{}', id_len=5, _new_cid=new_cid):
     return pattern.format(_new_cid(id_len))
 
-def new_msg_id(pattern='zhm{}', id_len=6, _new_cid=new_cid):
+def new_msg_id(pattern='zhl7{}', id_len=6, _new_cid=new_cid):
     return pattern.format(_new_cid(id_len))
 
 # ################################################################################################################################
@@ -57,7 +57,7 @@ class ConnCtx:
     """ Details of an individual remote connection to a server.
     """
     __slots__ = ('conn_id', 'conn_name', 'socket', 'peer_ip', 'peer_port', 'peer_fqdn', 'local_ip', \
-        'local_port', 'local_fqdn', 'stats_per_msg_type')
+        'local_port', 'local_fqdn', 'stats_per_msg_type', 'total_message_packets_received', 'total_messages_received')
 
     def __init__(self, conn_name, socket, peer_address, _new_conn_id=new_conn_id):
         # type: (socket, tuple)
@@ -70,6 +70,12 @@ class ConnCtx:
 
         # Statistics broken down by each message type, e.g. ADT
         self.stats_per_msg_type = {}
+
+        # Total message packets received
+        self.total_message_packets_received = 0
+
+        # Total full messages received, no matter their type
+        self.total_messages_received = 0
 
         self.peer_fqdn = get_fqdn_by_ip(self.peer_ip, 'peer', server_type)
         self.local_ip, self.local_port, self.local_fqdn = self._get_local_conn_info('local')
@@ -161,15 +167,32 @@ class HL7MLLPServer:
         self.end_seq     = config.end_seq
         self.end_seq_len = len(config.end_seq)
 
+        self.is_audit_log_sent_active = config.get('is_audit_log_sent_active')
+        self.is_audit_log_received_active = config.get('is_audit_log_received_active')
+
         self.keep_running = True
         self.impl = None # type: ZatoStreamServer
 
-        self.logger = getLogger('zato')
-        self.logger.setLevel(config.logging_level)
+        self.logger_zato = getLogger('zato')
 
-        self._logger_info = self.logger.info
-        self._logger_debug = self.logger.debug
-        self._has_debug_log = self.logger.isEnabledFor(logging.DEBUG)
+        self.logger_hl7 = getLogger('zato_hl7')
+        self.logger_hl7.setLevel(config.logging_level)
+
+        self._logger_info = self.logger_hl7.info
+        self._logger_debug = self.logger_hl7.debug
+        self._has_debug_log = self.logger_hl7.isEnabledFor(logging.DEBUG)
+
+# ################################################################################################################################
+
+    def _log_start_stop(self, is_start):
+        # type: (bool)
+
+        msg = 'Starting' if is_start else 'Stopping'
+        pattern = '%s %s connection `%s` (%s)'
+        args = (msg, server_type, self.name, self.address)
+
+        self._logger_info(pattern, *args)
+        self.logger_zato.warn(pattern, *args)
 
 # ################################################################################################################################
 
@@ -179,10 +202,21 @@ class HL7MLLPServer:
         self.impl = ZatoStreamServer(self.address, self.handle)
 
         # .. log info that we are starting ..
-        self._logger_info('Starting %s connection `%s` (%s)', server_type, self.name, self.address)
+        self._log_start_stop(True)
 
         # .. and start to serve.
         self.impl.serve_forever()
+
+# ################################################################################################################################
+
+    def stop(self):
+
+        # Log info that we are stopping ..
+        self._log_start_stop(False)
+
+        # .. and actually stop.
+        self.keep_running = False
+        self.impl.stop()
 
 # ################################################################################################################################
 
@@ -190,7 +224,7 @@ class HL7MLLPServer:
         try:
             self._handle(socket, peer_address)
         except Exception:
-            self.logger.warn('Exception in %s (%s %s); e:`%s`', self._handle, socket, peer_address, format_exc())
+            self.logger_hl7.warn('Exception in %s (%s %s); e:`%s`', self._handle, socket, peer_address, format_exc())
             raise
 
 # ################################################################################################################################
@@ -241,155 +275,170 @@ class HL7MLLPServer:
         # Run the main loop
         while self.keep_running:
 
-            # In each iteration, assume that no data was received
-            data = None
-
-            # Check whether reading the data would not exceed our message size limit
-            new_size = request_ctx.msg_size + _read_buffer_size
-            if new_size > _max_msg_size:
-                reason = 'message would exceed max. size allowed `{}` > `{}`'.format(new_size, _max_msg_size)
-                _close_connection(conn_ctx, reason)
-                return
-
-            # Receive data from the other end
-            _socket_settimeout(_recv_timeout)
-
-            # Try to receive some data from the socket ..
             try:
+                # In each iteration, assume that no data was received
+                data = None
 
-                # .. read data in ..
-                data = _socket_recv(_read_buffer_size)
+                # Check whether reading the data would not exceed our message size limit
+                new_size = request_ctx.msg_size + _read_buffer_size
+                if new_size > _max_msg_size:
+                    reason = 'message would exceed max. size allowed `{}` > `{}`'.format(new_size, _max_msg_size)
+                    _close_connection(conn_ctx, reason)
+                    return
 
-                if _has_debug_log:
-                    _log_debug('HL7 MLLP data received by `%s` (%d) -> `%s`', conn_ctx.conn_id, len(data), data)
+                # Receive data from the other end
+                _socket_settimeout(_recv_timeout)
 
-            # .. catch timeouts here but no other exception type ..
-            except SocketTimeoutException:
-                # That is fine, we simply did not get any data in this iteration
-                pass
+                # Try to receive some data from the socket ..
+                try:
 
-            # .. no timeout = we may have received some data from the socket ..
-            else:
+                    # .. read data in ..
+                    data = _socket_recv(_read_buffer_size)
 
-                # .. something was received so we can append it to our buffer ..
-                if data:
+                    # .. update counters ..
+                    conn_ctx.total_message_packets_received += 1
 
-                    # If we are here, it means that the recv call succeeded so we can increase the message size
-                    # by how many bytes were actually read from the socket.
-                    request_ctx.msg_size += len(data)
+                    if _has_debug_log:
+                        _log_debug('HL7 MLLP data received by `%s` (%d) -> `%s`', conn_ctx.conn_id, len(data), data)
 
-                    # At this point we either do not have all the bytes required to check the header
-                    # or the header is already checked, so we can just append data to our current buffer ..
-                    _buffer_append(data)
+                # .. catch timeouts here but no other exception type ..
+                except SocketTimeoutException:
+                    # That is fine, we simply did not get any data in this iteration
+                    pass
 
-                    # The first byte may be a header and we need to check whether we require it or not at this stage of parsing.
-                    # This method will close the connection if anything to do with header parsing is invalid.
-                    if _needs_header_check:
+                # .. no timeout = we may have received some data from the socket ..
+                else:
 
-                        # If we have a single-byte header, we can check it immediately. This is because
-                        # we received some data, which means one byte at the very least, so we can go ahead
-                        # with checking the header ..
-                        if self.start_seq_len_eq_one:
-                            if not _check_header(conn_ctx, request_ctx, data):
-                                return
-                            else:
-                                _needs_header_check = False
+                    # .. something was received so we can append it to our buffer ..
+                    if data:
 
-                        # .. but if we have a multi-byte header, we need to ensure we have already
-                        # read as many bytes as there are in the expected header. We do it by iterating
-                        # over the buffer of bytes received so far and concatenating them until we have
-                        # at least as many bytes as there are in the header to check.
-                        else:
-                            to_check_buffer = []
-                            to_check_len = 0
+                        # If we are here, it means that the recv call succeeded so we can increase the message size
+                        # by how many bytes were actually read from the socket.
+                        request_ctx.msg_size += len(data)
 
-                            # Go through each, potentially multi-byte, element in the buffer so far ..
-                            for elem in _buffer:
+                        # At this point we either do not have all the bytes required to check the header
+                        # or the header is already checked, so we can just append data to our current buffer ..
+                        _buffer_append(data)
 
-                                # .. break if we have already all the bytes that we need ..
-                                if to_check_len >= self.start_seq_len:
-                                    break
+                        # The first byte may be a header and we need to check whether we require it or not at this stage of parsing.
+                        # This method will close the connection if anything to do with header parsing is invalid.
+                        if _needs_header_check:
 
-                                # .. otherwise, append bytes from the current element
-                                # and increase the bytes read so far counter.
-                                else:
-                                    to_check_buffer.append(elem)
-                                    to_check_len += len(elem)
-
-                            # We still need to check if we have the full header worth of bytes already ..
-                            if to_check_len >= self.start_seq_len:
-
-                                # .. and if we do, we can look up the header now.
-                                to_check = b''.join(to_check_buffer)
-
-                                if not _check_header(conn_ctx, request_ctx, to_check):
+                            # If we have a single-byte header, we can check it immediately. This is because
+                            # we received some data, which means one byte at the very least, so we can go ahead
+                            # with checking the header ..
+                            if self.start_seq_len_eq_one:
+                                if not _check_header(conn_ctx, request_ctx, data):
                                     return
                                 else:
                                     _needs_header_check = False
 
+                            # .. but if we have a multi-byte header, we need to ensure we have already
+                            # read as many bytes as there are in the expected header. We do it by iterating
+                            # over the buffer of bytes received so far and concatenating them until we have
+                            # at least as many bytes as there are in the header to check.
                             else:
-                                # .. otherwise, if we do not have enough bytes,
-                                # we do nothing and this block is added to make it explicit that it is the case.
-                                pass
+                                to_check_buffer = []
+                                to_check_len = 0
 
-                    # .. the line that have just received may have been part of a footer
-                    # or the footer itself so we need to check it ..
+                                # Go through each, potentially multi-byte, element in the buffer so far ..
+                                for elem in _buffer:
 
-                    # .. but we need to take into account the fact that the footer has been split into two or more
-                    # segments. For instance, the previous segment of bytes returned by _socket_recv
-                    # ended with the first byte of end_seq and now we have received the second byte.
-                    # E.g. our _read_buffer_size is 2048 and if the overall message happens to be 2049 bytes
-                    # then the first byte of end_seq will be in the buffer already and the data currently
-                    # received contains the second byte. Note that if someone uses end_seq longer than two bytes
-                    # this will still work because our _read_buffer_size is always at least 2048 bytes
-                    # so end_seq may be split across two segments at most (unless someone uses a multi-kilobyte end_seq,
-                    # which is not something to be expected).
+                                    # .. break if we have already all the bytes that we need ..
+                                    if to_check_len >= self.start_seq_len:
+                                        break
 
-                    # First, try to check if data currently received ends in end_seq ..
-                    if self._points_to_full_message(data):
+                                    # .. otherwise, append bytes from the current element
+                                    # and increase the bytes read so far counter.
+                                    else:
+                                        to_check_buffer.append(elem)
+                                        to_check_len += len(elem)
 
-                        # .. even if it does, make sure we have a header already and reject the message otherwise ..
-                        if _needs_header_check:
-                            reason = 'end bytes `{}` received without a preceeding header `{}` (#1)'.format(
-                                self.end_seq, self.start_seq)
-                            self._close_connection(conn_ctx, reason)
-                            return
+                                # We still need to check if we have the full header worth of bytes already ..
+                                if to_check_len >= self.start_seq_len:
 
-                        # .. it is a match so it means that data was the last part of a message that we can already process ..
-                        self._handle_complete_message(True, *_handle_complete_message_args)
+                                    # .. and if we do, we can look up the header now.
+                                    to_check = b''.join(to_check_buffer)
 
-                    # .. otherwise, try to check if in combination with the previous segment,
-                    # the data received now points to a full message. However, for this to work
-                    # we require that there be at least one previous segment - otherwise we are the first one
-                    # and if we were the ending one we would have been caught in the if above ..
+                                    if not _check_header(conn_ctx, request_ctx, to_check):
+                                        return
+                                    else:
+                                        _needs_header_check = False
+
+                                else:
+                                    # .. otherwise, if we do not have enough bytes,
+                                    # we do nothing and this block is added to make it explicit that it is the case.
+                                    pass
+
+                        # .. the line that have just received may have been part of a trailer
+                        # or the trailer itself so we need to check it ..
+
+                        # .. but we need to take into account the fact that the trailer has been split into two or more
+                        # segments. For instance, the previous segment of bytes returned by _socket_recv
+                        # ended with the first byte of end_seq and now we have received the second byte.
+                        # E.g. our _read_buffer_size is 2048 and if the overall message happens to be 2049 bytes
+                        # then the first byte of end_seq will be in the buffer already and the data currently
+                        # received contains the second byte. Note that if someone uses end_seq longer than two bytes
+                        # this will still work because our _read_buffer_size is always at least 2048 bytes
+                        # so end_seq may be split across two segments at most (unless someone uses a multi-kilobyte end_seq,
+                        # which is not something to be expected).
+
+                        # First, try to check if data currently received ends in end_seq ..
+                        if self._points_to_full_message(data):
+
+                            # .. even if it does, make sure we have a header already and reject the message otherwise ..
+                            if _needs_header_check:
+                                reason = 'end bytes `{}` received without a preceeding header `{}` (#1)'.format(
+                                    self.end_seq, self.start_seq)
+                                self._close_connection(conn_ctx, reason)
+                                return
+
+                            # .. it is a match so it means that data was the last part of a message that we can already process ..
+                            self._handle_complete_message(True, *_handle_complete_message_args)
+
+                        # .. otherwise, try to check if in combination with the previous segment,
+                        # the data received now points to a full message. However, for this to work
+                        # we require that there be at least one previous segment - otherwise we are the first one
+                        # and if we were the ending one we would have been caught in the if above ..
+                        else:
+
+                            if _buffer_len() > 1:
+
+                                # Index -1 is our own segment (data) previously appended,
+                                # which is why we use -2 to get the segment preceeding it.
+                                last_data = _buffer[-2]
+                                concatenated = last_data + data
+
+                                # .. now that we have it concatenated, check if that indicates that a full message
+                                # is already received.
+                                if self._points_to_full_message(concatenated):
+
+                                    # Again, even if it does but have not received the header yet,
+                                    # we need to reject the whole message.
+                                    if _needs_header_check:
+                                        reason = 'end bytes `{}` received without a preceeding header `{}` (#2)'.format(
+                                            self.end_seq, self.start_seq)
+                                        self._close_connection(conn_ctx, reason)
+                                        return
+
+                                    self._handle_complete_message(True, *_handle_complete_message_args)
+
+                    # No data received = remote end is no longer connected.
                     else:
+                        reason = 'remote end disconnected; `{}`'.format(data)
+                        _close_connection(conn_ctx, reason)
+                        return
 
-                        if _buffer_len() > 1:
+            # This covers the whole body of the 'while' block,
+            # catching everything that was raised in a given loop's iteration.
+            except Exception:
 
-                            # Index -1 is our own segment (data) previously appended,
-                            # which is why we use -2 to get the segment preceeding it.
-                            last_data = _buffer[-2]
-                            concatenated = last_data + data
+                # Log the exception ..
+                exc = format_exc()
+                self.logger_hl7.warn(exc)
 
-                            # .. now that we have it concatenated, check if that indicates that a full message
-                            # is already received.
-                            if self._points_to_full_message(concatenated):
-
-                                # Again, even if it does but have not received the header yet,
-                                # we need to reject the whole message.
-                                if _needs_header_check:
-                                    reason = 'end bytes `{}` received without a preceeding header `{}` (#2)'.format(
-                                        self.end_seq, self.start_seq)
-                                    self._close_connection(conn_ctx, reason)
-                                    return
-
-                                self._handle_complete_message(True, *_handle_complete_message_args)
-
-                # No data received = remote end is no longer connected.
-                else:
-                    reason = 'remote end disconnected; `{}`'.format(data)
-                    _close_connection(conn_ctx, reason)
-                    return
+                # .. and sleep for a while in case we cannot re-enter the loop immediately.
+                sleep(2)
 
 # ################################################################################################################################
 
@@ -410,17 +459,21 @@ class HL7MLLPServer:
             _socket_send, _run_callback, _datetime_utcnow=datetime.utcnow):
         # type: (bool, bytes, object, ConnCtx, RequestCtx, object, object, object, object)
 
-        # Update our runtime metadata first (data received).
-        self._store_data_received(request_ctx)
-
         # Produce the message to invoke the callback with ..
         _buffer_data = _buffer_join_func(_buffer)
 
-        # .. remove the header and footer ..
+        # .. remove the header and trailer ..
         _buffer_data = _buffer_data[self.start_seq_len:-self.end_seq_len]
 
         # .. asign the actual business data to message ..
         request_ctx.data = _buffer_data
+
+        # .. update our runtime metadata first (data received) ..
+        if self.is_audit_log_received_active:
+            self._store_data_received(request_ctx)
+
+        # .. update counters ..
+        conn_ctx.total_messages_received += 1
 
         # .. invoke the callback ..
         response = _run_callback(conn_ctx, request_ctx)
@@ -433,19 +486,20 @@ class HL7MLLPServer:
         _socket_send(response)
 
         # .. update our runtime metadata first (data sent) ..
-        self._store_data_sent(request_ctx)
+        if self.is_audit_log_sent_active:
+            self._store_data_sent(request_ctx, response)
 
         # .. and reset the message to make it possible to handle a new one.
         _request_ctx_reset()
 
 # ################################################################################################################################
 
-    def _store_data(self, request_ctx, _DataEventClass, _conn_type=conn_type):
-        # type: (RequestCtx, DataEvent, str) -> None
+    def _store_data(self, request_ctx, _DataEventClass, response=None, _conn_type=conn_type):
+        # type: (RequestCtx, DataEvent, str, str) -> None
 
         # Create and fill out details of the new event ..
         data_event = _DataEventClass()
-        data_event.data = request_ctx.data
+        data_event.data = response or request_ctx.data
         data_event.type_ = _conn_type
         data_event.object_id = self.object_id
         data_event.conn_id = request_ctx.conn_id
@@ -461,21 +515,28 @@ class HL7MLLPServer:
 
 # ################################################################################################################################
 
-    def _store_data_sent(self, request_ctx, event_class=DataSent):
-        self._store_data(request_ctx, event_class)
+    def _store_data_sent(self, request_ctx, response, event_class=DataSent):
+        self._store_data(request_ctx, event_class, response)
 
 # ################################################################################################################################
 
     def _run_callback(self, conn_ctx, request_ctx):
-        # type: (ConnCtx, RequestCtx) -> None
-        if self.should_log_messages:
-            self._logger_info('Handling new HL7 MLLP message (c:%s; %s; %s; s=%d); `%r`',
-                conn_ctx.total_messages_received, conn_ctx.conn_id, request_ctx.msg_id, request_ctx.msg_size, request_ctx.to_dict())
-        else:
-            self._logger_info('Handling new HL7 MLLP message (c:%s; %s; %s; s=%d)',
-                conn_ctx.total_messages_received, conn_ctx.conn_id, request_ctx.msg_id, request_ctx.msg_size)
+        # type: (ConnCtx, RequestCtx) -> bytes
 
-        return b'BBB'
+        pattern = 'Handling new HL7 MLLP message (%s; m:%s (s=%s), c:%s, p:%s); `%r`'
+        request = request_ctx.to_dict() if self.should_log_messages else '<masked>'
+
+        self._logger_info(
+            pattern,
+            conn_ctx.conn_id,
+            request_ctx.msg_id,
+            request_ctx.msg_size,
+            conn_ctx.total_messages_received,
+            conn_ctx.total_message_packets_received,
+            request
+        )
+
+        return b'<response>'
 
 # ################################################################################################################################
 
@@ -546,17 +607,9 @@ def main():
 
         'logging_level': 'DEBUG',
         'should_log_messages': True,
-        'last_msg_log_size': 10,
 
         'start_seq': b'\x0b',
         'end_seq': b'\x1c\x0d',
-
-        'history_max_received': 10,
-        'history_max_sent': 10,
-
-        'history_max_bytes_received': None,
-        'history_max_bytes_sent': 2,
-
     })
 
     log_container_config = LogContainerConfig()
