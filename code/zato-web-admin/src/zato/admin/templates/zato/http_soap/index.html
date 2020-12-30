@@ -379,7 +379,7 @@
                         {% ifequal connection 'channel' %}
                             <td class='ignore'>{{ item.is_rate_limit_active }}</td>
                             <td class='ignore'>{{ item.rate_limit_type }}</td>
-                            <td class='ignore'>{{ item.rate_limit_def }}</td>
+                            <td class='ignore'>{{ item.rate_limit_def|default:"" }}</td>
                             <td class='ignore'>{{ item.rate_limit_check_parent_def }}</td>
                         {% endifequal %}
 
