@@ -57,16 +57,16 @@ class Wrapper(object):
         self.config = config
         self.config.username_pretty = self.config.username or '(None)'
         self.server = server
-        self._client = None
+        self._impl = None
         self.delete_requested = False
         self.is_connected = False
         self.update_lock = RLock()
 
     @property
     def client(self):
-        if not self._client:
+        if not self._impl:
             self.build_wrapper(False)
-        return self._client
+        return self._impl
 
 # ################################################################################################################################
 
@@ -126,7 +126,7 @@ class Wrapper(object):
 
     def delete(self):
         if self.needs_self_client:
-            if not self._client:
+            if not self._impl:
                 return
             else:
                 self._delete()

@@ -35,7 +35,7 @@ class CloudDropbox(Wrapper):
 
     def __init__(self, *args, **kwargs):
         super(CloudDropbox, self).__init__(*args, **kwargs)
-        self._client = None  # type: DropboxClient
+        self._impl = None  # type: DropboxClient
 
 # ################################################################################################################################
 
@@ -61,7 +61,7 @@ class CloudDropbox(Wrapper):
             }
 
             # Create the actual connection object
-            self._client = DropboxClient(**config)
+            self._impl = DropboxClient(**config)
 
             # Confirm the connection was established
             self.ping()
@@ -72,13 +72,13 @@ class CloudDropbox(Wrapper):
 # ################################################################################################################################
 
     def _delete(self):
-        if self._client:
-            self._client.close()
+        if self._impl:
+            self._impl.close()
 
 # ################################################################################################################################
 
     def _ping(self):
-        self._client.check_user()
+        self._impl.check_user()
 
 # ################################################################################################################################
 # ################################################################################################################################

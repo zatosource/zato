@@ -45,7 +45,7 @@ class DefKafkaWrapper(Wrapper):
 
     def __init__(self, *args, **kwargs):
         super(DefKafkaWrapper, self).__init__(*args, **kwargs)
-        self._client = None  # type: KafkaClient
+        self._impl = None  # type: KafkaClient
 
 # ################################################################################################################################
 
@@ -93,7 +93,7 @@ class DefKafkaWrapper(Wrapper):
             }
 
             # Create the actual connection object
-            self._client = KafkaClient(**client_config)
+            self._impl = KafkaClient(**client_config)
 
             # Confirm the connection was established
             self.ping()
@@ -112,7 +112,7 @@ class DefKafkaWrapper(Wrapper):
 # ################################################################################################################################
 
     def _delete(self):
-        for elem in self._client.brokers.values(): # type: Broker
+        for elem in self._impl.brokers.values(): # type: Broker
             try:
                 elem._connection.disconnect()
             except Exception:
@@ -121,7 +121,7 @@ class DefKafkaWrapper(Wrapper):
 # ################################################################################################################################
 
     def _ping(self):
-        self._client.cluster.fetch_api_versions()
+        self._impl.cluster.fetch_api_versions()
 
 # ################################################################################################################################
 # ################################################################################################################################
