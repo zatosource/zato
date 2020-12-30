@@ -87,6 +87,13 @@ simple_types = (bytes, str, dict, list, tuple, bool, Number)
 # ################################################################################################################################
 # ################################################################################################################################
 
+generic_attrs = ('is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def',
+    'is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', 'max_len_messages_received',
+    'max_bytes_per_message_sent', 'max_bytes_per_message_received', 'hl7_version', 'json_path', 'data_encoding')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # These are used by web-admin only because servers and scheduler use sql.conf
 ping_queries = {
     'db2': 'SELECT current_date FROM sysibm.sysdummy1',

@@ -64,12 +64,6 @@ SKIP_VALUE = 'zato.skip.value'
 
 # ################################################################################################################################
 
-generic_attrs = ('is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def',
-    'is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', 'max_len_messages_received',
-    'max_bytes_per_message_sent', 'max_bytes_per_message_received', 'hl7_version', 'json_path', 'data_encoding')
-
-# ################################################################################################################################
-
 def parse_response_data(response):
     """ Parses out data and metadata out an internal API call response.
     """
@@ -524,7 +518,7 @@ class Index(_BaseView):
 
 
             for k, v in sorted(return_data.items()):
-                logger.info('Index key/value `%s` -> `%s`', k, v)
+                logger.info('Index key/value `%s` -> `%r`', k, v)
 
             return TemplateResponse(req, template_name, return_data)
 
