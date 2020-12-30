@@ -57,10 +57,8 @@
                 'soap_version',
             {% endifequal %}
 
-            '_audit_log',
-
             {% ifequal connection 'channel' %}
-                '_method',
+                '_audit_log',
                 'service',
                 'content_encoding',
             {% endifequal %}
