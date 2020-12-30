@@ -73,6 +73,16 @@ $.fn.zato.channel.hl7.mllp.data_table.new_row = function(item, data, include_tr)
     row += String.format("<td class='ignore'>{0}</td>", item.data_encoding);
     row += String.format("<td class='ignore'>{0}</td>", item.should_return_errors);
 
+    // 7
+    row += String.format("<td class='ignore'>{0}</td>", item.is_audit_log_sent_active);
+    row += String.format("<td class='ignore'>{0}</td>", item.is_audit_log_received_active);
+    row += String.format("<td class='ignore'>{0}</td>", item.max_len_messages_sent);
+
+    // 8
+    row += String.format("<td class='ignore'>{0}</td>", item.max_len_messages_received);
+    row += String.format("<td class='ignore'>{0}</td>", item.max_bytes_per_message_sent);
+    row += String.format("<td class='ignore'>{0}</td>", item.max_bytes_per_message_received);
+
     if(include_tr) {
         row += '</tr>';
     }

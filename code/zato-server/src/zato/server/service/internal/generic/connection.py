@@ -13,7 +13,7 @@ from datetime import datetime
 from traceback import format_exc
 
 # Zato
-from zato.common.api import GENERIC as COMMON_GENERIC
+from zato.common.api import GENERIC as COMMON_GENERIC, generic_attrs
 from zato.common.broker_message import GENERIC
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import GenericConn as ModelGenericConn
@@ -75,7 +75,8 @@ class _CreateEditSIO(AdminSIO):
     input_required = ('name', 'type_', 'is_active', 'is_internal', 'is_channel', 'is_outconn', Int('pool_size'),
         Bool('sec_use_rbac'), 'cluster_id')
     input_optional = ('id', Int('cache_expiry'), 'address', Int('port'), Int('timeout'), 'data_format', 'version',
-        'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id') + extra_secret_keys
+        'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id') + \
+        extra_secret_keys + generic_attrs
     force_empty_keys = True
 
 # ################################################################################################################################
@@ -108,6 +109,9 @@ class _CreateEdit(_BaseService):
                 value = self._sio.eval_(key, value, self.server.encrypt)
 
                 data[key] = value
+
+
+        self.logger.warn('AAA %s', data)
 
         conn = GenericConnection.from_dict(data)
 
