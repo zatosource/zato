@@ -110,9 +110,6 @@ class _CreateEdit(_BaseService):
 
                 data[key] = value
 
-
-        self.logger.warn('AAA %s', data)
-
         conn = GenericConnection.from_dict(data)
 
         # Make sure not to overwrite the seceret in Edit

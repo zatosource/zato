@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from collections import deque
 from datetime import datetime
+from logging import getLogger
 
 # gevent
 from gevent.lock import RLock
@@ -32,7 +33,7 @@ transfer_attrs = 'total_bytes_received', 'total_messages_received', 'avg_msg_siz
 
 config_attrs   = 'type_', 'object_id', 'max_len_messages_received',      'max_len_messages_sent',      \
                                        'max_bytes_per_message_received', 'max_bytes_per_message_sent', \
-                                       'max_bytes_per_message',
+                                       'max_bytes_per_message'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -154,11 +155,6 @@ class LogContainer:
 
 # ################################################################################################################################
 
-    #def __repr__(self):
-    #    return str(self.to_dict())
-
-# ################################################################################################################################
-
     def store(self, data_event):
         with self.lock[data_event.direction]:
 
@@ -203,6 +199,9 @@ class AuditLog:
             GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: {},
             WEB_SOCKET.AUDIT_KEY: {},
         }
+
+        # Python logging
+        self.logger = getLogger('zato')
 
 # ################################################################################################################################
 

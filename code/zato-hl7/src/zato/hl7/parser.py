@@ -44,10 +44,6 @@ def get_payload_from_request(data, data_encoding, hl7_version, json_path, should
     # type: (str, str, str, bool, bool)
     try:
 
-        print()
-        print(555, repr(data_encoding))
-        print()
-
         # We always require str objects ..
         if isinstance(data, bytes):
             data = data.decode(data_encoding)
