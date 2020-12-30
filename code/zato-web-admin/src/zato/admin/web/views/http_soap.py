@@ -20,7 +20,7 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.forms.http_soap import SearchForm, CreateForm, EditForm
 from zato.admin.web.views import get_http_channel_security_id, get_security_id_from_select, get_tls_ca_cert_list, \
-     id_only_service, method_allowed, parse_response_data, SecurityList
+     generic_attrs, id_only_service, method_allowed, parse_response_data, SecurityList
 from zato.common.api import AuditLog, CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, DELEGATED_TO_RBAC, \
      HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, SOAP_CHANNEL_VERSIONS, \
      SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE
@@ -49,10 +49,6 @@ CACHE_TYPE = {
     CACHE.TYPE.BUILTIN: 'Built-in',
     CACHE.TYPE.MEMCACHED: 'Memcached',
 }
-
-generic_attrs = ('is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def',
-    'is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', 'max_len_messages_received',
-    'max_bytes_per_message_sent', 'max_bytes_per_message_received', 'hl7_version', 'json_path', 'data_encoding')
 
 _max_len_messages = AuditLog.Default.max_len_messages
 _max_data_stored_per_message = AuditLog.Default.max_data_stored_per_message

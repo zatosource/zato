@@ -58,6 +58,16 @@
             {% comment %} 6 {% endcomment %}
             'data_encoding',
             'should_return_errors',
+
+            {% comment %} 7 {% endcomment %}
+            'is_audit_log_sent_active',
+            'is_audit_log_received_active',
+            'max_len_messages_sent',
+
+            {% comment %} 8 {% endcomment %}
+            'max_len_messages_received',
+            'max_bytes_per_message_sent',
+            'max_bytes_per_message_received',
         ]
     }
     </script>
@@ -116,6 +126,17 @@
 
                         {% comment %} 6 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 7 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 8 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -170,6 +191,16 @@
                         <td class='ignore'>{{ item.data_encoding }}</td>
                         <td class='ignore'>{{ item.should_return_errors }}</td>
 
+                        {% comment %} 7 {% endcomment %}
+                        <td class='ignore'>{{ item.is_audit_log_sent_active }}</td>
+                        <td class='ignore'>{{ item.is_audit_log_received_active }}</td>
+                        <td class='ignore'>{{ item.max_len_messages_sent }}</td>
+
+                        {% comment %} 8 {% endcomment %}
+                        <td class='ignore'>{{ item.max_len_messages_received }}</td>
+                        <td class='ignore'>{{ item.max_bytes_per_message_sent }}</td>
+                        <td class='ignore'>{{ item.max_bytes_per_message_received }}</td>
+
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -191,7 +222,7 @@
                     <table class="form-data">
 
                         <tr>
-                            <td style="vertical-align:middle;width:14%">
+                            <td style="vertical-align:middle;width:17%">
                                 <label for="id_name">
                                 Name
                                 </label>
@@ -262,6 +293,8 @@
                             <td>{{ create_form.security_id }}</td>
                         </tr>
 
+                        {% include "zato/include/audit-log/create.html" %}
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
@@ -283,7 +316,7 @@
                     <table class="form-data">
 
                         <tr>
-                            <td style="vertical-align:middle;width:14%">
+                            <td style="vertical-align:middle;width:17%">
                                 <label for="id_edit-name">
                                 Name
                                 </label>
@@ -353,6 +386,8 @@
                             </td>
                             <td>{{ edit_form.security_id }}</td>
                         </tr>
+
+                        {% include "zato/include/audit-log/edit.html" %}
 
                         <tr>
                             <td colspan="2" style="text-align:right">

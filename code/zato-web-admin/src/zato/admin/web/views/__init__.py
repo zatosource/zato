@@ -64,6 +64,12 @@ SKIP_VALUE = 'zato.skip.value'
 
 # ################################################################################################################################
 
+generic_attrs = ('is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def',
+    'is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', 'max_len_messages_received',
+    'max_bytes_per_message_sent', 'max_bytes_per_message_received', 'hl7_version', 'json_path', 'data_encoding')
+
+# ################################################################################################################################
+
 def parse_response_data(response):
     """ Parses out data and metadata out an internal API call response.
     """
@@ -434,12 +440,13 @@ class Index(_BaseView):
         for msg_item in item_list:
 
             item = self.output_class()
-            for name in names:
+            for name in sorted(names):
                 value = getattr(msg_item, name, None)
                 if value is not None:
                     value = getattr(value, 'text', '') or value
                 if value or value == 0:
                     setattr(item, name, value)
+
             item = self.on_before_append_item(item)
 
             if isinstance(item, (list, tuple)):
@@ -515,7 +522,9 @@ class Index(_BaseView):
 
             return_data = self.handle_return_data(return_data)
 
-            logger.info('Index data for frontend `%s`', return_data)
+
+            for k, v in sorted(return_data.items()):
+                logger.info('Index key/value `%s` -> `%s`', k, v)
 
             return TemplateResponse(req, template_name, return_data)
 
