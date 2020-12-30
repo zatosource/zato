@@ -30,7 +30,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
     def __init__(self, *args, **kwargs):
         super(ChannelHL7MLLPWrapper, self).__init__(*args, **kwargs)
-        self._client = None
+        self._impl = None
 
 # ################################################################################################################################
 
