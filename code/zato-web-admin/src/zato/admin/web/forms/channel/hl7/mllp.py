@@ -26,7 +26,7 @@ class CreateForm(WithAuditLog):
     should_return_errors = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     hl7_version = forms.ChoiceField(widget=forms.Select())
     data_encoding = forms.CharField(widget=forms.TextInput(attrs={'style':'width:30%'}))
-    tcp_port = forms.CharField(initial=HL7.Default.mllp_tcp_port, widget=forms.TextInput(attrs={'style':'width:13%'}))
+    address = forms.CharField(initial=HL7.Default.address, widget=forms.TextInput(attrs={'style':'width:13%'}))
     service = forms.ChoiceField(widget=forms.Select(attrs={'class':'required', 'style':'width:100%'}))
 
     def __init__(self, prefix=None, post_data=None, req=None):
