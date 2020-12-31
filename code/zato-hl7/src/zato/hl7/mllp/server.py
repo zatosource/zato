@@ -192,7 +192,7 @@ class HL7MLLPServer:
         args = (msg, server_type, self.name, self.address)
 
         self._logger_info(pattern, *args)
-        self.logger_zato.warn(pattern, *args)
+        self.logger_zato.info(pattern, *args)
 
 # ################################################################################################################################
 

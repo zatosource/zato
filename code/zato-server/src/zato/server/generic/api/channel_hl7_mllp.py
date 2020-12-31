@@ -47,7 +47,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
             config = bunchify({
                 'id': self.config.id,
                 'name': self.config.name,
-                'address': '0.0.0.0:{}'.format(self.config.tcp_port),
+                'address': self.config.address,
 
                 'max_msg_size': 1_000_000,
                 'read_buffer_size': 2048,
