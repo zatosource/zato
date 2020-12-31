@@ -144,7 +144,9 @@ class ServerMessage(object):
 
                 if isinstance(data, basestring):
                     data = data if isinstance(data, str) else data.decode('utf8')
+
                 msg['data'] = data
+
             return _dumps_func(msg)
         except Exception:
             logger.warn('Exception while serializing message `%r`, e:`%s`', msg, format_exc())
