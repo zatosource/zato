@@ -40,9 +40,22 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
 # ################################################################################################################################
 
+    def _get_sequence_bytes(self, elems):
+        # type: (str) -> bytes
+
+        elems = [int(elem.strip(), 16) for elem in elems.split()]
+        elems = [chr(elem) for elem in elems]
+        elems = [bytes(elem, 'utf8') for elem in elems]
+
+        return b''.join(elems)
+
+# ################################################################################################################################
+
     def _init_impl(self):
 
         with self.update_lock:
+
+            # Unwrap the expected bytes sequences
 
             config = bunchify({
                 'id': self.config.id,
@@ -56,8 +69,8 @@ class ChannelHL7MLLPWrapper(Wrapper):
                 'logging_level': self.config.logging_level,
                 'should_log_messages': self.config.should_log_messages,
 
-                'start_seq': self.config.start_seq,
-                'end_seq': self.config.end_seq,
+                'start_seq': self._get_sequence_bytes(self.config.start_seq),
+                'end_seq': self._get_sequence_bytes(self.config.end_seq),
 
                 'is_audit_log_sent_active': self.config.get('is_audit_log_sent_active'),
                 'is_audit_log_received_active': self.config.get('is_audit_log_received_active'),
