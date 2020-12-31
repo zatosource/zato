@@ -20,9 +20,15 @@ from zato.common.util.api import spawn_greenlet
 from zato.hl7.mllp.server import HL7MLLPServer
 from zato.server.connection.wrapper import Wrapper
 
-# ################################################################################################################################
+# ###############################################################################################################################
+# ###############################################################################################################################
 
 logger = getLogger(__name__)
+
+# ###############################################################################################################################
+# ###############################################################################################################################
+
+_audit_log_type = GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -84,8 +90,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
             spawn_greenlet(self._impl.start)
 
             # .. and set up audit log.
-            self.server.set_up_object_audit_log_by_config(
-                GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP, self.config.id, self.config, False)
+            self.server.set_up_object_audit_log_by_config(_audit_log_type, self.config.id, self.config, False)
 
             # We can assume we are done building the channel now
             self.is_connected = True
@@ -94,6 +99,11 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
     def _delete(self):
         if self._impl:
+
+            # Clear the audit log ..
+            self.server.audit_log.delete_container(_audit_log_type, self.config.id)
+
+            # .. and stop the connection.
             self._impl.stop()
 
 # ################################################################################################################################
