@@ -247,7 +247,7 @@ class Request(Message):
 
         data_find = data.find
         self_get_data = self.get_data
-        buf_get_value = buf.getvalue
+        buf_getvalue = buf.getvalue
         self_max_buffer_headers = self.max_buffer_headers
 
         while True:
@@ -257,7 +257,7 @@ class Request(Message):
             if idx < 0 and not done:
                 self_get_data(unreader, buf)
                 data = buf_getvalue()
-                if len(data) > self.max_buffer_headers:
+                if len(data) > self_max_buffer_headers:
                     raise LimitRequestHeaders("max buffer headers")
             else:
                 break
