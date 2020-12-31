@@ -434,12 +434,13 @@ class Index(_BaseView):
         for msg_item in item_list:
 
             item = self.output_class()
-            for name in names:
+            for name in sorted(names):
                 value = getattr(msg_item, name, None)
                 if value is not None:
                     value = getattr(value, 'text', '') or value
                 if value or value == 0:
                     setattr(item, name, value)
+
             item = self.on_before_append_item(item)
 
             if isinstance(item, (list, tuple)):
@@ -515,7 +516,9 @@ class Index(_BaseView):
 
             return_data = self.handle_return_data(return_data)
 
-            logger.info('Index data for frontend `%s`', return_data)
+
+            for k, v in sorted(return_data.items()):
+                logger.info('Index key/value `%s` -> `%r`', k, v)
 
             return TemplateResponse(req, template_name, return_data)
 

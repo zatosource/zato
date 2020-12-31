@@ -23,6 +23,9 @@ from zato.common.api import DATA_FORMAT
 from zato.common.util.api import make_repr, new_cid
 from zato.cy.reqresp.payload import SimpleIOPayload
 
+# Past builtins
+from past.builtins import basestring
+
 # ################################################################################################################################
 
 logger = getLogger('zato')
@@ -138,7 +141,12 @@ class ServerMessage(object):
                         data = data[response_key]
                 else:
                     data = self.data
-                msg['data'] = data if isinstance(data, str) else data.decode('utf8')
+
+                if isinstance(data, basestring):
+                    data = data if isinstance(data, str) else data.decode('utf8')
+
+                msg['data'] = data
+
             return _dumps_func(msg)
         except Exception:
             logger.warn('Exception while serializing message `%r`, e:`%s`', msg, format_exc())

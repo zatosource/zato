@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Zato
 from zato.admin.web.forms.channel.hl7.rest import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, extract_security_id, Index as _Index
-from zato.common.api import CONNECTION, DATA_FORMAT, HL7, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE
+from zato.common.api import CONNECTION, DATA_FORMAT, generic_attrs, HL7, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE
 from zato.common.model import HL7Channel
 
 # ################################################################################################################################
@@ -37,7 +37,7 @@ class Index(_Index):
         input_required = 'cluster_id',
         output_required = 'id', 'name', 'is_active', 'is_internal', 'hl7_version', 'url_path', 'service_name', 'security_name', \
             'security_id', 'sec_type', 'sec_type_name', 'data_format',
-        output_optional = 'json_path', 'should_parse_on_input', 'should_validate', 'should_return_errors'
+        output_optional = ('json_path', 'should_parse_on_input', 'should_validate', 'should_return_errors') + generic_attrs
         output_repeated = True
 
 # ################################################################################################################################
@@ -65,7 +65,8 @@ class _CreateEdit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'name', 'is_internal', 'hl7_version', 'url_path', 'service', 'security_id', 'data_format'
-        input_optional = 'is_active', 'json_path', 'should_parse_on_input', 'should_validate', 'should_return_errors'
+        input_optional = ('is_active', 'json_path', 'should_parse_on_input', 'should_validate', \
+            'should_return_errors') + generic_attrs
         output_required = 'id', 'name'
 
 # ################################################################################################################################

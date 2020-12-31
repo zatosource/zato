@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Zato
 from zato.admin.web.forms.channel.hl7.mllp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
-from zato.common.api import GENERIC, HL7
+from zato.common.api import GENERIC, generic_attrs, HL7
 from zato.common.model import HL7Channel
 
 # ################################################################################################################################
@@ -27,8 +27,8 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id', 'type_'
-        output_required = 'id', 'name', 'is_active', 'is_internal', 'hl7_version', 'service', 'security_name', 'tcp_port'
-        output_optional = 'should_parse_on_input', 'should_validate', 'should_return_errors'
+        output_required = 'id', 'name', 'is_active', 'is_internal', 'hl7_version', 'service', 'security_name', 'address'
+        output_optional = ('should_parse_on_input', 'should_validate', 'should_return_errors') + generic_attrs
         output_repeated = True
 
 # ################################################################################################################################
@@ -46,8 +46,8 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_internal', 'hl7_version', 'service', 'tcp_port'
-        input_optional = 'is_active', 'should_parse_on_input', 'should_validate', 'should_return_errors'
+        input_required = 'name', 'is_internal', 'hl7_version', 'service', 'address'
+        input_optional = ('is_active', 'should_parse_on_input', 'should_validate', 'should_return_errors') + generic_attrs
         output_required = 'id', 'name'
 
 # ################################################################################################################################

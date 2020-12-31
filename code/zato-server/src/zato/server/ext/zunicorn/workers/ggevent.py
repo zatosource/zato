@@ -204,34 +204,16 @@ class GeventWorker(AsyncWorker):
         # by deferring to a new greenlet. See #1645
         gevent.spawn(super(GeventWorker, self).handle_usr1, sig, frame)
 
-    if gevent.version_info[0] == 0:
+    def init_process(self):
+        # monkey patch here
+        self.patch()
 
-        def init_process(self):
-            # monkey patch here
-            self.patch()
+        # reinit the hub
+        from gevent import hub
+        hub.reinit()
 
-            # reinit the hub
-            import gevent.core
-            gevent.core.reinit()
-
-            #gevent 0.13 and older doesn't reinitialize dns for us after forking
-            #here's the workaround
-            gevent.core.dns_shutdown(fail_requests=1)
-            gevent.core.dns_init()
-            super(GeventWorker, self).init_process()
-
-    else:
-
-        def init_process(self):
-            # monkey patch here
-            self.patch()
-
-            # reinit the hub
-            from gevent import hub
-            hub.reinit()
-
-            # then initialize the process
-            super(GeventWorker, self).init_process()
+        # then initialize the process
+        super(GeventWorker, self).init_process()
 
 
 class GeventResponse(object):

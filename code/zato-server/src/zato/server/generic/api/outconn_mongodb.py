@@ -35,7 +35,7 @@ class OutconnMongoDBWrapper(Wrapper):
 
     def __init__(self, *args, **kwargs):
         super(OutconnMongoDBWrapper, self).__init__(*args, **kwargs)
-        self._client = None  # type: MongoClient
+        self._impl = None  # type: MongoClient
 
 # ################################################################################################################################
 
@@ -97,7 +97,7 @@ class OutconnMongoDBWrapper(Wrapper):
                 client_config.ssl_match_hostname = self.config.is_tls_match_hostname_enabled
 
             # Create the actual connection object
-            self._client = MongoClient(**client_config)
+            self._impl = MongoClient(**client_config)
 
             # Confirm the connection was established
             self.ping()
@@ -108,12 +108,12 @@ class OutconnMongoDBWrapper(Wrapper):
 # ################################################################################################################################
 
     def _delete(self):
-        self._client.close()
+        self._impl.close()
 
 # ################################################################################################################################
 
     def _ping(self):
-        self._client.admin.command('ismaster')
+        self._impl.admin.command('ismaster')
 
 # ################################################################################################################################
 # ################################################################################################################################
