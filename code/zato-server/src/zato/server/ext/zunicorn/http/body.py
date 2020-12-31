@@ -116,11 +116,11 @@ class ChunkedReader(object):
         buf_write = buf.write
 
         if data is not None:
-            buf.write(data)
+            buf_write(data)
 
         idx = buf.getvalue().find(b"\r\n")
         while idx < 0:
-            self.get_data(unreader, buf.write)
+            self.get_data(unreader, buf_write)
             idx = buf.getvalue().find(b"\r\n")
 
         data = buf.getvalue()
@@ -284,7 +284,7 @@ class Body(object):
 
         data_find = data.find
         ret_append = ret.append
-        self.reader.read = self.reader.read
+        self_reader_read = self.reader.read
         self_buf_write = self.buf.write
 
         while 1:
@@ -292,7 +292,7 @@ class Body(object):
             idx = idx + 1 if idx >= 0 else size if len(data) >= size else 0
             if idx:
                 ret_append(data[:idx])
-                self.buf.write(data[idx:])
+                self_buf_write(data[idx:])
                 break
 
             ret_append(data)

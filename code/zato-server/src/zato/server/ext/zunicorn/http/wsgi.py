@@ -38,7 +38,6 @@ import io
 import logging
 import os
 import regex as re
-import sys
 
 from zato.server.ext.zunicorn import SERVER_SOFTWARE, util
 from zato.server.ext.zunicorn._compat import unquote_to_wsgi_str
