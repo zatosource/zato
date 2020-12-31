@@ -17,7 +17,19 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.HL7MLLPChannel;
     $.fn.zato.data_table.new_row_func = $.fn.zato.channel.hl7.mllp.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'tcp_port', 'hl7_version', 'service']);
+    $.fn.zato.data_table.setup_forms([
+        'name',
+        'address',
+        'hl7_version',
+        'service',
+        'logging_level',
+        'data_encoding',
+        'max_msg_size',
+        'read_buffer_size',
+        'recv_timeout',
+        'start_seq',
+        'end_seq',
+    ]);
 })
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

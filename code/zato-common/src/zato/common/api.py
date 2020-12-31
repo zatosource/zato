@@ -89,7 +89,8 @@ simple_types = (bytes, str, dict, list, tuple, bool, Number)
 
 generic_attrs = ('is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def',
     'is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', 'max_len_messages_received',
-    'max_bytes_per_message_sent', 'max_bytes_per_message_received', 'hl7_version', 'json_path', 'data_encoding')
+    'max_bytes_per_message_sent', 'max_bytes_per_message_received', 'hl7_version', 'json_path', 'data_encoding',
+    'max_msg_size', 'read_buffer_size', 'recv_timeout', 'logging_level', 'should_log_messages', 'start_seq', 'end_seq')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1462,14 +1463,17 @@ class HL7:
         # Default TCP port for MLLP connections
         address = '0.0.0.0:30901'
 
+        # Assume that UTF-8 is sent in by default
+        data_encoding = 'utf-8'
+
         # Each message may be of at most that many bytes
-        max_msg_size = 1_000_000
+        max_msg_size = '1_000_000'
 
         # At most that many bytes will be read from a socket at a time
         read_buffer_size = 2048
 
         # We wait at most that many seconds for data from a socket in each iteration of the main loop
-        recv_timeout = 0.25
+        recv_timeout = 250
 
         # At what level to log messages (Python logging)
         logging_level = 'INFO'
@@ -1478,10 +1482,10 @@ class HL7:
         should_log_messages = False
 
         # An MLLP message may begin with these bytes ..
-        start_seq = b'\x0b'
+        start_seq = '\\x0b'
 
         # .. and end with these below.
-        end_seq = b'\x1c\x0d'
+        end_seq = '\\x1c\\x0d'
 
     class Const:
         """ Various HL7-related constants.
@@ -1495,9 +1499,9 @@ class HL7:
             def __iter__(self):
                 return iter((self.v2,))
 
-        class LogLevel:
-            Info  = NameId('INFO',  'info')
-            Debug = NameId('DEBUG', 'debug')
+        class LoggingLevel:
+            Info  = NameId('INFO',  'INFO')
+            Debug = NameId('DEBUG', 'DEBUG')
 
             def __iter__(self):
                 return iter((self.Info, self.Debug))
