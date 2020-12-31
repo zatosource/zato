@@ -40,6 +40,9 @@
             '_service',
             '_security',
 
+            {% comment %} 2b {% endcomment %}
+            '_audit_log',
+
             {% comment %} 3 {% endcomment %}
             '_edit',
             '_delete',
@@ -109,6 +112,9 @@
                         <th><a href="#">Service</a></th>
                         <th><a href="#">Security</a></th>
 
+                        {% comment %} 2b {% endcomment %}
+                        <th>Message log</th>
+
                         {% comment %} 3 {% endcomment %}
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -164,6 +170,11 @@
                             {% else %}
                                 <span class="form_hint">---</span>
                             {% endif %}
+                        </td>
+
+                        {% comment %} 2b {% endcomment %}
+                        <td>
+                            <a href="{% url "audit-log" "http-soap" item.id %}?cluster={{ cluster_id }}&amp;object_name={{ item.name }}&amp;object_type_label=HL7 REST channel">View</a>
                         </td>
 
                         {% comment %} 3 {% endcomment %}
