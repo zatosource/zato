@@ -36,7 +36,7 @@
             'hl7_version',
 
             {% comment %} 2 {% endcomment %}
-            'tcp_port',
+            'address',
             '_service',
             '_audit_log',
 
@@ -66,7 +66,6 @@
             'max_len_messages_received',
             'max_bytes_per_message_sent',
             'max_bytes_per_message_received',
-
         ]
     }
     </script>
@@ -85,8 +84,6 @@
 {% with has_generic="1" generic_type="channel-hl7-mllp" %}
     {% include "zato/search-form.html" with page_prompt="Show channels"%}
 {% endwith %}
-
-
 
     {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
@@ -109,7 +106,7 @@
                         {% comment %} 2 {% endcomment %}
                         <th><a href="#">Port</a></th>
                         <th><a href="#">Service</a></th>
-                        <th><a href="#">Message log</a></th>
+                        <th>Message log</th>
 
                         {% comment %} 3 {% endcomment %}
                         <th>&nbsp;</th>
@@ -153,7 +150,7 @@
                         <td>{{ item.hl7_version }}</td>
 
                         {% comment %} 2 {% endcomment %}
-                        <td>{{ item.tcp_port }}</td>
+                        <td>{{ item.address }}</td>
                         <td><a href="{% url "service-overview" item.service %}?cluster={{ cluster_id }}">{{ item.service }}</a></td>
                         <td>
                             <a href="{% url "audit-log" "channel-hl7-mllp" item.id %}?cluster={{ cluster_id }}&amp;object_name={{ item.name }}&amp;object_type_label=Channel&nbsp;HL7&nbsp;MLLP">View</a>
@@ -235,7 +232,7 @@
 
                                 <label>
                                 TCP port
-                                {{ create_form.tcp_port }}
+                                {{ create_form.address }}
                                 </label>
 
                                 |
@@ -308,7 +305,7 @@
 
                                 <label>
                                 TCP port
-                                {{ edit_form.tcp_port }}
+                                {{ edit_form.address }}
                                 </label>
 
                                 |

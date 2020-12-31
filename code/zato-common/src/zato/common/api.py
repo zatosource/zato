@@ -1459,9 +1459,29 @@ class HL7:
     class Default:
         """ Default values for HL7 objects.
         """
-
         # Default TCP port for MLLP connections
-        mllp_tcp_port = 30901
+        address = '0.0.0.0:30901'
+
+        # Each message may be of at most that many bytes
+        max_msg_size = 1_000_000
+
+        # At most that many bytes will be read from a socket at a time
+        read_buffer_size = 2048
+
+        # We wait at most that many seconds for data from a socket in each iteration of the main loop
+        recv_timeout = 0.25
+
+        # At what level to log messages (Python logging)
+        logging_level = 'INFO'
+
+        # Should we store the contents of messages in logs (Python logging)
+        should_log_messages = False
+
+        # An MLLP message may begin with these bytes ..
+        start_seq = b'\x0b'
+
+        # .. and end with these below.
+        end_seq = b'\x1c\x0d'
 
     class Const:
         """ Various HL7-related constants.
@@ -1474,6 +1494,13 @@ class HL7:
 
             def __iter__(self):
                 return iter((self.v2,))
+
+        class LogLevel:
+            Info  = NameId('INFO',  'info')
+            Debug = NameId('DEBUG', 'debug')
+
+            def __iter__(self):
+                return iter((self.Info, self.Debug))
 
         class ImplClass:
             hl7apy = 'hl7apy'
