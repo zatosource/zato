@@ -58,7 +58,7 @@
             {% endifequal %}
 
             {% ifequal connection 'channel' %}
-                '_method',
+                '_audit_log',
                 'service',
                 'content_encoding',
             {% endifequal %}
@@ -186,6 +186,7 @@
 
                         <!-- 12,13,13a -->
                         <th><a href="#">Message log</a></th>
+
                         {% ifequal connection 'channel' %}
                             <th class='ignore'>&nbsp;</th> {% comment %} service {% endcomment %}
                             <th class='ignore'>&nbsp;</th> {% comment %} content_encoding {% endcomment %}
@@ -318,6 +319,7 @@
                         <td>
                             <a href="{% url "audit-log" "http-soap" item.id %}?cluster={{ cluster_id }}&amp;object_name={{ item.name }}&amp;object_type_label={% ifequal transport 'soap' %}SOAP{% else %}REST{% endifequal %} {% ifequal connection 'channel' %}channel{% else %}outgoing connection{% endifequal %}">View</a>
                         </td>
+
                         {% ifequal connection 'channel' %}
                             <td class='ignore'>{{ item.service_name }}</td>
                             <td class='ignore'>{{ item.content_encoding|default:'' }}</td>
@@ -379,7 +381,7 @@
                         {% ifequal connection 'channel' %}
                             <td class='ignore'>{{ item.is_rate_limit_active }}</td>
                             <td class='ignore'>{{ item.rate_limit_type }}</td>
-                            <td class='ignore'>{{ item.rate_limit_def }}</td>
+                            <td class='ignore'>{{ item.rate_limit_def|default:"" }}</td>
                             <td class='ignore'>{{ item.rate_limit_check_parent_def }}</td>
                         {% endifequal %}
 

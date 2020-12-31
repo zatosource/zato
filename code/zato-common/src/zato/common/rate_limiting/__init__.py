@@ -126,7 +126,7 @@ class DefinitionParser(object):
     @staticmethod
     def check_definition_from_input(input_data):
         # type: (dict)
-        rate_limit_def = input_data.get('rate_limit_def')
+        rate_limit_def = input_data.get('rate_limit_def') or ''
         if rate_limit_def:
             DefinitionParser.check_definition(rate_limit_def)
 

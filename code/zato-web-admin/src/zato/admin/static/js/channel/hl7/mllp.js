@@ -17,7 +17,19 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.HL7MLLPChannel;
     $.fn.zato.data_table.new_row_func = $.fn.zato.channel.hl7.mllp.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'tcp_port', 'hl7_version', 'service']);
+    $.fn.zato.data_table.setup_forms([
+        'name',
+        'address',
+        'hl7_version',
+        'service',
+        'logging_level',
+        'data_encoding',
+        'max_msg_size',
+        'read_buffer_size',
+        'recv_timeout',
+        'start_seq',
+        'end_seq',
+    ]);
 })
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -55,6 +67,8 @@ $.fn.zato.channel.hl7.mllp.data_table.new_row = function(item, data, include_tr)
     // 2
     row += String.format('<td>{0}</td>', item.tcp_port);
     row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(item.service, cluster_id));
+    row += String.format('<td><a href="/zato/audit-log/channel-hl7-mllp/{0}/?cluster={1}&amp;object_name={2}&amp;object_type_label={3}">View</a></td>',
+        item.id, cluster_id, item.name, 'Channel&nbsp;HL7&nbsp;MLLP');
 
     // 3
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.hl7.mllp.edit('{0}')\">Edit</a>", item.id));
@@ -72,6 +86,16 @@ $.fn.zato.channel.hl7.mllp.data_table.new_row = function(item, data, include_tr)
     // 6
     row += String.format("<td class='ignore'>{0}</td>", item.data_encoding);
     row += String.format("<td class='ignore'>{0}</td>", item.should_return_errors);
+
+    // 7
+    row += String.format("<td class='ignore'>{0}</td>", item.is_audit_log_sent_active);
+    row += String.format("<td class='ignore'>{0}</td>", item.is_audit_log_received_active);
+    row += String.format("<td class='ignore'>{0}</td>", item.max_len_messages_sent);
+
+    // 8
+    row += String.format("<td class='ignore'>{0}</td>", item.max_len_messages_received);
+    row += String.format("<td class='ignore'>{0}</td>", item.max_bytes_per_message_sent);
+    row += String.format("<td class='ignore'>{0}</td>", item.max_bytes_per_message_received);
 
     if(include_tr) {
         row += '</tr>';
