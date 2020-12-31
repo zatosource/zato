@@ -40,6 +40,9 @@
             '_service',
             '_security',
 
+            {% comment %} 2b {% endcomment %}
+            '_audit_log',
+
             {% comment %} 3 {% endcomment %}
             '_edit',
             '_delete',
@@ -58,6 +61,16 @@
             {% comment %} 6 {% endcomment %}
             'data_encoding',
             'should_return_errors',
+
+            {% comment %} 7 {% endcomment %}
+            'is_audit_log_sent_active',
+            'is_audit_log_received_active',
+            'max_len_messages_sent',
+
+            {% comment %} 8 {% endcomment %}
+            'max_len_messages_received',
+            'max_bytes_per_message_sent',
+            'max_bytes_per_message_received',
         ]
     }
     </script>
@@ -99,6 +112,9 @@
                         <th><a href="#">Service</a></th>
                         <th><a href="#">Security</a></th>
 
+                        {% comment %} 2b {% endcomment %}
+                        <th>Message log</th>
+
                         {% comment %} 3 {% endcomment %}
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -115,6 +131,17 @@
                         <th class='ignore'>&nbsp;</th>
 
                         {% comment %} 6 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 7 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 8 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                 </thead>
 
@@ -145,6 +172,11 @@
                             {% endif %}
                         </td>
 
+                        {% comment %} 2b {% endcomment %}
+                        <td>
+                            <a href="{% url "audit-log" "http-soap" item.id %}?cluster={{ cluster_id }}&amp;object_name={{ item.name }}&amp;object_type_label=HL7 REST channel">View</a>
+                        </td>
+
                         {% comment %} 3 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.channel.hl7.rest.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.channel.hl7.rest.delete_('{{ item.id }}')">Delete</a></td>
@@ -170,11 +202,21 @@
                         <td class='ignore'>{{ item.data_encoding }}</td>
                         <td class='ignore'>{{ item.should_return_errors }}</td>
 
+                        {% comment %} 7 {% endcomment %}
+                        <td class='ignore'>{{ item.is_audit_log_sent_active }}</td>
+                        <td class='ignore'>{{ item.is_audit_log_received_active }}</td>
+                        <td class='ignore'>{{ item.max_len_messages_sent }}</td>
+
+                        {% comment %} 8 {% endcomment %}
+                        <td class='ignore'>{{ item.max_len_messages_received }}</td>
+                        <td class='ignore'>{{ item.max_bytes_per_message_sent }}</td>
+                        <td class='ignore'>{{ item.max_bytes_per_message_received }}</td>
+
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='14'>No results</td>
+                        <td colspan='22'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -191,7 +233,7 @@
                     <table class="form-data">
 
                         <tr>
-                            <td style="vertical-align:middle;width:14%">
+                            <td style="vertical-align:middle;width:17%">
                                 <label for="id_name">
                                 Name
                                 </label>
@@ -262,6 +304,8 @@
                             <td>{{ create_form.security_id }}</td>
                         </tr>
 
+                        {% include "zato/include/audit-log/create.html" %}
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
@@ -283,7 +327,7 @@
                     <table class="form-data">
 
                         <tr>
-                            <td style="vertical-align:middle;width:14%">
+                            <td style="vertical-align:middle;width:17%">
                                 <label for="id_edit-name">
                                 Name
                                 </label>
@@ -353,6 +397,8 @@
                             </td>
                             <td>{{ edit_form.security_id }}</td>
                         </tr>
+
+                        {% include "zato/include/audit-log/edit.html" %}
 
                         <tr>
                             <td colspan="2" style="text-align:right">

@@ -114,6 +114,11 @@ loggers:
         handlers: [connector]
         qualname: zato_connector
         propagate: false
+    zato_hl7:
+        level: INFO
+        handlers: [stdout, hl7]
+        qualname: zato_hl7
+        propagate: false
     zato_kvdb:
         level: INFO
         handlers: [kvdb]
@@ -196,6 +201,13 @@ handlers:
         formatter: default
         class: logging.handlers.ConcurrentRotatingFileHandler
         filename: './logs/connector.log'
+        mode: 'a'
+        maxBytes: 20000000
+        backupCount: 10
+    hl7:
+        formatter: default
+        class: logging.handlers.ConcurrentRotatingFileHandler
+        filename: './logs/hl7.log'
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
