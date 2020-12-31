@@ -231,15 +231,90 @@
                                 |
 
                                 <label>
-                                TCP port
+                                Address
                                 {{ create_form.address }}
+                                </label>
+
+                            </td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>
+
+                                <label>
+                                Return errors
+                                {{ create_form.should_return_errors }}
                                 </label>
 
                                 |
 
                                 <label>
-                                Return errors
-                                {{ create_form.should_return_errors }}
+                                Log I/O
+                                {{ create_form.should_log_messages }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Encoding
+                                {{ create_form.data_encoding }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td></td>
+                            <td>
+
+                                <label>
+                                Recv. tmt.
+                                {{ create_form.recv_timeout }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Log level
+                                {{ create_form.logging_level }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>Max. size</td>
+                            <td>
+
+                                <label>
+                                Message
+                                {{ create_form.max_msg_size }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Read buffer
+                                {{ create_form.read_buffer_size }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>Separator</td>
+                            <td>
+
+                                <label>
+                                Start
+                                {{ create_form.start_seq }}
+                                </label>
+
+                                |
+
+                                <label>
+                                End
+                                {{ create_form.end_seq }}
                                 </label>
 
                             </td>

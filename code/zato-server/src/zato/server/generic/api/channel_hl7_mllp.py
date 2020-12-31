@@ -36,7 +36,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
     def __init__(self, *args, **kwargs):
         super(ChannelHL7MLLPWrapper, self).__init__(*args, **kwargs)
-        self._impl = None
+        self._impl = None # type: HL7MLLPServer
 
 # ################################################################################################################################
 
@@ -49,15 +49,15 @@ class ChannelHL7MLLPWrapper(Wrapper):
                 'name': self.config.name,
                 'address': self.config.address,
 
-                'max_msg_size': 1_000_000,
-                'read_buffer_size': 2048,
-                'recv_timeout': 0.25,
+                'max_msg_size': self.config.max_msg_size,
+                'read_buffer_size': self.config.read_buffer_size,
+                'recv_timeout': self.config.recv_timeout,
 
-                'logging_level': 'INFO',
-                'should_log_messages': False,
+                'logging_level': self.config.logging_level,
+                'should_log_messages': self.config.should_log_messages,
 
-                'start_seq': b'\x0b',
-                'end_seq': b'\x1c\x0d',
+                'start_seq': self.config.start_seq,
+                'end_seq': self.config.end_seq,
 
                 'is_audit_log_sent_active': self.config.get('is_audit_log_sent_active'),
                 'is_audit_log_received_active': self.config.get('is_audit_log_received_active'),
@@ -70,7 +70,6 @@ class ChannelHL7MLLPWrapper(Wrapper):
             # .. start the server in a new greenlet, waiting a moment to confirm that it runs ..
             spawn_greenlet(self._impl.start)
 
-
             # .. and set up audit log.
             self.server.set_up_object_audit_log_by_config(
                 GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP, self.config.id, self.config, False)
@@ -81,7 +80,8 @@ class ChannelHL7MLLPWrapper(Wrapper):
 # ################################################################################################################################
 
     def _delete(self):
-        self._impl.stop()
+        if self._impl:
+            self._impl.stop()
 
 # ################################################################################################################################
 
