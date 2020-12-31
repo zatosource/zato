@@ -91,13 +91,18 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     var merge_url_params_req_tr = '';
     var url_params_pri_tr = '';
     var params_pri_tr = '';
-    var serialization_type = item.serialization_type ? item.serialization_type : 'string';
+    var audit_object_type_label = '';
 
+    var serialization_type = item.serialization_type ? item.serialization_type : 'string';
     var security_name = item.security_id ? item.security_select : '<span class="form_hint">---</span>';
 
     if(is_soap) {
         soap_action_tr += String.format('<td>{0}</td>', item.soap_action);
         soap_version_tr += String.format('<td>{0}</td>', item.soap_version);
+        audit_object_type_label += 'SOAP ';
+    }
+    else {
+        audit_object_type_label += 'REST ';
     }
 
     if(is_channel) {
@@ -105,11 +110,12 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         merge_url_params_req_tr += String.format('<td class="ignore">{0}</td>', merge_url_params_req);
         url_params_pri_tr += String.format('<td class="ignore">{0}</td>', item.url_params_pri);
         params_pri_tr += String.format('<td class="ignore">{0}</td>', item.params_pri);
-
+        audit_object_type_label += 'channel';
     }
 
     if(is_outgoing) {
         host_tr += String.format('<td>{0}</td>', item.host);
+        audit_object_type_label += 'outgoing connection';
     }
 
     /* 1,2 */
@@ -141,7 +147,6 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         else {
             row += '<td><span class="form_hint">---</span></td>';
         }
-
     }
 
     /* 9 */
@@ -153,7 +158,8 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += soap_version_tr;
     }
 
-    row += String.format('<td><a href="/zato/audit-log/http-soap/{0}/?cluster={1}">View</a></td>', item.id, cluster_id);
+    row += String.format('<td><a href="/zato/audit-log/http-soap/{0}/?cluster={1}&amp;object_name={2}&amp;object_type_label={3}">View</a></td>',
+        item.id, cluster_id, item.name, audit_object_type_label);
 
     /* 12,13,13a */
     if(is_channel) {
