@@ -7,9 +7,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import logging
 from datetime import datetime
-from logging import getLogger
+from logging import DEBUG, getLevelName, getLogger
 from socket import timeout as SocketTimeoutException
 from time import sleep
 from traceback import format_exc
@@ -33,10 +32,6 @@ if 0:
     socket = socket
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
 # ################################################################################################################################
 
 conn_type   = GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP
@@ -148,7 +143,7 @@ class HL7MLLPServer:
     """ Each instance of this class handles an individual HL7 MLLP connection in handle_connection.
     """
 
-    # We will never read less that many bytes from client sockets
+    # We will never read less than that many bytes from client sockets
     min_read_buffer_size = 2048
 
     def __init__(self, config, audit_log):
@@ -176,11 +171,11 @@ class HL7MLLPServer:
         self.logger_zato = getLogger('zato')
 
         self.logger_hl7 = getLogger('zato_hl7')
-        self.logger_hl7.setLevel(config.logging_level)
+        self.logger_hl7.setLevel(getLevelName(config.logging_level))
 
         self._logger_info = self.logger_hl7.info
         self._logger_debug = self.logger_hl7.debug
-        self._has_debug_log = self.logger_hl7.isEnabledFor(logging.DEBUG)
+        self._has_debug_log = self.logger_hl7.isEnabledFor(DEBUG)
 
 # ################################################################################################################################
 
