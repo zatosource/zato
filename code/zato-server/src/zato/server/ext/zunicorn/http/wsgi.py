@@ -37,8 +37,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 import io
 import logging
 import os
-import re
-import sys
+import regex as re
 
 from zato.server.ext.zunicorn import SERVER_SOFTWARE, util
 from zato.server.ext.zunicorn._compat import unquote_to_wsgi_str
@@ -78,37 +77,8 @@ class FileWrapper(object):
             return data
         raise IndexError
 
-
-class WSGIErrorsWrapper(io.RawIOBase):
-
-    def __init__(self, cfg):
-        # There is no public __init__ method for RawIOBase so
-        # we don't need to call super() in the __init__ method.
-        # pylint: disable=super-init-not-called
-        errorlog = logging.getLogger("gunicorn.error")
-        handlers = errorlog.handlers
-        self.streams = []
-
-        if cfg.errorlog == "-":
-            self.streams.append(sys.stderr)
-            handlers = handlers[1:]
-
-        for h in handlers:
-            if hasattr(h, "stream"):
-                self.streams.append(h.stream)
-
-    def write(self, data):
-        for stream in self.streams:
-            try:
-                stream.write(data)
-            except UnicodeError:
-                stream.write(data.encode("UTF-8"))
-            stream.flush()
-
-
-def base_environ(cfg):
+def base_environ(cfg, FileWrapper=FileWrapper, SERVER_SOFTWARE=SERVER_SOFTWARE):
     return {
-        "wsgi.errors": WSGIErrorsWrapper(cfg),
         "wsgi.version": (1, 0),
         "wsgi.multithread": False,
         "wsgi.multiprocess": (cfg.workers > 1),
@@ -118,7 +88,7 @@ def base_environ(cfg):
     }
 
 
-def default_environ(req, sock, cfg):
+def default_environ(req, sock, cfg, base_environ=base_environ):
     env = base_environ(cfg)
     env.update({
         "wsgi.input": req.body,
@@ -146,7 +116,224 @@ def proxy_environ(req):
     }
 
 
-def create(req, sock, client, server, cfg):
+class Response(object):
+
+    def __init__(self, req, sock, cfg):
+        self.req = req
+        self.sock = sock
+        self.version = cfg.server_software
+        self.status = None
+        self.chunked = False
+        self.must_close = False
+        self.headers = []
+        self.headers_sent = False
+        self.response_length = None
+        self.sent = 0
+        self.upgrade = False
+        self.cfg = cfg
+
+    def force_close(self):
+        self.must_close = True
+
+    def should_close(self):
+        if self.must_close or self.req.should_close():
+            return True
+        if self.response_length is not None or self.chunked:
+            return False
+        if self.req.method == 'HEAD':
+            return False
+        if self.status_code < 200 or self.status_code in (204, 304):
+            return False
+        return True
+
+    def start_response(self, status, headers, exc_info=None):
+        if exc_info:
+            try:
+                if self.status and self.headers_sent:
+                    reraise(exc_info[0], exc_info[1], exc_info[2])
+            finally:
+                exc_info = None
+        elif self.status is not None:
+            raise AssertionError("Response headers already set!")
+
+        self.status = status
+
+        # get the status code from the response here so we can use it to check
+        # the need for the connection header later without parsing the string
+        # each time.
+        try:
+            self.status_code = int(self.status.split()[0])
+        except ValueError:
+            self.status_code = None
+
+        self.process_headers(headers)
+        self.chunked = self.is_chunked()
+        return self.write
+
+    def process_headers(self, headers, HEADER_RE=HEADER_RE, HEADER_VALUE_RE=HEADER_VALUE_RE,
+            string_types=string_types, util_is_hoppish=util.is_hoppish):
+
+        self_headers_append = self.headers.append
+
+        for name, value in headers:
+            if not isinstance(name, string_types):
+                raise TypeError('%r is not a string' % name)
+
+            if HEADER_RE.search(name):
+                raise InvalidHeaderName('%r' % name)
+
+            if HEADER_VALUE_RE.search(value):
+                raise InvalidHeader('%r' % value)
+
+            value = str(value).strip()
+            lname = name.lower().strip()
+            if lname == "content-length":
+                self.response_length = int(value)
+            elif util_is_hoppish(name):
+                if lname == "connection":
+                    # handle websocket
+                    if value.lower().strip() == "upgrade":
+                        self.upgrade = True
+                elif lname == "upgrade":
+                    if value.lower().strip() == "websocket":
+                        self_headers_append((name.strip(), value))
+
+                # ignore hopbyhop headers
+                continue
+            self_headers_append((name.strip(), value))
+
+    def is_chunked(self):
+        # Only use chunked responses when the client is
+        # speaking HTTP/1.1 or newer and there was
+        # no Content-Length header set.
+        if self.response_length is not None:
+            return False
+        elif self.req.version <= (1, 0):
+            return False
+        elif self.req.method == 'HEAD':
+            # Responses to a HEAD request MUST NOT contain a response body.
+            return False
+        elif self.status_code in (204, 304):
+            # Do not use chunked responses when the response is guaranteed to
+            # not have a response body.
+            return False
+        return True
+
+    def default_headers(self, util_http_date=util.http_date):
+        # set the connection header
+        if self.upgrade:
+            connection = "upgrade"
+        elif self.should_close():
+            connection = "close"
+        else:
+            connection = "keep-alive"
+
+        headers = [
+            "HTTP/%s.%s %s\r\n" % (self.req.version[0],
+                self.req.version[1], self.status),
+            "Server: %s\r\n" % self.version,
+            "Date: %s\r\n" % util_http_date(),
+            "Connection: %s\r\n" % connection
+        ]
+        if self.chunked:
+            headers.append("Transfer-Encoding: chunked\r\n")
+        return headers
+
+    def send_headers(self, util_write=util.write, util_to_bytestring=util.to_bytestring):
+        if self.headers_sent:
+            return
+        tosend = self.default_headers()
+        tosend.extend(["%s: %s\r\n" % (k, v) for k, v in self.headers])
+
+        header_str = "%s\r\n" % "".join(tosend)
+        util_write(self.sock, util_to_bytestring(header_str, "ascii"))
+        self.headers_sent = True
+
+    def write(self, arg, binary_type=binary_type, util_write=util.write):
+        self.send_headers()
+        if not isinstance(arg, binary_type):
+            raise TypeError('%r is not a byte' % arg)
+        arglen = len(arg)
+        tosend = arglen
+        if self.response_length is not None:
+            if self.sent >= self.response_length:
+                # Never write more than self.response_length bytes
+                return
+
+            tosend = min(self.response_length - self.sent, tosend)
+            if tosend < arglen:
+                arg = arg[:tosend]
+
+        # Sending an empty chunk signals the end of the
+        # response and prematurely closes the response
+        if self.chunked and tosend == 0:
+            return
+
+        self.sent += tosend
+        util_write(self.sock, arg, self.chunked)
+
+    def can_sendfile(self):
+        return self.cfg.sendfile is not False and sendfile is not None
+
+    def sendfile(self, respiter):
+        if self.cfg.is_ssl or not self.can_sendfile():
+            return False
+
+        if not util.has_fileno(respiter.filelike):
+            return False
+
+        fileno = respiter.filelike.fileno()
+        try:
+            offset = os.lseek(fileno, 0, os.SEEK_CUR)
+            if self.response_length is None:
+                filesize = os.fstat(fileno).st_size
+
+                # The file may be special and sendfile will fail.
+                # It may also be zero-length, but that is okay.
+                if filesize == 0:
+                    return False
+
+                nbytes = filesize - offset
+            else:
+                nbytes = self.response_length
+        except (OSError, io.UnsupportedOperation):
+            return False
+
+        self.send_headers()
+
+        if self.is_chunked():
+            chunk_size = "%X\r\n" % nbytes
+            self.sock.sendall(chunk_size.encode('utf-8'))
+
+        sockno = self.sock.fileno()
+        sent = 0
+
+        while sent != nbytes:
+            count = min(nbytes - sent, BLKSIZE)
+            sent += sendfile(sockno, fileno, offset + sent, count)
+
+        if self.is_chunked():
+            self.sock.sendall(b"\r\n")
+
+        os.lseek(fileno, offset, os.SEEK_SET)
+
+        return True
+
+    def write_file(self, respiter):
+        if not self.sendfile(respiter):
+            for item in respiter:
+                self.write(item)
+
+    def close(self):
+        if not self.headers_sent:
+            self.send_headers()
+        if self.chunked:
+            util.write_chunk(self.sock, b"")
+
+
+def create(req, sock, client, server, cfg, Response=Response, default_environ=default_environ,
+        string_types=string_types, binary_type=binary_type,
+        unquote_to_wsgi_str=unquote_to_wsgi_str, proxy_environ=proxy_environ):
     resp = Response(req, sock, cfg)
 
     # set initial environ
@@ -226,216 +413,6 @@ def create(req, sock, client, server, cfg):
 
     # override the environ with the correct remote and server address if
     # we are behind a proxy using the proxy protocol.
-    environ.update(proxy_environ(req))
+    if req.proxy_protocol_info:
+        environ.update(proxy_environ(req))
     return resp, environ
-
-
-class Response(object):
-
-    def __init__(self, req, sock, cfg):
-        self.req = req
-        self.sock = sock
-        self.version = cfg.server_software
-        self.status = None
-        self.chunked = False
-        self.must_close = False
-        self.headers = []
-        self.headers_sent = False
-        self.response_length = None
-        self.sent = 0
-        self.upgrade = False
-        self.cfg = cfg
-
-    def force_close(self):
-        self.must_close = True
-
-    def should_close(self):
-        if self.must_close or self.req.should_close():
-            return True
-        if self.response_length is not None or self.chunked:
-            return False
-        if self.req.method == 'HEAD':
-            return False
-        if self.status_code < 200 or self.status_code in (204, 304):
-            return False
-        return True
-
-    def start_response(self, status, headers, exc_info=None):
-        if exc_info:
-            try:
-                if self.status and self.headers_sent:
-                    reraise(exc_info[0], exc_info[1], exc_info[2])
-            finally:
-                exc_info = None
-        elif self.status is not None:
-            raise AssertionError("Response headers already set!")
-
-        self.status = status
-
-        # get the status code from the response here so we can use it to check
-        # the need for the connection header later without parsing the string
-        # each time.
-        try:
-            self.status_code = int(self.status.split()[0])
-        except ValueError:
-            self.status_code = None
-
-        self.process_headers(headers)
-        self.chunked = self.is_chunked()
-        return self.write
-
-    def process_headers(self, headers):
-        for name, value in headers:
-            if not isinstance(name, string_types):
-                raise TypeError('%r is not a string' % name)
-
-            if HEADER_RE.search(name):
-                raise InvalidHeaderName('%r' % name)
-
-            if HEADER_VALUE_RE.search(value):
-                raise InvalidHeader('%r' % value)
-
-            value = str(value).strip()
-            lname = name.lower().strip()
-            if lname == "content-length":
-                self.response_length = int(value)
-            elif util.is_hoppish(name):
-                if lname == "connection":
-                    # handle websocket
-                    if value.lower().strip() == "upgrade":
-                        self.upgrade = True
-                elif lname == "upgrade":
-                    if value.lower().strip() == "websocket":
-                        self.headers.append((name.strip(), value))
-
-                # ignore hopbyhop headers
-                continue
-            self.headers.append((name.strip(), value))
-
-    def is_chunked(self):
-        # Only use chunked responses when the client is
-        # speaking HTTP/1.1 or newer and there was
-        # no Content-Length header set.
-        if self.response_length is not None:
-            return False
-        elif self.req.version <= (1, 0):
-            return False
-        elif self.req.method == 'HEAD':
-            # Responses to a HEAD request MUST NOT contain a response body.
-            return False
-        elif self.status_code in (204, 304):
-            # Do not use chunked responses when the response is guaranteed to
-            # not have a response body.
-            return False
-        return True
-
-    def default_headers(self):
-        # set the connection header
-        if self.upgrade:
-            connection = "upgrade"
-        elif self.should_close():
-            connection = "close"
-        else:
-            connection = "keep-alive"
-
-        headers = [
-            "HTTP/%s.%s %s\r\n" % (self.req.version[0],
-                self.req.version[1], self.status),
-            "Server: %s\r\n" % self.version,
-            "Date: %s\r\n" % util.http_date(),
-            "Connection: %s\r\n" % connection
-        ]
-        if self.chunked:
-            headers.append("Transfer-Encoding: chunked\r\n")
-        return headers
-
-    def send_headers(self):
-        if self.headers_sent:
-            return
-        tosend = self.default_headers()
-        tosend.extend(["%s: %s\r\n" % (k, v) for k, v in self.headers])
-
-        header_str = "%s\r\n" % "".join(tosend)
-        util.write(self.sock, util.to_bytestring(header_str, "ascii"))
-        self.headers_sent = True
-
-    def write(self, arg):
-        self.send_headers()
-        if not isinstance(arg, binary_type):
-            raise TypeError('%r is not a byte' % arg)
-        arglen = len(arg)
-        tosend = arglen
-        if self.response_length is not None:
-            if self.sent >= self.response_length:
-                # Never write more than self.response_length bytes
-                return
-
-            tosend = min(self.response_length - self.sent, tosend)
-            if tosend < arglen:
-                arg = arg[:tosend]
-
-        # Sending an empty chunk signals the end of the
-        # response and prematurely closes the response
-        if self.chunked and tosend == 0:
-            return
-
-        self.sent += tosend
-        util.write(self.sock, arg, self.chunked)
-
-    def can_sendfile(self):
-        return self.cfg.sendfile is not False and sendfile is not None
-
-    def sendfile(self, respiter):
-        if self.cfg.is_ssl or not self.can_sendfile():
-            return False
-
-        if not util.has_fileno(respiter.filelike):
-            return False
-
-        fileno = respiter.filelike.fileno()
-        try:
-            offset = os.lseek(fileno, 0, os.SEEK_CUR)
-            if self.response_length is None:
-                filesize = os.fstat(fileno).st_size
-
-                # The file may be special and sendfile will fail.
-                # It may also be zero-length, but that is okay.
-                if filesize == 0:
-                    return False
-
-                nbytes = filesize - offset
-            else:
-                nbytes = self.response_length
-        except (OSError, io.UnsupportedOperation):
-            return False
-
-        self.send_headers()
-
-        if self.is_chunked():
-            chunk_size = "%X\r\n" % nbytes
-            self.sock.sendall(chunk_size.encode('utf-8'))
-
-        sockno = self.sock.fileno()
-        sent = 0
-
-        while sent != nbytes:
-            count = min(nbytes - sent, BLKSIZE)
-            sent += sendfile(sockno, fileno, offset + sent, count)
-
-        if self.is_chunked():
-            self.sock.sendall(b"\r\n")
-
-        os.lseek(fileno, offset, os.SEEK_SET)
-
-        return True
-
-    def write_file(self, respiter):
-        if not self.sendfile(respiter):
-            for item in respiter:
-                self.write(item)
-
-    def close(self):
-        if not self.headers_sent:
-            self.send_headers()
-        if self.chunked:
-            util.write_chunk(self.sock, b"")

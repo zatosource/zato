@@ -34,54 +34,64 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 """
 
+from io import BytesIO
+
 from zato.server.ext.zunicorn.http.errors import (NoMoreData, ChunkMissingTerminator,
         InvalidChunkSize)
 from zato.server.ext.zunicorn import six
 
 
 class ChunkedReader(object):
-    def __init__(self, req, unreader):
+    def __init__(self, req, unreader, BytesIO=BytesIO):
         self.req = req
         self.parser = self.parse_chunked(unreader)
-        self.buf = six.BytesIO()
+        self.buf = BytesIO()
 
-    def read(self, size):
-        if not isinstance(size, six.integer_types):
+    def read(self, size, integer_types=six.integer_types, BytesIO=BytesIO):
+        if not isinstance(size, integer_types):
             raise TypeError("size must be an integral type")
         if size < 0:
             raise ValueError("Size must be positive.")
         if size == 0:
             return b""
 
+        buf_tell = self.buf.tell
+        buf_write = self.buf.write
+
         if self.parser:
-            while self.buf.tell() < size:
+            while buf_tell() < size:
                 try:
-                    self.buf.write(six.next(self.parser))
+                    buf_write(next(self.parser))
                 except StopIteration:
                     self.parser = None
                     break
 
         data = self.buf.getvalue()
         ret, rest = data[:size], data[size:]
-        self.buf = six.BytesIO()
+        self.buf = BytesIO()
         self.buf.write(rest)
         return ret
 
-    def parse_trailers(self, unreader, data):
-        buf = six.BytesIO()
+    def parse_trailers(self, unreader, data, BytesIO=BytesIO):
+        buf = BytesIO()
         buf.write(data)
 
-        idx = buf.getvalue().find(b"\r\n\r\n")
-        done = buf.getvalue()[:2] == b"\r\n"
+        buf_getvalue = buf.getvalue
+
+        value = buf_getvalue()
+
+        idx = value.find(b"\r\n\r\n")
+        done = value[:2] == b"\r\n"
+
         while idx < 0 and not done:
-            self.get_data(unreader, buf)
-            idx = buf.getvalue().find(b"\r\n\r\n")
-            done = buf.getvalue()[:2] == b"\r\n"
+            self.get_data(unreader, buf.write)
+            idx = buf_getvalue().find(b"\r\n\r\n")
+            done = buf_getvalue()[:2] == b"\r\n"
         if done:
-            unreader.unread(buf.getvalue()[2:])
+            unreader.unread(buf_getvalue()[2:])
             return b""
-        self.req.trailers = self.req.parse_headers(buf.getvalue()[:idx])
-        unreader.unread(buf.getvalue()[idx + 4:])
+        self.req.trailers = self.req.parse_headers(buf_getvalue()[:idx])
+        unreader.unread(buf_getvalue()[idx + 4:])
 
     def parse_chunked(self, unreader):
         (size, rest) = self.parse_chunk_size(unreader)
@@ -101,14 +111,16 @@ class ChunkedReader(object):
                 raise ChunkMissingTerminator(rest[:2])
             (size, rest) = self.parse_chunk_size(unreader, data=rest[2:])
 
-    def parse_chunk_size(self, unreader, data=None):
-        buf = six.BytesIO()
+    def parse_chunk_size(self, unreader, data=None, BytesIO=BytesIO):
+        buf = BytesIO()
+        buf_write = buf.write
+
         if data is not None:
-            buf.write(data)
+            buf_write(data)
 
         idx = buf.getvalue().find(b"\r\n")
         while idx < 0:
-            self.get_data(unreader, buf)
+            self.get_data(unreader, buf_write)
             idx = buf.getvalue().find(b"\r\n")
 
         data = buf.getvalue()
@@ -128,11 +140,11 @@ class ChunkedReader(object):
             return (0, None)
         return (chunk_size, rest_chunk)
 
-    def get_data(self, unreader, buf):
+    def get_data(self, unreader, buf_write, NoMoreData=NoMoreData):
         data = unreader.read()
         if not data:
             raise NoMoreData()
-        buf.write(data)
+        buf_write(data)
 
 
 class LengthReader(object):
@@ -140,8 +152,8 @@ class LengthReader(object):
         self.unreader = unreader
         self.length = length
 
-    def read(self, size):
-        if not isinstance(size, six.integer_types):
+    def read(self, size, integer_types=six.integer_types, BytesIO=BytesIO):
+        if not isinstance(size, integer_types):
             raise TypeError("size must be an integral type")
 
         size = min(self.length, size)
@@ -150,13 +162,19 @@ class LengthReader(object):
         if size == 0:
             return b""
 
-        buf = six.BytesIO()
-        data = self.unreader.read()
+        buf = BytesIO()
+
+        buf_write = buf.write
+        buf_tell = buf.tell
+        self_unreader_read = self.unreader.read
+
+        data = self_unreader_read()
+
         while data:
-            buf.write(data)
-            if buf.tell() >= size:
+            buf_write(data)
+            if buf_tell() >= size:
                 break
-            data = self.unreader.read()
+            data = self_unreader_read()
 
         buf = buf.getvalue()
         ret, rest = buf[:size], buf[size:]
@@ -204,9 +222,9 @@ class EOFReader(object):
 
 
 class Body(object):
-    def __init__(self, reader):
+    def __init__(self, reader, BytesIO=BytesIO):
         self.reader = reader
-        self.buf = six.BytesIO()
+        self.buf = BytesIO()
 
     def __iter__(self):
         return self
@@ -227,7 +245,7 @@ class Body(object):
             return six.MAXSIZE
         return size
 
-    def read(self, size=None):
+    def read(self, size=None, BytesIO=BytesIO):
         size = self.getsize(size)
         if size == 0:
             return b""
@@ -239,38 +257,47 @@ class Body(object):
             self.buf.write(rest)
             return ret
 
-        while size > self.buf.tell():
-            data = self.reader.read(1024)
+        self_buf_tell = self.buf.tell
+        self_buf_write = self.buf.write
+        self_reader_read = self.reader.read
+
+        while size > self_buf_tell():
+            data = self_reader_read(1024)
             if not data:
                 break
-            self.buf.write(data)
+            self_buf_write(data)
 
         data = self.buf.getvalue()
         ret, rest = data[:size], data[size:]
-        self.buf = six.BytesIO()
+        self.buf = BytesIO()
         self.buf.write(rest)
         return ret
 
-    def readline(self, size=None):
+    def readline(self, size=None, BytesIO=BytesIO):
         size = self.getsize(size)
         if size == 0:
             return b""
 
         data = self.buf.getvalue()
-        self.buf = six.BytesIO()
-
+        self.buf = BytesIO()
         ret = []
+
+        data_find = data.find
+        ret_append = ret.append
+        self_reader_read = self.reader.read
+        self_buf_write = self.buf.write
+
         while 1:
-            idx = data.find(b"\n", 0, size)
+            idx = data_find(b"\n", 0, size)
             idx = idx + 1 if idx >= 0 else size if len(data) >= size else 0
             if idx:
-                ret.append(data[:idx])
-                self.buf.write(data[idx:])
+                ret_append(data[:idx])
+                self_buf_write(data[idx:])
                 break
 
-            ret.append(data)
+            ret_append(data)
             size -= len(data)
-            data = self.reader.read(min(1024, size))
+            data = self_reader_read(min(1024, size))
             if not data:
                 break
 
