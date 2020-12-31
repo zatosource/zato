@@ -83,7 +83,7 @@ class OutconnIMTelegramWrapper(Wrapper):
 
     def __init__(self, *args, **kwargs):
         super(OutconnIMTelegramWrapper, self).__init__(*args, **kwargs)
-        self._client = None  # type: TelegramClient
+        self._impl = None  # type: TelegramClient
 
 # ################################################################################################################################
 
@@ -101,7 +101,7 @@ class OutconnIMTelegramWrapper(Wrapper):
             }
 
             # Create the actual connection object
-            self._client = TelegramClient(**client_config)
+            self._impl = TelegramClient(**client_config)
 
             # Confirm the connection was established
             self.ping()
@@ -112,12 +112,12 @@ class OutconnIMTelegramWrapper(Wrapper):
 # ################################################################################################################################
 
     def _delete(self):
-        self._client.session.close()
+        self._impl.session.close()
 
 # ################################################################################################################################
 
     def _ping(self):
-        return self._client.ping()
+        return self._impl.ping()
 
 # ################################################################################################################################
 # ################################################################################################################################
