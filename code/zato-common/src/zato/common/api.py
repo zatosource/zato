@@ -1482,10 +1482,10 @@ class HL7:
         should_log_messages = False
 
         # An MLLP message may begin with these bytes ..
-        start_seq = '\\x0b'
+        start_seq = '0b'
 
         # .. and end with these below.
-        end_seq = '\\x1c\\x0d'
+        end_seq = '1c 0d'
 
     class Const:
         """ Various HL7-related constants.
