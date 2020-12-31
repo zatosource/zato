@@ -353,7 +353,7 @@
 
                         <tr>
                             <td style="vertical-align:middle;width:17%">
-                                <label for="id_edit-name">
+                                <label for="id_name">
                                 Name
                                 </label>
                             </td>
@@ -379,15 +379,90 @@
                                 |
 
                                 <label>
-                                TCP port
+                                Address
                                 {{ edit_form.address }}
+                                </label>
+
+                            </td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>
+
+                                <label>
+                                Return errors
+                                {{ edit_form.should_return_errors }}
                                 </label>
 
                                 |
 
                                 <label>
-                                Return errors
-                                {{ edit_form.should_return_errors }}
+                                Log I/O
+                                {{ edit_form.should_log_messages }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Encoding
+                                {{ edit_form.data_encoding }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td></td>
+                            <td>
+
+                                <label>
+                                Recv. tmt.
+                                {{ edit_form.recv_timeout }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Log level
+                                {{ edit_form.logging_level }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>Max. size</td>
+                            <td>
+
+                                <label>
+                                Message
+                                {{ edit_form.max_msg_size }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Read buffer
+                                {{ edit_form.read_buffer_size }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>Separator</td>
+                            <td>
+
+                                <label>
+                                Start
+                                {{ edit_form.start_seq }}
+                                </label>
+
+                                |
+
+                                <label>
+                                End
+                                {{ edit_form.end_seq }}
                                 </label>
 
                             </td>
@@ -395,7 +470,7 @@
 
                         <tr>
                             <td style="vertical-align:middle;width:12%">
-                                <label for="id_edit-service">
+                                <label for="id_service">
                                 Service
                                 </label>
                             </td>

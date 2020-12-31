@@ -258,7 +258,7 @@ class AuditLog:
         # .. so we can now try to delete that container by its object's ID.
         # Note that we use .pop on purpose - e.g. when a server has just started,
         # it may not have any such an object yet but the user may already try to edit
-        # the object this log is attached to already. Using .pop ignores non-existing keys.
+        # the object this log is attached to. Using .pop ignores non-existing keys.
         container_dict.pop(object_id, None)
 
 # ################################################################################################################################
