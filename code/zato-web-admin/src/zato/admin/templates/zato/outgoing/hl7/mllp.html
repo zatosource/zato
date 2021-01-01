@@ -37,6 +37,7 @@
             {% comment %} 2 {% endcomment %}
             'address',
             '_audit_log',
+            '_invoke',
 
             {% comment %} 3 {% endcomment %}
             '_edit',
@@ -70,7 +71,7 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% with has_generic="1" generic_type="outgoing-hl7-mllp" %}
+{% with has_generic="1" generic_type="outconn-hl7-mllp" %}
     {% include "zato/search-form.html" with page_prompt="Show connections"%}
 {% endwith %}
 
@@ -94,6 +95,7 @@
                         {% comment %} 2 {% endcomment %}
                         <th><a href="#">Address</a></th>
                         <th>Message log</th>
+                        <th></th>
 
                         {% comment %} 3 {% endcomment %}
                         <th>&nbsp;</th>
@@ -129,7 +131,10 @@
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.address }}</td>
                         <td>
-                            <a href="{% url "audit-log" "outgoing-hl7-mllp" item.id %}?cluster={{ cluster_id }}&amp;object_name={{ item.name }}&amp;object_type_label=Channel&nbsp;HL7&nbsp;MLLP">View</a>
+                            <a href="{% url "audit-log" "outconn-hl7-mllp" item.id %}?cluster={{ cluster_id }}&amp;object_name={{ item.name }}&amp;object_type_label=HL7&nbsp;MLLP&nbsp;outgoing&nbsp;connection">View</a>
+                        </td>
+                        <td>
+                            <a href="{% url "outgoing-hl7-mllp-invoke" item.id item.name item.name|slugify %}?cluster={{ cluster_id }}">Invoke</a>
                         </td>
 
                         {% comment %} 3 {% endcomment %}
@@ -191,15 +196,11 @@
                                 |
 
                                 <label>
-                                Address
-                                {{ create_form.address }}
+                                Pool size
+                                {{ create_form.pool_size }}
                                 </label>
 
-                            </td>
-                        </tr>
-                        <tr>
-                            <td></td>
-                            <td>
+                                |
 
                                 <label>
                                 Log I/O
@@ -209,10 +210,20 @@
                                 |
 
                                 <label>
-                                Receive timeout
-                                {{ create_form.recv_timeout }}
+                                Timeout
+                                <span class="form_hint">(s)</span>
+                                {{ create_form.max_wait_time }}
                                 </label>
 
+                            </tr>
+                        <tr>
+                            <td>
+                                <label for="id_address">
+                                Address
+                                </label>
+                            </td>
+                            <td>
+                                {{ create_form.address }}
                             </td>
                         </tr>
 

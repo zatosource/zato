@@ -95,7 +95,7 @@ class ConnectionQueue(object):
             else:
                 self.queue.put(client)
                 is_accepted = True
-                msg = 'Added `%s` client to %s (%s)'
+                msg = 'Added `%s` client to `%s` (%s)'
                 log_func = self.logger.info
 
             log_func(msg, self.conn_name, self.address, self.conn_type)

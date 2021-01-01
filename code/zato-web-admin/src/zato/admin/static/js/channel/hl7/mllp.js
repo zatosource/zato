@@ -65,7 +65,7 @@ $.fn.zato.channel.hl7.mllp.data_table.new_row = function(item, data, include_tr)
     row += String.format('<td>{0}</td>', item.hl7_version);
 
     // 2
-    row += String.format('<td>{0}</td>', item.tcp_port);
+    row += String.format('<td>{0}</td>', item.address);
     row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(item.service, cluster_id));
     row += String.format('<td><a href="/zato/audit-log/channel-hl7-mllp/{0}/?cluster={1}&amp;object_name={2}&amp;object_type_label={3}">View</a></td>',
         item.id, cluster_id, item.name, 'Channel&nbsp;HL7&nbsp;MLLP');
