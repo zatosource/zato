@@ -6,15 +6,12 @@ Copyright (C) Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-import logging
-
 # Django
 from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.forms.outgoing.hl7.mllp import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, invoke_action_handler, method_allowed
 from zato.common.api import GENERIC, generic_attrs, HL7
 from zato.common.model import HL7ConfigObject
 
@@ -104,6 +101,7 @@ def invoke(req, conn_id, conn_name, conn_slug):
         'conn_id': conn_id,
         'conn_name': conn_name,
         'conn_slug': conn_slug,
+        'max_wait_time': HL7.Default.max_wait_time,
         'cluster_id': req.zato.cluster_id,
     }
 

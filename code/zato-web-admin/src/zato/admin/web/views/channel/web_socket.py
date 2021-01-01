@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,10 +10,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from traceback import format_exc
 
 # Django
-from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 
 # Zato
@@ -21,7 +19,6 @@ from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.channel.web_socket import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, invoke_action_handler, method_allowed
 from zato.common.api import AuditLog, ZATO_NONE
-from zato.common.json_internal import dumps
 from zato.common.odb.model import ChannelWebSocket
 
 # ################################################################################################################################
