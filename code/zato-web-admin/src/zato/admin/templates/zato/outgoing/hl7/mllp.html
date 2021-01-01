@@ -1,7 +1,7 @@
 {% extends "zato/index.html" %}
 {% load extras %}
 
-{% block html_title %}HL7 MLLP Channels{% endblock %}
+{% block html_title %}HL7 MLLP outconns{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -22,7 +22,7 @@
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/javascript" src="/static/js/channel/hl7/mllp.js"></script>
+    <script type="text/javascript" src="/static/js/outgoing/hl7/mllp.js"></script>
 
     <script>
     $.fn.zato.data_table.get_columns = function() {
@@ -33,11 +33,9 @@
             {% comment %} 1 {% endcomment %}
             'name',
             '_is_active',
-            'hl7_version',
 
             {% comment %} 2 {% endcomment %}
             'address',
-            '_service',
             '_audit_log',
 
             {% comment %} 3 {% endcomment %}
@@ -47,22 +45,13 @@
 
             {% comment %} 4 {% endcomment %}
             'is_active',
-            'service',
 
             {% comment %} 5 {% endcomment %}
-            'should_parse_on_input',
-            'should_validate',
-
-            {% comment %} 6 {% endcomment %}
-            'data_encoding',
-            'should_return_errors',
-
-            {% comment %} 7 {% endcomment %}
             'is_audit_log_sent_active',
             'is_audit_log_received_active',
             'max_len_messages_sent',
 
-            {% comment %} 8 {% endcomment %}
+            {% comment %} 6 {% endcomment %}
             'max_len_messages_received',
             'max_bytes_per_message_sent',
             'max_bytes_per_message_received',
@@ -73,7 +62,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">HL7 MLLP channels</h2>
+<h2 class="zato">HL7 MLLP outgoing connections</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -81,13 +70,13 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% with has_generic="1" generic_type="channel-hl7-mllp" %}
-    {% include "zato/search-form.html" with page_prompt="Show channels"%}
+{% with has_generic="1" generic_type="outgoing-hl7-mllp" %}
+    {% include "zato/search-form.html" with page_prompt="Show connections"%}
 {% endwith %}
 
     {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.channel.hl7.mllp.create()">Create a new channel</a>
+            <a href="javascript:$.fn.zato.outgoing.hl7.mllp.create()">Create a new connection</a>
         </div>
 
 
@@ -101,11 +90,9 @@
                         {% comment %} 1 {% endcomment %}
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
-                        <th><a href="#">Version</a></th>
 
                         {% comment %} 2 {% endcomment %}
                         <th><a href="#">Address</a></th>
-                        <th><a href="#">Service</a></th>
                         <th>Message log</th>
 
                         {% comment %} 3 {% endcomment %}
@@ -115,22 +102,13 @@
 
                         {% comment %} 4 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
 
                         {% comment %} 5 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                         {% comment %} 6 {% endcomment %}
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
-                        {% comment %} 7 {% endcomment %}
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
-                        {% comment %} 8 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -147,38 +125,27 @@
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.hl7_version }}</td>
 
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.address }}</td>
-                        <td><a href="{% url "service-overview" item.service %}?cluster={{ cluster_id }}">{{ item.service }}</a></td>
                         <td>
-                            <a href="{% url "audit-log" "channel-hl7-mllp" item.id %}?cluster={{ cluster_id }}&amp;object_name={{ item.name }}&amp;object_type_label=Channel&nbsp;HL7&nbsp;MLLP">View</a>
+                            <a href="{% url "audit-log" "outgoing-hl7-mllp" item.id %}?cluster={{ cluster_id }}&amp;object_name={{ item.name }}&amp;object_type_label=Channel&nbsp;HL7&nbsp;MLLP">View</a>
                         </td>
 
                         {% comment %} 3 {% endcomment %}
-                        <td><a href="javascript:$.fn.zato.channel.hl7.mllp.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.channel.hl7.mllp.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.hl7.mllp.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.hl7.mllp.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
 
                         {% comment %} 4 {% endcomment %}
                         <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.service }}</td>
 
                         {% comment %} 5 {% endcomment %}
-                        <td class='ignore'>{{ item.should_parse_on_input }}</td>
-                        <td class='ignore'>{{ item.should_validate }}</td>
-
-                        {% comment %} 6 {% endcomment %}
-                        <td class='ignore'>{{ item.data_encoding }}</td>
-                        <td class='ignore'>{{ item.should_return_errors }}</td>
-
-                        {% comment %} 7 {% endcomment %}
                         <td class='ignore'>{{ item.is_audit_log_sent_active }}</td>
                         <td class='ignore'>{{ item.is_audit_log_received_active }}</td>
                         <td class='ignore'>{{ item.max_len_messages_sent|default:"" }}</td>
 
-                        {% comment %} 8 {% endcomment %}
+                        {% comment %} 6 {% endcomment %}
                         <td class='ignore'>{{ item.max_len_messages_received|default:"" }}</td>
                         <td class='ignore'>{{ item.max_bytes_per_message_sent|default:"" }}</td>
                         <td class='ignore'>{{ item.max_bytes_per_message_received|default:"" }}</td>
@@ -199,7 +166,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "channel-hl7-mllp-create" %}" method="post" id="create-form">
+                <form action="{% url "outgoing-hl7-mllp-create" %}" method="post" id="create-form">
 
                     <table class="form-data">
 
@@ -224,13 +191,6 @@
                                 |
 
                                 <label>
-                                Ver.
-                                {{ create_form.hl7_version }}
-                                </label>
-
-                                |
-
-                                <label>
                                 Address
                                 {{ create_form.address }}
                                 </label>
@@ -242,13 +202,6 @@
                             <td>
 
                                 <label>
-                                Return errors
-                                {{ create_form.should_return_errors }}
-                                </label>
-
-                                |
-
-                                <label>
                                 Log I/O
                                 {{ create_form.should_log_messages }}
                                 </label>
@@ -256,27 +209,8 @@
                                 |
 
                                 <label>
-                                Encoding
-                                {{ create_form.data_encoding }}
-                                </label>
-
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td></td>
-                            <td>
-
-                                <label>
-                                Recv. tmt.
+                                Receive timeout
                                 {{ create_form.recv_timeout }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Log level
-                                {{ create_form.logging_level }}
                                 </label>
 
                             </td>
@@ -320,15 +254,6 @@
                             </td>
                         </tr>
 
-                        <tr>
-                            <td style="vertical-align:middle;width:12%">
-                                <label for="id_service">
-                                Service
-                                </label>
-                            </td>
-                            <td>{{ create_form.service }}</td>
-                        </tr>
-
                         {% include "zato/include/audit-log/create.html" %}
 
                         <tr>
@@ -347,7 +272,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "channel-hl7-mllp-edit" %}" method="post" id="edit-form">
+                <form action="{% url "outgoing-hl7-mllp-edit" %}" method="post" id="edit-form">
 
                     <table class="form-data">
 

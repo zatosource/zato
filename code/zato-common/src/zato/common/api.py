@@ -1196,6 +1196,7 @@ class GENERIC:
             CHANNEL_HL7_MLLP = 'channel-hl7-mllp'
             CLOUD_DROPBOX = 'cloud-dropbox'
             DEF_KAFKA = 'def-kafka'
+            OUTCONN_HL7_MLLP = 'outconn-hl7-mllp'
             OUTCONN_IM_SLACK = 'outconn-im-slack'
             OUTCONN_IM_TELEGRAM = 'outconn-im-telegram'
             OUTCONN_LDAP = 'outconn-ldap'
