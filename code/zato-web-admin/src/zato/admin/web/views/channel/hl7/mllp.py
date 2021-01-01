@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from zato.admin.web.forms.channel.hl7.mllp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.common.api import GENERIC, generic_attrs, HL7
-from zato.common.model import HL7Channel
+from zato.common.model import HL7ConfigObject
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -22,7 +22,7 @@ class Index(_Index):
     url_name = 'channel-hl7-mllp'
     template = 'zato/channel/hl7/mllp.html'
     service_name = 'zato.generic.connection.get-list'
-    output_class = HL7Channel
+    output_class = HL7ConfigObject
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):

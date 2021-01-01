@@ -11,14 +11,9 @@ import logging
 
 # Zato
 from zato.admin.web.forms.outgoing.hl7.mllp import CreateForm, EditForm
-from zato.admin.web.views import get_security_id_from_select, CreateEdit, Delete as _Delete, Index as _Index, \
-     invoke_action_handler, method_allowed, SecurityList
-from zato.common.odb.model import AWSS3
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-logger = logging.getLogger(__name__)
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
+from zato.common.api import GENERIC, generic_attrs, HL7
+from zato.common.model import HL7ConfigObject
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,26 +22,22 @@ class Index(_Index):
     method_allowed = 'GET'
     url_name = 'outgoing-hl7-mllp'
     template = 'zato/outgoing/hl7/mllp.html'
-    service_name = 'zato.outgoing.hl7.mllp.get-list'
-    output_class = AWSS3
+    service_name = 'zato.generic.connection.get-list'
+    output_class = HL7ConfigObject
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'pool_size', 'address', 'debug_level', 'suppr_cons_slashes',
-            'content_type', 'security_id', 'encrypt_at_rest', 'storage_class')
-        output_optional = ('metadata_', 'bucket')
+        input_required = 'cluster_id', 'type_'
+        output_required = 'id', 'name', 'is_active', 'is_internal', 'security_name', 'address'
+        output_optional = generic_attrs
         output_repeated = True
 
-    def handle(self):
-        if self.req.zato.cluster_id:
-            sec_list = SecurityList.from_service(self.req.zato.client, self.req.zato.cluster.id, ['aws'])
-        else:
-            sec_list = []
+# ################################################################################################################################
 
+    def handle(self):
         return {
-            'create_form': CreateForm(sec_list),
-            'edit_form': EditForm(sec_list, prefix='edit'),
+            'create_form': CreateForm(),
+            'edit_form': EditForm(prefix='edit'),
         }
 
 # ################################################################################################################################
@@ -56,23 +47,32 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('cluster_id', 'name', 'is_active', 'pool_size', 'address', 'debug_level', 'suppr_cons_slashes',
-            'content_type', 'security_id', 'encrypt_at_rest', 'storage_class')
-        input_optional = ('metadata_', 'bucket')
-        output_required = ('id', 'name')
+        input_required = 'name', 'is_internal', 'address'
+        input_optional = ('is_active',) + generic_attrs
+        output_required = 'id', 'name'
 
-    def on_after_set_input(self):
-        self.input_dict['security_id'] = get_security_id_from_select(self.input, '', 'security_id')
+# ################################################################################################################################
+
+    def populate_initial_input_dict(self, initial_input_dict):
+        initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP
+        initial_input_dict['is_internal'] = False
+        initial_input_dict['is_channel'] = False
+        initial_input_dict['is_outgoing'] = True
+        initial_input_dict['is_outconn'] = False
+        initial_input_dict['sec_use_rbac'] = False
+        initial_input_dict['pool_size'] = 100
+
+# ################################################################################################################################
 
     def success_message(self, item):
-        return 'HL7 MLLP connection `{}` {} successfully'.format(item.name, self.verb)
+        return 'Successfully {} HL7 MLLP outgoing connection `{}`'.format(self.verb, item.name)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Create(_CreateEdit):
     url_name = 'outgoing-hl7-mllp-create'
-    service_name = 'zato.outgoing.hl7.mllp.create'
+    service_name = 'zato.generic.connection.create'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -80,23 +80,22 @@ class Create(_CreateEdit):
 class Edit(_CreateEdit):
     url_name = 'outgoing-hl7-mllp-edit'
     form_prefix = 'edit-'
-    service_name = 'zato.outgoing.hl7.mllp.edit'
+    service_name = 'zato.generic.connection.edit'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Delete(_Delete):
     url_name = 'outgoing-hl7-mllp-delete'
-    error_message = 'HL7 MLLP connection could not be deleted'
-    service_name = 'zato.outgoing.hl7.mllp.delete'
+    error_message = 'Could not delete HL7 MLLP outgoing connection'
+    service_name = 'zato.generic.connection.delete'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# ################################################################################################################################
 
 @method_allowed('GET')
-def invoke(req, conn_id, pub_client_id, ext_client_id, ext_client_name, channel_id, channel_name):
+def invoke(req, conn_id, pub_client_id, ext_client_id, ext_client_name, outgoing_id, outgoing_name):
 
     return_data = {
         'conn_id': conn_id,
@@ -104,8 +103,8 @@ def invoke(req, conn_id, pub_client_id, ext_client_id, ext_client_name, channel_
         'pub_client_id_html': pub_client_id.replace('.', '-'),
         'ext_client_id': ext_client_id,
         'ext_client_name': ext_client_name,
-        'channel_id': channel_id,
-        'channel_name': channel_name,
+        'outgoing_id': outgoing_id,
+        'outgoing_name': outgoing_name,
         'cluster_id': req.zato.cluster_id,
     }
 
