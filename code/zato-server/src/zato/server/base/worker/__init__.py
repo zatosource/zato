@@ -85,6 +85,7 @@ from zato.server.generic.api.channel_file_transfer import ChannelFileTransferWra
 from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper
 from zato.server.generic.api.cloud_dropbox import CloudDropbox
 from zato.server.generic.api.def_kafka import DefKafkaWrapper
+from zato.server.generic.api.outconn_hl7_mllp import OutconnHL7MLLPWrapper
 from zato.server.generic.api.outconn_im_slack import OutconnIMSlackWrapper
 from zato.server.generic.api.outconn_im_telegram import OutconnIMTelegramWrapper
 from zato.server.generic.api.outconn_ldap import OutconnLDAPWrapper
@@ -200,11 +201,24 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Generic connections - File transfer channels
         self.channel_file_transfer = {}
 
-        # Generic connections - HL7 MLLP
+        # Generic connections - HL7 MLLP channels
         self.channel_hl7_mllp = {}
+
+
+        # Generic connections - Cloud - Dropbox
+        self.cloud_dropbox = {}
 
         # Generic connections - Kafka definitions
         self.def_kafka = {}
+
+        # Generic connections - HL7 MLLP outconns
+        self.outconn_hl7_mllp = {}
+
+        # Generic connections - IM Slack
+        self.outconn_im_slack = {}
+
+        # Generic connections - IM Telegram
+        self.outconn_im_telegram = {}
 
         # Generic connections - LDAP outconns
         self.outconn_ldap = {}
@@ -214,15 +228,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Generic connections - WSX outconns
         self.outconn_wsx = {}
-
-        # Generic connections - IM Slack
-        self.outconn_im_slack = {}
-
-        # Generic connections - IM Telegram
-        self.outconn_im_telegram = {}
-
-        # Generic connections - Cloud - Dropbox
-        self.cloud_dropbox = {}
 
 # ################################################################################################################################
 
@@ -278,6 +283,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: self.channel_hl7_mllp,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX: self.cloud_dropbox,
             COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: self.def_kafka,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: self.outconn_hl7_mllp,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK: self.outconn_im_slack,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_TELEGRAM: self.outconn_im_telegram,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: self.outconn_ldap,
@@ -290,6 +296,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: ChannelHL7MLLPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX: CloudDropbox,
             COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: DefKafkaWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: OutconnHL7MLLPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK: OutconnIMSlackWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_TELEGRAM: OutconnIMTelegramWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: OutconnLDAPWrapper,
@@ -1105,6 +1112,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP, {})
         cloud_dropbox_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX, {})
         def_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA, {})
+        outconn_hl7_mllp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP, {})
         outconn_im_slack_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK, {})
         outconn_im_telegram_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_TELEGRAM, {})
         outconn_ldap_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP, {})
@@ -1118,7 +1126,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             channel_hl7_mllp_map,
             cloud_dropbox_map,
             def_kafka_map,
+            outconn_hl7_mllp_map,
             outconn_im_slack_map,
+            outconn_im_telegram_map,
             outconn_im_telegram_map,
             outconn_ldap_map,
             outconn_mongodb_map,

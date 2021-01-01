@@ -742,9 +742,9 @@ urlpatterns += [
         login_required(outgoing_hl7_mllp.Delete()), name=outgoing_hl7_mllp.Delete.url_name),
 
     url(r'^zato/outgoing/hl7/mllp/invoke/action/$',
-        login_required(outgoing_hl7_mllp.invoke_action), name='outgoing-hl7-mllp-action'),
+        login_required(outgoing_hl7_mllp.invoke_action), name='outgoing-hl7-mllp-invoke-action'),
 
-    url(r'^zato/outgoing/hl7/mllp/invoke/(?P<conn_id>.*)/$',
+    url(r'^zato/outgoing/hl7/mllp/invoke/(?P<conn_id>.*)/(?P<conn_name>.*)/(?P<conn_slug>.*)/$',
         login_required(outgoing_hl7_mllp.invoke), name='outgoing-hl7-mllp-invoke'),
 
     ]
