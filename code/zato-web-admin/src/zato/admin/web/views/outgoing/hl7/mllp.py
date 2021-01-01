@@ -9,6 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 
+# Django
+from django.template.response import TemplateResponse
+
 # Zato
 from zato.admin.web.forms.outgoing.hl7.mllp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
@@ -28,7 +31,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id', 'type_'
-        output_required = 'id', 'name', 'is_active', 'is_internal', 'security_name', 'address'
+        output_required = 'id', 'name', 'is_active', 'is_internal', 'security_name', 'address', 'pool_size'
         output_optional = generic_attrs
         output_repeated = True
 
@@ -48,7 +51,7 @@ class _CreateEdit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'name', 'is_internal', 'address'
-        input_optional = ('is_active',) + generic_attrs
+        input_optional = ('is_active', 'pool_size') + generic_attrs
         output_required = 'id', 'name'
 
 # ################################################################################################################################
@@ -60,7 +63,7 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['is_outgoing'] = True
         initial_input_dict['is_outconn'] = False
         initial_input_dict['sec_use_rbac'] = False
-        initial_input_dict['pool_size'] = 100
+        initial_input_dict['recv_timeout'] = False
 
 # ################################################################################################################################
 
@@ -95,20 +98,16 @@ class Delete(_Delete):
 
 
 @method_allowed('GET')
-def invoke(req, conn_id, pub_client_id, ext_client_id, ext_client_name, outgoing_id, outgoing_name):
+def invoke(req, conn_id, conn_name, conn_slug):
 
     return_data = {
         'conn_id': conn_id,
-        'pub_client_id': pub_client_id,
-        'pub_client_id_html': pub_client_id.replace('.', '-'),
-        'ext_client_id': ext_client_id,
-        'ext_client_name': ext_client_name,
-        'outgoing_id': outgoing_id,
-        'outgoing_name': outgoing_name,
+        'conn_name': conn_name,
+        'conn_slug': conn_slug,
         'cluster_id': req.zato.cluster_id,
     }
 
-    return TemplateResponse(req, 'zato/outgoing/hl7/mllp.html', return_data)
+    return TemplateResponse(req, 'zato/outgoing/hl7/mllp-invoke.html', return_data)
 
 # ################################################################################################################################
 

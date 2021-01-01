@@ -1485,6 +1485,9 @@ class HL7:
         # Should we store the contents of messages in logs (Python logging)
         should_log_messages = False
 
+        # How many concurrent outgoing connections we allow
+        pool_size = 10
+
         # An MLLP message may begin with these bytes ..
         start_seq = '0b'
 

@@ -22,7 +22,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 class _HL7MLLPConnection(object):
-    def __init__(self, **kwargs):
+    def __init__(self, config):
         '''
         self.impl = HL7MLLPClient(config)
         '''
@@ -31,16 +31,19 @@ class _HL7MLLPConnection(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class HL7MLLPWrapper(Wrapper):
+class OutconnHL7MLLPWrapper(Wrapper):
     """ Wraps a queue of connections to HL7 MLLP servers.
     """
     def __init__(self, config, server):
         config.auth_url = config.address
-        super(HL7MLLPWrapper, self).__init__(config, 'HL7 MLLP', server)
+        super(OutconnHL7MLLPWrapper, self).__init__(config, 'HL7 MLLP', server)
 
     def add_client(self):
         conn = _HL7MLLPConnection(self.config)
         self.client.put_client(conn)
+
+    def delete(self, ignored_reason):
+        pass
 
 # ################################################################################################################################
 # ################################################################################################################################
