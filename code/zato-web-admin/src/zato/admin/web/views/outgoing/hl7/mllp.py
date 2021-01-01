@@ -6,23 +6,28 @@ Copyright (C) Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 import logging
 
 # Zato
-from zato.admin.web.forms.cloud.aws.s3 import CreateForm, EditForm
-from zato.admin.web.views import get_security_id_from_select, CreateEdit, Delete as _Delete, Index as _Index, SecurityList
+from zato.admin.web.forms.outgoing.hl7.mllp import CreateForm, EditForm
+from zato.admin.web.views import get_security_id_from_select, CreateEdit, Delete as _Delete, Index as _Index, \
+     invoke_action_handler, method_allowed, SecurityList
 from zato.common.odb.model import AWSS3
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Index(_Index):
     method_allowed = 'GET'
-    url_name = 'cloud-aws-s3'
-    template = 'zato/cloud/aws/s3.html'
-    service_name = 'zato.cloud.aws.s3.get-list'
+    url_name = 'outgoing-hl7-mllp'
+    template = 'zato/outgoing/hl7/mllp.html'
+    service_name = 'zato.outgoing.hl7.mllp.get-list'
     output_class = AWSS3
     paginate = True
 
@@ -60,30 +65,56 @@ class _CreateEdit(CreateEdit):
         self.input_dict['security_id'] = get_security_id_from_select(self.input, '', 'security_id')
 
     def success_message(self, item):
-        return 'AWS S3 connection `{}` {} successfully'.format(item.name, self.verb)
+        return 'HL7 MLLP connection `{}` {} successfully'.format(item.name, self.verb)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Create(_CreateEdit):
-    url_name = 'cloud-aws-s3-create'
-    service_name = 'zato.cloud.aws.s3.create'
+    url_name = 'outgoing-hl7-mllp-create'
+    service_name = 'zato.outgoing.hl7.mllp.create'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Edit(_CreateEdit):
-    url_name = 'cloud-aws-s3-edit'
+    url_name = 'outgoing-hl7-mllp-edit'
     form_prefix = 'edit-'
-    service_name = 'zato.cloud.aws.s3.edit'
+    service_name = 'zato.outgoing.hl7.mllp.edit'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Delete(_Delete):
-    url_name = 'cloud-aws-s3-delete'
-    error_message = 'AWS S3 connection could not be deleted'
-    service_name = 'zato.cloud.aws.s3.delete'
+    url_name = 'outgoing-hl7-mllp-delete'
+    error_message = 'HL7 MLLP connection could not be deleted'
+    service_name = 'zato.outgoing.hl7.mllp.delete'
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+# ################################################################################################################################
+
+@method_allowed('GET')
+def invoke(req, conn_id, pub_client_id, ext_client_id, ext_client_name, channel_id, channel_name):
+
+    return_data = {
+        'conn_id': conn_id,
+        'pub_client_id': pub_client_id,
+        'pub_client_id_html': pub_client_id.replace('.', '-'),
+        'ext_client_id': ext_client_id,
+        'ext_client_name': ext_client_name,
+        'channel_id': channel_id,
+        'channel_name': channel_name,
+        'cluster_id': req.zato.cluster_id,
+    }
+
+    return TemplateResponse(req, 'zato/outgoing/hl7/mllp.html', return_data)
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def invoke_action(req, pub_client_id):
+    return invoke_action_handler(req, 'zato.outgoing.hl7.mllp.invoke', ('id', 'pub_client_id', 'request_data', 'timeout'))
+
 # ################################################################################################################################

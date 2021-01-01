@@ -70,7 +70,9 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
                 'max_msg_size': self.config.max_msg_size,
                 'read_buffer_size': self.config.read_buffer_size,
-                'recv_timeout': self.config.recv_timeout,
+
+                # Convert to seconds from milliseconds
+                'recv_timeout': self.config.recv_timeout / 100.0,
 
                 'logging_level': self.config.logging_level,
                 'should_log_messages': self.config.should_log_messages,

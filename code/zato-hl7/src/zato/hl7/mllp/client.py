@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import socket
 from logging import getLogger
+from traceback import format_exc
 
 # Bunch
 from bunch import bunchify
@@ -32,11 +33,11 @@ logger = getLogger('zato')
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Client:
+class HL7MLLPClient:
     """ An HL7 MLLP client for sending data to remote endpoints.
     """
-    __slots__ = 'config', 'name', 'address', 'max_wait_time', 'max_msg_size', 'should_log_messages', \
-        'start_seq', 'end_seq', 'host', 'port', 'reader'
+    __slots__ = 'config', 'name', 'address', 'max_wait_time', 'max_msg_size', 'read_buffer_size', 'recv_timeout', \
+        'should_log_messages', 'start_seq', 'end_seq', 'host', 'port', 'reader'
 
     def __init__(self, config):
         # type: (Bunch) -> None
@@ -45,6 +46,8 @@ class Client:
         self.address = config.address
         self.max_wait_time = config.max_wait_time # type: float
         self.max_msg_size = config.max_msg_size # type: int
+        self.read_buffer_size = config.read_buffer_size # type: int
+        self.recv_timeout = config.recv_timeout # type: int
         self.should_log_messages = config.should_log_messages # type: bool
 
         self.start_seq = config.start_seq
@@ -55,47 +58,55 @@ class Client:
     def send(self, data):
         # type: (bytes) -> bytes
 
-        # Wrap the message in an MLLP envelope
-        msg = self.start_seq + data + self.end_seq
+        try:
 
-        # This will auto-close the socket ..
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            # Wrap the message in an MLLP envelope
+            msg = self.start_seq + data + self.end_seq
 
-            # .. connect to the remote end ..
-            sock.connect((self.host, self.port))
+            # This will auto-close the socket ..
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
 
-            # .. send our data ..
-            sock.send(msg)
+                # .. connect to the remote end ..
+                sock.connect((self.host, self.port))
 
-            # .. encapsulate configuration for our socket reader function ..
-            ctx = SocketReaderCtx(
-                new_cid(),
-                sock,
-                self.max_wait_time,
-                self.max_msg_size,
-                2048,
-                0.1,
-                self.should_log_messages
-            )
+                # .. send our data ..
+                sock.send(msg)
 
-            # .. wait for the response ..
-            response = read_from_socket(ctx)
+                # .. encapsulate configuration for our socket reader function ..
+                ctx = SocketReaderCtx(
+                    new_cid(),
+                    sock,
+                    self.max_wait_time,
+                    self.max_msg_size,
+                    self.read_buffer_size,
+                    self.recv_timeout,
+                    self.should_log_messages
+                )
 
-            if self.should_log_messages:
-                logger.info('Response received `%s`', response)
+                # .. wait for the response ..
+                response = read_from_socket(ctx)
 
-            return response
+                if self.should_log_messages:
+                    logger.info('Response received `%s`', response)
+
+                return response
+
+        except Exception:
+            logger.warn('Client caught an exception while sending HL7 MLLP data to `%s (%s)`; e:`%s`',
+                self.name, self.address, format_exc())
+            raise
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def send_data(address, data):
-    """ Sends input data to a remote address.
+def send_data(data, config):
+    """ Sends input data to a remote address by its configuration.
     """
-    # type: (bytes, str) -> bytes
+    # type: (bytes, dict) -> bytes
 
+    '''
     config = bunchify({
-        'name': 'My Client',
+        'name': 'My HL7MLLPClient',
         'address': address,
         'start_seq': b'\x0b',
         'end_seq': b'\x1c\x0d',
@@ -103,11 +114,11 @@ def send_data(address, data):
         'max_msg_size': 2_000_000,
         'read_buffer_size': 2048,
         'recv_timeout': 0.25,
-        'logging_level': 'INFO',
         'should_log_messages': True,
     })
+    '''
 
-    client = Client(config)
+    client = HL7MLLPClient(config)
     response = client.send(data)
 
     return response

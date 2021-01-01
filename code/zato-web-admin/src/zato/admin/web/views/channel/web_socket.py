@@ -19,7 +19,7 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.channel.web_socket import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, invoke_action_handler, method_allowed
 from zato.common.api import AuditLog, ZATO_NONE
 from zato.common.json_internal import dumps
 from zato.common.odb.model import ChannelWebSocket
@@ -245,28 +245,7 @@ def invoke(req, conn_id, pub_client_id, ext_client_id, ext_client_name, channel_
 # ################################################################################################################################
 
 @method_allowed('POST')
-def invoke_action(req, pub_client_id, send_attrs=('id', 'pub_client_id', 'request_data', 'timeout')):
-
-    try:
-        request = {
-            'cluster_id': req.zato.cluster_id
-        }
-
-        for name in send_attrs:
-            request[name] = req.POST.get(name, '')
-
-        response = req.zato.client.invoke('zato.channel.web-socket.invoke-wsx', request)
-
-        if response.ok:
-            response_data = response.data['response_data']
-            if isinstance(response_data, dict):
-                response_data = dict(response_data)
-            return HttpResponse(dumps(response_data), content_type='application/javascript')
-        else:
-            raise Exception(response.details)
-    except Exception:
-        msg = 'Caught an exception, e:`{}`'.format(format_exc())
-        logger.error(msg)
-        return HttpResponseServerError(msg)
+def invoke_action(req, pub_client_id):
+    return invoke_action_handler(req, 'zato.channel.web-socket.invoke-wsx', ('id', 'pub_client_id', 'request_data', 'timeout'))
 
 # ################################################################################################################################

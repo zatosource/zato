@@ -44,6 +44,7 @@ from zato.admin.web.views.notif.cloud.openstack import swift as notif_cloud_open
 from zato.admin.web.views.notif import sql as notif_sql
 from zato.admin.web.views.outgoing import amqp_ as out_amqp
 from zato.admin.web.views.outgoing import ftp as out_ftp
+from zato.admin.web.views.outgoing.hl7 import mllp as outgoing_hl7_mllp
 from zato.admin.web.views.outgoing.im import slack as out_im_slack
 from zato.admin.web.views.outgoing.im import telegram as out_im_telegram
 from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
@@ -723,6 +724,29 @@ urlpatterns += [
         login_required(out_ftp.Delete()), name=out_ftp.Delete.url_name),
     url(r'^zato/outgoing/ftp/change-password/$',
         login_required(out_ftp.change_password), name='out-ftp-change-password'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. HL7 - MLLP
+
+    url(r'^zato/outgoing/hl7/mllp/$',
+        login_required(outgoing_hl7_mllp.Index()), name=outgoing_hl7_mllp.Index.url_name),
+    url(r'^zato/outgoing/hl7/mllp/create/$',
+        login_required(outgoing_hl7_mllp.Create()), name=outgoing_hl7_mllp.Create.url_name),
+    url(r'^zato/outgoing/hl7/mllp/edit/$',
+        login_required(outgoing_hl7_mllp.Edit()), name=outgoing_hl7_mllp.Edit.url_name),
+    url(r'^zato/outgoing/hl7/mllp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(outgoing_hl7_mllp.Delete()), name=outgoing_hl7_mllp.Delete.url_name),
+
+    url(r'^zato/outgoing/hl7/mllp/invoke/action/$',
+        login_required(outgoing_hl7_mllp.invoke_action), name='outgoing-hl7-mllp-action'),
+
+    url(r'^zato/outgoing/hl7/mllp/invoke/(?P<conn_id>.*)/$',
+        login_required(outgoing_hl7_mllp.invoke), name='outgoing-hl7-mllp-invoke'),
+
     ]
 
 # ################################################################################################################################
