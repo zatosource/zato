@@ -1469,10 +1469,13 @@ class HL7:
         # Each message may be of at most that many bytes
         max_msg_size = '1_000_000'
 
+        # How many seconds to wait for HL7 MLLP responses when invoking a remote end
+        max_wait_time = 60
+
         # At most that many bytes will be read from a socket at a time
         read_buffer_size = 2048
 
-        # We wait at most that many seconds for data from a socket in each iteration of the main loop
+        # We wait at most that many milliseconds for data from a socket in each iteration of the main loop
         recv_timeout = 250
 
         # At what level to log messages (Python logging)

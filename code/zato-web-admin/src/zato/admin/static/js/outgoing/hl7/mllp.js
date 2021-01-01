@@ -1,9 +1,9 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.data_table.AWSS3 = new Class({
+$.fn.zato.data_table.HL7MLLP = new Class({
     toString: function() {
-        var s = '<AWSS3 id:{0} name:{1} is_active:{2}>';
+        var s = '<HL7MLLP id:{0} name:{1} is_active:{2}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)',
                                 this.is_active ? this.is_active : '(none)'
@@ -15,21 +15,21 @@ $.fn.zato.data_table.AWSS3 = new Class({
 
 $(document).ready(function() {
     $('#data-table').tablesorter();
-    $.fn.zato.data_table.class_ = $.fn.zato.data_table.AWSS3;
-    $.fn.zato.data_table.new_row_func = $.fn.zato.cloud.aws.s3.data_table.new_row;
+    $.fn.zato.data_table.class_ = $.fn.zato.data_table.HL7MLLP;
+    $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.hl7.mllp.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'pool_size', 'debug_level', 'content_type', 'security_id', 'address', 'storage_class']);
 })
 
-$.fn.zato.cloud.aws.s3.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create a new AWS S3 connection', null);
+$.fn.zato.outgoing.hl7.mllp.create = function() {
+    $.fn.zato.data_table._create_edit('create', 'Create a new HL7 MLLP connection', null);
 }
 
-$.fn.zato.cloud.aws.s3.edit = function(id) {
-    $.fn.zato.data_table._create_edit('edit', 'Update the AWS S3 connection', id);
+$.fn.zato.outgoing.hl7.mllp.edit = function(id) {
+    $.fn.zato.data_table._create_edit('edit', 'Update the HL7 MLLP connection', id);
 }
 
-$.fn.zato.cloud.aws.s3.data_table.new_row = function(item, data, include_tr) {
+$.fn.zato.outgoing.hl7.mllp.data_table.new_row = function(item, data, include_tr) {
     var row = '';
 
     if(include_tr) {
@@ -53,8 +53,8 @@ $.fn.zato.cloud.aws.s3.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', bucket);
     row += String.format('<td>{0}</td>', item.content_type);
 
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.cloud.aws.s3.edit('{0}')\">Edit</a>", item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.cloud.aws.s3.delete_({0});'>Delete</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.hl7.mllp.edit('{0}')\">Edit</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.outgoing.hl7.mllp.delete_({0});'>Delete</a>", item.id));
 
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
@@ -74,9 +74,9 @@ $.fn.zato.cloud.aws.s3.data_table.new_row = function(item, data, include_tr) {
     return row;
 }
 
-$.fn.zato.cloud.aws.s3.delete_ = function(id) {
+$.fn.zato.outgoing.hl7.mllp.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'AWS S3 connection `{0}` deleted',
-        'Are you sure you want to delete the AWS S3 connection `{0}`?',
+        'HL7 MLLP connection `{0}` deleted',
+        'Are you sure you want to delete the HL7 MLLP connection `{0}`?',
         true);
 }
