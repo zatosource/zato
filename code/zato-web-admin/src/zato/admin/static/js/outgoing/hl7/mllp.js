@@ -60,11 +60,13 @@ $.fn.zato.outgoing.hl7.mllp.data_table.new_row = function(item, data, include_tr
     // 1
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
+    row += String.format('<td>{0}</td>', item.address);
 
     // 2
-    row += String.format('<td>{0}</td>', item.address);
+    row += String.format("<td class='ignore'>{0}</td>", item.pool_size);
     row += String.format('<td><a href="/zato/audit-log/outgoing-hl7-mllp/{0}/?cluster={1}&amp;object_name={2}&amp;object_type_label={3}">View</a></td>',
         item.id, cluster_id, item.name, 'HL7&nbsp;MLLP&nbsp;outgoing&nbsp;connection');
+    row += String.format('<td>{0}</td>', 'Invoke');
 
     // 3
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.hl7.mllp.edit('{0}')\">Edit</a>", item.id));
@@ -73,7 +75,6 @@ $.fn.zato.outgoing.hl7.mllp.data_table.new_row = function(item, data, include_tr
 
     // 4
     row += String.format("<td class='ignore'>{0}</td>", item.is_active);
-    row += String.format("<td class='ignore'>{0}</td>", item.pool_size);
 
     // 5
     row += String.format("<td class='ignore'>{0}</td>", item.is_audit_log_sent_active);

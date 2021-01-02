@@ -33,9 +33,10 @@
             {% comment %} 1 {% endcomment %}
             'name',
             '_is_active',
+            'address',
 
             {% comment %} 2 {% endcomment %}
-            'address',
+            'pool_size',
             '_audit_log',
             '_invoke',
 
@@ -91,9 +92,10 @@
                         {% comment %} 1 {% endcomment %}
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
+                        <th><a href="#">Address</a></th>
 
                         {% comment %} 2 {% endcomment %}
-                        <th><a href="#">Address</a></th>
+                        <th><a href="#">Pool size</a></th>
                         <th>Message log</th>
                         <th></th>
 
@@ -127,9 +129,10 @@
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.address }}</td>
 
                         {% comment %} 2 {% endcomment %}
-                        <td>{{ item.address }}</td>
+                        <td>{{ item.pool_size }}</td>
                         <td>
                             <a href="{% url "audit-log" "outconn-hl7-mllp" item.id %}?cluster={{ cluster_id }}&amp;object_name={{ item.name }}&amp;object_type_label=HL7&nbsp;MLLP&nbsp;outgoing&nbsp;connection">View</a>
                         </td>
@@ -308,26 +311,8 @@
                                 |
 
                                 <label>
-                                Ver.
-                                {{ edit_form.hl7_version }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Address
-                                {{ edit_form.address }}
-                                </label>
-
-                            </td>
-                        </tr>
-                        <tr>
-                            <td></td>
-                            <td>
-
-                                <label>
-                                Return errors
-                                {{ edit_form.should_return_errors }}
+                                Pool size
+                                {{ edit_form.pool_size }}
                                 </label>
 
                                 |
@@ -340,29 +325,20 @@
                                 |
 
                                 <label>
-                                Encoding
-                                {{ edit_form.data_encoding }}
+                                Timeout
+                                <span class="form_hint">(s)</span>
+                                {{ edit_form.max_wait_time }}
                                 </label>
 
-                            </td>
-                        </tr>
-
+                            </tr>
                         <tr>
-                            <td></td>
                             <td>
-
-                                <label>
-                                Recv. tmt.
-                                {{ edit_form.recv_timeout }}
+                                <label for="id_address">
+                                Address
                                 </label>
-
-                                |
-
-                                <label>
-                                Log level
-                                {{ edit_form.logging_level }}
-                                </label>
-
+                            </td>
+                            <td>
+                                {{ edit_form.address }}
                             </td>
                         </tr>
 
@@ -402,15 +378,6 @@
                                 </label>
 
                             </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle;width:12%">
-                                <label for="id_service">
-                                Service
-                                </label>
-                            </td>
-                            <td>{{ edit_form.service }}</td>
                         </tr>
 
                         {% include "zato/include/audit-log/edit.html" %}
