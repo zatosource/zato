@@ -195,6 +195,7 @@ stats=True
 slow_response=True
 cassandra=True
 email=True
+hl7=True
 search=True
 msg_path=True
 ibm_mq=False

@@ -392,6 +392,7 @@ class ServiceStore(object):
                 class_.component_enabled_email = True
                 class_.component_enabled_search = True
                 class_.component_enabled_msg_path = True
+                class_.component_enabled_hl7 = True
                 class_.component_enabled_ibm_mq = True
                 class_.component_enabled_odoo = True
                 class_.component_enabled_zeromq = True
@@ -439,6 +440,9 @@ class ServiceStore(object):
                 class_.component_enabled_target_matcher = service_store.server.fs_server_config.component_enabled.target_matcher
                 class_.component_enabled_invoke_matcher = service_store.server.fs_server_config.component_enabled.invoke_matcher
                 class_.component_enabled_sms = service_store.server.fs_server_config.component_enabled.sms
+
+                # New in Zato 3.2, thus optional
+                class_.component_enabled_hl7 = service_store.server.fs_server_config.component_enabled.get('hl7')
 
             # JSON Schema
             if class_.schema:

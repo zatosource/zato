@@ -46,18 +46,10 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
 # ################################################################################################################################
 
-    def _get_sequence_bytes(self, elems):
-        # type: (str) -> bytes
-
-        elems = [int(elem.strip(), 16) for elem in elems.split()]
-        elems = [chr(elem) for elem in elems]
-        elems = [bytes(elem, 'utf8') for elem in elems]
-
-        return b''.join(elems)
-
-# ################################################################################################################################
-
     def _init_impl(self):
+
+        # Zato
+        from zato.common.util.api import hex_sequence_to_bytes
 
         with self.update_lock:
 
@@ -67,16 +59,19 @@ class ChannelHL7MLLPWrapper(Wrapper):
                 'id': self.config.id,
                 'name': self.config.name,
                 'address': self.config.address,
+                'service_name': self.config.service,
 
                 'max_msg_size': self.config.max_msg_size,
                 'read_buffer_size': self.config.read_buffer_size,
-                'recv_timeout': self.config.recv_timeout,
+
+                # Convert to seconds from milliseconds
+                'recv_timeout': self.config.recv_timeout / 100.0,
 
                 'logging_level': self.config.logging_level,
                 'should_log_messages': self.config.should_log_messages,
 
-                'start_seq': self._get_sequence_bytes(self.config.start_seq),
-                'end_seq': self._get_sequence_bytes(self.config.end_seq),
+                'start_seq': hex_sequence_to_bytes(self.config.start_seq),
+                'end_seq': hex_sequence_to_bytes(self.config.end_seq),
 
                 'is_audit_log_sent_active': self.config.get('is_audit_log_sent_active'),
                 'is_audit_log_received_active': self.config.get('is_audit_log_received_active'),
@@ -84,7 +79,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
             })
 
             # Create a server ..
-            self._impl = HL7MLLPServer(config, self.server.audit_log)
+            self._impl = HL7MLLPServer(config, self.server.invoke, self.server.audit_log)
 
             # .. start the server in a new greenlet, waiting a moment to confirm that it runs ..
             spawn_greenlet(self._impl.start)
