@@ -13,6 +13,12 @@ from socket import timeout as SocketTimeoutException
 from time import sleep
 from traceback import format_exc
 
+# hl7apy
+from hl7apy.core import Message
+
+# Past
+from past.builtins import basestring
+
 # Zato
 from zato.common.api import GENERIC, HL7
 from zato.common.audit_log import DataReceived, DataSent
@@ -477,6 +483,7 @@ class HL7MLLPServer:
         # .. invoke the callback ..
         response = _run_callback(conn_ctx, request_ctx)
 
+        # .. optionally, log what we are about to send ..
         if self.should_log_messages:
             self._logger_info('Sending HL7 MLLP response to `%s` -> `%s` (c:%s; s=%d)',
                 request_ctx.msg_id, response, conn_ctx.conn_id, len(response))
@@ -554,9 +561,18 @@ class HL7MLLPServer:
         except Exception:
             self._logger_warn('Error while invoking `%s` with msg_id `%s`; e:`%s`',
                 self.service_name, request_ctx.msg_id, format_exc())
-
         else:
-            return '<static-response>'
+
+            # Convert high-level objects to bytes ..
+            if isinstance(response, Message):
+                response = response.to_er7()
+
+            # .. and make sure we actually do use bytes objects ..
+            if isinstance(response, basestring):
+                response = response if isinstance(response, bytes) else response.encode('utf8')
+
+            # .. and return the response to our caller.
+            return response
 
 # ################################################################################################################################
 
