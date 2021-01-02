@@ -108,6 +108,8 @@ $.namespace('zato.notif.sql');
 $.namespace('zato.outgoing');
 $.namespace('zato.outgoing.amqp');
 $.namespace('zato.outgoing.ftp');
+$.namespace('zato.outgoing.hl7');
+$.namespace('zato.outgoing.hl7.mllp');
 $.namespace('zato.outgoing.im');
 $.namespace('zato.outgoing.im.slack');
 $.namespace('zato.outgoing.im.telegram');

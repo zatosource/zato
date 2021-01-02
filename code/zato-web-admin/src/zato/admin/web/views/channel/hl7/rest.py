@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from zato.admin.web.forms.channel.hl7.rest import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, extract_security_id, Index as _Index
 from zato.common.api import CONNECTION, DATA_FORMAT, generic_attrs, HL7, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE
-from zato.common.model import HL7Channel
+from zato.common.model import HL7ConfigObject
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -22,7 +22,7 @@ class Index(_Index):
     url_name = 'channel-hl7-rest'
     template = 'zato/channel/hl7/rest.html'
     service_name = 'zato.http-soap.get-list'
-    output_class = HL7Channel
+    output_class = HL7ConfigObject
     paginate = True
 
     def get_initial_input(self):

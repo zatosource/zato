@@ -50,6 +50,7 @@ if 0:
 
     # Zato
     from zato.common.odb.api import PoolStore
+    from zato.hl7.mllp.server import ConnCtx
     from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.email import EMailAPI
     from zato.server.connection.ftp import FTPStore
@@ -178,10 +179,11 @@ WebSphereMQRequestData = IBMMQRequestData
 class HL7RequestData(object):
     """ Details of an individual HL7 request.
     """
-    __slots__ = 'data',
+    __slots__ = 'connection', 'data',
 
-    def __init__(self, data):
-        # type: (hl7apy_Message) -> None
+    def __init__(self, connection, data):
+        # type: (ConnCtx, hl7apy_Message) -> None
+        self.connection = connection
         self.data = data
 
 # ################################################################################################################################
@@ -277,10 +279,11 @@ class Outgoing(object):
     fetched from the service's self.worker_store.
     """
     __slots__ = ('amqp', 'ftp', 'ibm_mq', 'jms_wmq', 'wmq', 'odoo', 'plain_http', 'soap', 'sql', 'zmq', 'wsx', 'vault',
-        'sms', 'sap', 'sftp', 'ldap', 'mongodb', 'def_kafka')
+        'sms', 'sap', 'sftp', 'ldap', 'mongodb', 'def_kafka', 'hl7')
 
     def __init__(self, amqp=None, ftp=None, jms_wmq=None, odoo=None, plain_http=None, soap=None, sql=None, zmq=None,
-            wsx=None, vault=None, sms=None, sap=None, sftp=None, ldap=None, mongodb=None, def_kafka=None):
+            wsx=None, vault=None, sms=None, sap=None, sftp=None, ldap=None, mongodb=None, def_kafka=None,
+            hl7=None):
 
         self.amqp = amqp # type: AMQPFacade
         self.ftp = ftp   # type: FTPStore
@@ -300,7 +303,8 @@ class Outgoing(object):
         self.sftp = sftp # type: ConfigDict
         self.ldap = ldap # type: dict
         self.mongodb = mongodb # type: dict
-        self.def_kafka = None # type: dict
+        self.def_kafka = None  # type: dict
+        self.hl7       = hl7   # type: HL7API
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -353,6 +357,23 @@ class InstantMessaging(object):
         # type: (dict, dict)
         self.slack = slack
         self.telegram = telegram
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MLLP(object):
+    pass
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class HL7API(object):
+    """ A container for HL7 connections a service can establish.
+    """
+    __slots__ = 'mllp'
+
+    def __init__(self, mllp=None):
+        self.mllp = mllp or MLLP()
 
 # ################################################################################################################################
 # ################################################################################################################################

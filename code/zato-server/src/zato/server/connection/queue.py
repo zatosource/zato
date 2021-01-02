@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C), Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -95,7 +95,7 @@ class ConnectionQueue(object):
             else:
                 self.queue.put(client)
                 is_accepted = True
-                msg = 'Added `%s` client to %s (%s)'
+                msg = 'Added `%s` client to `%s` (%s)'
                 log_func = self.logger.info
 
             log_func(msg, self.conn_name, self.address, self.conn_type)
