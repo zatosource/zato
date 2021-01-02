@@ -51,8 +51,8 @@ from zato.server.pattern.fanout import FanOut
 from zato.server.pattern.invoke_retry import InvokeRetry
 from zato.server.pattern.parallel import ParallelExec
 from zato.server.pubsub import PubSub
-from zato.server.service.reqresp import AMQPRequestData, Cloud, Definition, HL7RequestData, IBMMQRequestData, InstantMessaging, \
-     Outgoing, Request
+from zato.server.service.reqresp import AMQPRequestData, Cloud, Definition, HL7API, HL7RequestData, IBMMQRequestData, \
+     InstantMessaging, Outgoing, Request
 
 # Zato - Cython
 from zato.cy.reqresp.response import Response
@@ -449,6 +449,7 @@ class Service(object):
             self._worker_store.outconn_ldap,
             self._worker_store.outconn_mongodb,
             self._worker_store.def_kafka,
+            HL7API(self._worker_store.outconn_hl7_mllp) if self.component_enabled_hl7 else None,
         )
 
     @staticmethod

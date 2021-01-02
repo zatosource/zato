@@ -137,7 +137,7 @@
                             <a href="{% url "audit-log" "outconn-hl7-mllp" item.id %}?cluster={{ cluster_id }}&amp;object_name={{ item.name }}&amp;object_type_label=HL7&nbsp;MLLP&nbsp;outgoing&nbsp;connection">View</a>
                         </td>
                         <td>
-                            <a href="{% url "outgoing-hl7-mllp-invoke" item.id item.name item.name|slugify %}?cluster={{ cluster_id }}">Invoke</a>
+                            <a href="{% url "outgoing-hl7-mllp-invoke" item.id item.max_wait_time item.name item.name|slugify %}?cluster={{ cluster_id }}">Invoke</a>
                         </td>
 
                         {% comment %} 3 {% endcomment %}
