@@ -493,11 +493,11 @@ def payload_from_request(cid, request, data_format, transport, channel_item=None
 
             payload = hl7_get_payload_from_request(
                 request,
-                channel_item.data_encoding,
-                channel_item.hl7_version,
-                channel_item.json_path,
-                channel_item.should_parse_on_input,
-                channel_item.should_validate
+                channel_item['data_encoding'],
+                channel_item['hl7_version'],
+                channel_item['json_path'],
+                channel_item['should_parse_on_input'],
+                channel_item['should_validate']
             )
 
         #
@@ -1756,5 +1756,16 @@ def wait_for_dict_key(_dict, key, timeout=30, interval=0.01):
         return key in _dict
 
     return wait_for_predicate(_predicate_dict_key, timeout, interval)
+
+# ################################################################################################################################
+
+def hex_sequence_to_bytes(elems):
+    # type: (str) -> bytes
+
+    elems = [int(elem.strip(), 16) for elem in elems.split()]
+    elems = [chr(elem) for elem in elems]
+    elems = [bytes(elem, 'utf8') for elem in elems]
+
+    return b''.join(elems)
 
 # ################################################################################################################################

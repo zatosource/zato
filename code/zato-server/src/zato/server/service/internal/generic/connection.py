@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -310,6 +310,40 @@ class Ping(_BaseService):
             else:
                 response_time = datetime.utcnow() - start_time
                 self.response.payload.info = 'Connection pinged; response time: {}'.format(response_time)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Invoke(AdminService):
+    """ Invokes a generic connection by its name.
+    """
+    class SimpleIO:
+        input_required = 'conn_type', 'conn_name'
+        input_optional = 'request_data'
+        output_optional = 'response_data'
+        response_elem = None
+
+    def handle(self):
+
+        # Maps all known connection types to their implementation ..
+        conn_type_to_container = {
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: self.out.hl7.mllp
+        }
+
+        # .. get the actual implementation ..
+        container = conn_type_to_container[self.request.input.conn_type]
+
+        # .. and invoke it.
+        with container[self.request.input.conn_name].conn.client() as client:
+
+            try:
+                response = client.invoke(self.request.input.request_data)
+            except Exception:
+                exc = format_exc()
+                response = exc
+                self.logger.warn(exc)
+            finally:
+                self.response.payload.response_data = response
 
 # ################################################################################################################################
 # ################################################################################################################################

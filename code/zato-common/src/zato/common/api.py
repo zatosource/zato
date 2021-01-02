@@ -90,7 +90,8 @@ simple_types = (bytes, str, dict, list, tuple, bool, Number)
 generic_attrs = ('is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def',
     'is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', 'max_len_messages_received',
     'max_bytes_per_message_sent', 'max_bytes_per_message_received', 'hl7_version', 'json_path', 'data_encoding',
-    'max_msg_size', 'read_buffer_size', 'recv_timeout', 'logging_level', 'should_log_messages', 'start_seq', 'end_seq')
+    'max_msg_size', 'read_buffer_size', 'recv_timeout', 'logging_level', 'should_log_messages', 'start_seq', 'end_seq',
+    'max_wait_time')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1196,6 +1197,7 @@ class GENERIC:
             CHANNEL_HL7_MLLP = 'channel-hl7-mllp'
             CLOUD_DROPBOX = 'cloud-dropbox'
             DEF_KAFKA = 'def-kafka'
+            OUTCONN_HL7_MLLP = 'outconn-hl7-mllp'
             OUTCONN_IM_SLACK = 'outconn-im-slack'
             OUTCONN_IM_TELEGRAM = 'outconn-im-telegram'
             OUTCONN_LDAP = 'outconn-ldap'
@@ -1469,10 +1471,13 @@ class HL7:
         # Each message may be of at most that many bytes
         max_msg_size = '1_000_000'
 
+        # How many seconds to wait for HL7 MLLP responses when invoking a remote end
+        max_wait_time = 60
+
         # At most that many bytes will be read from a socket at a time
         read_buffer_size = 2048
 
-        # We wait at most that many seconds for data from a socket in each iteration of the main loop
+        # We wait at most that many milliseconds for data from a socket in each iteration of the main loop
         recv_timeout = 250
 
         # At what level to log messages (Python logging)
@@ -1480,6 +1485,9 @@ class HL7:
 
         # Should we store the contents of messages in logs (Python logging)
         should_log_messages = False
+
+        # How many concurrent outgoing connections we allow
+        pool_size = 10
 
         # An MLLP message may begin with these bytes ..
         start_seq = '0b'
