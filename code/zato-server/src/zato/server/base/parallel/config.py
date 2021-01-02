@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -15,7 +15,7 @@ from logging import getLogger
 
 # Zato
 from zato.bunch import Bunch
-from zato.common.api import RATE_LIMIT
+from zato.common.api import AuditLog, RATE_LIMIT
 from zato.common.audit_log import LogContainerConfig
 from zato.common.const import SECRETS
 from zato.common.util.api import asbool
@@ -26,16 +26,14 @@ from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.url_dispatcher import Matcher
 
 # ################################################################################################################################
-
-if 0:
-    from zato.common.audit_log import AuditLog
-
-    AuditLog = AuditLog
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_audit_max_len_messages = AuditLog.Default.max_len_messages
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -506,6 +504,19 @@ class ConfigLoader(object):
         # .. and now we can create our audit log container
         func = audit_log.edit_container if is_edit else audit_log.create_container
         func(log_config)
+
+# ################################################################################################################################
+
+    def set_up_object_audit_log_by_config(self, object_type, object_id, config, is_edit):
+        # type: (str, str, dict, bool)
+
+        if config.get('is_audit_log_sent_active') or config.get('is_audit_log_received_active'):
+
+            # These may be string objects
+            config['max_len_messages_sent']     = int(config.get('max_len_messages_sent') or _audit_max_len_messages)
+            config['max_len_messages_received'] = int(config.get('max_len_messages_received') or _audit_max_len_messages)
+
+            self.set_up_object_audit_log(object_type, object_id, config, is_edit)
 
 # ################################################################################################################################
 

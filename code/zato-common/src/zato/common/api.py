@@ -87,6 +87,15 @@ simple_types = (bytes, str, dict, list, tuple, bool, Number)
 # ################################################################################################################################
 # ################################################################################################################################
 
+generic_attrs = ('is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def',
+    'is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', 'max_len_messages_received',
+    'max_bytes_per_message_sent', 'max_bytes_per_message_received', 'hl7_version', 'json_path', 'data_encoding',
+    'max_msg_size', 'read_buffer_size', 'recv_timeout', 'logging_level', 'should_log_messages', 'start_seq', 'end_seq',
+    'max_wait_time')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # These are used by web-admin only because servers and scheduler use sql.conf
 ping_queries = {
     'db2': 'SELECT current_date FROM sysibm.sysdummy1',
@@ -1188,6 +1197,7 @@ class GENERIC:
             CHANNEL_HL7_MLLP = 'channel-hl7-mllp'
             CLOUD_DROPBOX = 'cloud-dropbox'
             DEF_KAFKA = 'def-kafka'
+            OUTCONN_HL7_MLLP = 'outconn-hl7-mllp'
             OUTCONN_IM_SLACK = 'outconn-im-slack'
             OUTCONN_IM_TELEGRAM = 'outconn-im-telegram'
             OUTCONN_LDAP = 'outconn-ldap'
@@ -1452,9 +1462,38 @@ class HL7:
     class Default:
         """ Default values for HL7 objects.
         """
-
         # Default TCP port for MLLP connections
-        mllp_tcp_port = 30901
+        address = '0.0.0.0:30901'
+
+        # Assume that UTF-8 is sent in by default
+        data_encoding = 'utf-8'
+
+        # Each message may be of at most that many bytes
+        max_msg_size = '1_000_000'
+
+        # How many seconds to wait for HL7 MLLP responses when invoking a remote end
+        max_wait_time = 60
+
+        # At most that many bytes will be read from a socket at a time
+        read_buffer_size = 2048
+
+        # We wait at most that many milliseconds for data from a socket in each iteration of the main loop
+        recv_timeout = 250
+
+        # At what level to log messages (Python logging)
+        logging_level = 'INFO'
+
+        # Should we store the contents of messages in logs (Python logging)
+        should_log_messages = False
+
+        # How many concurrent outgoing connections we allow
+        pool_size = 10
+
+        # An MLLP message may begin with these bytes ..
+        start_seq = '0b'
+
+        # .. and end with these below.
+        end_seq = '1c 0d'
 
     class Const:
         """ Various HL7-related constants.
@@ -1467,6 +1506,13 @@ class HL7:
 
             def __iter__(self):
                 return iter((self.v2,))
+
+        class LoggingLevel:
+            Info  = NameId('INFO',  'INFO')
+            Debug = NameId('DEBUG', 'DEBUG')
+
+            def __iter__(self):
+                return iter((self.Info, self.Debug))
 
         class ImplClass:
             hl7apy = 'hl7apy'

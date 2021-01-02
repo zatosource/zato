@@ -30,7 +30,7 @@ class ChannelFileTransferWrapper(Wrapper):
 
     def __init__(self, *args, **kwargs):
         super(ChannelFileTransferWrapper, self).__init__(*args, **kwargs)
-        self._client = None
+        self._impl = None
 
 # ################################################################################################################################
 
@@ -50,7 +50,7 @@ class ChannelFileTransferWrapper(Wrapper):
 # ################################################################################################################################
 
     def delete(self):
-        """ This is overridden from Wrapper.delete because we do not have self._client.
+        """ This is overridden from Wrapper.delete because we do not have self._impl.
         """
         self.server.worker_store.file_transfer_api.delete(self.config)
 
