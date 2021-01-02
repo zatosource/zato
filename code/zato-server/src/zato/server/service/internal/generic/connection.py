@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -13,7 +13,7 @@ from datetime import datetime
 from traceback import format_exc
 
 # Zato
-from zato.common.api import GENERIC as COMMON_GENERIC
+from zato.common.api import GENERIC as COMMON_GENERIC, generic_attrs
 from zato.common.broker_message import GENERIC
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import GenericConn as ModelGenericConn
@@ -75,7 +75,8 @@ class _CreateEditSIO(AdminSIO):
     input_required = ('name', 'type_', 'is_active', 'is_internal', 'is_channel', 'is_outconn', Int('pool_size'),
         Bool('sec_use_rbac'), 'cluster_id')
     input_optional = ('id', Int('cache_expiry'), 'address', Int('port'), Int('timeout'), 'data_format', 'version',
-        'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id') + extra_secret_keys
+        'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id') + \
+        extra_secret_keys + generic_attrs
     force_empty_keys = True
 
 # ################################################################################################################################
@@ -309,6 +310,40 @@ class Ping(_BaseService):
             else:
                 response_time = datetime.utcnow() - start_time
                 self.response.payload.info = 'Connection pinged; response time: {}'.format(response_time)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Invoke(AdminService):
+    """ Invokes a generic connection by its name.
+    """
+    class SimpleIO:
+        input_required = 'conn_type', 'conn_name'
+        input_optional = 'request_data'
+        output_optional = 'response_data'
+        response_elem = None
+
+    def handle(self):
+
+        # Maps all known connection types to their implementation ..
+        conn_type_to_container = {
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: self.out.hl7.mllp
+        }
+
+        # .. get the actual implementation ..
+        container = conn_type_to_container[self.request.input.conn_type]
+
+        # .. and invoke it.
+        with container[self.request.input.conn_name].conn.client() as client:
+
+            try:
+                response = client.invoke(self.request.input.request_data)
+            except Exception:
+                exc = format_exc()
+                response = exc
+                self.logger.warn(exc)
+            finally:
+                self.response.payload.response_data = response
 
 # ################################################################################################################################
 # ################################################################################################################################

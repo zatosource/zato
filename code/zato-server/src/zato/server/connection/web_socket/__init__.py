@@ -132,10 +132,6 @@ class WebSocket(_WebSocket):
         # Note: configuration object is shared by all WebSockets and any writes will be visible to all of them
         self.config = config
 
-        # These may be string objects
-        self.config.max_len_messages_sent     = int(self.config.max_len_messages_sent)
-        self.config.max_len_messages_received = int(self.config.max_len_messages_received)
-
         # For later reference
         self.initial_http_wsgi_environ = wsgi_environ
 
@@ -150,7 +146,7 @@ class WebSocket(_WebSocket):
 
         super(WebSocket, self).__init__(_unusued_sock, _unusued_protocols, _unusued_extensions, wsgi_environ, **kwargs)
 
-    def _set_json_dump_func(self, _default='rapidjson', _supported=('rapidjson', 'bson')):
+    def _set_json_dump_func(self, _default='stdlib', _supported=('stdlib', 'rapidjson', 'bson')):
         json_library = self.parallel_server.fs_server_config.wsx.get('json_library', _default)
 
         if json_library not in _supported:
@@ -162,7 +158,10 @@ class WebSocket(_WebSocket):
 
             json_library = _default
 
-        if json_library == 'rapidjson':
+        if json_library == 'stdlib':
+            from json import dumps as dumps_func
+
+        elif json_library == 'rapidjson':
             from rapidjson import dumps as dumps_func
 
         elif json_library == 'bson':
@@ -197,12 +196,12 @@ class WebSocket(_WebSocket):
         self.user_data = Bunch() # Arbitrary user-defined data
         self._disconnect_requested = False # Have we been asked to disconnect this client?
 
-        # Audit log configuration
-        self.is_audit_log_sent_active     = self.config.is_audit_log_sent_active     # type: bool
-        self.is_audit_log_received_active = self.config.is_audit_log_received_active # type: bool
+        # Audit log configuration ..
+        self.is_audit_log_sent_active     = self.config.get('is_audit_log_sent_active')     # type: bool
+        self.is_audit_log_received_active = self.config.get('is_audit_log_received_active') # type: bool
 
-        if self.is_audit_log_sent_active or self.is_audit_log_received_active:
-            self.parallel_server.set_up_object_audit_log(_audit_msg_type, self.pub_client_id, self.config, False)
+        # .. and audit log setup.
+        self.parallel_server.set_up_object_audit_log_by_config(_audit_msg_type, self.pub_client_id, self.config, False)
 
         # This will be populated by the on_vault_mount_point_needed hook
         self.vault_mount_point = None
@@ -997,7 +996,7 @@ class WebSocket(_WebSocket):
 
     def send(self, data='', cid=None, in_reply_to=None):
 
-        if self.is_audit_log_received_active:
+        if self.is_audit_log_sent_active:
             self._store_audit_log_data(DataSent, data, cid, in_reply_to)
 
         # Call the super-class that will actually send the message.

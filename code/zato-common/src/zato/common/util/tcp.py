@@ -167,7 +167,6 @@ def read_from_socket(ctx, _utcnow=datetime.utcnow, _timedelta=timedelta):
     """ Reads data from an already connected TCP socket.
     """
     # type: (SocketReaderCtx) -> bytes
-    ctx.conn_id
 
     # Local aliases
     _should_log_messages = ctx.should_log_messages
@@ -205,6 +204,7 @@ def read_from_socket(ctx, _utcnow=datetime.utcnow, _timedelta=timedelta):
             raise ValueError(reason)
 
         try:
+
             _socket_settimeout(_recv_timeout)
             data = _socket_recv(_read_buffer_size)
 
