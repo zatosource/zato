@@ -13,8 +13,14 @@ from socket import timeout as SocketTimeoutException
 from time import sleep
 from traceback import format_exc
 
+# hl7apy
+from hl7apy.core import Message
+
+# Past
+from past.builtins import basestring
+
 # Zato
-from zato.common.api import GENERIC
+from zato.common.api import GENERIC, HL7
 from zato.common.audit_log import DataReceived, DataSent
 from zato.common.util.api import new_cid
 from zato.common.util.tcp import get_fqdn_by_ip, ZatoStreamServer
@@ -146,13 +152,15 @@ class HL7MLLPServer:
     # We will never read less than that many bytes from client sockets
     min_read_buffer_size = 2048
 
-    def __init__(self, config, audit_log):
-        # type: (Bunch, AuditLog)
+    def __init__(self, config, callback_func, audit_log):
+        # type: (Bunch, object, AuditLog)
         self.config = config
+        self.callback_func = callback_func
         self.object_id = config.id # type: str
         self.audit_log = audit_log
         self.address = config.address
         self.name = config.name
+        self.service_name = config.service_name
         self.should_log_messages = config.should_log_messages # type: bool
 
         self.start_seq     = config.start_seq
@@ -174,6 +182,7 @@ class HL7MLLPServer:
         self.logger_hl7.setLevel(getLevelName(config.logging_level))
 
         self._logger_info = self.logger_hl7.info
+        self._logger_warn = self.logger_hl7.warn
         self._logger_debug = self.logger_hl7.debug
         self._has_debug_log = self.logger_hl7.isEnabledFor(DEBUG)
 
@@ -473,6 +482,7 @@ class HL7MLLPServer:
         # .. invoke the callback ..
         response = _run_callback(conn_ctx, request_ctx)
 
+        # .. optionally, log what we are about to send ..
         if self.should_log_messages:
             self._logger_info('Sending HL7 MLLP response to `%s` -> `%s` (c:%s; s=%d)',
                 request_ctx.msg_id, response, conn_ctx.conn_id, len(response))
@@ -515,11 +525,11 @@ class HL7MLLPServer:
 
 # ################################################################################################################################
 
-    def _run_callback(self, conn_ctx, request_ctx):
+    def _run_callback(self, conn_ctx, request_ctx, _hl7_v2=HL7.Const.Version.v2.id):
         # type: (ConnCtx, RequestCtx) -> bytes
 
-        pattern = 'Handling new HL7 MLLP message (%s; m:%s (s=%s), c:%s, p:%s); `%r`'
-        request = request_ctx.to_dict() if self.should_log_messages else '<masked>'
+        pattern = 'Handling new HL7 MLLP message (%s; m:%s (s=%s), c:%s, p:%s; %s); `%r`'
+        log_request = request_ctx.to_dict() if self.should_log_messages else '<masked>'
 
         self._logger_info(
             pattern,
@@ -528,10 +538,40 @@ class HL7MLLPServer:
             request_ctx.msg_size,
             conn_ctx.total_messages_received,
             conn_ctx.total_message_packets_received,
-            request
+            self.service_name,
+            log_request
         )
 
-        return b'<response>'
+        try:
+            response = self.callback_func(
+                self.config.service_name,
+                request_ctx.data,
+                data_format = _hl7_v2,
+                zato_ctx = {'zato.channel_item': {
+                    'data_encoding': 'utf8',
+                    'hl7_version': _hl7_v2,
+                    'json_path': None,
+                    'should_parse_on_input': True,
+                    'should_validate': True,
+                    'hl7_mllp_conn_ctx': conn_ctx,
+                }}
+            )
+
+        except Exception:
+            self._logger_warn('Error while invoking `%s` with msg_id `%s`; e:`%s`',
+                self.service_name, request_ctx.msg_id, format_exc())
+        else:
+
+            # Convert high-level objects to bytes ..
+            if isinstance(response, Message):
+                response = response.to_er7()
+
+            # .. and make sure we actually do use bytes objects ..
+            if isinstance(response, basestring):
+                response = response if isinstance(response, bytes) else response.encode('utf8')
+
+            # .. and return the response to our caller.
+            return response
 
 # ################################################################################################################################
 
