@@ -60,7 +60,7 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['is_outgoing'] = True
         initial_input_dict['is_outconn'] = False
         initial_input_dict['sec_use_rbac'] = False
-        initial_input_dict['recv_timeout'] = False
+        initial_input_dict['recv_timeout'] = 250
 
 # ################################################################################################################################
 
@@ -95,13 +95,13 @@ class Delete(_Delete):
 
 
 @method_allowed('GET')
-def invoke(req, conn_id, conn_name, conn_slug):
+def invoke(req, conn_id, max_wait_time, conn_name, conn_slug):
 
     return_data = {
         'conn_id': conn_id,
         'conn_name': conn_name,
         'conn_slug': conn_slug,
-        'max_wait_time': HL7.Default.max_wait_time,
+        'timeout': max_wait_time,
         'cluster_id': req.zato.cluster_id,
     }
 
@@ -110,7 +110,7 @@ def invoke(req, conn_id, conn_name, conn_slug):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def invoke_action(req, pub_client_id):
-    return invoke_action_handler(req, 'zato.outgoing.hl7.mllp.invoke', ('id', 'pub_client_id', 'request_data', 'timeout'))
+def invoke_action(req, conn_id):
+    return invoke_action_handler(req, 'outgoing.hl7.mllp.invoke', ('conn_id', 'request_data', 'timeout'))
 
 # ################################################################################################################################

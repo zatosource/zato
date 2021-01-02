@@ -741,10 +741,10 @@ urlpatterns += [
     url(r'^zato/outgoing/hl7/mllp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(outgoing_hl7_mllp.Delete()), name=outgoing_hl7_mllp.Delete.url_name),
 
-    url(r'^zato/outgoing/hl7/mllp/invoke/action/$',
+    url(r'^zato/outgoing/hl7/mllp/invoke/action/(?P<conn_id>.*)/$',
         login_required(outgoing_hl7_mllp.invoke_action), name='outgoing-hl7-mllp-invoke-action'),
 
-    url(r'^zato/outgoing/hl7/mllp/invoke/(?P<conn_id>.*)/(?P<conn_name>.*)/(?P<conn_slug>.*)/$',
+    url(r'^zato/outgoing/hl7/mllp/invoke/(?P<conn_id>.*)/(?P<max_wait_time>.*)/(?P<conn_name>.*)/(?P<conn_slug>.*)/$',
         login_required(outgoing_hl7_mllp.invoke), name='outgoing-hl7-mllp-invoke'),
 
     ]

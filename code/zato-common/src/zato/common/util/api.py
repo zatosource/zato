@@ -1758,3 +1758,14 @@ def wait_for_dict_key(_dict, key, timeout=30, interval=0.01):
     return wait_for_predicate(_predicate_dict_key, timeout, interval)
 
 # ################################################################################################################################
+
+def hex_sequence_to_bytes(elems):
+    # type: (str) -> bytes
+
+    elems = [int(elem.strip(), 16) for elem in elems.split()]
+    elems = [chr(elem) for elem in elems]
+    elems = [bytes(elem, 'utf8') for elem in elems]
+
+    return b''.join(elems)
+
+# ################################################################################################################################

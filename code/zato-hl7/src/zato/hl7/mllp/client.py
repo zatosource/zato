@@ -41,17 +41,21 @@ class HL7MLLPClient:
 
     def __init__(self, config):
         # type: (Bunch) -> None
+
+        # Zato
+        from zato.common.util.api import hex_sequence_to_bytes
+
         self.config = config
         self.name = config.name
         self.address = config.address
-        self.max_wait_time = config.max_wait_time # type: float
-        self.max_msg_size = config.max_msg_size # type: int
-        self.read_buffer_size = config.read_buffer_size # type: int
-        self.recv_timeout = config.recv_timeout # type: int
+        self.max_wait_time = int(config.max_wait_time) # type: float
+        self.max_msg_size = int(config.max_msg_size) # type: int
+        self.read_buffer_size = int(config.read_buffer_size) # type: int
+        self.recv_timeout = int(config.recv_timeout) / 1000.0 # type: float
         self.should_log_messages = config.should_log_messages # type: bool
 
-        self.start_seq = config.start_seq
-        self.end_seq   = config.end_seq
+        self.start_seq = hex_sequence_to_bytes(config.start_seq)
+        self.end_seq   = hex_sequence_to_bytes(config.end_seq)
 
         self.host, self.port = parse_address(self.address) # type (str, int)
 
@@ -59,6 +63,8 @@ class HL7MLLPClient:
         # type: (bytes) -> bytes
 
         try:
+
+            data = data if isinstance(data, bytes) else data.encode('utf8')
 
             # Wrap the message in an MLLP envelope
             msg = self.start_seq + data + self.end_seq

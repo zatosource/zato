@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
+from traceback import format_exc
 
 # Zato
 from zato.hl7.mllp.client import HL7MLLPClient
@@ -23,10 +24,11 @@ logger = getLogger(__name__)
 
 class _HL7MLLPConnection(object):
     def __init__(self, config):
-        '''
         self.impl = HL7MLLPClient(config)
-        '''
-        pass
+
+    def invoke(self, data):
+        # type: (str) -> str
+        return self.impl.send(data)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,13 +41,16 @@ class OutconnHL7MLLPWrapper(Wrapper):
         super(OutconnHL7MLLPWrapper, self).__init__(config, 'HL7 MLLP', server)
 
     def add_client(self):
-        conn = _HL7MLLPConnection(self.config)
-        self.client.put_client(conn)
+
+        try:
+            conn = _HL7MLLPConnection(self.config)
+            self.client.put_client(conn)
+        except Exception:
+            logger.warn('Caught an exception while adding an HL7 MLLP client (%s); e:`%s`',
+                self.config.name, format_exc())
 
     def delete(self, ignored_reason=None):
         pass
-
-import multiprocessing
 
 # ################################################################################################################################
 # ################################################################################################################################
