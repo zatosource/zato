@@ -59,6 +59,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
                 'id': self.config.id,
                 'name': self.config.name,
                 'address': self.config.address,
+                'service_name': self.config.service,
 
                 'max_msg_size': self.config.max_msg_size,
                 'read_buffer_size': self.config.read_buffer_size,
@@ -78,7 +79,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
             })
 
             # Create a server ..
-            self._impl = HL7MLLPServer(config, self.server.audit_log)
+            self._impl = HL7MLLPServer(config, self.server.invoke, self.server.audit_log)
 
             # .. start the server in a new greenlet, waiting a moment to confirm that it runs ..
             spawn_greenlet(self._impl.start)
