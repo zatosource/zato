@@ -101,6 +101,7 @@ def invoke(req, conn_id, max_wait_time, conn_name, conn_slug):
         'conn_id': conn_id,
         'conn_name': conn_name,
         'conn_slug': conn_slug,
+        'conn_type': GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP,
         'timeout': max_wait_time,
         'cluster_id': req.zato.cluster_id,
     }
@@ -110,7 +111,7 @@ def invoke(req, conn_id, max_wait_time, conn_name, conn_slug):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def invoke_action(req, conn_id):
-    return invoke_action_handler(req, 'outgoing.hl7.mllp.invoke', ('conn_id', 'request_data', 'timeout'))
+def invoke_action(req, conn_name):
+    return invoke_action_handler(req, 'zato.generic.connection.invoke', ('conn_name', 'conn_type', 'request_data', 'timeout'))
 
 # ################################################################################################################################
