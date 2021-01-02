@@ -195,6 +195,7 @@ stats=True
 slow_response=True
 cassandra=True
 email=True
+hl7=True
 search=True
 msg_path=True
 ibm_mq=False
@@ -232,7 +233,7 @@ data_len=0
 
 [wsx]
 hook_service=
-json_library=rapidjson
+json_library=stdlib
 
 [content_type]
 json = {JSON}

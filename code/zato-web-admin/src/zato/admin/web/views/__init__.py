@@ -175,8 +175,7 @@ def method_allowed(*methods_allowed):
 # ################################################################################################################################
 
 def set_servers_state(cluster, client):
-    """ Assignes 3 flags to the cluster indicating whether load-balancer
-    believes the servers are UP, DOWN or in the MAINT mode.
+    """ Assignes 3 flags to the cluster indicating whether load-balancer believes the servers are UP, DOWN or in the MAINT mode.
     """
     servers_state = client.get_servers_state()
 
@@ -434,12 +433,13 @@ class Index(_BaseView):
         for msg_item in item_list:
 
             item = self.output_class()
-            for name in names:
+            for name in sorted(names):
                 value = getattr(msg_item, name, None)
                 if value is not None:
                     value = getattr(value, 'text', '') or value
                 if value or value == 0:
                     setattr(item, name, value)
+
             item = self.on_before_append_item(item)
 
             if isinstance(item, (list, tuple)):
@@ -515,7 +515,9 @@ class Index(_BaseView):
 
             return_data = self.handle_return_data(return_data)
 
-            logger.info('Index data for frontend `%s`', return_data)
+
+            for k, v in sorted(return_data.items()):
+                logger.info('Index key/value `%s` -> `%r`', k, v)
 
             return TemplateResponse(req, template_name, return_data)
 
@@ -777,5 +779,34 @@ def get_http_channel_security_id(item):
             security_id = ZATO_NONE
 
     return security_id
+
+# ################################################################################################################################
+
+def invoke_action_handler(req, service_name, send_attrs):
+    # type: (str, tuple) -> object
+
+    try:
+        request = {
+            'cluster_id': req.zato.cluster_id
+        }
+
+        for name in send_attrs:
+            request[name] = req.POST.get(name, '')
+
+        logger.info('Invoking `%s` with `%s`', service_name, request)
+        response = req.zato.client.invoke(service_name, request)
+
+        if response.ok:
+            response_data = response.data['response_data']
+            if isinstance(response_data, dict):
+                response_data = dict(response_data)
+                logger.info('Returning `%s` from `%s`', response_data, service_name)
+            return HttpResponse(dumps(response_data), content_type='application/javascript')
+        else:
+            raise Exception(response.details)
+    except Exception:
+        msg = 'Caught an exception, e:`{}`'.format(format_exc())
+        logger.error(msg)
+        return HttpResponseServerError(msg)
 
 # ################################################################################################################################
