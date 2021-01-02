@@ -793,12 +793,14 @@ def invoke_action_handler(req, service_name, send_attrs):
         for name in send_attrs:
             request[name] = req.POST.get(name, '')
 
+        logger.info('Invoking `%s` with `%s`', service_name, request)
         response = req.zato.client.invoke(service_name, request)
 
         if response.ok:
             response_data = response.data['response_data']
             if isinstance(response_data, dict):
                 response_data = dict(response_data)
+                logger.info('Returning `%s` from `%s`', response_data, service_name)
             return HttpResponse(dumps(response_data), content_type='application/javascript')
         else:
             raise Exception(response.details)
