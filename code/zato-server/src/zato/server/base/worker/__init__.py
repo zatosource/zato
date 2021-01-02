@@ -1688,6 +1688,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
                     else:
                         self.server.kvdb.conn.set(processed_key, KVDB.ASYNC_INVOKE_PROCESSED_FLAG_PATTERN, 300)
 
+        # The default WSGI environment that always exists ..
         wsgi_environ = {
             'zato.request_ctx.async_msg':msg,
             'zato.request_ctx.in_reply_to':msg.get('in_reply_to'),
@@ -1715,7 +1716,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         service.update_handle(self._set_service_response_data(kwargs.get('serialize', True)), service, payload,
             channel, data_format, transport, self.server, self.broker_client, self, cid,
             self.worker_config.simple_io, job_type=msg.get('job_type'), wsgi_environ=wsgi_environ,
-            environ=msg.get('environ'), channel_item=msg.get('channel_item'))
+            environ=msg.get('environ'))
 
         # Invoke the callback, if any.
         if msg.get('is_async') and msg.get('callback'):

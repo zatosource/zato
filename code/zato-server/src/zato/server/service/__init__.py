@@ -627,12 +627,13 @@ class Service(object):
 
         wsgi_environ = kwargs.get('wsgi_environ', {})
         payload = wsgi_environ.get('zato.request.payload')
+        channel_item = wsgi_environ.get('zato.channel_item', {})
 
         # Here's an edge case. If a SOAP request has a single child in Body and this child is an empty element
         # (though possibly with attributes), checking for 'not payload' alone won't suffice - this evaluates
         # to False so we'd be parsing the payload again superfluously.
         if not isinstance(payload, ObjectifiedElement) and not payload:
-            payload = payload_from_request(cid, raw_request, data_format, transport, kwargs.get('channel_item'))
+            payload = payload_from_request(cid, raw_request, data_format, transport, channel_item)
 
         job_type = kwargs.get('job_type')
         channel_params = kwargs.get('channel_params', {})
@@ -644,7 +645,7 @@ class Service(object):
             job_type=job_type, channel_params=channel_params,
             merge_channel_params=merge_channel_params, params_priority=params_priority,
             in_reply_to=wsgi_environ.get('zato.request_ctx.in_reply_to', None), environ=kwargs.get('environ'),
-            wmq_ctx=kwargs.get('wmq_ctx'), channel_info=kwargs.get('channel_info'))
+            wmq_ctx=kwargs.get('wmq_ctx'), channel_info=kwargs.get('channel_info'), channel_item=channel_item)
 
         # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
         # if ServiceStore replaces self.accept with None in the most common case of this method's not being
@@ -1166,6 +1167,7 @@ class Service(object):
              init=True,             # type: bool
              wmq_ctx=None,          # type: object
              channel_info=None,     # type: ChannelInfo
+             channel_item=None,     # type: dict
              _wsgi_channels=_wsgi_channels, # type: object
              _AMQP=CHANNEL.AMQP,        # type: str
              _WMQ=CHANNEL.WEBSPHERE_MQ, # type: str
@@ -1204,7 +1206,7 @@ class Service(object):
             service.request.wmq = service.request.ibm_mq = IBMMQRequestData(wmq_ctx)
 
         elif data_format == _HL7v2:
-            service.request.hl7 = HL7RequestData(wsgi_environ.get('zato.hl7.mllp.conn_ctx'), payload)
+            service.request.hl7 = HL7RequestData(channel_item['hl7_mllp_conn_ctx'], payload)
 
         service.channel = service.chan = channel_info or ChannelInfo(
             channel_item.get('id'), channel_item.get('name'), channel_type,
