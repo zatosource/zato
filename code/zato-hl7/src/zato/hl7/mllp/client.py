@@ -11,9 +11,6 @@ import socket
 from logging import getLogger
 from traceback import format_exc
 
-# Bunch
-from bunch import bunchify
-
 # Zato
 from zato.common.util.api import new_cid
 from zato.common.util.tcp import parse_address, read_from_socket, SocketReaderCtx
@@ -59,7 +56,7 @@ class HL7MLLPClient:
 
         self.host, self.port = parse_address(self.address) # type (str, int)
 
-    def send(self, data):
+    def send(self, data, _socket_socket=socket.socket, _family=socket.AF_INET, _type=socket.SOCK_STREAM):
         # type: (bytes) -> bytes
 
         try:
@@ -70,7 +67,7 @@ class HL7MLLPClient:
             msg = self.start_seq + data + self.end_seq
 
             # This will auto-close the socket ..
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            with _socket_socket(_family, _type) as sock:
 
                 # .. connect to the remote end ..
                 sock.connect((self.host, self.port))
@@ -105,24 +102,25 @@ class HL7MLLPClient:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def send_data(data, config):
+def send_data(address, data):
     """ Sends input data to a remote address by its configuration.
     """
-    # type: (bytes, dict) -> bytes
+    # type: (bytes, str) -> bytes
 
-    '''
+    # Bunch
+    from bunch import bunchify
+
     config = bunchify({
         'name': 'My HL7MLLPClient',
         'address': address,
-        'start_seq': b'\x0b',
-        'end_seq': b'\x1c\x0d',
+        'start_seq': '0b',
+        'end_seq': '1c 0d',
         'max_wait_time': 3,
         'max_msg_size': 2_000_000,
         'read_buffer_size': 2048,
-        'recv_timeout': 0.25,
+        'recv_timeout': 250,
         'should_log_messages': True,
     })
-    '''
 
     client = HL7MLLPClient(config)
     response = client.send(data)
