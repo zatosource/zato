@@ -50,6 +50,7 @@ if 0:
 
     # Zato
     from zato.common.odb.api import PoolStore
+    from zato.hl7.mllp.server import ConnCtx
     from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.email import EMailAPI
     from zato.server.connection.ftp import FTPStore
@@ -178,10 +179,11 @@ WebSphereMQRequestData = IBMMQRequestData
 class HL7RequestData(object):
     """ Details of an individual HL7 request.
     """
-    __slots__ = 'data',
+    __slots__ = 'connection', 'data',
 
-    def __init__(self, data):
-        # type: (hl7apy_Message) -> None
+    def __init__(self, connection, data):
+        # type: (ConnCtx, hl7apy_Message) -> None
+        self.connection = connection
         self.data = data
 
 # ################################################################################################################################

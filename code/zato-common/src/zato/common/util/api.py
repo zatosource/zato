@@ -493,11 +493,11 @@ def payload_from_request(cid, request, data_format, transport, channel_item=None
 
             payload = hl7_get_payload_from_request(
                 request,
-                channel_item.data_encoding,
-                channel_item.hl7_version,
-                channel_item.json_path,
-                channel_item.should_parse_on_input,
-                channel_item.should_validate
+                channel_item['data_encoding'],
+                channel_item['hl7_version'],
+                channel_item['json_path'],
+                channel_item['should_parse_on_input'],
+                channel_item['should_validate']
             )
 
         #

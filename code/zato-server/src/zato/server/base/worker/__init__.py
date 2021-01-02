@@ -1644,6 +1644,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             'callback': kwargs.get('callback'),
             'zato_ctx': kwargs.get('zato_ctx'),
             'wsgi_environ': kwargs.get('wsgi_environ'),
+            'channel_item': kwargs.get('channel_item'),
         }, channel, None, needs_response=True, serialize=serialize)
 
 # ################################################################################################################################
@@ -1714,7 +1715,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         service.update_handle(self._set_service_response_data(kwargs.get('serialize', True)), service, payload,
             channel, data_format, transport, self.server, self.broker_client, self, cid,
             self.worker_config.simple_io, job_type=msg.get('job_type'), wsgi_environ=wsgi_environ,
-            environ=msg.get('environ'))
+            environ=msg.get('environ'), channel_item=msg.get('channel_item'))
 
         # Invoke the callback, if any.
         if msg.get('is_async') and msg.get('callback'):
