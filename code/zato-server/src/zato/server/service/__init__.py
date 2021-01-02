@@ -32,8 +32,8 @@ from zato.common.py23_ import maxint
 
 # Zato
 from zato.bunch import Bunch
-from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, PUBSUB, WEB_SOCKET, \
-     zato_no_op_marker
+from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, PUBSUB, \
+     WEB_SOCKET, zato_no_op_marker
 from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL, SERVICE
 from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.json_internal import dumps
@@ -632,6 +632,13 @@ class Service(object):
         # (though possibly with attributes), checking for 'not payload' alone won't suffice - this evaluates
         # to False so we'd be parsing the payload again superfluously.
         if not isinstance(payload, ObjectifiedElement) and not payload:
+
+            print()
+            print(111, repr(payload))
+            print(222, kwargs.get('channel_item'))
+            print(333, kwargs)
+            print()
+
             payload = payload_from_request(cid, raw_request, data_format, transport, kwargs.get('channel_item'))
 
         job_type = kwargs.get('job_type')
@@ -1169,7 +1176,7 @@ class Service(object):
              _wsgi_channels=_wsgi_channels, # type: object
              _AMQP=CHANNEL.AMQP,        # type: str
              _WMQ=CHANNEL.WEBSPHERE_MQ, # type: str
-             _HL7v2=HL7.Const.Version.v2.id,
+             _HL7v2=HL7.Const.Version.v2.id
              ):
         """ Takes a service instance and updates it with the current request's context data.
         """
@@ -1204,7 +1211,7 @@ class Service(object):
             service.request.wmq = service.request.ibm_mq = IBMMQRequestData(wmq_ctx)
 
         elif data_format == _HL7v2:
-            service.request.hl7 = HL7RequestData(payload)
+            service.request.hl7 = HL7RequestData(wsgi_environ.get('zato.hl7.mllp.conn_ctx'), payload)
 
         service.channel = service.chan = channel_info or ChannelInfo(
             channel_item.get('id'), channel_item.get('name'), channel_type,
