@@ -24,7 +24,6 @@ from zato.common.api import GENERIC, HL7
 from zato.common.audit_log import DataReceived, DataSent
 from zato.common.util.api import new_cid
 from zato.common.util.tcp import get_fqdn_by_ip, ZatoStreamServer
-from zato.hl7.parser import get_payload_from_request
 
 # ################################################################################################################################
 
@@ -548,14 +547,14 @@ class HL7MLLPServer:
                 self.config.service_name,
                 request_ctx.data,
                 data_format = _hl7_v2,
-                hl7_mllp_conn_ctx = conn_ctx,
-                channel_item = {
+                zato_ctx = {'zato.channel_item': {
                     'data_encoding': 'utf8',
                     'hl7_version': _hl7_v2,
                     'json_path': None,
                     'should_parse_on_input': True,
                     'should_validate': True,
-                }
+                    'hl7_mllp_conn_ctx': conn_ctx,
+                }}
             )
 
         except Exception:
