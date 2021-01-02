@@ -12,7 +12,7 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.forms.outgoing.hl7.mllp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, invoke_action_handler, method_allowed
-from zato.common.api import GENERIC, generic_attrs, HL7
+from zato.common.api import GENERIC, generic_attrs
 from zato.common.model import HL7ConfigObject
 
 # ################################################################################################################################
