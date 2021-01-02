@@ -42,8 +42,10 @@ class OutconnHL7MLLPWrapper(Wrapper):
         conn = _HL7MLLPConnection(self.config)
         self.client.put_client(conn)
 
-    def delete(self, ignored_reason):
+    def delete(self, ignored_reason=None):
         pass
+
+import multiprocessing
 
 # ################################################################################################################################
 # ################################################################################################################################
