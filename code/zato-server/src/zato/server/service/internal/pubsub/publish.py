@@ -100,9 +100,6 @@ class Publish(AdminService):
             'security_id', 'ws_channel_id', 'service_id', 'data_parsed', 'meta', AsIs('group_id'),
             Int('position_in_group'), 'endpoint_id', List('reply_to_sk'), List('deliver_to_sk'), 'user_ctx', 'zato_ctx')
         output_optional = (AsIs('msg_id'), List('msg_id_list'))
-        response_elem = 'response'
-        force_empty_keys = True
-        empty_output_value = ''
 
 # ################################################################################################################################
 

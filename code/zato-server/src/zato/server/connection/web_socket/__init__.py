@@ -799,10 +799,6 @@ class WebSocket(_WebSocket):
         while not self._initialized:
             sleep(0.1)
 
-        print()
-        print(333, self.config.on_message_callback)
-        print()
-
         return self.config.on_message_callback({
             'cid': cid or new_cid(),
             'data_format': _data_format,
