@@ -1610,20 +1610,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def _set_service_response_data(self, serialize=True):
-
-        def inner(service, **ignored):
-            if not isinstance(service.response.payload, self._simple_types):
-
-                # If serialise is False, the operation below is essentially a no-op
-                # so we can skip it altogether.
-                if serialize:
-                    service.response.payload = service.response.payload.getvalue(serialize)
-
-        return inner
-
-# ################################################################################################################################
-
     def invoke(self, service, payload, **kwargs):
         """ Invokes a service by its name with request on input.
         """
@@ -1713,7 +1699,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             logger.warn(msg)
             raise Exception(msg)
 
-        service.update_handle(self._set_service_response_data(kwargs.get('serialize', True)), service, payload,
+        service.update_handle(service.set_response_data, service, payload,
             channel, data_format, transport, self.server, self.broker_client, self, cid,
             self.worker_config.simple_io, job_type=msg.get('job_type'), wsgi_environ=wsgi_environ,
             environ=msg.get('environ'))
@@ -1732,9 +1718,16 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             cb_msg['is_async'] = True
             cb_msg['in_reply_to'] = cid
 
+            #import traceback as x
+            #x.print_stack()
+
             self.broker_client.invoke_async(cb_msg)
 
         if kwargs.get('needs_response'):
+
+            if 'client.Create' in str(service):
+                logger.warn('ZZZ %s %s', service, service.response.payload.getvalue())
+
             return service.response.payload
 
 # ################################################################################################################################
