@@ -275,6 +275,7 @@ class SubscribeServiceImpl(_Subscribe):
         input_optional = drop_sio_elems(common_sub_data, 'is_internal', 'topic_name')
         output_optional = 'sub_key', 'queue_depth'
         default_value = None
+        force_empty_keys = True
 
 # ################################################################################################################################
 
@@ -673,7 +674,7 @@ class CreateWSXSubscription(AdminService):
         input_optional = 'topic_name', List('topic_name_list'), Bool('wrap_one_msg_in_list'), Int('delivery_batch_size')
         output_optional = 'sub_key', 'current_depth', 'sub_data'
         response_elem = None
-        skip_empty_keys = True
+        force_empty_keys = True
 
     def handle(self):
 
