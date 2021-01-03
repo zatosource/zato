@@ -127,7 +127,7 @@ class AdminService(Service):
         if self.name == 'zato.service.invoke':
             return
 
-        if self.server.is_admin_enabled_for_info:
+        if 0:#self.server.is_admin_enabled_for_info:
             logger.info('Response; service:`%s`, data:`%s` cid:`%s`, ',
                 self.name, replace_private_key(get_response_value(self.response)), self.cid)
 

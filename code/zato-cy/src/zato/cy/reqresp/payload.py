@@ -198,6 +198,20 @@ class SimpleIOPayload(object):
             if force_dict_serialisation:
                 serialize = True
 
+        '''
+        import traceback as x
+
+        for line in x.format_stack():
+            print(line.strip())
+            '''
+
+        print()
+        print(111, self.data_format)
+        print(222, serialize)
+        print(333, force_dict_serialisation)
+        print()
+
+
         # If data format is DICT, we force serialisation to that format
         # unless overridden on input.
         value = self.user_attrs_list if self.output_repeated else self.user_attrs_dict
@@ -219,6 +233,11 @@ class SimpleIOPayload(object):
 
         else:
             out = self.sio.get_output(value, self.data_format) if serialize else value
+
+            print()
+            print(777, out)
+            print()
+
             return out
 
 # ################################################################################################################################
@@ -236,6 +255,11 @@ class SimpleIOPayload(object):
 
     def __setattr__(self, key, value):
 
+        print()
+        print(555, self.user_attrs_dict)
+        print(666, key, value)
+        print()
+
         # Special-case Zato's own internal attributes
         if key == 'zato_meta':
             self.zato_meta = value
@@ -246,7 +270,8 @@ class SimpleIOPayload(object):
         try:
             return self.user_attrs_dict[key]
         except KeyError:
-            raise KeyError('No such key `{}` among `{}` ({})'.format(key, self.user_attrs_dict, hex(id(self.user_attrs_dict))))
+            raise KeyError('{}; No such key `{}` among `{}` ({})'.format(
+                self.sio.service_class, key, self.user_attrs_dict, hex(id(self))))
 
     def append(self, value):
         self.user_attrs_list.append(value)
