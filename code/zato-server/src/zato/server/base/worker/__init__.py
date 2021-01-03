@@ -1614,11 +1614,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         def inner(service, **ignored):
             if not isinstance(service.response.payload, self._simple_types):
-
-                # If serialise is False, the operation below is essentially a no-op
-                # so we can skip it altogether.
-                if serialize:
-                    service.response.payload = service.response.payload.getvalue(serialize)
+                service.response.payload = service.response.payload.getvalue(serialize)
 
         return inner
 
