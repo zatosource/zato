@@ -549,8 +549,8 @@ class Service(object):
         # type: (Service, tuple, **object)
         response = service.response.payload
         if not isinstance(response, _raw_types):
-            response = response.getvalue(serialize=kwargs['serialize'])
-            if kwargs['as_bunch']:
+            response = response.getvalue(serialize=kwargs.get('serialize'))
+            if kwargs.get('as_bunch'):
                 response = bunchify(response)
             service.response.payload = response
 

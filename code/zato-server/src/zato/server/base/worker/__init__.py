@@ -1610,25 +1610,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def _set_service_response_data(self, serialize=True):
-
-        def inner(service, **ignored):
-            if not isinstance(service.response.payload, self._simple_types):
-
-                if serialize:
-                    service.response.payload = service.response.payload.getvalue(serialize)
-
-                    #if 'Create' in str(service):
-                    logger.info('')
-                    logger.warn('BBB %r %r', service, serialize)
-                    #logger.warn('QWE %s', service.response.payload.getvalue())
-                    logger.warn('ASD %s', type(service.response.payload))
-                    logger.info('')
-
-        return inner
-
-# ################################################################################################################################
-
     def invoke(self, service, payload, **kwargs):
         """ Invokes a service by its name with request on input.
         """
@@ -1718,7 +1699,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             logger.warn(msg)
             raise Exception(msg)
 
-        service.update_handle(self._set_service_response_data(kwargs.get('serialize', True)), service, payload,
+        service.update_handle(service.set_response_data, service, payload,
             channel, data_format, transport, self.server, self.broker_client, self, cid,
             self.worker_config.simple_io, job_type=msg.get('job_type'), wsgi_environ=wsgi_environ,
             environ=msg.get('environ'))
