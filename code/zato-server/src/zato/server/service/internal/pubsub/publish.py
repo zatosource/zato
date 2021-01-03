@@ -553,8 +553,10 @@ class Publish(AdminService):
         len_msg_list = len_gd_msg_list + len(ctx.non_gd_msg_list)
 
         if len_msg_list == 1:
+            z
             self.response.payload.msg_id = ctx.msg_id_list[0]
         else:
+            a
             self.response.payload.msg_id_list = ctx.msg_id_list
 
 # ################################################################################################################################

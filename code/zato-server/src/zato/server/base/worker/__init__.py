@@ -1614,7 +1614,16 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         def inner(service, **ignored):
             if not isinstance(service.response.payload, self._simple_types):
-                service.response.payload = service.response.payload.getvalue(serialize)
+
+                if serialize:
+                    service.response.payload = service.response.payload.getvalue(serialize)
+
+                #if 'Create' in str(service):
+                logger.info('')
+                logger.warn('BBB %r %r', service, serialize)
+                #logger.warn('QWE %s', service.response.payload.getvalue())
+                logger.warn('ASD %s', type(service.response.payload))
+                logger.info('')
 
         return inner
 
@@ -1728,9 +1737,16 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             cb_msg['is_async'] = True
             cb_msg['in_reply_to'] = cid
 
+            #import traceback as x
+            #x.print_stack()
+
             self.broker_client.invoke_async(cb_msg)
 
         if kwargs.get('needs_response'):
+
+            if 'client.Create' in str(service):
+                logger.warn('ZZZ %s %s', service, service.response.payload.getvalue())
+
             return service.response.payload
 
 # ################################################################################################################################
