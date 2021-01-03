@@ -182,27 +182,6 @@ class SimpleIOPayload(object):
     def set_payload_attrs(self, value:object):
         """ Assigns user-defined attributes to what will eventually be a response.
         """
-
-        # #####################################################################################################
-        #
-        # In a rare case that we do something like the below ..
-        #
-        # service.response.payload = service.response.payload.getvalue(False)
-        #
-        # .. that is, assigning to payload its own value without previous serialisation,
-        # just like it used to be done in WorkerStore._set_service_response_data,
-        # we will need possibly to rethink the idea of clearing out the user attributes
-        #
-        # For now, this is not a concern because, with the exception of WorkerStore._set_service_response_data,
-        # which is no longer doing it, no other component will attempt it
-        # and this comment is left just in case reconsidering it in the future.
-        #
-        # #####################################################################################################
-
-        # First, clear out what was potentially set earlier
-        self.user_attrs_dict.clear()
-        self.user_attrs_list[:] = []
-
         value = self._preprocess_payload_attrs(value)
         is_dict:cy.bint = isinstance(value, dict)
 
