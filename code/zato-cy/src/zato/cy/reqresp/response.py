@@ -115,7 +115,7 @@ class Response(object):
     def _get_payload(self):
         return self._payload
 
-    def _set_payload(self, value, clear_attrs=True):
+    def _set_payload(self, value):
         """ Strings, lists and tuples are assigned as-is. Dicts as well if SIO is not used. However, if SIO is used
         the dicts are matched and transformed according to the SIO definition.
         """
@@ -148,7 +148,7 @@ class Response(object):
                 # 2b1)
                 # .. if using SimpleIO ..
                 if self._has_sio_output:
-                    self._payload.set_payload_attrs(value, clear_attrs)
+                    self._payload.set_payload_attrs(value)
 
                 # 2b2)
                 # .. someone assigns to self.response.payload an object that needs
