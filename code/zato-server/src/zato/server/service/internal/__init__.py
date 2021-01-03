@@ -127,17 +127,17 @@ class AdminService(Service):
         if self.name == 'zato.service.invoke':
             return
 
-        if 0:#self.server.is_admin_enabled_for_info:
+        if self.server.is_admin_enabled_for_info:
             logger.info('Response; service:`%s`, data:`%s` cid:`%s`, ',
                 self.name, replace_private_key(get_response_value(self.response)), self.cid)
 
-            payload = self.response.payload
-            is_text = isinstance(payload, basestring)
-            needs_meta = self.request.input.get('needs_meta', True)
+        payload = self.response.payload
+        is_text = isinstance(payload, basestring)
+        needs_meta = self.request.input.get('needs_meta', True)
 
-            if needs_meta and hasattr(self, '_search_tool'):
-                if not is_text:
-                    payload.zato_meta = self._search_tool.output_meta
+        if needs_meta and hasattr(self, '_search_tool'):
+            if not is_text:
+                payload.zato_meta = self._search_tool.output_meta
 
 # ################################################################################################################################
 
