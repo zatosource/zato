@@ -50,7 +50,6 @@ if 0:
 
     # Zato
     from zato.common.odb.api import PoolStore
-    from zato.hl7.mllp.server import ConnCtx
     from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.email import EMailAPI
     from zato.server.connection.ftp import FTPStore
