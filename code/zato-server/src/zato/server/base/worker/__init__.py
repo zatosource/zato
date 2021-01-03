@@ -1618,12 +1618,12 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
                 if serialize:
                     service.response.payload = service.response.payload.getvalue(serialize)
 
-                #if 'Create' in str(service):
-                logger.info('')
-                logger.warn('BBB %r %r', service, serialize)
-                #logger.warn('QWE %s', service.response.payload.getvalue())
-                logger.warn('ASD %s', type(service.response.payload))
-                logger.info('')
+                    #if 'Create' in str(service):
+                    logger.info('')
+                    logger.warn('BBB %r %r', service, serialize)
+                    #logger.warn('QWE %s', service.response.payload.getvalue())
+                    logger.warn('ASD %s', type(service.response.payload))
+                    logger.info('')
 
         return inner
 
