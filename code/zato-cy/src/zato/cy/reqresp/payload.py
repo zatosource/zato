@@ -3,12 +3,10 @@
 # cython: auto_pickle=False
 
 """
-Copyright (C) 2020, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from copy import deepcopy
@@ -83,6 +81,41 @@ class SimpleIOPayload(object):
 
 # ################################################################################################################################
 
+    def __iter__(self):
+        return iter(self.user_attrs_list if self.output_repeated else self.user_attrs_dict)
+
+    def __setitem__(self, key, value):
+
+        if isinstance(key, slice):
+            self.user_attrs_list[key.start:key.stop] = value
+            self.output_repeated = True
+        else:
+            setattr(self, key, value)
+
+    def __setattr__(self, key, value):
+
+        # Special-case Zato's own internal attributes
+        if key == 'zato_meta':
+            self.zato_meta = value
+        else:
+            self.user_attrs_dict[key] = value
+
+    def __getattr__(self, key):
+        try:
+            return self.user_attrs_dict[key]
+        except KeyError:
+            raise KeyError('{}; No such key `{}` among `{}` ({})'.format(
+                self.sio.service_class, key, self.user_attrs_dict, hex(id(self))))
+
+
+# ################################################################################################################################
+
+    @cy.returns(bool)
+    def has_data(self):
+        return bool(self.user_attrs_dict or self.user_attrs_list)
+
+# ################################################################################################################################
+
     @cy.returns(dict)
     def _extract_payload_attrs(self, item:object) -> dict:
         """ Extract response attributes from a single object. Used with items other than dicts.
@@ -149,27 +182,6 @@ class SimpleIOPayload(object):
     def set_payload_attrs(self, value:object):
         """ Assigns user-defined attributes to what will eventually be a response.
         """
-
-        # #####################################################################################################
-        #
-        # In a rare case that we do something like the below ..
-        #
-        # service.response.payload = service.response.payload.getvalue(False)
-        #
-        # .. that is, assigning to payload its own value without previous serialisation,
-        # just like it used to be done in WorkerStore._set_service_response_data,
-        # we will need possibly to rethink the idea of clearing out the user attributes
-        #
-        # For now, this is not a concern because, with the exception of WorkerStore._set_service_response_data,
-        # which is no longer doing it, no other component will attempt it
-        # and this comment is left just in case reconsidering it in the future.
-        #
-        # #####################################################################################################
-
-        # First, clear out what was potentially set earlier
-        self.user_attrs_dict.clear()
-        self.user_attrs_list[:] = []
-
         value = self._preprocess_payload_attrs(value)
         is_dict:cy.bint = isinstance(value, dict)
 
@@ -220,33 +232,6 @@ class SimpleIOPayload(object):
         else:
             out = self.sio.get_output(value, self.data_format) if serialize else value
             return out
-
-# ################################################################################################################################
-
-    def __iter__(self):
-        return iter(self.user_attrs_list if self.output_repeated else self.user_attrs_dict)
-
-    def __setitem__(self, key, value):
-
-        if isinstance(key, slice):
-            self.user_attrs_list[key.start:key.stop] = value
-            self.output_repeated = True
-        else:
-            setattr(self, key, value)
-
-    def __setattr__(self, key, value):
-
-        # Special-case Zato's own internal attributes
-        if key == 'zato_meta':
-            self.zato_meta = value
-        else:
-            self.user_attrs_dict[key] = value
-
-    def __getattr__(self, key):
-        try:
-            return self.user_attrs_dict[key]
-        except KeyError:
-            raise KeyError('No such key `{}` among `{}` ({})'.format(key, self.user_attrs_dict, hex(id(self.user_attrs_dict))))
 
     def append(self, value):
         self.user_attrs_list.append(value)
