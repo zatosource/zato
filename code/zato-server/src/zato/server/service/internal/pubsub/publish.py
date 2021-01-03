@@ -100,9 +100,6 @@ class Publish(AdminService):
             'security_id', 'ws_channel_id', 'service_id', 'data_parsed', 'meta', AsIs('group_id'),
             Int('position_in_group'), 'endpoint_id', List('reply_to_sk'), List('deliver_to_sk'), 'user_ctx', 'zato_ctx')
         output_optional = (AsIs('msg_id'), List('msg_id_list'))
-        response_elem = 'response'
-        force_empty_keys = True
-        empty_output_value = ''
 
 # ################################################################################################################################
 
@@ -553,8 +550,10 @@ class Publish(AdminService):
         len_msg_list = len_gd_msg_list + len(ctx.non_gd_msg_list)
 
         if len_msg_list == 1:
+            z
             self.response.payload.msg_id = ctx.msg_id_list[0]
         else:
+            a
             self.response.payload.msg_id_list = ctx.msg_id_list
 
 # ################################################################################################################################
