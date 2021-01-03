@@ -37,6 +37,7 @@ class Create(AdminService):
             'peer_fqdn', 'connection_time', 'last_seen', 'channel_name')
         input_optional = 'ext_client_name', 'peer_forwarded_for', 'peer_forwarded_for_fqdn'
         output_optional = 'ws_client_id'
+        response_elem = None
 
     def handle(self):
         req = self.request.input
