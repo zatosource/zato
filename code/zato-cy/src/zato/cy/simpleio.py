@@ -1501,6 +1501,13 @@ class CySimpleIO(object):
         if (not response_elem) or (response_elem is InternalNotGiven):
             response_elem = None
 
+        '''
+        if 'publish.Publish' in str(class_):
+            print()
+            print(111, class_, response_elem)
+            print()
+            '''
+
         output_repeated = getattr(self.user_declaration, 'output_repeated', InternalNotGiven)
         if output_repeated is not InternalNotGiven:
             self.definition.output_repeated = bool(output_repeated)
@@ -1857,8 +1864,8 @@ class CySimpleIO(object):
                     elif is_csv:
                         all_elems = elem
 
-                    raise ValueError('No such input elem `{}` among `{}` in `{}` ({})'.format(
-                        sio_item_name, all_elems, elem, self.service_class))
+                    raise ValueError('{}; No such input elem `{}` among `{}` in `{}`'.format(
+                        self.service_class, sio_item_name, all_elems, elem))
                 else:
                     if self._should_skip_on_input(self.definition, sio_item, input_value):
                         # Continue to the next sio_item
@@ -2047,11 +2054,22 @@ class CySimpleIO(object):
         out:object = out_elems if is_list else out_elems[0]
 
         # Wrap the response in a top-level element if needed
+
         if data_format in (DATA_FORMAT_JSON, DATA_FORMAT_DICT):
             if self.definition._has_response_elem:
                 out = {
                     self.definition._response_elem: out
                 }
+
+        '''
+        print()
+        print(222, data_format)
+        print(333, self.definition._response_elem)
+        print(444, self.definition._has_response_elem)
+        print(555, out)
+        print(666, self.service_class)
+        print()
+        '''
 
         return out
 
