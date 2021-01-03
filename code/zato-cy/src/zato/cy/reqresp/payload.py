@@ -3,12 +3,10 @@
 # cython: auto_pickle=False
 
 """
-Copyright (C) 2020, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from copy import deepcopy
@@ -198,20 +196,6 @@ class SimpleIOPayload(object):
             if force_dict_serialisation:
                 serialize = True
 
-        '''
-        import traceback as x
-
-        for line in x.format_stack():
-            print(line.strip())
-            '''
-
-        print()
-        print(111, self.data_format)
-        print(222, serialize)
-        print(333, force_dict_serialisation)
-        print()
-
-
         # If data format is DICT, we force serialisation to that format
         # unless overridden on input.
         value = self.user_attrs_list if self.output_repeated else self.user_attrs_dict
@@ -233,11 +217,6 @@ class SimpleIOPayload(object):
 
         else:
             out = self.sio.get_output(value, self.data_format) if serialize else value
-
-            print()
-            print(777, out)
-            print()
-
             return out
 
 # ################################################################################################################################
@@ -254,11 +233,6 @@ class SimpleIOPayload(object):
             setattr(self, key, value)
 
     def __setattr__(self, key, value):
-
-        print()
-        print(555, self.user_attrs_dict)
-        print(666, key, value)
-        print()
 
         # Special-case Zato's own internal attributes
         if key == 'zato_meta':
