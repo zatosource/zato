@@ -81,6 +81,41 @@ class SimpleIOPayload(object):
 
 # ################################################################################################################################
 
+    def __iter__(self):
+        return iter(self.user_attrs_list if self.output_repeated else self.user_attrs_dict)
+
+    def __setitem__(self, key, value):
+
+        if isinstance(key, slice):
+            self.user_attrs_list[key.start:key.stop] = value
+            self.output_repeated = True
+        else:
+            setattr(self, key, value)
+
+    def __setattr__(self, key, value):
+
+        # Special-case Zato's own internal attributes
+        if key == 'zato_meta':
+            self.zato_meta = value
+        else:
+            self.user_attrs_dict[key] = value
+
+    def __getattr__(self, key):
+        try:
+            return self.user_attrs_dict[key]
+        except KeyError:
+            raise KeyError('{}; No such key `{}` among `{}` ({})'.format(
+                self.sio.service_class, key, self.user_attrs_dict, hex(id(self))))
+
+
+# ################################################################################################################################
+
+    @cy.returns(bool)
+    def has_data(self):
+        return bool(self.user_attrs_dict or self.user_attrs_list)
+
+# ################################################################################################################################
+
     @cy.returns(dict)
     def _extract_payload_attrs(self, item:object) -> dict:
         """ Extract response attributes from a single object. Used with items other than dicts.
@@ -218,34 +253,6 @@ class SimpleIOPayload(object):
         else:
             out = self.sio.get_output(value, self.data_format) if serialize else value
             return out
-
-# ################################################################################################################################
-
-    def __iter__(self):
-        return iter(self.user_attrs_list if self.output_repeated else self.user_attrs_dict)
-
-    def __setitem__(self, key, value):
-
-        if isinstance(key, slice):
-            self.user_attrs_list[key.start:key.stop] = value
-            self.output_repeated = True
-        else:
-            setattr(self, key, value)
-
-    def __setattr__(self, key, value):
-
-        # Special-case Zato's own internal attributes
-        if key == 'zato_meta':
-            self.zato_meta = value
-        else:
-            self.user_attrs_dict[key] = value
-
-    def __getattr__(self, key):
-        try:
-            return self.user_attrs_dict[key]
-        except KeyError:
-            raise KeyError('{}; No such key `{}` among `{}` ({})'.format(
-                self.sio.service_class, key, self.user_attrs_dict, hex(id(self))))
 
     def append(self, value):
         self.user_attrs_list.append(value)
