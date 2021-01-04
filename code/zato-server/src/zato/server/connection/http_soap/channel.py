@@ -651,7 +651,7 @@ class RequestHandler(object):
             'payload': response.payload,
             'content_type': response.content_type,
             'headers': response.headers,
-            'status_code': response.status_code.value if _py3 else response.status_code,
+            'status_code': response.status_code,
         }))
 
 # ################################################################################################################################
