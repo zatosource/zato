@@ -33,17 +33,15 @@
 
             {% comment %} 3 {% endcomment %}
             '_delivery_mode',
-            '_priority',
-            '_content_type',
 
             {% comment %} 4 {% endcomment %}
-            '_content_encoding',
             '_expiration',
             '_pool_size',
 
             {% comment %} 5 {% endcomment %}
             '_user_id',
             '_app_id',
+            '_publish',
             '_edit',
 
             {% comment %} 6 {% endcomment %}
@@ -105,17 +103,15 @@
 
                         {% comment %} 3 {% endcomment %}
                         <th><a href="#">Delivery mode</a></th>
-                        <th><a href="#">Priority</a></th>
-                        <th><a href="#">Content type</a></th>
 
                         {% comment %} 4 {% endcomment %}
-                        <th><a href="#">Encoding</a></th>
                         <th><a href="#">Expiration (ms)</a></th>
                         <th><a href="#">Pool size</a></th>
 
                         {% comment %} 5 {% endcomment %}
                         <th><a href="#">User ID</a></th>
                         <th><a href="#">App ID</a></th>
+                        <th>&nbsp;</th>
                         <th>&nbsp;</th>
 
                         {% comment %} 6 {% endcomment %}
@@ -155,17 +151,17 @@
 
                         {% comment %} 3 {% endcomment %}
                         <td>{{ item.delivery_mode_text|no_value_indicator }}</td>
-                        <td>{{ item.priority|no_value_indicator }}</td>
-                        <td>{{ item.content_type|no_value_indicator }}</td>
 
                         {% comment %} 4 {% endcomment %}
-                        <td>{{ item.content_encoding|no_value_indicator }}</td>
                         <td>{{ item.expiration|no_value_indicator }}</td>
                         <td>{{ item.pool_size }}</td>
 
                         {% comment %} 5 {% endcomment %}
                         <td>{{ item.user_id|no_value_indicator }}</td>
                         <td>{{ item.app_id|no_value_indicator }}</td>
+                        <td>
+                            <a href="{% url "out-amqp-invoke" item.id item.name item.name|slugify %}?cluster={{ cluster_id }}">Publish</a>
+                        </td>
                         <td><a href="javascript:$.fn.zato.outgoing.amqp.edit('{{ item.id }}')">Edit</a></td>
 
                         {% comment %} 6 {% endcomment %}
