@@ -51,10 +51,8 @@ $.fn.zato.outgoing.amqp.data_table.new_row = function(item, data, include_tr) {
     // 3
     row += String.format('<td>{0}</td>', data.delivery_mode_text || $.fn.zato.empty_value);
     row += String.format('<td>{0}</td>', item.priority || $.fn.zato.empty_value);
-    row += String.format('<td>{0}</td>', item.content_type || $.fn.zato.empty_value);
 
     // 4
-    row += String.format('<td>{0}</td>', item.content_encoding || $.fn.zato.empty_value);
     row += String.format('<td>{0}</td>', item.expiration || $.fn.zato.empty_value);
     row += String.format('<td>{0}</td>', item.pool_size || $.fn.zato.empty_value);
 

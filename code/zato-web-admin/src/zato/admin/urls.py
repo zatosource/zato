@@ -698,14 +698,18 @@ urlpatterns += [
 
     # .. AMQP
 
-    url(r'^zato/outgoing/amqp/$',
-        login_required(out_amqp.Index()), name=out_amqp.Index.url_name),
-    url(r'^zato/outgoing/amqp/create/$',
-        login_required(out_amqp.create), name='out-amqp-create'),
-    url(r'^zato/outgoing/amqp/edit/$',
-        login_required(out_amqp.edit), name='out-amqp-edit'),
+    url(r'^zato/outgoing/amqp/$', login_required(out_amqp.Index()), name=out_amqp.Index.url_name),
+    url(r'^zato/outgoing/amqp/create/$', login_required(out_amqp.create), name='out-amqp-create'),
+    url(r'^zato/outgoing/amqp/edit/$', login_required(out_amqp.edit), name='out-amqp-edit'),
     url(r'^zato/outgoing/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_amqp.Delete()), name=out_amqp.Delete.url_name),
+
+    url(r'^zato/outgoing/amqp/invoke/action/(?P<conn_name>.*)/$',
+        login_required(out_amqp.invoke_action), name='out-amqp-invoke-action'),
+
+    url(r'^zato/outgoing/amqp/invoke/(?P<conn_id>.*)/(?P<conn_name>.*)/(?P<conn_slug>.*)/$',
+        login_required(out_amqp.invoke), name='out-amqp-invoke'),
+
     ]
 
 # ################################################################################################################################
