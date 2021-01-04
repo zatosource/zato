@@ -47,7 +47,7 @@ def _get_edit_create_message(params, prefix=''):
 def _edit_create_response(client, verb, id, name, delivery_mode_text, def_id, cluster_id):
     response = client.invoke('zato.definition.amqp.get-by-id', {'id':def_id, 'cluster_id': cluster_id})
     return_data = {'id': id,
-                   'message': 'Successfully {} the outgoing AMQP connection `{}`'.format(verb, name),
+                   'message': 'Successfully {} outgoing AMQP connection `{}`'.format(verb, name),
                    'delivery_mode_text': delivery_mode_text,
                    'def_name': response.data.name
                 }
@@ -103,7 +103,7 @@ def edit(req):
     try:
         request = _get_edit_create_message(req.POST, 'edit-')
         req.zato.client.invoke('zato.outgoing.amqp.edit', request)
-        delivery_mode_text = delivery_friendly_name[int(req.POST['edit-delivery_mode'])]
+        delivery_mode_text = delivery_friendly_name[req.POST['edit-delivery_mode']]
 
         return _edit_create_response(req.zato.client, 'updated', req.POST['id'], req.POST['edit-name'],
             delivery_mode_text, req.POST['edit-def_id'], req.POST['cluster_id'])
