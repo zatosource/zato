@@ -502,6 +502,15 @@
                             {% endifequal %}
                         {% endifequal %}
 
+                        {% ifequal connection 'channel' %}
+                        <tr>
+                            <td style="vertical-align:middle">Accept header</td>
+                            <td>
+                                {{ create_form.http_accept }}
+                            </td>
+                        </tr>
+                        {% endifequal %}
+
                         {% ifequal transport 'soap' %}
                         <tr>
                             <td style="vertical-align:middle">SOAP action</td>
@@ -580,12 +589,6 @@
                             Expiry
                             {{ create_form.cache_expiry }}
                             <span class="form_hint">(in minutes, 0=unlimited)</span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Accept header</td>
-                            <td>
-                                {{ create_form.http_accept }}
                             </td>
                         </tr>
 
