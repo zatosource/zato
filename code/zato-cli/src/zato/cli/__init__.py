@@ -491,6 +491,24 @@ class ZatoCommand(object):
 
 # ################################################################################################################################
 
+    def _encrypt(self, CryptoManagerClass, args, to_encrypt=None, needs_log_info=True):
+
+        # stdlib
+        import os
+
+        os.chdir(self.original_dir)
+        repo_dir = os.path.abspath(os.path.join(args.path, 'config', 'repo'))
+        cm = CryptoManagerClass(repo_dir=repo_dir)
+
+        encrypted = cm.encrypt(to_encrypt or args.secret)
+
+        if needs_log_info:
+            self.logger.info('Encrypted value: `%s`' % encrypted)
+
+        return encrypted
+
+# ################################################################################################################################
+
     def reset_logger(self, args, reload_=False):
 
         # stdlib
