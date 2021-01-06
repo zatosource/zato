@@ -350,6 +350,7 @@ command_imports = (
     ('hash_get_rounds', 'zato.cli.crypto.GetHashRounds'),
     ('hl7_mllp_send', 'zato.cli.hl7_.MLLPSend'),
     ('info', 'zato.cli.info.Info'),
+    ('set_ide_password', 'zato.cli.ide.SetIDEPassword'),
     ('reset_totp_key', 'zato.cli.web_admin_auth.ResetTOTPKey'),
     ('quickstart_create', 'zato.cli.quickstart.Create'),
     ('service_invoke', 'zato.cli.service.Invoke'),
@@ -378,11 +379,23 @@ def run_command(args):
     # Zato
     from zato.common.util.import_ import import_string
 
-    for command_name, class_dotted_name in command_imports:
+    # This may be needed in two places.
+    sorted_command_imports = sorted(command_imports)
+
+    # Iterate over all the commands that we know ..
+    for command_name, class_dotted_name in sorted_command_imports:
+
+        # Try to match the command given with our configuration ..
         if command_name == args.command:
             class_ = import_string(class_dotted_name)
             instance = class_(args)
+
+            # .. we found a match so we can run the command.
             return instance.run(args)
+
+    # .. if we are here, it means that configuration from zato_command.py does not much our.
+    else:
+        raise Exception('Could not find `{}` among `{}`'.format(args.command, [elem[0] for elem in sorted_command_imports]))
 
 # ################################################################################################################################
 
