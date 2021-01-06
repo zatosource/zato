@@ -1313,6 +1313,26 @@ def get_odb_session_from_server_config(config, cm, odb_password_encrypted):
 
 # ################################################################################################################################
 
+def get_odb_session_from_component_dir(component_dir, config_file, CryptoManagerClass):
+
+    repo_dir = get_repo_dir_from_component_dir(component_dir)
+    cm = CryptoManagerClass.from_repo_dir(None, repo_dir, None)
+    secrets_conf = get_config(repo_dir, 'secrets.conf', needs_user_config=False)
+    config = get_config(repo_dir, config_file, crypto_manager=cm, secrets_conf=secrets_conf)
+
+    return get_odb_session_from_server_config(config, None, False)
+
+# ################################################################################################################################
+
+def get_odb_session_from_server_dir(server_dir):
+
+    # Zato
+    from zato.common.crypto.api import ServerCryptoManager
+
+    return get_odb_session_from_component_dir(server_dir, 'server.conf', ServerCryptoManager)
+
+# ################################################################################################################################
+
 def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted):
     """ Returns credentials to authenticate with against Zato's own /zato/admin/invoke channel.
     """
@@ -1337,6 +1357,8 @@ def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted):
             if security:
                 password = security.password.replace(SECRETS.PREFIX, '')
                 return (security.username, cm.decrypt(password))
+
+# ################################################################################################################################
 
 def get_client_from_server_conf(server_dir, require_server=True):
 

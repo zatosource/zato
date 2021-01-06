@@ -116,6 +116,7 @@ class CommandStore(object):
              enmasse             as enmasse_mod,             \
              FromConfig,                                     \
              hl7_                as hl7_mod,                 \
+             ide                 as ide_mod,                 \
              info                as info_mod,                \
              quickstart          as quickstart_mod,          \
              service             as service_mod,             \
@@ -334,6 +335,14 @@ class CommandStore(object):
         hl7_mllp_send = hl7_subs.add_parser('mllp-send', description=hl7_mod.MLLPSend.__doc__, parents=[base_parser])
         hl7_mllp_send.set_defaults(command='hl7_mllp_send')
         self.add_opts(hl7_mllp_send, hl7_mod.MLLPSend.opts)
+
+        #
+        # IDE
+        #
+        ide = subs.add_parser('set-ide-password', description=ide_mod.SetIDEPassword.__doc__, parents=[base_parser])
+        ide.add_argument('path', help='Path to a Zato server')
+        ide.set_defaults(command='set_ide_password')
+        self.add_opts(ide, ide_mod.SetIDEPassword.opts)
 
         #
         # info
