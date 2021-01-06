@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -15,7 +15,8 @@ from requests import Session as RequestsSession
 from zato.common.api import CACHE, NotGiven
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.json_internal import dumps
-from zato.common.util.api import as_bool, get_config, get_odb_session_from_server_config, get_repo_dir_from_component_dir
+from zato.common.util.api import as_bool, get_config, get_odb_session_from_server_dir, get_odb_session_from_server_config, \
+     get_repo_dir_from_component_dir,
 from zato.common.odb.model import Cluster, HTTPBasicAuth, Server
 
 # ################################################################################################################################
@@ -99,7 +100,7 @@ class Client(object):
         password = None
 
         try:
-            session = get_odb_session_from_server_config(config, None, False)
+            session = get_odb_session_from_server_dir(server_dir)
 
             cluster = session.query(Server).\
                 filter(Server.token == config.main.token).\
