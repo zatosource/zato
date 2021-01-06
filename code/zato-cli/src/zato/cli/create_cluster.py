@@ -71,6 +71,7 @@ class Create(ZatoCommand):
         from sqlalchemy.exc import IntegrityError
 
         # Zato
+        from zato.common.api import IDEDeploy
         from zato.common.odb.model import Cluster, HTTPBasicAuth
         from zato.common.odb.post_process import ODBPostProcess
 
@@ -126,7 +127,7 @@ class Create(ZatoCommand):
             self.add_default_rbac_permissions(session, cluster)
             root_rbac_role = self.add_default_rbac_roles(session, cluster)
             ide_pub_rbac_role = self.add_rbac_role_and_acct(
-                session, cluster, root_rbac_role, 'IDE Publishers', 'ide_publisher', 'ide_publisher')
+                session, cluster, root_rbac_role, 'IDE Publishers', IDEDeploy.Username, IDEDeploy.Username)
 
             # We need to flush the session here, after adding default RBAC permissions
             # which are needed by REST channels with security delegated to RBAC.

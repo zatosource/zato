@@ -35,18 +35,6 @@ class Encrypt(ManageCommand):
 
 # ################################################################################################################################
 
-    def _encrypt(self, class_, args):
-
-        # stdlib
-        import os
-
-        os.chdir(self.original_dir)
-        repo_dir = os.path.abspath(os.path.join(args.path, 'config', 'repo'))
-        cm = class_(repo_dir=repo_dir)
-        self.logger.info('Encrypted value: `%s`' % cm.encrypt(args.secret))
-
-# ################################################################################################################################
-
     def _on_web_admin(self, args):
 
         # Zato
