@@ -15,7 +15,7 @@ from copy import deepcopy
 # Zato
 from zato.cli import common_odb_opts, kvdb_opts, ZatoCommand
 
-DEFAULT_NO_SERVERS=2
+DEFAULT_NO_SERVERS=1
 
 # Taken from http://stackoverflow.com/a/246128
 script_dir = """SOURCE="${BASH_SOURCE[0]}"
@@ -431,7 +431,7 @@ class Create(ZatoCommand):
         # Need to reset the logger here because executing the create_web_admin command
         # loads the web admin's logger which doesn't like that of ours.
         self.reset_logger(args, True)
-        self.logger.info('[{}/{}] Web admin created'.format(next(next_step), total_steps))
+        self.logger.info('[{}/{}] Dashboard created'.format(next(next_step), total_steps))
 
 # ################################################################################################################################
 
