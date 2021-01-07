@@ -19,7 +19,7 @@ class SetIDEPassword(ZatoCommand):
     """
     opts = [
         {'name':'--password', 'help':'Password to set for the IDE user', 'default':''},
-        {'name':'--to-stdout', 'help':'Should the password be printed to studout', 'action':'store_true'},
+        {'name':'--skip-stdout', 'help':'Should the password be printed to studout', 'action':'store_true'},
     ]
 
 # ################################################################################################################################
@@ -30,6 +30,9 @@ class SetIDEPassword(ZatoCommand):
 # ################################################################################################################################
 
     def execute(self, args):
+
+        # stdlib
+        import sys
 
         # Zato
         from zato.common.api import IDEDeploy
@@ -62,10 +65,7 @@ class SetIDEPassword(ZatoCommand):
             if session:
                 session.close()
 
-        if self.args.to_stdout:
-            # stdlib
-            import sys
-
+        if not args.skip_stdout:
             sys.stdout.write(password)
             sys.stdout.write('\n')
             sys.stdout.flush()
