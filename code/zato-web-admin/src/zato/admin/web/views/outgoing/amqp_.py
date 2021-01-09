@@ -105,7 +105,7 @@ def create(req):
     try:
         request = _get_edit_create_message(req.POST)
         response = req.zato.client.invoke('zato.outgoing.amqp.create', request)
-        delivery_mode_text = delivery_friendly_name[int(req.POST['delivery_mode'])]
+        delivery_mode_text = delivery_friendly_name[req.POST['delivery_mode']]
 
         return _edit_create_response(req.zato.client, 'created', response.data.id,
             req.POST['name'], delivery_mode_text, req.POST['def_id'], req.POST['cluster_id'])
