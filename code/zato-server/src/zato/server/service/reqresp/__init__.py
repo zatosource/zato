@@ -277,7 +277,7 @@ class Outgoing(object):
     """ A container for various outgoing connections a service can access. This in fact is a thin wrapper around data
     fetched from the service's self.worker_store.
     """
-    __slots__ = ('amqp', 'ftp', 'ibm_mq', 'jms_wmq', 'wmq', 'odoo', 'plain_http', 'soap', 'sql', 'zmq', 'wsx', 'vault',
+    __slots__ = ('amqp', 'ftp', 'ibm_mq', 'jms_wmq', 'wmq', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'zmq', 'wsx', 'vault',
         'sms', 'sap', 'sftp', 'ldap', 'mongodb', 'def_kafka', 'hl7')
 
     def __init__(self, amqp=None, ftp=None, jms_wmq=None, odoo=None, plain_http=None, soap=None, sql=None, zmq=None,
@@ -291,7 +291,7 @@ class Outgoing(object):
         self.ibm_mq = self.wmq = self.jms_wmq = jms_wmq # type: WMQFacade
 
         self.odoo = odoo # type: ConfigDict
-        self.plain_http = plain_http # type: ConfigDict
+        self.plain_http = self.rest = plain_http # type: ConfigDict
         self.soap = soap # type: ConfigDict
         self.sql = sql   # type: PoolStore
         self.zmq = zmq     # type: ZMQFacade
