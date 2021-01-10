@@ -560,9 +560,12 @@ class ConnectorAMQP(Connector):
         # type: (dict)
         """ Deletes an outgoing connection. Must be called with self.lock held.
         """
-        self._producers[config.old_name].stop()
-        del self._producers[config.old_name]
-        del self.outconns[config.old_name]
+        # It will be old_name if this is an edit and name if it a deletion.
+        _name = config.get('old_name') or config.name
+
+        self._producers[_name].stop()
+        del self._producers[_name]
+        del self.outconns[_name]
 
 # ################################################################################################################################
 
