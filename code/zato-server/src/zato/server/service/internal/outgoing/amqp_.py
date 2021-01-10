@@ -218,3 +218,21 @@ class Delete(AdminService):
                 raise
 
 # ################################################################################################################################
+
+class Publish(AdminService):
+    """ Publishes a message to an AMQP broker.
+    """
+    name = 'zato.outgoing.amqp.publish'
+
+    class SimpleIO:
+        input_required = 'request_data', 'conn_name', 'exchange', 'routing_key'
+        output_optional = 'response_data'
+        response_elem = None
+
+    def handle(self):
+        input = self.request.input
+        self.out.amqp.send(input.request_data, input.conn_name, input.exchange, input.routing_key)
+        self.response.payload.response_data = 'OK'
+
+# ################################################################################################################################
+# ################################################################################################################################
