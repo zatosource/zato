@@ -797,11 +797,6 @@ def invoke_action_handler(req, service_name, send_attrs):
         response = req.zato.client.invoke(service_name, request)
 
         if response.ok:
-
-            print()
-            print(111, response.data)
-            print()
-
             response_data = response.data['response_data']
             if isinstance(response_data, dict):
                 response_data = dict(response_data)
