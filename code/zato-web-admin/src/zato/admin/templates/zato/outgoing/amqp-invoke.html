@@ -19,7 +19,7 @@
     <table id="data-table">
         <tr>
             <td class='inline_header'>
-            Invoke AMQP outgoing connection
+            Publish messages to AMQP outgoing connection
             <a href="{% url "out-amqp" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-hl7-mllp&amp;query={{ conn_name }}">{{ conn_name }}</a>
             </td>
         </tr>
@@ -27,28 +27,31 @@
             <td>
                 <form id="send_message_form" action="{% url "out-amqp-invoke-action" conn_name %}?cluster={{ cluster_id }}" method="post">
                 {% csrf_token %}
-                    Request:
+                    Data:
                     <textarea style="width:100%; height:250px" id="request_data" name="request_data">Hello from Zato!</textarea>
                     <br/><br/>
-                    Response:
-                    <textarea style="width:100%; height:250px" id="response_data" name="response_data"></textarea>
 
                     <table style="width:100%">
                         <tr>
-                            <td style="width:70px">
-                                Topic&nbsp;<span class="form_hint">(s)</span>:
+                            <td>
+                                Exchange
+                                <input type="text" name="exchange" />
+                                |
+                                Routing key
+                                <input type="text" name="routing_key" />
                             </td>
-                            <td style="width:5%">
-                                <input type="text" name="timeout" id="timeout" style="width:60px" value="{{ timeout }}"/>
-                            </td>
-
+                        </tr>
+                        <tr>
                             <td style="text-align:right">
                                 <input type="submit" value="Submit" />
                             </td>
                         </tr>
+
+
                     </table>
 
-                    <input type="hidden" id="conn_type" name="conn_type" value="{{ conn_type }}" />
+                    <input type="hidden" id="action_verb" name="action_verb" value="published" />
+                    <input type="hidden" id="conn_id" name="conn_id" value="{{ conn_id }}" />
                     <input type="hidden" id="conn_name" name="conn_name" value="{{ conn_name }}" />
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     </div>
