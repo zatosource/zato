@@ -719,7 +719,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def _populate_connector_config(self, config):
-        """ Called when we are not the first worker so, any connector is enabled,
+        """ Called when we are not the first worker and, if any connector is enabled,
         we need to get its configuration through IPC and populate our own accordingly.
         """
         # type: (SubprocessStartConfig)
