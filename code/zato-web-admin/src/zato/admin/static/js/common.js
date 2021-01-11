@@ -1217,6 +1217,10 @@ $.fn.zato.toggle_time = function(link_name, current_value, new_value) {
 
 }
 
+$.fn.zato.slugify = function(text) {
+    return text.toLowerCase().replace(/ /g,'-').replace(/[^\w-]+/g,'');
+}
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.empty_value = '<span class="form_hint">---</span>';

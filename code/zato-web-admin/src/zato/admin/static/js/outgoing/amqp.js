@@ -32,6 +32,7 @@ $.fn.zato.outgoing.amqp.edit = function(id) {
 
 $.fn.zato.outgoing.amqp.data_table.new_row = function(item, data, include_tr) {
     var row = '';
+    let cluster_id = $(document).getUrlParam('cluster');
 
     if(include_tr) {
         row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
@@ -50,7 +51,6 @@ $.fn.zato.outgoing.amqp.data_table.new_row = function(item, data, include_tr) {
 
     // 3
     row += String.format('<td>{0}</td>', data.delivery_mode_text || $.fn.zato.empty_value);
-    row += String.format('<td>{0}</td>', item.priority || $.fn.zato.empty_value);
 
     // 4
     row += String.format('<td>{0}</td>', item.expiration || $.fn.zato.empty_value);
@@ -59,6 +59,8 @@ $.fn.zato.outgoing.amqp.data_table.new_row = function(item, data, include_tr) {
     // 5
     row += String.format('<td>{0}</td>', item.user_id || $.fn.zato.empty_value);
     row += String.format('<td>{0}</td>', item.app_id || $.fn.zato.empty_value);
+    row += String.format('<td><a href="/zato/outgoing/amqp/invoke/{0}/{1}/{2}/?cluster={3}">Publish</a></td>',
+        item.id, item.name, $.fn.zato.slugify(item.name), cluster_id);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.amqp.edit('{0}')\">Edit</a>", item.id));
 
     // 6

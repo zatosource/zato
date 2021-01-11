@@ -1160,6 +1160,10 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
     def _on_outconn_sftp_create(self, msg):
 
+        if not self.server.is_first_worker:
+            self.server._populate_connector_config(SubprocessStartConfig(has_sftp=True))
+            return
+
         if not self.server.subproc_current_state.is_sftp_running:
             config = SubprocessStartConfig()
             config.has_sftp = True
@@ -1173,6 +1177,11 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def _on_outconn_sftp_edit(self, msg):
+
+        if not self.server.is_first_worker:
+            self.server._populate_connector_config(SubprocessStartConfig(has_sftp=True))
+            return
+
         connector_msg = deepcopy(msg)
         del self.worker_config.out_sftp[msg.old_name]
         return self._on_outconn_sftp_create(connector_msg)
@@ -1180,6 +1189,11 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def _on_outconn_sftp_delete(self, msg):
+
+        if not self.server.is_first_worker:
+            self.server._populate_connector_config(SubprocessStartConfig(has_sftp=True))
+            return
+
         connector_msg = deepcopy(msg)
         del self.worker_config.out_sftp[msg.name]
         return self.server.connector_sftp.invoke_connector(connector_msg)
