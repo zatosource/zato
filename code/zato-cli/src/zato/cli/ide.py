@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Zato
 from zato.cli import ZatoCommand
+from zato.common.const import SECRETS
 from zato.common.util.api import get_odb_session_from_server_dir
 
 # ################################################################################################################################
@@ -44,8 +45,10 @@ class SetIDEPassword(ZatoCommand):
         password = password.replace('-', '').replace('_', '').replace('=', '')
 
         encrypted = self._encrypt(ServerCryptoManager, self.args, password, False)
+        encrypted = SECRETS.PREFIX + encrypted.decode('utf8')
 
         session = None
+
         try:
             session = get_odb_session_from_server_dir(args.path)
 
