@@ -306,10 +306,14 @@ class Ping(_BaseService):
             try:
                 ping_func(self.request.input.id)
             except Exception:
-                self.response.payload.info = format_exc()
+                exc = format_exc()
+                self.logger.warn(exc)
+                self.response.payload.info = exc
             else:
                 response_time = datetime.utcnow() - start_time
-                self.response.payload.info = 'Connection pinged; response time: {}'.format(response_time)
+                info = 'Connection pinged; response time: {}'.format(response_time)
+                self.logger.info(info)
+                self.response.payload.info = info
 
 # ################################################################################################################################
 # ################################################################################################################################

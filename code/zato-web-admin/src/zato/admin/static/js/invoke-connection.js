@@ -9,7 +9,8 @@ $(document).ready(function() {
     var _callback = function(data, status, xhr){
         var success = status == 'success';
         if(success) {
-            $.fn.zato.user_message(true, 'OK, invoked successfully');
+            let action_verb = $('#action_verb').val() || 'ZZZ';
+            $.fn.zato.user_message(true, 'OK, '+ action_verb +' successfully');
             $('#response_data').text(JSON.stringify(data) || '(No response)');
         }
         else {

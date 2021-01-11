@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,9 +14,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 class StartConfig:
     __slots__ = 'has_ibm_mq', 'has_sftp'
 
-    def __init__(self):
-        self.has_ibm_mq = False
-        self.has_sftp   = False
+    def __init__(self, has_ibm_mq=False, has_sftp=False):
+        self.has_ibm_mq = has_ibm_mq
+        self.has_sftp   = has_sftp
 
 # ################################################################################################################################
 # ################################################################################################################################
