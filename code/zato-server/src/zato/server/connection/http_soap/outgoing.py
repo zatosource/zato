@@ -343,9 +343,9 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         self._enforce_is_active()
 
         # We never touch strings/unicode because apparently the user already serialized outgoing data
-        needs_serialize = not isinstance(data, basestring)
+        needs_request_serialize = not isinstance(data, basestring)
 
-        if needs_serialize:
+        if needs_request_serialize:
             if self.config['data_format'] == DATA_FORMAT.JSON:
                 data = dumps(data)
             elif data and self.config['data_format'] == DATA_FORMAT.XML:
@@ -374,14 +374,15 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         if _has_debug:
             logger.debug('CID:`%s`, response:`%s`', cid, response.text)
 
-        if needs_serialize:
-
-            if self.config['data_format'] == DATA_FORMAT.JSON:
+        if self.config['data_format'] == DATA_FORMAT.JSON:
+            try:
                 response.data = loads(response.text)
+            except ValueError as e:
+                raise Exception('Could not parse JSON response `{}`; e:`{}`'.format(response.text, e.args[0]))
 
-            elif self.config['data_format'] == DATA_FORMAT.XML:
-                if response.text and response.headers.get('Content-Type') in ('application/xml', 'text/xml'):
-                    response.data = fromstring(response.text)
+        elif self.config['data_format'] == DATA_FORMAT.XML:
+            if response.text and response.headers.get('Content-Type') in ('application/xml', 'text/xml'):
+                response.data = fromstring(response.text)
 
         return response
 
