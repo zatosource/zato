@@ -341,11 +341,10 @@
                         {% endifequal %}
 
                         <!-- 12, 13, 13a -->
-                        <td>
-                            <a href="{% url "audit-log" "http-soap" item.id %}?cluster={{ cluster_id }}&amp;object_name={{ item.name }}&amp;object_type_label={% ifequal transport 'soap' %}SOAP{% else %}REST{% endifequal %} {% ifequal connection 'channel' %}channel{% else %}outgoing connection{% endifequal %}">View</a>
-                        </td>
-
                         {% ifequal connection 'channel' %}
+                            <td>
+                                <a href="{% url "audit-log" "http-soap" item.id %}?cluster={{ cluster_id }}&amp;object_name={{ item.name }}&amp;object_type_label={% ifequal transport 'soap' %}SOAP{% else %}REST{% endifequal %} {% ifequal connection 'channel' %}channel{% else %}outgoing connection{% endifequal %}">View</a>
+                            </td>
                             <td class='ignore'>{{ item.service_name }}</td>
                             <td class='ignore'>{{ item.content_encoding|default:'' }}</td>
                         {% endifequal %}
