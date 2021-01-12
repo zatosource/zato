@@ -364,7 +364,7 @@ class ConnectorAMQP(Connector):
         else:
             prefix = 'amqp://'
 
-        conn_string = '{}{}:{}@{}:{}{}'.format(prefix, self.config.username,
+        conn_string = '{}{}:{}@{}:{}/{}'.format(prefix, self.config.username,
             self.config.password if needs_password else SECRET_SHADOW, host, self.config.port, self.config.vhost)
 
         return conn_string
