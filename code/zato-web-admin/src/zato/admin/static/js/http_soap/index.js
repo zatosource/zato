@@ -158,11 +158,11 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += soap_version_tr;
     }
 
-    row += String.format('<td><a href="/zato/audit-log/http-soap/{0}/?cluster={1}&amp;object_name={2}&amp;object_type_label={3}">View</a></td>',
-        item.id, cluster_id, item.name, audit_object_type_label);
-
     /* 12,13,13a */
     if(is_channel) {
+
+        row += String.format('<td><a href="/zato/audit-log/http-soap/{0}/?cluster={1}&amp;object_name={2}&amp;object_type_label={3}">View</a></td>',
+            item.id, cluster_id, item.name, audit_object_type_label);
         row += String.format("<td class='ignore'>{0}</td>", item.service);
         row += String.format("<td class='ignore'>{0}</td>", item.content_encoding);
     }
