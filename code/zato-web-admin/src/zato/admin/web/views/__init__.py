@@ -422,6 +422,9 @@ class Index(_BaseView):
             service_name = self.service_name if self.service_name else self.get_service_name()
             request = self.get_initial_input()
             request.update(self.input)
+
+            logger.info('Invoking `%s` with `%s`', service_name, request)
+
             return func(service_name, request)
 
     def _handle_item_list(self, item_list):
