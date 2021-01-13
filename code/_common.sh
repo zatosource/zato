@@ -1,5 +1,9 @@
 #!/bin/bash
 
+CURDIR="${BASH_SOURCE[0]}";RL="readlink";([[ `uname -s`=='Darwin' ]] || RL="$RL -f")
+while([ -h "${CURDIR}" ]) do CURDIR=`$RL "${CURDIR}"`; done
+N="/dev/null";pushd .>$N;cd `dirname ${CURDIR}`>$N;CURDIR=`pwd`;popd>$N
+
 # Common functions
 
 # Apply a list of patches to source code
@@ -17,6 +21,8 @@ function apply_patches() {
     patch --forward -p0 -d $localpath/eggs < $localpath/patches/requests/models.py.diff
     patch --forward -p0 -d $localpath/eggs < $localpath/patches/requests/sessions.py.diff
     patch --forward -p0 -d $localpath/eggs < $localpath/patches/ws4py/server/geventserver.py.diff
+    patch --forward -p0 -d $localpath/eggs < $localpath/patches/sqlalchemy/sql/dialects/postgresql/pg8000.py.diff
+    patch --forward -p0 -d $localpath/eggs < $localpath/patches/pg8000/core.py.diff
 
     #
     # On SUSE, SQLAlchemy installs to lib64 instead of lib.
@@ -38,23 +44,23 @@ function pip_install() {
 
     $localpath/bin/pip install \
         --no-warn-script-location   \
-        -r requirements.txt
+        -r $CURDIR/requirements.txt
 
     # zato-common must be first.
     $localpath/bin/pip install \
-        -e ./zato-common      \
-        -e ./zato-agent       \
-        -e ./zato-broker      \
-        -e ./zato-cli         \
-        -e ./zato-client      \
-        -e ./zato-cy          \
-        -e ./zato-distlock    \
-        -e ./zato-hl7         \
-        -e ./zato-lib         \
-        -e ./zato-scheduler   \
-        -e ./zato-server      \
-        -e ./zato-web-admin   \
-        -e ./zato-zmq         \
-        -e ./zato-sso         \
-        -e ./zato-testing
+        -e $CURDIR/zato-common      \
+        -e $CURDIR/zato-agent       \
+        -e $CURDIR/zato-broker      \
+        -e $CURDIR/zato-cli         \
+        -e $CURDIR/zato-client      \
+        -e $CURDIR/zato-cy          \
+        -e $CURDIR/zato-distlock    \
+        -e $CURDIR/zato-hl7         \
+        -e $CURDIR/zato-lib         \
+        -e $CURDIR/zato-scheduler   \
+        -e $CURDIR/zato-server      \
+        -e $CURDIR/zato-web-admin   \
+        -e $CURDIR/zato-zmq         \
+        -e $CURDIR/zato-sso         \
+        -e $CURDIR/zato-testing
 }
