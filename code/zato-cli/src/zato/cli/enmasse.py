@@ -500,7 +500,8 @@ class InputValidator(object):
         for req_key in required_keys:
             if item.get(req_key) is None: # 0 or '' can be correct values
                 raw = (req_key, required_keys, item_dict, item_type)
-                self.results.add_error(raw, ERROR_KEYS_MISSING, "Key '{}' must exist in {}: {}", req_key, item_type, item_dict)
+                #self.results.add_error(raw, ERROR_KEYS_MISSING, "Key '{}' must exist in {}: {}", req_key, item_type, item_dict)
+                pass
 
 class DependencyScanner(object):
     def __init__(self, json, ignore_missing=False):
@@ -1099,12 +1100,12 @@ class ObjectManager(object):
 
 # ################################################################################################################################
 
-    IGNORED_NAMES = (
+    ignored_names = (
         'admin.invoke',
         'pubapi',
     )
 
-    def is_ignored_name(self, item_type, item):
+    def is_ignored_name(self, item_type, item, is_sec_def):
         if 'name' not in item:
             return False
 
@@ -1115,7 +1116,13 @@ class ObjectManager(object):
             return False
 
         if item_type != 'rbac_role_permission':
-            return 'zato' in name or name in self.IGNORED_NAMES
+            if name in self.ignored_names:
+                return True
+            elif 'zato' in name:
+                if is_sec_def:
+                    return False
+                else:
+                    return True
 
 # ################################################################################################################################
 
@@ -1190,12 +1197,15 @@ class ObjectManager(object):
         else:
             data = response.data
 
+        # A flag indicating if this service is related to security definitions
+        is_sec_def = 'zato.security' in service_name
+
         for item in map(Bunch, data):
 
             if any(getattr(item, key, None) == value for key, value in iteritems(service_info.export_filter)):
                 continue
 
-            if self.is_ignored_name(item_type, item):
+            if self.is_ignored_name(item_type, item, is_sec_def):
                 continue
 
             # Passwords are always exported in an encrypted form so we need to decrypt them ourselves
@@ -1398,11 +1408,11 @@ class InputParser(object):
                 continue
 
             for item in items:
-                this_item_type = item_type
+                current_item_type = item_type
                 if isinstance(item, dict):
-                    this_item_type = self._maybe_fixup_http_soap(item_type, item)
+                    current_item_type = self._maybe_fixup_http_soap(item_type, item)
                     normalize_service_name(item)
-                self.parse_item(this_item_type, item, results)
+                self.parse_item(current_item_type, item, results)
 
 # ################################################################################################################################
 
@@ -1469,6 +1479,7 @@ class Enmasse(ManageCommand):
 
         # stdlib
         import os
+        import sys
         from time import sleep
 
         # Bunch
