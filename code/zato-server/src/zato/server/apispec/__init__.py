@@ -134,7 +134,7 @@ class SimpleIO(object):
             out[name] = getattr(self, name)
 
         if self.needs_sio_desc:
-            out.description = self.description
+            out.description = self.description.to_bunch()
 
         return out
 
