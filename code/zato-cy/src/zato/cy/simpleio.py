@@ -1501,13 +1501,6 @@ class CySimpleIO(object):
         if (not response_elem) or (response_elem is InternalNotGiven):
             response_elem = None
 
-        '''
-        if 'publish.Publish' in str(class_):
-            print()
-            print(111, class_, response_elem)
-            print()
-            '''
-
         output_repeated = getattr(self.user_declaration, 'output_repeated', InternalNotGiven)
         if output_repeated is not InternalNotGiven:
             self.definition.output_repeated = bool(output_repeated)
@@ -2060,16 +2053,6 @@ class CySimpleIO(object):
                 out = {
                     self.definition._response_elem: out
                 }
-
-        '''
-        print()
-        print(222, data_format)
-        print(333, self.definition._response_elem)
-        print(444, self.definition._has_response_elem)
-        print(555, out)
-        print(666, self.service_class)
-        print()
-        '''
 
         return out
 
