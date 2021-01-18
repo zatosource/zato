@@ -1349,6 +1349,21 @@ class CySimpleIO(object):
             force_empty_input_set = getattr(class_skip_empty, 'force_empty_input', NotGiven)
             force_empty_output_set = getattr(class_skip_empty, 'force_empty_output', NotGiven)
 
+        # ####################################################################################
+        #
+        # As far as skipping of empty keys goes, we potentially have now
+        # its definition from SkipEmpty or from individual (pre-3.2) attributes.
+        # But if we do not have either of them, we need to look the defaults
+        # in the server's configuration.
+        #
+        # ####################################################################################
+
+        if input_def is NotGiven:
+            input_def = server_config.skip_empty_request_keys
+
+        if output_def is NotGiven:
+            output_def = server_config.skip_empty_response_keys
+
         if isinstance(input_def, basestring):
             input_def = [input_def]
 
