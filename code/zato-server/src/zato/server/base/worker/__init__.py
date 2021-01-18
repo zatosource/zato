@@ -1739,9 +1739,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         if kwargs.get('needs_response'):
 
-            if 'client.Create' in str(service):
-                logger.warn('ZZZ %s %s', service, service.response.payload.getvalue())
-
             return service.response.payload
 
 # ################################################################################################################################
