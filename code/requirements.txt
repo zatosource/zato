@@ -90,7 +90,6 @@ psycopg2==2.8.6
 py-cpuinfo==3.3.0
 pyaml==20.4.0
 pyasn1==0.4.8
-pybind11==2.6.0rc3
 pycparser==2.10
 pycrypto==2.6
 pyflakes==0.8.1
