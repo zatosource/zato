@@ -719,6 +719,7 @@ class CreateWSXSubscription(AdminService):
         for item in subscribe_to:
 
             request = {
+                'is_internal': False,
                 'topic_name': item,
                 'ws_channel_id': ws_channel_id,
                 'ext_client_id': environ['ext_client_id'],
