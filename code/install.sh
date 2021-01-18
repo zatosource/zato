@@ -10,14 +10,12 @@ INSTALL_PYTHON="y"
 
 # Taken from https://stackoverflow.com/a/14203146
 OPTIND=1
-while getopts "p:s" opt; do
+while getopts "sp:" opt; do
     case "$opt" in
     p)
-        shift
-        PY_BINARY=$1
+        PY_BINARY=$OPTARG
         ;;
     s)
-        shift
         INSTALL_PYTHON=n
         ;;
     esac
