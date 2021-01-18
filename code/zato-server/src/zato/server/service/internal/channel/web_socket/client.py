@@ -124,7 +124,7 @@ class DeleteByServer(AdminService):
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            server_pid = self.server.pid if self.request.input.needs_pid else None
+            server_pid = self.server.pid if self.request.input.get('needs_pid') else None
             clients = web_socket_clients_by_server_id(session, self.server.id, server_pid)
             clients.delete()
             session.commit()
