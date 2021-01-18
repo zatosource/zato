@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2020, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,9 +14,6 @@ from glob import glob
 from setuptools import setup, find_packages
 from setuptools import setup
 
-# pybind11
-from pybind11.setup_helpers import Pybind11Extension
-
 # Python 2/3 compatibility
 from past.builtins import execfile
 
@@ -26,14 +23,7 @@ _locals = {}
 execfile(_version_py, _locals)
 version = _locals['version']
 
-src_files = os.path.join('src', 'cpp', '*.cpp')
-
-ext_modules = [
-    Pybind11Extension(
-        'zato-lib',
-        sorted(glob(src_files))
-    )
-]
+ext_modules = []
 
 setup(
       name = 'zato-lib',
