@@ -195,12 +195,8 @@ class XMLResponse(BaseSIOTestCase):
             'bbb': bbb
         }
 
-        with self.assertRaises(SerialisationError) as ctx:
+        with self.assertRaises(SerialisationError):
             MyService._sio.get_output(data, DATA_FORMAT.XML)
-
-        e = ctx.exception # type: SerialisationError
-        self.assertTrue(e.args[0].startswith(
-            """Exception `ValueError("invalid literal for int() with base 10: 'aaa'",)` while serialising `aaa` (<class 'test.zato.cy.simpleio_.test_response_xml.XMLResponse.test_response_invalid_input.<locals>.MyService'>) ({'aaa': 'aaa', 'bbb': '222'})"""))
 
 # ################################################################################################################################
 # ################################################################################################################################
