@@ -1349,6 +1349,21 @@ class CySimpleIO(object):
             force_empty_input_set = getattr(class_skip_empty, 'force_empty_input', NotGiven)
             force_empty_output_set = getattr(class_skip_empty, 'force_empty_output', NotGiven)
 
+        # ####################################################################################
+        #
+        # As far as skipping of empty keys goes, we potentially have now
+        # its definition from SkipEmpty or from individual (pre-3.2) attributes.
+        # But if we do not have either of them, we need to look the defaults
+        # in the server's configuration.
+        #
+        # ####################################################################################
+
+        if input_def is NotGiven:
+            input_def = server_config.skip_empty_request_keys
+
+        if output_def is NotGiven:
+            output_def = server_config.skip_empty_response_keys
+
         if isinstance(input_def, basestring):
             input_def = [input_def]
 
@@ -1500,13 +1515,6 @@ class CySimpleIO(object):
 
         if (not response_elem) or (response_elem is InternalNotGiven):
             response_elem = None
-
-        '''
-        if 'publish.Publish' in str(class_):
-            print()
-            print(111, class_, response_elem)
-            print()
-            '''
 
         output_repeated = getattr(self.user_declaration, 'output_repeated', InternalNotGiven)
         if output_repeated is not InternalNotGiven:
@@ -2060,16 +2068,6 @@ class CySimpleIO(object):
                 out = {
                     self.definition._response_elem: out
                 }
-
-        '''
-        print()
-        print(222, data_format)
-        print(333, self.definition._response_elem)
-        print(444, self.definition._has_response_elem)
-        print(555, out)
-        print(666, self.service_class)
-        print()
-        '''
 
         return out
 

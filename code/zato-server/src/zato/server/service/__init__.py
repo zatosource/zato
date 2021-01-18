@@ -725,8 +725,6 @@ class Service(object):
             except Exception as ex:
                 e = ex
                 exc_formatted = format_exc()
-                logger.warn(exc_formatted)
-
             finally:
                 try:
                     response = set_response_func(service, data_format=data_format, transport=transport, **kwargs)
@@ -738,9 +736,6 @@ class Service(object):
                         spawn(func, self, service.response.payload, exc_formatted)
 
                 except Exception as resp_e:
-
-                    # If we already have an exception around, log the new one but don't overwrite the old one with it.
-                    logger.warn('Exception in service `%s`, e:`%s`', service.name, format_exc())
 
                     if e:
                         if isinstance(e, Reportable):
@@ -796,28 +791,24 @@ class Service(object):
 
         kwargs.update({'serialize':serialize, 'as_bunch':as_bunch})
 
-        try:
-            if timeout:
-                try:
-                    g = spawn(self.update_handle, *invoke_args, **kwargs)
-                    return g.get(block=True, timeout=timeout)
-                except Timeout:
-                    g.kill()
-                    logger.warn('Service `%s` timed out (%s)', service.name, self.cid)
-                    if raise_timeout:
-                        raise
-            else:
-                out = self.update_handle(*invoke_args, **kwargs)
+        if timeout:
+            try:
+                g = spawn(self.update_handle, *invoke_args, **kwargs)
+                return g.get(block=True, timeout=timeout)
+            except Timeout:
+                g.kill()
+                logger.warn('Service `%s` timed out (%s)', service.name, self.cid)
+                if raise_timeout:
+                    raise
+        else:
+            out = self.update_handle(*invoke_args, **kwargs)
 
-                if kwargs.get('skip_response_elem') and hasattr(out, 'keys'):
-                    keys = list(iterkeys(out))
-                    response_elem = keys[0]
-                    return out[response_elem]
-                else:
-                    return out
-        except Exception:
-            logger.warn('Could not invoke `%s`, e:`%s`', service.name, format_exc())
-            raise
+            if kwargs.get('skip_response_elem') and hasattr(out, 'keys'):
+                keys = list(iterkeys(out))
+                response_elem = keys[0]
+                return out[response_elem]
+            else:
+                return out
 
     def invoke(self, name, *args, **kwargs):
         """ Invokes a service synchronously by its name.
