@@ -16,7 +16,7 @@ while getopts "p:s" opt; do
         shift
         PY_BINARY=$1
         ;;
-    k)
+    s)
         shift
         INSTALL_PYTHON=n
         ;;
