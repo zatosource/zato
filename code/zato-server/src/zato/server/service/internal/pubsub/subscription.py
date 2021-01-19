@@ -519,7 +519,8 @@ class SubscribeServiceImpl(_Subscribe):
                 sub_config.server_receiving_subscription_pid = self.server.pid
                 sub_config.is_api_call = True
 
-                logger_pubsub.info('Subscription created `%s`', sub_config)
+                logger_pubsub.info('Subscription created id=`%s`; t=`%s`; sk=`%s`; patt=`%s`',
+                    sub_config['id'], sub_config['topic_name'], sub_config['sub_key'], sub_config['sub_pattern_matched'])
 
                 self.broker_client.publish(sub_config)
 
