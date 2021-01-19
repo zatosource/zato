@@ -26,7 +26,6 @@ class _Logger(Service):
     pickup_data_type = None
 
     def handle(self):
-        self.logger.warn('EEE %s', self)
         self.logger.info('%s data received: `%s`', self.pickup_data_type, self.request.raw_request)
 
 # ################################################################################################################################

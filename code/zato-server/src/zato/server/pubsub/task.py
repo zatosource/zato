@@ -466,9 +466,8 @@ class DeliveryTask(object):
         if self.keep_running:
             logger.info('Stopping delivery task for sub_key:`%s`', self.sub_key)
             self.keep_running = False
-
-            self.pubsub.log_subscriptions_by_sub_key('DeliveryTask.stop')
-            self.pubsub.log_subscriptions_by_topic_name('DeliveryTask.stop')
+            # self.pubsub.log_subscriptions_by_sub_key('DeliveryTask.stop')
+            # self.pubsub.log_subscriptions_by_topic_name('DeliveryTask.stop')
 
 # ################################################################################################################################
 

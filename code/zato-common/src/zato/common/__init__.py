@@ -7,3 +7,4 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from zato.common.api import *
+from zato.common.vault_ import *
