@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
-from logging import getLogger
+from logging import DEBUG, getLogger
 from threading import current_thread
 from traceback import format_exc
 
@@ -59,6 +59,8 @@ if 0:
 
 logger = getLogger('zato_web_socket')
 logger_zato = getLogger('zato')
+
+logger_has_debug = logger.isEnabledFor(DEBUG)
 
 # ################################################################################################################################
 
@@ -383,10 +385,14 @@ class WebSocket(_WebSocket):
                     'last_seen': now,
                 }
 
-                logger.info('Setting pub/sub interaction metadata `%s`', pub_sub_request)
+                if logger_has_debug:
+                    logger.debug('Setting pub/sub interaction metadata `%s`', pub_sub_request)
+
                 self.invoke_service('zato.pubsub.subscription.update-interaction-metadata', pub_sub_request)
 
-                logger.info('Setting WSX last seen `%s`', wsx_request)
+                if logger_has_debug:
+                    logger.debug('Setting WSX last seen `%s`', wsx_request)
+
                 self.invoke_service('zato.channel.web-socket.client.set-last-seen', wsx_request)
 
                 # Finally, store it for the future use
@@ -605,7 +611,8 @@ class WebSocket(_WebSocket):
                 # Update peer name pretty now that we have more details about it
                 self.peer_conn_info_pretty = self.get_peer_info_pretty()
 
-                logger.info('Assigning wsx py:`%s` to `%s`', self.python_id, self.peer_conn_info_pretty)
+                logger.info('Assigning wsx py:`%s` to `%s` (%s %s)', self.python_id, self.pub_client_id,
+                    self.ext_client_id, self.ext_client_name)
 
             return AuthenticateResponse(self.token.value, request.cid, request.id).serialize(self._json_dump_func)
 
@@ -649,7 +656,8 @@ class WebSocket(_WebSocket):
 
     def send_background_pings(self, ping_extend=30):
 
-        logger.info('Starting WSX background pings for `%s`', self.peer_conn_info_pretty)
+        if logger_has_debug:
+            logger.debug('Starting WSX background pings for `%s`', self.peer_conn_info_pretty)
 
         try:
             while self.stream and (not self.server_terminated):
@@ -781,8 +789,8 @@ class WebSocket(_WebSocket):
                 self.register_auth_client()
                 self.send(response, cid, None)
                 logger.info(
-                    'Client %s logged in successfully to %s (%s) (%s)', self.pub_client_id, self._local_address,
-                    self.config.name, self.peer_conn_info_pretty)
+                    'Client %s logged in successfully to %s (%s) (%s %s)', self.pub_client_id, self._local_address,
+                    self.config.name, self.ext_client_id, self.ext_client_name)
             else:
                 self.on_forbidden('sent invalid credentials')
         else:
@@ -863,8 +871,8 @@ class WebSocket(_WebSocket):
 
         serialized = response.serialize(self._json_dump_func)
 
-        logger.info('Sending response `%s` from to `%s` `%s` `%s` `%s` %s', serialized,
-            self.python_id, self.pub_client_id, self.ext_client_id, self.ext_client_name, self.peer_conn_info_pretty)
+        logger.info('Sending response `%s` to `%s` (%s %s)',
+            serialized, self.pub_client_id, self.ext_client_id, self.ext_client_name)
 
         try:
             self.send(serialized, msg.cid, cid)
@@ -975,7 +983,8 @@ class WebSocket(_WebSocket):
             else:
                 self.handle_create_session(cid, request)
 
-            logger.info('Response returned cid:`%s`, time:`%s`', cid, _now()-now)
+            if logger_has_debug:
+                logger.debug('Response returned cid:`%s`, time:`%s`', cid, _now() - now)
 
         except Exception:
             logger.warn(format_exc())
@@ -984,8 +993,8 @@ class WebSocket(_WebSocket):
 
     def received_message(self, message):
 
-        logger.info('Received message %r to `%s` from `%s` `%s` `%s` `%s`', message.data,
-            self.python_id, self.pub_client_id, self.ext_client_id, self.ext_client_name, self.peer_conn_info_pretty)
+        logger.info('Received message %r from `%s` (%s %s)', message.data,
+            self.pub_client_id, self.ext_client_id, self.ext_client_name)
 
         try:
             self._received_message(message.data)
@@ -1139,8 +1148,9 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def opened(self):
-        logger.info('New connection from %s (%s) to %s (%s %s %s)', self._peer_address, self._peer_fqdn,
-            self._local_address, self.config.name, self.python_id, self.sock)
+        logger.warn('New connection from %s (%s) to %s (%s %s) (%s %s) (%s)', self._peer_address, self._peer_fqdn,
+            self._local_address, self.config.name, self.python_id, self.forwarded_for, self.forwarded_for_fqdn,
+            self.pub_client_id)
 
         spawn(self._ensure_session_created)
 
