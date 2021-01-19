@@ -247,9 +247,6 @@ class BaseObserver:
                     # .. difference between the old and new will return, in particular, new or modified files ..
                     diff = DirSnapshotDiff(snapshot, new_snapshot)
 
-                    #logger.warn('CCC-1 %s', diff.files_created)
-                    #logger.warn('CCC-2 %s', diff.files_modified)
-
                     for path_created in diff.files_created:
                         full_event_path = os.path.join(path, path_created)
                         handler_func(FileCreatedEvent(full_event_path), self, snapshot_maker)
