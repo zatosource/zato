@@ -47,8 +47,8 @@ from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import CHANNEL, CONNECTION, DATA_FORMAT, FILE_TRANSFER, GENERIC as COMMON_GENERIC, \
-     HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, simple_types, URL_TYPE, TRACE1, \
-     ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
+     HotDeploy, HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, simple_types, URL_TYPE, \
+     TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
@@ -1054,21 +1054,47 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
     def convert_pickup_to_file_transfer(self):
 
+        # Default pickup directory
+        self._add_service_pickup_to_file_transfer(
+            'hot-deploy', self.server.hot_deploy_config.pickup_dir, self.server.hot_deploy_config.delete_after_pickup)
+
+        # User-defined pickup directories
+
+        for name, config in self.server.pickup_config.items():
+            if name.startswith(HotDeploy.UserPrefix):
+                logger.warn('QQQ %s', config)
+                self._add_service_pickup_to_file_transfer(
+                    'hot-deploy2',
+                    config.pickup_from,
+                    False)
+
+# ################################################################################################################################
+
+    def _add_service_pickup_to_file_transfer(self, name, pickup_dir, delete_after_pickup):
+
         # Explicitly create configuration for hot-deployment
-        hot_deploy_name = '{}.{}'.format(pickup_conf_item_prefix, 'hot-deploy')
+        hot_deploy_name = '{}.{}'.format(pickup_conf_item_prefix, name)
         hot_deploy_config = self._convert_pickup_config_to_file_transfer(hot_deploy_name, {
             'is_hot_deploy': True,
             'patterns': '*.py',
             'services': 'zato.hot-deploy.create',
-            'pickup_from': self.server.hot_deploy_config.pickup_dir,
-            'delete_after_pickup': self.server.hot_deploy_config.delete_after_pickup
+            'pickup_from': pickup_dir,
+            'delete_after_pickup': delete_after_pickup
         })
 
         # Add hot-deployment to local file transfer
         self.worker_config.generic_connection[hot_deploy_name] = {'config': hot_deploy_config}
 
+# ################################################################################################################################
+
+    def _convert_pickup_to_file_transfer(self):
+
         # Create transfer channels based on pickup.conf
         for key, value in self.server.pickup_config.items(): # type: (str, dict)
+
+            # Skip user-defined service pickup because it was already added in self.convert_pickup_to_file_transfer
+            if key.startswith(HotDeploy.UserPrefix):
+                continue
 
             # This is an internal name
             name = '{}.{}'.format(pickup_conf_item_prefix, key)
