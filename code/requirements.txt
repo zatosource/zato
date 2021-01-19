@@ -125,7 +125,7 @@ recommonmark==0.6.0
 redis==2.10.6
 regex==2016.11.21
 repoze.lru==0.6
-repoze.profile==2.0
+repoze.profile==2.3
 requests==2.25.0
 rsa==3.1.2
 sarge==0.1.5.post0
