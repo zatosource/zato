@@ -972,7 +972,7 @@ class PubSub(object):
             sub_key_info = [item.sub_key]
 
             if item.wsx_info:
-                for name in ('swc', 'name', 'pub_client_id', 'peer_fqdn', 'forwarded_for_fqdn', 'python_id', 'sock'):
+                for name in ('swc', 'name', 'pub_client_id', 'peer_fqdn', 'forwarded_for_fqdn'):
                     name = name if isinstance(name, unicode) else name.decode('utf8')
                     value = item.wsx_info[name]
                     if isinstance(value, basestring):
