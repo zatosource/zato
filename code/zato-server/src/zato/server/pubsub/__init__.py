@@ -1540,7 +1540,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def trigger_notify_pubsub_tasks(self):
-        """ A background greenlet which periodically lets delivery tasks that there are perhaps
+        """ A background greenlet which periodically lets delivery tasks know that there are perhaps
         new GD messages for the topic this class represents.
         """
 
