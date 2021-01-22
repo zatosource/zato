@@ -371,12 +371,24 @@ def run(base_dir, start_gunicorn_app=True, options=None):
 
 if __name__ == '__main__':
 
-    server_base_dir = sys.argv[1]
-    cmd_line_options = sys.argv[2]
+    env_server_base_dir = os.environ.get('ZATO_SERVER_BASE_DIR')
+
+    if env_server_base_dir:
+        server_base_dir = env_server_base_dir
+        cmd_line_options = {
+            'fg':True,
+            'sync_internal':False,
+            'secret_key':'',
+            'stderr_path':None,
+        }
+    else:
+        server_base_dir = sys.argv[1]
+        cmd_line_options = sys.argv[2]
+        cmd_line_options = parse_cmd_line_options(cmd_line_options)
 
     if not os.path.isabs(server_base_dir):
         server_base_dir = os.path.abspath(os.path.join(os.getcwd(), server_base_dir))
 
-    run(server_base_dir, options=parse_cmd_line_options(cmd_line_options))
+    run(server_base_dir, options=cmd_line_options)
 
 # ################################################################################################################################
