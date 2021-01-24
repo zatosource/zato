@@ -1062,7 +1062,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         for name, config in self.server.pickup_config.items():
             if name.startswith(HotDeploy.UserPrefix):
-                logger.warn('QQQ %s', config)
                 self._add_service_pickup_to_file_transfer(
                     'hot-deploy2',
                     config.pickup_from,
