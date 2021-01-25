@@ -821,7 +821,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             if stanza_config.case_insensitive:
                 flags |= IGNORECASE
 
-            patterns = stanza_config.patterns
+            patterns = stanza_config.get('patterns', [])
             stanza_config.patterns = [patterns] if not isinstance(patterns, list) else patterns
             stanza_config.patterns = [globre.compile(elem, flags) for elem in stanza_config.patterns]
 
