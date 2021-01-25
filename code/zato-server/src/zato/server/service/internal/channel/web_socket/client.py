@@ -103,7 +103,7 @@ class UnregisterWSSubKey(AdminService):
             sub = self.pubsub.get_subscription_by_sub_key(sub_key)
 
             if self.request.input.needs_wsx_close or (sub and sub.unsub_on_wsx_close):
-                self.invoke('zato.pubsub.pubapi.unsubscribe',{
+                self.invoke('zato.pubsub.pubapi.unsubscribe', {
                     'sub_key': sub.sub_key,
                     'topic_name': sub.topic_name,
                 })
