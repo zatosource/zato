@@ -1059,13 +1059,12 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             'hot-deploy', self.server.hot_deploy_config.pickup_dir, self.server.hot_deploy_config.delete_after_pickup)
 
         # User-defined pickup directories
-
         for name, config in self.server.pickup_config.items():
             if name.startswith(HotDeploy.UserPrefix):
-                self._add_service_pickup_to_file_transfer(
-                    'hot-deploy2',
-                    config.pickup_from,
-                    False)
+                self._add_service_pickup_to_file_transfer('hot-deploy-user-prefix', config.pickup_from, False)
+
+        # Convert all the other pickup entries
+        self._convert_pickup_to_file_transfer()
 
 # ################################################################################################################################
 
