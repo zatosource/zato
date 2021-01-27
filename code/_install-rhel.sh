@@ -21,7 +21,7 @@ then
     curl "$PYTHON_URL" | tac | tac | sudo tar -C / -jx
 fi
 
-curl https://bootstrap.pypa.io/get-pip.py | sudo $(type -p $PY_BINARY)
+curl https://bootstrap.pypa.io/2.7/get-pip.py | sudo $(type -p $PY_BINARY)
 sudo $(type -p $PY_BINARY) -m pip install -U setuptools virtualenv==15.1.0 pip
 
 $PY_BINARY -m virtualenv .
