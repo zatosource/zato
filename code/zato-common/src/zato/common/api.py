@@ -107,6 +107,17 @@ ping_queries = {
     'sqlite': 'SELECT 1',
 }
 
+engine_display_name = {
+    'db2': 'DB2',
+    'mssql': 'MS SQL',
+    'zato+mssql1': 'MS SQL (Direct)',
+    'mysql+pymysql': 'MySQL',
+    'oracle': 'Oracle',
+    'postgresql': 'PostgreSQL',
+    'postgresql+pg8000': 'PostgreSQL',
+    'sqlite': 'SQLite',
+}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
