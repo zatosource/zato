@@ -1148,7 +1148,7 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def opened(self):
-        logger.warn('New connection from %s (%s) to %s (%s %s) (%s %s) (%s)', self._peer_address, self._peer_fqdn,
+        logger.info('New connection from %s (%s) to %s (%s %s) (%s %s) (%s)', self._peer_address, self._peer_fqdn,
             self._local_address, self.config.name, self.python_id, self.forwarded_for, self.forwarded_for_fqdn,
             self.pub_client_id)
 
@@ -1160,7 +1160,7 @@ class WebSocket(_WebSocket):
 
         # Our self.disconnect_client must have cleaned up everything already
         if not self._disconnect_requested:
-            self._close_connection('c:{}; r:{}; Closing connection from'.format(code, reason))
+            self._close_connection('c:{}; r:{}; Client closed its connection from'.format(code, reason))
 
     on_socket_terminated = closed
 
