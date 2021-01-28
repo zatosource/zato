@@ -19,6 +19,7 @@ from zato.admin.web.views import change_password as _change_password, parse_resp
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.sql import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, method_allowed
+from zato.common.api import engine_display_name
 from zato.common.json_internal import dumps
 from zato.common.odb.model import SQLConnectionPool
 
@@ -75,11 +76,11 @@ def index(req):
         for item in data:
 
             _item = SQLConnectionPool()
-
-            for name in('id', 'name', 'is_active', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size',
-                'engine_display_name'):
+            for name in('id', 'name', 'is_active', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size', 'engine'):
                 value = getattr(item, name)
                 setattr(_item, name, value)
+
+            _item.engine_display_name = engine_display_name[_item.engine]
 
             _item.extra = item.extra or ''
             items.append(_item)
