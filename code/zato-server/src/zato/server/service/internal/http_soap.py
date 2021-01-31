@@ -18,7 +18,7 @@ from paste.util.converters import asbool
 # Zato
 from zato.common.api import AuditLog, CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      HL7, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
-     ZATO_NONE, ZATO_SEC_USE_RBAC
+     ZATO_DEFAULT, ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
@@ -91,7 +91,7 @@ class _BaseGet(AdminService):
         output_required = 'id', 'name', 'is_active', 'is_internal', 'url_path'
         output_optional = 'service_id', 'service_name', 'security_id', 'security_name', 'sec_type', \
             'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size', 'merge_url_params_req', \
-            'url_params_pri', 'params_pri', 'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), \
+            'url_params_pri', 'params_pri', 'serialization_type', 'timeout', AsIs('sec_tls_ca_cert_id'), Boolean('has_rbac'), \
             'content_type', Boolean('sec_use_rbac'), 'cache_id', 'cache_name', Integer('cache_expiry'), 'cache_type', \
             'content_encoding', Boolean('match_slash'), 'http_accept', List('service_whitelist'), 'is_rate_limit_active', \
                 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def'), \
@@ -193,6 +193,32 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
                         self._raise_error(item.name, url_path, http_accept, http_method, soap_action, 'chk2')
 
 # ################################################################################################################################
+
+    def _set_sec_tls_ca_cert_id(self, item, input):
+
+        sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
+
+        if sec_tls_ca_cert_id:
+
+            # Skip validation
+            if sec_tls_ca_cert_id == ZATO_NONE:
+                item.sec_tls_ca_cert_id = None
+                input['sec_tls_ca_cert_verify_strategy'] = False
+
+            # Use the default CA certs bundle
+            elif sec_tls_ca_cert_id == ZATO_DEFAULT:
+                item.sec_tls_ca_cert_id = None
+                input['sec_tls_ca_cert_verify_strategy'] = True
+
+            # A user-defined bundle
+            else:
+                item.sec_tls_ca_cert_id = sec_tls_ca_cert_id
+                input['sec_tls_ca_cert_verify_strategy'] = None
+        else:
+            item.sec_tls_ca_cert_id = None
+            input['sec_tls_ca_cert_verify_strategy'] = True # By default, verify using the built-in bundle
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Create(_CreateEdit):
@@ -204,7 +230,7 @@ class Create(_CreateEdit):
         input_required = 'cluster_id', 'name', 'is_active', 'connection', 'transport', 'is_internal', 'url_path'
         input_optional = 'service', AsIs('security_id'), 'method', 'soap_action', 'soap_version', 'data_format', \
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri', \
-            'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type', \
+            'serialization_type', 'timeout', AsIs('sec_tls_ca_cert_id'), Boolean('has_rbac'), 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
             List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
             Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac'), 'hl7_version', 'json_path', \
@@ -293,6 +319,9 @@ class Create(_CreateEdit):
                 item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
 
+                # Configure CA certs
+                self._set_sec_tls_ca_cert_id(item, input)
+
                 if input.security_id:
                     item.security = get_security_by_id(session, input.security_id)
                 else:
@@ -320,7 +349,7 @@ class Create(_CreateEdit):
                         input.cache_type = None
                         input.cache_name = None
 
-                if item.sec_tls_ca_cert_id and item.sec_tls_ca_cert_id != ZATO_NONE:
+                if item.sec_tls_ca_cert_id:
                     self.add_tls_ca_cert(input, item.sec_tls_ca_cert_id)
 
                 input.id = item.id
@@ -352,7 +381,7 @@ class Edit(_CreateEdit):
         input_required = 'id', 'cluster_id', 'name', 'is_active', 'connection', 'transport', 'url_path'
         input_optional = 'service', AsIs('security_id'), 'method', 'soap_action', 'soap_version', 'data_format', \
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri', \
-            'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type', \
+            'serialization_type', 'timeout', AsIs('sec_tls_ca_cert_id'), Boolean('has_rbac'), 'content_type', \
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
             List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
             Boolean('rate_limit_check_parent_def'), Boolean('sec_use_rbac'), 'hl7_version', 'json_path', \
@@ -450,8 +479,8 @@ class Edit(_CreateEdit):
                 item.cache_expiry = input.get('cache_expiry') or 0
                 item.content_encoding = input.content_encoding
 
-                sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
-                item.sec_tls_ca_cert_id = sec_tls_ca_cert_id if sec_tls_ca_cert_id and sec_tls_ca_cert_id != ZATO_NONE else None
+                # Configure CA certs
+                self._set_sec_tls_ca_cert_id(item, input)
 
                 # Opaque attributes
                 set_instance_opaque_attrs(item, input)
