@@ -88,8 +88,8 @@ class BaseHTTPSOAPWrapper(object):
     def invoke_http(self, cid, method, address, data, headers, hooks, *args, **kwargs):
 
         cert = self.config['tls_key_cert_full_path'] if self.config['sec_type'] == SEC_DEF_TYPE.TLS_KEY_CERT else None
-        verify = False if self.config.get('tls_verify', ZATO_NONE) == ZATO_NONE else self.config['tls_verify']
-        verify = verify if isinstance(verify, bool) else verify.encode('utf-8')
+        tls_verify = self.config.get('tls_verify', True)
+        tls_verify = tls_verify if isinstance(tls_verify, bool) else tls_verify.encode('utf-8')
 
         try:
 
@@ -98,7 +98,7 @@ class BaseHTTPSOAPWrapper(object):
 
             return self.session.request(
                 method, address, data=data, auth=auth, headers=headers, hooks=hooks,
-                cert=cert, verify=verify, timeout=self.config['timeout'], *args, **kwargs)
+                cert=cert, verify=tls_verify, timeout=self.config['timeout'], *args, **kwargs)
         except RequestsTimeout:
             raise TimeoutException(cid, format_exc())
 
