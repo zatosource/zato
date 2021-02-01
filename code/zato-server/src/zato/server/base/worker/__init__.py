@@ -504,11 +504,29 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             }
         wrapper_config.update(sec_config)
 
-        if config.get('sec_tls_ca_cert_id') and config.sec_tls_ca_cert_id != ZATO_NONE:
-            tls_verify = get_tls_ca_cert_full_path(self.server.tls_dir, get_tls_from_payload(
-                self.worker_config.tls_ca_cert[config.sec_tls_ca_cert_name].config.value))
+        # Key 'sec_tls_ca_cert_verify_strategy' was added in 3.2
+        # so we need to handle cases when it exists or it does not.
+        sec_tls_ca_cert_verify_strategy = config.get('sec_tls_ca_cert_verify_strategy')
+
+        # 3.2+
+        if sec_tls_ca_cert_verify_strategy:
+            if sec_tls_ca_cert_verify_strategy is True:
+                tls_verify = True
+
+            elif sec_tls_ca_cert_verify_strategy is False:
+                tls_verify = False
+
+            else:
+                tls_verify = get_tls_ca_cert_full_path(self.server.tls_dir, get_tls_from_payload(
+                    self.worker_config.tls_ca_cert[config.sec_tls_ca_cert_name].config.value))
+
+        # < 3.2
         else:
-            tls_verify = ZATO_NONE
+            if config.get('sec_tls_ca_cert_id') and config.sec_tls_ca_cert_id != ZATO_NONE:
+                tls_verify = get_tls_ca_cert_full_path(self.server.tls_dir, get_tls_from_payload(
+                    self.worker_config.tls_ca_cert[config.sec_tls_ca_cert_name].config.value))
+            else:
+                tls_verify = False
 
         wrapper_config['tls_verify'] = tls_verify
 
