@@ -327,9 +327,6 @@ class Create(_CreateEdit):
                 else:
                     input.security_id = None # To ensure that SQLite doesn't reject ''
 
-                sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
-                item.sec_tls_ca_cert_id = sec_tls_ca_cert_id if sec_tls_ca_cert_id and sec_tls_ca_cert_id != ZATO_NONE else None
-
                 # Opaque attributes
                 set_instance_opaque_attrs(item, input)
 
