@@ -617,7 +617,9 @@
                         {% include "zato/include/rate-limiting/create.html" %}
                         {% endifequal %}
 
-                        {% include "zato/include/audit-log/create.html" %}
+                        {% ifequal connection 'channel' %}
+                            {% include "zato/include/audit-log/create.html" %}
+                        {% endifequal %}
 
                         {% ifequal connection 'outgoing' %}
                         <tr>
@@ -823,7 +825,9 @@
                         {% include "zato/include/rate-limiting/edit.html" %}
                         {% endifequal %}
 
-                        {% include "zato/include/audit-log/edit.html" %}
+                        {% ifequal connection 'channel' %}
+                            {% include "zato/include/audit-log/edit.html" %}
+                        {% endifequal %}
 
                         {% ifequal connection 'outgoing' %}
                         <tr>

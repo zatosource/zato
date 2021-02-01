@@ -15,7 +15,7 @@ from django import forms
 from zato.admin.web.forms import add_security_select, add_select, add_services, SearchForm as _ChooseClusterForm, \
      DataFormatForm, INITIAL_CHOICES, WithAuditLog
 from zato.common.api import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP, HTTP_SOAP_SERIALIZATION_TYPE, \
-     MISC, PARAMS_PRIORITY, RATE_LIMIT, SIMPLE_IO, SOAP_VERSIONS, URL_PARAMS_PRIORITY, ZATO_NONE
+     MISC, PARAMS_PRIORITY, RATE_LIMIT, SIMPLE_IO, SOAP_VERSIONS, URL_PARAMS_PRIORITY, ZATO_DEFAULT, ZATO_NONE
 
 # ################################################################################################################################
 
@@ -97,6 +97,7 @@ class CreateForm(DataFormatForm, WithAuditLog):
         self.fields['sec_tls_ca_cert_id'].choices = []
         self.fields['sec_tls_ca_cert_id'].choices.append(INITIAL_CHOICES)
         self.fields['sec_tls_ca_cert_id'].choices.append([ZATO_NONE, 'Skip validation'])
+        self.fields['sec_tls_ca_cert_id'].choices.append([ZATO_DEFAULT, 'Default bundle'])
 
         for value, label in sec_tls_ca_cert_list.items():
             self.fields['sec_tls_ca_cert_id'].choices.append([value, label])

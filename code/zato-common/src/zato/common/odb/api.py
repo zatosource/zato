@@ -162,7 +162,7 @@ class SessionWrapper(object):
                 self._session = self._Session()
 
             self.session_initialized = True
-            self.is_sqlite = self.pool.engine.name == 'sqlite'
+            self.is_sqlite = self.pool.engine and self.pool.engine.name == 'sqlite'
 
     def session(self):
         return self._Session()
@@ -207,6 +207,7 @@ class SQLConnectionPool(object):
 
         self.name = name
         self.config = config
+        self.engine = None
         self.engine_name = config['engine'] # self.engine.name is 'mysql' while 'self.engine_name' is mysql+pymysql
 
         # Safe for printing out to logs, any sensitive data has been shadowed
@@ -234,7 +235,11 @@ class SQLConnectionPool(object):
                 _extra['poolclass'] = NullPool
 
         engine_url = get_engine_url(config)
-        self.engine = self._create_engine(engine_url, config, _extra)
+
+        try:
+            self.engine = self._create_engine(engine_url, config, _extra)
+        except Exception as e:
+            self.logger.warn('Could not create SQL connection `%s`, e:`%s`', config['name'], e.args[0])
 
         if self.engine and (not self._is_unittest_engine(engine_url)) and self._is_sa_engine(engine_url):
             event.listen(self.engine, 'checkin', self.on_checkin)
@@ -338,6 +343,9 @@ class SQLConnectionPool(object):
     def ping(self, fs_sql_config):
         """ Pings the SQL database and returns the response time, in milliseconds.
         """
+        if not self.engine:
+            return
+
         if hasattr(self.engine, 'ping'):
             func = self.engine.ping
             query = self.engine.ping_query
