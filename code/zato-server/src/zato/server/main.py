@@ -371,9 +371,13 @@ def run(base_dir, start_gunicorn_app=True, options=None):
 
 if __name__ == '__main__':
 
-    env_server_base_dir = os.environ.get('ZATO_SERVER_BASE_DIR')
+    env_key_name = 'ZATO_SERVER_BASE_DIR'
+    env_server_base_dir = os.environ.get(env_key_name)
 
     if env_server_base_dir:
+
+        logging.info('Using environment key %s -> %s', env_key_name, env_server_base_dir)
+
         server_base_dir = env_server_base_dir
         cmd_line_options = {
             'fg':True,
