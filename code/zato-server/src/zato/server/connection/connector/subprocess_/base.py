@@ -261,6 +261,11 @@ class BaseConnectionContainer(object):
 
     def _post(self, msg, _post=requests_post):
         self.logger.info('POST to `%s` (%s), msg:`%s`', self.server_address, self.username, msg)
+
+        for k, v in msg.items():
+            if isinstance(v, bytes):
+                msg[k] = v.decode('utf8')
+
         _post(self.server_address, data=dumps(msg), auth=self.server_auth)
 
 # ################################################################################################################################
