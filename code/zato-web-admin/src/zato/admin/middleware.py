@@ -72,8 +72,8 @@ class Client(AnyServiceInvoker):
     def invoke(self, *args, **kwargs):
         response = super(Client, self).invoke(*args, headers={'X-Zato-Forwarded-For': self.forwarded_for}, **kwargs)
         if response.inner.status_code != OK:
-            zato_env = loads(response.inner.text).get('zato_env', {})
-            raise Exception('CID: {}\nDetails: {}'.format(zato_env.get('cid'), zato_env.get('details')))
+            json_data = loads(response.inner.text)
+            raise Exception('CID: {}\nDetails: {}'.format(json_data.get('cid'), json_data.get('details')))
         return response
 
     def invoke_async(self, *args, **kwargs):
