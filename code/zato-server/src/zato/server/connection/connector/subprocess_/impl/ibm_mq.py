@@ -27,6 +27,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 from logging import DEBUG
+from functools import wraps
 from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_ACCEPTABLE, OK, responses, SERVICE_UNAVAILABLE
 from time import sleep
 from traceback import format_exc
@@ -193,6 +194,7 @@ class IBMMQChannel(object):
 
 class IBMMQConnectionContainer(BaseConnectionContainer):
 
+    has_prereqs = True
     connection_class = WebSphereMQConnection
     ipc_name = 'ibm-mq'
     conn_type = 'ibm_mq'
@@ -209,7 +211,17 @@ class IBMMQConnectionContainer(BaseConnectionContainer):
             self.pymqi = pymqi
 
         # Call our parent to initialize everything
-        super(IBMMQConnectionContainer, self).__init__()
+        super().__init__()
+
+# ################################################################################################################################
+
+    def check_prereqs_ready(self):
+        return bool(self.pymqi)
+
+# ################################################################################################################################
+
+    def get_prereqs_not_ready_message(self):
+        return 'PyMQI library could not be imported. Is PyMQI installed? Is ibm_mq set to True in server.conf?'
 
 # ################################################################################################################################
 
@@ -232,52 +244,52 @@ class IBMMQConnectionContainer(BaseConnectionContainer):
             return Response(_http_503, 'Could not find pymqi module, IBM MQ connections will not start')
 
         # Call our parent which will actually create the definition
-        return super(IBMMQConnectionContainer, self).on_definition_create(msg)
+        return super().on_definition_create(msg)
 
 # ################################################################################################################################
 
     def _on_DEFINITION_WMQ_EDIT(self, msg):
-        return super(IBMMQConnectionContainer, self).on_definition_edit(msg)
+        return super().on_definition_edit(msg)
 
 # ################################################################################################################################
 
     def _on_DEFINITION_WMQ_DELETE(self, msg):
-        return super(IBMMQConnectionContainer, self).on_definition_delete(msg)
+        return super().on_definition_delete(msg)
 
 # ################################################################################################################################
 
     def _on_DEFINITION_WMQ_CHANGE_PASSWORD(self, msg):
-        return super(IBMMQConnectionContainer, self).on_definition_change_password(msg)
+        return super().on_definition_change_password(msg)
 
 # ################################################################################################################################
 
     def _on_DEFINITION_WMQ_PING(self, msg):
-        return super(IBMMQConnectionContainer, self).on_definition_ping(msg)
+        return super().on_definition_ping(msg)
 
 # ################################################################################################################################
 
     def _on_OUTGOING_WMQ_DELETE(self, msg):
-        return super(IBMMQConnectionContainer, self).on_outgoing_delete(msg)
+        return super().on_outgoing_delete(msg)
 
 # ################################################################################################################################
 
     def _on_OUTGOING_WMQ_CREATE(self, msg):
-        return super(IBMMQConnectionContainer, self).on_outgoing_create(msg)
+        return super().on_outgoing_create(msg)
 
 # ################################################################################################################################
 
     def _on_OUTGOING_WMQ_EDIT(self, msg):
-        return super(IBMMQConnectionContainer, self).on_outgoing_edit(msg)
+        return super().on_outgoing_edit(msg)
 
 # ################################################################################################################################
 
     def _on_CHANNEL_WMQ_CREATE(self, msg):
-        return super(IBMMQConnectionContainer, self).on_channel_create(msg)
+        return super().on_channel_create(msg)
 
 # ################################################################################################################################
 
     def _on_CHANNEL_WMQ_DELETE(self, msg):
-        return super(IBMMQConnectionContainer, self).on_channel_delete(msg)
+        return super().on_channel_delete(msg)
 
 # ################################################################################################################################
 
@@ -307,12 +319,12 @@ class IBMMQConnectionContainer(BaseConnectionContainer):
                     jms_delivery_mode = delivery_mode,
                     jms_priority = priority,
                     jms_expiration = expiration,
-                    jms_correlation_id = msg.get('correlation_id', '').encode('utf8'),
-                    jms_message_id = msg.get('msg_id', '').encode('utf8'),
-                    jms_reply_to = msg.get('reply_to', '').encode('utf8'),
+                    jms_correlation_id = msg.get('correlation_id', ''),
+                    jms_message_id = msg.get('msg_id', ''),
+                    jms_reply_to = msg.get('reply_to', ''),
                 )
 
-                conn.send(text_msg, msg.queue_name.encode('utf8'))
+                conn.send(text_msg, msg.queue_name)
 
                 return Response(data=dumps(text_msg.to_dict(False)))
 
