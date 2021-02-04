@@ -13,6 +13,7 @@ import logging
 import os
 import signal
 import sys
+from functools import wraps
 from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_ACCEPTABLE, OK, responses, SERVICE_UNAVAILABLE
 from logging import Formatter, getLogger, StreamHandler
 from logging.handlers import RotatingFileHandler
@@ -86,6 +87,41 @@ _paths = (_path_api, _path_ping)
 # ################################################################################################################################
 # ################################################################################################################################
 
+def ensure_id_exists(container_name):
+    def ensure_id_exists_impl(func):
+        @wraps(func)
+        def inner(self, msg, _not_given=object()):
+            # type: (BasConnectionContainer, Bunch)
+
+            # Make sure we have a config container of that name
+            container = getattr(self, container_name, _not_given) # type: dict
+
+            if container is _not_given:
+                raise Exception('No such attribute `{}` in `{}`'.format(container_name, self))
+
+            if not msg.id in container:
+                raise Exception('No such ID `{}` among `{}` ({})'.format(
+                    msg.id, sorted(container.items()), container_name))
+
+            return func(self, msg)
+        return inner
+    return ensure_id_exists_impl
+
+# ################################################################################################################################
+
+def ensure_prereqs_ready(func):
+    @wraps(func)
+    def inner(self, *args, **kwargs):
+        # type: (BaseConnectionContainer)
+        if self.has_prereqs:
+            if not self.check_prereqs_ready():
+                raise Exception(self.get_prereqs_not_ready_message())
+        return func(self, *args, **kwargs)
+    return inner
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Response(object):
     def __init__(self, status=_http_200, data=b'', content_type='text/json'):
         self.status = status
@@ -96,6 +132,11 @@ class Response(object):
 # ################################################################################################################################
 
 class BaseConnectionContainer(object):
+
+    # Subclasses may indicate that they have their specific prerequisites
+    # that need to be fulfilled before connections can be used,
+    # e.g. IBM MQ requires installation of PyMQI.
+    has_prereqs = False
 
     # Set by our subclasses that actually create connections
     connection_class = None
@@ -173,6 +214,16 @@ class BaseConnectionContainer(object):
         # Store our process's pidfile
         if config.needs_pidfile:
             self.store_pidfile(config.pidfile_suffix)
+
+# ################################################################################################################################
+
+    def check_prereqs_ready(self):
+        return True
+
+# ################################################################################################################################
+
+    def get_prereqs_not_ready_message(self):
+        return '<default-not-set-prereqs-not-ready-message>'
 
 # ################################################################################################################################
 
@@ -281,6 +332,8 @@ class BaseConnectionContainer(object):
 
 # ################################################################################################################################
 
+    @ensure_id_exists('outconns')
+    @ensure_prereqs_ready
     def _delete_outconn(self, msg, outconn_name=None):
         """ A low-level implementation of outconn deletion. Must be called with self.lock held.
         """
@@ -385,9 +438,10 @@ class BaseConnectionContainer(object):
                 exc_formatted = format_exc()
                 self.logger.warn('Exception in finally block `%s`', exc_formatted)
 
-
 # ################################################################################################################################
 
+    @ensure_id_exists('channels')
+    @ensure_prereqs_ready
     def on_channel_delete(self, msg):
         """ Stops and deletes an existing channel.
         """
@@ -400,6 +454,7 @@ class BaseConnectionContainer(object):
 
 # ################################################################################################################################
 
+    @ensure_prereqs_ready
     def on_channel_create(self, msg):
         """ Creates a new channel listening for messages from a given endpoint.
         """
@@ -413,6 +468,7 @@ class BaseConnectionContainer(object):
 
 # ################################################################################################################################
 
+    @ensure_prereqs_ready
     def on_outgoing_edit(self, msg):
         """ Updates and existing outconn by deleting and creating it again with latest configuration.
         """
@@ -422,6 +478,7 @@ class BaseConnectionContainer(object):
 
 # ################################################################################################################################
 
+    @ensure_prereqs_ready
     def on_outgoing_create(self, msg):
         """ Creates a new outgoing connection using an already existing definition.
         """
@@ -430,6 +487,7 @@ class BaseConnectionContainer(object):
 
 # ################################################################################################################################
 
+    @ensure_prereqs_ready
     def on_outgoing_delete(self, msg):
         """ Deletes an existing outgoing connection.
         """
@@ -439,18 +497,22 @@ class BaseConnectionContainer(object):
 
 # ################################################################################################################################
 
+    @ensure_prereqs_ready
+    @ensure_id_exists('connections')
     def on_definition_ping(self, msg):
         """ Pings a remote endpoint.
         """
         try:
             self.connections[msg.id].ping()
         except Exception as e:
-            return Response(_http_503, str(e.message), 'text/plain')
+            return Response(_http_503, str(e.args[0]), 'text/plain')
         else:
             return Response()
 
 # ################################################################################################################################
 
+    @ensure_id_exists('connections')
+    @ensure_prereqs_ready
     def on_definition_change_password(self, msg):
         """ Changes the password of an existing definition and reconnects to the remote end.
         """
@@ -462,12 +524,14 @@ class BaseConnectionContainer(object):
                 conn.connect()
             except Exception as e:
                 self.logger.warn(format_exc())
-                return Response(_http_503, str(e.message), 'text/plain')
+                return Response(_http_503, str(e.args[0]), 'text/plain')
             else:
                 return Response()
 
 # ################################################################################################################################
 
+    @ensure_id_exists('connections')
+    @ensure_prereqs_ready
     def on_definition_delete(self, msg):
         """ Deletes a definition along with its associated outconns and channels.
         """
@@ -509,6 +573,8 @@ class BaseConnectionContainer(object):
 
 # ################################################################################################################################
 
+    @ensure_id_exists('connections')
+    @ensure_prereqs_ready
     def on_definition_edit(self, msg):
         """ Updates an existing definition - close the current one, including channels and outconns,
         and creates a new one in its place.
@@ -540,6 +606,7 @@ class BaseConnectionContainer(object):
 
 # ################################################################################################################################
 
+    @ensure_prereqs_ready
     def on_definition_create(self, msg):
         """ Creates a new definition from the input message.
         """

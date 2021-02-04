@@ -252,7 +252,7 @@ class Ping(AdminService):
         request_elem = 'zato_definition_jms_wmq_ping_request'
         response_elem = 'zato_definition_jms_wmq_ping_response'
         input_required = (Int('id'),)
-        output_required = ('info',)
+        output_optional = ('info',)
 
     def handle(self):
 
