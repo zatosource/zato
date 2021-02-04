@@ -23,6 +23,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 import locale
 from base64 import b64encode
 from binascii import hexlify
@@ -35,6 +36,10 @@ from zato.common.py23_ import pickle_dumps
 
 # Zato
 from zato.server.connection.jms_wmq.jms import DEFAULT_DELIVERY_MODE, BaseException
+
+# ################################################################################################################################
+
+logger_zato = logging.getLogger('zato')
 
 # ################################################################################################################################
 
@@ -182,7 +187,7 @@ class TextMessage(object):
             'destination':self.jms_destination,
             'reply_to':self.jms_reply_to,
             'redelivered':self.jms_redelivered,
-            'mqmd': b64encode(pickle_dumps(self.mqmd))
+            'mqmd': b64encode(pickle_dumps(self.mqmd)).decode('utf8')
         }
 
 # ################################################################################################################################
@@ -190,6 +195,11 @@ class TextMessage(object):
     def to_dict(self, include_text=True):
         data = self._get_basic_data()
         data['text'] = self.text if include_text else None
+
+        for k, v in data.items():
+            if isinstance(v, bytes):
+                data[k] = v.decode('utf8')
+
         return data
 
 # ################################################################################################################################
