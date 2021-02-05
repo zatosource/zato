@@ -281,6 +281,8 @@ class Elem(object):
     # From Python objects to external formats
     parse_to   = cy.declare(dict, visibility='public') # type: dict
 
+    get_default_value = None
+
 # ################################################################################################################################
 
     def __cinit__(self):
@@ -462,6 +464,9 @@ class Bool(Elem):
 
     def to_json(self, value):
         return Bool.to_json_static(value)
+
+    def get_default_value(self):
+        return False
 
     to_dict = from_dict = to_csv = to_xml = from_csv = from_xml = from_json
 
@@ -1876,16 +1881,17 @@ class CySimpleIO(object):
                         self.service_class, sio_item_name, all_elems, elem))
                 else:
                     if self._should_skip_on_input(self.definition, sio_item, input_value):
-                        # Continue to the next sio_item
                         continue
                     else:
-                        value = sio_item.default_value
+                        if sio_item.get_default_value:
+                            value = sio_item.get_default_value()
+                        else:
+                            value = sio_item.default_value
             else:
                 parse_func = sio_item.parse_from[data_format]
 
                 try:
                     if self._should_skip_on_input(self.definition, sio_item, input_value):
-                        # Continue to the next sio_item
                         continue
                     else:
                         value = parse_func(input_value)
