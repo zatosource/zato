@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 from contextlib import closing
+from json import dumps
 from logging import DEBUG, getLogger
 from operator import itemgetter
 from traceback import format_exc
@@ -23,7 +22,7 @@ from gevent import spawn
 # Zato
 from zato.common.api import DATA_FORMAT, PUBSUB, ZATO_NONE
 from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
-from zato.common.json_internal import dumps, loads
+from zato.common.json_internal import loads
 from zato.common.odb.query.pubsub.cleanup import delete_enq_delivered, delete_enq_marked_deleted, delete_msg_delivered, \
      delete_msg_expired
 from zato.common.odb.query.pubsub.publish import sql_publish_with_retry
@@ -124,7 +123,7 @@ class Publish(AdminService):
         expiration = get_expiration(self.cid, input)
         expiration_time = now + (expiration / 1000.0)
 
-        pub_msg_id = input.get('msg_id', '').encode('utf8') or new_msg_id()
+        pub_msg_id = input.get('msg_id', '') or new_msg_id()
 
         # If there is at least one WSX subscriber to this topic which is not connected at the moment,
         # which means it has no delivery server, we uncoditionally turn this message into a GD one ..
@@ -151,10 +150,10 @@ class Publish(AdminService):
             ext_pub_time = dt_parse(ext_pub_time)
             ext_pub_time = datetime_to_ms(ext_pub_time) / 1000.0
 
-        pub_correl_id = pub_correl_id.encode('utf8') if pub_correl_id else None
-        in_reply_to = in_reply_to.encode('utf8') if in_reply_to else None
-        ext_client_id = ext_client_id.encode('utf8') if ext_client_id else None
-        mime_type = mime_type.encode('utf8') if mime_type else None
+        pub_correl_id = pub_correl_id if pub_correl_id else None
+        in_reply_to = in_reply_to if in_reply_to else None
+        ext_client_id = ext_client_id if ext_client_id else None
+        mime_type = mime_type if mime_type else None
         reply_to_sk = input.get('reply_to_sk') or []
         deliver_to_sk = input.get('deliver_to_sk') or []
 
