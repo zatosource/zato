@@ -97,20 +97,29 @@ class UnregisterWSSubKey(AdminService):
 
     def handle(self):
 
-        # If configured to, delete the WebSocket's persistent subscription
-        for sub_key in self.request.input.sub_key_list:
-            sub = self.pubsub.get_subscription_by_sub_key(sub_key)
+        # Local aliases
+        sub_key_list = self.request.input.sub_key_list
 
-            if self.request.input.needs_wsx_close or (sub and sub.unsub_on_wsx_close):
-                self.invoke('zato.pubsub.pubapi.unsubscribe',{
-                    'sub_key': sub.sub_key,
-                    'topic_name': sub.topic_name,
-                })
+        # If configured to, delete the WebSocket's persistent subscription
+        for sub_key in sub_key_list:
+
+            try:
+                sub = self.pubsub.get_subscription_by_sub_key(sub_key)
+                if sub:
+                    if self.request.input.needs_wsx_close or (sub and sub.unsub_on_wsx_close):
+                        self.invoke('zato.pubsub.pubapi.unsubscribe',{
+                            'sub_key': sub.sub_key,
+                            'topic_name': sub.topic_name,
+                        })
+                else:
+                    self.logger.info('Sub not found for sk:`%s` (unregister)', sub_key)
+            except Exception:
+                self.logger.warn('Exception in UnregisterWSSubKey (%s; %s): `%s`', sub_key, sub_key_list, format_exc())
 
         # Update in-RAM state of workers
         self.broker_client.publish({
             'action': BROKER_MSG_PUBSUB.WSX_CLIENT_SUB_KEY_SERVER_REMOVE.value,
-            'sub_key_list': self.request.input.sub_key_list,
+            'sub_key_list': sub_key_list,
         })
 
 # ################################################################################################################################
