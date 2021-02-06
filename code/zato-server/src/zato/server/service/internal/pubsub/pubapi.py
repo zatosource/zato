@@ -231,6 +231,11 @@ class SubscribeService(_PubSubService):
                 sub_key, self.pubsub.get_endpoint_by_id(endpoint_id).name)
             raise Forbidden(self.cid)
         else:
+
+            if not sub:
+                self.logger.info('No such sub_key: `%s`', sub_key)
+                return
+
             # Raise an exception if current endpoint is not the one that created the subscription originally,
             # but only if current endpoint is not the default internal one; in such a case we want to let
             # the call succeed - this lets other services use self.invoke in order to unsubscribe.
@@ -242,16 +247,16 @@ class SubscribeService(_PubSubService):
                         self_endpoint.name, sub_key, self.pubsub.get_topic_by_sub_key(sub_key).name, sub_endpoint.name)
                     raise Forbidden(self.cid)
 
-        # We have all permissions checked now and can proceed to the actual calls
-        self.response.payload = self.invoke('zato.pubsub.endpoint.delete-endpoint-queue', {
-            'cluster_id': self.server.cluster_id,
-            'sub_key': sub_key
-        })
-
-        if sub.is_wsx:
-            self.invoke('zato.channel.web-socket.client.unregister-ws-sub-key', {
-                'sub_key_list': [sub_key],
+            # We have all permissions checked now and can proceed to the actual calls
+            self.response.payload = self.invoke('zato.pubsub.endpoint.delete-endpoint-queue', {
+                'cluster_id': self.server.cluster_id,
+                'sub_key': sub_key
             })
+
+            if sub.is_wsx:
+                self.invoke('zato.channel.web-socket.client.unregister-ws-sub-key', {
+                    'sub_key_list': [sub_key],
+                })
 
 # ################################################################################################################################
 
