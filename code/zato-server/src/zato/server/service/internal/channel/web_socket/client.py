@@ -101,17 +101,11 @@ class UnregisterWSSubKey(AdminService):
         # If configured to, delete the WebSocket's persistent subscription
         for sub_key in self.request.input.sub_key_list:
             sub = self.pubsub.get_subscription_by_sub_key(sub_key)
-
-            self.logger.warn('QQQ %s', sub)
-            self.logger.warn('EEE %s', sub.unsub_on_wsx_close)
-            self.logger.warn('WWW %s', self.request.input.needs_wsx_close)
-
             if self.request.input.needs_wsx_close or (sub and sub.unsub_on_wsx_close):
                 self.invoke('zato.pubsub.pubapi.unsubscribe', {
                     'sub_key': sub.sub_key,
                     'topic_name': sub.topic_name,
                 })
-                zzz
 
         # Update in-RAM state of workers
         self.broker_client.publish({
