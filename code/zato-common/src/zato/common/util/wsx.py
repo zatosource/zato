@@ -22,11 +22,27 @@ logger_wsx = getLogger('zato_web_socket')
 
 # ################################################################################################################################
 
-msg_cleanup_error = 'WSX cleanup error, wcr:`%d`, si:`%s`, pci:`%s`, sk_list:`%s`, h:`%r`, hs:`%r`, hr:`%r`, ofl:`%s`, e:`%s`'
+msg_cleanup_error = 'WSX cleanup error; state:%d, wcr:%d, si:`%s`, pci:`%s`, sk_list:`%s`, h:`%r`, hs:`%r`, ' \
+    'hr:`%r`, ofl:`%s`, e:`%s`'
+
+class _stage:
+    delete_by_pub_id = 1
+    unregister       = 2
+    func             = 3
+    hook             = 4
+    except_block     = 5
 
 # ################################################################################################################################
 
 _on_disconnected = WEB_SOCKET.HOOK_TYPE.ON_DISCONNECTED
+
+# ################################################################################################################################
+
+def log_warning(stage, wsx_cleanup_required, service_invoker, pub_client_id, sub_keys, hook, hook_service, hook_request,
+    opaque_func_list):
+    for logger in logger_zato, logger_wsx:
+        logger.warn(msg_cleanup_error, stage, wsx_cleanup_required, service_invoker, pub_client_id, sub_keys, hook,
+            hook_service, hook_request, opaque_func_list, format_exc())
 
 # ################################################################################################################################
 
@@ -46,6 +62,7 @@ def cleanup_wsx_client(wsx_cleanup_required, service_invoker, pub_client_id, sub
     """ Cleans up information about a WSX client that has disconnected.
     """
     try:
+        z
         # Sometime it will not be needed at all, e.g. when we clean up a half-opened connection that never
         # succesfully authenticated.
         if wsx_cleanup_required:
@@ -72,8 +89,7 @@ def cleanup_wsx_client(wsx_cleanup_required, service_invoker, pub_client_id, sub
             hook(_on_disconnected, hook_service, **hook_request)
 
     except Exception:
-        for logger in logger_zato, logger_wsx:
-            logger.warn(msg_cleanup_error, wsx_cleanup_required, service_invoker, pub_client_id, sub_keys, hook,
-                hook_service, hook_request, opaque_func_list, format_exc())
+        log_warning(_stage.except_block, wsx_cleanup_required, service_invoker, pub_client_id, sub_keys, hook, hook_service,
+            hook_request, opaque_func_list)
 
 # ################################################################################################################################
