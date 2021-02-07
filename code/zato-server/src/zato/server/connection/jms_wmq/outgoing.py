@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.common.ibm_mq import ConnectorClosedException
+from zato.common.exception import ConnectorClosedException, IBMMQException
 
 # ################################################################################################################################
 
@@ -34,7 +34,7 @@ class WMQFacade(object):
 # ################################################################################################################################
 
     def send(self, msg, outconn_name, queue_name, correlation_id='', msg_id='', reply_to='', expiration=None, priority=None,
-        delivery_mode=None):
+        delivery_mode=None, raise_on_error=True):
         """ Puts a message on an IBM MQ MQ queue.
         """
         try:
@@ -50,8 +50,11 @@ class WMQFacade(object):
                 'delivery_mode': delivery_mode,
             })
         except ConnectorClosedException as e:
-            self.service.logger.info('IBM MQ connector closed (%s -> %s); e: `%s`',
-                outconn_name, queue_name, e.inner_exc.args[0])
+            msg = 'IBM MQ connector is unavailable ({} -> {}); `{}'.format(outconn_name, queue_name, e.inner_exc.args[0])
+            if raise_on_error:
+                raise IBMMQException(msg)
+            else:
+                self.service.logger.info(msg)
 
 # ################################################################################################################################
 
