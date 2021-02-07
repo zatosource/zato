@@ -567,10 +567,25 @@ class WebSphereMQConnection(object):
             exc = WebSphereMQException(text)
             raise exc
 
-        if md.ReplyToQ.strip():
+        # Reply-to will have at least a queue name
+        md_reply_to_queue = md.ReplyToQ.strip()
+
+        # Are replies to be sent anywhere?
+        if md_reply_to_queue:
+
+            # We will have a reply-to-qm potentially as well
+            md_reply_to_qm = md.ReplyToQMgr.strip()
+
+            # Convert everything to string
+            if isinstance(md_reply_to_queue, bytes):
+                md_reply_to_queue = md_reply_to_queue.decode('utf8')
+
+            if isinstance(md_reply_to_qm, bytes):
+                md_reply_to_qm = md_reply_to_qm.decode('utf8')
+
             if self.has_debug:
-                logger.debug('Found md.ReplyToQ:`%r`' % md.ReplyToQ)
-            text_message.jms_reply_to = 'queue://' + md.ReplyToQMgr.strip() + '/' + md.ReplyToQ.strip()
+                logger.debug('Found md.ReplyToQ:`%r`' % md_reply_to_queue)
+            text_message.jms_reply_to = 'queue://' + md_reply_to_qm + '/' + md_reply_to_queue
 
         text_message.jms_priority = md.Priority
         text_message.jms_message_id = md.MsgId

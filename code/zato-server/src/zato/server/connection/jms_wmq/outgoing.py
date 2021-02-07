@@ -1,14 +1,22 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
+# Zato
+from zato.common.ibm_mq import ConnectorClosedException
+
+# ################################################################################################################################
+
+if 0:
+    from zato.server.service import Service
+
+    Service = Service
 
 # ################################################################################################################################
 
@@ -20,7 +28,8 @@ class WMQFacade(object):
 # ################################################################################################################################
 
     def __init__(self, service):
-        self.service = service # Current service on whose behalf we execute
+        # Current service on whose behalf we execute
+        self.service = service # type: Service
 
 # ################################################################################################################################
 
@@ -28,17 +37,21 @@ class WMQFacade(object):
         delivery_mode=None):
         """ Puts a message on an IBM MQ MQ queue.
         """
-        return self.service.server.connector_ibm_mq.send_wmq_message({
-            'data': msg,
-            'outconn_name': outconn_name,
-            'queue_name': queue_name,
-            'correlation_id': correlation_id,
-            'msg_id': msg_id,
-            'reply_to': reply_to,
-            'expiration': expiration,
-            'priority': priority,
-            'delivery_mode': delivery_mode,
-        })
+        try:
+            return self.service.server.connector_ibm_mq.send_wmq_message({
+                'data': msg,
+                'outconn_name': outconn_name,
+                'queue_name': queue_name,
+                'correlation_id': correlation_id,
+                'msg_id': msg_id,
+                'reply_to': reply_to,
+                'expiration': expiration,
+                'priority': priority,
+                'delivery_mode': delivery_mode,
+            })
+        except ConnectorClosedException as e:
+            self.service.logger.info('IBM MQ connector closed (%s -> %s); e: `%s`',
+                outconn_name, queue_name, e.inner_exc.args[0])
 
 # ################################################################################################################################
 
