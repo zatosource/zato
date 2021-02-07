@@ -201,7 +201,7 @@ def publish_action(req):
         req.zato.client.invoke('zato.pubsub.publish.publish', service_input)
 
     except Exception as e:
-        message = e.message
+        message = e.args[0]
         is_ok = False
     else:
         message = 'Successfully published message `{}`'.format(msg_id)
