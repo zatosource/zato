@@ -174,8 +174,13 @@ class SubprocessIPC(object):
 # ################################################################################################################################
 
     def send_message(self, msg):
+        # type: (dict) -> None
         if self.check_enabled:
             self._check_enabled()
+
+        for k, v in msg.items():
+            if isinstance(v, bytes):
+                msg[k] = v.decode('utf8')
 
         msg['action'] = self.action_send.value
         response = self.invoke_connector(msg)
