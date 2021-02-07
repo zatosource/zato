@@ -26,16 +26,17 @@ from zato.common.util.proc import start_python_process
 
 # ################################################################################################################################
 
-# Type checking
-import typing
+if 0:
 
-if typing.TYPE_CHECKING:
+    # requests
+    from requests import Response
 
     # Zato
     from zato.server.base.parallel import ParallelServer
 
     # For pyflakes
     ParallelServer = ParallelServer
+    Response = Response
 
 # ################################################################################################################################
 
@@ -192,7 +193,7 @@ class SubprocessIPC(object):
             self._check_enabled()
 
         address = address_pattern.format(self.ipc_tcp_port, 'api')
-        response = post(address, data=dumps(msg), auth=self.get_credentials())
+        response = post(address, data=dumps(msg), auth=self.get_credentials()) # type: Response
 
         if not response.ok:
             if raise_on_error:
