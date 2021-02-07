@@ -1734,7 +1734,7 @@ class IMAPMessage:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class WebSphereMQCallData:
+class IBMMQCallData:
     """ Metadata for information returned by IBM MQ in response to underlying MQPUT calls.
     """
     __slots__ = ('msg_id', 'correlation_id')
@@ -1742,6 +1742,9 @@ class WebSphereMQCallData:
     def __init__(self, msg_id, correlation_id):
         self.msg_id = msg_id
         self.correlation_id = correlation_id
+
+# For compatibility with Zato < 3.2
+WebSphereMQCallData = IBMMQCallData
 
 # ################################################################################################################################
 # ################################################################################################################################
