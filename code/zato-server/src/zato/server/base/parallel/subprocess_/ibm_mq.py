@@ -21,13 +21,13 @@ from urllib3.exceptions import ProtocolError
 # Zato
 from zato.common.api import IPC, WebSphereMQCallData
 from zato.common.broker_message import CHANNEL, DEFINITION, OUTGOING
-from zato.common.ibm_mq import ConnectorClosedException
+from zato.common.exception import ConnectorClosedException
 from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-_connector_not_reachable = (ConnectionError, ProtocolError, RemoteDisconnected)
+_connector_not_reachable = (ConnectionError, ProtocolError, RemoteDisconnected, ConnectorClosedException)
 
 # ################################################################################################################################
 # ################################################################################################################################
