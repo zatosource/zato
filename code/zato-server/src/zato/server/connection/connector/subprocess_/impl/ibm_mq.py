@@ -314,14 +314,27 @@ class IBMMQConnectionContainer(BaseConnectionContainer):
                 priority = msg.priority or outconn.priority
                 expiration = msg.expiration or outconn.expiration
 
+                jms_correlation_id = msg.get('correlation_id', '')
+                jms_message_id = msg.get('msg_id', '')
+                jms_reply_to = msg.get('reply_to', '')
+
+                if isinstance(jms_correlation_id, str):
+                    jms_correlation_id = jms_correlation_id.encode('utf8')
+
+                if isinstance(jms_message_id, str):
+                    jms_message_id = jms_message_id.encode('utf8')
+
+                if isinstance(jms_reply_to, str):
+                    jms_reply_to = jms_reply_to.encode('utf8')
+
                 text_msg = TextMessage(
                     text = msg.data,
                     jms_delivery_mode = delivery_mode,
                     jms_priority = priority,
                     jms_expiration = expiration,
-                    jms_correlation_id = msg.get('correlation_id', ''),
-                    jms_message_id = msg.get('msg_id', ''),
-                    jms_reply_to = msg.get('reply_to', ''),
+                    jms_correlation_id = jms_correlation_id,
+                    jms_message_id = jms_message_id,
+                    jms_reply_to = jms_reply_to,
                 )
 
                 conn.send(text_msg, msg.queue_name)
