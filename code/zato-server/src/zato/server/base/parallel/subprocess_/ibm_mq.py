@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,11 +10,24 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from binascii import unhexlify
+from http.client import RemoteDisconnected
+
+# Requests
+from requests.exceptions import ConnectionError
+
+# urllib3
+from urllib3.exceptions import ProtocolError
 
 # Zato
 from zato.common.api import IPC, WebSphereMQCallData
 from zato.common.broker_message import CHANNEL, DEFINITION, OUTGOING
+from zato.common.ibm_mq import ConnectorClosedException
 from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_connector_not_reachable = (ConnectionError, ProtocolError, RemoteDisconnected)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,8 +67,15 @@ class IBMMQIPC(SubprocessIPC):
 # ################################################################################################################################
 
     def send_wmq_message(self, *args, **kwargs):
-        out = self.send_message(*args, **kwargs)
-        return WebSphereMQCallData(unhexlify(out['msg_id']).strip(), unhexlify(out['correlation_id']).strip())
+        try:
+            out = self.send_message(*args, **kwargs)
+        except Exception as e:
+            if isinstance(e, _connector_not_reachable):
+                raise ConnectorClosedException(e, 'IBM MQ connector not reachable')
+            else:
+                raise
+        else:
+            return WebSphereMQCallData(unhexlify(out['msg_id']).strip(), unhexlify(out['correlation_id']).strip())
 
     def ping_wmq(self, *args, **kwargs):
         return self.ping(*args, **kwargs)
