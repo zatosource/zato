@@ -33,7 +33,6 @@ import yaml
 
 # Python 2/3 compatibility
 from builtins import bytes
-from six import PY2
 
 # Zato
 from zato.common.api import MISC
@@ -401,7 +400,7 @@ class BaseConnectionContainer(object):
     def on_wsgi_request(self, environ, start_response):
 
         # Default values to use in case of any internal errors
-        status = _http_503
+        status = _http_406
         content_type = 'text/plain'
 
         try:
@@ -425,16 +424,12 @@ class BaseConnectionContainer(object):
         except Exception:
             self.logger.warn(format_exc())
             content_type = 'text/plain'
-            status = _http_503
+            status = _http_400
             data = format_exc()
         finally:
 
             try:
-                if PY2:
-                    status = status.encode('utf8')
-                    headers = [(b'Content-type', content_type.encode('utf8'))]
-                else:
-                    headers = [('Content-type', content_type)]
+                headers = [('Content-type', content_type)]
 
                 if not isinstance(data, bytes):
                     data = data.encode('utf8')
