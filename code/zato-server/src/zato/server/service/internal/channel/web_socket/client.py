@@ -101,12 +101,12 @@ class UnregisterWSSubKey(AdminService):
         # If configured to, delete the WebSocket's persistent subscription
         for sub_key in self.request.input.sub_key_list:
             sub = self.pubsub.get_subscription_by_sub_key(sub_key)
-
-            if self.request.input.needs_wsx_close or (sub and sub.unsub_on_wsx_close):
-                self.invoke('zato.pubsub.pubapi.unsubscribe', {
-                    'sub_key': sub.sub_key,
-                    'topic_name': sub.topic_name,
-                })
+            if sub:
+                if self.request.input.needs_wsx_close or (sub and sub.unsub_on_wsx_close):
+                    self.invoke('zato.pubsub.pubapi.unsubscribe', {
+                        'sub_key': sub.sub_key,
+                        'topic_name': sub.topic_name,
+                    })
 
         # Update in-RAM state of workers
         self.broker_client.publish({
@@ -136,7 +136,7 @@ class NotifyPubSubMessage(AdminService):
     """
     class SimpleIO(AdminSIO):
         input_required = (AsIs('pub_client_id'), 'channel_name', AsIs('request'))
-        output_required = (AsIs('r'),)
+        output_optional = (AsIs('r'),)
         response_elem = 'r'
 
     def handle(self):
