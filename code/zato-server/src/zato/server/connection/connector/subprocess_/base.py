@@ -266,7 +266,10 @@ class BaseConnectionContainer(object):
             if isinstance(v, bytes):
                 msg[k] = v.decode('utf8')
 
-        _post(self.server_address, data=dumps(msg), auth=self.server_auth)
+        try:
+            _post(self.server_address, data=dumps(msg), auth=self.server_auth)
+        except Exception as e:
+            self.logger.warn('Exception in BaseConnectionContainer._post: `%s`', e.args[0])
 
 # ################################################################################################################################
 
