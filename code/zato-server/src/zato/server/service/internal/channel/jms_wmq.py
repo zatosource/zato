@@ -28,6 +28,7 @@ from zato.common.odb.model import ChannelWMQ, Cluster, ConnDefWMQ, Service
 from zato.common.odb.query import channel_wmq_list
 from zato.common.util.api import payload_from_request
 from zato.common.util.time_ import datetime_from_ms
+from zato.server.service import Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
@@ -212,13 +213,9 @@ class Delete(AdminService):
 
 # ################################################################################################################################
 
-class OnMessageReceived(AdminService):
+class OnMessageReceived(Service):
     """ A callback service invoked by WebSphere connectors for each taken off a queue.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_channel_jms_wmq_on_message_received_request'
-        response_elem = 'zato_channel_jms_wmq_on_message_received_response'
-
     def handle(self, _channel=CHANNEL.WEBSPHERE_MQ, ts_format='YYYYMMDDHHmmssSS'):
         request = loads(self.request.raw_request)
         msg = request['msg']
