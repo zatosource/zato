@@ -24,7 +24,7 @@ from zato.common.py23_ import pickle_loads
 from zato.common.api import CHANNEL
 from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL
 from zato.common.json_internal import loads
-from zato.common.odb.model import ChannelWMQ, Cluster, ConnDefWMQ, Service
+from zato.common.odb.model import ChannelWMQ, Cluster, ConnDefWMQ, Service as ModelService
 from zato.common.odb.query import channel_wmq_list
 from zato.common.util.api import payload_from_request
 from zato.common.util.time_ import datetime_from_ms
@@ -80,10 +80,10 @@ class Create(AdminService):
                 raise Exception('A IBM MQ channel `{}` already exists on this cluster'.format(input.name))
 
             # Is the service's name correct?
-            service = session.query(Service).\
+            service = session.query(ModelService).\
                 filter(Cluster.id==input.cluster_id).\
-                filter(Service.cluster_id==Cluster.id).\
-                filter(Service.name==input.service).first()
+                filter(ModelService.cluster_id==Cluster.id).\
+                filter(ModelService.name==input.service).first()
 
             if not service:
                 msg = 'Service `{}` does not exist on this cluster'.format(input.service)
@@ -127,7 +127,7 @@ class Edit(AdminService):
         response_elem = 'zato_channel_jms_wmq_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 'service')
         input_optional = ('data_format',)
-        output_required = ('id', 'name')
+        output_optional = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -146,10 +146,10 @@ class Edit(AdminService):
                 raise Exception('A IBM MQ channel `{}` already exists on this cluster'.format(input.name))
 
             # Is the service's name correct?
-            service = session.query(Service).\
+            service = session.query(ModelService).\
                 filter(Cluster.id==input.cluster_id).\
-                filter(Service.cluster_id==Cluster.id).\
-                filter(Service.name==input.service).first()
+                filter(ModelService.cluster_id==Cluster.id).\
+                filter(ModelService.name==input.service).first()
 
             if not service:
                 msg = 'Service `{}` does not exist on this cluster'.format(input.service)
