@@ -191,10 +191,6 @@ class SubprocessIPC(object):
         msg['action'] = self.action_send.value
         response = self.invoke_connector(msg)
 
-        print()
-        print(111, repr(response.text))
-        print()
-
         # If we are here, it means that there was no error because otherwise an exception
         # would have been raised by invoke_connector.
         response = loads(response.text)
