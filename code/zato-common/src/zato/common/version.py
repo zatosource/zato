@@ -26,7 +26,7 @@ def get_version():
         execfile(_version_py, _locals)
         version = 'Zato {}'.format(_locals['version'])
     except IOError:
-        version = '3.1'
+        version = '3.2'
     finally:
         version = '{}-py{}.{}.{}'.format(version, py_version_info.major, py_version_info.minor, py_version_info.micro)
 

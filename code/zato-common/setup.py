@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from setuptools import setup, find_packages
 
-version = '3.1.1'
+version = '3.2.1'
 
 def parse_requirements(requirements):
     ignored = ['#', 'setuptools', '-e']
