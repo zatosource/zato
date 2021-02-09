@@ -147,7 +147,7 @@ class RateLimiting(object):
     def __init__(self):
         self.parser = DefinitionParser() # type: DefinitionParser
         self.config_store = {}           # type: dict
-        self.lock = RLock()              # type: Rlock
+        self.lock = RLock()
         self.global_lock_func = None     # type: LockManager
         self.sql_session_func = None     # type: Callable
         self.cluster_id = None           # type: int
@@ -268,7 +268,7 @@ class RateLimiting(object):
         """
         # type: (unicode, unicode, unicode, unicode)
 
-        for child_config in self.config_store.values(): # type: RateLimiterApproximate
+        for child_config in self.config_store.values(): # type: BaseLimiter
             object_info = child_config.object_info
 
             # This is our own config
@@ -361,7 +361,7 @@ class RateLimiting(object):
         """ Invoked periodically by the scheduler - goes through all configuration elements and cleans up
         all time periods that are no longer needed.
         """
-        for config in self.config_store.values(): # type: RateLimiterApproximate
+        for config in self.config_store.values(): # type: BaseLimiter
             config.cleanup()
 
 # ################################################################################################################################
