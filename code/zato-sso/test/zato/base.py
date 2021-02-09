@@ -63,8 +63,8 @@ class TestCtx(object):
         self.reset()
 
     def reset(self):
-        self.super_user_ust = None # type: unicode
-        self.super_user_id = None # type: unicode
+        self.super_user_ust = None # type: str
+        self.super_user_id = None # type: str
         self.config = Config
 
 # ################################################################################################################################
