@@ -19,6 +19,16 @@ from sqlalchemy import create_engine
 # YAML
 import yaml
 
+# These are needed for pyflakes
+log_config = None
+config_dir = None
+DATABASES = None
+db_type = None
+django_sqlalchemy_engine = None
+SSL_CA_CERTS = None
+SSL_CERT_FILE = None
+SSL_KEY_FILE = None
+
 # Zato
 from zato.common.api import TRACE1
 from zato.common.settings_db import SettingsDB
