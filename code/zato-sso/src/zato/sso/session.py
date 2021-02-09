@@ -36,10 +36,7 @@ from zato.sso.util import check_credentials, check_remote_app_exists, new_user_s
 
 # ################################################################################################################################
 
-# Type checking
-import typing
-
-if typing.TYPE_CHECKING:
+if 0:
 
     # stdlib
     from typing import Callable
@@ -49,11 +46,13 @@ if typing.TYPE_CHECKING:
 
     # Zato
     from zato.common.odb.model import SSOUser
+    from zato.sso.user import User
 
     # For pyflakes
     Bunch = Bunch
     Callable = Callable
     SSOUser = SSOUser
+    User = User
 
 # ################################################################################################################################
 
