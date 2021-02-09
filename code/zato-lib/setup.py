@@ -10,8 +10,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from glob import glob
-from setuptools import setup, find_packages
 from setuptools import setup
 
 # Python 2/3 compatibility

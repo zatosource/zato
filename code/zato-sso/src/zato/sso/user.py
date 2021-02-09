@@ -1133,7 +1133,7 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def change_password(self, cid, data, current_ust, current_app, remote_addr, _no_user_id='no-user-id'.format(uuid4().hex)):
+    def change_password(self, cid, data, current_ust, current_app, remote_addr, _no_user_id='no-user-id.{}'.format(uuid4().hex)):
         """ Changes a user's password. Super-admins may also set its expiration
         and whether the user must set it to a new one on next login.
         """

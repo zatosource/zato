@@ -14,24 +14,27 @@ from zato.common.util.api import as_bool
 
 # ################################################################################################################################
 
-# Type checking
-import typing
-
-if typing.TYPE_CHECKING:
+if 0:
 
     # stdlib
     from argparse import Namespace
+
+    # Bunch
+    from bunch import Bunch
 
     # Python 2/3 compatibility
     from past.builtins import unicode
 
     # Zato
     from zato.common.odb.model import SSOUser
+    from zato.sso.api import UserAPI
 
     # For pyflakes
+    Bunch = Bunch
     Namespace = Namespace
     SSOUser = SSOUser
     unicode = unicode
+    UserAPI = UserAPI
 
 # ################################################################################################################################
 # ################################################################################################################################
