@@ -110,10 +110,8 @@ class _CreateEdit(CreateEdit):
             self.req.zato.cluster_id,
             item.current_depth_gd,
 
-            # Non-GD messages
+            # Non-GD messages -> Currently shows GD instead of non-GD
             item.current_depth_gd,
-            self.req.zato.cluster_id,
-            item.current_depth_gd
         )
 
     def success_message(self, item):
