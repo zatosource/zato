@@ -70,7 +70,7 @@ def get_service_config(item, server):
 
 class ValidationException(Exception):
     def __init__(self, cid, object_type, object_name, needs_err_details, error_msg, error_msg_details):
-        # type: (unicode, unicode, unicode, bool, unicode, unicode)
+        # type: (str, str, str, bool, str, str)
         self.cid = cid
         self.object_type = object_type
         self.object_name = object_name
@@ -90,7 +90,7 @@ class ValidationError(object):
     __slots__ = 'cid', 'needs_err_details', 'error_msg', 'error_extra', 'needs_prefix'
 
     def __init__(self, cid, needs_err_details, error_msg, error_extra=None, needs_prefix=True):
-        # type: (unicode, bool, unicode, dict, bool)
+        # type: (str, bool, str, dict, bool)
         self.cid = cid
         self.needs_err_details = needs_err_details
         self.error_msg = error_msg
@@ -98,7 +98,7 @@ class ValidationError(object):
         self.needs_prefix = needs_prefix
 
     def get_error_message(self, needs_error_msg=False):
-        # type: (bool) -> unicode
+        # type: (bool) -> str
 
         out = 'Invalid request' if self.needs_prefix else ''
         if needs_error_msg or self.needs_err_details:
@@ -173,10 +173,10 @@ class ValidationConfig(object):
 
         # Object type is channel type or, in the future, one of outgoing connections
         # whose requests to external resources we may also want to validate.
-        self.object_type = None # type: unicode
+        self.object_type = None # type: str
 
-        self.object_name = None # type: unicode
-        self.schema_path = None # type: unicode
+        self.object_name = None # type: str
+        self.schema_path = None # type: str
         self.schema = None      # type: dict
         self.validator = None   # type: object
         self.needs_err_details = None # type: bool
@@ -189,11 +189,11 @@ class Result(object):
 
     def __init__(self):
         self.is_ok = None        # type: bool
-        self.cid = None          # type: unicode
+        self.cid = None          # type: str
         self.needs_err_details = None # type: bool
-        self.error_msg = None    # type: unicode
+        self.error_msg = None    # type: str
         self.error_extra = None  # type: dict
-        self.object_type = None  # type: unicode
+        self.object_type = None  # type: str
 
     def __bool__(self):
         return bool(self.is_ok)
@@ -227,7 +227,7 @@ class Validator(object):
             return
 
         if not os.path.exists(self.config.schema_path):
-            raise ValidationException('JSON schema not found `{}` ({})'.format(self.config.schema_path))
+            raise ValidationException('JSON schema not found `{}` ({})'.format(self.config.schema_path, self.config.object_name))
 
         # The file is sure to exist
         with open(self.config.schema_path) as f:
@@ -244,7 +244,7 @@ class Validator(object):
         self.is_initialized = True
 
     def validate(self, cid, data, object_type=None, object_name=None, needs_err_details=False, _validate=js_validate):
-        # type: (unicode, object, unicode, unicode, Callable) -> Result
+        # type: (str, object, str, str, Callable) -> Result
 
         # Result we will return
         result = Result()

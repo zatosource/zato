@@ -53,9 +53,9 @@ class RequestContext(object):
     __slots__ = ('cid', 'orig_message', 'message')
 
     def __init__(self):
-        self.cid = None          # type: unicode
+        self.cid = None          # type: str
         self.orig_message = None # type: object
-        self.message = None      # type: unicode
+        self.message = None      # type: str
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -64,9 +64,9 @@ class ErrorCtx(object):
     __slots__ = ('cid', 'code', 'message')
 
     def __init__(self):
-        self.cid = None     # type: unicode
+        self.cid = None     # type: str
         self.code = None    # type: int
-        self.message = None # type: unicode
+        self.message = None # type: str
 
     def to_dict(self):
         # type: () -> dict
@@ -88,12 +88,12 @@ class ItemResponse(object):
 
     def __init__(self):
         self.id = None     # type: int
-        self.cid = None    # type: unicode
+        self.cid = None    # type: str
         self.error = None  # type: ErrorCtx
         self.result = NotGiven # type: object
 
     def to_dict(self, _json_rpc_version=json_rpc_version_supported):
-        # type: (unicode) -> dict
+        # type: (str) -> dict
 
         out = {
             'jsonrpc': _json_rpc_version,
@@ -118,7 +118,7 @@ class JSONRPCException(object):
 
 class JSONRPCBadRequest(JSONRPCException, BadRequest):
     def __init__(self, cid, message):
-        # type: (unicode, unicode)
+        # type: (str, str)
         BadRequest.__init__(self, cid, msg=message)
 
 # ################################################################################################################################
@@ -168,10 +168,10 @@ class JSONRPCItem(object):
 # ################################################################################################################################
 
     def __init__(self):
-        self.jsonrpc = None # type: unicode
-        self.method = None  # type: unicode
+        self.jsonrpc = None # type: str
+        self.method = None  # type: str
         self.params = None  # type: object
-        self.id = None      # type: unicode
+        self.id = None      # type: str
         self.needs_response = None # type: bool
 
 # ################################################################################################################################
@@ -232,13 +232,13 @@ class JSONRPCHandler(object):
 # ################################################################################################################################
 
     def can_handle(self, method):
-        # type: (unicode) -> bool
+        # type: (str) -> bool
         return method in self.config['service_whitelist']
 
 # ################################################################################################################################
 
     def _handle_one_item(self, cid, message, orig_message, _json_rpc_version=json_rpc_version_supported):
-        # type: (RequestContext, unicode) -> dict
+        # type: (RequestContext, str) -> dict
 
         try:
             # Response to return
