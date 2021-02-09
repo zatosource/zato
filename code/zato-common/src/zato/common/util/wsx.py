@@ -62,7 +62,6 @@ def cleanup_wsx_client(wsx_cleanup_required, service_invoker, pub_client_id, sub
     """ Cleans up information about a WSX client that has disconnected.
     """
     try:
-        z
         # Sometime it will not be needed at all, e.g. when we clean up a half-opened connection that never
         # succesfully authenticated.
         if wsx_cleanup_required:
