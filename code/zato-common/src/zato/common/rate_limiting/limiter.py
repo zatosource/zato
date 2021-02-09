@@ -29,21 +29,21 @@ from future.utils import iterkeys
 
 # ################################################################################################################################
 
-# Type checking
-import typing
-
-if typing.TYPE_CHECKING:
+if 0:
 
     # stdlib
     from typing import Callable
 
     # Zato
-    from zato.common.rate_limiting.common import ObjectInfo
+    from zato.common.rate_limiting import Approximate as RateLimiterApproximate, RateLimiting
+    from zato.common.rate_limiting.common import DefinitionItem, ObjectInfo
 
     # For pyflakes
     Callable = Callable
+    DefinitionItem = DefinitionItem
     ObjectInfo = ObjectInfo
-
+    RateLimiterApproximate = RateLimiterApproximate
+    RateLimiting = RateLimiting
 
 # ################################################################################################################################
 
@@ -81,17 +81,17 @@ class BaseLimiter(object):
         self.definition = None     # type: list
         self.has_from_any = None   # type: bool
         self.from_any_rate = None  # type: int
-        self.from_any_unit = None  # type: unicode
+        self.from_any_unit = None  # type: str
         self.ip_address_cache = {} # type: dict
         self.by_period = {}        # type: dict
-        self.parent_type = None    # type: unicode
-        self.parent_name = None    # type: unicode
+        self.parent_type = None    # type: str
+        self.parent_name = None    # type: str
         self.is_exact = None       # type: bool
         self.invocation_no = 0     # type: int
 
         self.from_any_object_id = None   # type: int
-        self.from_any_object_type = None # type: unicode
-        self.from_any_object_name = None # type: unicode
+        self.from_any_object_type = None # type: str
+        self.from_any_object_name = None # type: str
 
         self.current_period_func = {
             Const.Unit.day: self._get_current_day,
@@ -131,8 +131,8 @@ class BaseLimiter(object):
                 Const.Unit.day: current_day
             }
 
-            for period in periods: # type: unicode
-                period_unit = period[0] # type: unicode # One of Const.Unit instances
+            for period in periods: # type: str
+                period_unit = period[0] # type: str # One of Const.Unit instances
                 current_period = current_periods_map[period_unit]
 
                 # If this period is in the past, add it to the ones to be deleted
@@ -156,13 +156,13 @@ class BaseLimiter(object):
 # ################################################################################################################################
 
     def get_config_key(self):
-        # type: () -> unicode
+        # type: () -> str
         return '{}:{}'.format(self.object_info.type_, self.object_info.name)
 
 # ################################################################################################################################
 
     def _get_rate_config_by_from(self, orig_from, _from_any=Const.from_any):
-        # type: (unicode, unicode) -> DefinitionItem
+        # type: (str, str) -> DefinitionItem
 
         from_ = self.ip_address_cache.setdefault(orig_from, IPAddress(orig_from)) # type: IPAddress
         found = None
@@ -189,21 +189,21 @@ class BaseLimiter(object):
 # ################################################################################################################################
 
     def _get_current_day(self, now, _prefix=Const.Unit.day, _format='%Y-%m-%d'):
-        # type: (datetime, unicode, unicode) -> unicode
+        # type: (datetime, str, str) -> str
         return '{}.{}'.format(_prefix, now.strftime(_format))
 
     def _get_current_hour(self, now, _prefix=Const.Unit.hour, _format='%Y-%m-%dT%H'):
-        # type: (datetime, unicode, unicode) -> unicode
+        # type: (datetime, str, str) -> str
         return '{}.{}'.format(_prefix, now.strftime(_format))
 
     def _get_current_minute(self, now, _prefix=Const.Unit.minute, _format='%Y-%m-%dT%H:%M'):
-        # type: (datetime, unicode, unicode) -> unicode
+        # type: (datetime, str, str) -> str
         return '{}.{}'.format(_prefix, now.strftime(_format))
 
 # ################################################################################################################################
 
     def _format_last_info(self, current_state):
-        # type: (dict) -> unicode
+        # type: (dict) -> str
 
         return 'last_from:`{last_from}; last_request_time_utc:`{last_request_time_utc}; last_cid:`{last_cid}`;'.format(
             **current_state)
@@ -221,7 +221,7 @@ class BaseLimiter(object):
 
     def _check_limit(self, cid, orig_from, network_found, rate, unit, def_object_id, def_object_name, def_object_type,
         _rate_any=Const.rate_any, _utcnow=datetime.utcnow):
-        # type: (unicode, unicode, unicode, int, unicode, unicode, object, unicode, unicode)
+        # type: (str, str, str, int, str, str, object, str, str)
 
         # Increase invocation counter
         self.invocation_no += 1
@@ -257,7 +257,7 @@ class BaseLimiter(object):
 # ################################################################################################################################
 
     def check_limit(self, cid, orig_from):
-        # type: (unicode, unicode)
+        # type: (str, str)
 
         with self.lock:
 
@@ -298,13 +298,13 @@ class Approximate(BaseLimiter):
 # ################################################################################################################################
 
     def _delete_periods(self, to_delete):
-        for item in to_delete: # item: unicode
+        for item in to_delete: # item: str
             del self.by_period[item]
 
 # ################################################################################################################################
 
     def _get_current_state(self, current_period, network_found):
-        # type: (unicode, unicode) -> dict
+        # type: (str, str) -> dict
 
         # Get or create a dictionary of requests information for current period
         period_dict = self.by_period.setdefault(current_period, {}) # type: dict
@@ -334,7 +334,7 @@ class Exact(BaseLimiter):
 # ################################################################################################################################
 
     def _fetch_current_state(self, session, current_period, network_found):
-        # type: (unicode, unicode) -> RateLimitState
+        # type: (str, str) -> RateLimitState
 
         # We have a complex Python object but for the query we just need its string representation
         network_found = str(network_found)
@@ -346,7 +346,7 @@ class Exact(BaseLimiter):
 # ################################################################################################################################
 
     def _get_current_state(self, current_period, network_found):
-        # type: (unicode, unicode) -> dict
+        # type: (str, str) -> dict
 
         current_state = deepcopy(self.initial_state) # type: dict
 
