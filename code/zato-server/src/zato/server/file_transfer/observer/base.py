@@ -259,7 +259,7 @@ class BaseObserver:
                     snapshot = snapshot_maker.get_snapshot(path, is_recursive, False, True)
 
                 # Note that this will be caught only with local files not with FTP, SFTP etc.
-                except FileNotFoundError as e:
+                except FileNotFoundError:
 
                     # Log the error ..
                     logger.warn('Path not found caught in %s file observer main loop (%s) `%s` (%s t:%s)',
@@ -285,7 +285,7 @@ class BaseObserver:
                     if self.is_local:
                         sleep(timeout)
 
-        except Exception as e:
+        except Exception:
             logger.warn('Exception in %s file observer `%s` e:`%s (%s t:%s)',
                 self.observer_type_name, path, format_exc(), self.name, self.observer_type_impl)
 

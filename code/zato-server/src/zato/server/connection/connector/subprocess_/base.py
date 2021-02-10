@@ -44,6 +44,13 @@ from zato.common.util.posix_ipc_ import ConnectorConfigIPC
 
 # ################################################################################################################################
 
+if 0:
+    from bunch import Bunch
+
+    Bunch = Bunch
+
+# ################################################################################################################################
+
 def get_logging_config(conn_type, file_name):
     return {
         'loggers': {
@@ -90,7 +97,7 @@ def ensure_id_exists(container_name):
     def ensure_id_exists_impl(func):
         @wraps(func)
         def inner(self, msg, _not_given=object()):
-            # type: (BasConnectionContainer, Bunch)
+            # type: (BaseConnectionContainer, Bunch)
 
             # Make sure we have a config container of that name
             container = getattr(self, container_name, _not_given) # type: dict

@@ -204,7 +204,7 @@ class _CreateEdit(_Base):
         try:
             int(expiry)
         except ValueError:
-            raise BadRequest(self.cid, 'Expiry {} must be an integer instead of {}'.format(repr(expiry)), type(expiry))
+            raise BadRequest(self.cid, 'Expiry {} must be an integer instead of {}'.format(repr(expiry), type(expiry)))
 
         cache = self._get_cache_by_input()
 
