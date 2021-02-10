@@ -33,7 +33,7 @@ class DataDictService(AdminService):
             if item['id'] == str(id):
                 return item
         else:
-            msg = 'Could not find the dictionary by its ID:[{}}]'.format(id)
+            msg = 'Could not find the dictionary by its ID:`{}`'.format(id)
             raise ZatoException(self.cid, msg)
 
     def _get_dict_items_raw(self):
