@@ -27,7 +27,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 from logging import DEBUG
-from functools import wraps
 from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_ACCEPTABLE, OK, responses, SERVICE_UNAVAILABLE
 from time import sleep
 from traceback import format_exc
@@ -135,7 +134,7 @@ class IBMMQChannel(object):
                         start_new_thread(_invoke_callback, (
                             _MessageCtx(msg, self.id, self.queue_name, self.service_name, self.data_format),))
 
-                except NoMessageAvailableException as e:
+                except NoMessageAvailableException:
                     if self.has_debug:
                         self.logger.debug('Consumer for queue `%s` did not receive a message. `%s`' % (
                             self.queue_name, self._get_destination_info(self.queue_name)))
@@ -168,7 +167,7 @@ class IBMMQChannel(object):
                         except WebSphereMQException as exc:
                             e = exc
                             sleep(sleep_on_error)
-                        except Exception as e:
+                        except Exception:
                             self.logger.error('Stopping channel `%s` due to `%s`', conn_info, format_exc())
                             raise
                     else:
@@ -369,7 +368,7 @@ class IBMMQConnectionContainer(BaseConnectionContainer):
                 else:
                     return self._on_send_exception()
 
-            except Exception as e:
+            except Exception:
                 return self._on_send_exception()
 
 # ################################################################################################################################
