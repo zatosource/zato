@@ -14,7 +14,7 @@ from zato.admin.web.forms.cache.builtin import CreateForm, EditForm
 from zato.admin.web.views import Index as _Index, invoke_service_with_json_response, \
      method_allowed
 from zato.common.api import CACHE
-from zato.common.model import AuditLogEvent
+from zato.common.model.audit_log import AuditLogEvent
 
 # ################################################################################################################################
 
