@@ -53,7 +53,8 @@ class _CreateEdit(DataDictService):
                 continue
             else:
                 msg = 'System and key may contain only letters, digits and an underscore, failed to validate `{}` ' + \
-                       'against the regular expression {}'.format(name, self.NAME_PATTERN)
+                       'against the regular expression {}'
+                msg = msg.format(name, self.NAME_PATTERN)
                 raise ZatoException(self.cid, msg)
 
         for item in self._get_dict_items():
