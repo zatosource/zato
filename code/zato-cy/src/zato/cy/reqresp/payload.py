@@ -9,32 +9,23 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from copy import deepcopy
 from logging import getLogger
-from operator import getitem
 
 # Cython
 import cython as cy
 
-# SQLAlchemy
-from sqlalchemy.util import KeyedTuple
-
 # Zato
 from zato.common.api import DATA_FORMAT
-from zato.common.odb.api import WritableKeyedTuple
 
 # Zato - Cython
-from zato.simpleio import CySimpleIO, SIODefinition
-
-# Python 2/3 compatibility
-from past.builtins import unicode as past_unicode
+from zato.simpleio import CySimpleIO
 
 # ################################################################################################################################
 
 if 0:
-    from zato.simpleio import CySimpleIO
+    # Python 2/3 compatibility
+    from past.builtins import unicode as past_unicode
 
-    CySimpleIO = CySimpleIO
     past_unicode = past_unicode
 
 # ################################################################################################################################
@@ -107,7 +98,6 @@ class SimpleIOPayload(object):
             raise KeyError('{}; No such key `{}` among `{}` ({})'.format(
                 self.sio.service_class, key, self.user_attrs_dict, hex(id(self))))
 
-
 # ################################################################################################################################
 
     @cy.returns(bool)
@@ -121,7 +111,7 @@ class SimpleIOPayload(object):
         """ Extract response attributes from a single object. Used with items other than dicts.
         """
         extracted:dict = {}
-        is_dict:bint = isinstance(item, dict)
+        is_dict:cy.bint= isinstance(item, dict)
 
         # Use a different function depending on whether the object is dict-like or not.
         # Note that we need .get to be able to provide a default value.

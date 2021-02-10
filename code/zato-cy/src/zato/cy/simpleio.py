@@ -3,7 +3,7 @@
 # cython: auto_pickle=False
 
 """
-Copyright (C) 2020, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,7 +11,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import types
 from builtins import bool as stdlib_bool
 from copy import deepcopy
 from csv import DictWriter, reader as csv_reader
@@ -35,7 +34,6 @@ from lxml.etree import _Element as EtreeElementClass, Element, SubElement, tostr
 
 # Zato
 from zato.common.api import APISPEC, DATA_FORMAT, ZATO_NONE
-from zato.common.json_internal import dumps as json_dumps
 from zato.common.odb.api import WritableKeyedTuple
 from zato.util_convert import to_bool
 
@@ -87,6 +85,14 @@ DATA_FORMAT_DICT:cy.unicode = DATA_FORMAT.DICT
 DATA_FORMAT_JSON:cy.unicode = DATA_FORMAT.JSON
 DATA_FORMAT_POST:cy.unicode = DATA_FORMAT.POST
 DATA_FORMAT_XML:cy.unicode  = DATA_FORMAT.XML
+
+# ################################################################################################################################
+
+@staticmethod
+def _not_implemented_func(func):
+    def _inner(*args, **kwargs):
+        raise NotImplementedError('{} - operation not implemented'.format(func))
+    return _inner
 
 # ################################################################################################################################
 
@@ -407,23 +413,17 @@ class Elem(object):
 
 # ################################################################################################################################
 
-    @staticmethod
-    def _not_implemented(func):
-        def _inner(*args, **kwargs):
-            raise NotImplementedError('{} - operation not implemented'.format(func))
-        return _inner
+    from_json = _not_implemented_func('Elem.from_json')
+    to_json   = _not_implemented_func('Elem.to_json')
 
-    from_json = Elem._not_implemented('Elem.from_json')
-    to_json   = Elem._not_implemented('Elem.to_json')
+    from_xml  = _not_implemented_func('Elem.from_xml')
+    to_xml    = _not_implemented_func('Elem.to_xml')
 
-    from_xml  = Elem._not_implemented('Elem.from_xml')
-    to_xml    = Elem._not_implemented('Elem.to_xml')
+    from_csv  = _not_implemented_func('Elem.from_csv')
+    to_csv    = _not_implemented_func('Elem.to_csv')
 
-    from_csv  = Elem._not_implemented('Elem.from_csv')
-    to_csv    = Elem._not_implemented('Elem.to_csv')
-
-    from_dict  = Elem._not_implemented('Elem.from_dict')
-    to_dict    = Elem._not_implemented('Elem.to_dict')
+    from_dict  = _not_implemented_func('Elem.from_dict')
+    to_dict    = _not_implemented_func('Elem.to_dict')
 
 # ################################################################################################################################
 
@@ -491,8 +491,8 @@ class CSV(Elem):
     from_xml  = from_json
     to_dict   = to_json
     from_dict = from_json
-    to_csv    = Elem._not_implemented('CSV.to_csv')
-    from_csv  = Elem._not_implemented('CSV.from_csv')
+    to_csv    = _not_implemented_func('CSV.to_csv')
+    from_csv  = _not_implemented_func('CSV.from_csv')
 
 # ################################################################################################################################
 
@@ -679,10 +679,10 @@ class Dict(Elem):
 
     from_dict = to_dict = from_json
 
-    to_csv    = Elem._not_implemented('Dict.to_csv')
-    from_csv  = Elem._not_implemented('Dict.from_csv')
-    to_xml    = Elem._not_implemented('Dict.to_xml')
-    from_xml  = Elem._not_implemented('Dict.from_xml')
+    to_csv    = _not_implemented_func('Dict.to_csv')
+    from_csv  = _not_implemented_func('Dict.from_csv')
+    to_xml    = _not_implemented_func('Dict.to_xml')
+    from_xml  = _not_implemented_func('Dict.from_xml')
 
 # ################################################################################################################################
 
@@ -704,10 +704,10 @@ class DictList(Dict):
 
     from_dict = to_dict = from_json
 
-    to_csv    = Elem._not_implemented('DictList.to_csv')
-    from_csv  = Elem._not_implemented('DictList.from_csv')
-    to_xml    = Elem._not_implemented('DictList.to_xml')
-    from_xml  = Elem._not_implemented('DictList.from_xml')
+    to_csv    = _not_implemented_func('DictList.to_csv')
+    from_csv  = _not_implemented_func('DictList.from_csv')
+    to_xml    = _not_implemented_func('DictList.to_xml')
+    from_xml  = _not_implemented_func('DictList.from_xml')
 
 # ################################################################################################################################
 
@@ -1784,7 +1784,6 @@ class CySimpleIO(object):
     @cy.returns(cy.bint)
     @cy.exceptval(-1)
     def _should_skip_on_input(self, definition:SIODefinition, sio_item:Elem, input_value:object) -> cy.bint:
-        should_skip:cy.bint = False
         has_no_input_value:bool = not bool(input_value)
 
         matches_skip_all:cy.bint = definition.skip_empty.skip_all_empty_input and has_no_input_value # type: bool
@@ -2047,7 +2046,6 @@ class CySimpleIO(object):
         is_list:cy.bint
 
         # Local variables
-        current_idx:int = 0
         out_elems:list = []
 
         if isinstance(data, (list, tuple)):

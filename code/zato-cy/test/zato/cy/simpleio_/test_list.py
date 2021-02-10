@@ -9,12 +9,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.common.api import DATA_FORMAT
 from zato.common.test import BaseSIOTestCase
 from zato.server.service import Service
 
 # Zato - Cython
-from zato.simpleio import CySimpleIO, List
+from zato.simpleio import List
 
 # ################################################################################################################################
 # ################################################################################################################################
