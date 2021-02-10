@@ -6,8 +6,6 @@ Copyright (C) Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 import logging
 import inspect
@@ -54,6 +52,7 @@ from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
 from zato.common.json_internal import loads
 from zato.common.match import Matcher
+from zato.common.model.amqp_ import AMQPConnectorConfig
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.util.api import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
      import_module_from_path, new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, \
@@ -831,17 +830,17 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
             channels = self.worker_config.channel_amqp.get_config_list(_name_matches(def_name))
             outconns = self.worker_config.out_amqp.get_config_list(_name_matches(def_name))
+
             for outconn in outconns:
                 self.amqp_out_name_to_def[outconn['name']] = def_name
 
-            # AMQP definitions as such are always active. It's channels or outconns that can be inactive.
-            data.config.is_active = True
+            # Create a new AMQP connector definition ..
+            config = AMQPConnectorConfig.from_dict(data.config)
 
-            print()
-            print(111, data.config)
-            print()
+            # .. AMQP definitions as such are always active. It is channels or outconns that can be inactive.
+            config.is_active = True
 
-            self.amqp_api.create(def_name, bunchify(data.config), self.invoke,
+            self.amqp_api.create(def_name, config, self.invoke,
                 channels=self._config_to_dict(channels), outconns=self._config_to_dict(outconns))
 
         self.amqp_api.start()
