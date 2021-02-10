@@ -419,7 +419,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.init_pubsub()
 
         # WebSocket connections may depend on pub/sub so we create them only after pub/sub is initialized
-        self.init_web_socket()
+        self.init_wsx()
 
 # ################################################################################################################################
 
@@ -800,7 +800,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def init_web_socket(self):
+    def init_wsx(self):
         """ Initializes all WebSocket connections.
         """
         # Channels
@@ -836,6 +836,11 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
             # AMQP definitions as such are always active. It's channels or outconns that can be inactive.
             data.config.is_active = True
+
+            print()
+            print(111, data.config)
+            print()
+
             self.amqp_api.create(def_name, bunchify(data.config), self.invoke,
                 channels=self._config_to_dict(channels), outconns=self._config_to_dict(outconns))
 
