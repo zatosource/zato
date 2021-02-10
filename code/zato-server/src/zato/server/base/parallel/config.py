@@ -28,6 +28,14 @@ from zato.url_dispatcher import Matcher
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.model.wsx import WSXConnectorConfig
+
+    WSXConnectorConfig = WSXConnectorConfig
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = getLogger(__name__)
 
 # ################################################################################################################################
@@ -483,7 +491,7 @@ class ConfigLoader(object):
 # ################################################################################################################################
 
     def set_up_object_audit_log(self, object_type, object_id, config, is_edit):
-        # type: (str, str, dict)
+        # type: (str, str, WSXConnectorConfig, bool)
 
         # For type completion
         audit_log = self.audit_log # type: AuditLog
@@ -494,12 +502,19 @@ class ConfigLoader(object):
         log_config.type_ = object_type
         log_config.object_id = object_id
 
-        log_config.max_len_messages_sent     = config['max_len_messages_sent']
-        log_config.max_len_messages_received = config['max_len_messages_received']
+        if isinstance(config, dict):
+            config_max_len_messages_sent = config['max_len_messages_sent']
+            config_max_len_messages_received = config['max_len_messages_received']
+        else:
+            config_max_len_messages_sent = config.max_len_messages_sent
+            config_max_len_messages_received = config.max_len_messages_received
+
+        log_config.max_len_messages_sent     = config_max_len_messages_sent
+        log_config.max_len_messages_received = config_max_len_messages_received
 
         # .. convert both from kilobytes to bytes (we use kB = 1,000 bytes rather than KB = 1,024 bytes) ..
-        log_config.max_bytes_per_message_sent     = int(config['max_len_messages_sent']) * 1000
-        log_config.max_bytes_per_message_received = int(config['max_len_messages_received']) * 1000
+        log_config.max_bytes_per_message_sent     = int(config_max_len_messages_sent) * 1000
+        log_config.max_bytes_per_message_received = int(config_max_len_messages_received) * 1000
 
         # .. and now we can create our audit log container
         func = audit_log.edit_container if is_edit else audit_log.create_container
@@ -508,13 +523,13 @@ class ConfigLoader(object):
 # ################################################################################################################################
 
     def set_up_object_audit_log_by_config(self, object_type, object_id, config, is_edit):
-        # type: (str, str, dict, bool)
+        # type: (str, str, WSXConnectorConfig, bool)
 
-        if config.get('is_audit_log_sent_active') or config.get('is_audit_log_received_active'):
+        if config.is_audit_log_sent_active or config.is_audit_log_received_active:
 
             # These may be string objects
-            config['max_len_messages_sent']     = int(config.get('max_len_messages_sent') or _audit_max_len_messages)
-            config['max_len_messages_received'] = int(config.get('max_len_messages_received') or _audit_max_len_messages)
+            config.max_len_messages_sent     = int(config.max_len_messages_sent or _audit_max_len_messages)
+            config.max_len_messages_received = int(config.max_len_messages_received or _audit_max_len_messages)
 
             self.set_up_object_audit_log(object_type, object_id, config, is_edit)
 
