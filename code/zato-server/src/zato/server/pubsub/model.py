@@ -28,6 +28,13 @@ from zato.common.util.time_ import utcnow_as_ms
 
 # ################################################################################################################################
 
+if 0:
+    from bunch import Bunch
+
+    Bunch = Bunch
+
+# ################################################################################################################################
+
 logger = logging.getLogger('zato_pubsub.ps')
 logger_zato = logging.getLogger('zato')
 logger_overflow = logging.getLogger('zato_pubsub_overflow')
@@ -381,7 +388,7 @@ class Topic(ToDictBase):
         self._emit_needs_task_sync_before({
             'now': now,
             'last_synced': self.last_synced,
-            'last_synced': self.task_sync_interval,
+            'task_sync_interval': self.task_sync_interval,
             'needs_sync': needs_sync
         })
 

@@ -419,7 +419,7 @@ class ConfigLoader(object):
 
         for config_store_name in _config_store:
             config_dict = self.config[config_store_name] # type: ConfigDict
-            for object_name in config_dict: # type: unicode
+            for object_name in config_dict: # type: str
                 self.set_up_object_rate_limiting(_sec_def, object_name, config_store_name)
 
         for item in self.config['http_soap']: # type: dict
@@ -431,7 +431,7 @@ class ConfigLoader(object):
 
     def set_up_object_rate_limiting(self, object_type, object_name, config_store_name=None, config=None,
         _exact=RATE_LIMIT.TYPE.EXACT.id):
-        # type: (unicode, unicode, unicode, dict) -> bool
+        # type: (str, str, str, dict) -> bool
 
         if not config:
             config = self.config[config_store_name].get(object_name) # type: ConfigDict

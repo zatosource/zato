@@ -6,8 +6,6 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 import inspect
 import logging
@@ -34,10 +32,10 @@ from humanize import naturalsize
 
 # PyYAML
 try:
-    from yaml import CDumper  # For pyflakes
+    from yaml import CDumper # For pyflakes
     Dumper = CDumper
 except ImportError:
-    from yaml import Dumper   # ditto
+    from yaml import Dumper  # (Ditto)
     Dumper = Dumper
 
 # Zato
@@ -144,9 +142,9 @@ class InRAMService(object):
     def __init__(self):
         self.cluster_id = None       # type: int
         self.id = None               # type: int
-        self.impl_name = None        # type: unicode
-        self.name = None             # type: unicode
-        self.deployment_info = None  # type: unicode
+        self.impl_name = None        # type: str
+        self.name = None             # type: str
+        self.deployment_info = None  # type: str
         self.service_class = None    # type: object
         self.is_active = None        # type: bool
         self.is_internal = None      # type: bool
@@ -184,7 +182,7 @@ class DeploymentInfo(object):
     def __init__(self):
         self.to_process = []      # type: List
         self.total_size = 0       # type: int
-        self.total_size_human = 0 # type: text
+        self.total_size_human = 0 # type: str
 
 # ################################################################################################################################
 
@@ -281,10 +279,10 @@ class ServiceStore(object):
 # ################################################################################################################################
 
     def delete_service_data(self, name):
-        # type: (unicode)
+        # type: (str)
 
         with self.update_lock:
-            impl_name = self.name_to_impl_name[name]     # type: unicode
+            impl_name = self.name_to_impl_name[name]     # type: str
             service_id = self.impl_name_to_id[impl_name] # type: int
 
             del self.id_to_impl_name[service_id]
@@ -343,7 +341,7 @@ class ServiceStore(object):
 # ################################################################################################################################
 
     def set_up_rate_limiting(self, name, class_=None, _exact=RATE_LIMIT.TYPE.EXACT.id, _service=RATE_LIMIT.OBJECT_TYPE.SERVICE):
-        # type: (unicode, Service, unicode, unicode)
+        # type: (str, Service, str, str)
 
         if not class_:
             service_id = self.get_service_id_by_name(name) # type: int
@@ -359,7 +357,7 @@ class ServiceStore(object):
 # ################################################################################################################################
 
     def set_up_class_attributes(self, class_, service_store=None, name=None):
-        # type: (Service, ServiceStore, unicode)
+        # type: (Service, ServiceStore, str)
 
         # Set up enforcement of what other services a given service can invoke
         try:
@@ -528,7 +526,7 @@ class ServiceStore(object):
 # ################################################################################################################################
 
     def get_deployment_info(self, impl_name):
-        # type: (unicode) -> dict
+        # type: (str) -> dict
         return self.deployment_info[impl_name]
 
 # ################################################################################################################################
@@ -943,7 +941,7 @@ class ServiceStore(object):
     def import_services_from_anywhere(self, items, base_dir, work_dir=None, is_internal=None):
         """ Imports services from any of the supported sources.
         """
-        # type: (Any, text, text) -> DeploymentInfo
+        # type: (Any, str, str) -> DeploymentInfo
 
         items = items if isinstance(items, (list, tuple)) else [items]
         to_process = []
@@ -1132,7 +1130,7 @@ class ServiceStore(object):
     def _get_source_code_info(self, mod):
         """ Returns the source code of and the FS path to the given module.
         """
-        # type: (Any) -> SourceInfo
+        # type: (Any) -> SourceCodeInfo
 
         source_info = SourceCodeInfo()
         try:
@@ -1158,7 +1156,7 @@ class ServiceStore(object):
 # ################################################################################################################################
 
     def _visit_class(self, mod, class_, fs_location, is_internal, _utcnow=datetime.utcnow):
-        # type: (Any, Any, text, bool, Any, Any) -> InRAMService
+        # type: (Any, Any, str, bool, Any, Any) -> InRAMService
 
         name = class_.get_name()
         impl_name = class_.get_impl_name()
