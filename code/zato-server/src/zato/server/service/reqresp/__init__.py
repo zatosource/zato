@@ -6,8 +6,6 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 import logging
 from cgi import FieldStorage
@@ -50,6 +48,7 @@ if 0:
 
     # Zato
     from zato.common.odb.api import PoolStore
+    from zato.hl7.mllp.server import ConnCtx as HL7ConnCtx
     from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.email import EMailAPI
     from zato.server.connection.ftp import FTPStore
@@ -71,6 +70,7 @@ if 0:
     EMailAPI = EMailAPI
     FTPStore = FTPStore
     hl7apy_Message = hl7apy_Message
+    HL7ConnCtx = HL7ConnCtx
     KombuAMQPMessage = KombuAMQPMessage
     Logger = Logger
     PoolStore = PoolStore
@@ -181,7 +181,7 @@ class HL7RequestData(object):
     __slots__ = 'connection', 'data',
 
     def __init__(self, connection, data):
-        # type: (ConnCtx, hl7apy_Message) -> None
+        # type: (HL7ConnCtx, hl7apy_Message) -> None
         self.connection = connection
         self.data = data
 
