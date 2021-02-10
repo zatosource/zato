@@ -203,7 +203,7 @@ class ServiceTestCase(TestCase):
 # ################################################################################################################################
 
     def invoke_service(self, class_, request=None, **kwargs):
-        # type: (Service, object, **object)
+        # type: (Service, object, object)
 
         class_.name = class_.get_name()
         class_.impl_name = class_.get_impl_name()
