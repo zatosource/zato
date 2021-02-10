@@ -26,6 +26,14 @@ from zato.server.connection.wrapper import Wrapper
 
 # ################################################################################################################################
 
+if 0:
+    from requests import Response
+
+    Response = Response
+
+
+# ################################################################################################################################
+
 logger = getLogger(__name__)
 
 # ################################################################################################################################
@@ -34,7 +42,7 @@ logger = getLogger(__name__)
 
 class TelegramClient(object):
     def __init__(self, address, token, connect_timeout, invoke_timeout, proxies):
-        # type: (unicode, unicode, int, int, dict)
+        # type: (str, str, int, int, dict)
 
         self.address = address.replace('{token}', token)
         self.token = token

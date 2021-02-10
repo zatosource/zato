@@ -3,7 +3,7 @@
 # cython: auto_pickle=False
 
 """
-Copyright (C) 2020, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,7 +11,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import types
 from builtins import bool as stdlib_bool
 from copy import deepcopy
 from csv import DictWriter, reader as csv_reader
@@ -35,7 +34,6 @@ from lxml.etree import _Element as EtreeElementClass, Element, SubElement, tostr
 
 # Zato
 from zato.common.api import APISPEC, DATA_FORMAT, ZATO_NONE
-from zato.common.json_internal import dumps as json_dumps
 from zato.common.odb.api import WritableKeyedTuple
 from zato.util_convert import to_bool
 
@@ -1784,7 +1782,6 @@ class CySimpleIO(object):
     @cy.returns(cy.bint)
     @cy.exceptval(-1)
     def _should_skip_on_input(self, definition:SIODefinition, sio_item:Elem, input_value:object) -> cy.bint:
-        should_skip:cy.bint = False
         has_no_input_value:bool = not bool(input_value)
 
         matches_skip_all:cy.bint = definition.skip_empty.skip_all_empty_input and has_no_input_value # type: bool
@@ -2047,7 +2044,6 @@ class CySimpleIO(object):
         is_list:cy.bint
 
         # Local variables
-        current_idx:int = 0
         out_elems:list = []
 
         if isinstance(data, (list, tuple)):

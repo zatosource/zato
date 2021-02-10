@@ -27,6 +27,13 @@ from zato.server.connection.connector.subprocess_.base import BaseConnectionCont
 
 # ################################################################################################################################
 
+if 0:
+    from bunch import Bunch
+
+    Bunch = Bunch
+
+# ################################################################################################################################
+
 # One megabyte = eight thousand kilobits
 mb_to_kbit = 8000
 
@@ -301,11 +308,11 @@ class SFTPConnectionContainer(BaseConnectionContainer):
         start_time = _utcnow()
 
         try:
-            result = connection.execute(msg.cid, msg.data, msg.log_level) # type: Output
+            result = connection.execute(msg.cid, msg.data, msg.log_level) # type: SFTPOutput
         except ErrorReturnCode as e:
             out['stdout'] = e.stdout
             out['stderr'] = e.stderr
-        except Exception as e:
+        except Exception:
             out['stderr'] = format_exc()
             out['is_ok'] = False
         else:

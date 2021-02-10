@@ -153,10 +153,9 @@ class InvokeRetry(object):
 
         try:
             result = self.invoking_service.invoke(target, *args, **kwargs)
-        except Exception as e:
+        except Exception:
 
-            msg = 'Could not invoke:`{}`, cid:`{}`, e:`{}`'.format(target, self.invoking_service.cid, format_exc())
-            logger.warn(msg)
+            logger.warn('Could not invoke:`%s`, cid:`%s`, e:`%s`', target, self.invoking_service.cid, format_exc())
 
             # How we handle the exception depends on whether the caller wants us
             # to block or prefers if we retry in background.
