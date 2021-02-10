@@ -25,6 +25,7 @@ from zato.common.util.api import spawn_greenlet
 
 if 0:
     from typing import Any, Callable
+    from zato.common.model.connector import ConnectorConfig
 
     Any = Any
     Callable = Callable
@@ -83,8 +84,7 @@ class Connector(object):
 
     def __init__(self, name, type, config, on_message_callback=None, auth_func=None, channels=None, outconns=None,
             parallel_server=None):
-        # type: (str, str, dict, Callable, Callable, dict, dict, Callable) -> None
-        z
+        # type: (str, str, ConnectorConfig, Callable, Callable, dict, dict, Callable) -> None
         self.name = name
         self.type = type
         self.config = config
@@ -93,7 +93,7 @@ class Connector(object):
         self.auth_func = auth_func # Invoked by channels that need to authenticate users
 
         # Service to invoke by channels for each message received
-        self.service = config.get('service_name')
+        self.service = config.service_name
 
         self.channels = channels or {} # type: dict
         self.outconns = outconns or {} # type: dict
@@ -358,7 +358,7 @@ class ConnectorStore(object):
 # ################################################################################################################################
 
     def change_password(self, name, config):
-        # type: (str, dict)
+        # type: (str, ConnectorConfig)
         with self.lock:
             new_config = deepcopy(self.connectors[name].config)
             new_config.password = config.password
