@@ -576,7 +576,7 @@ class HL7MLLPServer:
 # ################################################################################################################################
 
     def _close_connection(self, conn_ctx, reason):
-        # type: str -> None
+        # type: (str) -> None
         self._logger_info('Closing connection; %s; %s', reason, conn_ctx.get_conn_pretty_info())
         conn_ctx.socket.close()
 
