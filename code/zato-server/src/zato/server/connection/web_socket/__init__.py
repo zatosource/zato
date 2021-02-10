@@ -50,10 +50,12 @@ from zato.server.pubsub.task import PubSubTool
 
 if 0:
     from zato.common.audit_log import DataEvent
+    from zato.common.model.wsx import WSXConnectorConfig
     from zato.server.base.parallel import ParallelServer
 
     DataEvent = DataEvent
     ParallelServer = ParallelServer
+    WSXConnectorConfig = WSXConnectorConfig
 
 # ################################################################################################################################
 
@@ -127,6 +129,7 @@ class WebSocket(_WebSocket):
     """ Encapsulates information about an individual connection from a WebSocket client.
     """
     def __init__(self, container, config, _unusued_sock, _unusued_protocols, _unusued_extensions, wsgi_environ, **kwargs):
+        # type: (object, WSXConnectorConfig, object, object, object, dict, object)
 
         # The object containing this WebSocket
         self.container = container
@@ -194,13 +197,13 @@ class WebSocket(_WebSocket):
         self.connection_time = self.last_seen = datetime.utcnow()
         self.sec_type = self.config.sec_type
         self.pings_missed = 0
-        self.pings_missed_threshold = self.config.get('pings_missed_threshold', 5)
+        self.pings_missed_threshold = self.config.pings_missed_threshold
         self.user_data = Bunch() # Arbitrary user-defined data
         self._disconnect_requested = False # Have we been asked to disconnect this client?
 
         # Audit log configuration ..
-        self.is_audit_log_sent_active     = self.config.get('is_audit_log_sent_active')     # type: bool
-        self.is_audit_log_received_active = self.config.get('is_audit_log_received_active') # type: bool
+        self.is_audit_log_sent_active     = self.config.is_audit_log_sent_active
+        self.is_audit_log_received_active = self.config.is_audit_log_received_active
 
         # .. and audit log setup.
         self.parallel_server.set_up_object_audit_log_by_config(_audit_msg_type, self.pub_client_id, self.config, False)
@@ -1213,6 +1216,7 @@ class WebSocket(_WebSocket):
 class WebSocketContainer(WebSocketWSGIApplication):
 
     def __init__(self, config, *args, **kwargs):
+        # type: (WSXConnectorConfig, object, object)
         self.config = config
         self.clients = {}
         super(WebSocketContainer, self).__init__(*args, **kwargs)
@@ -1263,6 +1267,7 @@ class WebSocketServer(WSGIServer):
     """ A WebSocket server exposing Zato services to client applications.
     """
     def __init__(self, config, auth_func, on_message_callback):
+        # type: (WSXConnectorConfig, object, object)
 
         address_info = urlparse(config.address)
 

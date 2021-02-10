@@ -17,22 +17,29 @@ from zato.common.model.connector import ConnectorConfig
 # ################################################################################################################################
 
 @dataclass
-class AMQPConnectorConfig(ConnectorConfig):
-    host: str
-    queue: optional[str]
-    ack_mode: optional[str]
-    conn_url: optional[str]
-    username: str
-    vhost: str
-    frame_max: int
-    prefetch_count: optional[int]
-    get_conn_class_func: optional[callable_]
-    consumer_tag_prefix: optional[str]
+class WSXConnectorConfig(ConnectorConfig):
+    parallel_server: object
+    path: str
+    needs_auth: optional[bool]
+    sec_name: optional[str]
+    sec_type: optional[str]
+    data_format: optional[str]
+    token_ttl: optional[int]
+    new_token_wait_time: int
+    pings_missed_threshold: optional[int] = 5
+    is_audit_log_sent_active: optional[bool] = False
+    is_audit_log_received_active: optional[bool] = False
+    max_len_messages_sent: optional[int]
+    max_len_messages_received: optional[int]
+    hook_service: optional[callable_]
+    auth_func: optional[callable_]
+    vault_conn_default_auth_method: optional[callable_]
+    on_message_callback: optional[callable_]
 
     @staticmethod
     def from_dict(config_dict):
-        # type: (dict) -> AMQPConnectorConfig
-        return from_dict(AMQPConnectorConfig, config_dict)
+        # type: (dict) -> WSXConnectorConfig
+        return from_dict(WSXConnectorConfig, config_dict)
 
 
 # ################################################################################################################################
