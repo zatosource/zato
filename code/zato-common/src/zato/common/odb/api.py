@@ -521,7 +521,7 @@ class ODBManager(SessionWrapper):
     """
     def __init__(self, parallel_server=None, well_known_data=None, token=None, crypto_manager=None, server_id=None,
             server_name=None, cluster_id=None, pool=None, decrypt_func=None):
-        # type: (ParallelServer, unicode, unicode, object, int, unicode, int, object, object)
+        # type: (ParallelServer, str, str, object, int, str, int, object, object)
         super(ODBManager, self).__init__()
         self.parallel_server = parallel_server
         self.well_known_data = well_known_data
@@ -814,7 +814,7 @@ class ODBManager(SessionWrapper):
 # ################################################################################################################################
 
     def add_services(self, session, data):
-        # type: (List[dict]) -> None
+        # type: (list[dict]) -> None
         try:
             session.execute(ServiceTableInsert().values(data))
         except IntegrityError:
@@ -826,7 +826,7 @@ class ODBManager(SessionWrapper):
 # ################################################################################################################################
 
     def add_deployed_services(self, session, data):
-        # type: (List[dict]) -> None
+        # type: (list[dict]) -> None
         session.execute(DeployedServiceInsert().values(data))
 
 # ################################################################################################################################

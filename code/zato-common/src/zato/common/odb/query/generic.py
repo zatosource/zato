@@ -42,7 +42,7 @@ class GenericObjectWrapper:
     model_class = ModelGenericObject
 
     def __init__(self, session, cluster_id):
-        # type: (object, int):
+        # type: (object, int)
         self.session = session
         self.cluster_id = cluster_id
 

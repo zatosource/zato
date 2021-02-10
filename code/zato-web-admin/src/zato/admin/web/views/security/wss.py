@@ -108,7 +108,7 @@ def create(req):
         response = req.zato.client.invoke('zato.security.wss.create', _get_edit_create_message(req.POST))
         return _edit_create_response(response, 'created', req.POST['name'], req.POST['password_type'])
     except Exception:
-        msg = "WS-Security definition could not be created, e:[{e}]".format(format_exc())
+        msg = 'WS-Security definition could not be created; e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 

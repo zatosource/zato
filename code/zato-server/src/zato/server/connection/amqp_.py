@@ -6,8 +6,6 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 from datetime import datetime, timedelta
 from logging import getLogger
@@ -34,10 +32,19 @@ from zato.common.version import get_version
 from zato.common.util.api import get_component_name
 from zato.server.connection.connector import Connector, Inactive
 
-version = get_version()
+# ################################################################################################################################
+
+if 0:
+    from bunch import Bunch
+    from typing import Any, Callable
+
+    Any = Any
+    Bunch = Bunch
+    Callable = Callable
 
 # ################################################################################################################################
 
+version = get_version()
 logger = getLogger(__name__)
 
 # ################################################################################################################################
