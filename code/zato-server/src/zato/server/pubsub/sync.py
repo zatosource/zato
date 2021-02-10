@@ -28,6 +28,13 @@ from zato.common.util.time_ import utcnow_as_ms
 
 # ################################################################################################################################
 
+if 0:
+    from zato.server.pubsub import PubSub
+
+    PubSub = PubSub
+
+# ################################################################################################################################
+
 logger = logging.getLogger('zato_pubsub.ps')
 logger_zato = logging.getLogger('zato')
 logger_overflow = logging.getLogger('zato_pubsub_overflow')

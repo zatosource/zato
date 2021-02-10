@@ -214,7 +214,7 @@ class SOAPSIOClientTestCase(_Base):
         headers = {'x-zato-cid':cid}
         ok = True
         status_code = rand_int()
-        rand_id, rand_name, soap_action = rand_string(), rand_string(), rand_string()
+        rand_id, soap_action = rand_string(), rand_string()
 
         sio_response = """<zato_outgoing_amqp_edit_response xmlns="https://zato.io/ns/20130518">
            <zato_env>
@@ -226,7 +226,7 @@ class SOAPSIOClientTestCase(_Base):
             <name>crm.account</name>
            </item>
           </zato_outgoing_amqp_edit_response>
-        """.format(cid, rand_id, rand_name)
+        """.format(cid, rand_id)
 
         text = """<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518">
              <soap:Body>

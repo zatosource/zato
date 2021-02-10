@@ -6,8 +6,6 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 import logging
 from datetime import datetime
@@ -383,7 +381,7 @@ class Service(object):
     servers = None # type: Servers
 
     # By default, services do not use JSON Schema
-    schema = '' # type: unicode
+    schema = '' # type: str
 
     # JSON Schema validator attached only if service declares a schema to use
     _json_schema_validator = None # type: JSONSchemaValidator
@@ -546,7 +544,7 @@ class Service(object):
         self.cache = self._worker_store.cache_api
 
     def set_response_data(self, service, _raw_types=_response_raw_types, **kwargs):
-        # type: (Service, tuple, **object)
+        # type: (Service, tuple, object)
         response = service.response.payload
         if not isinstance(response, _raw_types):
             response = response.getvalue(serialize=kwargs.get('serialize'))
@@ -609,13 +607,13 @@ class Service(object):
         set_response_func, # type: Callable
         service,       # type: Service
         raw_request,   # type: object
-        channel,       # type: unicode
-        data_format,   # type: unicode
-        transport,     # type: unicode
+        channel,       # type: str
+        data_format,   # type: str
+        transport,     # type: str
         server,        # type: ParallelServer
         broker_client, # type: BrokerClient
         worker_store,  # type: WorkerStore
-        cid,           # type: unicode
+        cid,           # type: str
         simple_io_config, # type: dict
         _utcnow=datetime.utcnow,
         _call_hook_with_service=call_hook_with_service,

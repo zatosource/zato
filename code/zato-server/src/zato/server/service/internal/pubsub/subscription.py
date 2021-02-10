@@ -386,7 +386,7 @@ class SubscribeServiceImpl(_Subscribe):
                             self.pubsub.emit_in_subscribe_impl({'stage':'has_subscription', 'data':{
                                 'ctx.cluster_id': ctx.cluster_id,
                                 'ctx.topic_id': ctx.topic.id,
-                                'ctx.topic_id': ctx.endpoint_id,
+                                'ctx.endpoint_id': ctx.endpoint_id,
                             }})
 
                             raise PubSubSubscriptionExists(self.cid, 'Endpoint `{}` is already subscribed to topic `{}`'.format(
