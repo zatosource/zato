@@ -84,6 +84,7 @@ class Connector(object):
     def __init__(self, name, type, config, on_message_callback=None, auth_func=None, channels=None, outconns=None,
             parallel_server=None):
         # type: (str, str, dict, Callable, Callable, dict, dict, Callable) -> None
+        z
         self.name = name
         self.type = type
         self.config = config
