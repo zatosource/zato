@@ -29,6 +29,7 @@ if 0:
 
     Any = Any
     Callable = Callable
+    ConnectorConfig = ConnectorConfig
 
 # ################################################################################################################################
 
@@ -326,7 +327,7 @@ class ConnectorStore(object):
 # ################################################################################################################################
 
     def _edit(self, old_name, config):
-        # type: (str, dict)
+        # type: (str, ConnectorConfig)
         connector = self._delete(old_name)
         self._create(
             config.name, config, connector.on_message_callback, connector.auth_func, connector.channels,
