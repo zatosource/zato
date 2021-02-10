@@ -20,6 +20,7 @@ class ConnectorConfig:
     id: int
     name: str
     port: int
+    address: optional[str]
     is_active: optional[bool]
     pool_size: optional[int]
     def_name: optional[str]
