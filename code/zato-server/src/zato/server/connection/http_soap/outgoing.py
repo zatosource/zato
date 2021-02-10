@@ -34,7 +34,7 @@ from requests.sessions import Session as requests_session
 from past.builtins import basestring, unicode
 
 # Zato
-from zato.common.api import CONTENT_TYPE, DATA_FORMAT, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
+from zato.common.api import CONTENT_TYPE, DATA_FORMAT, SEC_DEF_TYPE, URL_TYPE
 from zato.common.exception import Inactive, TimeoutException
 from zato.common.json_internal import dumps, loads
 from zato.common.util.api import get_component_name
