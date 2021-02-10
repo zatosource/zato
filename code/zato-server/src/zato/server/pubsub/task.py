@@ -37,8 +37,10 @@ from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 # ################################################################################################################################
 
 if 0:
+    from bunch import Bunch
     from zato.server.pubsub import PubSub
 
+    Bunch = Bunch
     PubSub = PubSub
 
 # ################################################################################################################################

@@ -53,9 +53,11 @@ from zato.server.pubsub.sync import InRAMSync
 # Type checking
 if 0:
     from zato.server.base.parallel import ParallelServer
+    from zato.server.pubsub.task import PubSubTool
     from zato.server.service import Service
 
     ParallelServer = ParallelServer
+    PubSubTool = PubSubTool
     Service = Service
 
 # ################################################################################################################################
