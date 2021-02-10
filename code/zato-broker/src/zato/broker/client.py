@@ -69,11 +69,11 @@ class BrokerClientAPI(object):
         raise NotImplementedError()
 
     def publish(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL, *ignored_args, **ignored_kwargs):
-        # type: (dict, str, *object, **object)
+        # type: (dict, str, object, object)
         raise NotImplementedError()
 
     def invoke_async(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ANY, expiration=BROKER.DEFAULT_EXPIRATION):
-        # type: (dict, str, *object, **object)
+        # type: (dict, str, object, object)
         raise NotImplementedError()
 
     def on_message(self, msg):
