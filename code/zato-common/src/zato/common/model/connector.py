@@ -19,8 +19,11 @@ from zato.common.dataclasses_ import dataclass
 class ConnectorConfig:
     id: int
     name: str
-    is_active: bool
-    pool_size: int
+    port: int
+    is_active: optional[bool]
+    pool_size: optional[int]
+    def_name: optional[str]
+    old_name: optional[str]
     password: optional[str]
     service_name: optional[str]
 
