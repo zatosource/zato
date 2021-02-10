@@ -13,7 +13,7 @@ from zato.admin.web.forms.channel.file_transfer import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, get_outconn_rest_list, Index as _Index
 from zato.common.api import FILE_TRANSFER, GENERIC
 from zato.common.json_internal import dumps
-from zato.common.model import FileTransferChannel
+from zato.common.model.file_transfer import FileTransferChannel
 
 # ################################################################################################################################
 # ################################################################################################################################
