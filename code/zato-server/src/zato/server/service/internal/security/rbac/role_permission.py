@@ -25,8 +25,10 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 if 0:
     from bunch import Bunch
+    from zato.common.odb.model import RBACClientRole
 
     Bunch = Bunch
+    RBACClientRole = RBACClientRole
 
 # ################################################################################################################################
 
