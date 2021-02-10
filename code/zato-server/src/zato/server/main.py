@@ -95,7 +95,7 @@ class ZatoGunicornApplication(Application):
                 k = k.replace('gunicorn_', '')
                 if k == 'bind':
                     if not ':' in v:
-                        raise ValueError('No port found in main.gunicorn_bind `{}`, such as `{}:17010`'.format(v))
+                        raise ValueError('No port found in main.gunicorn_bind')
                     else:
                         host, port = v.split(':')
                         self.zato_host = host
