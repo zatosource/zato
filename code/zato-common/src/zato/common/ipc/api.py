@@ -161,7 +161,7 @@ class IPCAPI(object):
             try:
 
                 # Open the pipe for reading ..
-                fifo_fd = os.open(fifo_path, os.O_RDONLY|os.O_NONBLOCK)
+                fifo_fd = os.open(fifo_path, os.O_RDONLY | os.O_NONBLOCK)
                 fcntl(fifo_fd, _F_SETPIPE_SZ, 1000000)
 
                 # .. and wait for response ..

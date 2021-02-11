@@ -17,14 +17,14 @@ from past.builtins import basestring, unicode
 # ################################################################################################################################
 
 if 0:
-    from zato.cy.simpleio import BoolConfig      as PyBoolConfig
-    from zato.cy.simpleio import IntConfig       as PyIntConfig
-    from zato.cy.simpleio import SecretConfig    as PySecretConfig
+    from zato.cy.simpleio import BoolConfig as PyBoolConfig
+    from zato.cy.simpleio import IntConfig as PyIntConfig
+    from zato.cy.simpleio import SecretConfig as PySecretConfig
     from zato.cy.simpleio import SIOServerConfig as PySIOServerConfig
 
-    PyBoolConfig      = PyBoolConfig
-    PyIntConfig       = PyIntConfig
-    PySecretConfig    = PySecretConfig
+    PyBoolConfig = PyBoolConfig
+    PyIntConfig  = PyIntConfig
+    PySecretConfig = PySecretConfig
     PySIOServerConfig = PySIOServerConfig
 
 # ################################################################################################################################

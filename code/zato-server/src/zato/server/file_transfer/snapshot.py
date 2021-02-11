@@ -141,7 +141,6 @@ class DirSnapshotDiff:
     def __init__(self, previous_snapshot, current_snapshot):
         # type: (DirSnapshot, DirSnapshot)
 
-
         # These will be new for sure ..
         self.files_created = set()
 

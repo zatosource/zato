@@ -98,11 +98,11 @@ def _publish_update_action(req, cluster_id, action, msg_id=None, topic_id=None):
                 expiration_time = """
                 <a
                     id="a_expiration_time"
-                    href="javascript:$.fn.zato.pubsub.message.details.toggle_time('expiration_time', '{expiration_time_user}', '{expiration_time_utc}')">{expiration_time_user}
+                    href="javascript:$.fn.zato.pubsub.message.details.toggle_time('expiration_time', '{exp_time_user}', '{exp_time_utc}')">{exp_time_user}
                 </a>
                 """.format(**{
-                       'expiration_time_utc': response.expiration_time,
-                       'expiration_time_user': from_utc_to_user(response.expiration_time+'+00:00', req.zato.user_profile),
+                       'exp_time_utc': response.expiration_time,
+                       'exp_time_user': from_utc_to_user(response.expiration_time+'+00:00', req.zato.user_profile),
                 })
 
     return HttpResponse(dumps({

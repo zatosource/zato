@@ -81,7 +81,6 @@ class Decrypt(ManageCommand):
 
     def _on_web_admin(self, args):
 
-
         # Zato
         from zato.common.crypto.api import WebAdminCryptoManager
 
