@@ -287,13 +287,9 @@ class SSLClient(ServerProxy):
             _transport=SSLClientTransport(ca_certs, keyfile, certfile, cert_reqs,
                                          ssl_version, timeout, strict)
         else:
-            _transport=transport(ca_certs, keyfile, certfile, cert_reqs,
-                                         ssl_version, timeout, strict)
+            _transport=transport(ca_certs, keyfile, certfile, cert_reqs, ssl_version, timeout, strict)
 
-
-        ServerProxy.__init__(self, uri, _transport, encoding, verbose,
-                        allow_none, use_datetime)
-
+        ServerProxy.__init__(self, uri, _transport, encoding, verbose, allow_none, use_datetime)
         self.logger = logging.getLogger(self.__class__.__name__)
 
 # ################################################################################################################################

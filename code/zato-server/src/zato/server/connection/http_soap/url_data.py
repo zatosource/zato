@@ -1302,7 +1302,6 @@ class URLData(CyURLData, OAuthDataStore):
 
         return sec_info
 
-
 # ################################################################################################################################
 
     def _set_up_audit_log(self, channel_item, is_edit):

@@ -706,7 +706,7 @@ class UserAPI(object):
             extra={'current_app':current_app, 'remote_addr':remote_addr, 'sec_type': sec_type})
 
         return self._get_user(
-            cid, get_user_by_linked_sec, (sec_type, sec_username) , current_ust, current_app, remote_addr, False, True)
+            cid, get_user_by_linked_sec, (sec_type, sec_username), current_ust, current_app, remote_addr, False, True)
 
 # ################################################################################################################################
 

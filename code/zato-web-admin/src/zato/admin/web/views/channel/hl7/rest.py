@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from zato.admin.web.forms.channel.hl7.rest import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, extract_security_id, Index as _Index
 from zato.common.api import CONNECTION, DATA_FORMAT, generic_attrs, HL7, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE
-from zato.common.model import HL7ConfigObject
+from zato.common.model.hl7 import HL7ConfigObject
 
 # ################################################################################################################################
 # ################################################################################################################################

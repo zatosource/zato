@@ -223,7 +223,7 @@ class TextMessage(object):
 
                 buff.write('  %s:%s\n' % (user_attr, user_attr_value))
 
-        if self.text != None:
+        if self.text is not None:
             text_to_show = self.text[:self.max_chars_printed]
 
             if isinstance(text_to_show, unicode):

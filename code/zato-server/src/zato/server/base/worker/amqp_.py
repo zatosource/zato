@@ -13,6 +13,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # Zato
+from zato.common.model.amqp_ import AMQPConnectorConfig
 from zato.common.util.api import spawn_greenlet, start_connectors
 from zato.server.base.worker.common import WorkerImpl
 
@@ -42,6 +43,11 @@ class AMQP(WorkerImpl):
 # ################################################################################################################################
 
     def on_broker_msg_DEFINITION_AMQP_EDIT(self, msg):
+
+        # Convert to a dataclass first
+        msg = AMQPConnectorConfig.from_dict(msg)
+
+        # Definitions are always active
         msg.is_active = True
 
         # Make sure connection passwords are always in clear text

@@ -152,7 +152,7 @@ get_user_by_ust = get_session_by_ust
 def is_super_user_by_ust(session, ust, now=None):
     return _get_session_by_ust(session, ust, now or _utcnow(), _user_id_column).\
         filter(SSOUser.is_super_user==True).\
-        first()
+        first() # noqa: E712
 
 # ################################################################################################################################
 
@@ -192,6 +192,6 @@ def get_rate_limiting_info(session):
         SSOUser.rate_limit_def
         ).\
         filter(SSOUser.is_rate_limit_active==True).\
-        all()
+        all() # noqa: E712
 
 # ################################################################################################################################
