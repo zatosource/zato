@@ -811,6 +811,10 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             # .. append common hook service to the configuration.
             config.hook_service = self.server.fs_server_config.get('wsx', {}).get('hook_service', '')
 
+            print()
+            print(111, config)
+            print()
+
             self.web_socket_api.create(name, config, self.on_message_invoke_service,
                 self.request_dispatcher.url_data.authenticate_web_socket)
 
