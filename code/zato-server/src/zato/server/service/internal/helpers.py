@@ -213,7 +213,7 @@ class WebSocketsGateway(Service):
         if service \
            and service not in _default_allowed \
            and service not in self.services_allowed:
-                self.logger.warn('Service `%s` is not among %s', service, self.services_allowed)
+                self.logger.warn('Service `%s` is not among %s', service, self.services_allowed) # noqa: E117
                 raise Forbidden(self.cid)
 
         # We need to special-pub/sub subscriptions
