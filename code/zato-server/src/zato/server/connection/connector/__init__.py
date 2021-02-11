@@ -135,6 +135,8 @@ class Connector(object):
             logger.warning('Skipped creation of an inactive connection `%s` (%s)', self.name, self.type)
             return
 
+        z
+
         try:
             while self.keep_connecting:
                 while not self.is_connected:

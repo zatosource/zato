@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
+# Make sure we are gevent-friendly - this is needed if we run
+# the code from the __main__ block.
+from gevent.monkey import patch_all
+patch_all()
 
 # stdlib
 from datetime import datetime, timedelta
@@ -1386,3 +1389,86 @@ class ChannelWebSocket(Connector):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+if __name__ == '__main__':
+
+    # gevent
+    from gevent import sleep
+
+    # Zato
+    from zato.common import CHANNEL, DATA_FORMAT
+    from zato.common.model.wsx import WSXConnectorConfig
+    #from zato.server.base.parallel import ParallelServer
+    from zato.server.connection.connector import ConnectorStore, connector_type
+
+    # We start WSX channels
+    conn_type = CHANNEL.WEB_SOCKET
+
+    # Reusable
+    port = 33133
+    host = 'localhost'
+    path = '/'
+
+    # Full address to bind to
+    address = 'ws://{}:{}{}'.format(host, port, path)
+
+    # A test server
+    parallel_server = None #ParallelServer()
+
+    # An overall WSX container store
+    web_socket_api = ConnectorStore(connector_type.duplex.web_socket, ChannelWebSocket, parallel_server)
+
+
+    #self.web_socket_api.create(name, config, self.on_message_invoke_service,
+    #    self.request_dispatcher.url_data.authenticate_web_socket)
+
+    web_socket_api.start()
+
+    '''
+    # Config as dict
+    config = {
+        'id': 1,
+        'name': 'test',
+        'port': port,
+        'address': address,
+        'is_active': True,
+        'pool_size': 1,
+        'def_name': 'test.def',
+        'old_name': None,
+        'password': 'abc',
+        'service_name': 'my.service',
+        'parallel_server': '<none>',
+        'path': path,
+        'needs_auth': False,
+        'sec_name': None,
+        'sec_type': None,
+        'data_format': DATA_FORMAT.JSON,
+        'token_ttl': 30,
+        'new_token_wait_time': 5,
+        'max_len_messages_sent': 50,
+        'max_len_messages_received': 50,
+        'hook_service': None,
+        'auth_func': None,
+        'vault_conn_default_auth_method': None,
+        'on_message_callback': None
+    }
+
+    # Config as a business object
+    config = WSXConnectorConfig(**config)
+
+    # The connector needs to know what kind of channels or outconns we are starting
+    connector_channels = {}
+    connector_outconns = {}
+
+    # Create a WSX channel based on our config ..
+    wsx_channel = ChannelWebSocket(config.name, conn_type, config, config.on_message_callback, config.auth_func,
+        connector_channels, connector_outconns, config.parallel_server)
+
+    # .. and start the channel now.
+    wsx_channel.start()
+    '''
+
+    # Run forever
+    while True:
+        sleep(0.1)
+
