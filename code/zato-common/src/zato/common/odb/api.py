@@ -1502,4 +1502,3 @@ class ODBManager(SessionWrapper):
     _migrate_30_encrypt_sec_xpath_sec          = _migrate_30_encrypt_sec_base
 
 # ################################################################################################################################
-
