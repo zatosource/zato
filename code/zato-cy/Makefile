@@ -28,7 +28,11 @@ simpleio-tests:
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/simpleio_/test_*.py -s
 
 run-tests:
-	# No tests to run for now
+	echo "Running unit-tests in zato-cy"
 	$(MAKE) reqresp-tests
 	$(MAKE) simpleio-tests
 	echo
+
+static-check:
+	echo "Running static checks in zato-cy"
+	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/

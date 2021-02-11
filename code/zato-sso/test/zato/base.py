@@ -77,9 +77,9 @@ class BaseTest(TestCase):
     def setUp(self):
         try:
             # Try to create a super-user ..
-            #sh.zato('sso', 'create-super-user', Config.server_location, Config.super_user_name, '--password',
+            # sh.zato('sso', 'create-super-user', Config.server_location, Config.super_user_name, '--password',
             #    Config.super_user_password, '--verbose')
-            #sh.zato('sso', 'reset-totp-key', Config.server_location, Config.super_user_name, '--key',
+            # sh.zato('sso', 'reset-totp-key', Config.server_location, Config.super_user_name, '--key',
             #    Config.super_user_totp_key, '--verbose')
 
             pass

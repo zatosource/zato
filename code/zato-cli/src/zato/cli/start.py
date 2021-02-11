@@ -32,7 +32,7 @@ stderr_sleep_bg = 1.2
 # ################################################################################################################################
 
 class Start(ManageCommand):
-    """Starts a Zato component installed in the 'path'. The same command is used for starting servers, load-balancer and web admin instances. 'path' must point to a directory into which the given component has been installed. # nopep8
+    """Starts a Zato component installed in the 'path'. The same command is used for starting servers, load-balancer and web admin instances. 'path' must point to a directory into which the given component has been installed. # noqa: E501
 
 Examples:
   - Assuming a Zato server has been installed in /opt/zato/server1, the command to start the server is 'zato start /opt/zato/server1'.

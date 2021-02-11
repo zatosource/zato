@@ -287,7 +287,7 @@ formatters:
         (): zato.common.util.api.ColorFormatter
 
 version: 1
-""" # nopep8
+""" # noqa: E501
 
 sql_conf_contents = """
 # ######### ######################## ######### #

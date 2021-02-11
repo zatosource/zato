@@ -73,15 +73,15 @@ class SSOSearch(object):
     # Maps columns and exactness flags to sqlalchemy-level functions that look up data
     name_column_op = {
 
-        (SSOUser.display_name_upper, True): SSOUser.display_name_upper.__eq__,
-        (SSOUser.first_name_upper, True)  : SSOUser.first_name_upper.__eq__,
-        (SSOUser.middle_name_upper, True) : SSOUser.middle_name_upper.__eq__,
-        (SSOUser.last_name_upper, True)   : SSOUser.last_name_upper.__eq__,
+        (SSOUser.display_name_upper, True): SSOUser.display_name_upper.__eq__, # noqa: E203
+        (SSOUser.first_name_upper, True)  : SSOUser.first_name_upper.__eq__,   # noqa: E203
+        (SSOUser.middle_name_upper, True) : SSOUser.middle_name_upper.__eq__,  # noqa: E203
+        (SSOUser.last_name_upper, True)   : SSOUser.last_name_upper.__eq__,    # noqa: E203
 
-        (SSOUser.display_name_upper, False): SSOUser.display_name_upper.contains,
-        (SSOUser.first_name_upper, False)  : SSOUser.first_name_upper.contains,
-        (SSOUser.middle_name_upper, False) : SSOUser.middle_name_upper.contains,
-        (SSOUser.last_name_upper, False)   : SSOUser.last_name_upper.contains,
+        (SSOUser.display_name_upper, False): SSOUser.display_name_upper.contains, # noqa: E203
+        (SSOUser.first_name_upper, False)  : SSOUser.first_name_upper.contains,   # noqa: E203
+        (SSOUser.middle_name_upper, False) : SSOUser.middle_name_upper.contains,  # noqa: E203
+        (SSOUser.last_name_upper, False)   : SSOUser.last_name_upper.contains,    # noqa: E203
     }
 
     # What columns to use for non-name criteria

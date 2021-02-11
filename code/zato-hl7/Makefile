@@ -20,4 +20,9 @@ hl7-tests:
 
 run-tests:
 	$(MAKE) hl7-tests
+	$(MAKE) static-check
 	echo
+
+static-check:
+	echo "Running static checks in zato-hl7"
+	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/

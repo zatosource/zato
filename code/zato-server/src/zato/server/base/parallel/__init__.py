@@ -279,7 +279,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                     msg.package_id = hot_deploy(self, file_name, values['tmp_full_path'], notify=False)
 
                     # .. and tell the worker to actually deploy all the services the package contains.
-                    #gevent.spawn(self.worker_store.on_broker_msg_HOT_DEPLOY_CREATE_SERVICE, msg)
+                    # gevent.spawn(self.worker_store.on_broker_msg_HOT_DEPLOY_CREATE_SERVICE, msg)
                     self.worker_store.on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(msg)
 
                     logger.info('Deployed extra services found: %s', sorted(values['services']))
@@ -476,7 +476,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.deployment_key = zato_deployment_key
 
         register_diag_handlers()
-
 
         # Find out if we are on a platform that can handle our posix_ipc
         _skip_platform = self.fs_server_config.misc.get('posix_ipc_skip_platform')

@@ -47,7 +47,6 @@ class Wait(ZatoCommand):
             self.logger.warn('Exactly one of --path or --address is required (#1)')
             sys.exit(self.SYS_ERROR.INVALID_INPUT)
 
-
         # .. but we cannot have both of them at the same time.
         if args.path and args.address:
             self.logger.warn('Exactly one of --path or --address is required (#2)')
