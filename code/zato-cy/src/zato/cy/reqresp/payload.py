@@ -193,7 +193,7 @@ class SimpleIOPayload(object):
 # ################################################################################################################################
 
     @cy.ccall
-    def getvalue(self, serialize:bool=True, force_dict_serialisation:bool=True):
+    def getvalue(self, serialize:bool=True, force_dict_serialisation:bool=True): # noqa: E252
         """ Returns a service's payload, either serialised or not.
         """
         if self.data_format == DATA_FORMAT_DICT:

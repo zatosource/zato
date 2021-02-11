@@ -72,7 +72,7 @@ def set_initial_opaque_attrs(username, initial, opaque_attrs):
         initial['totp_key_label'] = cm.decrypt(initial['totp_key_label'])
 
     # Build the actual TOTP object for later use
-    totp =  pyotp.totp.TOTP(totp_key)
+    totp = pyotp.totp.TOTP(totp_key)
 
     # Update template data with TOTP information
     initial['totp_key'] = totp.secret

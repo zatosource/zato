@@ -32,3 +32,7 @@ run-tests:
 	$(MAKE) reqresp-tests
 	$(MAKE) simpleio-tests
 	echo
+
+static-check:
+	echo "Running static checks in zato-cy"
+	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/

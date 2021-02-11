@@ -36,6 +36,8 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 """
 
+# flake8: noqa
+
 """Utilities for writing code that runs on Python 2 and 3"""
 
 # Copyright (c) 2010-2014 Benjamin Peterson
