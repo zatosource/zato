@@ -123,7 +123,7 @@ class CommandStore(object):
              sso                 as sso_mod,                 \
              stop                as stop_mod,                \
              wait                as wait_mod,                \
-             web_admin_auth      as web_admin_auth_mod
+             web_admin_auth      as web_admin_auth_mod # noqa: E272
 
         parser, base_parser, subs, formatter_class = self.build_core_parser()
         self._add_version(parser)

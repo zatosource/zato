@@ -402,9 +402,9 @@ class ServiceTestCase(TestCase):
             pass
 
         instance.handle()
-        #instance.update_handle(
-        #    set_response_func, instance, request_data, channel, data_format, None, server, None, worker_store, new_cid(),
-        #    None)
+        instance.update_handle(
+            set_response_func, instance, request_data, channel, data_format, None, server, None, worker_store, new_cid(),
+            None)
         return instance
 
     def _check_sio_request_input(self, instance, request_data):

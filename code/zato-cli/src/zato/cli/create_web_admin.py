@@ -147,7 +147,6 @@ class Create(ZatoCommand):
         odb_password = args.odb_password or ''
         odb_password = odb_password.encode('utf8')
 
-
         config = {
             'host': web_admin_host,
             'port': web_admin_port,

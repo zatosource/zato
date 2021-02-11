@@ -91,4 +91,3 @@ class PubSubHookDemo(PubSubHook):
             self.request.input.ctx.msg.pub_msg_id, self.request.input.ctx.msg.data)
 
 # ################################################################################################################################
-

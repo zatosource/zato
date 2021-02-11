@@ -365,7 +365,7 @@ def get_config(repo_location, config_name, bunchified=True, needs_user_config=Tr
     """
     # type: (str, str, bool, bool, object, object) -> Bunch
     conf_location = os.path.join(repo_location, config_name)
-    conf = ConfigObj(conf_location , zato_crypto_manager=crypto_manager, zato_secrets_conf=secrets_conf)
+    conf = ConfigObj(conf_location, zato_crypto_manager=crypto_manager, zato_secrets_conf=secrets_conf)
 
     return _get_config(conf, bunchified, needs_user_config, repo_location)
 
@@ -912,7 +912,7 @@ def get_stack(f, with_locals=False):
                 reprs = spformat(localvars)
             except Exception:
                 reprs = "failed to format local variables"
-            out += [' ' + l for l in reprs.splitlines()]
+            out += [' ' + line for line in reprs.splitlines()]
             out.append('')
     return '\n'.join(out)
 
@@ -1175,7 +1175,7 @@ class StaticConfig(Bunch):
     def __init__(self, base_dir):
         super(StaticConfig, self).__init__()
         self.base_dir = base_dir
-        #self.read()
+        self.read()
 
     def read_file(self, name):
         f = open(os.path.join(self.base_dir, name))
@@ -1655,7 +1655,7 @@ def is_class_pubsub_hook(class_):
     """
     # Imported here to avoid circular dependencies
     from zato.server.service import PubSubHook
-    return issubclass(class_, PubSubHook) and (not class_ is PubSubHook)
+    return issubclass(class_, PubSubHook) and (class_ is not PubSubHook)
 
 # ################################################################################################################################
 
@@ -1744,11 +1744,11 @@ def slugify(value, allow_unicode=False):
     """
     if allow_unicode:
         value = unicodedata.normalize('NFKC', value)
-        value = re.sub('[^\w\s-]', '', value, flags=re.U).strip().lower()
-        return re.sub('[-\s]+', '_', value, flags=re.U)
+        value = re.sub('[^\w\s-]', '', value, flags=re.U).strip().lower() # noqa: W605
+        return re.sub('[-\s]+', '_', value, flags=re.U) # noqa: W605
     value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
-    value = re.sub('[^\w\s-]', '', value).strip().lower()
-    return re.sub('[-\s]+', '_', value)
+    value = re.sub('[^\w\s-]', '', value).strip().lower() # noqa: W605
+    return re.sub('[-\s]+', '_', value) # noqa: W605
 
 # ################################################################################################################################
 

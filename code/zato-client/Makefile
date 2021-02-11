@@ -20,3 +20,7 @@ upload2 upload3:
 	$(MAKE) clean
 	$(PYTHON_BIN) setup.py clean && $(PYTHON_BIN) setup.py bdist_wheel
 	$(MAKE) twine
+
+static-check:
+	echo "Running static checks in zato-client"
+	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
