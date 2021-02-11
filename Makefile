@@ -21,6 +21,7 @@ static-check:
 	cd $(CURDIR)/code/zato-common && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-cy && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-hl7 && $(MAKE) static-check
+	cd $(CURDIR)/code/zato-lib && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-scheduler && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-server && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-sso && $(MAKE) static-check
