@@ -26,15 +26,15 @@ class WSXConnectorConfig(ConnectorConfig):
     data_format: optional[str]
     token_ttl: optional[int]
     new_token_wait_time: int
-    pings_missed_threshold: optional[int] = 5
-    is_audit_log_sent_active: optional[bool] = False
-    is_audit_log_received_active: optional[bool] = False
     max_len_messages_sent: optional[int]
     max_len_messages_received: optional[int]
     hook_service: optional[callable_]
     auth_func: optional[callable_]
     vault_conn_default_auth_method: optional[callable_]
     on_message_callback: optional[callable_]
+    pings_missed_threshold: optional[int] = 5
+    is_audit_log_sent_active: optional[bool] = False
+    is_audit_log_received_active: optional[bool] = False
 
     @staticmethod
     def from_dict(config_dict):
