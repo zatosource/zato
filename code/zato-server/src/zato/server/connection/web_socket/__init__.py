@@ -13,7 +13,7 @@ patch_all()
 
 # stdlib
 from datetime import datetime, timedelta
-from http.client import BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
+from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
 from logging import DEBUG, getLogger
 from threading import current_thread
 from traceback import format_exc
@@ -26,8 +26,9 @@ from gevent import sleep, socket, spawn
 from gevent.lock import RLock
 
 # ws4py
+from ws4py.exc import HandshakeError
 from ws4py.websocket import WebSocket as _WebSocket
-from ws4py.server.geventserver import WSGIServer
+from ws4py.server.geventserver import WSGIServer, WebSocketWSGIHandler
 from ws4py.server.wsgiutils import WebSocketWSGIApplication
 
 # Python 2/3 compatibility
@@ -68,6 +69,12 @@ logger_zato = getLogger('zato')
 logger_has_debug = logger.isEnabledFor(DEBUG)
 
 # ################################################################################################################################
+
+http400 = '{} {}'.format(BAD_REQUEST, responses[BAD_REQUEST])
+http400_bytes = http400.encode('latin1')
+
+http403 = '{} {}'.format(FORBIDDEN, responses[FORBIDDEN])
+http403_bytes = http403.encode('latin1')
 
 http404 = '{} {}'.format(NOT_FOUND, responses[NOT_FOUND])
 http404_bytes = http404.encode('latin1')
@@ -1224,25 +1231,42 @@ class WebSocketContainer(WebSocketWSGIApplication):
         self.clients = {}
         super(WebSocketContainer, self).__init__(*args, **kwargs)
 
-    def make_websocket(self, sock, protocols, extensions, environ):
+    def make_websocket(self, sock, protocols, extensions, wsgi_environ):
         try:
-            websocket = self.handler_cls(self, self.config, sock, protocols, extensions, environ.copy())
+            websocket = self.handler_cls(self, self.config, sock, protocols, extensions, wsgi_environ.copy())
             self.clients[websocket.pub_client_id] = websocket
-            environ['ws4py.websocket'] = websocket
+            wsgi_environ['ws4py.websocket'] = websocket
             return websocket
         except Exception:
             logger.warn(format_exc())
 
-    def __call__(self, environ, start_response):
+    def __call__(self, wsgi_environ, start_response):
 
         try:
-            if environ['PATH_INFO'] != self.config.path:
+
+            # Make sure this is a WebSockets request
+            if 'HTTP_UPGRADE' not in wsgi_environ:
+                raise HandshakeError('No HTTP_UPGRADE in wsgi_environ')
+
+            # Do we have such a path?
+            if wsgi_environ['PATH_INFO'] != self.config.path:
                 start_response(http404, {})
                 return [error_response[NOT_FOUND][self.config.data_format]]
 
-            super(WebSocketContainer, self).__call__(environ, start_response)
-        except Exception:
-            logger.warn('Could not execute __call__, e:`%s`', format_exc())
+            # Yes, we do, although we are not sure yet if input is valid,
+            # e.g. HTTP_UPGRADE may be missing.
+            else:
+                super(WebSocketContainer, self).__call__(wsgi_environ, start_response)
+
+        except HandshakeError:
+            logger.warning('Handshake error; e:`%s`', format_exc())
+
+            start_response(http400, {})
+            return [error_response[BAD_REQUEST][self.config.data_format]]
+
+        except Exception as e:
+            logger.warning('Could not execute __call__; e:`%s`', e.args[0])
+            raise
 
     def invoke_client(self, cid, pub_client_id, request, timeout):
         return self.clients[pub_client_id].invoke_client(cid, request, timeout)
@@ -1266,9 +1290,27 @@ class WebSocketContainer(WebSocketWSGIApplication):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class WSXWSGIHandler(WebSocketWSGIHandler):
+
+    def process_result(self):
+        for data in self.result or '':
+            if data:
+                self.write(data)
+            else:
+                self.write(b'')
+        if self.status and not self.headers_sent:
+            # In other words, the application returned an empty
+            # result iterable (and did not use the write callable)
+            # Trigger the flush of the headers.
+            self.write(b'')
+        if self.response_use_chunked:
+            self._sendall(b'0\r\n\r\n')
+
 class WebSocketServer(WSGIServer):
     """ A WebSocket server exposing Zato services to client applications.
     """
+    handler_class = WSXWSGIHandler
+
     def __init__(self, config, auth_func, on_message_callback):
         # type: (WSXConnectorConfig, object, object)
 
@@ -1388,7 +1430,7 @@ class ChannelWebSocket(Connector):
         return self._wsx_server.get_client_by_pub_id(pub_client_id)
 
     def get_conn_report(self):
-        return self._wsx_server
+        return self._wsx_server.environ
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1458,8 +1500,16 @@ if __name__ == '__main__':
     # Start the connector
     web_socket_api.start()
 
+    # To toggle reporting
+    needs_report = False
+
     # Run forever
     while True:
         sleep(0.1)
-        for connector in web_socket_api.connectors.items():
-            pass
+        if needs_report:
+            for name, connector in web_socket_api.connectors.items(): # type: (str, Connector)
+                report = connector.get_conn_report()
+                print('*', name, report)
+
+# ################################################################################################################################
+# ################################################################################################################################
