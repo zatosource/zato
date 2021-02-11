@@ -1387,6 +1387,9 @@ class ChannelWebSocket(Connector):
     def get_client_by_pub_id(self, pub_client_id):
         return self._wsx_server.get_client_by_pub_id(pub_client_id)
 
+    def get_conn_report(self):
+        return self._wsx_server
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -1418,11 +1421,6 @@ if __name__ == '__main__':
     # An overall WSX container store
     web_socket_api = ConnectorStore(connector_type.duplex.web_socket, ChannelWebSocket, parallel_server)
 
-    # self.web_socket_api.create(name, config, self.on_message_invoke_service,
-    # self.request_dispatcher.url_data.authenticate_web_socket)
-    web_socket_api.start()
-
-    '''
     # Config as dict
     config = {
         'id': 1,
@@ -1452,20 +1450,16 @@ if __name__ == '__main__':
     }
 
     # Config as a business object
-    config = WSXConnectorConfig(**config)
+    config = WSXConnectorConfig.from_dict(config)
 
-    # The connector needs to know what kind of channels or outconns we are starting
-    connector_channels = {}
-    connector_outconns = {}
+    # Create a new channel
+    web_socket_api.create(config.name, config, config.on_message_callback, config.auth_func)
 
-    # Create a WSX channel based on our config ..
-    wsx_channel = ChannelWebSocket(config.name, conn_type, config, config.on_message_callback, config.auth_func,
-        connector_channels, connector_outconns, config.parallel_server)
-
-    # .. and start the channel now.
-    wsx_channel.start()
-    '''
+    # Start the connector
+    web_socket_api.start()
 
     # Run forever
     while True:
         sleep(0.1)
+        for connector in web_socket_api.connectors.items():
+            pass
