@@ -1175,7 +1175,6 @@ class StaticConfig(Bunch):
     def __init__(self, base_dir):
         super(StaticConfig, self).__init__()
         self.base_dir = base_dir
-        self.read()
 
     def read_file(self, name):
         f = open(os.path.join(self.base_dir, name))
