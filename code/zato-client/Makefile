@@ -20,3 +20,6 @@ upload2 upload3:
 	$(MAKE) clean
 	$(PYTHON_BIN) setup.py clean && $(PYTHON_BIN) setup.py bdist_wheel
 	$(MAKE) twine
+
+static-check:
+	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/

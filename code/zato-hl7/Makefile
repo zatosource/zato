@@ -20,4 +20,8 @@ hl7-tests:
 
 run-tests:
 	$(MAKE) hl7-tests
+	$(MAKE) static-check
 	echo
+
+static-check:
+	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/

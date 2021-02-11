@@ -19,3 +19,6 @@ sso-test:
 	py $(CURDIR)/test/zato/test_session_list.py &&  \
 	py $(CURDIR)/test/zato/test_linked_auth.py && \
 	py $(CURDIR)/test/zato/test_login_totp.py
+
+static-check:
+	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
