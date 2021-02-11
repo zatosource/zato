@@ -22,4 +22,5 @@ upload2 upload3:
 	$(MAKE) twine
 
 static-check:
+	echo "Running static checks in zato-client"
 	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
