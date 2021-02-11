@@ -21,4 +21,5 @@ sso-test:
 	py $(CURDIR)/test/zato/test_login_totp.py
 
 static-check:
+	echo "Running static checks in zato-sso"
 	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/

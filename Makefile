@@ -27,3 +27,4 @@ static-check:
 	cd $(CURDIR)/code/zato-testing && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-web-admin && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-zmq && $(MAKE) static-check
+	echo "Static checks OK"
