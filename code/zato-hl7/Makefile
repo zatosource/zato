@@ -24,4 +24,5 @@ run-tests:
 	echo
 
 static-check:
+	echo "Running static checks in zato-hl7"
 	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
