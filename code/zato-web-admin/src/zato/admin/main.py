@@ -23,7 +23,7 @@ except ImportError:
     pass
 
 # stdlib
-import  os
+import os
 
 # Django
 import django

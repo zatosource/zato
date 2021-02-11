@@ -84,7 +84,7 @@ frontend front_http_plain
     maxconn 200 # ZATO frontend front_http_plain:maxconn
 
     monitor-uri /zato-lb-alive # ZATO frontend front_http_plain:monitor-uri
-"""
+""" # noqa
 
 default_backend = """
     server http_plain--server1 127.0.0.1:{server01_port} check inter 2s rise 2 fall 2 # ZATO backend bck_http_plain:server--server1

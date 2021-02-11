@@ -215,9 +215,6 @@ class SubprocessIPC(object):
             else:
                 logger.warn('Error message from {} connector `{}`'.format(self.connector_name, response.text))
         else:
-            #if not response.text:
-            #    raise ConnectorClosedException(None, '<empty-response>')
-            #else:
             return response
 
 # ################################################################################################################################

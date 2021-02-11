@@ -45,7 +45,6 @@ class CreateForm(forms.Form):
     default_directory = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     ssh_options = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%'}))
 
-
     def __init__(self, prefix=None, req=None):
         super(CreateForm, self).__init__(prefix=prefix)
         add_select(self, 'log_level', SFTP.LOG_LEVEL(), needs_initial_select=False)

@@ -20,6 +20,7 @@ coverage==3.7.1
 crontab==0.22.9
 cryptography==2.9.2
 Cython==3.0a6
+dacite==1.6.0
 dateparser==0.7.6
 decorator==3.4.0
 dictalchemy==0.1.2.6

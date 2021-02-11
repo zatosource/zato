@@ -114,7 +114,7 @@ class LogContainerConfig:
 class LogContainer:
     """ Stores messages for a specific object, e.g. an individual REST or HL7 channel.
     """
-    __slots__ = config_attrs +  transfer_attrs + ('lock',)
+    __slots__ = config_attrs + transfer_attrs + ('lock',)
 
     def __init__(self, config, _sent=_sent, _received=_received):
         # type: (LogContainerConfig)

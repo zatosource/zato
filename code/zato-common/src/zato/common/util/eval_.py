@@ -13,7 +13,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # (c) 2005 Ian Bicking and contributors; written for Paste (http://pythonpaste.org)
 # Licensed under the MIT license: http://www.opensource.org/licenses/mit-license.php
 
-true_values  =  'true', 'yes',  'on', 'y', 't', '1'
+true_values  =  'true', 'yes',  'on', 'y', 't', '1' # noqa: E222
 false_values = 'false',  'no', 'off', 'n', 'f', '0'
 
 def as_bool(data):
