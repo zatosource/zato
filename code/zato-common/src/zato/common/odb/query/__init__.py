@@ -160,7 +160,7 @@ def internal_channel_list(session, cluster_id):
         filter(HTTPSOAP.service_id==Service.id).\
         filter(Service.is_internal==True).\
         filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==HTTPSOAP.cluster_id)
+        filter(Cluster.id==HTTPSOAP.cluster_id) # noqa: E712
 
 # ################################################################################################################################
 

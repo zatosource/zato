@@ -152,7 +152,6 @@ class _CreateEdit(CreateEdit):
             'endpoint_id': self.input.endpoint_id,
         }).data
 
-
         if response['last_seen']:
             response['last_seen'] = from_utc_to_user(response['last_seen']+'+00:00', self.req.zato.user_profile)
 
@@ -183,7 +182,7 @@ class Create(_CreateEdit):
 class Edit(_CreateEdit):
     url_name = 'pubsub-subscription-edit'
     form_prefix = 'edit-'
-    service_name = 'subscription-edit' #'zato.pubsub.subscription.edit'
+    service_name = 'zato.pubsub.subscription.edit'
 
 # ################################################################################################################################
 

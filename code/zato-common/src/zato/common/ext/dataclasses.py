@@ -208,6 +208,8 @@ The original license is:
    limitations under the License.
 """
 
+# flake8: noqa
+
 import re
 import sys
 import copy

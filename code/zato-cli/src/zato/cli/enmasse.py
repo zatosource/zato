@@ -500,8 +500,7 @@ class InputValidator(object):
         for req_key in required_keys:
             if item.get(req_key) is None: # 0 or '' can be correct values
                 raw = (req_key, required_keys, item_dict, item_type)
-                #self.results.add_error(raw, ERROR_KEYS_MISSING, "Key '{}' must exist in {}: {}", req_key, item_type, item_dict)
-                pass
+                self.results.add_error(raw, ERROR_KEYS_MISSING, "Key '{}' must exist in {}: {}", req_key, item_type, item_dict)
 
 class DependencyScanner(object):
     def __init__(self, json, ignore_missing=False):
@@ -778,8 +777,8 @@ class ObjectImporter(object):
                     transport = item.get('transport')
 
                     item = find_first(self.object_mgr.objects.http_soap,
-                        lambda item: connection == item.connection and
-                                     transport == item.transport and
+                        lambda item: connection == item.connection and \
+                                     transport == item.transport and \
                                      name == item.name)
                     if item is not None:
                         self.add_warning(results, item_type, item, item)
@@ -1431,7 +1430,7 @@ class Enmasse(ManageCommand):
     """ Manages server objects en masse.
     """
     opts = [
-        {'name':'--server-url', 'help':'URL of the server that enmasse should talk to, provided in host[:port] format. Defaults to server.conf\'s \'gunicorn_bind\''},  # nopep8
+        {'name':'--server-url', 'help':'URL of the server that enmasse should talk to, provided in host[:port] format. Defaults to server.conf\'s \'gunicorn_bind\''},  # noqa: E501
         {'name':'--export-local', 'help':'Export local file definitions into one file (can be used with --export-odb)', 'action':'store_true'},
         {'name':'--export-odb', 'help':'Export ODB definitions into one file (can be used with --export-local)', 'action':'store_true'},
         {'name':'--import', 'help':'Import definitions from a local file (excludes --export-*)', 'action':'store_true'},

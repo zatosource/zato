@@ -991,7 +991,6 @@ class PubSub(object):
                 '\n'.join(sub_key_info),
             ])
 
-
         # Add all rows to the table
         table.add_rows(rows)
 
@@ -1657,7 +1656,6 @@ class PubSub(object):
                     # .. if there are any subscriptions at all, we store that information for later use.
                     if subs:
                         topic_id_dict[_topic.id] = (_topic.name, subs)
-
 
                 # OK, if we had any subscriptions for at least one topic and there are any messages waiting,
                 # we can continue.

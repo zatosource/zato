@@ -984,7 +984,7 @@ class Service(object):
         """
         raise NotImplementedError('Should be overridden by subclasses (Service.handle)')
 
-    def lock(self, name=None, *args, **kwargs):#ttl=20, block=10):
+    def lock(self, name=None, *args, **kwargs):
         """ Creates a distributed lock.
 
         name - defaults to self.name effectively making access to this service serialized
