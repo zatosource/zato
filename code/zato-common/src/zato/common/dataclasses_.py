@@ -11,12 +11,11 @@ from dacite import from_dict
 
 try:
     # Try to use the stdlib first ..
-    from dataclasses import *
+    from dataclasses import * # noqa: F401
 
 except ImportError:
     # .. fall back to our own vendor copy on Python < 3.7
-    from zato.common.ext.dataclasses import *
-
+    from zato.common.ext.dataclasses import * # noqa: F401
 
 # For pyflakes
 from_dict = from_dict

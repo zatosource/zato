@@ -432,7 +432,6 @@ class CACHE:
         SET_CONTAINS_ALL = 'SET_CONTAINS_ALL'
         SET_CONTAINS_ANY = 'SET_CONTAINS_ANY'
 
-
     class DEFAULT:
         MAX_SIZE = 10000
         MAX_ITEM_SIZE = 10000 # In characters for string/unicode, bytes otherwise
