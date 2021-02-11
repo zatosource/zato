@@ -203,7 +203,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Generic connections - HL7 MLLP channels
         self.channel_hl7_mllp = {}
 
-
         # Generic connections - Cloud - Dropbox
         self.cloud_dropbox = {}
 
@@ -811,10 +810,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             # .. append common hook service to the configuration.
             config.hook_service = self.server.fs_server_config.get('wsx', {}).get('hook_service', '')
 
-            print()
-            print(111, config)
-            print()
-
             self.web_socket_api.create(name, config, self.on_message_invoke_service,
                 self.request_dispatcher.url_data.authenticate_web_socket)
 
@@ -1021,7 +1016,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         if wrapper.config['security_name'] == msg['name']:
             wrapper.config['password'] = msg['password']
             wrapper.set_auth()
-
 
 # ################################################################################################################################
 
@@ -1781,9 +1775,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             cb_msg['transport'] = transport
             cb_msg['is_async'] = True
             cb_msg['in_reply_to'] = cid
-
-            #import traceback as x
-            #x.print_stack()
 
             self.broker_client.invoke_async(cb_msg)
 

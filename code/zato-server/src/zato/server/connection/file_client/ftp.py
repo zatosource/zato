@@ -189,8 +189,8 @@ if __name__ == '__main__':
 
     client = FTPFileClient(conn, config)
 
-    #client.create_directory('aaa2')
-    #client.delete_directory('aaa2')
+    # client.create_directory('aaa2')
+    # client.delete_directory('aaa2')
 
     path = '/aaa2/abc.txt2'
 

@@ -261,7 +261,7 @@ class ServiceStore(object):
         self.needs_post_deploy_attr = 'needs_post_deploy'
 
         if self.is_testing:
-            self._testing_worker_store =  _TestingWorkerStore()
+            self._testing_worker_store = _TestingWorkerStore()
             self._testing_worker_store.worker_config = _TestingWorkerConfig()
 
 # ################################################################################################################################
@@ -1206,7 +1206,7 @@ class ServiceStore(object):
 
             # .. try to find the deployed service's parents ..
             for base_class in service_mro:
-                if issubclass(base_class, Service) and (not base_class is Service):
+                if issubclass(base_class, Service) and (base_class is not Service):
                     if base_class.get_name() == changed_service_name:
 
                         # Do not deploy services that are defined in the same module their parent is

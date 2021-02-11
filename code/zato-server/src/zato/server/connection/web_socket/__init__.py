@@ -120,7 +120,7 @@ class TokenInfo(object):
         self.value = value
         self.ttl = ttl
         self.creation_time = _now()
-        self.expires_at =  self.creation_time
+        self.expires_at = self.creation_time
         self.extend()
 
     def extend(self, extend_by=None, _timedelta=timedelta):
@@ -1398,7 +1398,7 @@ if __name__ == '__main__':
     # Zato
     from zato.common import CHANNEL, DATA_FORMAT
     from zato.common.model.wsx import WSXConnectorConfig
-    #from zato.server.base.parallel import ParallelServer
+    # from zato.server.base.parallel import ParallelServer
     from zato.server.connection.connector import ConnectorStore, connector_type
 
     # We start WSX channels
@@ -1413,15 +1413,13 @@ if __name__ == '__main__':
     address = 'ws://{}:{}{}'.format(host, port, path)
 
     # A test server
-    parallel_server = None #ParallelServer()
+    parallel_server = None # ParallelServer()
 
     # An overall WSX container store
     web_socket_api = ConnectorStore(connector_type.duplex.web_socket, ChannelWebSocket, parallel_server)
 
-
-    #self.web_socket_api.create(name, config, self.on_message_invoke_service,
-    #    self.request_dispatcher.url_data.authenticate_web_socket)
-
+    # self.web_socket_api.create(name, config, self.on_message_invoke_service,
+    # self.request_dispatcher.url_data.authenticate_web_socket)
     web_socket_api.start()
 
     '''
@@ -1471,4 +1469,3 @@ if __name__ == '__main__':
     # Run forever
     while True:
         sleep(0.1)
-
