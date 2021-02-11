@@ -32,3 +32,6 @@ run-tests:
 	$(MAKE) reqresp-tests
 	$(MAKE) simpleio-tests
 	echo
+
+static-check:
+	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
