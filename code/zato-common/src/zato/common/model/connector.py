@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from typing import Optional as optional
 
 # Zato
-from zato.common.dataclasses_ import dataclass
+from zato.common.typing_ import dataclass
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -19,13 +19,12 @@ from gevent import sleep, spawn
 from gevent.lock import RLock
 
 # Zato
-from zato.common.typing_ import TypedDict
 from zato.common.util.api import spawn_greenlet
 
 # ################################################################################################################################
 
 if 0:
-    from typing import Any, Callable, Dict as dict_,
+    from typing import Any, Callable, Dict as dict_
     from zato.common.model.connector import ConnectorConfig
 
     Any = Any
@@ -295,6 +294,11 @@ class Connector(object):
     def _stop(self):
         """ Can be, but does not have to, overwritten by subclasses to customize the behaviour.
         """
+
+# ################################################################################################################################
+
+    def get_conn_report(self):
+        raise NotImplementedError('Needs to be implemented by subclasses')
 
 # ################################################################################################################################
 
