@@ -28,7 +28,7 @@ simpleio-tests:
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/simpleio_/test_*.py -s
 
 run-tests:
-	# No tests to run for now
+	echo "Running unit-tests in zato-cy"
 	$(MAKE) reqresp-tests
 	$(MAKE) simpleio-tests
 	echo
