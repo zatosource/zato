@@ -518,7 +518,6 @@ class Index(_BaseView):
 
             return_data = self.handle_return_data(return_data)
 
-
             for k, v in sorted(return_data.items()):
                 logger.info('Index key/value `%s` -> `%r`', k, v)
 
@@ -655,6 +654,7 @@ class Delete(BaseCallView):
     """ Our subclasses will delete objects such as connections and others.
     """
     id_elem = 'id'
+
     def get_input_dict(self):
         return {
             self.id_elem: self.req.zato.id,
