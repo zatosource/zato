@@ -463,4 +463,3 @@ class GetFromQueueNonGD(AdminService):
                 self.response.payload = response['response']
 
 # ################################################################################################################################
-
