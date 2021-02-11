@@ -2,16 +2,13 @@
 .PHONY: build
 MAKEFLAGS += --silent
 
+default: run-tests
+
 cy-tests:
 	cd $(CURDIR)/code/zato-cy && make run-tests
 
 server-tests:
 	cd $(CURDIR)/code/zato-server && make run-tests
-
-run-tests:
-	$(MAKE) cy-tests
-	$(MAKE) server-tests
-	$(MAKE) static-check
 
 static-check:
 	cd $(CURDIR)/code/zato-agent && $(MAKE) static-check
@@ -29,3 +26,8 @@ static-check:
 	cd $(CURDIR)/code/zato-web-admin && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-zmq && $(MAKE) static-check
 	echo "Static checks OK"
+
+run-tests:
+	$(MAKE) cy-tests
+	$(MAKE) server-tests
+	$(MAKE) static-check
