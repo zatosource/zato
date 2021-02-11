@@ -237,22 +237,22 @@ class SerialisationError(Exception):
 
 @cy.cclass
 class ElemType:
-    as_is:int         =  1000
-    bool:int          =  2000
-    csv:int           =  3000
-    date:int          =  4000
-    date_time:int     =  5000
-    decimal:int       =  5000
-    dict_:int         =  6000
-    dict_list:int     =  7000
-    float_:int        =  8000
-    int_:int          =  9000
-    list_:int         = 10000
-    secret:int        = 11000
-    text:int          = 12000
-    utc:int           = 13000 # Deprecated, do not use
-    uuid:int          = 14000
-    user_defined:int  = 1_000_000
+    as_is:int         =  1000 # noqa: E222
+    bool:int          =  2000 # noqa: E222
+    csv:int           =  3000 # noqa: E222
+    date:int          =  4000 # noqa: E222
+    date_time:int     =  5000 # noqa: E222
+    decimal:int       =  5000 # noqa: E222
+    dict_:int         =  6000 # noqa: E222
+    dict_list:int     =  7000 # noqa: E222
+    float_:int        =  8000 # noqa: E222
+    int_:int          =  9000 # noqa: E222
+    list_:int         = 10000 # noqa: E222
+    secret:int        = 11000 # noqa: E222
+    text:int          = 12000 # noqa: E222
+    utc:int           = 13000 # Deprecated, do not use  # noqa: E222
+    uuid:int          = 14000 # noqa: E222
+    user_defined:int  = 1_000_000 # noqa: E222
 
 # ################################################################################################################################
 
@@ -411,17 +411,17 @@ class Elem(object):
             raise NotImplementedError('{} - operation not implemented'.format(func))
         return _inner
 
-    from_json = Elem._not_implemented('Elem.from_json')
-    to_json   = Elem._not_implemented('Elem.to_json')
+    from_json = Elem._not_implemented('Elem.from_json')  # noqa: F821
+    to_json   = Elem._not_implemented('Elem.to_json')    # noqa: F821
 
-    from_xml  = Elem._not_implemented('Elem.from_xml')
-    to_xml    = Elem._not_implemented('Elem.to_xml')
+    from_xml  = Elem._not_implemented('Elem.from_xml')   # noqa: F821
+    to_xml    = Elem._not_implemented('Elem.to_xml')     # noqa: F821
 
-    from_csv  = Elem._not_implemented('Elem.from_csv')
-    to_csv    = Elem._not_implemented('Elem.to_csv')
+    from_csv  = Elem._not_implemented('Elem.from_csv')   # noqa: F821
+    to_csv    = Elem._not_implemented('Elem.to_csv')     # noqa: F821
 
-    from_dict  = Elem._not_implemented('Elem.from_dict')
-    to_dict    = Elem._not_implemented('Elem.to_dict')
+    from_dict  = Elem._not_implemented('Elem.from_dict') # noqa: F821
+    to_dict    = Elem._not_implemented('Elem.to_dict')   # noqa: F821
 
 # ################################################################################################################################
 
@@ -1806,7 +1806,7 @@ class CySimpleIO(object):
 # ################################################################################################################################
 
     @cy.returns(object)
-    def _parse_input_elem(self, elem:object, data_format:cy.unicode, is_csv:cy.bint=False) -> object:
+    def _parse_input_elem(self, elem:object, data_format:cy.unicode, is_csv:cy.bint=False) -> object: # noqa: E252
 
         is_dict:cy.bint = isinstance(elem, dict)
         is_xml:cy.bint  = isinstance(elem, EtreeElementClass)
@@ -2120,7 +2120,7 @@ class CySimpleIO(object):
 # ################################################################################################################################
 
     @cy.returns(object)
-    def get_output(self, data:object, data_format:cy.unicode, serialise:cy.int=True) -> object:
+    def get_output(self, data:object, data_format:cy.unicode, serialise:cy.int=True) -> object: # noqa: E252
         """ Returns input converted to the output format, possibly including serialisation to a string representation.
         """
         if data_format == DATA_FORMAT_JSON:
