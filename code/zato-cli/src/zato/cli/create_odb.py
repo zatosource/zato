@@ -46,8 +46,8 @@ class Create(ZatoCommand):
                 if show_output:
                     version = session.query(ZatoInstallState.version).one().version
                     msg = (
-                        'The ODB (v. {}) already exists, not creating it. ' +
-                        "Use the 'zato delete odb' command first if you'd like to start afresh and " +
+                        'The ODB (v. {}) already exists, not creating it. ' + \
+                        "Use the 'zato delete odb' command first if you'd like to start afresh and " + \
                         'recreate all ODB objects.').format(version)
                     self.logger.error(msg)
 
