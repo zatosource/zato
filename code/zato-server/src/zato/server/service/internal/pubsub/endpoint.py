@@ -235,7 +235,7 @@ class _GetEndpointQueue(AdminService):
             filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
             filter(PubSubEndpointEnqueuedMessage.sub_key==item.sub_key).\
             filter(PubSubEndpointEnqueuedMessage.is_in_staging != True).\
-            filter(PubSubEndpointEnqueuedMessage.delivery_status != COMMON_PUBSUB.DELIVERY_STATUS.DELIVERED)
+            filter(PubSubEndpointEnqueuedMessage.delivery_status != COMMON_PUBSUB.DELIVERY_STATUS.DELIVERED) # noqa: E712
 
         # This could be read from the SQL database ..
         item.current_depth_gd = count(session, current_depth_gd_q)

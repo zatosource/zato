@@ -182,7 +182,7 @@ class WebSphereMQConnection(object):
                 except Exception:
                     try:
                         logger.error('Could not clear caches, e:`%s`' % format_exc())
-                    except:
+                    except Exception:
                         pass
                 try:
                     logger.info('Disconnecting from queue manager `%s`' % self.queue_manager)

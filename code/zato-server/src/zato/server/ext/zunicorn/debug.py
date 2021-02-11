@@ -37,6 +37,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 """The debug module contains utilities and functions for better
 debugging Gunicorn."""
 
+# flake8: noqa
+
 import sys
 import linecache
 import re
