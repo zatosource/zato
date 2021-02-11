@@ -355,7 +355,7 @@ class WSSE(object):
                 self.on_username_token_expired(config, elapsed, soap)
 
         if config.get('wsse-pwd-password-digest'):
-            expected_password =  self._get_digest(config['wsse-pwd-password'], wsse_nonce, wsu_username_created)
+            expected_password = self._get_digest(config['wsse-pwd-password'], wsse_nonce, wsu_username_created)
         else:
             expected_password = config.get('wsse-pwd-password')
 
