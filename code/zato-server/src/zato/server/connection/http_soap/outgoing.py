@@ -355,7 +355,6 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         if self.config['transport'] == 'soap':
             data, headers = self._soap_data(data, headers)
 
-
         params = params or {}
 
         if self.path_params:

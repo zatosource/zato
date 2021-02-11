@@ -18,6 +18,8 @@ Author: Nathan Hoad
 Description: Simple wrapper around smtplib for sending an email.
 """
 
+# flake8: noqa
+
 import smtplib
 import socket, sys
 

@@ -20,6 +20,7 @@ coverage==3.7.1
 crontab==0.22.9
 cryptography==2.9.2
 Cython==3.0a6
+dacite==1.6.0
 dateparser==0.7.6
 decorator==3.4.0
 dictalchemy==0.1.2.6
@@ -29,7 +30,7 @@ docformatter==0.8
 dropbox==10.10.0
 elasticsearch==7.9.1
 ephem==3.7.6.0
-flake8==2.1.0
+flake8==3.8.4
 flatbuffers==1.12
 fs==2.4.11
 future==0.18.2
@@ -65,7 +66,7 @@ lxml==4.5.2
 Mako==0.9.0
 markdown==2.6.7
 MarkupSafe==1.1.1
-mccabe==0.2.1
+mccabe==0.6.1
 mock==3.0.5
 ndg-httpsclient==0.4.0
 netaddr==0.7.19
