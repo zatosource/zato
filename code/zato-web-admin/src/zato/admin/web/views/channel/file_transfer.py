@@ -170,21 +170,20 @@ class _CreateEdit(CreateEdit):
         # REST
         #
 
-        for outconn_rest_name in outconn_rest_list:
+        for outconn_name in outconn_rest_list:
 
-            if not outconn_rest_name:
+            if not outconn_name:
                 continue
 
             # The list of REST outconns as HTML
             outconn_rest_list_html += """
             <span class="form_hint">R</span>→
-                <a href="/zato/http-soap/?cluster={cluster_id}&amp;connection=outgoing&amp;transport=plain_http&amp;query={outconn_rest_name}">{outconn_rest_name}</a>
+                <a href="/zato/http-soap/?cluster={cluster_id}&amp;connection=outgoing&amp;transport=plain_http&amp;query={outconn_name}">{outconn_name}</a>
             <br/>
             """.format(**{
-                'outconn_rest_name': outconn_rest_name,
+                'outconn_name': outconn_name,
                 'cluster_id': cluster_id
             })
-
 
         # Get human-readable names of the source for this channel
         if self.input.source_type == source_type_local:
