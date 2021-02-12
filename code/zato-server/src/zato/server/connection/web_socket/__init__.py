@@ -41,6 +41,7 @@ from zato.common.audit_log import DataReceived, DataSent
 from zato.common.exception import ParsingException, Reportable
 from zato.common.json_internal import loads
 from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
+from zato.common.typing_ import dataclass
 from zato.common.util.api import new_cid
 from zato.common.util.hook import HookTool
 from zato.common.util.wsx import cleanup_wsx_client
@@ -174,7 +175,8 @@ class WebSocket(_WebSocket):
             json_library = _default
 
         if json_library == 'stdlib':
-            from json import dumps as dumps_func
+            # from json import dumps as dumps_func
+            from zato.common.json_ import dumps as dumps_func
 
         elif json_library == 'rapidjson':
             from rapidjson import dumps as dumps_func
@@ -1437,14 +1439,36 @@ class ChannelWebSocket(Connector):
 
 if __name__ == '__main__':
 
+    # stdlib
+    import os
+
     # gevent
     from gevent import sleep
 
     # Zato
     from zato.common import CHANNEL, DATA_FORMAT
     from zato.common.model.wsx import WSXConnectorConfig
-    # from zato.server.base.parallel import ParallelServer
+    from zato.common.util.import_ import import_string
+    from zato.server.base.parallel import ParallelServer
+    from zato.server.base.worker import WorkerStore
     from zato.server.connection.connector import ConnectorStore, connector_type
+
+# ################################################################################################################################
+
+    @dataclass(init=False)
+    class FSServerConfig:
+        wsx: Bunch
+        pubsub: Bunch
+        pubsub_meta_topic: Bunch
+        pubsub_meta_endpoint_pub: Bunch
+
+# ################################################################################################################################
+
+    def default_on_message_callback(request_dict, *ignored_args, **ignored_kwargs):
+        # type: (dict, object, object) -> dict
+        return {'default_on_message_callback': 'default_on_message_callback'}
+
+# ################################################################################################################################
 
     # We start WSX channels
     conn_type = CHANNEL.WEB_SOCKET
@@ -1454,14 +1478,48 @@ if __name__ == '__main__':
     host = 'localhost'
     path = '/'
 
+    os.environ['ZATO_SERVER_WORKER_IDX'] = '1'
+
     # Full address to bind to
     address = 'ws://{}:{}{}'.format(host, port, path)
 
-    # A test server
-    parallel_server = None # ParallelServer()
+    fs_server_config = FSServerConfig()
+    fs_server_config.wsx = Bunch()
+
+    fs_server_config.pubsub = Bunch()
+    fs_server_config.pubsub.log_if_deliv_server_not_found = True
+    fs_server_config.pubsub.log_if_wsx_deliv_server_not_found = True
+    fs_server_config.pubsub.data_prefix_len = 10
+    fs_server_config.pubsub.data_prefix_short_len = 5
+
+    fs_server_config.pubsub_meta_topic = Bunch()
+    fs_server_config.pubsub_meta_topic.enabled = False
+    fs_server_config.pubsub_meta_topic.store_frequency = 1
+
+    fs_server_config.pubsub_meta_endpoint_pub = Bunch()
+    fs_server_config.pubsub_meta_endpoint_pub.enabled = False
+    fs_server_config.pubsub_meta_endpoint_pub.store_frequency = 1
+    fs_server_config.pubsub_meta_endpoint_pub.data_len = 50
+    fs_server_config.pubsub_meta_endpoint_pub.max_history = 50
+
+    parallel_server = ParallelServer()
+    parallel_server.fs_server_config = fs_server_config
+
+    worker_store = WorkerStore(server=parallel_server)
+    parallel_server.worker_store = worker_store
 
     # An overall WSX container store
     web_socket_api = ConnectorStore(connector_type.duplex.web_socket, ChannelWebSocket, parallel_server)
+
+    # This may be overridden if needed
+    on_message_callback_name = os.environ.get('ZATO_WSX_ON_MESSAGE_CALLBACK_NAME')
+
+    if on_message_callback_name:
+        logger.info('Using callback name from environment: %s', on_message_callback_name)
+        on_message_callback = import_string(on_message_callback_name)
+    else:
+        logger.info('Using default callback function')
+        on_message_callback = default_on_message_callback
 
     # Config as dict
     config = {
@@ -1474,8 +1532,8 @@ if __name__ == '__main__':
         'def_name': 'test.def',
         'old_name': None,
         'password': 'abc',
-        'service_name': 'my.service',
-        'parallel_server': '<none>',
+        'service_name': '_zato.wsx.default.service',
+        'parallel_server': parallel_server,
         'path': path,
         'needs_auth': False,
         'sec_name': None,
@@ -1488,7 +1546,7 @@ if __name__ == '__main__':
         'hook_service': None,
         'auth_func': None,
         'vault_conn_default_auth_method': None,
-        'on_message_callback': None
+        'on_message_callback': on_message_callback
     }
 
     # Config as a business object

@@ -26,9 +26,6 @@ from simdjson import load, loads
 # uJSON
 from ujson import dump, dumps as json_dumps
 
-# Python 2/3 compatibility
-from builtins import bytes
-
 # ################################################################################################################################
 
 # These are needed for pyflakes
@@ -41,11 +38,11 @@ loads = loads
 
 # ################################################################################################################################
 
-def dumps(value, indent=4, expected=(str, dict, int, float, list, tuple, set)):
+def dumps(value, indent=4, simple_type=(str, dict, int, float, list, tuple, set)):
 
     if value is not None:
 
-        if not isinstance(value, expected):
+        if not isinstance(value, simple_type):
 
             # Useful in various contexts
             if isinstance(value, datetime):
