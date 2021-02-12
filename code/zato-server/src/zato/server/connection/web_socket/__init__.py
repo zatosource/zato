@@ -25,6 +25,9 @@ from bunch import Bunch, bunchify
 from gevent import sleep, socket, spawn
 from gevent.lock import RLock
 
+# Pympler
+from pympler import tracker
+
 # ws4py
 from ws4py.exc import HandshakeError
 from ws4py.websocket import WebSocket as _WebSocket
@@ -160,6 +163,9 @@ class WebSocket(_WebSocket):
         # JSON dumps function can be overridden by users
         self._json_dump_func = self._set_json_dump_func()
 
+        # For memory tracking
+        self.mem_tracker = tracker.SummaryTracker()
+
         super(WebSocket, self).__init__(_unusued_sock, _unusued_protocols, _unusued_extensions, wsgi_environ, **kwargs)
 
     def _set_json_dump_func(self, _default='stdlib', _supported=('stdlib', 'rapidjson', 'bson')):
@@ -184,7 +190,7 @@ class WebSocket(_WebSocket):
         elif json_library == 'bson':
             from bson.json_util import dumps as dumps_func
 
-        logger.info('Setting JSON dumps function based on `%s`', json_library)
+        # logger.info('Setting JSON dumps function based on `%s`', json_library)
 
         return dumps_func
 
@@ -626,8 +632,8 @@ class WebSocket(_WebSocket):
                 # Update peer name pretty now that we have more details about it
                 self.peer_conn_info_pretty = self.get_peer_info_pretty()
 
-                logger.info('Assigning wsx py:`%s` to `%s` (%s %s)', self.python_id, self.pub_client_id,
-                    self.ext_client_id, self.ext_client_name)
+                # logger.info('Assigning wsx py:`%s` to `%s` (%s %s)', self.python_id, self.pub_client_id,
+                #    self.ext_client_id, self.ext_client_name)
 
             return AuthenticateResponse(self.token.value, request.cid, request.id).serialize(self._json_dump_func)
 
@@ -635,7 +641,7 @@ class WebSocket(_WebSocket):
 
     def on_forbidden(self, action, data=copy_forbidden):
         cid = new_cid()
-        logger.warn(
+        logger.warning(
             'Peer %s (%s) %s, closing its connection to %s (%s), cid:`%s` (%s)', self._peer_address, self._peer_fqdn, action,
             self._local_address, self.config.name, cid, self.peer_conn_info_pretty)
 
@@ -669,10 +675,10 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def send_background_pings(self, ping_extend=30):
+    def send_background_pings(self, ping_extend=5):
 
-        if logger_has_debug:
-            logger.debug('Starting WSX background pings for `%s`', self.peer_conn_info_pretty)
+        #if logger_has_debug:
+        logger.info('Starting WSX background pings for `%s`', self.peer_conn_info_pretty)
 
         try:
             while self.stream and (not self.server_terminated):
@@ -770,8 +776,8 @@ class WebSocket(_WebSocket):
             'peer_forwarded_for_fqdn': self.forwarded_for_fqdn,
         }, needs_response=True).ws_client_id
 
-        logger.info(
-            _assigned_msg, self.sql_ws_client_id, self.python_id, self.pub_client_id, self.ext_client_id, self.ext_client_name)
+        # logger.info(
+        #     _assigned_msg, self.sql_ws_client_id, self.python_id, self.pub_client_id, self.ext_client_id, self.ext_client_name)
 
         # Run the relevant on_connected hook, if any is available
         hook = self.get_on_connected_hook()
@@ -886,8 +892,8 @@ class WebSocket(_WebSocket):
 
         serialized = response.serialize(self._json_dump_func)
 
-        logger.info('Sending response `%s` to `%s` (%s %s)',
-            serialized, self.pub_client_id, self.ext_client_id, self.ext_client_name)
+        # logger.info('Sending response `%s` to `%s` (%s %s)',
+        #    serialized, self.pub_client_id, self.ext_client_id, self.ext_client_name)
 
         try:
             self.send(serialized, msg.cid, cid)
@@ -979,7 +985,12 @@ class WebSocket(_WebSocket):
                     return
 
                 # Reject request if token is provided but it already expired
-                if _now() > self.token.expires_at:
+                _timestamp = _now()
+
+                logger.info('TOK: [%s] %s %s -> %s',
+                    self.token.value, _timestamp, self.token.expires_at, _timestamp > self.token.expires_at)
+
+                if _timestamp > self.token.expires_at:
                     self.on_forbidden('used an expired token')
                     return
 
@@ -1008,8 +1019,8 @@ class WebSocket(_WebSocket):
 
     def received_message(self, message):
 
-        logger.info('Received message %r from `%s` (%s %s)', message.data,
-            self.pub_client_id, self.ext_client_id, self.ext_client_name)
+        # logger.info('Received message %r from `%s` (%s %s)', message.data,
+        #     self.pub_client_id, self.ext_client_id, self.ext_client_name)
 
         try:
             self._received_message(message.data)
@@ -1025,6 +1036,8 @@ class WebSocket(_WebSocket):
 
         # Call the super-class that will actually send the message.
         super().send(data)
+
+        #self.mem_tracker.print_diff()
 
 # ################################################################################################################################
 
@@ -1163,9 +1176,9 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def opened(self):
-        logger.info('New connection from %s (%s) to %s (%s %s) (%s %s) (%s)', self._peer_address, self._peer_fqdn,
-            self._local_address, self.config.name, self.python_id, self.forwarded_for, self.forwarded_for_fqdn,
-            self.pub_client_id)
+        # logger.info('New connection from %s (%s) to %s (%s %s) (%s %s) (%s)', self._peer_address, self._peer_fqdn,
+        #     self._local_address, self.config.name, self.python_id, self.forwarded_for, self.forwarded_for_fqdn,
+        #     self.pub_client_id)
 
         spawn(self._ensure_session_created)
 
@@ -1479,6 +1492,7 @@ if __name__ == '__main__':
     path = '/'
 
     os.environ['ZATO_SERVER_WORKER_IDX'] = '1'
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
 
     # Full address to bind to
     address = 'ws://{}:{}{}'.format(host, port, path)
@@ -1539,7 +1553,7 @@ if __name__ == '__main__':
         'sec_name': None,
         'sec_type': None,
         'data_format': DATA_FORMAT.JSON,
-        'token_ttl': 30,
+        'token_ttl': 2,
         'new_token_wait_time': 5,
         'max_len_messages_sent': 50,
         'max_len_messages_received': 50,
@@ -1563,11 +1577,13 @@ if __name__ == '__main__':
 
     # Run forever
     while True:
-        sleep(0.1)
+        sleep(1)
         if needs_report:
+            '''
             for name, connector in web_socket_api.connectors.items(): # type: (str, Connector)
                 report = connector.get_conn_report()
                 print('*', name, report)
+                '''
 
 # ################################################################################################################################
 # ################################################################################################################################
