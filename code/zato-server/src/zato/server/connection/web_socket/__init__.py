@@ -547,7 +547,8 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def create_session(self, cid, request, _sec_def_type_vault=SEC_DEF_TYPE.VAULT, _VAULT_TOKEN_HEADER=VAULT_TOKEN_HEADER):
+    def create_session(self, cid, request, _sec_def_type_vault=SEC_DEF_TYPE.VAULT, _VAULT_TOKEN_HEADER=VAULT_TOKEN_HEADER,
+        _now=datetime.utcnow):
         """ Creates a new session in the channel's auth backend and assigned metadata based on the backend's response.
         """
         # This dictionary will be written to
@@ -593,6 +594,12 @@ class WebSocket(_WebSocket):
 
                 logger.info('Assigning wsx py:`%s` to `%s`', self.python_id, self.peer_conn_info_pretty)
 
+            _timestamp = _now()
+
+            logger.info('Tok auth: [%s / %s] ts:%s exp:%s -> %s',
+                self.token.value, self.pub_client_id, _timestamp, self.token.expires_at,
+                _timestamp > self.token.expires_at)
+
             return AuthenticateResponse(self.token.value, request.cid, request.id).serialize(self._json_dump_func)
 
 # ################################################################################################################################
@@ -633,7 +640,7 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def send_background_pings(self, ping_extend=30):
+    def send_background_pings(self, ping_extend=30, _now=datetime.utcnow):
 
         logger.info('Starting WSX background pings for `%s`', self.peer_conn_info_pretty)
 
@@ -654,9 +661,22 @@ class WebSocket(_WebSocket):
 
                     with self.update_lock:
                         if response:
+
+                            _timestamp = _now()
+
                             self.pings_missed = 0
-                            self.ping_last_response_time = datetime.utcnow()
+                            self.ping_last_response_time = _timestamp
+
+                            logger.info('Tok ext1: [%s / %s] ts:%s exp:%s -> %s',
+                                self.token.value, self.pub_client_id, _timestamp, self.token.expires_at,
+                                _timestamp > self.token.expires_at)
+
                             self.token.extend(ping_extend)
+
+                            logger.info('Tok ext2: [%s / %s] ts:%s exp:%s -> %s',
+                                self.token.value, self.pub_client_id, _timestamp, self.token.expires_at,
+                                _timestamp > self.token.expires_at)
+
                         else:
                             self.pings_missed += 1
                             if self.pings_missed < self.pings_missed_threshold:
@@ -941,8 +961,14 @@ class WebSocket(_WebSocket):
                     return
 
                 # Reject request if token is provided but it already expired
-                if _now() > self.token.expires_at:
-                    self.on_forbidden('used an expired token')
+                _timestamp = _now()
+
+                logger.info('Tok rcv: [%s / %s] ts:%s exp:%s -> %s',
+                    self.token.value, self.pub_client_id, _timestamp, self.token.expires_at, _timestamp > self.token.expires_at)
+
+                if _timestamp > self.token.expires_at:
+                    self.on_forbidden('used an expired token; tok: [{} / {}] ts:{} > exp:{}'.format(
+                        self.token.value, self.pub_client_id, _timestamp, self.token.expires_at))
                     return
 
                 # Ok, we can proceed
