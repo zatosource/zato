@@ -452,9 +452,18 @@ def payload_from_request(cid, request, data_format, transport, channel_item=None
         #
         # JSON and dicts
         #
+
         if data_format in _data_format_json_like:
+
+            # It is possible that we have an XML request converted
+            # to an ObjectifiedElement instance on input and sent
+            # using the data format of dict. This happens in IBM MQ channels.
+            if isinstance(request, objectify.ObjectifiedElement):
+                return request
+
             if not request:
                 return ''
+
             if isinstance(request, basestring) and data_format == _data_format_json:
                 try:
                     request = request.decode('utf8') if isinstance(request, bytes) else request
