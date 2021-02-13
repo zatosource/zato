@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from typing import Callable as callable_, Optional as optional
 
 # Zato
-from zato.common.dataclasses_ import dataclass, from_dict
+from zato.common.typing_ import dataclass, from_dict
 from zato.common.model.connector import ConnectorConfig
 
 # ################################################################################################################################
@@ -18,8 +18,8 @@ from zato.common.model.connector import ConnectorConfig
 
 @dataclass
 class WSXConnectorConfig(ConnectorConfig):
-    parallel_server: object
-    path: str
+    parallel_server: optional[object]
+    path: optional[str]
     needs_auth: optional[bool]
     sec_name: optional[str]
     sec_type: optional[str]
@@ -30,7 +30,7 @@ class WSXConnectorConfig(ConnectorConfig):
     max_len_messages_received: optional[int]
     hook_service: optional[callable_]
     auth_func: optional[callable_]
-    vault_conn_default_auth_method: optional[callable_]
+    vault_conn_default_auth_method: optional[str]
     on_message_callback: optional[callable_]
     pings_missed_threshold: optional[int] = 5
     is_audit_log_sent_active: optional[bool] = False
