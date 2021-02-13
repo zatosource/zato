@@ -13,7 +13,7 @@ patch_all()
 
 # stdlib
 from datetime import datetime, timedelta
-from http.client import BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
+from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
 from logging import DEBUG, getLogger
 from threading import current_thread
 from traceback import format_exc
@@ -25,9 +25,13 @@ from bunch import Bunch, bunchify
 from gevent import sleep, socket, spawn
 from gevent.lock import RLock
 
+# Pympler
+from pympler import tracker
+
 # ws4py
+from ws4py.exc import HandshakeError
 from ws4py.websocket import WebSocket as _WebSocket
-from ws4py.server.geventserver import WSGIServer
+from ws4py.server.geventserver import WSGIServer, WebSocketWSGIHandler
 from ws4py.server.wsgiutils import WebSocketWSGIApplication
 
 # Python 2/3 compatibility
@@ -40,6 +44,7 @@ from zato.common.audit_log import DataReceived, DataSent
 from zato.common.exception import ParsingException, Reportable
 from zato.common.json_internal import loads
 from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
+from zato.common.typing_ import dataclass
 from zato.common.util.api import new_cid
 from zato.common.util.hook import HookTool
 from zato.common.util.wsx import cleanup_wsx_client
@@ -68,6 +73,12 @@ logger_zato = getLogger('zato')
 logger_has_debug = logger.isEnabledFor(DEBUG)
 
 # ################################################################################################################################
+
+http400 = '{} {}'.format(BAD_REQUEST, responses[BAD_REQUEST])
+http400_bytes = http400.encode('latin1')
+
+http403 = '{} {}'.format(FORBIDDEN, responses[FORBIDDEN])
+http403_bytes = http403.encode('latin1')
 
 http404 = '{} {}'.format(NOT_FOUND, responses[NOT_FOUND])
 http404_bytes = http404.encode('latin1')
@@ -152,22 +163,25 @@ class WebSocket(_WebSocket):
         # JSON dumps function can be overridden by users
         self._json_dump_func = self._set_json_dump_func()
 
+        # For memory tracking
+        self.mem_tracker = tracker.SummaryTracker()
+
         super(WebSocket, self).__init__(_unusued_sock, _unusued_protocols, _unusued_extensions, wsgi_environ, **kwargs)
 
-    def _set_json_dump_func(self, _default='stdlib', _supported=('stdlib', 'rapidjson', 'bson')):
+    def _set_json_dump_func(self, _default='zato_default', _supported=('stdlib', 'zato_default', 'rapidjson', 'bson')):
         json_library = self.parallel_server.fs_server_config.wsx.get('json_library', _default)
 
         if json_library not in _supported:
 
             # Warn only if something was set by users
             if json_library:
-                logger.warn('Unrecognized JSON library `%s` configured for WSX, not one of `%s`, switching to `%s`',
+                logger.warning('Unrecognized JSON library `%s` configured for WSX, not one of `%s`, switching to `%s`',
                     json_library, _supported, _default)
 
             json_library = _default
 
-        if json_library == 'stdlib':
-            from json import dumps as dumps_func
+        if json_library in ('stdlib', 'zato_default'):
+            from zato.common.json_ import dumps as dumps_func
 
         elif json_library == 'rapidjson':
             from rapidjson import dumps as dumps_func
@@ -312,7 +326,7 @@ class WebSocket(_WebSocket):
             self._peer_host = socket.gethostbyaddr(_peer_address[0])[0]
             _peer_fqdn = socket.getfqdn(self._peer_host)
         except Exception:
-            logger.warn('WSX exception in FQDN lookup `%s`', format_exc())
+            logger.warning('WSX exception in FQDN lookup `%s`', format_exc())
         finally:
             self._peer_fqdn = _peer_fqdn
 
@@ -573,7 +587,8 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def create_session(self, cid, request, _sec_def_type_vault=SEC_DEF_TYPE.VAULT, _VAULT_TOKEN_HEADER=VAULT_TOKEN_HEADER):
+    def create_session(self, cid, request, _sec_def_type_vault=SEC_DEF_TYPE.VAULT, _VAULT_TOKEN_HEADER=VAULT_TOKEN_HEADER,
+        _now=datetime.utcnow):
         """ Creates a new session in the channel's auth backend and assigned metadata based on the backend's response.
         """
         # This dictionary will be written to
@@ -618,7 +633,13 @@ class WebSocket(_WebSocket):
                 self.peer_conn_info_pretty = self.get_peer_info_pretty()
 
                 logger.info('Assigning wsx py:`%s` to `%s` (%s %s)', self.python_id, self.pub_client_id,
-                    self.ext_client_id, self.ext_client_name)
+                   self.ext_client_id, self.ext_client_name)
+
+            _timestamp = _now()
+
+            logger.info('Tok auth: [%s / %s] ts:%s exp:%s -> %s',
+                self.token.value, self.pub_client_id, _timestamp, self.token.expires_at,
+                _timestamp > self.token.expires_at)
 
             return AuthenticateResponse(self.token.value, request.cid, request.id).serialize(self._json_dump_func)
 
@@ -626,7 +647,7 @@ class WebSocket(_WebSocket):
 
     def on_forbidden(self, action, data=copy_forbidden):
         cid = new_cid()
-        logger.warn(
+        logger.warning(
             'Peer %s (%s) %s, closing its connection to %s (%s), cid:`%s` (%s)', self._peer_address, self._peer_fqdn, action,
             self._local_address, self.config.name, cid, self.peer_conn_info_pretty)
 
@@ -660,10 +681,10 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def send_background_pings(self, ping_extend=30):
+    def send_background_pings(self, ping_extend=5, _now=datetime.utcnow):
 
-        if logger_has_debug:
-            logger.debug('Starting WSX background pings for `%s`', self.peer_conn_info_pretty)
+        #if logger_has_debug:
+        logger.info('Starting WSX background pings for `%s`', self.peer_conn_info_pretty)
 
         try:
             while self.stream and (not self.server_terminated):
@@ -677,18 +698,31 @@ class WebSocket(_WebSocket):
                     try:
                         response = self.invoke_client(new_cid(), None, use_send=False)
                     except RuntimeError:
-                        logger.warn('Closing connection due to `%s`', format_exc())
+                        logger.warning('Closing connection due to `%s`', format_exc())
                         self.on_socket_terminated(close_code.runtime_background_ping, 'Background ping runtime error')
 
                     with self.update_lock:
                         if response:
+
+                            _timestamp = _now()
+
                             self.pings_missed = 0
-                            self.ping_last_response_time = datetime.utcnow()
+                            self.ping_last_response_time = _timestamp
+
+                            logger.info('Tok ext1: [%s / %s] ts:%s exp:%s -> %s',
+                                self.token.value, self.pub_client_id, _timestamp, self.token.expires_at,
+                                _timestamp > self.token.expires_at)
+
                             self.token.extend(ping_extend)
+
+                            logger.info('Tok ext2: [%s / %s] ts:%s exp:%s -> %s',
+                                self.token.value, self.pub_client_id, _timestamp, self.token.expires_at,
+                                _timestamp > self.token.expires_at)
+
                         else:
                             self.pings_missed += 1
                             if self.pings_missed < self.pings_missed_threshold:
-                                logger.warn(
+                                logger.warning(
                                     'Peer %s (%s) missed %s/%s ping messages from %s (%s). Last response time: %s{} (%s)'.format(
                                         ' UTC' if self.ping_last_response_time else ''),
 
@@ -723,7 +757,7 @@ class WebSocket(_WebSocket):
                     return
 
         except Exception:
-            logger.warn(format_exc())
+            logger.warning(format_exc())
 
 # ################################################################################################################################
 
@@ -852,7 +886,7 @@ class WebSocket(_WebSocket):
             service_response = self.invoke_service(self.config.service_name, msg.data, cid=cid)
         except Exception as e:
 
-            logger.warn('Service `%s` could not be invoked, id:`%s` cid:`%s`, conn:`%s`, e:`%s`',
+            logger.warning('Service `%s` could not be invoked, id:`%s` cid:`%s`, conn:`%s`, e:`%s`',
                 self.config.service_name, msg.id, cid, self.peer_conn_info_pretty, format_exc())
 
             # Errors known to map to HTTP ones
@@ -878,7 +912,7 @@ class WebSocket(_WebSocket):
         serialized = response.serialize(self._json_dump_func)
 
         logger.info('Sending response `%s` to `%s` (%s %s)',
-            serialized, self.pub_client_id, self.ext_client_id, self.ext_client_name)
+           serialized, self.pub_client_id, self.ext_client_id, self.ext_client_name)
 
         try:
             self.send(serialized, msg.cid, cid)
@@ -886,7 +920,7 @@ class WebSocket(_WebSocket):
             if e.args[0] == "'NoneType' object has no attribute 'text_message'":
                 _msg = 'Service response discarded (client disconnected), cid:`%s`, msg.meta:`%s`'
                 _meta = msg.get_meta()
-                logger.warn(_msg, _meta)
+                logger.warning(_msg, _meta)
                 logger_zato.warn(_msg, _meta)
 
 # ################################################################################################################################
@@ -916,7 +950,7 @@ class WebSocket(_WebSocket):
             hook = self.get_on_pubsub_hook()
             if not hook:
                 log_msg = 'Ignoring pub/sub response, on_pubsub_response hook not implemented for `%s`, conn:`%s`, msg:`%s`'
-                logger.warn(log_msg, self.config.name, self.peer_conn_info_pretty, msg)
+                logger.warning(log_msg, self.config.name, self.peer_conn_info_pretty, msg)
                 logger_zato.warn(log_msg, self.config.name, self.peer_conn_info_pretty, msg)
             else:
                 request = self._get_hook_request()
@@ -970,8 +1004,14 @@ class WebSocket(_WebSocket):
                     return
 
                 # Reject request if token is provided but it already expired
-                if _now() > self.token.expires_at:
-                    self.on_forbidden('used an expired token')
+                _timestamp = _now()
+
+                logger.info('Tok rcv: [%s / %s] ts:%s exp:%s -> %s',
+                    self.token.value, self.pub_client_id, _timestamp, self.token.expires_at, _timestamp > self.token.expires_at)
+
+                if _timestamp > self.token.expires_at:
+                    self.on_forbidden('used an expired token; tok: [{} / {}] ts:{} > exp:{}'.format(
+                        self.token.value, self.pub_client_id, _timestamp, self.token.expires_at))
                     return
 
                 # Ok, we can proceed
@@ -993,7 +1033,7 @@ class WebSocket(_WebSocket):
                 logger.debug('Response returned cid:`%s`, time:`%s`', cid, _now() - now)
 
         except Exception:
-            logger.warn(format_exc())
+            logger.warning(format_exc())
 
 # ################################################################################################################################
 
@@ -1005,7 +1045,7 @@ class WebSocket(_WebSocket):
         try:
             self._received_message(message.data)
         except Exception:
-            logger.warn(format_exc())
+            logger.warning(format_exc())
 
 # ################################################################################################################################
 
@@ -1016,6 +1056,8 @@ class WebSocket(_WebSocket):
 
         # Call the super-class that will actually send the message.
         super().send(data)
+
+        #self.mem_tracker.print_diff()
 
 # ################################################################################################################################
 
@@ -1059,7 +1101,7 @@ class WebSocket(_WebSocket):
             self._init()
             super(WebSocket, self).run()
         except Exception:
-            logger.warn('Exception in WebSocket.run `%s`', format_exc())
+            logger.warning('Exception in WebSocket.run `%s`', format_exc())
 
 # ################################################################################################################################
 
@@ -1079,7 +1121,7 @@ class WebSocket(_WebSocket):
             if e.message == "'NoneType' object has no attribute 'text_message'":
                 self.on_forbidden('did not create session within {}s (#2)'.format(self.config.new_token_wait_time))
             else:
-                logger.warn('Exception in WSX _ensure_session_created `%s`', format_exc())
+                logger.warning('Exception in WSX _ensure_session_created `%s`', format_exc())
 
 # ################################################################################################################################
 
@@ -1224,25 +1266,42 @@ class WebSocketContainer(WebSocketWSGIApplication):
         self.clients = {}
         super(WebSocketContainer, self).__init__(*args, **kwargs)
 
-    def make_websocket(self, sock, protocols, extensions, environ):
+    def make_websocket(self, sock, protocols, extensions, wsgi_environ):
         try:
-            websocket = self.handler_cls(self, self.config, sock, protocols, extensions, environ.copy())
+            websocket = self.handler_cls(self, self.config, sock, protocols, extensions, wsgi_environ.copy())
             self.clients[websocket.pub_client_id] = websocket
-            environ['ws4py.websocket'] = websocket
+            wsgi_environ['ws4py.websocket'] = websocket
             return websocket
         except Exception:
-            logger.warn(format_exc())
+            logger.warning(format_exc())
 
-    def __call__(self, environ, start_response):
+    def __call__(self, wsgi_environ, start_response):
 
         try:
-            if environ['PATH_INFO'] != self.config.path:
+
+            # Make sure this is a WebSockets request
+            if 'HTTP_UPGRADE' not in wsgi_environ:
+                raise HandshakeError('No HTTP_UPGRADE in wsgi_environ')
+
+            # Do we have such a path?
+            if wsgi_environ['PATH_INFO'] != self.config.path:
                 start_response(http404, {})
                 return [error_response[NOT_FOUND][self.config.data_format]]
 
-            super(WebSocketContainer, self).__call__(environ, start_response)
-        except Exception:
-            logger.warn('Could not execute __call__, e:`%s`', format_exc())
+            # Yes, we do, although we are not sure yet if input is valid,
+            # e.g. HTTP_UPGRADE may be missing.
+            else:
+                super(WebSocketContainer, self).__call__(wsgi_environ, start_response)
+
+        except HandshakeError:
+            logger.warning('Handshake error; e:`%s`', format_exc())
+
+            start_response(http400, {})
+            return [error_response[BAD_REQUEST][self.config.data_format]]
+
+        except Exception as e:
+            logger.warning('Could not execute __call__; e:`%s`', e.args[0])
+            raise
 
     def invoke_client(self, cid, pub_client_id, request, timeout):
         return self.clients[pub_client_id].invoke_client(cid, request, timeout)
@@ -1266,9 +1325,27 @@ class WebSocketContainer(WebSocketWSGIApplication):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class WSXWSGIHandler(WebSocketWSGIHandler):
+
+    def process_result(self):
+        for data in self.result or '':
+            if data:
+                self.write(data)
+            else:
+                self.write(b'')
+        if self.status and not self.headers_sent:
+            # In other words, the application returned an empty
+            # result iterable (and did not use the write callable)
+            # Trigger the flush of the headers.
+            self.write(b'')
+        if self.response_use_chunked:
+            self._sendall(b'0\r\n\r\n')
+
 class WebSocketServer(WSGIServer):
     """ A WebSocket server exposing Zato services to client applications.
     """
+    handler_class = WSXWSGIHandler
+
     def __init__(self, config, auth_func, on_message_callback):
         # type: (WSXConnectorConfig, object, object)
 
@@ -1387,10 +1464,16 @@ class ChannelWebSocket(Connector):
     def get_client_by_pub_id(self, pub_client_id):
         return self._wsx_server.get_client_by_pub_id(pub_client_id)
 
+    def get_conn_report(self):
+        return self._wsx_server.environ
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
+
+    # stdlib
+    import os
 
     # gevent
     from gevent import sleep
@@ -1398,8 +1481,27 @@ if __name__ == '__main__':
     # Zato
     from zato.common import CHANNEL, DATA_FORMAT
     from zato.common.model.wsx import WSXConnectorConfig
-    # from zato.server.base.parallel import ParallelServer
+    from zato.common.util.import_ import import_string
+    from zato.server.base.parallel import ParallelServer
+    from zato.server.base.worker import WorkerStore
     from zato.server.connection.connector import ConnectorStore, connector_type
+
+# ################################################################################################################################
+
+    @dataclass(init=False)
+    class FSServerConfig:
+        wsx: Bunch
+        pubsub: Bunch
+        pubsub_meta_topic: Bunch
+        pubsub_meta_endpoint_pub: Bunch
+
+# ################################################################################################################################
+
+    def default_on_message_callback(request_dict, *ignored_args, **ignored_kwargs):
+        # type: (dict, object, object) -> dict
+        return {'default_on_message_callback': 'default_on_message_callback'}
+
+# ################################################################################################################################
 
     # We start WSX channels
     conn_type = CHANNEL.WEB_SOCKET
@@ -1409,20 +1511,50 @@ if __name__ == '__main__':
     host = 'localhost'
     path = '/'
 
+    os.environ['ZATO_SERVER_WORKER_IDX'] = '1'
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
+
     # Full address to bind to
     address = 'ws://{}:{}{}'.format(host, port, path)
 
-    # A test server
-    parallel_server = None # ParallelServer()
+    fs_server_config = FSServerConfig()
+    fs_server_config.wsx = Bunch()
+
+    fs_server_config.pubsub = Bunch()
+    fs_server_config.pubsub.log_if_deliv_server_not_found = True
+    fs_server_config.pubsub.log_if_wsx_deliv_server_not_found = True
+    fs_server_config.pubsub.data_prefix_len = 10
+    fs_server_config.pubsub.data_prefix_short_len = 5
+
+    fs_server_config.pubsub_meta_topic = Bunch()
+    fs_server_config.pubsub_meta_topic.enabled = False
+    fs_server_config.pubsub_meta_topic.store_frequency = 1
+
+    fs_server_config.pubsub_meta_endpoint_pub = Bunch()
+    fs_server_config.pubsub_meta_endpoint_pub.enabled = False
+    fs_server_config.pubsub_meta_endpoint_pub.store_frequency = 1
+    fs_server_config.pubsub_meta_endpoint_pub.data_len = 50
+    fs_server_config.pubsub_meta_endpoint_pub.max_history = 50
+
+    parallel_server = ParallelServer()
+    parallel_server.fs_server_config = fs_server_config
+
+    worker_store = WorkerStore(server=parallel_server)
+    parallel_server.worker_store = worker_store
 
     # An overall WSX container store
     web_socket_api = ConnectorStore(connector_type.duplex.web_socket, ChannelWebSocket, parallel_server)
 
-    # self.web_socket_api.create(name, config, self.on_message_invoke_service,
-    # self.request_dispatcher.url_data.authenticate_web_socket)
-    web_socket_api.start()
+    # This may be overridden if needed
+    on_message_callback_name = os.environ.get('ZATO_WSX_ON_MESSAGE_CALLBACK_NAME')
 
-    '''
+    if on_message_callback_name:
+        logger.info('Using callback name from environment: %s', on_message_callback_name)
+        on_message_callback = import_string(on_message_callback_name)
+    else:
+        logger.info('Using default callback function')
+        on_message_callback = default_on_message_callback
+
     # Config as dict
     config = {
         'id': 1,
@@ -1434,38 +1566,44 @@ if __name__ == '__main__':
         'def_name': 'test.def',
         'old_name': None,
         'password': 'abc',
-        'service_name': 'my.service',
-        'parallel_server': '<none>',
+        'service_name': '_zato.wsx.default.service',
+        'parallel_server': parallel_server,
         'path': path,
         'needs_auth': False,
         'sec_name': None,
         'sec_type': None,
         'data_format': DATA_FORMAT.JSON,
-        'token_ttl': 30,
+        'token_ttl': 20,
         'new_token_wait_time': 5,
         'max_len_messages_sent': 50,
         'max_len_messages_received': 50,
         'hook_service': None,
         'auth_func': None,
         'vault_conn_default_auth_method': None,
-        'on_message_callback': None
+        'on_message_callback': on_message_callback
     }
 
     # Config as a business object
-    config = WSXConnectorConfig(**config)
+    config = WSXConnectorConfig.from_dict(config)
 
-    # The connector needs to know what kind of channels or outconns we are starting
-    connector_channels = {}
-    connector_outconns = {}
+    # Create a new channel
+    web_socket_api.create(config.name, config, config.on_message_callback, config.auth_func)
 
-    # Create a WSX channel based on our config ..
-    wsx_channel = ChannelWebSocket(config.name, conn_type, config, config.on_message_callback, config.auth_func,
-        connector_channels, connector_outconns, config.parallel_server)
+    # Start the connector
+    web_socket_api.start()
 
-    # .. and start the channel now.
-    wsx_channel.start()
-    '''
+    # To toggle reporting
+    needs_report = False
 
     # Run forever
     while True:
-        sleep(0.1)
+        sleep(1)
+        if needs_report:
+            '''
+            for name, connector in web_socket_api.connectors.items(): # type: (str, Connector)
+                report = connector.get_conn_report()
+                print('*', name, report)
+                '''
+
+# ################################################################################################################################
+# ################################################################################################################################
