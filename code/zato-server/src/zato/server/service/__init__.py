@@ -1159,7 +1159,7 @@ class Service(object):
              channel_item=None,     # type: dict
              _wsgi_channels=_wsgi_channels, # type: object
              _AMQP=CHANNEL.AMQP,        # type: str
-             _WMQ=CHANNEL.WEBSPHERE_MQ, # type: str
+             _IBM_MQ=CHANNEL.IBM_MQ, # type: str
              _HL7v2=HL7.Const.Version.v2.id
              ):
         """ Takes a service instance and updates it with the current request's context data.
@@ -1191,7 +1191,7 @@ class Service(object):
         if channel_type == _AMQP:
             service.request.amqp = AMQPRequestData(channel_item['amqp_msg'])
 
-        elif channel_type == _WMQ:
+        elif channel_type == _IBM_MQ:
             service.request.wmq = service.request.ibm_mq = IBMMQRequestData(wmq_ctx)
 
         elif data_format == _HL7v2:

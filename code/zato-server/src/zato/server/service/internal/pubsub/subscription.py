@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
@@ -36,6 +34,13 @@ from zato.server.pubsub import PubSub, Topic
 from zato.server.service import Bool, Int, List, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.internal.pubsub import common_sub_data
+
+# ################################################################################################################################
+
+if 0:
+    from zato.common.model.wsx import WSXConnectorConfig
+
+    WSXConnectorConfig = WSXConnectorConfig
 
 # ################################################################################################################################
 
@@ -719,13 +724,15 @@ class CreateWSXSubscription(AdminService):
 
         for item in subscribe_to:
 
+            ws_channel_config = environ['ws_channel_config'] # type: WSXConnectorConfig
+
             request = {
                 'is_internal': False,
                 'topic_name': item,
                 'ws_channel_id': ws_channel_id,
                 'ext_client_id': environ['ext_client_id'],
                 'ws_pub_client_id': environ['pub_client_id'],
-                'ws_channel_name': environ['ws_channel_config']['name'],
+                'ws_channel_name': ws_channel_config.name,
                 'sql_ws_client_id': environ['sql_ws_client_id'],
                 'unsub_on_wsx_close': unsub_on_wsx_close,
                 'web_socket': environ['web_socket'],
