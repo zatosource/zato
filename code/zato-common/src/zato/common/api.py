@@ -559,7 +559,7 @@ class CHANNEL(Attrs):
     STARTUP_SERVICE = 'startup-service'
     URL_DATA = 'url-data'
     WEB_SOCKET = 'web-socket'
-    WEBSPHERE_MQ = 'websphere-mq'
+    IBM_MQ = 'websphere-mq'
     WORKER = 'worker'
     ZMQ = 'zmq'
 

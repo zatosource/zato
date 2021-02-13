@@ -24,7 +24,7 @@ from zato.common.util.api import spawn_greenlet
 # ################################################################################################################################
 
 if 0:
-    from typing import Any, Callable
+    from typing import Any, Callable, Dict as dict_
     from zato.common.model.connector import ConnectorConfig
 
     Any = Any
@@ -297,6 +297,11 @@ class Connector(object):
 
 # ################################################################################################################################
 
+    def get_conn_report(self):
+        raise NotImplementedError('Needs to be implemented by subclasses')
+
+# ################################################################################################################################
+
 class ConnectorStore(object):
     """ Base container for all connectors.
     """
@@ -304,13 +309,13 @@ class ConnectorStore(object):
         self.type = type
         self.connector_class = connector_class
         self.parallel_server = parallel_server
-        self.connectors = {}
+        self.connectors = {} # type: dict_[str, Connector]
         self.lock = RLock()
 
 # ################################################################################################################################
 
     def _create(self, name, config, on_message_callback=None, auth_func=None, channels=None, outconns=None, needs_start=False):
-        # type: (str, dict, Callable, Callable, dict, dict, bool)
+        # type: (str, ConnectorConfig, Callable, Callable, dict, dict, bool)
         connector = self.connector_class(
             name, self.type, config, on_message_callback, auth_func, channels, outconns, self.parallel_server)
         self.connectors[name] = connector
@@ -320,7 +325,7 @@ class ConnectorStore(object):
 # ################################################################################################################################
 
     def create(self, name, config, on_message_callback=None, auth_func=None, channels=None, outconns=None, needs_start=False):
-        # type: (str, dict, Callable, Callable, dict, dict, bool)
+        # type: (str, ConnectorConfig, Callable, Callable, dict, dict, bool)
         with self.lock:
             self._create(name, config, on_message_callback, auth_func, channels, outconns, needs_start)
 

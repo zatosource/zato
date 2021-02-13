@@ -23,6 +23,7 @@ from zato.common.py23_ import pickle_loads
 # Zato
 from zato.common.api import CHANNEL
 from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL
+from zato.common.ccsid_ import CCSIDConfig
 from zato.common.json_internal import loads
 from zato.common.odb.model import ChannelWMQ, Cluster, ConnDefWMQ, Service as ModelService
 from zato.common.odb.query import channel_wmq_list
@@ -216,7 +217,7 @@ class Delete(AdminService):
 class OnMessageReceived(Service):
     """ A callback service invoked by WebSphere connectors for each taken off a queue.
     """
-    def handle(self, _channel=CHANNEL.WEBSPHERE_MQ, ts_format='YYYYMMDDHHmmssSS'):
+    def handle(self, _channel=CHANNEL.IBM_MQ, ts_format='YYYYMMDDHHmmssSS'):
         request = loads(self.request.raw_request)
         msg = request['msg']
         service_name = request['service_name']
@@ -228,10 +229,28 @@ class OnMessageReceived(Service):
         timestamp = '{}{}'.format(msg['put_date'], msg['put_time'])
         timestamp = arrow_get(timestamp, ts_format).replace(tzinfo='UTC').datetime
 
+        # Extract MQMD
+        mqmd = msg['mqmd']
+        mqmd = b64decode(mqmd)
+        mqmd = pickle_loads(mqmd)
+
+        # Find the message's CCSID
+        request_ccsid = mqmd.CodedCharSetId
+
+        # Try to find an encoding matching the CCSID,
+        # if not found, use the default one.
+        try:
+            encoding = CCSIDConfig.encoding_map[request_ccsid]
+        except KeyError:
+            encoding = CCSIDConfig.default_encoding
+
+        # Encode the input Unicode data into bytes
+        msg['text'] = msg['text'].encode(encoding)
+
+        # Extract the business payload
         data = payload_from_request(self.cid, msg['text'], request['data_format'], None)
 
-        msg['mqmd'] = b64decode(msg['mqmd'])
-
+        # Invoke the target service
         self.invoke(service_name, data, _channel, wmq_ctx={
             'msg_id': unhexlify(msg['msg_id']),
             'correlation_id': correlation_id,
@@ -241,7 +260,7 @@ class OnMessageReceived(Service):
             'expiration': expiration,
             'reply_to': msg['reply_to'],
             'data': data,
-            'mqmd': pickle_loads(msg['mqmd'])
+            'mqmd': mqmd
         })
 
 # ################################################################################################################################
