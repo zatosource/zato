@@ -25,9 +25,6 @@ from bunch import Bunch, bunchify
 from gevent import sleep, socket, spawn
 from gevent.lock import RLock
 
-# Pympler
-from pympler import tracker
-
 # ws4py
 from ws4py.exc import HandshakeError
 from ws4py.websocket import WebSocket as _WebSocket
@@ -162,9 +159,6 @@ class WebSocket(_WebSocket):
 
         # JSON dumps function can be overridden by users
         self._json_dump_func = self._set_json_dump_func()
-
-        # For memory tracking
-        self.mem_tracker = tracker.SummaryTracker()
 
         super(WebSocket, self).__init__(_unusued_sock, _unusued_protocols, _unusued_extensions, wsgi_environ, **kwargs)
 
@@ -1056,8 +1050,6 @@ class WebSocket(_WebSocket):
 
         # Call the super-class that will actually send the message.
         super().send(data)
-
-        #self.mem_tracker.print_diff()
 
 # ################################################################################################################################
 
