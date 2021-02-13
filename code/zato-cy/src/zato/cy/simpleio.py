@@ -237,22 +237,22 @@ class SerialisationError(Exception):
 
 @cy.cclass
 class ElemType:
-    as_is:int         =  1000 # noqa: E222
-    bool:int          =  2000 # noqa: E222
-    csv:int           =  3000 # noqa: E222
-    date:int          =  4000 # noqa: E222
-    date_time:int     =  5000 # noqa: E222
-    decimal:int       =  5000 # noqa: E222
-    dict_:int         =  6000 # noqa: E222
-    dict_list:int     =  7000 # noqa: E222
-    float_:int        =  8000 # noqa: E222
-    int_:int          =  9000 # noqa: E222
-    list_:int         = 10000 # noqa: E222
-    secret:int        = 11000 # noqa: E222
-    text:int          = 12000 # noqa: E222
-    utc:int           = 13000 # Deprecated, do not use  # noqa: E222
-    uuid:int          = 14000 # noqa: E222
-    user_defined:int  = 1_000_000 # noqa: E222
+    as_is:int         =  1000
+    bool:int          =  2000
+    csv:int           =  3000
+    date:int          =  4000
+    date_time:int     =  5000
+    decimal:int       =  5000
+    dict_:int         =  6000
+    dict_list:int     =  7000
+    float_:int        =  8000
+    int_:int          =  9000
+    list_:int         = 10000
+    secret:int        = 11000
+    text:int          = 12000
+    utc:int           = 13000 # Deprecated, do not use
+    uuid:int          = 14000
+    user_defined:int  = 1_000_000
 
 # ################################################################################################################################
 
