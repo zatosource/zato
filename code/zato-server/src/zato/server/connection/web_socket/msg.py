@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime
-from http.client import FORBIDDEN, NOT_FOUND, OK
+from http.client import BAD_REQUEST, FORBIDDEN, NOT_FOUND, OK
 from json import dumps
 from logging import getLogger
 from traceback import format_exc
@@ -34,16 +34,23 @@ logger = getLogger('zato')
 
 xml_error_template = '<?xml version="1.0" encoding="utf-8"?><error>{}</error>'
 
+copy_bad_request = 'Bad request'
 copy_forbidden = 'You are not authorized to access this resource'
 copy_not_found = 'Not found'
 
 error_response = {
-
+    BAD_REQUEST: {
+        DATA_FORMAT.JSON: dumps({'error': copy_bad_request}).encode('latin1'),
+        DATA_FORMAT.XML: xml_error_template.format(copy_bad_request).encode('latin1')
+    },
+    FORBIDDEN: {
+        DATA_FORMAT.JSON: dumps({'error': copy_forbidden}).encode('latin1'),
+        DATA_FORMAT.XML: xml_error_template.format(copy_forbidden).encode('latin1')
+    },
     NOT_FOUND: {
-        DATA_FORMAT.JSON: dumps({'error': copy_not_found}),
-        DATA_FORMAT.XML: xml_error_template.format(copy_not_found)
-    }
-
+        DATA_FORMAT.JSON: dumps({'error': copy_not_found}).encode('latin1'),
+        DATA_FORMAT.XML: xml_error_template.format(copy_not_found).encode('latin1')
+    },
 }
 
 # ################################################################################################################################

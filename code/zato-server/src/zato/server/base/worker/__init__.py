@@ -53,6 +53,7 @@ from zato.common.dispatch import dispatcher
 from zato.common.json_internal import loads
 from zato.common.match import Matcher
 from zato.common.model.amqp_ import AMQPConnectorConfig
+from zato.common.model.wsx import WSXConnectorConfig
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.util.api import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
      import_module_from_path, new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, \
@@ -804,8 +805,12 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Channels
         for name, data in self.worker_config.channel_web_socket.items():
 
-            # Per-channel configuration ..
-            config = bunchify(data.config)
+            # Convert configuration to expected datatypes
+            data.config['max_len_messages_sent'] = int(data.config.get('max_len_messages_sent', 0))
+            data.config['max_len_messages_received'] = int(data.config.get('max_len_messages_received', 0))
+
+            # Create a new AMQP connector definition ..
+            config = WSXConnectorConfig.from_dict(data.config)
 
             # .. append common hook service to the configuration.
             config.hook_service = self.server.fs_server_config.get('wsx', {}).get('hook_service', '')
