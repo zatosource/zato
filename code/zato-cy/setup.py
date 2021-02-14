@@ -38,7 +38,6 @@ setup(
           Extension(name='zato.bunch',               sources=['src/zato/cy/bunch.pyx']),
           Extension(name='zato.cache',               sources=['src/zato/cy/cache.pyx']),
           Extension(name='zato.cy.reqresp.payload',  sources=['src/zato/cy/reqresp/payload.py']),
-          Extension(name='zato.cy.reqresp.request',  sources=['src/zato/cy/reqresp/request.py']),
           Extension(name='zato.cy.reqresp.response', sources=['src/zato/cy/reqresp/response.py']),
           Extension(name='zato.simpleio',            sources=['src/zato/cy/simpleio.py']),
           Extension(name='zato.url_dispatcher',      sources=['src/zato/cy/url_dispatcher.pyx']),
