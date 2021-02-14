@@ -18,7 +18,6 @@ from zato.common.model.connector import ConnectorConfig
 
 @dataclass
 class WSXConnectorConfig(ConnectorConfig):
-    parallel_server: optional[object]
     path: optional[str]
     needs_auth: optional[bool]
     sec_name: optional[str]
@@ -32,6 +31,7 @@ class WSXConnectorConfig(ConnectorConfig):
     auth_func: optional[callable_]
     vault_conn_default_auth_method: optional[str]
     on_message_callback: optional[callable_]
+    parallel_server: optional[object] = None
     pings_missed_threshold: optional[int] = 5
     is_audit_log_sent_active: optional[bool] = False
     is_audit_log_received_active: optional[bool] = False
