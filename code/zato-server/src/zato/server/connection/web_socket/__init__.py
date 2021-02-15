@@ -1225,28 +1225,44 @@ class WebSocket(_WebSocket):
     def unhandled_error(self, e, _msg='Low-level exception caught, about to close connection from `%s`, e:`%s`'):
         """ Called by the underlying WSX library when a low-level TCP/OS exception occurs.
         """
-        peer_info = self.get_peer_info_pretty()
-        exc = format_exc()
+        # Do not log too many details for common disconnection events ..
+        if isinstance(e, ConnectionError):
+            details = e.args
 
-        logger.info(_msg, peer_info, exc)
-        logger_zato.info(_msg, peer_info, exc)
+        # .. but log everything in other cases.
+        else:
+            details = format_exc()
+
+        peer_info = self.get_peer_info_pretty()
+
+        logger.info(_msg, peer_info, details)
+        logger_zato.info(_msg, peer_info, details)
 
         self.disconnect_client('<unhandled-error>', close_code.runtime_background_ping, 'Unhandled error caught')
 
-    def close(self, code=1000, reason='', _msg='Error while closing connection from `%s`, e:`%s`'):
+    def close(self, code=1000, reason='', _msg='Error while closing connection from `%s`, e:`%s`',
+        _msg_ignored='Caught an exception while closing connection from `%s`, e:`%s`'):
         """ Re-implemented from the base class to be able to catch exceptions in self._write when closing connections.
         """
         if not self.server_terminated:
             self.server_terminated = True
             try:
                 self._write(self.stream.close(code=code, reason=reason).single(mask=self.stream.always_mask))
-            except Exception:
+            except Exception as e:
 
                 peer_info = self.get_peer_info_pretty()
-                exc = format_exc()
 
-                logger.info(_msg, peer_info, exc)
-                logger_zato.info(_msg, peer_info, exc)
+                # Ignore non-essential errors about broken pipes, connections being already reset etc.
+                if isinstance(e, ConnectionError):
+                    e_description = e.args
+                    logger.info(_msg_ignored, peer_info, e_description)
+                    logger_zato.info(_msg_ignored, peer_info, e_description)
+
+                # Log details of exceptions of other types.
+                else:
+                    exc = format_exc()
+                    logger.info(_msg, peer_info, exc)
+                    logger_zato.info(_msg, peer_info, exc)
 
 # ################################################################################################################################
 
