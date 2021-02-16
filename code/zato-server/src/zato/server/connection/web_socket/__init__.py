@@ -319,8 +319,8 @@ class WebSocket(_WebSocket):
         try:
             self._peer_host = socket.gethostbyaddr(_peer_address[0])[0]
             _peer_fqdn = socket.getfqdn(self._peer_host)
-        except Exception:
-            logger.warning('WSX exception in FQDN lookup `%s`', format_exc())
+        except Exception as e:
+            logger.info('WSX exception in FQDN lookup `%s` (%s)', e.args, _peer_address)
         finally:
             self._peer_fqdn = _peer_fqdn
 
@@ -1011,6 +1011,12 @@ class WebSocket(_WebSocket):
                 # Ok, we can proceed
                 try:
                     self.handle_client_message(cid, request) if not request.is_auth else self.handle_create_session(cid, request)
+
+                except ConnectionError as e:
+                    msg = 'Ignoring message (ConnectionError), cid:`%s`; conn:`%s`; e:`%s`'
+                    logger.info(msg, cid, self.peer_conn_info_pretty, e.args)
+                    logger_zato.info(msg, cid, self.peer_conn_info_pretty, e.args)
+
                 except RuntimeError as e:
                     if str(e) == _cannot_send:
                         msg = 'Ignoring message (socket terminated #1), cid:`%s`, request:`%s` conn:`%s`'
