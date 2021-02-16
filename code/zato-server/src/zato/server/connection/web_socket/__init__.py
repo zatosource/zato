@@ -1488,6 +1488,9 @@ if __name__ == '__main__':
 
     # stdlib
     import os
+    from logging import basicConfig, INFO, WARN
+
+    basicConfig(level=WARN, format='%(asctime)s - %(message)s')
 
     # gevent
     from gevent import sleep
@@ -1499,6 +1502,10 @@ if __name__ == '__main__':
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.worker import WorkerStore
     from zato.server.connection.connector import ConnectorStore, connector_type
+
+    # For flake8
+    INFO = INFO
+    WARN = WARN
 
 # ################################################################################################################################
 
@@ -1522,7 +1529,7 @@ if __name__ == '__main__':
 
     # Reusable
     port = 33133
-    host = 'localhost'
+    host = '0.0.0.0'
     path = '/'
 
     os.environ['ZATO_SERVER_WORKER_IDX'] = '1'
