@@ -99,7 +99,7 @@ pygments==2.0
 PyJWT==1.4.2
 pykafka==2.8.0
 pymongo==3.11.0
-PyMySQL==0.8.1
+PyMySQL==1.0.2
 pyOpenSSL==17.5.0
 pyotp==2.2.7
 pyparsing==2.2.0
