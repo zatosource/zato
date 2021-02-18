@@ -40,12 +40,10 @@ from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.file_system import fs_safe_name
-from zato.common.util.event import EventLog
 from zato.common.util.hook import HookTool
-from zato.common.util.python_ import get_current_stack
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.common.util.wsx import find_wsx_environ
-from zato.server.pubsub.model import Endpoint, EventType, HookCtx, Subscription, SubKeyServer, Topic
+from zato.server.pubsub.model import Endpoint, HookCtx, Subscription, SubKeyServer, Topic
 from zato.server.pubsub.sync import InRAMSync
 
 # ################################################################################################################################
@@ -155,7 +153,6 @@ class PubSub(object):
         self.cluster_id = cluster_id
         self.server = server
         self.broker_client = broker_client
-        self.event_log = EventLog('ps.{}.{}.{}'.format(self.cluster_id, self.server.name, self.server.pid))
         self.lock = RLock()
         self.keep_running = True
         self.sk_server_table_columns = self.server.fs_server_config.pubsub.get('sk_server_table_columns') or \
@@ -220,7 +217,6 @@ class PubSub(object):
     @property
     def subscriptions_by_sub_key(self):
         # type: () -> dict
-        self.emit_about_to_access_sub_sk({'sub_sk':sorted(self._subscriptions_by_sub_key), 'stack':get_current_stack()})
         return self._subscriptions_by_sub_key
 
 # ################################################################################################################################
@@ -814,16 +810,6 @@ class PubSub(object):
             self._delete_topic(config.id, del_name)
             self._create_topic_object(config)
             self.subscriptions_by_topic[config.name] = subscriptions_by_topic
-
-# ################################################################################################################################
-
-    def get_topic_event_list(self, topic_name):
-        return self.topics[topic_name].get_event_list()
-
-# ################################################################################################################################
-
-    def get_event_list(self):
-        return self.event_log.get_event_list()
 
 # ################################################################################################################################
 
@@ -1491,52 +1477,11 @@ class PubSub(object):
         else:
             topic.sync_has_non_gd_msg = value
 
-        self.emit_set_sync_has_msg({
-            'topic_id': topic_id,
-            'is_gd': is_gd,
-            'value': value,
-            'source': source,
-            'gd_pub_time_max': gd_pub_time_max,
-            'topic.name': topic.name,
-            'topic.sync_has_gd_msg': topic.sync_has_gd_msg,
-            'topic.gd_pub_time_max': topic.gd_pub_time_max,
-            'topic.sync_has_non_gd_msg': topic.sync_has_non_gd_msg
-        })
-
 # ################################################################################################################################
 
     def set_sync_has_msg(self, topic_id, is_gd, value, source, gd_pub_time_max):
         with self.lock:
             self._set_sync_has_msg(topic_id, is_gd, value, source, gd_pub_time_max)
-
-# ################################################################################################################################
-
-    def emit_loop_topic_id_dict(self, ctx=None, _event=EventType.PubSub.loop_topic_id_dict):
-        self.event_log.emit(_event, ctx)
-
-    def emit_loop_sub_keys(self, ctx=None, _event=EventType.PubSub.loop_sub_keys):
-        self.event_log.emit(_event, ctx)
-
-    def emit_loop_before_has_msg(self, ctx=None, _event=EventType.PubSub.loop_before_has_msg):
-        self.event_log.emit(_event, ctx)
-
-    def emit_loop_has_msg(self, ctx=None, _event=EventType.PubSub.loop_has_msg):
-        self.event_log.emit(_event, ctx)
-
-    def emit_loop_before_sync(self, ctx=None, _event=EventType.PubSub.loop_before_sync):
-        self.event_log.emit(_event, ctx)
-
-    def emit_set_sync_has_msg(self, ctx=None, _event=EventType.PubSub._set_sync_has_msg):
-        self.event_log.emit(_event, ctx)
-
-    def emit_about_to_subscribe(self, ctx=None, _event=EventType.PubSub.about_to_subscribe):
-        self.event_log.emit(_event, ctx)
-
-    def emit_about_to_access_sub_sk(self, ctx=None, _event=EventType.PubSub.about_to_access_sub_sk):
-        self.event_log.emit(_event, ctx)
-
-    def emit_in_subscribe_impl(self, ctx=None, _event=EventType.PubSub.in_subscribe_impl):
-        self.event_log.emit(_event, ctx)
 
 # ################################################################################################################################
 
@@ -1546,11 +1491,6 @@ class PubSub(object):
         """
 
         # Local aliases
-
-        _self_emit_loop_topic_id_dict  = self.emit_loop_topic_id_dict
-        _self_emit_loop_sub_keys       = self.emit_loop_sub_keys
-        _self_emit_loop_before_has_msg = self.emit_loop_before_has_msg
-        _self_emit_loop_before_sync    = self.emit_loop_before_sync
 
         _new_cid      = new_cid
         _spawn        = spawn
@@ -1575,45 +1515,6 @@ class PubSub(object):
 
         def _cmp_non_gd_msg(elem):
             return elem['pub_time']
-
-# ################################################################################################################################
-
-        def _do_emit_loop_topic_id_dict(_topic_id_dict):
-            _self_emit_loop_topic_id_dict({
-                'topic_id_dict': _topic_id_dict
-            })
-
-# ################################################################################################################################
-
-        def _do_emit_loop_sub_keys(topic_id, topic_name, sub_keys):
-            _self_emit_loop_sub_keys({
-                'topic_id': topic_id,
-                'topic.name': topic_name,
-                'sub_keys': sub_keys
-            })
-
-# ################################################################################################################################
-
-        def _do_emit_loop_before_has_msg(topic_id, topic_name, topic_sync_has_gd_msg, topic_sync_has_non_gd_msg):
-            _self_emit_loop_before_has_msg({
-                'topic_id': topic_id,
-                'topic.name': topic_name,
-                'topic.sync_has_gd_msg': topic_sync_has_gd_msg,
-                'topic.sync_has_non_gd_msg': topic_sync_has_non_gd_msg,
-            })
-
-# ################################################################################################################################
-
-        def _do_emit_loop_before_sync(topic_id, topic_name, topic_sync_has_gd_msg, topic_sync_has_non_gd_msg,
-            non_gd_msg_list_msg_id_list, pub_time_max):
-            _self_emit_loop_before_sync({
-                'topic_id': topic_id,
-                'topic.name': topic_name,
-                'topic.sync_has_gd_msg': topic_sync_has_gd_msg,
-                'topic.sync_has_non_gd_msg': topic_sync_has_non_gd_msg,
-                'non_gd_msg_list': non_gd_msg_list_msg_id_list,
-                'pub_time_max': pub_time_max
-            })
 
 # ################################################################################################################################
 
@@ -1661,13 +1562,6 @@ class PubSub(object):
                 # we can continue.
                 try:
 
-                    if topic_id_dict:
-
-                        #
-                        # Event log
-                        #
-                        _do_emit_loop_topic_id_dict(topic_id_dict)
-
                     for topic_id in topic_id_dict:
 
                         topic = _self_topics[topic_id]
@@ -1686,17 +1580,7 @@ class PubSub(object):
                         # Continue only if there are actually any sub_keys left = any tasks up and running ..
                         if sub_keys:
 
-                            #
-                            # Event log
-                            #
-                            _do_emit_loop_sub_keys(topic_id, topic.name, sub_keys)
-
                             non_gd_msg_list = _sync_backlog_get_delete_messages_by_sub_keys(topic_id, sub_keys)
-
-                            #
-                            # Event log
-                            #
-                            _do_emit_loop_before_has_msg(topic_id, topic.name, topic.sync_has_gd_msg, topic.sync_has_non_gd_msg)
 
                             # .. also, continue only if there are still messages for the ones that are up ..
                             if topic.sync_has_gd_msg or topic.sync_has_non_gd_msg:
@@ -1708,12 +1592,6 @@ class PubSub(object):
                                     pub_time_max = topic.gd_pub_time_max
 
                                 non_gd_msg_list_msg_id_list = [elem['pub_msg_id'] for elem in non_gd_msg_list]
-
-                                #
-                                # Event log
-                                #
-                                _do_emit_loop_before_sync(topic_id, topic.name, topic.sync_has_gd_msg, topic.sync_has_non_gd_msg,
-                                    non_gd_msg_list_msg_id_list, pub_time_max)
 
                                 _logger_info('Forwarding messages to a task for `%s` ngd-list:%s (sk_list:%s) cid:%s' % (
                                     topic_name, non_gd_msg_list_msg_id_list, sub_keys, cid))
