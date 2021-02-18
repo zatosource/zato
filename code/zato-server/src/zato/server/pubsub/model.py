@@ -23,7 +23,6 @@ from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
 from zato.common.exception import BadRequest
 from zato.common.pubsub import dict_keys
 from zato.common.util.api import make_repr
-from zato.common.util.event import EventLog
 from zato.common.util.time_ import utcnow_as_ms
 
 # ################################################################################################################################
@@ -253,7 +252,6 @@ class Topic(ToDictBase):
         self.pub_buffer_size_gd = config.pub_buffer_size_gd
         self.task_delivery_interval = config.task_delivery_interval
         self.meta_store_frequency = config.meta_store_frequency
-        self.event_log = EventLog('t.{}.{}.{}'.format(self.server_name, self.server_pid, self.name))
         self.set_hooks()
 
         # For now, task sync interval is the same for GD and non-GD messages
@@ -281,33 +279,8 @@ class Topic(ToDictBase):
 
 # ################################################################################################################################
 
-    def _emit_set_hooks(self, ctx=None, _event=EventType.Topic.set_hooks):
-        self.event_log.emit(_event, ctx)
-
-    def _emit_incr_topic_msg_counter(self, ctx=None, _event=EventType.Topic.incr_topic_msg_counter):
-        self.event_log.emit(_event, ctx)
-
-    def _emit_update_task_sync_time_before(self, ctx=None, _event=EventType.Topic.update_task_sync_time_before):
-        self.event_log.emit(_event, ctx)
-
-    def _emit_update_task_sync_time_after(self, ctx=None, _event=EventType.Topic.update_task_sync_time_after):
-        self.event_log.emit(_event, ctx)
-
-    def _emit_needs_task_sync_before(self, ctx=None, _event=EventType.Topic.needs_task_sync_before):
-        self.event_log.emit(_event, ctx)
-
-    def _emit_needs_task_sync_after(self, ctx=None, _event=EventType.Topic.needs_task_sync_after):
-        self.event_log.emit(_event, ctx)
-
-# ################################################################################################################################
-
     def get_id(self):
         return '{};{}'.format(self.name, self.id)
-
-# ################################################################################################################################
-
-    def get_event_list(self):
-        return self.event_log.get_event_list()
 
 # ################################################################################################################################
 
@@ -317,17 +290,6 @@ class Topic(ToDictBase):
         self.before_publish_hook_service_invoker = self.config.get('before_publish_hook_service_invoker')
         self.before_delivery_hook_service_invoker = self.config.get('before_delivery_hook_service_invoker')
         self.on_outgoing_soap_invoke_invoker = self.config.get('on_outgoing_soap_invoke_invoker')
-
-        #
-        # Event log
-        #
-        self._emit_set_hooks({
-            'on_subscribed_service_invoker': self.on_subscribed_service_invoker,
-            'on_unsubscribed_service_invoker': self.on_unsubscribed_service_invoker,
-            'before_publish_hook_service_invoker': self.before_publish_hook_service_invoker,
-            'before_delivery_hook_service_invoker': self.before_delivery_hook_service_invoker,
-            'on_outgoing_soap_invoke_invoker': self.on_outgoing_soap_invoke_invoker,
-        })
 
 # ################################################################################################################################
 
@@ -342,38 +304,12 @@ class Topic(ToDictBase):
         if has_non_gd:
             self.msg_pub_counter_non_gd += 1
 
-        #
-        # Event log
-        #
-        self._emit_incr_topic_msg_counter({
-            'has_gd': has_gd,
-            'has_non_gd': has_non_gd,
-            'msg_pub_counter': self.msg_pub_counter,
-            'msg_pub_counter_gd': self.msg_pub_counter_gd,
-            'msg_pub_counter_non_gd': self.msg_pub_counter_non_gd,
-        })
-
 # ################################################################################################################################
 
     def update_task_sync_time(self, _utcnow_as_ms=utcnow_as_ms):
         """ Increases counter of messages published to this topic from current server.
         """
-
-        #
-        # Event log
-        #
-        self._emit_update_task_sync_time_before({
-            'last_synced': self.last_synced
-        })
-
         self.last_synced = _utcnow_as_ms()
-
-        #
-        # Event log
-        #
-        self._emit_update_task_sync_time_after({
-            'last_synced': self.last_synced
-        })
 
 # ################################################################################################################################
 
@@ -381,16 +317,6 @@ class Topic(ToDictBase):
 
         now = _utcnow_as_ms()
         needs_sync = now - self.last_synced >= self.task_sync_interval
-
-        #
-        # Event log
-        #
-        self._emit_needs_task_sync_before({
-            'now': now,
-            'last_synced': self.last_synced,
-            'task_sync_interval': self.task_sync_interval,
-            'needs_sync': needs_sync
-        })
 
         return needs_sync
 
