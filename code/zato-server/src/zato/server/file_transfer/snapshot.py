@@ -12,8 +12,8 @@ from datetime import datetime
 from logging import getLogger
 from traceback import format_exc
 
-# dateutil
-from dateutil.parser import parse as dt_parse
+# ciso8601
+from ciso8601 import parse_datetime
 
 # Zato
 from zato.common.json_ import dumps
@@ -96,7 +96,7 @@ class DirSnapshot:
 
             # This may be either string or a datetime object
             last_modified = item['last_modified']
-            file_info.last_modified = last_modified if isinstance(last_modified, datetime) else dt_parse(last_modified)
+            file_info.last_modified = last_modified if isinstance(last_modified, datetime) else parse_datetime(last_modified)
 
             self.file_data[file_info.name] = file_info
 

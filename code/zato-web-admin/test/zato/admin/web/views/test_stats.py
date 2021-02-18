@@ -16,8 +16,8 @@ from datetime import datetime
 from unittest import TestCase
 import os
 
-# dateutil
-from dateutil.parser import parse
+# ciso8601
+from ciso8601 import parse_datetime
 
 # Django
 import django
@@ -80,7 +80,7 @@ class TrendsTestCase(StatsTestCase):
             eq_(info.step, None)
 
     def test_shift_prev_hour2(self):
-        now = parse('2012-10-30T21:09:02.141791+00:00')
+        now = parse_datetime('2012-10-30T21:09:02.141791+00:00')
         info = shift(now, '2012-10-30 23:09:02', self.user_profile, 'last_hour_prev', 'hour', 'date_time')
         eq_(info.utc_start, '2012-10-30T20:09:02.141791+00:00')
         eq_(info.utc_stop, '2012-10-30T21:09:02.141791+00:00')
@@ -160,7 +160,7 @@ class SummaryTestCase(StatsTestCase):
             eq_(info.step, 'year')
 
     def test_shift_prev_day_by_day(self):
-        now = parse('2012-03-21T00:39:19+00:00')
+        now = parse_datetime('2012-03-21T00:39:19+00:00')
         info = shift(now, from_utc_to_user(now, self.user_profile), self.user_profile, 'today_prev_day', 'day', 'date')
         eq_(info.utc_start, '2012-03-20T00:39:19+00:00')
         eq_(info.utc_stop, '2012-03-21T00:39:19+00:00')
@@ -169,7 +169,7 @@ class SummaryTestCase(StatsTestCase):
         eq_(info.step, None)
 
     def test_shift_prev_week_by_day(self):
-        now = parse('2012-03-21T00:39:19+00:00')
+        now = parse_datetime('2012-03-21T00:39:19+00:00')
         info = shift(now, from_utc_to_user(now, self.user_profile), self.user_profile, 'today_prev_day_week', 'day', 'date')
         eq_(info.utc_start, '2012-03-14T00:39:19+00:00')
         eq_(info.utc_stop, '2012-03-15T00:39:19+00:00')
@@ -178,7 +178,7 @@ class SummaryTestCase(StatsTestCase):
         eq_(info.step, None)
 
     def test_shift_prev_week_by_week(self):
-        now = parse('2012-10-22T00:00:00+00:00')
+        now = parse_datetime('2012-10-22T00:00:00+00:00')
         info = shift(now, from_utc_to_user(now, self.user_profile), self.user_profile, 'today_prev_day_week', 'week', 'date')
         eq_(info.utc_start, '2012-10-15T00:00:00+00:00')
         eq_(info.utc_stop, '2012-10-22T00:00:00+00:00')
@@ -187,7 +187,7 @@ class SummaryTestCase(StatsTestCase):
         eq_(info.step, None)
 
     def test_shift_prev_month_by_month(self):
-        now = parse('2012-10-01T00:00:00+00:00')
+        now = parse_datetime('2012-10-01T00:00:00+00:00')
         info = shift(now, from_utc_to_user(now, self.user_profile, 'month_year'), self.user_profile, 'this_month_prev_month', 'month', 'month_year')
         eq_(info.utc_start, '2012-08-31T22:00:00+00:00')
         eq_(info.utc_stop, '2012-09-30T22:00:00+00:00')
@@ -196,7 +196,7 @@ class SummaryTestCase(StatsTestCase):
         eq_(info.step, None)
 
     def test_shift_prev_year_by_year(self):
-        now = parse('2012-01-01T00:00:00+00:00')
+        now = parse_datetime('2012-01-01T00:00:00+00:00')
         info = shift(now, from_utc_to_user(now, self.user_profile), self.user_profile, 'this_year_prev', 'year', 'year')
         eq_(info.utc_start, '2011-01-01T00:00:00+00:00')
         eq_(info.utc_stop, '2012-01-01T00:00:00+00:00')

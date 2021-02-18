@@ -12,8 +12,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from datetime import datetime
 from unittest import main
 
-# dateutil
-from dateutil.parser import parse as dt_parse
+# ciso8601
+from ciso8601 import parse_datetime
 
 # Zato
 from base import BaseTest
@@ -178,7 +178,7 @@ class SessionRenewTestCase(BaseTest):
             'ust': self.ctx.super_user_ust,
         })
 
-        self.assertGreater(dt_parse(response.expiration_time), now)
+        self.assertGreater(parse_datetime(response.expiration_time), now)
 
 # ################################################################################################################################
 # ################################################################################################################################
