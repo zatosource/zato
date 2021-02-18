@@ -50,11 +50,11 @@ from traceback import format_exc
 # Bunch
 from bunch import Bunch, bunchify
 
+# ciso8601
+from ciso8601 import parse_datetime
+
 # ConfigObj
 from configobj import ConfigObj
-
-# dateutil
-from dateutil.parser import parse
 
 # gevent
 from gevent import sleep as gevent_sleep, spawn, Timeout
@@ -677,7 +677,7 @@ def from_local_to_utc(dt, tz_name, dayfirst=True):
     """ What is the UTC time given the local time and the timezone's name?
     """
     if not isinstance(dt, datetime):
-        dt = parse(dt, dayfirst=dayfirst)
+        dt = parse_datetime(dt, dayfirst=dayfirst)
 
     dt = pytz.timezone(tz_name).localize(dt)
     utc_dt = pytz.utc.normalize(dt.astimezone(pytz.utc))
@@ -689,7 +689,7 @@ def from_utc_to_local(dt, tz_name):
     """ What is the local time in the user-provided time zone name?
     """
     if not isinstance(dt, datetime):
-        dt = parse(dt)
+        dt = parse_datetime(dt)
 
     local_tz = pytz.timezone(tz_name)
     dt = local_tz.normalize(dt.astimezone(local_tz))
