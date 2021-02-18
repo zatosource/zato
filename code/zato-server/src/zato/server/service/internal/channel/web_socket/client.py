@@ -12,8 +12,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from traceback import format_exc
 
-# dateutil
-from dateutil.parser import parse
+# ciso8601
+from ciso8601 import parse_datetime
 
 # Zato
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
@@ -57,8 +57,8 @@ class Create(AdminService):
             client.local_address = req.local_address
             client.peer_address = req.peer_address
             client.peer_fqdn = req.peer_fqdn
-            client.connection_time = parse(req.connection_time)
-            client.last_seen = parse(req.last_seen)
+            client.connection_time = parse_datetime(req.connection_time)
+            client.last_seen = parse_datetime(req.last_seen)
             client.server_proc_pid = self.server.pid
             client.channel_id = channel.id
             client.server_id = self.server.id

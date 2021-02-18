@@ -18,8 +18,10 @@ from traceback import format_exc
 # Bunch
 from bunch import Bunch
 
+# ciso8601
+from ciso8601 import parse_datetime
+
 # dateutil
-from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta, MO, SU
 from dateutil.rrule import DAILY, HOURLY, MINUTELY, MONTHLY, YEARLY
 
@@ -103,43 +105,43 @@ class BaseSummarizingService(BaseAggregatingService):
     """
     def get_minutely_suffixes(self, now, start=None, stop=None):
         if not start:
-            start = parse((now - timedelta(hours=1)).strftime(DT_PATTERNS.PREVIOUS_HOUR_START))
+            start = parse_datetime((now - timedelta(hours=1)).strftime(DT_PATTERNS.PREVIOUS_HOUR_START))
         if not stop:
-            stop = parse(now.strftime(DT_PATTERNS.CURRENT_HOUR_END))
+            stop = parse_datetime(now.strftime(DT_PATTERNS.CURRENT_HOUR_END))
 
         return (elem.strftime('%Y:%m:%d:%H:%M') for elem in stop_excluding_rrset(MINUTELY, start, stop))
 
     def get_hourly_suffixes(self, now, start=None, stop=None):
         if not start:
-            start = parse(now.strftime(DT_PATTERNS.CURRENT_DAY_START))
+            start = parse_datetime(now.strftime(DT_PATTERNS.CURRENT_DAY_START))
         if not stop:
-            stop = parse((now - timedelta(hours=2)).strftime(DT_PATTERNS.PREVIOUS_HOUR_START))
+            stop = parse_datetime((now - timedelta(hours=2)).strftime(DT_PATTERNS.PREVIOUS_HOUR_START))
 
         return (elem.strftime('%Y:%m:%d:%H') for elem in stop_excluding_rrset(HOURLY, start, stop))
 
     def get_daily_suffixes(self, now, start=None, stop=None):
         if not start:
-            start = parse(now.strftime(DT_PATTERNS.CURRENT_MONTH_START))
+            start = parse_datetime(now.strftime(DT_PATTERNS.CURRENT_MONTH_START))
         if not stop:
-            stop = parse((now - timedelta(days=1)).strftime(DT_PATTERNS.PREVIOUS_DAY_END))
+            stop = parse_datetime((now - timedelta(days=1)).strftime(DT_PATTERNS.PREVIOUS_DAY_END))
 
         return (elem.strftime('%Y:%m:%d') for elem in stop_excluding_rrset(DAILY, start, stop))
 
     def get_monthly_suffixes(self, now, start=None, stop=None):
         if not start:
-            start = parse(now.strftime(DT_PATTERNS.CURRENT_YEAR_START))
+            start = parse_datetime(now.strftime(DT_PATTERNS.CURRENT_YEAR_START))
         if not stop:
             delta = relativedelta(now, months=1)
-            stop = parse((start - delta).strftime(DT_PATTERNS.PREVIOUS_MONTH_END))
+            stop = parse_datetime((start - delta).strftime(DT_PATTERNS.PREVIOUS_MONTH_END))
 
         return (elem.strftime('%Y:%m') for elem in stop_excluding_rrset(MONTHLY, start, stop))
 
     def get_yearly_suffixes(self, now, start=None, stop=None):
         if not start:
-            start = parse(now.strftime(DT_PATTERNS.CURRENT_YEAR_START))
+            start = parse_datetime(now.strftime(DT_PATTERNS.CURRENT_YEAR_START))
         if not stop:
             delta = relativedelta(now, years=1)
-            stop = parse((start - delta).strftime(DT_PATTERNS.PREVIOUS_YEAR_END))
+            stop = parse_datetime((start - delta).strftime(DT_PATTERNS.PREVIOUS_YEAR_END))
 
         return (elem.strftime('%Y') for elem in stop_excluding_rrset(YEARLY, start, stop))
 
@@ -165,10 +167,10 @@ class BaseSummarizingService(BaseAggregatingService):
             key_prefix = KVDB.SERVICE_SUMMARY_PREFIX_PATTERN.format(target)
 
             if target == 'by-week':
-                start = parse((now + relativedelta(weekday=MO(-1))).strftime('%Y-%m-%d 00:00:00')) # Current week start
+                start = parse_datetime((now + relativedelta(weekday=MO(-1))).strftime('%Y-%m-%d 00:00:00')) # Current week start
                 key_suffix = start.strftime(DT_PATTERNS.SUMMARY_SUFFIX_PATTERNS[target])
             else:
-                start = parse(now.strftime('%Y-%m-%d 00:00:00')) # Current day start
+                start = parse_datetime(now.strftime('%Y-%m-%d 00:00:00')) # Current day start
                 key_suffix = now.strftime(DT_PATTERNS.SUMMARY_SUFFIX_PATTERNS[target])
             total_seconds = (now - start).total_seconds()
 
@@ -290,10 +292,10 @@ class GetSummaryByWeek(GetSummaryBase):
     def get_start_date(self):
         """ Find the nearest Monday preceding the start date given on input.
         """
-        return (parse(self.request.input.start) + relativedelta(weekday=MO(-1))).strftime('%Y-%m-%d')
+        return (parse_datetime(self.request.input.start) + relativedelta(weekday=MO(-1))).strftime('%Y-%m-%d')
 
     def get_end_date(self, start):
-        start = parse(start)
+        start = parse_datetime(start)
         today = date.today()
 
         # Is it the current week?
@@ -318,7 +320,7 @@ class GetSummaryByMonth(GetSummaryBase):
         if start == date.today().strftime('%Y-%m'):
             return datetime.utcnow().isoformat()
         else:
-            start = parse(start)
+            start = parse_datetime(start)
             return '{0}-{1:0>2}-{2}T23:59:59'.format(start.year, start.month, monthrange(start.year, start.month)[1])
 
 class GetSummaryByYear(GetSummaryBase):
@@ -519,8 +521,8 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
         """ Slices the time range into a series of per-minute/-hour/-day/-month or -year statistics.
         """
         slices = []
-        start = parse(orig_start)
-        stop = parse(orig_stop)
+        start = parse_datetime(orig_start)
+        stop = parse_datetime(orig_stop)
 
         delta, result = self._get_slice_period_type(start, stop, orig_start, orig_stop)
 

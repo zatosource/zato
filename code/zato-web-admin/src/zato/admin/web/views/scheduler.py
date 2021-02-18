@@ -20,8 +20,8 @@ from traceback import format_exc
 # anyjson
 from anyjson import dumps
 
-# dateutil
-from dateutil.parser import parse
+# ciso8601
+from ciso8601 import parse_datetime
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
@@ -56,7 +56,7 @@ def _get_start_date(start_date):
         return ''
 
     if not isinstance(start_date, datetime):
-        start_date = parse(start_date)
+        start_date = parse_datetime(start_date)
 
     return start_date.replace(tzinfo=UTC)
 
@@ -313,7 +313,7 @@ def index(req):
                 'query': req.GET.get('query', '')
             }
 
-            data, meta = parse_response_data(req.zato.client.invoke('zato.scheduler.job.get-list', request))
+            data, meta = parse_datetime_response_data(req.zato.client.invoke('zato.scheduler.job.get-list', request))
 
             for job_elem in data:
 

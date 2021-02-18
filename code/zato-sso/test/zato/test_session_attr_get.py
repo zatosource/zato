@@ -11,8 +11,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from unittest import main
 
-# dateutil
-from dateutil.parser import parse as dt_parse
+# ciso8601
+from ciso8601 import parse_datetime
 
 # Zato
 from base import BaseTest
@@ -50,9 +50,9 @@ class SessionAttrGetTestCase(BaseTest):
         self.assertEqual(response.value, value)
 
         # Will raise an exception if date parsing fails
-        dt_parse(response.creation_time)
-        dt_parse(response.last_modified)
-        dt_parse(response.expiration_time)
+        parse_datetime(response.creation_time)
+        parse_datetime(response.last_modified)
+        parse_datetime(response.expiration_time)
 
 # ################################################################################################################################
 # ################################################################################################################################
