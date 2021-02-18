@@ -17,8 +17,8 @@ from datetime import datetime
 from io import StringIO
 from traceback import format_exc
 
-# dateutil
-from dateutil.parser import parse
+# ciso8601
+from ciso8601 import parse_datetime
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
@@ -29,7 +29,7 @@ from pytz import UTC
 
 # Zato
 from zato.admin.web import from_user_to_utc, from_utc_to_user
-from zato.admin.web.views import get_js_dt_format, method_allowed, Delete as _Delete, parse_response_data
+from zato.admin.web.views import get_js_dt_format, method_allowed, Delete as _Delete, parse_datetime_response_data
 from zato.admin.settings import job_type_friendly_names
 from zato.admin.web.forms.scheduler import CronStyleSchedulerJobForm, IntervalBasedSchedulerJobForm, OneTimeSchedulerJobForm
 from zato.common.api import SCHEDULER, TRACE1
@@ -64,7 +64,7 @@ def _get_start_date(start_date):
         return ''
 
     if not isinstance(start_date, datetime):
-        start_date = parse(start_date)
+        start_date = parse_datetime(start_date)
 
     return start_date.replace(tzinfo=UTC)
 
@@ -364,7 +364,7 @@ def index(req):
                 'query': req.GET.get('query', '')
             }
 
-            data, meta = parse_response_data(req.zato.client.invoke('zato.scheduler.job.get-list', request))
+            data, meta = parse_datetime_response_data(req.zato.client.invoke('zato.scheduler.job.get-list', request))
 
             for job_elem in data:
 

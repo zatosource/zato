@@ -19,8 +19,10 @@ from traceback import format_exc
 # Bunch
 from bunch import Bunch
 
+# ciso8601
+from ciso8601 import parse_datetime
+
 # dateutil
-from dateutil.parser import parse
 from dateutil.relativedelta import MO, relativedelta
 
 # Django
@@ -470,7 +472,7 @@ def stats_data(req, stats_type):
         duration = skip_by_duration[req_input.shift]
         format = user_format[duration]
 
-        shift_info = shift(parse(req_input.utc_start), req_input.user_start, req.zato.user_profile, req_input.shift, duration, format)
+        shift_info = shift(parse_datetime(req_input.utc_start), req_input.user_start, req.zato.user_profile, req_input.shift, duration, format)
 
         for date_type in('utc', 'user'):
             for direction in('start', 'stop'):
