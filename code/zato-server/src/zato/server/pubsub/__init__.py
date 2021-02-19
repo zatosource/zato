@@ -48,8 +48,8 @@ from zato.server.pubsub.sync import InRAMSync
 
 # ################################################################################################################################
 
-# Type checking
 if 0:
+    from zato.cy.reqresp.payload import SimpleIOPayload
     from zato.server.base.parallel import ParallelServer
     from zato.server.pubsub.task import PubSubTool
     from zato.server.service import Service
@@ -57,6 +57,7 @@ if 0:
     ParallelServer = ParallelServer
     PubSubTool = PubSubTool
     Service = Service
+    SimpleIOPayload = SimpleIOPayload
 
 # ################################################################################################################################
 
@@ -1431,6 +1432,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def invoke_service(self, name, msg, *args, **kwargs):
+        # type: () -> SimpleIOPayload
         return self.server.invoke(name, msg, *args, **kwargs)
 
 # ################################################################################################################################
@@ -1725,7 +1727,7 @@ class PubSub(object):
         }, serialize=False)
 
         if response.has_data():
-            return response['msg_id']
+            return response.get('msg_id') or response.get('msg_id_list')
 
 # ################################################################################################################################
 # ################################################################################################################################
