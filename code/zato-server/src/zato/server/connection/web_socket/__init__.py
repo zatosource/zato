@@ -691,8 +691,11 @@ class WebSocket(_WebSocket):
                 if self.stream and (not self.server_terminated):
                     try:
                         response = self.invoke_client(new_cid(), None, use_send=False)
+                    except ConnectionError as e:
+                        logger.warning('ConnectionError; closing connection -> `%s`', e.args)
+                        self.on_socket_terminated(close_code.runtime_background_ping, 'Background ping connection error')
                     except RuntimeError:
-                        logger.warning('Closing connection due to `%s`', format_exc())
+                        logger.warning('RuntimeError; closing connection -> `%s`', format_exc())
                         self.on_socket_terminated(close_code.runtime_background_ping, 'Background ping runtime error')
 
                     with self.update_lock:
