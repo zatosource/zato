@@ -135,7 +135,7 @@ class Edit(AdminService, _SQLService):
         input = self.request.input
         input.extra = input.extra.encode('utf-8') if input.extra else ''
 
-        self.validate_extra(self.cid, input.extra)
+        self.validate_extra(self.cid, input.extra.decode('utf-8'))
 
         with closing(self.odb.session()) as session:
             existing_one = session.query(SQLConnectionPool.id).\
