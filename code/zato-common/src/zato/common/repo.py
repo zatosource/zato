@@ -73,10 +73,11 @@ class GitRepoManager(_BaseRepoManager):
         # Add all files
         sh.git.add('-A', self.repo_location)
 
-        has_channges = 'nothing to commit' not in sh.git.status()
+        output = sh.git.status('--porcelain') # type: str
+        output = output.strip()
 
         # And commit changes if there are any
-        if has_channges:
+        if output:
             sh.git.commit('-m', 'Committing latest changes')
 
 # ################################################################################################################################
