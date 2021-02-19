@@ -748,7 +748,10 @@ class List(Elem):
 
     @staticmethod
     def from_json_static(value, *args, **kwargs):
-        return value if isinstance(value, _list_like) else [value]
+        if value is not None:
+            return value if isinstance(value, _list_like) else [value]
+        else:
+            return []
 
     def from_json(self, value):
         return List.from_json_static(value)
