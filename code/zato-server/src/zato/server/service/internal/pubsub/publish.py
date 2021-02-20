@@ -379,8 +379,9 @@ class Publish(AdminService):
                 # (E.g. this is a WSX that is not currently connected).
                 has_no_sk_server = True
 
-        logger_pubsub.info('Subscriptions for topic `%s` `%s` (a:%d, %d/%d, cid:%s)',
-            topic.name, _subs_found, has_all, len(subscriptions_by_topic), len_all_sub, self.cid)
+        if has_logger_pubsub_debug:
+            logger_pubsub.debug('Subscriptions for topic `%s` `%s` (a:%d, %d/%d, cid:%s)',
+                topic.name, _subs_found, has_all, len(subscriptions_by_topic), len_all_sub, self.cid)
 
         # If input.data is a list, it means that it is a list of messages, each of which has its own
         # metadata. Otherwise, it's a string to publish and other input parameters describe it.
