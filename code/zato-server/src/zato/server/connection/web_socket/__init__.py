@@ -11,6 +11,12 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from gevent.monkey import patch_all
 patch_all()
 
+# Patch ws4py's frame unmasking with a Cython version
+from ws4py.framing import Frame
+from zato.cy.wsx import unmask as cy_wsx_unmask
+Frame.unmask = cy_wsx_unmask
+Frame.mask = cy_wsx_unmask
+
 # stdlib
 from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
