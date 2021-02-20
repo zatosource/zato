@@ -9,10 +9,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # This is an internal version of zato.common.json_ which only loads the core libraries,
-# without any other additions. This is import in the CLI where every millisecond counts.
+# without any other additions. This is important in the CLI where every millisecond counts.
 
-# simdjson
-from simdjson import load, loads
+# stdlib
+from json import load, loads
 
 # uJSON
 from ujson import dump, dumps
