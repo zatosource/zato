@@ -327,6 +327,7 @@ class Service(object):
     the transport and protocol, be it plain HTTP, SOAP, IBM MQ or any other,
     regardless whether they're built-in or user-defined ones.
     """
+    call_hooks = True
     _filter_by = None
     _enforce_service_invokes = None
     invokes = []
@@ -683,13 +684,13 @@ class Service(object):
                 # All hooks are optional so we check if they have not been replaced with None by ServiceStore.
 
                 # Call before job hooks if any are defined and we are called from the scheduler
-                if service._has_before_job_hooks and self.channel.type == _CHANNEL_SCHEDULER:
+                if service.call_hooks and service._has_before_job_hooks and self.channel.type == _CHANNEL_SCHEDULER:
                     for elem in service._before_job_hooks:
                         if elem:
                             _call_hook_with_service(elem, service)
 
                 # Called before .handle - catches exceptions
-                if service.before_handle:
+                if service.call_hooks and service.before_handle:
                     _call_hook_no_service(service.before_handle)
 
                 # Called before .handle - does not catch exceptions
@@ -704,7 +705,7 @@ class Service(object):
                     service.validate_output()
 
                 # Called after .handle - catches exceptions
-                if service.after_handle:
+                if service.call_hooks and service.after_handle:
                     _call_hook_no_service(service.after_handle)
 
                 # Call after job hooks if any are defined and we are called from the scheduler
