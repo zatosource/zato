@@ -92,6 +92,8 @@ class PubCtx(object):
 class Publish(AdminService):
     """ Actual implementation of message publishing exposed through other services to the outside world.
     """
+    call_hooks = False
+
     class SimpleIO:
         input_required = ('topic_name',)
         input_optional = (AsIs('data'), List('data_list'), AsIs('msg_id'), 'has_gd', Int('priority'), Int('expiration'),
