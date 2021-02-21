@@ -571,7 +571,7 @@ class WebSocket(_WebSocket):
             msg = 'Invalid UTF-8 bytes; `{}`'.format(e.args)
             logger.warn(msg)
             logger_zato.warn(msg)
-            self.disconnect_client('<no-cid>', 4001, 'Invalid UTF-8 bytes')
+            self.disconnect_client('<no-cid>', _code_invalid_utf8, 'Invalid UTF-8 bytes')
             raise
 
         parsed = loads(data)
