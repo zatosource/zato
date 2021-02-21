@@ -11,11 +11,40 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from gevent.monkey import patch_all
 patch_all()
 
-# Patch ws4py's frame unmasking with a Cython version
-from ws4py.framing import Frame
-from zato.cy.wsx import unmask as cy_wsx_unmask
-Frame.unmask = cy_wsx_unmask
-Frame.mask = cy_wsx_unmask
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _UTF8Validator:
+    """ A pass-through UTF-8 validator for ws4py - we do not need for this layer
+    to validate UTF-8 bytes because we do it anyway during JSON parsing.
+    """
+    def validate(*ignored_args, **ignored_kwargs):
+        return True, True, None, None
+
+    def reset(*ignored_args, **ignored_kwargs):
+        pass
+
+from ws4py import streaming
+streaming.Utf8Validator = _UTF8Validator
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Patch ws4py with a Cython-based masker
+from wsaccel.xormask import XorMaskerSimple
+from ws4py import framing
+
+def mask(self, data):
+    if self.masking_key:
+        masker = XorMaskerSimple(self.masking_key)
+        return masker.process(data)
+    return data
+
+framing.Frame.mask = mask
+framing.Frame.unmask = mask
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 # stdlib
 from datetime import datetime, timedelta
@@ -89,6 +118,10 @@ http404_bytes = http404.encode('latin1')
 # ################################################################################################################################
 
 _wsgi_drop_keys = ('ws4py.socket', 'wsgi.errors', 'wsgi.input')
+
+# ################################################################################################################################
+
+code_invalid_utf8 = 4001
 
 # ################################################################################################################################
 
@@ -527,9 +560,20 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def parse_json(self, data, _create_session=WEB_SOCKET.ACTION.CREATE_SESSION, _response=WEB_SOCKET.ACTION.CLIENT_RESPONSE):
+    def parse_json(self, data, _create_session=WEB_SOCKET.ACTION.CREATE_SESSION, _response=WEB_SOCKET.ACTION.CLIENT_RESPONSE,
+        _code_invalid_utf8=code_invalid_utf8):
+        """ Parses an incoming message into a Bunch object.
+        """
 
-        data = data.decode('utf8')
+        try:
+            data = data.decode('utf8')
+        except UnicodeDecodeError as e:
+            msg = 'Invalid UTF-8 bytes; `{}`'.format(e.args)
+            logger.warn(msg)
+            logger_zato.warn(msg)
+            self.disconnect_client('<no-cid>', 4001, 'Invalid UTF-8 bytes')
+            raise
+
         parsed = loads(data)
         msg = ClientMessage()
 
