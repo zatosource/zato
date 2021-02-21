@@ -560,8 +560,8 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def parse_json(self, data, _create_session=WEB_SOCKET.ACTION.CREATE_SESSION, _response=WEB_SOCKET.ACTION.CLIENT_RESPONSE,
-        _code_invalid_utf8=code_invalid_utf8):
+    def parse_json(self, data, cid=None, _create_session=WEB_SOCKET.ACTION.CREATE_SESSION,
+        _response=WEB_SOCKET.ACTION.CLIENT_RESPONSE, _code_invalid_utf8=code_invalid_utf8):
         """ Parses an incoming message into a Bunch object.
         """
 
@@ -571,7 +571,7 @@ class WebSocket(_WebSocket):
             msg = 'Invalid UTF-8 bytes; `{}`'.format(e.args)
             logger.warn(msg)
             logger_zato.warn(msg)
-            self.disconnect_client('<no-cid>', _code_invalid_utf8, 'Invalid UTF-8 bytes')
+            self.disconnect_client(cid or '<no-cid>', _code_invalid_utf8, 'Invalid UTF-8 bytes')
             raise
 
         parsed = loads(data)
@@ -1027,8 +1027,8 @@ class WebSocket(_WebSocket):
             sleep(0.1)
 
         try:
-            request = self._parse_func(data or _default_data)
             cid = new_cid()
+            request = self._parse_func(data or _default_data)
             now = _now()
             self.last_seen = now
 
