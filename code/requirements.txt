@@ -106,7 +106,7 @@ pyotp==2.2.7
 pyparsing==2.2.0
 pyprof2calltree==1.4.5
 pyrapidjson==0.5.1
-pysimdjson==3.0.0
+pysimdjson==3.2.0
 pysolr==3.9.0
 python-butler==0.9
 python-dateutil==2.6.0
