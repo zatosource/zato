@@ -1092,7 +1092,7 @@ class WebSocket(_WebSocket):
 
     def received_message(self, message):
 
-        logger.info('Received message %r from `%s` (%s %s)', message.data,
+        logger.info('Received message %r from `%s` (%s %s)', message.data[:1024],
             self.pub_client_id, self.ext_client_id, self.ext_client_name)
 
         try:
