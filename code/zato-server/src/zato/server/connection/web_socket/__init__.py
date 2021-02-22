@@ -60,6 +60,9 @@ from bunch import Bunch, bunchify
 from gevent import sleep, socket, spawn
 from gevent.lock import RLock
 
+# pysimdjson
+from simdjson import Parser as SIMDJSONParser
+
 # ws4py
 from ws4py.exc import HandshakeError
 from ws4py.websocket import WebSocket as _WebSocket
@@ -74,7 +77,6 @@ from past.builtins import basestring
 from zato.common.api import CHANNEL, DATA_FORMAT, PUBSUB, SEC_DEF_TYPE, WEB_SOCKET
 from zato.common.audit_log import DataReceived, DataSent
 from zato.common.exception import ParsingException, Reportable
-from zato.common.json_internal import loads
 from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
 from zato.common.typing_ import dataclass
 from zato.common.util.api import new_cid
@@ -198,6 +200,9 @@ class WebSocket(_WebSocket):
 
         # JSON dumps function can be overridden by users
         self._json_dump_func = self._set_json_dump_func()
+
+        # A reusable JSON parser
+        self._json_parser = SIMDJSONParser()
 
         super(WebSocket, self).__init__(_unusued_sock, _unusued_protocols, _unusued_extensions, wsgi_environ, **kwargs)
 
@@ -565,33 +570,28 @@ class WebSocket(_WebSocket):
         """ Parses an incoming message into a Bunch object.
         """
 
-        try:
-            data = data.decode('utf8')
-        except UnicodeDecodeError as e:
-            msg = 'Invalid UTF-8 bytes; `{}`'.format(e.args)
-            logger.warn(msg)
-            logger_zato.warn(msg)
-            self.disconnect_client(cid or '<no-cid>', _code_invalid_utf8, 'Invalid UTF-8 bytes')
-            raise
+        # Parse JSON into a dictionary
+        parsed = self._json_parser.parse(data)
+        parsed = parsed.as_dict()
 
-        parsed = loads(data)
+        # Create a request message
         msg = ClientMessage()
 
+        # Request metadata is optional
         meta = parsed.get('meta', {})
 
         if meta:
-            meta = bunchify(meta)
-
             msg.action = meta.get('action', _response)
-            msg.id = meta.id
-            msg.timestamp = meta.timestamp
+            msg.id = meta['id']
+            msg.timestamp = meta['timestamp']
             msg.token = meta.get('token') # Optional because it won't exist during first authentication
 
             # self.ext_client_id and self.ext_client_name will exist after create-session action
             # so we use them if they are available but fall back to meta.client_id and meta.client_name during
             # the very create-session action.
-            if meta.get('client_id'):
-                self.ext_client_id = meta.client_id
+            ext_client_id = meta.get('client_id')
+            if ext_client_id:
+                self.ext_client_id = meta.get('client_id')
 
             ext_client_name = meta.get('client_name')
             if ext_client_name:
@@ -608,7 +608,7 @@ class WebSocket(_WebSocket):
                 msg.username = meta.get('username')
 
                 # Secret is optional because WS channels may be without credentials attached
-                msg.secret = meta.secret if self.config.needs_auth else ''
+                msg.secret = meta['secret'] if self.config.needs_auth else ''
 
                 msg.is_auth = True
             else:
@@ -620,6 +620,7 @@ class WebSocket(_WebSocket):
                     msg.reply_to_sk = ctx.get('reply_to_sk')
                     msg.deliver_to_sk = ctx.get('deliver_to_sk')
 
+        # Data is optional
         msg.data = parsed.get('data', {})
 
         return msg
@@ -1184,7 +1185,7 @@ class WebSocket(_WebSocket):
         # of an error or if it is not a string.
         if isinstance(request, basestring):
             try:
-                request = loads(request)
+                request = self._json_parser.parse(request)
             except ValueError:
                 pass
 
@@ -1265,7 +1266,7 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def ponged(self, msg, _loads=loads, _action=WEB_SOCKET.ACTION.CLIENT_RESPONSE):
+    def ponged(self, msg, _action=WEB_SOCKET.ACTION.CLIENT_RESPONSE):
 
         # Audit log comes first
         if self.is_audit_log_received_active:
@@ -1273,7 +1274,10 @@ class WebSocket(_WebSocket):
 
         # Pretend it's an actual response from the client,
         # we cannot use in_reply_to because pong messages are 1:1 copies of ping ones.
-        self.responses_received[_loads(msg.data.decode('utf8'))['meta']['id']] = True
+        data = msg.data.decode('utf8')
+        data = self._json_parser.parse(data)
+        msg_id = data['meta']['id']
+        self.responses_received[msg_id] = True
 
         # Since we received a pong response, it means that the peer is connected,
         # in which case we update its pub/sub metadata.
