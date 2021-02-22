@@ -460,7 +460,9 @@ class PoolStore(object):
         """ Stops a pool and deletes it from the store.
         """
         with self._lock:
-            self.wrappers[name].pool.engine.dispose()
+            engine = self.wrappers[name].pool.engine
+            if engine:
+                engine.dispose()
             del self.wrappers[name]
 
 # ################################################################################################################################
