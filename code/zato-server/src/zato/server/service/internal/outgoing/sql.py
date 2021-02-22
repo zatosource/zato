@@ -40,7 +40,7 @@ class _SQLService(object):
         if extra and not '=' in extra:
             raise ZatoException(cid,
                 'extra should be a list of key=value parameters, possibly one-element long, instead of `{}`'.format(
-                    extra.decode('utf-8')))
+                    extra))
 
 class GetList(AdminService):
     """ Returns a list of outgoing SQL connections.
@@ -134,7 +134,7 @@ class Edit(AdminService, _SQLService):
 
     def handle(self):
         input = self.request.input
-        input.extra = input.extra.encode('utf-8') if input.extra else ''
+        input.extra = input.extra.encode('utf-8') if input.extra else b''
 
         self.validate_extra(self.cid, input.extra.decode('utf-8'))
 
