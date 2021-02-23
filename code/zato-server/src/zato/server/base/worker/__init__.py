@@ -26,8 +26,10 @@ from uuid import uuid4
 # Bunch
 from bunch import bunchify
 
+# ciso8601
+from ciso8601 import parse_datetime
+
 # dateutil
-from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import DAILY, MINUTELY, rrule
 
@@ -2076,8 +2078,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_broker_msg_STATS_DELETE(self, msg, *args):
-        start = parse(msg.start)
-        stop = parse(msg.stop)
+        start = parse_datetime(msg.start)
+        stop = parse_datetime(msg.stop)
 
         # Looks weird but this is so we don't have to create a list instead of a generator
         # (and Python 3 won't leak the last element anymore)
@@ -2115,7 +2117,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             self.stats_maint.delete(start, stop, MINUTELY)
 
     def on_broker_msg_STATS_DELETE_DAY(self, msg, *args):
-        self.stats_maint.delete(parse(msg.start), parse(msg.stop), MINUTELY)
+        self.stats_maint.delete(parse_datetime(msg.start), parse_datetime(msg.stop), MINUTELY)
 
 # ################################################################################################################################
 
