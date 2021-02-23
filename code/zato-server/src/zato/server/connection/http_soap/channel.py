@@ -322,7 +322,7 @@ class RequestDispatcher(object):
                         # in later steps, it won't be parsed twice or more.
                         elif sec.sec_def.sec_type == SEC_DEF_TYPE.XPATH_SEC:
                             wsgi_environ['zato.request.payload'] = payload_from_request(
-                                cid, payload, channel_item.data_format, channel_item.transport)
+                                self.server.json_parser, cid, payload, channel_item.data_format, channel_item.transport)
 
                     # Will raise an exception on any security violation
                     auth_result = self.url_data.check_security(
