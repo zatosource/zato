@@ -315,7 +315,7 @@ class Invoke(AdminService):
         payload = self.request.input.get('payload')
         if payload:
             payload = b64decode(payload)
-            payload = payload_from_request(self.cid, payload,
+            payload = payload_from_request(self.server.json_parser, self.cid, payload,
                 self.request.input.data_format, self.request.input.transport)
 
         id = self.request.input.get('id')
