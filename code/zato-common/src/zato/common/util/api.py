@@ -120,7 +120,15 @@ from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_req
 
 # ################################################################################################################################
 
+if 0:
+    from simdjson import Parser as SIMDJSONParser
+    SIMDJSONParser = SIMDJSONParser
+
+# ################################################################################################################################
+
 random.seed()
+
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 logging.addLevelName(TRACE1, "TRACE1")
@@ -444,9 +452,11 @@ def get_body_payload(body):
 
 # ################################################################################################################################
 
-def payload_from_request(cid, request, data_format, transport, channel_item=None):
+def payload_from_request(json_parser, cid, request, data_format, transport, channel_item=None):
     """ Converts a raw request to a payload suitable for usage with SimpleIO.
     """
+    # type: (SIMDJSONParser, str, object, str, str, object)
+
     if request is not None:
 
         #
@@ -466,8 +476,8 @@ def payload_from_request(cid, request, data_format, transport, channel_item=None
 
             if isinstance(request, basestring) and data_format == _data_format_json:
                 try:
-                    request = request.decode('utf8') if isinstance(request, bytes) else request
-                    payload = loads(request)
+                    payload = json_parser.parse(request)
+                    payload = payload.as_dict()
                 except ValueError:
                     logger.warn('Could not parse request as JSON:`%s`, e:`%s`', request, format_exc())
                     raise
