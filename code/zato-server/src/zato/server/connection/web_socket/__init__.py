@@ -1274,8 +1274,7 @@ class WebSocket(_WebSocket):
 
         # Pretend it's an actual response from the client,
         # we cannot use in_reply_to because pong messages are 1:1 copies of ping ones.
-        data = msg.data.decode('utf8')
-        data = self._json_parser.parse(data)
+        data = self._json_parser.parse(msg.data)
         msg_id = data['meta']['id']
         self.responses_received[msg_id] = True
 
