@@ -248,7 +248,7 @@ class OnMessageReceived(Service):
         msg['text'] = msg['text'].encode(encoding)
 
         # Extract the business payload
-        data = payload_from_request(self.cid, msg['text'], request['data_format'], None)
+        data = payload_from_request(self.server.json_parser, self.cid, msg['text'], request['data_format'], None)
 
         # Invoke the target service
         self.invoke(service_name, data, _channel, wmq_ctx={

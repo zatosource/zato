@@ -13,8 +13,8 @@ from logging import DEBUG, getLogger
 from operator import itemgetter
 from traceback import format_exc
 
-# datetutil
-from dateparser import parse as dt_parse
+# ciso8601
+from ciso8601 import parse_datetime_as_naive
 
 # gevent
 from gevent import spawn
@@ -92,6 +92,8 @@ class PubCtx(object):
 class Publish(AdminService):
     """ Actual implementation of message publishing exposed through other services to the outside world.
     """
+    call_hooks = False
+
     class SimpleIO:
         input_required = ('topic_name',)
         input_optional = (AsIs('data'), List('data_list'), AsIs('msg_id'), 'has_gd', Int('priority'), Int('expiration'),
@@ -147,7 +149,7 @@ class Publish(AdminService):
 
         ext_pub_time = input.get('ext_pub_time') or None
         if ext_pub_time:
-            ext_pub_time = dt_parse(ext_pub_time)
+            ext_pub_time = parse_datetime_as_naive(ext_pub_time)
             ext_pub_time = datetime_to_ms(ext_pub_time) / 1000.0
 
         pub_correl_id = pub_correl_id if pub_correl_id else None

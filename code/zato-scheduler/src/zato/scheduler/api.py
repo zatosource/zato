@@ -12,11 +12,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 from traceback import format_exc
 
+# ciso8601
+from ciso8601 import parse_datetime
+
 # crontab
 from crontab import CronTab
-
-# dateutil
-from dateutil.parser import parse
 
 # gevent
 from gevent import sleep
@@ -42,7 +42,7 @@ _has_debug = logger.isEnabledFor(logging.DEBUG)
 
 def _start_date(job_data):
     if isinstance(job_data.start_date, basestring):
-        return parse(job_data.start_date)
+        return parse_datetime(job_data.start_date)
     return job_data.start_date
 
 # ################################################################################################################################

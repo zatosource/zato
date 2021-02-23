@@ -12,11 +12,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from traceback import format_exc
 
+# ciso8601
+from ciso8601 import parse_datetime
+
 # crontab
 from crontab import CronTab
-
-# dateutil
-from dateutil.parser import parse
 
 # Zato
 from zato.common.api import scheduler_date_time_format, SCHEDULER, ZATO_NONE
@@ -87,7 +87,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
 
     extra = (input.extra or u'').encode('utf-8')
     is_active = input.is_active
-    start_date = parse(input.start_date)
+    start_date = parse_datetime(input.start_date)
 
     if action == 'create':
         job = Job(None, name, is_active, job_type, start_date, extra, cluster=cluster, service=service)

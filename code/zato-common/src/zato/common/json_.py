@@ -16,12 +16,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime
+from json import load, loads
 
 # BSON
 from bson import ObjectId
-
-# simdjson
-from simdjson import load, loads
 
 # uJSON
 from ujson import dump, dumps as json_dumps

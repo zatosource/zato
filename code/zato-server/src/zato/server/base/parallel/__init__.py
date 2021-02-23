@@ -25,6 +25,9 @@ import gevent.monkey # Needed for Cassandra
 # Paste
 from paste.util.converters import asbool
 
+# pysimdjson
+from simdjson import Parser as SIMDJSONParser
+
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
@@ -183,6 +186,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.has_posix_ipc = True
         self.user_config = Bunch()
         self.stderr_path = None # type: str
+        self.json_parser = SIMDJSONParser()
 
         # Audit log
         self.audit_log = AuditLog()
