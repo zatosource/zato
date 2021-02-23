@@ -142,12 +142,6 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     # Start initializing the server now
     os.chdir(base_dir)
 
-    try:
-        import pymysql
-        pymysql.install_as_MySQLdb()
-    except ImportError:
-        pass
-
     # We know we don't need warnings because users may explicitly configure no certificate validation.
     # We don't want for urllib3 to warn us about it.
     import requests as _r

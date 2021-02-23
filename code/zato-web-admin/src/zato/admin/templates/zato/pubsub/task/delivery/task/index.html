@@ -24,8 +24,6 @@
             '_topic',
 
             '_len_messages_history',
-
-            '_dlvc',
             'thread_id',
 
             '_last_sync',
@@ -71,7 +69,6 @@
                         <th><a href="#">Topic</a></th>
 
                         <th><a href="#">Messages</a></th>
-                        <th><a href="#">DLV</a></th>
                         <th><a href="#">Python</a></th>
 
                         <th><a href="#">Last sync</a></th>
@@ -99,10 +96,6 @@
 
                         <td>
                             <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;query={{ item.topic_name }}">{{ item.topic_name }}</a>
-                        </td>
-
-                        <td>
-                            <a href="{% url "pubsub-task-message-browser" server_name server_pid item.python_id %}?cluster={{ cluster_id }}">{{ item.len_messages }}</a><!--/ <a href="#">{{ item.len_history }}</a>-->
                         </td>
 
                         <td>

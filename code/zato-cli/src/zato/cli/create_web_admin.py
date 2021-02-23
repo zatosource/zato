@@ -81,12 +81,6 @@ class Create(ZatoCommand):
 
     def execute(self, args, show_output=True, admin_password=None, needs_admin_created_flag=False):
 
-        try:
-            import pymysql
-            pymysql.install_as_MySQLdb()
-        except ImportError:
-            pass
-
         # stdlib
         import os, json
         from random import getrandbits

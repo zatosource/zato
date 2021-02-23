@@ -241,7 +241,7 @@ class Connector(object):
         if self.is_active:
             logger.info(
                 '%s %s connector `%s` (id:%s) %s', verb, self.type, self.name, self.id_self,
-                ' ({})'.format(log_details if log_details else self.get_log_details()))
+                '({})'.format(log_details if log_details else self.get_log_details()))
 
 # ################################################################################################################################
 
@@ -269,7 +269,7 @@ class Connector(object):
             logger.warn('Skipped creation of an inactive connector `%s` (%s)', self.name, self.type)
             return
 
-        with self._start_stop_logger('Starting',' Started', self._wait_until_connected):
+        with self._start_stop_logger('Starting', 'Started', self._wait_until_connected):
             self.keep_running = True
             self.keep_connecting = True
 

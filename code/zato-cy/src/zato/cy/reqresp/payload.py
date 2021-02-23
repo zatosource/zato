@@ -98,6 +98,12 @@ class SimpleIOPayload(object):
             raise KeyError('{}; No such key `{}` among `{}` ({})'.format(
                 self.sio.service_class, key, self.user_attrs_dict, hex(id(self))))
 
+    def __getitem__(self, key):
+        return self.__getattr__(key)
+
+    def get(self, key):
+        return self.user_attrs_dict.get(key)
+
 # ################################################################################################################################
 
     @cy.returns(bool)
