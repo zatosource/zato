@@ -18,14 +18,14 @@ from unittest import TestCase
 # Bunch
 from bunch import bunchify
 
-# dateutil
-from dateutil.parser import parse as dt_parse
-
-# sh
-import sh
+# ciso8601
+from ciso8601 import parse_datetime
 
 # requests
 import requests
+
+# sh
+import sh
 
 # Zato
 from zato.common.json_internal import dumps, loads
@@ -193,10 +193,10 @@ class BaseTest(TestCase):
         now = now.isoformat()
 
         func = self.assertGreater if is_default_user else self.assertLess
-        func(now, dt_parse(response.approval_status_mod_time).isoformat() + '.999999')
-        func(now, dt_parse(response.password_last_set).isoformat() + '.999999')
-        func(now, dt_parse(response.sign_up_time).isoformat() + '.999999')
-        self.assertLess(now, dt_parse(response.password_expiry).isoformat() + '.999999')
+        func(now, parse_datetime(response.approval_status_mod_time).isoformat() + '.999999')
+        func(now, parse_datetime(response.password_last_set).isoformat() + '.999999')
+        func(now, parse_datetime(response.sign_up_time).isoformat() + '.999999')
+        self.assertLess(now, parse_datetime(response.password_expiry).isoformat() + '.999999')
 
 # ################################################################################################################################
 

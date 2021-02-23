@@ -17,8 +17,8 @@ from datetime import datetime
 from io import StringIO
 from traceback import format_exc
 
-# dateutil
-from dateutil.parser import parse
+# ciso8601
+from ciso8601 import parse_datetime
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
@@ -64,7 +64,7 @@ def _get_start_date(start_date):
         return ''
 
     if not isinstance(start_date, datetime):
-        start_date = parse(start_date)
+        start_date = parse_datetime(start_date)
 
     return start_date.replace(tzinfo=UTC)
 

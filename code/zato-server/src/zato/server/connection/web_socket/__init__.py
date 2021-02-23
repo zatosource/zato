@@ -11,6 +11,41 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from gevent.monkey import patch_all
 patch_all()
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _UTF8Validator:
+    """ A pass-through UTF-8 validator for ws4py - we do not need for this layer
+    to validate UTF-8 bytes because we do it anyway during JSON parsing.
+    """
+    def validate(*ignored_args, **ignored_kwargs):
+        return True, True, None, None
+
+    def reset(*ignored_args, **ignored_kwargs):
+        pass
+
+from ws4py import streaming
+streaming.Utf8Validator = _UTF8Validator
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Patch ws4py with a Cython-based masker
+from wsaccel.xormask import XorMaskerSimple
+from ws4py import framing
+
+def mask(self, data):
+    if self.masking_key:
+        masker = XorMaskerSimple(self.masking_key)
+        return masker.process(data)
+    return data
+
+framing.Frame.mask = mask
+framing.Frame.unmask = mask
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # stdlib
 from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
@@ -24,6 +59,9 @@ from bunch import Bunch, bunchify
 # gevent
 from gevent import sleep, socket, spawn
 from gevent.lock import RLock
+
+# pysimdjson
+from simdjson import Parser as SIMDJSONParser
 
 # ws4py
 from ws4py.exc import HandshakeError
@@ -39,7 +77,6 @@ from past.builtins import basestring
 from zato.common.api import CHANNEL, DATA_FORMAT, PUBSUB, SEC_DEF_TYPE, WEB_SOCKET
 from zato.common.audit_log import DataReceived, DataSent
 from zato.common.exception import ParsingException, Reportable
-from zato.common.json_internal import loads
 from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
 from zato.common.typing_ import dataclass
 from zato.common.util.api import new_cid
@@ -83,6 +120,10 @@ http404_bytes = http404.encode('latin1')
 # ################################################################################################################################
 
 _wsgi_drop_keys = ('ws4py.socket', 'wsgi.errors', 'wsgi.input')
+
+# ################################################################################################################################
+
+code_invalid_utf8 = 4001
 
 # ################################################################################################################################
 
@@ -159,6 +200,9 @@ class WebSocket(_WebSocket):
 
         # JSON dumps function can be overridden by users
         self._json_dump_func = self._set_json_dump_func()
+
+        # A reusable JSON parser
+        self._json_parser = SIMDJSONParser()
 
         super(WebSocket, self).__init__(_unusued_sock, _unusued_protocols, _unusued_extensions, wsgi_environ, **kwargs)
 
@@ -319,8 +363,8 @@ class WebSocket(_WebSocket):
         try:
             self._peer_host = socket.gethostbyaddr(_peer_address[0])[0]
             _peer_fqdn = socket.getfqdn(self._peer_host)
-        except Exception:
-            logger.warning('WSX exception in FQDN lookup `%s`', format_exc())
+        except Exception as e:
+            logger.info('WSX exception in FQDN lookup `%s` (%s)', e.args, _peer_address)
         finally:
             self._peer_fqdn = _peer_fqdn
 
@@ -521,27 +565,33 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def parse_json(self, data, _create_session=WEB_SOCKET.ACTION.CREATE_SESSION, _response=WEB_SOCKET.ACTION.CLIENT_RESPONSE):
+    def parse_json(self, data, cid=None, _create_session=WEB_SOCKET.ACTION.CREATE_SESSION,
+        _response=WEB_SOCKET.ACTION.CLIENT_RESPONSE, _code_invalid_utf8=code_invalid_utf8):
+        """ Parses an incoming message into a Bunch object.
+        """
 
-        data = data.decode('utf8')
-        parsed = loads(data)
+        # Parse JSON into a dictionary
+        parsed = self._json_parser.parse(data)
+        parsed = parsed.as_dict()
+
+        # Create a request message
         msg = ClientMessage()
 
+        # Request metadata is optional
         meta = parsed.get('meta', {})
 
         if meta:
-            meta = bunchify(meta)
-
             msg.action = meta.get('action', _response)
-            msg.id = meta.id
-            msg.timestamp = meta.timestamp
+            msg.id = meta['id']
+            msg.timestamp = meta['timestamp']
             msg.token = meta.get('token') # Optional because it won't exist during first authentication
 
             # self.ext_client_id and self.ext_client_name will exist after create-session action
             # so we use them if they are available but fall back to meta.client_id and meta.client_name during
             # the very create-session action.
-            if meta.get('client_id'):
-                self.ext_client_id = meta.client_id
+            ext_client_id = meta.get('client_id')
+            if ext_client_id:
+                self.ext_client_id = meta.get('client_id')
 
             ext_client_name = meta.get('client_name')
             if ext_client_name:
@@ -558,7 +608,7 @@ class WebSocket(_WebSocket):
                 msg.username = meta.get('username')
 
                 # Secret is optional because WS channels may be without credentials attached
-                msg.secret = meta.secret if self.config.needs_auth else ''
+                msg.secret = meta['secret'] if self.config.needs_auth else ''
 
                 msg.is_auth = True
             else:
@@ -570,6 +620,7 @@ class WebSocket(_WebSocket):
                     msg.reply_to_sk = ctx.get('reply_to_sk')
                     msg.deliver_to_sk = ctx.get('deliver_to_sk')
 
+        # Data is optional
         msg.data = parsed.get('data', {})
 
         return msg
@@ -691,8 +742,11 @@ class WebSocket(_WebSocket):
                 if self.stream and (not self.server_terminated):
                     try:
                         response = self.invoke_client(new_cid(), None, use_send=False)
+                    except ConnectionError as e:
+                        logger.warning('ConnectionError; closing connection -> `%s`', e.args)
+                        self.on_socket_terminated(close_code.runtime_background_ping, 'Background ping connection error')
                     except RuntimeError:
-                        logger.warning('Closing connection due to `%s`', format_exc())
+                        logger.warning('RuntimeError; closing connection -> `%s`', format_exc())
                         self.on_socket_terminated(close_code.runtime_background_ping, 'Background ping runtime error')
 
                     with self.update_lock:
@@ -974,8 +1028,8 @@ class WebSocket(_WebSocket):
             sleep(0.1)
 
         try:
-            request = self._parse_func(data or _default_data)
             cid = new_cid()
+            request = self._parse_func(data or _default_data)
             now = _now()
             self.last_seen = now
 
@@ -1011,6 +1065,12 @@ class WebSocket(_WebSocket):
                 # Ok, we can proceed
                 try:
                     self.handle_client_message(cid, request) if not request.is_auth else self.handle_create_session(cid, request)
+
+                except ConnectionError as e:
+                    msg = 'Ignoring message (ConnectionError), cid:`%s`; conn:`%s`; e:`%s`'
+                    logger.info(msg, cid, self.peer_conn_info_pretty, e.args)
+                    logger_zato.info(msg, cid, self.peer_conn_info_pretty, e.args)
+
                 except RuntimeError as e:
                     if str(e) == _cannot_send:
                         msg = 'Ignoring message (socket terminated #1), cid:`%s`, request:`%s` conn:`%s`'
@@ -1033,7 +1093,7 @@ class WebSocket(_WebSocket):
 
     def received_message(self, message):
 
-        logger.info('Received message %r from `%s` (%s %s)', message.data,
+        logger.info('Received message %r from `%s` (%s %s)', message.data[:1024],
             self.pub_client_id, self.ext_client_id, self.ext_client_name)
 
         try:
@@ -1125,7 +1185,7 @@ class WebSocket(_WebSocket):
         # of an error or if it is not a string.
         if isinstance(request, basestring):
             try:
-                request = loads(request)
+                request = self._json_parser.parse(request)
             except ValueError:
                 pass
 
@@ -1206,7 +1266,7 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def ponged(self, msg, _loads=loads, _action=WEB_SOCKET.ACTION.CLIENT_RESPONSE):
+    def ponged(self, msg, _action=WEB_SOCKET.ACTION.CLIENT_RESPONSE):
 
         # Audit log comes first
         if self.is_audit_log_received_active:
@@ -1214,7 +1274,9 @@ class WebSocket(_WebSocket):
 
         # Pretend it's an actual response from the client,
         # we cannot use in_reply_to because pong messages are 1:1 copies of ping ones.
-        self.responses_received[_loads(msg.data.decode('utf8'))['meta']['id']] = True
+        data = self._json_parser.parse(msg.data)
+        msg_id = data['meta']['id']
+        self.responses_received[msg_id] = True
 
         # Since we received a pong response, it means that the peer is connected,
         # in which case we update its pub/sub metadata.
@@ -1225,28 +1287,44 @@ class WebSocket(_WebSocket):
     def unhandled_error(self, e, _msg='Low-level exception caught, about to close connection from `%s`, e:`%s`'):
         """ Called by the underlying WSX library when a low-level TCP/OS exception occurs.
         """
-        peer_info = self.get_peer_info_pretty()
-        exc = format_exc()
+        # Do not log too many details for common disconnection events ..
+        if isinstance(e, ConnectionError):
+            details = e.args
 
-        logger.info(_msg, peer_info, exc)
-        logger_zato.info(_msg, peer_info, exc)
+        # .. but log everything in other cases.
+        else:
+            details = format_exc()
+
+        peer_info = self.get_peer_info_pretty()
+
+        logger.info(_msg, peer_info, details)
+        logger_zato.info(_msg, peer_info, details)
 
         self.disconnect_client('<unhandled-error>', close_code.runtime_background_ping, 'Unhandled error caught')
 
-    def close(self, code=1000, reason='', _msg='Error while closing connection from `%s`, e:`%s`'):
+    def close(self, code=1000, reason='', _msg='Error while closing connection from `%s`, e:`%s`',
+        _msg_ignored='Caught an exception while closing connection from `%s`, e:`%s`'):
         """ Re-implemented from the base class to be able to catch exceptions in self._write when closing connections.
         """
         if not self.server_terminated:
             self.server_terminated = True
             try:
                 self._write(self.stream.close(code=code, reason=reason).single(mask=self.stream.always_mask))
-            except Exception:
+            except Exception as e:
 
                 peer_info = self.get_peer_info_pretty()
-                exc = format_exc()
 
-                logger.info(_msg, peer_info, exc)
-                logger_zato.info(_msg, peer_info, exc)
+                # Ignore non-essential errors about broken pipes, connections being already reset etc.
+                if isinstance(e, ConnectionError):
+                    e_description = e.args
+                    logger.info(_msg_ignored, peer_info, e_description)
+                    logger_zato.info(_msg_ignored, peer_info, e_description)
+
+                # Log details of exceptions of other types.
+                else:
+                    exc = format_exc()
+                    logger.info(_msg, peer_info, exc)
+                    logger_zato.info(_msg, peer_info, exc)
 
 # ################################################################################################################################
 
@@ -1466,6 +1544,9 @@ if __name__ == '__main__':
 
     # stdlib
     import os
+    from logging import basicConfig, INFO, WARN
+
+    basicConfig(level=WARN, format='%(asctime)s - %(message)s')
 
     # gevent
     from gevent import sleep
@@ -1477,6 +1558,10 @@ if __name__ == '__main__':
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.worker import WorkerStore
     from zato.server.connection.connector import ConnectorStore, connector_type
+
+    # For flake8
+    INFO = INFO
+    WARN = WARN
 
 # ################################################################################################################################
 
@@ -1500,7 +1585,7 @@ if __name__ == '__main__':
 
     # Reusable
     port = 33133
-    host = 'localhost'
+    host = '0.0.0.0'
     path = '/'
 
     os.environ['ZATO_SERVER_WORKER_IDX'] = '1'

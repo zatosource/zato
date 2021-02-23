@@ -19,8 +19,10 @@ from operator import itemgetter
 # Bunch
 from bunch import Bunch
 
+# ciso8601
+from ciso8601 import parse_datetime
+
 # dateutil
-from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import MINUTELY, rrule, rruleset
 
@@ -372,8 +374,8 @@ class StatsReturningService(AdminService):
         # A mean value of all the mean values (mean_all_services_list)
         mean_all_services = 0
 
-        start = parse(start)
-        stop = parse(stop)
+        start = parse_datetime(start)
+        stop = parse_datetime(stop)
         delta = (stop - start)
 
         if hasattr(delta, 'total_seconds'):
