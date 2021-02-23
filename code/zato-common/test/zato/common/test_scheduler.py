@@ -20,8 +20,8 @@ from bunch import Bunch
 # crontab
 from crontab import CronTab
 
-# dateutil
-from dateutil.parser import parse
+# ciso8601
+from ciso8601 import parse_datetime
 
 # gevent
 from gevent import sleep, spawn
@@ -138,7 +138,7 @@ class JobTestCase(TestCase):
         func(ctx['max_repeats_reached'])
 
         # Don't check an exact time. Simply parse it out and confirm it's in the past.
-        start_time = parse(ctx['start_time'])
+        start_time = parse_datetime(ctx['start_time'])
         now = datetime.utcnow()
         self.assertTrue(start_time < now, 'start_time:`{}` is not less than now:`{}`'.format(start_time, now))
 
@@ -266,7 +266,7 @@ class JobTestCase(TestCase):
         wait_time = 0.2
         sleep_time = rand_int()
 
-        now_values = [parse('2019-12-23 22:19:03'), parse('2021-05-13 17:35:48')]
+        now_values = [parse_datetime('2019-12-23 22:19:03'), parse_datetime('2021-05-13 17:35:48')]
 
         sleep_history = []
         spawn_history = []
@@ -371,7 +371,7 @@ class JobTestCase(TestCase):
         self.assertEquals(hash(job3), hash('b'))
 
     def test_get_sleep_time(self):
-        now = parse('2015-11-27 19:13:37.274')
+        now = parse_datetime('2015-11-27 19:13:37.274')
 
         job1 = Job(1, 'a', SCHEDULER.JOB_TYPE.INTERVAL_BASED, Interval(seconds=5), now)
         self.assertEquals(job1.get_sleep_time(now), 5)
@@ -397,9 +397,9 @@ class JobStartTimeTestCase(TestCase):
 
     def check_get_start_time(self, start_time, now, expected):
 
-        start_time = parse(start_time)
-        self.now = parse(now)
-        expected = parse(expected)
+        start_time = parse_datetime(start_time)
+        self.now = parse_datetime(now)
+        expected = parse_datetime(expected)
 
         interval = 1 # Days
         data = {'start_time':[], 'now':[]}
@@ -442,9 +442,9 @@ class JobStartTimeTestCase(TestCase):
         self.check_get_start_time('2017-03-20 19:11:37', '2017-03-21 21:11:37', '2017-03-22 19:11:37')
 
     def test_get_start_time_last_run_in_past_next_run_in_past(self):
-        start_time = parse('2017-03-20 19:11:23')
-        self.now = parse('2019-05-13 05:19:37')
-        expected = parse('2017-04-04 19:11:23')
+        start_time = parse_datetime('2017-03-20 19:11:23')
+        self.now = parse_datetime('2019-05-13 05:19:37')
+        expected = parse_datetime('2017-04-04 19:11:23')
 
         with patch('zato.scheduler.backend.datetime', self._datetime):
 
@@ -537,7 +537,7 @@ class SchedulerTestCase(TestCase):
         job1, job2, job3 = [get_job(str(x)) for x in range(3)]
 
         # Already run out of max_repeats and should not be started
-        job4 = Job(rand_int(), rand_string(), SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_time=parse('1997-12-23 21:24:27'),
+        job4 = Job(rand_int(), rand_string(), SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_time=parse_datetime('1997-12-23 21:24:27'),
             interval=Interval(seconds=5), max_repeats=3)
 
         job1.run = job_run

@@ -50,11 +50,11 @@ from traceback import format_exc
 # Bunch
 from bunch import Bunch, bunchify
 
+# ciso8601
+from ciso8601 import parse_datetime
+
 # ConfigObj
 from configobj import ConfigObj
-
-# dateutil
-from dateutil.parser import parse
 
 # gevent
 from gevent import sleep as gevent_sleep, spawn, Timeout
@@ -120,7 +120,15 @@ from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_req
 
 # ################################################################################################################################
 
+if 0:
+    from simdjson import Parser as SIMDJSONParser
+    SIMDJSONParser = SIMDJSONParser
+
+# ################################################################################################################################
+
 random.seed()
+
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 logging.addLevelName(TRACE1, "TRACE1")
@@ -444,9 +452,11 @@ def get_body_payload(body):
 
 # ################################################################################################################################
 
-def payload_from_request(cid, request, data_format, transport, channel_item=None):
+def payload_from_request(json_parser, cid, request, data_format, transport, channel_item=None):
     """ Converts a raw request to a payload suitable for usage with SimpleIO.
     """
+    # type: (SIMDJSONParser, str, object, str, str, object)
+
     if request is not None:
 
         #
@@ -466,8 +476,8 @@ def payload_from_request(cid, request, data_format, transport, channel_item=None
 
             if isinstance(request, basestring) and data_format == _data_format_json:
                 try:
-                    request = request.decode('utf8') if isinstance(request, bytes) else request
-                    payload = loads(request)
+                    payload = json_parser.parse(request)
+                    payload = payload.as_dict()
                 except ValueError:
                     logger.warn('Could not parse request as JSON:`%s`, e:`%s`', request, format_exc())
                     raise
@@ -677,7 +687,7 @@ def from_local_to_utc(dt, tz_name, dayfirst=True):
     """ What is the UTC time given the local time and the timezone's name?
     """
     if not isinstance(dt, datetime):
-        dt = parse(dt, dayfirst=dayfirst)
+        dt = parse_datetime(dt, dayfirst=dayfirst)
 
     dt = pytz.timezone(tz_name).localize(dt)
     utc_dt = pytz.utc.normalize(dt.astimezone(pytz.utc))
@@ -689,7 +699,7 @@ def from_utc_to_local(dt, tz_name):
     """ What is the local time in the user-provided time zone name?
     """
     if not isinstance(dt, datetime):
-        dt = parse(dt)
+        dt = parse_datetime(dt)
 
     local_tz = pytz.timezone(tz_name)
     dt = local_tz.normalize(dt.astimezone(local_tz))
