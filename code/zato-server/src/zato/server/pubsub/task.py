@@ -618,7 +618,7 @@ class GDMessage(Message):
         # Add times in ISO-8601 for external subscribers
         self.add_iso_times()
 
-        logger.info('Built task message (gd) `%s`', self.to_dict(add_id_attrs=True))
+        logger.info('Built task message (gd) for `%s`', self.pub_msg_id)
 
 # ################################################################################################################################
 
