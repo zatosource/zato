@@ -76,6 +76,7 @@ newrelic==2.20.0.17
 nose==1.3.3
 odoo-client-lib==1.2.2
 openpyxl==3.0.5
+orjson==3.5.0
 oslo.config==1.2.1
 parse-type==0.3.4
 parse==1.6.6
