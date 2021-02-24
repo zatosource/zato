@@ -101,6 +101,10 @@ if 0:
 
 # ################################################################################################################################
 
+_supported_json_dumps = set(['stdlib', 'zato_default', 'rapidjson', 'bson', 'orjson'])
+
+# ################################################################################################################################
+
 logger = getLogger('zato_web_socket')
 logger_zato = getLogger('zato')
 
@@ -206,7 +210,7 @@ class WebSocket(_WebSocket):
 
         super(WebSocket, self).__init__(_unusued_sock, _unusued_protocols, _unusued_extensions, wsgi_environ, **kwargs)
 
-    def _set_json_dump_func(self, _default='zato_default', _supported=('stdlib', 'zato_default', 'rapidjson', 'bson')):
+    def _set_json_dump_func(self, _default='zato_default', _supported=_supported_json_dumps):
         json_library = self.parallel_server.fs_server_config.wsx.get('json_library', _default)
 
         if json_library not in _supported:
@@ -218,8 +222,11 @@ class WebSocket(_WebSocket):
 
             json_library = _default
 
-        if json_library in ('stdlib', 'zato_default'):
+        if json_library == 'stdlib':
             from zato.common.json_ import dumps as dumps_func
+
+        elif json_library in ('orjson', 'zato_default'):
+            from orjson import dumps as dumps_func
 
         elif json_library == 'rapidjson':
             from rapidjson import dumps as dumps_func
