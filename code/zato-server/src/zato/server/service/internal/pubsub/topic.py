@@ -289,7 +289,7 @@ class GetGDMessageList(AdminService):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_gd_data(session)
 
-        for item in self.response.payload.zato_output:
+        for item in self.response.payload:
             item.pub_time = datetime_from_ms(item.pub_time * 1000.0)
             item.ext_pub_time = datetime_from_ms(item.ext_pub_time * 1000.0) if item.ext_pub_time else ''
 
