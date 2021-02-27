@@ -45,7 +45,7 @@ framing.Frame.unmask = mask
 
 # stdlib
 from datetime import datetime, timedelta
-from http.client import BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
+from http.client import BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, responses, UNPROCESSABLE_ENTITY
 from json import loads
 from logging import getLogger
 from threading import current_thread
@@ -84,8 +84,10 @@ from zato.vault.client import VAULT
 
 if 0:
     from zato.server.base.parallel import ParallelServer
+    from zato.server.connection.web_socket.msg import ServerMessage
 
     ParallelServer = ParallelServer
+    ServerMessage = ServerMessage
 
 # ################################################################################################################################
 
@@ -531,15 +533,6 @@ class WebSocket(_WebSocket):
         """ Parses an incoming message into a Bunch object.
         """
 
-        try:
-            data = data.decode('utf8')
-        except UnicodeDecodeError as e:
-            msg = 'Invalid UTF-8 bytes; `{}`'.format(e.args)
-            logger.warn(msg)
-            logger_zato.warn(msg)
-            self.disconnect_client('<no-cid>', _code_invalid_utf8, 'Invalid UTF-8 bytes')
-            raise
-
         parsed = loads(data)
         msg = ClientMessage()
 
@@ -892,6 +885,7 @@ class WebSocket(_WebSocket):
 
         try:
             service_response = self.invoke_service(self.config.service_name, msg.data, cid=cid)
+            response = OKResponse(cid, msg.id, service_response)
         except Exception as e:
 
             logger.warn('Service `%s` could not be invoked, id:`%s` cid:`%s`, conn:`%s`, e:`%s`',
@@ -912,10 +906,16 @@ class WebSocket(_WebSocket):
                 status = INTERNAL_SERVER_ERROR
                 error_message = 'Internal server error'
 
+            # Build a response message with details ..
             response = ErrorResponse(cid, msg.id, status, error_message)
 
-        else:
-            response = OKResponse(cid, msg.id, service_response)
+        # Send the response to our client
+        self._send_response_to_client(response)
+
+# ################################################################################################################################
+
+    def _send_response_to_client(self, response):
+        # type: (ServerMessage) -> None
 
         serialized = response.serialize(self._json_dump_func)
 
@@ -988,6 +988,23 @@ class WebSocket(_WebSocket):
             sleep(0.1)
 
         try:
+
+            # Input bytes must be UTF-8
+            try:
+                data = data.decode('utf8')
+            except UnicodeDecodeError as e:
+                reason = 'Invalid UTF-8 bytes'
+                msg = '{}; `{}`'.format(reason, e.args)
+                logger.warn(msg)
+                logger_zato.warn(msg)
+                if self.has_session_opened:
+                    response = ErrorResponse('<no-cid>', '<no-msg-id>', UNPROCESSABLE_ENTITY, reason)
+                    self._send_response_to_client(response)
+                    return
+                else:
+                    self.disconnect_client('<no-cid>', _code_invalid_utf8, reason)
+                    return
+
             request = self._parse_func(data or _default_data)
             cid = new_cid()
             now = _now()
