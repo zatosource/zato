@@ -505,7 +505,7 @@ class GetEndpointQueueMessagesGD(AdminService, _GetMessagesBase):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
 
-        for item in self.response.payload.zato_output:
+        for item in self.response.payload:
             item.recv_time = datetime_from_ms(item.recv_time * 1000.0)
             item.published_by_name = self.pubsub.get_endpoint_by_id(item.published_by_id).name
 

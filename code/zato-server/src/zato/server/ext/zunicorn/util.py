@@ -56,6 +56,7 @@ import warnings
 import logging
 import re
 from platform import system as platform_system
+from time import gmtime
 
 from zato.server.ext.zunicorn import _compat
 from zato.server.ext.zunicorn.errors import AppImportError
@@ -69,6 +70,9 @@ is_linux = 'linux' in platform_system().lower()
 
 # Forking to child processes is used only on Linux
 is_forking = is_linux
+
+days   = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
+months = (None, 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
 
 # Server and Date aren't technically hop-by-hop
 # headers, but they are in the purview of the
@@ -426,12 +430,19 @@ def getcwd():
     return cwd
 
 
-def http_date(timestamp=None):
-    """Return the current date and time formatted for a message header."""
-    if timestamp is None:
-        timestamp = time.time()
-    s = email.utils.formatdate(timestamp, localtime=False, usegmt=True)
-    return s
+def http_date(_gmtime=gmtime, _days=days, _months=months):
+    """ Return the current date and time formatted for a message header.
+    """
+    _time_tuple = _gmtime()
+
+    return '%s, %02d %s %02d:%02d:%02d GMT' % (
+        _days[_time_tuple.tm_wday],
+        _time_tuple.tm_mday,
+        _months[_time_tuple.tm_mon],
+        _time_tuple.tm_hour,
+        _time_tuple.tm_min,
+        _time_tuple.tm_sec
+    )
 
 
 def is_hoppish(header):
