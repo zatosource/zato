@@ -14,9 +14,14 @@ cloghandler = cloghandler # For pyflakes
 
 # stdlib
 import logging
-
-# stdlib
 import os
+
+# MySQL
+try:
+    import pymysql
+    pymysql.install_as_MySQLdb()
+except ImportError:
+    pass
 
 # Django
 import django
