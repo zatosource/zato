@@ -1237,7 +1237,7 @@ class WebSocket(_WebSocket):
             self.pub_client_id, ' {})'.format(self.ext_client_name) if self.ext_client_name else ')')
 
         self.unregister_auth_client()
-        del self.container.clients[self.pub_client_id]
+        self.container.clients.pop(self.pub_client_id, None)
 
         # Unregister the client from audit log
         if self.is_audit_log_sent_active or self.is_audit_log_received_active:
