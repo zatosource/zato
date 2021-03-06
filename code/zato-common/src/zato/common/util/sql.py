@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from itertools import chain
 from logging import DEBUG, getLogger
-from traceback import format_exc
 
 # Bunch
 from bunch import bunchify
