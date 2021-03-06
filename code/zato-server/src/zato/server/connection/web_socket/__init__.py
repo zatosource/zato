@@ -156,6 +156,10 @@ _audit_msg_type = WEB_SOCKET.AUDIT_KEY
 
 # ################################################################################################################################
 
+log_msg_max_size = 256
+
+# ################################################################################################################################
+
 class HookCtx(object):
     __slots__ = ('hook_type', 'config', 'pub_client_id', 'ext_client_id', 'ext_client_name', 'connection_time', 'user_data',
         'forwarded_for', 'forwarded_for_fqdn', 'peer_address', 'peer_host', 'peer_fqdn', 'peer_conn_info_pretty', 'msg')
@@ -967,7 +971,7 @@ class WebSocket(_WebSocket):
         serialized = response.serialize(self._json_dump_func)
 
         logger.info('Sending response `%s` to `%s` (%s %s)',
-           serialized, self.pub_client_id, self.ext_client_id, self.ext_client_name)
+           serialized[:log_msg_max_size], self.pub_client_id, self.ext_client_id, self.ext_client_name)
 
         try:
             self.send(serialized, msg.cid, cid)
@@ -1100,7 +1104,7 @@ class WebSocket(_WebSocket):
 
     def received_message(self, message):
 
-        logger.info('Received message %r from `%s` (%s %s)', message.data[:1024],
+        logger.info('Received message %r from `%s` (%s %s)', message.data[:log_msg_max_size],
             self.pub_client_id, self.ext_client_id, self.ext_client_name)
 
         try:
@@ -1202,7 +1206,7 @@ class WebSocket(_WebSocket):
 
         # Log what is about to be sent
         if use_send:
-            logger.info('Sending message `%s` from `%s` to `%s` `%s` `%s` `%s`', serialized,
+            logger.info('Sending message `%s` from `%s` to `%s` `%s` `%s` `%s`', serialized[:log_msg_max_size],
                 self.python_id, self.pub_client_id, self.ext_client_id, self.ext_client_name, self.peer_conn_info_pretty)
 
         try:
@@ -1213,8 +1217,9 @@ class WebSocket(_WebSocket):
         except RuntimeError as e:
             if str(e) == _cannot_send:
                 msg = 'Cannot send message (socket terminated #2), disconnecting client, cid:`%s`, msg:`%s` conn:`%s`'
-                logger.info(msg[:1024], cid, serialized, self.peer_conn_info_pretty)
-                logger_zato.info(msg[:1024], cid, serialized, self.peer_conn_info_pretty)
+                data_msg = msg[:log_msg_max_size]
+                logger.info(data_msg, cid, serialized, self.peer_conn_info_pretty)
+                logger_zato.info(data_msg, cid, serialized, self.peer_conn_info_pretty)
                 self.disconnect_client(cid, close_code.runtime_invoke_client, 'Client invocation runtime error')
                 raise Exception('WSX client disconnected cid:`{}, peer:`{}`'.format(cid, self.peer_conn_info_pretty))
             else:
