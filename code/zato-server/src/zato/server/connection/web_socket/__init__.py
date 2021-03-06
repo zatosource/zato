@@ -1213,8 +1213,8 @@ class WebSocket(_WebSocket):
         except RuntimeError as e:
             if str(e) == _cannot_send:
                 msg = 'Cannot send message (socket terminated #2), disconnecting client, cid:`%s`, msg:`%s` conn:`%s`'
-                logger.info(msg, cid, serialized, self.peer_conn_info_pretty)
-                logger_zato.info(msg, cid, serialized, self.peer_conn_info_pretty)
+                logger.info(msg[:1024], cid, serialized, self.peer_conn_info_pretty)
+                logger_zato.info(msg[:1024], cid, serialized, self.peer_conn_info_pretty)
                 self.disconnect_client(cid, close_code.runtime_invoke_client, 'Client invocation runtime error')
                 raise Exception('WSX client disconnected cid:`{}, peer:`{}`'.format(cid, self.peer_conn_info_pretty))
             else:
