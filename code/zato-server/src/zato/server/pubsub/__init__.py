@@ -245,6 +245,7 @@ class PubSub(object):
     def get_subscriptions_by_topic(self, topic_name, require_backlog_messages=False):
         with self.lock:
             subs = self.subscriptions_by_topic.get(topic_name, [])
+            subs = subs[:]
             if require_backlog_messages:
                 out = []
                 for item in subs:
@@ -524,11 +525,13 @@ class PubSub(object):
 # ################################################################################################################################
 
     def _get_topic_by_sub_key(self, sub_key):
+        # type: (str) -> Topic
         return self._get_topic_by_name(self._get_subscription_by_sub_key(sub_key).topic_name)
 
 # ################################################################################################################################
 
     def get_topic_by_sub_key(self, sub_key):
+        # type: (str) -> Topic
         with self.lock:
             return self._get_topic_by_sub_key(sub_key)
 
@@ -624,6 +627,8 @@ class PubSub(object):
 
         existing_by_topic = self.subscriptions_by_topic.setdefault(config.topic_name, [])
         existing_by_topic.append(sub)
+
+        logger_zato.info('Added sub `%s` -> `%s`', config.sub_key, config.topic_name)
 
         self.subscriptions_by_sub_key[config.sub_key] = sub
 
