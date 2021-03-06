@@ -245,6 +245,7 @@ class PubSub(object):
     def get_subscriptions_by_topic(self, topic_name, require_backlog_messages=False):
         with self.lock:
             subs = self.subscriptions_by_topic.get(topic_name, [])
+            subs = subs[:]
             if require_backlog_messages:
                 out = []
                 for item in subs:
