@@ -71,9 +71,9 @@ def cleanup_wsx_client(wsx_cleanup_required, service_invoker, pub_client_id, sub
         if hook:
             hook(_on_disconnected, hook_service, **hook_request)
 
-    except Exception:
+    except Exception as e:
         for logger in logger_zato, logger_wsx:
-            logger.warn(msg_cleanup_error, wsx_cleanup_required, service_invoker, pub_client_id, sub_keys, hook,
-                hook_service, hook_request, opaque_func_list, format_exc())
+            logger.info(msg_cleanup_error, wsx_cleanup_required, service_invoker, pub_client_id, sub_keys, hook,
+                hook_service, hook_request, opaque_func_list, e)
 
 # ################################################################################################################################
