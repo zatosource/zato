@@ -156,7 +156,7 @@ _audit_msg_type = WEB_SOCKET.AUDIT_KEY
 
 # ################################################################################################################################
 
-log_msg_max_size = 256
+log_msg_max_size = 1024
 
 # ################################################################################################################################
 
@@ -971,7 +971,7 @@ class WebSocket(_WebSocket):
         serialized = response.serialize(self._json_dump_func)
 
         logger.info('Sending response `%s` to `%s` (%s %s)',
-           serialized[:log_msg_max_size], self.pub_client_id, self.ext_client_id, self.ext_client_name)
+           self._shorten_data(serialized), self.pub_client_id, self.ext_client_id, self.ext_client_name)
 
         try:
             self.send(serialized, msg.cid, cid)
@@ -1104,7 +1104,7 @@ class WebSocket(_WebSocket):
 
     def received_message(self, message):
 
-        logger.info('Received message %r from `%s` (%s %s)', message.data[:log_msg_max_size],
+        logger.info('Received message %r from `%s` (%s %s)', self._shorten_data(message.data),
             self.pub_client_id, self.ext_client_id, self.ext_client_name)
 
         try:
@@ -1188,6 +1188,23 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
+    def _shorten_data(self, data, max_size=log_msg_max_size):
+
+        # Reusable
+        len_data = len(data)
+
+        # No need to shorten anything as long as we fit in the max length allowed ..
+        if len_data <= max_size:
+            out = data
+
+        # ..otherwise, we need to make a shorter copy
+        else:
+            out = '%s [...]' % (data[:max_size])
+
+        return '%s (%s B)' % (out, len_data)
+
+# ################################################################################################################################
+
     def invoke_client(self, cid, request, timeout=5, ctx=None, use_send=True, _Class=InvokeClientRequest, wait_for_response=True):
         """ Invokes a remote WSX client with request given on input, returning its response,
         if any was produced in the expected time.
@@ -1206,7 +1223,7 @@ class WebSocket(_WebSocket):
 
         # Log what is about to be sent
         if use_send:
-            logger.info('Sending message `%s` from `%s` to `%s` `%s` `%s` `%s`', serialized[:log_msg_max_size],
+            logger.info('Sending message `%s` from `%s` to `%s` `%s` `%s` `%s`', self._shorten_data(serialized),
                 self.python_id, self.pub_client_id, self.ext_client_id, self.ext_client_name, self.peer_conn_info_pretty)
 
         try:
@@ -1217,7 +1234,7 @@ class WebSocket(_WebSocket):
         except RuntimeError as e:
             if str(e) == _cannot_send:
                 msg = 'Cannot send message (socket terminated #2), disconnecting client, cid:`%s`, msg:`%s` conn:`%s`'
-                data_msg = msg[:log_msg_max_size]
+                data_msg = self._shorten_data(msg)
                 logger.info(data_msg, cid, serialized, self.peer_conn_info_pretty)
                 logger_zato.info(data_msg, cid, serialized, self.peer_conn_info_pretty)
                 self.disconnect_client(cid, close_code.runtime_invoke_client, 'Client invocation runtime error')
