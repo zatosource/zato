@@ -36,7 +36,7 @@ then
     sudo ln -sf /usr/sbin/haproxy /usr/bin/haproxy
 fi
 
-curl https://bootstrap.pypa.io/2.7/get-pip.py | sudo $(type -p $PY_BINARY)
+curl https://bootstrap.pypa.io/pip/2.7/get-pip.py | sudo $(type -p $PY_BINARY)
 sudo $PY_BINARY -m pip install -U virtualenv
 
 $PY_BINARY -m virtualenv .
