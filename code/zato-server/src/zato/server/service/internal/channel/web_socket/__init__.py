@@ -211,9 +211,16 @@ class _BaseAPICommand(_BaseCommand):
             server_name = client.server_name
             server_proc_pid = client.server_proc_pid
 
-        self.logger.info(
-            'WSX API request: `%s` `%s` `%s` `%s` (%s %s:%s)', self.server_service, self.request.input,
-            client.pub_client_id, client.ext_client_id, self.cid, server_name, server_proc_pid)
+        if server_name != self.server.name:
+            self.logger.warn(
+                'Ignoring WSX API request: `%s` `%s` `%s` `%s` (%s %s:%s) (self: %s:%s)', self.server_service, self.request.input,
+                client.pub_client_id, client.ext_client_id, self.cid, server_name, server_proc_pid,
+                self.server.name, self.server.pid)
+            return
+        else:
+            self.logger.info(
+                'WSX API request: `%s` `%s` `%s` `%s` (%s %s:%s)', self.server_service, self.request.input,
+                client.pub_client_id, client.ext_client_id, self.cid, server_name, server_proc_pid)
 
         server_response = self.servers[server_name].invoke(
             self.server_service, self.request.input, pid=server_proc_pid, data_format=DATA_FORMAT.JSON)
