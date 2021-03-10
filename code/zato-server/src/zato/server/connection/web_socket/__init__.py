@@ -983,10 +983,16 @@ class WebSocket(_WebSocket):
                 logger_zato.warn(msg)
                 if self.has_session_opened:
                     response = ErrorResponse('<no-cid>', '<no-msg-id>', UNPROCESSABLE_ENTITY, reason)
+                    log_msg = 'About to send the invalid UTF-8 message to client'
+                    logger.warning(log_msg)
+                    logger_zato.warning(log_msg)
                     self._send_response_to_client(response)
                     return
                 else:
-                    self.disconnect_client('<no-cid>', _code_invalid_utf8, reason)
+                    log_msg = 'Disconnecting client due to invalid UTF-8 data'
+                    logger.warning(log_msg)
+                    logger_zato.warning(log_msg)
+                    self.disconnect_client('<no-cid>', code_invalid_utf8, reason)
                     return
 
             request = self._parse_func(data or _default_data)
