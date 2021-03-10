@@ -278,23 +278,7 @@ class ResumeWSXSubscription(AdminService):
         try:
             with closing(self.odb.session()) as session:
 
-
-                # Everything is performed using that WebSocket's pub/sub lock to ensure that both
-                # in-RAM and SQL (non-GD and GD) messages are made available to the WebSocket as a single unit.
                 with pubsub_tool.lock:
-
-                    get_in_ram_service = 'zato.pubsub.topic.get-in-ram-message-list'
-                    _, non_gd_messages = self.servers.invoke_all(get_in_ram_service, {'sub_key_list':sub_key_list}, timeout=120)
-
-                    # Parse non-GD messages on output from all servers, if any at all, into per-sub_key lists ..
-                    if non_gd_messages:
-                        non_gd_messages = self._parse_non_gd_messages(sub_key_list, non_gd_messages)
-
-                        # If there are any non-GD messages, add them to this WebSocket's pubsub tool.
-                        if non_gd_messages:
-                            for sub_key, messages in non_gd_messages.items():
-                                pubsub_tool.add_sub_key_no_lock(sub_key)
-                                pubsub_tool.add_non_gd_messages_by_sub_key(sub_key, messages)
 
                     # For each sub_key from input ..
                     for sub_key in sub_key_list:
