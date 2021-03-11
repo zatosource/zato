@@ -32,7 +32,7 @@ streaming.Utf8Validator = _UTF8Validator
 
 # stdlib
 from datetime import datetime, timedelta
-from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
+from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, responses, UNPROCESSABLE_ENTITY
 from logging import DEBUG, getLogger
 from threading import current_thread
 from traceback import format_exc
