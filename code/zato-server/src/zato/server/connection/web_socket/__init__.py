@@ -30,22 +30,6 @@ streaming.Utf8Validator = _UTF8Validator
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Patch ws4py with a Cython-based masker
-from wsaccel.xormask import XorMaskerSimple
-from ws4py import framing
-
-def mask(self, data):
-    if self.masking_key:
-        masker = XorMaskerSimple(self.masking_key)
-        return masker.process(data)
-    return data
-
-framing.Frame.mask = mask
-framing.Frame.unmask = mask
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 # stdlib
 from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
