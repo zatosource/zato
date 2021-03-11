@@ -1023,6 +1023,30 @@ class WebSocket(_WebSocket):
             sleep(0.1)
 
         try:
+
+            # Input bytes must be UTF-8
+            try:
+                data = data.decode('utf8')
+            except UnicodeDecodeError as e:
+                reason = 'Invalid UTF-8 bytes'
+                msg = '{}; `{}`'.format(reason, e.args)
+                logger.warn(msg)
+                logger_zato.warn(msg)
+                if self.has_session_opened:
+                    response = ErrorResponse('<no-cid>', '<no-msg-id>', UNPROCESSABLE_ENTITY, reason)
+                    log_msg = 'About to send the invalid UTF-8 message to client'
+                    logger.warning(log_msg)
+                    logger_zato.warning(log_msg)
+                    self._send_response_to_client(response)
+                    return
+                else:
+                    log_msg = 'Disconnecting client due to invalid UTF-8 data'
+                    logger.warning(log_msg)
+                    logger_zato.warning(log_msg)
+                    self.disconnect_client('<no-cid>', code_invalid_utf8, reason)
+                    return
+
+            request = self._parse_func(data or _default_data)
             cid = new_cid()
             request = self._parse_func(data or _default_data)
             now = _now()
