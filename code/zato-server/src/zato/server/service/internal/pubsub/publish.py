@@ -411,9 +411,9 @@ class Publish(AdminService):
 # ################################################################################################################################
 
     def _publish(self, ctx):
-        # Type: PubCtx
         """ Publishes GD and non-GD messages to topics and, if subscribers exist, moves them to their queues / notifies them.
         """
+        # Type: PubCtx
         len_gd_msg_list = len(ctx.gd_msg_list)
         has_gd_msg_list = bool(len_gd_msg_list)
 
