@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from itertools import chain
 from logging import DEBUG, getLogger
-from traceback import format_exc
 
 # Bunch
 from bunch import bunchify
@@ -20,7 +19,7 @@ from bunch import bunchify
 from gevent import sleep
 
 # SQLAlchemy
-from sqlalchemy.exc import InternalError as SAInternalError
+from sqlalchemy.exc import InternalError as SAInternalError, OperationalError as SAOperationalError
 
 # Zato
 from zato.common.api import GENERIC, SEARCH
@@ -39,6 +38,9 @@ has_debug = logger_zato.isEnabledFor(DEBUG) or logger_pubsub.isEnabledFor(DEBUG)
 
 _default_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE
 _max_page_size = _default_page_size * 5
+
+# All exceptions that can be raised when deadlocks occur
+_DeadlockException = (SAInternalError, SAOperationalError)
 
 # In MySQL, 1213 = 'Deadlock found when trying to get lock; try restarting transaction'
 # but the underlying PyMySQL library returns only a string rather than an integer code.
@@ -112,12 +114,12 @@ def sql_op_with_deadlock_retry(cid, name, func, *args, **kwargs):
             return True
 
         # Catch deadlocks - it may happen because both this function and delivery tasks update the same tables
-        except SAInternalError as e:
+        except _DeadlockException as e:
 
             if has_debug:
-                logger_zato.info('Caught SAInternalError `%s` `%s`', cid, format_exc())
+                logger_zato.warn('Caught _DeadlockException `%s` `%s`', cid, e)
 
-            if _deadlock_code not in e.message:
+            if _deadlock_code not in e.args[0]:
                 raise
             else:
                 if attempts % 50 == 0:

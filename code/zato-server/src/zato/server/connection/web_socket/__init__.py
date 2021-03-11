@@ -30,25 +30,9 @@ streaming.Utf8Validator = _UTF8Validator
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Patch ws4py with a Cython-based masker
-from wsaccel.xormask import XorMaskerSimple
-from ws4py import framing
-
-def mask(self, data):
-    if self.masking_key:
-        masker = XorMaskerSimple(self.masking_key)
-        return masker.process(data)
-    return data
-
-framing.Frame.mask = mask
-framing.Frame.unmask = mask
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 # stdlib
 from datetime import datetime, timedelta
-from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
+from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, responses, UNPROCESSABLE_ENTITY
 from logging import DEBUG, getLogger
 from threading import current_thread
 from traceback import format_exc
@@ -153,6 +137,10 @@ hook_type_to_method = {
 
 _cannot_send = 'Cannot send on a terminated websocket'
 _audit_msg_type = WEB_SOCKET.AUDIT_KEY
+
+# ################################################################################################################################
+
+log_msg_max_size = 1024
 
 # ################################################################################################################################
 
@@ -967,7 +955,7 @@ class WebSocket(_WebSocket):
         serialized = response.serialize(self._json_dump_func)
 
         logger.info('Sending response `%s` to `%s` (%s %s)',
-           serialized, self.pub_client_id, self.ext_client_id, self.ext_client_name)
+           self._shorten_data(serialized), self.pub_client_id, self.ext_client_id, self.ext_client_name)
 
         try:
             self.send(serialized, msg.cid, cid)
@@ -1035,6 +1023,30 @@ class WebSocket(_WebSocket):
             sleep(0.1)
 
         try:
+
+            # Input bytes must be UTF-8
+            try:
+                data = data.decode('utf8')
+            except UnicodeDecodeError as e:
+                reason = 'Invalid UTF-8 bytes'
+                msg = '{}; `{}`'.format(reason, e.args)
+                logger.warn(msg)
+                logger_zato.warn(msg)
+                if self.has_session_opened:
+                    response = ErrorResponse('<no-cid>', '<no-msg-id>', UNPROCESSABLE_ENTITY, reason)
+                    log_msg = 'About to send the invalid UTF-8 message to client'
+                    logger.warning(log_msg)
+                    logger_zato.warning(log_msg)
+                    self._send_response_to_client(response)
+                    return
+                else:
+                    log_msg = 'Disconnecting client due to invalid UTF-8 data'
+                    logger.warning(log_msg)
+                    logger_zato.warning(log_msg)
+                    self.disconnect_client('<no-cid>', code_invalid_utf8, reason)
+                    return
+
+            request = self._parse_func(data or _default_data)
             cid = new_cid()
             request = self._parse_func(data or _default_data)
             now = _now()
@@ -1079,10 +1091,10 @@ class WebSocket(_WebSocket):
                     logger_zato.info(msg, cid, self.peer_conn_info_pretty, e.args)
 
                 except RuntimeError as e:
-                    if str(e) == _cannot_send:
+                    if e.args[0] == _cannot_send:
                         msg = 'Ignoring message (socket terminated #1), cid:`%s`, request:`%s` conn:`%s`'
-                        logger.info(msg, cid, request, self.peer_conn_info_pretty)
-                        logger_zato.info(msg, cid, request, self.peer_conn_info_pretty)
+                        logger.warn(msg, cid, request, self.peer_conn_info_pretty)
+                        logger_zato.warn(msg, cid, request, self.peer_conn_info_pretty)
                     else:
                         raise
 
@@ -1100,7 +1112,7 @@ class WebSocket(_WebSocket):
 
     def received_message(self, message):
 
-        logger.info('Received message %r from `%s` (%s %s)', message.data[:1024],
+        logger.info('Received message %r from `%s` (%s %s)', self._shorten_data(message.data),
             self.pub_client_id, self.ext_client_id, self.ext_client_name)
 
         try:
@@ -1184,6 +1196,23 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
+    def _shorten_data(self, data, max_size=log_msg_max_size):
+
+        # Reusable
+        len_data = len(data)
+
+        # No need to shorten anything as long as we fit in the max length allowed ..
+        if len_data <= max_size:
+            out = data
+
+        # ..otherwise, we need to make a shorter copy
+        else:
+            out = '%s [...]' % (data[:max_size])
+
+        return '%s (%s B)' % (out, len_data)
+
+# ################################################################################################################################
+
     def invoke_client(self, cid, request, timeout=5, ctx=None, use_send=True, _Class=InvokeClientRequest, wait_for_response=True):
         """ Invokes a remote WSX client with request given on input, returning its response,
         if any was produced in the expected time.
@@ -1202,7 +1231,7 @@ class WebSocket(_WebSocket):
 
         # Log what is about to be sent
         if use_send:
-            logger.info('Sending message `%s` from `%s` to `%s` `%s` `%s` `%s`', serialized,
+            logger.info('Sending message `%s` from `%s` to `%s` `%s` `%s` `%s`', self._shorten_data(serialized),
                 self.python_id, self.pub_client_id, self.ext_client_id, self.ext_client_name, self.peer_conn_info_pretty)
 
         try:
@@ -1213,8 +1242,9 @@ class WebSocket(_WebSocket):
         except RuntimeError as e:
             if str(e) == _cannot_send:
                 msg = 'Cannot send message (socket terminated #2), disconnecting client, cid:`%s`, msg:`%s` conn:`%s`'
-                logger.info(msg, cid, serialized, self.peer_conn_info_pretty)
-                logger_zato.info(msg, cid, serialized, self.peer_conn_info_pretty)
+                data_msg = self._shorten_data(msg)
+                logger.info(data_msg, cid, serialized, self.peer_conn_info_pretty)
+                logger_zato.info(data_msg, cid, serialized, self.peer_conn_info_pretty)
                 self.disconnect_client(cid, close_code.runtime_invoke_client, 'Client invocation runtime error')
                 raise Exception('WSX client disconnected cid:`{}, peer:`{}`'.format(cid, self.peer_conn_info_pretty))
             else:
@@ -1237,7 +1267,7 @@ class WebSocket(_WebSocket):
             self.pub_client_id, ' {})'.format(self.ext_client_name) if self.ext_client_name else ')')
 
         self.unregister_auth_client()
-        del self.container.clients[self.pub_client_id]
+        self.container.clients.pop(self.pub_client_id, None)
 
         # Unregister the client from audit log
         if self.is_audit_log_sent_active or self.is_audit_log_received_active:
