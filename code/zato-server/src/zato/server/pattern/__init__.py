@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from bunch import Bunch
@@ -16,7 +14,15 @@ from logging import DEBUG, getLogger
 from past.builtins import basestring
 
 # Zato
+from zato.common import DATA_FORMAT
 from zato.common.json_internal import dumps, loads
+
+# ################################################################################################################################
+
+if 0:
+    from zato.server.service import Service
+
+    Service = Service
 
 # ################################################################################################################################
 
@@ -43,6 +49,7 @@ class ParallelBase(object):
     request_ctx_cid_key = None
 
     def __init__(self, source):
+        # type: (Service) -> None
         self.source = source
         self.cid = source.cid
 
@@ -52,6 +59,8 @@ class ParallelBase(object):
         """ Invokes targets collecting their responses, can be both as a whole or individual ones,
         and executes callback(s).
         """
+        # type: (list, list, list, str) -> None
+
         # Can be user-provided or what our source gave us
         cid = cid or self.cid
 
@@ -75,20 +84,20 @@ class ParallelBase(object):
 
             # Invoke targets
             for name, payload in targets.items():
-                to_json_string = False if isinstance(payload, basestring) else True
-                self.source.invoke_async(name, payload, self.call_channel, to_json_string=to_json_string,
-                    zato_ctx={self.request_ctx_cid_key: cid})
+                self.source.invoke_async(name, payload, self.call_channel, to_json_string=True,
+                    data_format=DATA_FORMAT.JSON, zato_ctx={self.request_ctx_cid_key: cid})
 
         return cid
 
 # ################################################################################################################################
 
     def _log_before_callbacks(self, cb_type, cb_list, invoked_service):
-        logger.debug('(%s) Before %s callbacks `%s` after `%s`', self.pattern_name, cb_type, cb_list, invoked_service.name)
+        logger.warn('(%s) Before %s callbacks `%s` after `%s`', self.pattern_name, cb_type, cb_list, invoked_service.name)
 
 # ################################################################################################################################
 
     def on_call_finished(self, invoked_service, response, exception):
+        # type: (Service, object, Exception)
 
         now = invoked_service.time.utcnow()
         cid = invoked_service.wsgi_environ['zato.request_ctx.{}'.format(self.request_ctx_cid_key)]
@@ -138,8 +147,8 @@ class ParallelBase(object):
 
                     on_final = payload['on_final']
 
-                    if logger.isEnabledFor(DEBUG):
-                        self._log_before_callbacks('on_final', on_final, invoked_service)
+                    #if logger.isEnabledFor(DEBUG):
+                    self._log_before_callbacks('on_final', on_final, invoked_service)
 
                     self.invoke_callbacks(invoked_service, payload, on_final, self.on_final_channel, cid)
 

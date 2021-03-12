@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -34,10 +34,12 @@ from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, KVDB, NO_DEFAULT_
      WEB_SOCKET, zato_no_op_marker
 from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL, SERVICE
 from zato.common.exception import Inactive, Reportable, ZatoException
+from zato.common.ext.dataclasses import dataclass
 from zato.common.json_internal import dumps
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException
 from zato.common.nav import DictNav, ListNav
-from zato.common.util.api import get_response_value, make_repr, new_cid, payload_from_request, service_name_from_impl, uncamelify
+from zato.common.util.api import get_response_value, make_repr, new_cid, payload_from_request, service_name_from_impl, \
+     spawn_greenlet, uncamelify
 from zato.server.connection import slow_response
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
@@ -182,6 +184,21 @@ def call_hook_with_service(hook, service):
 
 # ################################################################################################################################
 
+@dataclass(init=False)
+class AsyncCtx:
+    """ Used by self.invoke_async to relay context of the invocation.
+    """
+    calling_service: str
+    service_name: str
+    cid: str
+    data: str
+    data_format: str
+    callback: str
+    zato_ctx: object
+    environ: dict
+
+# ################################################################################################################################
+
 class ChannelInfo(object):
     """ Conveys information abouts the channel that a service is invoked through.
     Available in services as self.channel or self.chan.
@@ -223,6 +240,8 @@ class ChannelSecurityInfo(object):
         self.username = username # type: str
         self.impl = impl # type: dict
 
+# ################################################################################################################################
+
     def to_dict(self, needs_impl=False):
         out = {
             'id': self.id,
@@ -245,6 +264,8 @@ class _WSXChannel(object):
         # type: (ParallelServer, str)
         self.server = server
         self.channel_name = channel_name
+
+# ################################################################################################################################
 
     def broadcast(self, data, _action=BROKER_MSG_CHANNEL.WEB_SOCKET_BROADCAST.value):
         """ Sends data to all WSX clients connected to this channel.
@@ -270,6 +291,8 @@ class _WSXChannelContainer(object):
         self._lock = RLock()
         self._channels = {}
 
+# ################################################################################################################################
+
     def __getitem__(self, channel_name):
         # type: (str) -> _WSXChannel
         with self._lock:
@@ -280,6 +303,8 @@ class _WSXChannelContainer(object):
                     raise KeyError('No such WebSocket channel `{}`'.format(channel_name))
 
             return self._channels[channel_name]
+
+# ################################################################################################################################
 
     def get(self, channel_name):
         # type: (str) -> _WSXChannel
@@ -316,6 +341,7 @@ class PatternsFacade(object):
     __slots__ = ('invoke_retry', 'fanout', 'parallel')
 
     def __init__(self, invoking_service):
+        # type: (Service) -> None
         self.invoke_retry = InvokeRetry(invoking_service)
         self.fanout = FanOut(invoking_service)
         self.parallel = ParallelExec(invoking_service)
@@ -451,9 +477,13 @@ class Service(object):
             HL7API(self._worker_store.outconn_hl7_mllp) if self.component_enabled_hl7 else None,
         )
 
+# ################################################################################################################################
+
     @staticmethod
     def get_name_static(class_):
         return Service.get_name(class_)
+
+# ################################################################################################################################
 
     @classmethod
     def get_name(class_):
@@ -470,11 +500,15 @@ class Service(object):
 
         return class_.__service_name
 
+# ################################################################################################################################
+
     @classmethod
     def get_impl_name(class_):
         if not hasattr(class_, '__service_impl_name'):
             class_.__service_impl_name = '{}.{}'.format(class_.__module__, class_.__name__)
         return class_.__service_impl_name
+
+# ################################################################################################################################
 
     @staticmethod
     def convert_impl_name(name):
@@ -489,6 +523,8 @@ class Service(object):
 
         return '{}.{}'.format('.'.join(path), class_name)
 
+# ################################################################################################################################
+
     @classmethod
     def add_http_method_handlers(class_):
 
@@ -500,6 +536,8 @@ class Service(object):
 
                 method = name.replace('handle_', '')
                 class_.http_method_handlers[method] = getattr(class_, name)
+
+# ################################################################################################################################
 
     def _init(self, may_have_wsgi_environ=False):
         """ Actually initializes the service.
@@ -544,6 +582,8 @@ class Service(object):
         # Cache is always enabled
         self.cache = self._worker_store.cache_api
 
+# ################################################################################################################################
+
     def set_response_data(self, service, _raw_types=_response_raw_types, **kwargs):
         # type: (Service, tuple, object)
         response = service.response.payload
@@ -554,6 +594,8 @@ class Service(object):
             service.response.payload = response
 
         return response
+
+# ################################################################################################################################
 
     def _invoke(self, service, channel, http_channels=(CHANNEL.HTTP_SOAP, CHANNEL.INVOKE)):
         #
@@ -590,6 +632,8 @@ class Service(object):
         else:
             service.handle()
 
+# ################################################################################################################################
+
     def extract_target(self, name):
         """ Splits a service's name into name and target, if the latter is provided on input at all.
         """
@@ -603,6 +647,8 @@ class Service(object):
             target = ''
 
         return name, target
+
+# ################################################################################################################################
 
     def update_handle(self,
         set_response_func, # type: Callable
@@ -755,6 +801,8 @@ class Service(object):
 
         return response
 
+# ################################################################################################################################
+
     def invoke_by_impl_name(self, impl_name, payload='', channel=CHANNEL.INVOKE, data_format=DATA_FORMAT.DICT,
         transport=None, serialize=False, as_bunch=False, timeout=None, raise_timeout=True, **kwargs):
         """ Invokes a service synchronously by its implementation name (full dotted Python name).
@@ -809,6 +857,8 @@ class Service(object):
             else:
                 return out
 
+# ################################################################################################################################
+
     def invoke(self, name, *args, **kwargs):
         """ Invokes a service synchronously by its name.
         """
@@ -824,6 +874,8 @@ class Service(object):
 
         return self.invoke_by_impl_name(self.server.service_store.name_to_impl_name[name], *args, **kwargs)
 
+# ################################################################################################################################
+
     def invoke_by_id(self, service_id, *args, **kwargs):
         """ Invokes a service synchronously by its ID.
         """
@@ -833,11 +885,17 @@ class Service(object):
 
         return self.invoke_by_impl_name(self.server.service_store.id_to_impl_name[service_id], *args, **kwargs)
 
+# ################################################################################################################################
+
     def invoke_async(self, name, payload='', channel=CHANNEL.INVOKE_ASYNC, data_format=DATA_FORMAT.DICT,
-                     transport=None, expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=False, cid=None, callback=None,
-                     zato_ctx={}, environ={}):
+        transport=None, expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=False, cid=None, callback=None,
+        zato_ctx=None, environ=None):
         """ Invokes a service asynchronously by its name.
         """
+
+        zato_ctx = zato_ctx if zato_ctx is not None else {}
+        environ = environ if environ is not None else {}
+
         if self.component_enabled_target_matcher:
             name, target = self.extract_target(name)
             zato_ctx['zato.request_ctx.target'] = target
@@ -870,6 +928,7 @@ class Service(object):
 
             # Otherwise the callback must be a string pointing to the actual service to reply to so we don't need to do anything.
 
+        '''
         msg = {}
         msg['action'] = SERVICE.PUBLISH.value
         msg['service'] = name
@@ -882,12 +941,36 @@ class Service(object):
         msg['callback'] = callback
         msg['zato_ctx'] = zato_ctx
         msg['environ'] = environ
+        '''
 
-        # If we have a target we need to invoke all the servers
-        # and these which are not able to handle the target will drop the message.
-        (self.broker_client.publish if target else self.broker_client.invoke_async)(msg, expiration=expiration)
+        async_ctx = AsyncCtx()
+        async_ctx.calling_service = self.name
+        async_ctx.service_name = name
+        async_ctx.cid = cid
+        async_ctx.data = payload
+        async_ctx.data_format = data_format
+        async_ctx.callback = callback
+        async_ctx.zato_ctx = zato_ctx
+        async_ctx.environ = environ
+
+        spawn_greenlet(self._invoke_async, async_ctx)
 
         return cid
+
+# ################################################################################################################################
+
+    def _invoke_async(self, ctx):
+        # type: (AsyncCtx) -> None
+
+        response = self.invoke(ctx.service_name)
+
+        print()
+        print(111, ctx)
+        print()
+        print(222, response)
+        print()
+
+# ################################################################################################################################
 
     def post_handle(self, _get_response_value=get_response_value, _utcnow=datetime.utcnow,
         _service_time_basic=KVDB.SERVICE_TIME_BASIC, _service_time_raw=KVDB.SERVICE_TIME_RAW,
@@ -979,11 +1062,15 @@ class Service(object):
     def translate(self, *args, **kwargs):
         raise NotImplementedError('An initializer should override this method')
 
+# ################################################################################################################################
+
     def handle(self):
         """ The only method Zato services need to implement in order to process
         incoming requests.
         """
         raise NotImplementedError('Should be overridden by subclasses (Service.handle)')
+
+# ################################################################################################################################
 
     def lock(self, name=None, *args, **kwargs):
         """ Creates a distributed lock.
@@ -1186,7 +1273,7 @@ class Service(object):
         service.in_reply_to = in_reply_to
         service.environ = environ or {}
 
-        channel_item = wsgi_environ.get('zato.channel_item', {})
+        channel_item = wsgi_environ.get('zato.channel_item') or {}
         sec_def_info = wsgi_environ.get('zato.sec_def', {})
 
         if channel_type == _AMQP:
