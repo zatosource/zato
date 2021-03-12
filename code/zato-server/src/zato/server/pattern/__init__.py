@@ -147,7 +147,7 @@ class ParallelBase(object):
 
                     on_final = payload['on_final']
 
-                    #if logger.isEnabledFor(DEBUG):
+                    # if logger.isEnabledFor(DEBUG):
                     self._log_before_callbacks('on_final', on_final, invoked_service)
 
                     self.invoke_callbacks(invoked_service, payload, on_final, self.on_final_channel, cid)
