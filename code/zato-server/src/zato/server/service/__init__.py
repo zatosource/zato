@@ -11,6 +11,7 @@ import logging
 from datetime import datetime
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED
 from traceback import format_exc
+from typing import Optional as optional
 
 # Bunch
 from bunch import bunchify
@@ -32,7 +33,7 @@ from zato.common.py23_ import maxint
 from zato.bunch import Bunch
 from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, PUBSUB, \
      WEB_SOCKET, zato_no_op_marker
-from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL, SERVICE
+from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL
 from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.ext.dataclasses import dataclass
 from zato.common.json_internal import dumps
@@ -154,6 +155,10 @@ PubSub = PubSub
 
 # ################################################################################################################################
 
+_async_callback = CHANNEL.INVOKE_ASYNC_CALLBACK
+
+# ################################################################################################################################
+
 _wsgi_channels = (CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC)
 
 # ################################################################################################################################
@@ -193,7 +198,7 @@ class AsyncCtx:
     cid: str
     data: str
     data_format: str
-    callback: str
+    callback: optional[str]
     zato_ctx: object
     environ: dict
 
@@ -926,22 +931,10 @@ class Service(object):
             if sink in self.server.service_store.name_to_impl_name:
                 callback = sink
 
-            # Otherwise the callback must be a string pointing to the actual service to reply to so we don't need to do anything.
-
-        '''
-        msg = {}
-        msg['action'] = SERVICE.PUBLISH.value
-        msg['service'] = name
-        msg['payload'] = payload
-        msg['cid'] = cid
-        msg['channel'] = channel
-        msg['data_format'] = data_format
-        msg['transport'] = transport
-        msg['is_async'] = True
-        msg['callback'] = callback
-        msg['zato_ctx'] = zato_ctx
-        msg['environ'] = environ
-        '''
+            else:
+                # Otherwise the callback must be a string pointing to the actual service to reply to
+                # so we do not need to do anything.
+                pass
 
         async_ctx = AsyncCtx()
         async_ctx.calling_service = self.name
@@ -949,7 +942,7 @@ class Service(object):
         async_ctx.cid = cid
         async_ctx.data = payload
         async_ctx.data_format = data_format
-        async_ctx.callback = callback
+        async_ctx.callback = callback if isinstance(callback, (list, tuple)) else [callback]
         async_ctx.zato_ctx = zato_ctx
         async_ctx.environ = environ
 
@@ -959,16 +952,16 @@ class Service(object):
 
 # ################################################################################################################################
 
-    def _invoke_async(self, ctx):
-        # type: (AsyncCtx) -> None
+    def _invoke_async(self, ctx, _async_callback=_async_callback, _new_cid=new_cid):
+        # type: (AsyncCtx, str, object) -> None
 
-        response = self.invoke(ctx.service_name)
+        # Invoke our target service ..
+        response = self.invoke(ctx.service_name, skip_response_elem=True)
 
-        print()
-        print(111, ctx)
-        print()
-        print(222, response)
-        print()
+        # .. and report back the response to our callback(s), if there are any.
+        for callback_service in ctx.callback: # type: str
+            self.invoke(callback_service, payload=response, channel=_async_callback, cid=_new_cid, data_format=ctx.data_format,
+                in_reply_to=ctx.cid, environ=ctx.environ)
 
 # ################################################################################################################################
 
