@@ -198,7 +198,7 @@ class AsyncCtx:
     cid: str
     data: str
     data_format: str
-    callback: optional[str]
+    callback: optional[list] = None
     zato_ctx: object
     environ: dict
 
@@ -942,9 +942,11 @@ class Service(object):
         async_ctx.cid = cid
         async_ctx.data = payload
         async_ctx.data_format = data_format
-        async_ctx.callback = callback if isinstance(callback, (list, tuple)) else [callback]
         async_ctx.zato_ctx = zato_ctx
         async_ctx.environ = environ
+
+        if callback:
+            async_ctx.callback = callback if isinstance(callback, (list, tuple)) else [callback]
 
         spawn_greenlet(self._invoke_async, async_ctx)
 
@@ -958,10 +960,16 @@ class Service(object):
         # Invoke our target service ..
         response = self.invoke(ctx.service_name, skip_response_elem=True)
 
+        print()
+        print(111, ctx)
+        print(222, response)
+        print()
+
         # .. and report back the response to our callback(s), if there are any.
-        for callback_service in ctx.callback: # type: str
-            self.invoke(callback_service, payload=response, channel=_async_callback, cid=_new_cid, data_format=ctx.data_format,
-                in_reply_to=ctx.cid, environ=ctx.environ)
+        if ctx.callback:
+            for callback_service in ctx.callback: # type: str
+                self.invoke(callback_service, payload=response, channel=_async_callback, cid=_new_cid,
+                    data_format=ctx.data_format, in_reply_to=ctx.cid, environ=ctx.environ)
 
 # ################################################################################################################################
 
