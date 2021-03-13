@@ -48,9 +48,9 @@ from zato.server.connection.search import SearchAPI
 from zato.server.connection.sms import SMSAPI
 from zato.server.connection.zmq_.outgoing import ZMQFacade
 from zato.server.message import MessageFacade
-from zato.server.pattern.fanout import FanOut
-from zato.server.pattern.invoke_retry import InvokeRetry
-from zato.server.pattern.parallel import ParallelExec
+from zato.server.pattern.base import FanOut
+from zato.server.pattern.base import InvokeRetry
+from zato.server.pattern.base import ParallelExec
 from zato.server.pubsub import PubSub
 from zato.server.service.reqresp import AMQPRequestData, Cloud, Definition, HL7API, HL7RequestData, IBMMQRequestData, \
      InstantMessaging, Outgoing, Request
@@ -345,11 +345,11 @@ class PatternsFacade(object):
     """
     __slots__ = ('invoke_retry', 'fanout', 'parallel')
 
-    def __init__(self, invoking_service):
+    def __init__(self, invoking_service, cache, lock):
         # type: (Service) -> None
-        self.invoke_retry = InvokeRetry(invoking_service)
-        self.fanout = FanOut(invoking_service)
-        self.parallel = ParallelExec(invoking_service)
+        self.invoke_retry = InvokeRetry(invoking_service, cache, lock)
+        self.fanout = FanOut(invoking_service, cache, lock)
+        self.parallel = ParallelExec(invoking_service, cache, lock)
 
 # ################################################################################################################################
 
@@ -573,7 +573,7 @@ class Service(object):
                 self._json_pointer_store, self._xpath_store, self._msg_ns_store, self.request.payload, self.time)
 
         if self.component_enabled_patterns:
-            self.patterns = PatternsFacade(self)
+            self.patterns = PatternsFacade(self, self.server.internal_cache, self.server.internal_cache_lock)
 
         if may_have_wsgi_environ:
             self.request.http.init(self.wsgi_environ)
@@ -672,7 +672,7 @@ class Service(object):
         _call_hook_no_service=call_hook_no_service,
         _CHANNEL_SCHEDULER=CHANNEL.SCHEDULER,
         _CHANNEL_SERVICE=CHANNEL.SERVICE,
-        _pattern_channels=(CHANNEL.FANOUT_CALL, CHANNEL.PARALLEL_EXEC_CALL),
+        _pattern_call_channels=(CHANNEL.FANOUT_CALL, CHANNEL.PARALLEL_EXEC_CALL),
         *args, **kwargs):
 
         wsgi_environ = kwargs.get('wsgi_environ', {})
@@ -780,7 +780,7 @@ class Service(object):
                     response = set_response_func(service, data_format=data_format, transport=transport, **kwargs)
 
                     # If this was fan-out/fan-in we need to always notify our callbacks no matter the result
-                    if channel in _pattern_channels:
+                    if channel in _pattern_call_channels:
                         func = self.patterns.fanout.on_call_finished if channel == CHANNEL.FANOUT_CALL else \
                             self.patterns.parallel.on_call_finished
                         spawn(func, self, service.response.payload, exc_formatted)
@@ -959,11 +959,6 @@ class Service(object):
 
         # Invoke our target service ..
         response = self.invoke(ctx.service_name, skip_response_elem=True)
-
-        print()
-        print(111, ctx)
-        print(222, response)
-        print()
 
         # .. and report back the response to our callback(s), if there are any.
         if ctx.callback:
