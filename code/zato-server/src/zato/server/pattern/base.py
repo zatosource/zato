@@ -125,9 +125,6 @@ class ParallelBase:
             # .. exit early if we cannot find the entry for any reason ..
             if not entry:
                 logger.warn('No such parallel cache key `%s`', invoked_service.cid)
-                print()
-                print('NNN No such parallel cache key `{}` {}'.format(invoked_service.cid, invoked_service.name))
-                print()
                 return
 
             # .. alright, we can proceed ..
@@ -145,17 +142,28 @@ class ParallelBase:
                 invocation_response.exception = exception
                 invocation_response.ok = False if exception else True
                 invocation_response.source = self.source.name
-                invocation_response.target = invoked_service
+                invocation_response.target = invoked_service.name
+
+                # For pre-Zato 3.2 compatibility, callbacks expect dicts on input.
+                dict_payload = {
+                    'source': invocation_response.source,
+                    'target': invocation_response.target,
+                    'response': invocation_response.response,
+                    'req_ts_utc': invocation_response.req_ts_utc.isoformat(),
+                    'resp_ts_utc': invocation_response.resp_ts_utc.isoformat(),
+                    'ok': invocation_response.ok,
+                    'exception': invocation_response.exception,
+                }
 
                 # .. invoke any potential on-target callbacks ..
                 if entry.on_target_list:
+
+                    # Updates the dictionary in-place
+                    dict_payload['phase'] = 'on-target'
+
                     for on_target_item in entry.on_target_list: # type: str
-
-                        print('Invoked {} calling on-target {} with {}'.format(
-                            invoked_service.name, on_target_item, invocation_response))
-
                         invoked_service.invoke_async(
-                            on_target_item, invocation_response, channel=self.on_target_channel, cid=invoked_service.cid)
+                            on_target_item, dict_payload, channel=self.on_target_channel, cid=invoked_service.cid)
 
                 # .. check if this was the last service that we were waiting for ..
                 if entry.remaining_targets == 0:
@@ -163,21 +171,19 @@ class ParallelBase:
                     # .. if so, run the final callback services if it is required in our case ..
                     if self.needs_on_final:
                         if entry.on_final_list:
+
+                            # Updates the dictionary in-place
+                            dict_payload['phase'] = 'on-final'
+
                             for on_final_item in entry.on_final_list: # type: str
-
-                                print('Invoked {} calling on-final {}'.format(invoked_service.name, on_final_item))
-
                                 invoked_service.invoke_async(
-                                    on_final_item, invocation_response, channel=self.on_final_channel, cid=invoked_service.cid)
+                                    on_final_item, dict_payload,
+                                    channel=self.on_final_channel, cid=invoked_service.cid)
 
                     # .. now, clean up by deleting the current entry from cache.
                     # Note that we ise None in an unlikely it is already deleted,
                     # although this should not happen because we are the only piece of code holding this lock.
                     self.cache.pop(invoked_service.cid, None)
-
-                    print()
-                    print('DELETE', invoked_service.cid)
-                    print()
 
 # ################################################################################################################################
 # ################################################################################################################################
