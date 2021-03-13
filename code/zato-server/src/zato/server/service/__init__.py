@@ -573,7 +573,7 @@ class Service(object):
                 self._json_pointer_store, self._xpath_store, self._msg_ns_store, self.request.payload, self.time)
 
         if self.component_enabled_patterns:
-            self.patterns = PatternsFacade(self, self.server.internal_cache, self.server.internal_cache_lock)
+            self.patterns = PatternsFacade(self, self.server.internal_cache_patterns, self.server.internal_cache_lock_patterns)
 
         if may_have_wsgi_environ:
             self.request.http.init(self.wsgi_environ)
