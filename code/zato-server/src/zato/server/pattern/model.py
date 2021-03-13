@@ -26,3 +26,10 @@ class ParallelCtx:
     target_list: list_[Target]
     on_target_list: optional[list] = None
     on_final_list: optional[list] = None
+
+@dataclass(init=False)
+class CacheEntry:
+    cid: str
+    req_ts_utc: datetime
+    on_target_list: optional[list] = None
+    on_final_list: optional[list] = None
