@@ -198,9 +198,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # and this will be set to True the first time around.
         self._is_process_closing = False
 
-        # Internal cache - not to be used by user services
-        self.internal_cache = {}
-        self.internal_cache_lock = gevent.lock.RLock()
+        # Internal caches - not to be used by user services
+        self.internal_cache_patterns = {}
+        self.internal_cache_lock_patterns = gevent.lock.RLock()
 
         # Allows users store arbitrary data across service invocations
         self.user_ctx = Bunch()
