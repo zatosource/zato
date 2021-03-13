@@ -11,11 +11,14 @@ from datetime import datetime
 from logging import getLogger
 
 # Zato
-from zato.server.pattern.model import ParallelCtx
+from zato.common import CHANNEL
+from zato.common.util import spawn_greenlet
+from zato.server.pattern.model import CacheEntry, ParallelCtx
 
 # ################################################################################################################################
 
 if 0:
+    from gevent.lock import RLock
     from zato.server.service import Service
 
     Service = Service
@@ -27,19 +30,48 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+_channel_fanout = CHANNEL.FANOUT_CALL
+_channel_parallel = CHANNEL.PARALLEL_EXEC_CALL
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ParallelBase:
     """ A base class for most parallel integration patterns. An instance of this class is created for each service instance.
     """
-    def __init__(self, source):
-        # type: (Service) -> None
+    def __init__(self, source, cache, lock):
+        # type: (Service, dict, RLock) -> None
         self.source = source
+        self.cache = cache
+        self.lock = lock
         self.cid = source.cid
 
 # ################################################################################################################################
 
     def _invoke(self, ctx):
         # type: (ParallelCtx)
-        pass
+
+        # Store metadata about our invocation ..
+        with self.lock:
+
+            # .. create a new entry ..
+            entry = CacheEntry()
+            entry.cid = ctx.cid
+            entry.req_ts_utc = ctx.req_ts_utc
+            entry.on_target_list = ctx.on_target_list
+            entry.on_final_list = ctx.on_final_list
+
+            # .. and add it to the cache.
+            self.cache[ctx.cid] = entry
+
+        print()
+
+        for item in ctx.target_list:
+            print(111, item)
+
+        print(222, self.cache)
+
+        print()
 
 # ################################################################################################################################
 
@@ -62,7 +94,7 @@ class ParallelBase:
         ctx.on_target_list = [on_target] if isinstance(on_target, str) else on_target
 
         # .. invoke our implementation in background ..
-        self._invoke(ctx)
+        spawn_greenlet(self._invoke, ctx)
 
         # .. and return the CID to the caller.
         return cid
