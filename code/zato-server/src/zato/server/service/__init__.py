@@ -56,6 +56,7 @@ from zato.server.service.reqresp import AMQPRequestData, Cloud, Definition, HL7A
      InstantMessaging, Outgoing, Request
 
 # Zato - Cython
+from zato.cy.reqresp.payload import SimpleIOPayload
 from zato.cy.reqresp.response import Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
@@ -783,7 +784,13 @@ class Service(object):
                     if channel in _pattern_call_channels:
                         func = self.patterns.fanout.on_call_finished if channel == CHANNEL.FANOUT_CALL else \
                             self.patterns.parallel.on_call_finished
-                        spawn(func, self, service.response.payload, exc_formatted)
+
+                        if isinstance(service.response.payload, SimpleIOPayload):
+                            payload = service.response.payload.getvalue()
+                        else:
+                            payload = service.response.payload
+
+                        spawn_greenlet(func, service, payload, exc_formatted)
 
                 except Exception as resp_e:
 
@@ -948,23 +955,24 @@ class Service(object):
         if callback:
             async_ctx.callback = callback if isinstance(callback, (list, tuple)) else [callback]
 
-        spawn_greenlet(self._invoke_async, async_ctx)
+        spawn_greenlet(self._invoke_async, async_ctx, channel)
 
         return cid
 
 # ################################################################################################################################
 
-    def _invoke_async(self, ctx, _async_callback=_async_callback, _new_cid=new_cid):
+    def _invoke_async(self, ctx, channel, _async_callback=_async_callback, _new_cid=new_cid):
         # type: (AsyncCtx, str, object) -> None
 
         # Invoke our target service ..
-        response = self.invoke(ctx.service_name, skip_response_elem=True)
+        response = self.invoke(ctx.service_name, ctx.data, data_format=ctx.data_format, channel=channel, skip_response_elem=True)
 
         # .. and report back the response to our callback(s), if there are any.
         if ctx.callback:
             for callback_service in ctx.callback: # type: str
                 self.invoke(callback_service, payload=response, channel=_async_callback, cid=_new_cid,
-                    data_format=ctx.data_format, in_reply_to=ctx.cid, environ=ctx.environ)
+                    data_format=ctx.data_format, in_reply_to=ctx.cid, environ=ctx.environ,
+                    skip_response_elem=True)
 
 # ################################################################################################################################
 
