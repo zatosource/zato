@@ -147,24 +147,28 @@ class ParallelBase:
                 invocation_response.source = self.source.name
                 invocation_response.target = invoked_service
 
-                print(111, entry.on_target_list)
-
                 # .. invoke any potential on-target callbacks ..
-                for on_target_item in entry.on_target_list: # type: str
+                if entry.on_target_list:
+                    for on_target_item in entry.on_target_list: # type: str
 
-                    print('Invoked {} calling {}'.format(invoked_service.name, on_target_item))
+                        print('Invoked {} calling on-target {} with {}'.format(
+                            invoked_service.name, on_target_item, invocation_response))
 
-                    invoked_service.invoke_async(
-                        on_target_item, invocation_response, channel=self.on_target_channel, cid=invoked_service.cid)
+                        invoked_service.invoke_async(
+                            on_target_item, invocation_response, channel=self.on_target_channel, cid=invoked_service.cid)
 
                 # .. check if this was the last service that we were waiting for ..
                 if entry.remaining_targets == 0:
 
                     # .. if so, run the final callback services if it is required in our case ..
                     if self.needs_on_final:
-                        for on_final_item in entry.on_final_list: # type: str
-                            invoked_service.invoke_async(
-                                on_final_item, invocation_response, channel=self.on_final_channel, cid=invoked_service.cid)
+                        if entry.on_final_list:
+                            for on_final_item in entry.on_final_list: # type: str
+
+                                print('Invoked {} calling on-final {}'.format(invoked_service.name, on_final_item))
+
+                                invoked_service.invoke_async(
+                                    on_final_item, invocation_response, channel=self.on_final_channel, cid=invoked_service.cid)
 
                     # .. now, clean up by deleting the current entry from cache.
                     # Note that we ise None in an unlikely it is already deleted,
@@ -181,6 +185,9 @@ class ParallelBase:
 class ParallelExec(ParallelBase):
     call_channel = CHANNEL.PARALLEL_EXEC_CALL
     on_target_channel = CHANNEL.PARALLEL_EXEC_ON_TARGET
+
+    def invoke(self, targets, on_target, cid=None):
+        return super().invoke(targets, None, on_target, cid)
 
 # ################################################################################################################################
 # ################################################################################################################################
