@@ -13,13 +13,16 @@ from unittest import main, TestCase
 from faker import Faker
 
 # gevent
+from gevent import sleep
 from gevent.lock import RLock
 
 # Zato
+from zato.common import CHANNEL
 from zato.common.ext.dataclasses import dataclass
-from zato.server.pattern.base import ParallelBase
+from zato.common.util import spawn_greenlet
+from zato.server.pattern.base import ParallelBase, ParallelExec
 from zato.server.pattern.model import ParallelCtx
-from zato.server.service import Service
+from zato.server.service import PatternsFacade, Service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,10 +36,40 @@ fake = Faker()
 # ################################################################################################################################
 # ################################################################################################################################
 
+_pattern_call_channels=(CHANNEL.FANOUT_CALL, CHANNEL.PARALLEL_EXEC_CALL)
+_fanout_call = CHANNEL.FANOUT_CALL
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class FakeService:
-    def __init__(self):
+    def __init__(self, cache, lock, response_payload):
+        # type: (dict, RLock, str) -> None
         self.cid = None  # type: int
         self.name = None # type: str
+        self.cache = cache
+        self.lock = lock
+        self.patterns = PatternsFacade(self, self.cache, self.lock)
+        self.response_payload = response_payload
+        self.response_exception = None
+
+    def invoke_async(self, target_name, payload, channel, cid):
+
+        invoked_service = FakeService(self.cache, self.lock, payload)
+        invoked_service.name = target_name
+        invoked_service.cid = cid
+
+        # If we are invoked via patterns, let the callbacks run ..
+        if channel in _pattern_call_channels:
+
+            # .. find the correct callback function first ..
+            if channel == _fanout_call:
+                func = self.patterns.fanout.on_call_finished
+            else:
+                func = self.patterns.parallel.on_call_finished
+
+            # .. and run the function in a new greenlet.
+            spawn_greenlet(func, invoked_service, self.response_payload, self.response_exception)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -66,15 +99,15 @@ class ParamsCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class PatternBaseTestCase(TestCase):
+class BaseTestCase(TestCase):
 
-    def get_default_params(self):
-        # type: () -> ParamsCtx
+    def get_default_params(self, cache, lock, response_payload=None):
+        # type: (dict, RLock, str) -> ParamsCtx
 
         cid = fake.pyint()
-        source_name = fake.name()
+        source_name = 'source.name.1'
 
-        source_service = FakeService()
+        source_service = FakeService(cache, lock, response_payload)
         source_service.cid = cid
         source_service.name = source_name
 
@@ -129,13 +162,15 @@ class PatternBaseTestCase(TestCase):
         return ctx
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+class PatternBaseTestCase(BaseTestCase):
 
     def xtest_base_parallel_invoke_params_no_cid(self):
 
-        params_ctx = self.get_default_params()
-
         cache = {}
         lock = RLock()
+        params_ctx = self.get_default_params(cache, lock)
 
         def xtest_invoke(ctx):
             # type: (ParallelCtx) -> None
@@ -154,11 +189,10 @@ class PatternBaseTestCase(TestCase):
 
     def xtest_base_parallel_invoke_params_with_cid(self):
 
-        params_ctx = self.get_default_params()
-        custom_cid = fake.pystr()
-
         cache = {}
         lock = RLock()
+        params_ctx = self.get_default_params(cache, lock)
+        custom_cid = fake.pystr()
 
         def xtest_invoke(ctx):
             # type: (ParallelCtx) -> None
@@ -177,12 +211,11 @@ class PatternBaseTestCase(TestCase):
 
     def xtest_base_parallel_invoke_params_single_elements(self):
 
-        params_ctx = self.get_default_params()
-        custom_on_final = fake.pystr()
-        custom_on_target = fake.pystr()
-
         cache = {}
         lock = RLock()
+        params_ctx = self.get_default_params(cache, lock)
+        custom_on_final = fake.pystr()
+        custom_on_target = fake.pystr()
 
         def xtest_invoke(ctx):
             # type: (ParallelCtx) -> None
@@ -201,12 +234,11 @@ class PatternBaseTestCase(TestCase):
 
     def xtest_base_parallel_invoke_params_final_is_none(self):
 
-        params_ctx = self.get_default_params()
-        custom_on_final = None
-        custom_on_target = fake.pystr()
-
         cache = {}
         lock = RLock()
+        params_ctx = self.get_default_params(cache, lock)
+        custom_on_final = None
+        custom_on_target = fake.pystr()
 
         def xtest_invoke(ctx):
             # type: (ParallelCtx) -> None
@@ -225,12 +257,11 @@ class PatternBaseTestCase(TestCase):
 
     def xtest_base_parallel_invoke_params_target_is_none(self):
 
-        params_ctx = self.get_default_params()
-        custom_on_final = fake.pystr()
-        custom_on_target = None
-
         cache = {}
         lock = RLock()
+        params_ctx = self.get_default_params(cache, lock)
+        custom_on_final = fake.pystr()
+        custom_on_target = None
 
         def xtest_invoke(ctx):
             # type: (ParallelCtx) -> None
@@ -246,16 +277,22 @@ class PatternBaseTestCase(TestCase):
         api.invoke(params_ctx.targets, custom_on_final, custom_on_target)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-    def test_base_invoke_callback_all(self):
-
-        params_ctx = self.get_default_params()
+class ParallelExecTestCase(BaseTestCase):
+    def test_parallel_exec(self):
 
         cache = {}
         lock = RLock()
+        response_payload = 'my.payload'
+        params_ctx = self.get_default_params(cache, lock, response_payload)
+        params_ctx.on_final_list = []
 
-        api = ParallelBase(params_ctx.source_service, cache, lock)
+        api = ParallelExec(params_ctx.source_service, cache, lock)
         api.invoke(params_ctx.targets, params_ctx.on_final_list, params_ctx.on_target_list)
+
+        # Give the test enough time to run
+        sleep(0.01)
 
 # ################################################################################################################################
 # ################################################################################################################################
