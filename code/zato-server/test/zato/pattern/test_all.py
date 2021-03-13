@@ -22,7 +22,7 @@ from zato.common.ext.dataclasses import dataclass
 from zato.common.util import spawn_greenlet
 from zato.server.pattern.base import ParallelBase, ParallelExec
 from zato.server.pattern.model import ParallelCtx
-from zato.server.service import PatternsFacade, Service
+from zato.server.service import PatternsFacade
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -166,13 +166,13 @@ class BaseTestCase(TestCase):
 
 class PatternBaseTestCase(BaseTestCase):
 
-    def xtest_base_parallel_invoke_params_no_cid(self):
+    def test_base_parallel_invoke_params_no_cid(self):
 
         cache = {}
         lock = RLock()
         params_ctx = self.get_default_params(cache, lock)
 
-        def xtest_invoke(ctx):
+        def test_invoke(ctx):
             # type: (ParallelCtx) -> None
 
             self.assertEqual(ctx.cid, params_ctx.cid)
@@ -187,14 +187,14 @@ class PatternBaseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_base_parallel_invoke_params_with_cid(self):
+    def test_base_parallel_invoke_params_with_cid(self):
 
         cache = {}
         lock = RLock()
         params_ctx = self.get_default_params(cache, lock)
         custom_cid = fake.pystr()
 
-        def xtest_invoke(ctx):
+        def test_invoke(ctx):
             # type: (ParallelCtx) -> None
 
             self.assertEqual(ctx.cid, custom_cid)
@@ -209,7 +209,7 @@ class PatternBaseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_base_parallel_invoke_params_single_elements(self):
+    def test_base_parallel_invoke_params_single_elements(self):
 
         cache = {}
         lock = RLock()
@@ -217,7 +217,7 @@ class PatternBaseTestCase(BaseTestCase):
         custom_on_final = fake.pystr()
         custom_on_target = fake.pystr()
 
-        def xtest_invoke(ctx):
+        def test_invoke(ctx):
             # type: (ParallelCtx) -> None
 
             self.assertEqual(ctx.cid, params_ctx.cid)
@@ -232,7 +232,7 @@ class PatternBaseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_base_parallel_invoke_params_final_is_none(self):
+    def test_base_parallel_invoke_params_final_is_none(self):
 
         cache = {}
         lock = RLock()
@@ -240,7 +240,7 @@ class PatternBaseTestCase(BaseTestCase):
         custom_on_final = None
         custom_on_target = fake.pystr()
 
-        def xtest_invoke(ctx):
+        def test_invoke(ctx):
             # type: (ParallelCtx) -> None
 
             self.assertEqual(ctx.cid, params_ctx.cid)
@@ -255,7 +255,7 @@ class PatternBaseTestCase(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_base_parallel_invoke_params_target_is_none(self):
+    def test_base_parallel_invoke_params_target_is_none(self):
 
         cache = {}
         lock = RLock()
@@ -263,7 +263,7 @@ class PatternBaseTestCase(BaseTestCase):
         custom_on_final = fake.pystr()
         custom_on_target = None
 
-        def xtest_invoke(ctx):
+        def test_invoke(ctx):
             # type: (ParallelCtx) -> None
 
             self.assertEqual(ctx.cid, params_ctx.cid)
