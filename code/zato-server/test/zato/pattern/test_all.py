@@ -20,7 +20,7 @@ from gevent.lock import RLock
 from zato.common import CHANNEL
 from zato.common.ext.dataclasses import dataclass
 from zato.common.util import spawn_greenlet
-from zato.server.pattern.base import ParallelBase, ParallelExec
+from zato.server.pattern.api import ParallelBase, ParallelExec
 from zato.server.pattern.model import ParallelCtx
 from zato.server.service import PatternsFacade
 
