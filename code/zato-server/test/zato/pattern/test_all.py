@@ -305,7 +305,7 @@ class PatternBaseTestCase(BaseTestCase):
 # ################################################################################################################################
 
 class ParallelExecTestCase(BaseTestCase):
-    def xtest_parallel_exec(self):
+    def test_parallel_exec(self):
 
         cache = {}
         lock = RLock()
@@ -314,7 +314,7 @@ class ParallelExecTestCase(BaseTestCase):
         params_ctx.on_final_list = []
 
         api = ParallelExec(params_ctx.source_service, cache, lock)
-        api.invoke(params_ctx.targets, params_ctx.on_final_list, params_ctx.on_target_list)
+        api.invoke(params_ctx.targets, params_ctx.on_target_list)
 
         # Give the test enough time to run
         sleep(0.01)
