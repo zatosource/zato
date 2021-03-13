@@ -48,9 +48,9 @@ from zato.server.connection.search import SearchAPI
 from zato.server.connection.sms import SMSAPI
 from zato.server.connection.zmq_.outgoing import ZMQFacade
 from zato.server.message import MessageFacade
-from zato.server.pattern.base import FanOut
-from zato.server.pattern.base import InvokeRetry
-from zato.server.pattern.base import ParallelExec
+from zato.server.pattern.api import FanOut
+from zato.server.pattern.api import InvokeRetry
+from zato.server.pattern.api import ParallelExec
 from zato.server.pubsub import PubSub
 from zato.server.service.reqresp import AMQPRequestData, Cloud, Definition, HL7API, HL7RequestData, IBMMQRequestData, \
      InstantMessaging, Outgoing, Request
