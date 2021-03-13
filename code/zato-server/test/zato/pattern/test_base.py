@@ -165,6 +165,69 @@ class PatternBaseTestCase(TestCase):
         api.invoke(params_ctx.targets, params_ctx.on_final_list, params_ctx.on_target_list, custom_cid)
 
 # ################################################################################################################################
+
+    def test_base_parallel_invoke_params_single_elements(self):
+
+        params_ctx = self.get_default_params()
+        custom_on_final = fake.pystr()
+        custom_on_target = fake.pystr()
+
+        def test_invoke(ctx):
+            # type: (ParallelCtx) -> None
+
+            self.assertEqual(ctx.cid, params_ctx.cid)
+            self.assertEqual(ctx.source_name, params_ctx.source_name)
+            self.assertDictEqual(ctx.target_list, params_ctx.targets)
+            self.assertListEqual(ctx.on_final_list, [custom_on_final])
+            self.assertListEqual(ctx.on_target_list, [custom_on_target])
+
+        api = ParallelBase(params_ctx.source_service)
+        api._invoke = test_invoke
+        api.invoke(params_ctx.targets, custom_on_final, custom_on_target)
+
+# ################################################################################################################################
+
+    def test_base_parallel_invoke_params_final_is_none(self):
+
+        params_ctx = self.get_default_params()
+        custom_on_final = None
+        custom_on_target = fake.pystr()
+
+        def test_invoke(ctx):
+            # type: (ParallelCtx) -> None
+
+            self.assertEqual(ctx.cid, params_ctx.cid)
+            self.assertEqual(ctx.source_name, params_ctx.source_name)
+            self.assertDictEqual(ctx.target_list, params_ctx.targets)
+            self.assertIsNone(ctx.on_final_list)
+            self.assertListEqual(ctx.on_target_list, [custom_on_target])
+
+        api = ParallelBase(params_ctx.source_service)
+        api._invoke = test_invoke
+        api.invoke(params_ctx.targets, custom_on_final, custom_on_target)
+
+# ################################################################################################################################
+
+    def test_base_parallel_invoke_params_target_is_none(self):
+
+        params_ctx = self.get_default_params()
+        custom_on_final = fake.pystr()
+        custom_on_target = None
+
+        def test_invoke(ctx):
+            # type: (ParallelCtx) -> None
+
+            self.assertEqual(ctx.cid, params_ctx.cid)
+            self.assertEqual(ctx.source_name, params_ctx.source_name)
+            self.assertDictEqual(ctx.target_list, params_ctx.targets)
+            self.assertListEqual(ctx.on_final_list, [custom_on_final])
+            self.assertIsNone(ctx.on_target_list)
+
+        api = ParallelBase(params_ctx.source_service)
+        api._invoke = test_invoke
+        api.invoke(params_ctx.targets, custom_on_final, custom_on_target)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
