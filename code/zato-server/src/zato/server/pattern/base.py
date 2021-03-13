@@ -13,7 +13,7 @@ from logging import getLogger
 # Zato
 from zato.common import CHANNEL
 from zato.common.util import spawn_greenlet
-from zato.server.pattern.model import CacheEntry, ParallelCtx
+from zato.server.pattern.model import CacheEntry, InvocationResponse, ParallelCtx, Target
 
 # ################################################################################################################################
 
@@ -30,15 +30,14 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-_channel_fanout = CHANNEL.FANOUT_CALL
-_channel_parallel = CHANNEL.PARALLEL_EXEC_CALL
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class ParallelBase:
     """ A base class for most parallel integration patterns. An instance of this class is created for each service instance.
     """
+    call_channel = '<parallel-base-call-channel-not-set>'
+    on_target_channel = '<parallel-base-target-channel-not-set>'
+    on_final_channel = '<parallel-base-final-channel-not-set>'
+    needs_on_final = False
+
     def __init__(self, source, cache, lock):
         # type: (Service, dict, RLock) -> None
         self.source = source
@@ -58,20 +57,20 @@ class ParallelBase:
             entry = CacheEntry()
             entry.cid = ctx.cid
             entry.req_ts_utc = ctx.req_ts_utc
+            entry.len_targets = len(ctx.target_list)
+            entry.remaining_targets = entry.len_targets
+            entry.target_responses = {}
+            entry.final_responses = {}
             entry.on_target_list = ctx.on_target_list
             entry.on_final_list = ctx.on_final_list
 
             # .. and add it to the cache.
             self.cache[ctx.cid] = entry
 
-        print()
+        # Now that metadata is stored, we can actually invoke each of the serviced from our list of targets.
 
-        for item in ctx.target_list:
-            print(111, item)
-
-        print(222, self.cache)
-
-        print()
+        for item in ctx.target_list: # type: Target
+            self.source.invoke_async(item.name, item.payload, channel=self.call_channel, cid=ctx.cid)
 
 # ################################################################################################################################
 
@@ -79,25 +78,124 @@ class ParallelBase:
         """ Invokes targets collecting their responses, can be both as a whole or individual ones,
         and executes callback(s).
         """
-        # type: (list, list, list, str) -> None
+        # type: (dict, list, list, str, object) -> None
 
         # Establish what our CID is ..
         cid = cid or self.cid
+
+        # .. set up targets to invoke ..
+        target_list = []
+        for target_name, payload in targets.items():
+            target = Target()
+            target.name = target_name
+            target.payload = payload
+            target_list.append(target)
 
         # .. create an execution context ..
         ctx = ParallelCtx()
         ctx.cid = cid
         ctx.req_ts_utc = _utcnow()
         ctx.source_name = self.source.name
-        ctx.target_list = targets
+        ctx.target_list = target_list
+
+        # .. on-final is always available ..
         ctx.on_final_list = [on_final] if isinstance(on_final, str) else on_final
-        ctx.on_target_list = [on_target] if isinstance(on_target, str) else on_target
+
+        # .. but on-target may be None ..
+        if on_target:
+            ctx.on_target_list = [on_target] if isinstance(on_target, str) else on_target
 
         # .. invoke our implementation in background ..
         spawn_greenlet(self._invoke, ctx)
 
         # .. and return the CID to the caller.
         return cid
+
+# ################################################################################################################################
+
+    def on_call_finished(self, invoked_service, response, exception, _utcnow=datetime.utcnow):
+        # type: (Service, object, Exception, object)
+
+        # Update metadata about the current parallel execution under a server-wide lock ..
+        with self.lock:
+
+            # .. find our cache entry ..
+            entry = self.cache.get(invoked_service.cid) # type: CacheEntry
+
+            # .. exit early if we cannot find the entry for any reason ..
+            if not entry:
+                logger.warn('No such parallel cache key `%s`', invoked_service.cid)
+                print()
+                print('NNN No such parallel cache key `{}` {}'.format(invoked_service.cid, invoked_service.name))
+                print()
+                return
+
+            # .. alright, we can proceed ..
+            else:
+
+                # .. update the number of targets already invoked ..
+                entry.remaining_targets -= 1
+
+                # .. build information about the response that we have ..
+                invocation_response = InvocationResponse()
+                invocation_response.cid = invoked_service.cid
+                invocation_response.req_ts_utc = entry.req_ts_utc
+                invocation_response.resp_ts_utc = _utcnow()
+                invocation_response.response = response
+                invocation_response.exception = exception
+                invocation_response.ok = False if exception else True
+                invocation_response.source = self.source.name
+                invocation_response.target = invoked_service
+
+                print(111, entry.on_target_list)
+
+                # .. invoke any potential on-target callbacks ..
+                for on_target_item in entry.on_target_list: # type: str
+
+                    print('Invoked {} calling {}'.format(invoked_service.name, on_target_item))
+
+                    invoked_service.invoke_async(
+                        on_target_item, invocation_response, channel=self.on_target_channel, cid=invoked_service.cid)
+
+                # .. check if this was the last service that we were waiting for ..
+                if entry.remaining_targets == 0:
+
+                    # .. if so, run the final callback services if it is required in our case ..
+                    if self.needs_on_final:
+                        for on_final_item in entry.on_final_list: # type: str
+                            invoked_service.invoke_async(
+                                on_final_item, invocation_response, channel=self.on_final_channel, cid=invoked_service.cid)
+
+                    # .. now, clean up by deleting the current entry from cache.
+                    # Note that we ise None in an unlikely it is already deleted,
+                    # although this should not happen because we are the only piece of code holding this lock.
+                    self.cache.pop(invoked_service.cid, None)
+
+                    print()
+                    print('DELETE', invoked_service.cid)
+                    print()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ParallelExec(ParallelBase):
+    call_channel = CHANNEL.PARALLEL_EXEC_CALL
+    on_target_channel = CHANNEL.PARALLEL_EXEC_ON_TARGET
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class FanOut(ParallelBase):
+    call_channel = CHANNEL.FANOUT_CALL
+    on_target_channel = CHANNEL.FANOUT_ON_TARGET
+    on_final_channel = CHANNEL.FANOUT_ON_FINAL
+    needs_on_final = True
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class InvokeRetry(ParallelBase):
+    pass
 
 # ################################################################################################################################
 # ################################################################################################################################
