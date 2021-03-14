@@ -31,6 +31,7 @@ docformatter==0.8
 dropbox==10.10.0
 elasticsearch==7.9.1
 ephem==3.7.6.0
+faker==6.6.0
 flake8==3.8.4
 flatbuffers==1.12
 fs==2.4.11
