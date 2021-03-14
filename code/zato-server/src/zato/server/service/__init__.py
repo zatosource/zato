@@ -348,7 +348,7 @@ class PatternsFacade(object):
 
     def __init__(self, invoking_service, cache, lock):
         # type: (Service) -> None
-        self.invoke_retry = InvokeRetry(invoking_service, cache, lock)
+        self.invoke_retry = InvokeRetry(invoking_service)
         self.fanout = FanOut(invoking_service, cache, lock)
         self.parallel = ParallelExec(invoking_service, cache, lock)
 
