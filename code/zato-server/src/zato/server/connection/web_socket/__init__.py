@@ -211,7 +211,7 @@ class WebSocket(_WebSocket):
         self.connection_time = self.last_seen = datetime.utcnow()
         self.sec_type = self.config.sec_type
         self.pings_missed = 0
-        self.pings_missed_threshold = self.config.get('pings_missed_threshold', 5)
+        self.pings_missed_threshold = self.config.get('pings_missed_threshold', 2)
         self.user_data = Bunch() # Arbitrary user-defined data
         self._disconnect_requested = False # Have we been asked to disconnect this client?
 
