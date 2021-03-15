@@ -146,7 +146,7 @@ class Create(ZatoCommand):
             'port': web_admin_port,
             'db_type': args.odb_type,
             'log_config': 'logging.conf',
-            'lb_agent_use_tls': 'true' if has_crypto else 'false',
+            'lb_agent_use_tls': 'false',
             'zato_secret_key':zato_secret_key,
             'well_known_data': cm.encrypt(well_known_data.encode('utf8')),
             'DATABASE_NAME': args.odb_db_name or args.sqlite_path,
