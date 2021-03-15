@@ -765,7 +765,7 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def on_pings_missed(self, reason):
+    def on_pings_missed(self):
         logger.warning(
             'Peer %s (%s) missed %s/%s pings, forcing its connection to close (%s)',
             self._peer_address, self._peer_fqdn, self.pings_missed, self.pings_missed_threshold,
