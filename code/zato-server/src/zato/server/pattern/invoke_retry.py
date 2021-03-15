@@ -1,19 +1,15 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
+from datetime import datetime
 from logging import getLogger
 from traceback import format_exc
-
-# Arrow
-from arrow import utcnow
 
 # gevent
 from gevent import sleep
@@ -23,18 +19,36 @@ from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
 from zato.common.util.api import new_cid
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.server.service import Service
+
+    Service = Service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = getLogger(__name__)
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+utcnow = datetime.utcnow
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 def retry_failed_msg(so_far, retry_repeats, service_name, retry_seconds, orig_cid, e):
-    return '({}/{}) Retry failed for:`{}`, retry_seconds:`{}`, orig_cid:`{}`, e:`{}`'.format(
-        so_far, retry_repeats, service_name, retry_seconds, orig_cid, format_exc(e))
+    return '({}/{}) Retry failed for:`{}`, retry_seconds:`{}`, orig_cid:`{}`, {}:`{}`'.format(
+        so_far, retry_repeats, service_name, retry_seconds, orig_cid, e.__class__.__name__, e.args)
 
 def retry_limit_reached_msg(retry_repeats, service_name, retry_seconds, orig_cid):
     return '({}/{}) Retry limit reached for:`{}`, retry_seconds:`{}`, orig_cid:`{}`'.format(
         retry_repeats, retry_repeats, service_name, retry_seconds, orig_cid)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class NeedsRetry(ZatoException):
@@ -47,6 +61,7 @@ class NeedsRetry(ZatoException):
             format_exc(self.inner_exc) if self.inner_exc else None)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class RetryFailed(ZatoException):
     def __init__(self, remaining, inner_exc):
@@ -58,11 +73,13 @@ class RetryFailed(ZatoException):
             self.__class__.__name__, hex(id(self)), self.remaining, format_exc(self.inner_exc) if self.inner_exc else None)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class InvokeRetry(object):
     """ Provides the invoke-retry pattern that lets one invoke a service with parametrized retries.
     """
     def __init__(self, invoking_service):
+        # type: (Service) -> None
         self.invoking_service = invoking_service
 
 # ################################################################################################################################
@@ -112,7 +129,8 @@ class InvokeRetry(object):
 
 # ################################################################################################################################
 
-    def _invoke_async_retry(self, target, retry_repeats, retry_seconds, orig_cid, call_cid, callback, callback_context, args, kwargs):
+    def _invoke_async_retry(self, target, retry_repeats, retry_seconds, orig_cid, call_cid, callback,
+        callback_context, args, kwargs, _utcnow=utcnow):
 
         # Request to invoke the background service with ..
         retry_request = {
@@ -126,7 +144,7 @@ class InvokeRetry(object):
             'callback_context': callback_context,
             'args': args,
             'kwargs': kwargs,
-            'req_ts_utc': utcnow().isoformat()
+            'req_ts_utc': _utcnow()
         }
 
         return self.invoking_service.invoke_async('zato.pattern.invoke-retry.invoke-retry', dumps(retry_request), cid=call_cid)
@@ -190,4 +208,5 @@ class InvokeRetry(object):
             # All good, simply return the response
             return result
 
+# ################################################################################################################################
 # ################################################################################################################################
