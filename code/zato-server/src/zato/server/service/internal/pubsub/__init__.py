@@ -277,6 +277,7 @@ class ResumeWSXSubscription(AdminService):
 
         try:
             with closing(self.odb.session()) as session:
+
                 with pubsub_tool.lock:
 
                     # For each sub_key from input ..
