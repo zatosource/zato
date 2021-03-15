@@ -112,6 +112,7 @@ _wsgi_drop_keys = ('ws4py.socket', 'wsgi.errors', 'wsgi.input')
 # ################################################################################################################################
 
 code_invalid_utf8 = 4001
+code_pings_missed = 4002
 
 # ################################################################################################################################
 
@@ -719,6 +720,9 @@ class WebSocket(_WebSocket):
     def is_client_disconnected(self):
         return self.terminated or self.sock is None
 
+    def is_client_connected(self):
+        return not self.is_client_disconnected()
+
 # ################################################################################################################################
 
     def send_background_pings(self, ping_extend=5, _now=datetime.utcnow):
@@ -781,8 +785,8 @@ class WebSocket(_WebSocket):
                                     self.ping_last_response_time,
                                     self.peer_conn_info_pretty)
                             else:
-                                self.on_forbidden('missed {}/{} ping messages'.format(
-                                    self.pings_missed, self.pings_missed_threshold))
+                                self.on_pings_missed()
+                                return
 
                 # No stream or server already terminated = we can quit
                 else:
@@ -816,6 +820,17 @@ class WebSocket(_WebSocket):
                 out[name] = getattr(self, name)
 
         return out
+
+# ################################################################################################################################
+
+    def on_pings_missed(self, reason):
+        logger.warning(
+            'Peer %s (%s) missed %s/%s pings, forcing its connection to close (%s)',
+            self._peer_address, self._peer_fqdn, self.pings_missed, self.pings_missed_threshold,
+            self.peer_conn_info_pretty)
+
+        self.disconnect_client(new_cid(), code_pings_missed, 'Pings missed')
+        self.update_terminated_status()
 
 # ################################################################################################################################
 
