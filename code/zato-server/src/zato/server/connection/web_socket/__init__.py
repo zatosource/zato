@@ -1181,7 +1181,7 @@ class WebSocket(_WebSocket):
         """ Disconnects the remote client, cleaning up internal resources along the way.
         """
         self._disconnect_requested = True
-        self._close_connection('cid:{}; c:{}; r:{}; Disconnecting client from')
+        self._close_connection('cid:{}; c:{}; r:{}; Disconnecting client from'.format(cid, code, reason))
         self.close(code, reason)
 
 # ################################################################################################################################
