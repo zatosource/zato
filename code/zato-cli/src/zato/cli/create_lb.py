@@ -127,6 +127,11 @@ class Create(ZatoCommand):
         log_path = os.path.abspath(os.path.join(repo_dir, '..', '..', 'logs', 'lb-agent.log')) # noqa
         stats_socket = os.path.join(self.target_dir, 'haproxy-stat.sock') # noqa
 
+        is_tls_enabled = is_arg_given(args, 'priv_key_path')
+        config = config_template.format(**{
+            'is_tls_enabled': is_tls_enabled,
+        })
+
         open(os.path.join(repo_dir, 'lb-agent.conf'), 'w').write(config) # noqa
         open(os.path.join(repo_dir, 'logging.conf'), 'w').write((common_logging_conf_contents.format(log_path=log_path))) # noqa
 
