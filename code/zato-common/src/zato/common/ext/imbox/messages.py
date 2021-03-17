@@ -26,8 +26,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import datetime
 import logging
 
-from imbox.query import build_search_query
-from imbox.parser import fetch_email_by_uid
+from zato.common.ext.imbox.query import build_search_query
+from zato.common.ext.imbox.parser import fetch_email_by_uid
 
 
 logger = logging.getLogger(__name__)

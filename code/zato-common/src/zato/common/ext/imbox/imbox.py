@@ -25,12 +25,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import imaplib
 
-from imbox.imap import ImapTransport
-from imbox.messages import Messages
+from zato.common.ext.imbox.imap import ImapTransport
+from zato.common.ext.imbox.messages import Messages
 
 import logging
 
-from imbox.vendors import GmailMessages, hostname_vendorname_dict, name_authentication_string_dict
+from zato.common.ext.imbox.vendors import GmailMessages, hostname_vendorname_dict, name_authentication_string_dict
 
 logger = logging.getLogger(__name__)
 
