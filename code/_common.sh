@@ -66,6 +66,7 @@ function pip_install() {
 
     # Delete packages no longer needed
     $localpath/bin/pip uninstall -y \
+        imbox \
         pycrypto \
         python-keyczar \
         2> /dev/null || true
