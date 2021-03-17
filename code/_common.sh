@@ -63,4 +63,10 @@ function pip_install() {
         -e $CURDIR/zato-zmq         \
         -e $CURDIR/zato-sso         \
         -e $CURDIR/zato-testing
+
+    # Delete packages no longer needed
+    $localpath/bin/pip uninstall -y \
+        pycrypto \
+        python-keyczar \
+        2> /dev/null || true
 }
