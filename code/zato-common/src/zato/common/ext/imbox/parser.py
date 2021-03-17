@@ -34,7 +34,7 @@ import sys
 import time
 from datetime import datetime
 from email.header import decode_header
-from imbox.utils import str_encode, str_decode
+from zato.common.ext.imbox.utils import str_encode, str_decode
 
 import logging
 
