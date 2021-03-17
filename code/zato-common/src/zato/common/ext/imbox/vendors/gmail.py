@@ -23,8 +23,8 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-from imbox.messages import Messages
-from imbox.vendors.helpers import merge_two_dicts
+from zato.common.ext.imbox.messages import Messages
+from zato.common.ext.imbox.vendors.helpers import merge_two_dicts
 
 
 class GmailMessages(Messages):
