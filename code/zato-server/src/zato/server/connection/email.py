@@ -15,9 +15,9 @@ from logging import getLogger, INFO
 from traceback import format_exc
 
 # imbox
-from imbox import Imbox as _Imbox
-from imbox.imap import ImapTransport as _ImapTransport
-from imbox.parser import parse_email
+from zato.common.ext.imbox import Imbox as _Imbox
+from zato.common.ext.imbox.imap import ImapTransport as _ImapTransport
+from zato.common.ext.imbox.parser import parse_email
 
 # Outbox
 from zato.server.ext.outbox import AnonymousOutbox, Attachment, Email, Outbox
