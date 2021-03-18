@@ -313,7 +313,7 @@ def index(req):
                 'query': req.GET.get('query', '')
             }
 
-            data, meta = parse_datetime_response_data(req.zato.client.invoke('zato.scheduler.job.get-list', request))
+            data, meta = parse_response_data(req.zato.client.invoke('zato.scheduler.job.get-list', request))
 
             for job_elem in data:
 
