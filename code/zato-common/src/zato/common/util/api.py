@@ -478,7 +478,7 @@ def payload_from_request(json_parser, cid, request, data_format, transport, chan
                 try:
                     request_bytes = request if isinstance(request, bytes) else request.encode('utf8')
                     payload = json_parser.parse(request_bytes)
-                    payload = payload.as_dict()
+                    payload = payload if payload is None else payload.as_dict()
                 except ValueError:
                     logger.warn('Could not parse request as JSON:`%s`, (%s), e:`%s`', request, type(request), format_exc())
                     raise
