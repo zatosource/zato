@@ -6,8 +6,6 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 from contextlib import contextmanager
 from io import BytesIO
@@ -82,7 +80,6 @@ class Imbox(_Imbox):
 
 class ImapTransport(_ImapTransport):
     def connect(self, username, password, debug_level):
-        self.server = self.transport(self.hostname, self.port)
         self.server.debug = debug_level
         self.server.login(username, password)
         self.server.select()
@@ -189,24 +186,24 @@ class IMAPConnection(_Connection):
         conn.close()
 
     def get(self, folder='INBOX'):
-        with self.get_connection() as conn:
+        with self.get_connection() as conn: # type: Imbox
             conn.connection.select(folder)
 
             for uid, msg in conn.fetch_list(' '.join(self.config.get_criteria.splitlines())):
                 yield (uid, IMAPMessage(uid, conn, msg))
 
     def ping(self):
-        with self.get_connection() as conn:
+        with self.get_connection() as conn: # type: Imbox
             conn.connection.noop()
 
     def delete(self, *uids):
-        with self.get_connection() as conn:
+        with self.get_connection() as conn: # type: Imbox
             for uid in uids:
                 mov, data = self.connection.uid('STORE', uid, '+FLAGS', '(\\Deleted)')
             conn.connection.expunge()
 
     def mark_seen(self, *uids):
-        with self.get_connection() as conn:
+        with self.get_connection() as conn: # type: Imbox
             for uid in uids:
                 conn.connection.uid('STORE', uid, '+FLAGS', '\\Seen')
 
