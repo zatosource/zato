@@ -55,7 +55,7 @@ class _CreateEdit(CreateEdit):
         output_required = ('id', 'name')
 
     def success_message(self, item):
-        return 'Successfully {0} the IMAP connection [{1}]'.format(self.verb, item.name)
+        return 'Successfully {} IMAP connection `{}`'.format(self.verb, item.name)
 
 class Create(_CreateEdit):
     url_name = 'email-imap-create'
