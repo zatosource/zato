@@ -225,9 +225,8 @@ class Request(object):
 
         if is_sio:
 
-            if self.payload:
-                parsed = sio.parse_input(self.payload, data_format)
-                self.input.update(parsed)
+            parsed = sio.parse_input(self.payload or {}, data_format)
+            self.input.update(parsed)
 
             for param, value in iteritems(self.channel_params):
                 if param not in self.input:
