@@ -47,8 +47,7 @@ class ImapTransport:
 
         if starttls:
             self.server.starttls()
-        logger.debug("Created IMAP4 transport for {host}:{port}"
-                     .format(host=self.hostname, port=self.port))
+        logger.debug("Created IMAP4 transport for {host}:{port}".format(host=self.hostname, port=self.port))
 
     def list_folders(self):
         logger.debug("List all folders in mailbox")
