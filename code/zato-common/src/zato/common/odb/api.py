@@ -164,7 +164,7 @@ class SessionWrapper(object):
                 err_details = format_exc()
             else:
                 err_details = e.args[0]
-            func = self.logger.warn(msg, name, err_details)
+            self.logger.warn(msg, name, err_details)
         else:
             if config['engine'] == MS_SQL.ZATO_DIRECT:
                 self._Session = SimpleSession(self.pool.engine)
