@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -148,9 +146,13 @@ class SessionWrapper(object):
 
         try:
             self.pool.ping(self.fs_sql_config)
-        except Exception:
-            msg = 'Could not ping:`%s`, session will be left uninitialized, e:`%s`'
-            self.logger.warn(msg, name, format_exc())
+        except Exception as e:
+            msg = 'Could not ping:`%s`, session will be left uninitialised, e:`%s`'
+            if self.config['is_active']:
+                err_details = format_exc()
+            else:
+                err_details = e.args[0]
+            func = self.logger.warn(msg, name, err_details)
         else:
             if config['engine'] == MS_SQL.ZATO_DIRECT:
                 self._Session = SimpleSession(self.pool.engine)
