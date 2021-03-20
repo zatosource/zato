@@ -35,6 +35,7 @@ from lxml.etree import _Element as EtreeElementClass, Element, SubElement, tostr
 # Zato
 from zato.common.api import APISPEC, DATA_FORMAT, ZATO_NONE
 from zato.common.odb.api import WritableKeyedTuple
+from zato.common.pubsub import PubSubMessage
 from zato.util_convert import to_bool
 
 # Zato - Cython
@@ -1810,6 +1811,15 @@ class CySimpleIO(object):
 
     @cy.returns(object)
     def _parse_input_elem(self, elem:object, data_format:cy.unicode, is_csv:cy.bint=False) -> object: # noqa: E252
+
+        # If this is a pub/sub message ..
+        if isinstance(elem, PubSubMessage):
+
+            # .. parse out its data ..
+            elem = elem.data
+
+            # .. and make sure it is something we can process.
+            elem = elem or {}
 
         is_dict:cy.bint = isinstance(elem, dict)
         is_xml:cy.bint  = isinstance(elem, EtreeElementClass)
