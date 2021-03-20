@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -226,7 +226,9 @@ class Request(object):
         if is_sio:
 
             parsed = sio.parse_input(self.payload or {}, data_format)
-            self.input.update(parsed)
+
+            if isinstance(parsed, dict):
+                self.input.update(parsed)
 
             for param, value in iteritems(self.channel_params):
                 if param not in self.input:
