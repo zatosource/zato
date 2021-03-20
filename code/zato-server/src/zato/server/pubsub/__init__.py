@@ -755,8 +755,8 @@ class PubSub(object):
 # ################################################################################################################################
 
     def create_topic_for_service(self, service_name, topic_name):
-        # type: (PubSub, str, str)
-        self.create_topic(topic_name)
+        # type: (str, str)
+        self.create_topic(topic_name, is_internal=True)
         logger.info('Created topic `%s` for service `%s`', topic_name, service_name)
 
 # ################################################################################################################################
@@ -1691,7 +1691,7 @@ class PubSub(object):
             # Subscribe the default service delivery endpoint to messages from this topic
             endpoint = self.get_endpoint_by_name(PUBSUB.SERVICE_SUBSCRIBER.NAME)
             if not self.is_subscribed_to(endpoint.id, topic_name):
-                self.subscribe(topic_name, endpoint_name=endpoint.name)
+                self.subscribe(topic_name, endpoint_name=endpoint.name, is_internal=True)
 
             # We need a Zato context to relay information about the service pointed to by the published message
             zato_ctx = dumps({
@@ -1711,7 +1711,7 @@ class PubSub(object):
         user_ctx = kwargs.get('user_ctx')
         zato_ctx = zato_ctx or kwargs.get('zato_ctx')
 
-        response = self.invoke_service('zato.pubsub.publish.publish', {
+        request = {
             'topic_name': topic_name,
             'data': data,
             'data_list': data_list,
@@ -1729,7 +1729,9 @@ class PubSub(object):
             'deliver_to_sk': deliver_to_sk,
             'user_ctx': user_ctx,
             'zato_ctx': zato_ctx,
-        }, serialize=False)
+        }
+
+        response = self.invoke_service('zato.pubsub.publish.publish', request, serialize=False)
 
         if response.has_data():
             return response.get('msg_id') or response.get('msg_id_list')
@@ -1848,8 +1850,9 @@ class PubSub(object):
         # This is always needed to invoke the subscription service
         request = {
             'topic_name': topic_name,
+            'is_internal': kwargs.get('is_internal') or False,
             'wrap_one_msg_in_list': kwargs.get('wrap_one_msg_in_list', True),
-            'delivery_batch_size': kwargs.get('delivery_batch_size', PUBSUB.DEFAULT.DELIVERY_BATCH_SIZE)
+            'delivery_batch_size': kwargs.get('delivery_batch_size', PUBSUB.DEFAULT.DELIVERY_BATCH_SIZE),
         }
 
         # This is a subscription for a WebSocket client ..
@@ -1926,15 +1929,18 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def create_topic(self, name, has_gd=False, accept_on_no_sub=True, is_active=True, is_api_sub_allowed=True, hook_service_id=None,
-        task_sync_interval=_ps_default.TASK_SYNC_INTERVAL, task_delivery_interval=_ps_default.TASK_DELIVERY_INTERVAL,
-        depth_check_freq=_ps_default.DEPTH_CHECK_FREQ):
-        # type: (PubSub)
+    def create_topic(self, name, has_gd=False, accept_on_no_sub=True, is_active=True, is_internal=False, is_api_sub_allowed=True,
+        hook_service_id=None, task_sync_interval=_ps_default.TASK_SYNC_INTERVAL,
+        task_delivery_interval=_ps_default.TASK_DELIVERY_INTERVAL, depth_check_freq=_ps_default.DEPTH_CHECK_FREQ,
+        max_depth_gd=_ps_default.TOPIC_MAX_DEPTH_GD, max_depth_non_gd=_ps_default.TOPIC_MAX_DEPTH_NON_GD,
+        pub_buffer_size_gd=_ps_default.PUB_BUFFER_SIZE_GD,
+        ):
 
         self.invoke_service('zato.pubsub.topic.create', {
             'cluster_id': self.server.cluster_id,
             'name': name,
             'is_active': is_active,
+            'is_internal': is_internal,
             'is_api_sub_allowed': is_api_sub_allowed,
             'has_gd': has_gd,
             'hook_service_id': hook_service_id,
@@ -1942,6 +1948,9 @@ class PubSub(object):
             'task_sync_interval': task_sync_interval,
             'task_delivery_interval': task_delivery_interval,
             'depth_check_freq': depth_check_freq,
+            'max_depth_gd': PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_GD,
+            'max_depth_non_gd': PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_NON_GD,
+            'pub_buffer_size_gd': PUBSUB.DEFAULT.PUB_BUFFER_SIZE_GD,
         })
 
 # ################################################################################################################################
