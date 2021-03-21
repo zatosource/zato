@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 import logging
 from datetime import datetime
+from typing import List as list_
 
 # globre
 from globre import compile as globre_compile
@@ -21,6 +20,7 @@ from future.utils import iteritems
 # Zato
 from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
 from zato.common.exception import BadRequest
+from zato.common.ext.dataclasses import dataclass, field as dc_field
 from zato.common.pubsub import dict_keys
 from zato.common.util.api import make_repr
 from zato.common.util.time_ import utcnow_as_ms
@@ -114,6 +114,7 @@ def get_expiration(cid, input, default_expiration=_default_expiration):
     return expiration or default_expiration
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class EventType:
 
@@ -137,6 +138,7 @@ class EventType:
         in_subscribe_impl = 'in_subscribe_impl'
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class ToDictBase(object):
     _to_dict_keys = None
@@ -152,6 +154,7 @@ class ToDictBase(object):
 
         return out
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Endpoint(ToDictBase):
@@ -230,6 +233,7 @@ class Endpoint(ToDictBase):
                     logger.warn('Ignoring invalid {} pattern `{}` for `{}` (role:{}) (reason: no pub=/sub= prefix found)'.format(
                         key, line, self.name, self.role))
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Topic(ToDictBase):
@@ -336,6 +340,7 @@ class Topic(ToDictBase):
         return self.msg_pub_counter % self.meta_store_frequency == 0
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Subscription(ToDictBase):
     """ Describes an existing subscription object.
@@ -377,6 +382,7 @@ class Subscription(ToDictBase):
         return self.sub_key
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class HookCtx(object):
     __slots__ = ('hook_type', 'msg', 'topic', 'sub', 'http_soap', 'outconn_name')
@@ -389,6 +395,7 @@ class HookCtx(object):
         self.http_soap = kwargs.get('http_soap', {})
         self.outconn_name = self.http_soap.get('config', {}).get('name')
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class SubKeyServer(ToDictBase):
@@ -423,4 +430,16 @@ class SubKeyServer(ToDictBase):
     def get_id(self):
         return '{};{};{}'.format(self.server_name, self.server_pid, self.sub_key)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=True)
+class DeliveryResultCtx:
+    delivery_iter: int = 0
+    is_ok: bool = False
+    status_code: int = 0
+    reason_code: int = 0
+    exception_list: list_[Exception] = dc_field(default_factory=list)
+
+# ################################################################################################################################
 # ################################################################################################################################
