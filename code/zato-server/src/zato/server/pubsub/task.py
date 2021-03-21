@@ -1,20 +1,17 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from bisect import bisect_left
 from copy import deepcopy
 from logging import getLogger
-from socket import error as SocketError
 from threading import current_thread
-from traceback import format_exc
+from traceback import format_exc, format_exception
 
 # gevent
 from gevent import sleep, spawn
@@ -33,14 +30,17 @@ from zato.common.json_internal import loads
 from zato.common.pubsub import PubSubMessage
 from zato.common.util.api import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
+from zato.server.pubsub.model import DeliveryResultCtx
 
 # ################################################################################################################################
 
 if 0:
+    from typing import Callable
     from bunch import Bunch
     from zato.server.pubsub import PubSub
 
     Bunch = Bunch
+    Callable = Callable
     PubSub = PubSub
 
 # ################################################################################################################################
@@ -52,6 +52,11 @@ logger_zato = getLogger('zato')
 
 _hook_action = PUBSUB.HOOK_ACTION
 _notify_methods = (PUBSUB.DELIVERY_METHOD.NOTIFY.id, PUBSUB.DELIVERY_METHOD.WEB_SOCKET.id)
+
+run_deliv_sc = PUBSUB.RunDeliveryStatus.StatusCode
+run_deliv_rc = PUBSUB.RunDeliveryStatus.ReasonCode
+
+deliv_exc_msg = 'Exception {}/{} in delivery iter #{} for `{}` sk:{} -> {}'
 
 # ################################################################################################################################
 
@@ -104,6 +109,9 @@ class DeliveryTask(object):
         self.previous_delivery_method = self.sub_config.delivery_method
         self.python_id = str(hex(id(self)))
         self.py_object = '<empty>'
+
+        # This is a total of delivery iterations
+        self.delivery_iter = 0
 
         # This is a total of message batches processed so far
         self.len_batches = 0
@@ -239,12 +247,20 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def run_delivery(self, deliver_pubsub_msg=None, _run_deliv_status=PUBSUB.RUN_DELIVERY_STATUS):
+    def run_delivery(self, deliver_pubsub_msg=None, status_code=run_deliv_sc, reason_code=run_deliv_rc):
         """ Actually attempts to deliver messages. Each time it runs, it gets all the messages
         that are still to be delivered from self.delivery_list.
         """
+        # type: (Callable, run_deliv_sc, reason_code) -> DeliveryResultCtx
+
+        # Increase our delivery counter
+        self.delivery_iter += 1
+
         # Try to deliver a batch of messages or a single message if batch size is 1
         # and we should not wrap it in a list.
+        result = DeliveryResultCtx()
+        result.delivery_iter = self.delivery_iter
+
         try:
 
             # For pull-type deliveries, this will be given on input. For notify-type deliveries,
@@ -308,11 +324,13 @@ class DeliveryTask(object):
             # time and then re-run us, thanks to which the next time we run we will again iterate over all the messages
             # currently queued up, including the ones that we were not able to deliver in current iteration.
 
-            exc = format_exc()
-            logger.warn('Could not deliver pub/sub messages, e:`%s`', exc)
-            logger_zato.warn('Could not deliver pub/sub messages, e:`%s`', exc)
+            result.status_code = status_code.Error
+            result.exception_list.append(e)
 
-            return _run_deliv_status.SOCKET_ERROR if isinstance(e, SocketError) else _run_deliv_status.OTHER_ERROR
+            if isinstance(e, IOError):
+                result.reason_code = reason_code.Error_IO
+            else:
+                result.reason_code = reason_code.Error_Other
 
         else:
             # On successful delivery, remove these messages from SQL and our own delivery_list
@@ -322,21 +340,19 @@ class DeliveryTask(object):
                 with self.delivery_lock:
                     self.confirm_pubsub_msg_delivered_cb(self.sub_key, delivered_msg_id_list)
 
-            except Exception:
-                e = format_exc()
-                logger_zato.warn('Could not update delivery status for message(s):`%s`, e:`%s`', to_deliver, e)
-                logger.warn('Could not update delivery status for message(s):`%s`, e:`%s`', to_deliver, e)
-                return _run_deliv_status.OTHER_ERROR
+            except Exception as update_err:
+                result.status_code = status_code.Error
+                result.reason_code = reason_code.Error_Other
+                result.exception_list.append(update_err)
             else:
                 with self.delivery_lock:
                     for msg in to_deliver:
                         try:
                             msg.delivery_count += 1
                             self.delivery_list.remove_pubsub_msg(msg)
-                        except Exception:
-                            msg = 'Caught exception in run_delivery/remove_pubsub_msg, e:`%s`'
-                            logger.warn(msg, format_exc())
-                            logger_zato.warn(msg, format_exc())
+                        except Exception as remove_err:
+                            result.status_code = status_code.Warning
+                            result.exception_list.append(remove_err)
 
                 # Status of messages is updated in both SQL and RAM so we can now log success
                 len_delivered = len(delivered_msg_id_list)
@@ -350,7 +366,13 @@ class DeliveryTask(object):
 
                 # Indicates that we have successfully delivered all messages currently queued up
                 # and our delivery list is currently empty.
-                return _run_deliv_status.OK
+                result.status_code = status_code.OK
+
+        # No matter what, we always have a result object to return
+        if result.status_code not in (status_code.Error, status_code.Warning):
+            result.is_ok = True
+            result.status_code = status_code.OK
+        return result
 
 # ################################################################################################################################
 
@@ -369,9 +391,12 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def run(self, default_sleep_time=0.1, _status=PUBSUB.RUN_DELIVERY_STATUS, _notify_methods=_notify_methods):
+    def run(self, default_sleep_time=0.1, status_code=run_deliv_sc, reason_code=run_deliv_rc, _notify_methods=_notify_methods,
+        deliv_exc_msg=deliv_exc_msg):
         """ Runs the delivery task's main loop.
         """
+        # type: (float, run_deliv_sc, run_deliv_rc, list, str)
+
         # Fill out Python-level metadata first
         self.py_object = '{}; {}; {}'.format(current_thread().name, getcurrent().name, self.python_id)
 
@@ -415,6 +440,7 @@ class DeliveryTask(object):
                     sleep(5)
                     continue
 
+                # Is there any message that we can try to deliver?
                 if self._should_wake():
 
                     with self.delivery_lock:
@@ -432,11 +458,11 @@ class DeliveryTask(object):
                             logger.warn(msg, result, self.keep_running, self.len_delivered)
                             continue
 
-                        # On success, sleep for a moment because we have just run out of all messages.
-                        if result == _status.OK:
+                        if result.is_ok:
                             continue
 
-                        elif result == _status.NO_MSG:
+                        # Sleep for a moment because we have just run out of all messages.
+                        elif result.reason_code == reason_code.No_Msg:
                             sleep(default_sleep_time)
 
                         # Otherwise, sleep for a longer time because our endpoint must have returned an error.
@@ -444,15 +470,54 @@ class DeliveryTask(object):
                         # we queued up. Note that we are the only delivery task for this sub_key  so when we sleep here
                         # for a moment, we do not block other deliveries.
                         else:
-                            sleep_time = self.wait_sock_err if result == _status.SOCKET_ERROR else self.wait_non_sock_err
-                            msg = 'Sleeping for {}s after `{}` in sub_key:`{}`'.format(sleep_time, result, self.sub_key)
-                            logger.warn(msg)
-                            logger_zato.warn(msg)
-                            sleep(sleep_time)
 
+                            # We caught an error or warning ..
+                            if not result.is_ok:
+
+                                len_exception_list = len(result.exception_list)
+
+                                # .. log all exceptions reported by the delivery task ..
+                                for idx, e in enumerate(result.exception_list, 1): # type: Exception
+
+                                    msg_logger = deliv_exc_msg.format(
+                                        idx, len_exception_list, result.delivery_iter, self.topic_name, self.sub_key,
+                                        ''.join(format_exception(type(e), e, e.__traceback__)))
+
+                                    msg_logger_zato = deliv_exc_msg.format(
+                                        idx, len_exception_list, result.delivery_iter, self.topic_name, self.sub_key,
+                                        e.args[0])
+
+                                    logger.warn(msg_logger)
+                                    logger_zato.warn(msg_logger_zato)
+
+                                # .. sleep for a while but only if this was an error (not a warning).
+                                if result.status_code == status_code.Error:
+
+                                    if result.reason_code == reason_code.Error_IO:
+                                        sleep_time = self.wait_sock_err
+                                    else:
+                                        sleep_time = self.wait_non_sock_err
+
+                                    exc_len_one = 'an exception'
+                                    exc_len_multi = '{} exceptions'
+
+                                    if len_exception_list == 1:
+                                        exc_len_msg = exc_len_one
+                                    else:
+                                        exc_len_msg = exc_len_multi.format(len_exception_list)
+
+                                    sleep_msg = 'Sleeping for {}s after {} in iter #{}'.format(
+                                        sleep_time, exc_len_msg, result.delivery_iter)
+
+                                    logger.warn(sleep_msg)
+                                    logger_zato.warn(sleep_msg)
+
+                                    sleep(sleep_time)
+
+                # There was no message to deliver in this turn ..
                 else:
 
-                    # Wait for our turn
+                    # .. so we can wait until one arrives.
                     sleep(default_sleep_time)
 
 # ################################################################################################################################
