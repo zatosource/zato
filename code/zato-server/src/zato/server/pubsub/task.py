@@ -1143,8 +1143,7 @@ class PubSubTool(object):
     def get_queue_depth(self, sub_key):
         """ Returns the number of GD and non-GD messages queued up for input sub_key.
         """
-        with self.sub_key_locks[sub_key]:
-            return self.delivery_tasks[sub_key].get_queue_depth()
+        return self.delivery_tasks[sub_key].get_queue_depth()
 
 # ################################################################################################################################
 
