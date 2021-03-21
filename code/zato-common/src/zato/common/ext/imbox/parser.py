@@ -80,7 +80,7 @@ def get_mail_addresses(message, header_name):
     """
     Retrieve all email addresses from one message header.
     """
-    headers = [h for h in message.get_all(header_name, [])]
+    headers = list(message.get_all(header_name, []))
     addresses = email.utils.getaddresses(headers)
 
     for index, (address_name, address_email) in enumerate(addresses):

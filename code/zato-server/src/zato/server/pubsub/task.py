@@ -187,7 +187,7 @@ class DeliveryTask(object):
         """ Returns all messages enqueued in the delivery list, without deleting them from self.delivery_list.
         """
         if has_gd is None:
-            out = [msg for msg in self.delivery_list]
+            out = list(self.delivery_list)
             len_out = len(out)
         else:
             out = []
