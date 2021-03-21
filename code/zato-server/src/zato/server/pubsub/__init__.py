@@ -911,6 +911,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def get_pubsub_tool_by_sub_key(self, sub_key):
+        # type: (str) -> PubSubTool
         with self.lock:
             return self.pubsub_tool_by_sub_key[sub_key]
 
