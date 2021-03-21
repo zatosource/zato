@@ -804,7 +804,7 @@ class PUBSUB:
         TASK_SYNC_INTERVAL = 500
         TASK_DELIVERY_INTERVAL = 2000
         WAIT_TIME_SOCKET_ERROR = 10
-        WAIT_TIME_NON_SOCKET_ERROR = 30
+        WAIT_TIME_NON_SOCKET_ERROR = 3
         INTERNAL_ENDPOINT_NAME = 'zato.pubsub.default.internal.endpoint'
         ON_NO_SUBS_PUB = 'accept'
         SK_OPAQUE = ('deliver_to_sk', 'reply_to_sk')
@@ -868,11 +868,17 @@ class PUBSUB:
         def __iter__(self):
             return iter((self.PUBLISHER, self.SUBSCRIBER, self.PUBLISHER_SUBSCRIBER))
 
-    class RUN_DELIVERY_STATUS:
-        NO_MSG = 'no-messages'
-        SOCKET_ERROR = 'socket-error'
-        OTHER_ERROR = 'other-error'
-        OK = 'ok'
+    class RunDeliveryStatus:
+
+        class StatusCode:
+            OK = 1
+            Warning = 2
+            Error = 3
+
+        class ReasonCode:
+            Error_IO = 1
+            Error_Other = 2
+            No_Msg = 3
 
     class ENDPOINT_TYPE:
         AMQP = NameId('AMQP', 'amqp')
