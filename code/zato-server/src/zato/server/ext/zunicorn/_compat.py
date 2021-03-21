@@ -234,10 +234,6 @@ else:
                 # be used (ex: ENOENT).
             _wrap_error(exc, _MAP_ERRNO, exc.errno)
             raise
-        except select.error as exc:
-            if exc.args:
-                _wrap_error(exc, _MAP_ERRNO, exc.args[0])
-            raise
 
 if PY26:
     from urlparse import (
