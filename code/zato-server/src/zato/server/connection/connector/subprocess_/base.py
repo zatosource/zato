@@ -565,13 +565,13 @@ class BaseConnectionContainer(object):
                     self.logger.warn(format_exc())
 
                 # .. continue to delete outconns regardless of errors above ..
-                for outconn_id, outconn_def_id in self.outconn_id_to_def_id.items():
+                for outconn_id, outconn_def_id in self.outconn_id_to_def_id.copy().items():
                     if outconn_def_id == def_id:
                         del self.outconn_id_to_def_id[outconn_id]
                         del self.outconns[outconn_id]
 
                 # .. delete channels too.
-                for channel_id, channel_def_id in self.channel_id_to_def_id.items():
+                for channel_id, channel_def_id in self.channel_id_to_def_id.copy().items():
                     if channel_def_id == def_id:
                         del self.channel_id_to_def_id[channel_id]
                         del self.channels[channel_id]
