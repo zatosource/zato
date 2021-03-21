@@ -717,7 +717,12 @@ class Float(Elem):
 
     @staticmethod
     def from_json_static(value, *args, **kwargs):
-        return _builtin_float(value)
+        if value and value != _zato_none:
+            return _builtin_float(value)
+        elif value is None:
+            return 0.0
+        else:
+            return value
 
     def from_json(self, value):
         return Float.from_json_static(value)
@@ -733,7 +738,12 @@ class Int(Elem):
 
     @staticmethod
     def from_json_static(value, *args, **kwargs):
-        return _builtin_int(value) if (value and value != _zato_none) else value
+        if value and value != _zato_none:
+            return _builtin_int(value)
+        elif value is None:
+            return 0
+        else:
+            return value
 
     def from_json(self, value):
         return Int.from_json_static(value)
@@ -1797,11 +1807,6 @@ class CySimpleIO(object):
 
             # .. possibly, unless we are forced not to include it.
             if sio_item.name not in definition.skip_empty.force_empty_input_set:
-                return True
-
-        # .. or, possibly, because this particular value cannot be converted to a SIO element.
-        if cy.cast(cy.int, sio_item._type) == cy.cast(cy.int, ElemType.int_):
-            if input_value in (None, ''):
                 return True
 
         # In all other cases, we explicitly say that this value should not be skipped
