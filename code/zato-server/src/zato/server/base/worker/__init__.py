@@ -808,8 +808,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         for name, data in self.worker_config.channel_web_socket.items():
 
             # Convert configuration to expected datatypes
-            data.config['max_len_messages_sent'] = int(data.config.get('max_len_messages_sent', 0))
-            data.config['max_len_messages_received'] = int(data.config.get('max_len_messages_received', 0))
+            data.config['max_len_messages_sent'] = int(data.config.get('max_len_messages_sent') or 0)
+            data.config['max_len_messages_received'] = int(data.config.get('max_len_messages_received') or 0)
 
             # Create a new AMQP connector definition ..
             config = WSXConnectorConfig.from_dict(data.config)
@@ -1771,7 +1771,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Invoke the callback, if any.
         if msg.get('is_async') and msg.get('callback'):
-
+/
             cb_msg = {}
             cb_msg['action'] = SERVICE.PUBLISH.value
             cb_msg['service'] = msg['callback']
