@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from base64 import b64decode, b64encode
@@ -35,6 +33,7 @@ from zato.common.json_schema import get_service_config
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, Service
 from zato.common.odb.query import service_list
 from zato.common.rate_limiting import DefinitionParser
+from zato.common.scheduler import get_startup_job_services
 from zato.common.util.api import hot_deploy, payload_from_request
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean, Integer, Service as ZatoService
@@ -61,6 +60,7 @@ class GetList(AdminService):
         request_elem = 'zato_service_get_list_request'
         response_elem = 'zato_service_get_list_response'
         input_required = 'cluster_id'
+        input_optional = 'should_include_scheduler'
         output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), Integer('usage'), \
             Integer('slow_threshold')
         output_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_active', \
@@ -73,8 +73,16 @@ class GetList(AdminService):
         return_internal = is_boolean(self.server.fs_server_config.misc.return_internal_objects)
         internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
 
+        # By default, we do not return internal services, unless we are specifically told to
+        include_list = []
+
+        if self.request.input.should_include_scheduler:
+            include_list.extend(get_startup_job_services())
+
         out = []
-        search_result = self._search(service_list, session, self.request.input.cluster_id, return_internal, False)
+        search_result = self._search(
+            service_list, session, self.request.input.cluster_id, return_internal, include_list, False)
+
         for item in elems_with_opaque(search_result):
             item.may_be_deleted = internal_del if item.is_internal else True
             item.usage = self.server.kvdb.conn.get('{}{}'.format(KVDB.SERVICE_USAGE, item.name)) or 0
