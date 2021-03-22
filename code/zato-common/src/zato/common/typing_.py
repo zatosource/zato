@@ -18,7 +18,7 @@ from dacite import from_dict
 
 # Be explicit about which import error we want to catch
 try:
-    import dataclasses
+    import dataclasses # noqa: F401
 
 # Python 3.6
 except ImportError:
