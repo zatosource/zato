@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,13 +14,13 @@ try:
 except ImportError:
     pass
 
-# stdlib
 import os
 from copy import deepcopy
 
 from zato.cli import common_logging_conf_contents, common_odb_opts, is_arg_given, kvdb_opts, sql_conf_contents, ZatoCommand
 from zato.common.crypto import SchedulerCryptoManager, well_known_data
 from zato.common.odb.model import Cluster
+from zato.common.scheduler import startup_jobs
 
 # ################################################################################################################################
 
@@ -75,65 +75,6 @@ ca_certs_location=zato-scheduler-ca-certs.pem
 
 [api_users]
 user1={user1_password}
-"""
-
-# ################################################################################################################################
-
-startup_jobs="""[zato.stats.process-raw-times]
-seconds=90
-service=zato.stats.process-raw-times
-extra=max_batch_size=99999
-
-[zato.stats.aggregate-by-minute]
-seconds=60
-service=zato.stats.aggregate-by-minute
-
-[zato.stats.aggregate-by-hour]
-minutes=10
-service=zato.stats.aggregate-by-hour
-
-[zato.stats.aggregate-by-day]
-minutes=60
-service=zato.stats.aggregate-by-day
-
-[zato.stats.aggregate-by-month]
-minutes=60
-service=zato.stats.aggregate-by-month
-
-[zato.stats.summary.create-summary-by-day]
-minutes=10
-service=zato.stats.summary.create-summary-by-day
-
-[zato.stats.summary.create-summary-by-week]
-minutes=10
-service=zato.stats.summary.create-summary-by-week
-
-[zato.stats.summary.create-summary-by-month]
-minutes=60
-service=zato.stats.summary.create-summary-by-month
-
-[zato.stats.summary.create-summary-by-year]
-minutes=60
-service=zato.stats.summary.create-summary-by-year
-
-[zato.outgoing.sql.auto-ping]
-minutes=3
-service=zato.outgoing.sql.auto-ping
-
-[zato.wsx.cleanup.pub-sub]
-minutes=30
-service=pub.zato.channel.web-socket.cleanup-wsx-pub-sub
-extra=
-is_extra_list=True
-
-[zato.wsx.cleanup]
-minutes=30
-service=pub.zato.channel.web-socket.cleanup-wsx
-
-[zato.pubsub.cleanup]
-minutes=5
-service=zato.pubsub.cleanup-service
-extra=
 """
 
 # ################################################################################################################################
