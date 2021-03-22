@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # ##################################################################################################################################
 
 class Bunch(dict):
@@ -17,6 +15,11 @@ class Bunch(dict):
                 return self[key]
             except KeyError:
                 raise AttributeError(key)
+
+    def to_dict(self):
+        return dict(self)
+
+    toDict = to_dict
 
 # ##################################################################################################################################
 
