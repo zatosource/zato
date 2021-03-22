@@ -831,12 +831,16 @@ def service(session, cluster_id, id=None, name=None):
     return q.one()
 
 @query_wrapper
-def service_list(session, cluster_id, return_internal=True, needs_columns=False):
+def service_list(session, cluster_id, return_internal=True, include_list=None, needs_columns=False):
     """ All services.
     """
     q = _service(session, cluster_id)
-    if not return_internal:
-        q = q.filter(not_(Service.name.startswith('zato')))
+
+    if include_list:
+        q = q.filter(or_(Service.name.in_(include_list)))
+    else:
+        if not return_internal:
+            q = q.filter(not_(Service.name.startswith('zato')))
 
     return q
 
