@@ -111,7 +111,9 @@ def add_http_soap_select(form, field_name, req, connection, transport, needs_ini
 
 # ################################################################################################################################
 
-def add_services(form, req, by_id=False, initial_service=None, api_name='zato.service.get-list', has_name_filter=True):
+def add_services(form, req, by_id=False, initial_service=None, api_name='zato.service.get-list', has_name_filter=True,
+    should_include_scheduler=False):
+
     if req.zato.cluster_id:
 
         fields = {}
@@ -130,7 +132,12 @@ def add_services(form, req, by_id=False, initial_service=None, api_name='zato.se
             field.choices = []
             field.choices.append(INITIAL_CHOICES)
 
-            request = {'cluster_id': req.zato.cluster_id, 'name_filter':'*'}
+            request = {
+                'cluster_id': req.zato.cluster_id,
+                'name_filter':'*',
+                'should_include_scheduler': should_include_scheduler,
+            }
+
             if has_name_filter:
                 request['name_filter'] = '*'
 

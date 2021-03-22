@@ -878,7 +878,7 @@ class ODBManager(SessionWrapper):
         """ Returns a list of services defined on the given cluster.
         """
         with closing(self.session()) as session:
-            return elems_with_opaque(query.service_list(session, cluster_id, needs_columns))
+            return elems_with_opaque(query.service_list(session, cluster_id, needs_columns=needs_columns))
 
 # ################################################################################################################################
 
