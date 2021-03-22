@@ -1771,7 +1771,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Invoke the callback, if any.
         if msg.get('is_async') and msg.get('callback'):
-/
+
             cb_msg = {}
             cb_msg['action'] = SERVICE.PUBLISH.value
             cb_msg['service'] = msg['callback']
