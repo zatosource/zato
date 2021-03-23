@@ -225,7 +225,7 @@ class Request(object):
 
         if is_sio:
 
-            parsed = sio.parse_input(self.payload or {}, data_format)
+            parsed = sio.parse_input(self.payload or {}, data_format, extra=self.channel_params)
 
             if isinstance(parsed, dict):
                 self.input.update(parsed)
