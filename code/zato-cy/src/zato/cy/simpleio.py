@@ -1815,7 +1815,7 @@ class CySimpleIO(object):
 # ################################################################################################################################
 
     @cy.returns(object)
-    def _parse_input_elem(self, elem:object, data_format:cy.unicode, is_csv:cy.bint=False) -> object: # noqa: E252
+    def _parse_input_elem(self, elem:object, data_format:cy.unicode, is_csv:cy.bint=False, extra:dict=None) -> object: # noqa: E252
 
         # If this is a pub/sub message ..
         if isinstance(elem, PubSubMessage):
@@ -1833,11 +1833,29 @@ class CySimpleIO(object):
             raise ValueError('Expected a dict, CSV or EtreeElementClass instead of input `{!r}` ({} in {})'.format(
                 elem, type(elem).__name__, self.service_class))
 
+        # This dictionary holds keys that were common to both 'elem' and 'extra'. If extra exists,
+        # and some of the extra keys already exist in elem, this dictionary is populated with such
+        # keys/value extracted from elem. Before we return, they are re-added. This is needed,
+        # because if extra exists, we update elem with extra's keys in-place so we need to make sure
+        # that elem is in the same state (has the same keys/values) as before we received it.
+        elem_shared_keys:dict = {}
+
         out:dict = {}
         idx:cy.int = -1
         sio_item:Elem = None
         sio_item_name:str = None
         items:list = self.definition.all_input_elems
+
+        # Overwrite and append any keys found in extra and elem, first make a backup of shared keys for later use.
+        if is_dict and extra:
+            for extra_key, extra_value in extra.items():
+
+                # .. make backup ..
+                if extra_key in elem:
+                    elem_shared_keys[extra_key] = elem[extra_key]
+
+                # .. overwrite (note that there is no 'else').
+                elem[extra_key] = extra_value
 
         for sio_item in items:
 
@@ -1916,6 +1934,18 @@ class CySimpleIO(object):
             # We get here only if should_skip is not True
             out[sio_item_name] = value
 
+        # Before returning, if input was a dict (or dict-like, e.g. JSON), undo all the changes
+        # made when extra overwrote keys from the 'elem' dict.
+        if is_dict and extra:
+            for extra_key in extra:
+
+                # .. undo ..
+                elem.pop(extra_key)
+
+                # .. bring back the old value.
+                if extra_key in elem_shared_keys:
+                    elem[extra_key] = elem_shared_keys[extra_key]
+
         return out
 
 # ################################################################################################################################
@@ -1931,7 +1961,7 @@ class CySimpleIO(object):
 # ################################################################################################################################
 
     @cy.returns(object)
-    def parse_input(self, data:object, data_format:cy.unicode) -> object:
+    def parse_input(self, data:object, data_format:cy.unicode, extra:dict=None) -> object:
 
         is_csv:cy.bint = data_format == DATA_FORMAT_CSV and isinstance(data, basestring)
 
@@ -1943,7 +1973,7 @@ class CySimpleIO(object):
                 csv_data = csv_reader(data, self.definition._csv_config.dialect, **self.definition._csv_config.common_config)
                 return self._parse_input_list(csv_data, data_format, is_csv)
             else:
-                out = self._parse_input_elem(data, data_format)
+                out = self._parse_input_elem(data, data_format, extra=extra)
             return bunchify(out)
 
 # ################################################################################################################################
@@ -2186,6 +2216,14 @@ class CySimpleIO(object):
 
         else:
             raise ValueError('Unrecognised output data format `{}`'.format(data_format))
+
+# ################################################################################################################################
+
+    def eval_multi(self, data, encrypt_func=None):
+        """ Runs self.eval_ for each item in the input data dict.
+        """
+        for elem_name, value in data.items():
+            data[elem_name] = self.eval_(elem_name, value, encrypt_func)
 
 # ################################################################################################################################
 
