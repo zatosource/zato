@@ -580,7 +580,7 @@ class RequestHandler(object):
         """
         _qs = self._get_flattened(wsgi_environ.get('QUERY_STRING'))
 
-        # Whoever called us has already parsed POST for us so we just use it as is
+        # Our caller has already parsed POST for us so we just use it as is
         if post_data:
             post = post_data
         else:
