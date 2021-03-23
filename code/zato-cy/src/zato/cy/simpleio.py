@@ -2189,6 +2189,14 @@ class CySimpleIO(object):
 
 # ################################################################################################################################
 
+    def eval_multi(self, data, encrypt_func=None):
+        """ Runs self.eval_ for each item in the input data dict.
+        """
+        for elem_name, value in data.items():
+            data[elem_name] = self.eval_(elem_name, value, encrypt_func)
+
+# ################################################################################################################################
+
     def eval_(self, elem_name, value, encrypt_func=None):
         """ Tries to evaluate elem_name as if it was a SIO element, no matter if it belongs to any request or response element.
         This is useful for dynamically created elements that should not be treated as mere strings.

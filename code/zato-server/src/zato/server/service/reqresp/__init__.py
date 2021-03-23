@@ -223,21 +223,39 @@ class Request(object):
         self.input = ServiceInput()
         self.encrypt_func = encrypt_func
 
+        print()
+
+        print(111, is_sio)
+
         if is_sio:
+
+            print(222, self.payload)
+            print(333, data_format)
+            print('AAA', self.channel_params)
 
             parsed = sio.parse_input(self.payload or {}, data_format)
 
+            print(444, parsed)
+            print(555, type(parsed))
+
             if isinstance(parsed, dict):
                 self.input.update(parsed)
+
+            print(666, self.input)
+            print(777, self.channel_params)
 
             for param, value in iteritems(self.channel_params):
                 if param not in self.input:
                     self.input[param] = value
 
+            print(888, self.input)
+
         # We merge channel params in if requested even if it's not SIO
         else:
             if self.merge_channel_params:
                 self.input.update(self.channel_params)
+
+        print()
 
 # ################################################################################################################################
 
