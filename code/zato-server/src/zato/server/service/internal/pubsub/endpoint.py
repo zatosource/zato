@@ -233,25 +233,25 @@ class _GetEndpointQueue(AdminService):
 
         current_depth_gd_q = session.query(PubSubEndpointEnqueuedMessage.id).\
             filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
-            filter(PubSubEndpointEnqueuedMessage.sub_key==item.sub_key).\
+            filter(PubSubEndpointEnqueuedMessage.sub_key==item['sub_key']).\
             filter(PubSubEndpointEnqueuedMessage.is_in_staging != True).\
             filter(PubSubEndpointEnqueuedMessage.delivery_status != COMMON_PUBSUB.DELIVERY_STATUS.DELIVERED) # noqa: E712
 
         # This could be read from the SQL database ..
-        item.current_depth_gd = count(session, current_depth_gd_q)
+        item['current_depth_gd'] = count(session, current_depth_gd_q)
 
         # .. but non-GD depth needs to be collected from all the servers around. Note that the server may not be known
         # in case the subscriber is a WSX client. In this case, by definition, there will be no non-GD messages for that client.
-        sk_server = self.pubsub.get_delivery_server_by_sub_key(item.sub_key)
+        sk_server = self.pubsub.get_delivery_server_by_sub_key(item['sub_key'])
 
         if sk_server:
 
             if sk_server.server_name == self.server.name and sk_server.server_pid == self.server.pid:
-                pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(item.sub_key)
-                _, current_depth_non_gd = pubsub_tool.get_queue_depth(item.sub_key)
+                pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(item['sub_key'])
+                _, current_depth_non_gd = pubsub_tool.get_queue_depth(item['sub_key'])
             else:
                 response = self.servers[sk_server.server_name].invoke(GetEndpointQueueNonGDDepth.get_name(), {
-                    'sub_key': item.sub_key,
+                    'sub_key': item['sub_key'],
                 }, pid=sk_server.server_pid)
                 inner_response = response['response']
                 current_depth_non_gd = inner_response['current_depth_non_gd'] if inner_response else 0
@@ -260,7 +260,7 @@ class _GetEndpointQueue(AdminService):
         else:
             current_depth_non_gd = 0
 
-        item.current_depth_non_gd = current_depth_non_gd
+        item['current_depth_non_gd'] = current_depth_non_gd
 
 # ################################################################################################################################
 
@@ -302,17 +302,28 @@ class GetEndpointQueueList(_GetEndpointQueue):
         response = []
         with closing(self.odb.session()) as session:
             for item in self.get_data(session):
+
+                item = item.get_value()
+
                 self._add_queue_depths(session, item)
-                item.creation_time = datetime_from_ms(item.creation_time * 1000.0)
+                item['creation_time'] = datetime_from_ms(item['creation_time'] * 1000.0)
 
-                if item.last_interaction_time:
-                    item.last_interaction_time = datetime_from_ms(item.last_interaction_time * 1000.0)
+                print()
+                print(111, item['current_depth_gd'])
+                print()
 
-                if item.last_interaction_details:
-                    if not isinstance(item.last_interaction_details, unicode):
-                        item.last_interaction_details = item.last_interaction_details.decode('utf8')
+                if item['last_interaction_time']:
+                    item['last_interaction_time'] = datetime_from_ms(item['last_interaction_time'] * 1000.0)
+
+                if item['last_interaction_details']:
+                    if not isinstance(item['last_interaction_details'], unicode):
+                        item['last_interaction_details'] = item['last_interaction_details'].decode('utf8')
 
                 response.append(item)
+
+        print()
+        #print(222, response[0].current_depth_gd, response[1].current_depth_gd)
+        print()
 
         self.response.payload[:] = response
 
