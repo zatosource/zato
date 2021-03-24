@@ -248,7 +248,7 @@ class WebSocket(_WebSocket):
         self.connection_time = self.last_seen = datetime.utcnow()
         self.sec_type = self.config.sec_type
         self.pings_missed = 0
-        self.pings_missed_threshold = self.config.pings_missed_threshold
+        self.pings_missed_threshold = self.config.get('pings_missed_threshold') or 2
         self.user_data = Bunch() # Arbitrary user-defined data
         self._disconnect_requested = False # Have we been asked to disconnect this client?
 
@@ -1061,7 +1061,6 @@ class WebSocket(_WebSocket):
                     self.disconnect_client('<no-cid>', code_invalid_utf8, reason)
                     return
 
-            request = self._parse_func(data or _default_data)
             cid = new_cid()
             request = self._parse_func(data or _default_data)
             now = _now()
