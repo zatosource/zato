@@ -2021,10 +2021,6 @@ class CySimpleIO(object):
             elif isinstance(_input_data_dict, WritableKeyedTuple):
                 input_data_dict = _input_data_dict.get_value()
 
-            print()
-            print('QQQ', input_data_dict)
-            print()
-
             for is_required, current_elems in all_elems: # type: bool, dict
                 for current_elem_name, current_elem in current_elems.items():
                     value = input_data_dict.get(current_elem_name, InternalNotGiven)
