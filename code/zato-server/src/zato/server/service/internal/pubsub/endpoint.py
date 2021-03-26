@@ -308,10 +308,6 @@ class GetEndpointQueueList(_GetEndpointQueue):
                 self._add_queue_depths(session, item)
                 item['creation_time'] = datetime_from_ms(item['creation_time'] * 1000.0)
 
-                print()
-                print(111, item['current_depth_gd'])
-                print()
-
                 if item['last_interaction_time']:
                     item['last_interaction_time'] = datetime_from_ms(item['last_interaction_time'] * 1000.0)
 
@@ -320,10 +316,6 @@ class GetEndpointQueueList(_GetEndpointQueue):
                         item['last_interaction_details'] = item['last_interaction_details'].decode('utf8')
 
                 response.append(item)
-
-        print()
-        #print(222, response[0].current_depth_gd, response[1].current_depth_gd)
-        print()
 
         self.response.payload[:] = response
 
