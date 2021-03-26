@@ -257,6 +257,10 @@ class EndpointQueues(_EndpointObjects):
 
     def on_before_append_item(self, item):
 
+        print()
+        print(111, item.current_depth_gd)
+        print()
+
         item.current_depth_gd = item.current_depth_gd or 0
         item.current_depth_non_gd = item.current_depth_non_gd or 0
 
