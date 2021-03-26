@@ -123,7 +123,7 @@
                         <td id="current_depth_{{ item.id }}">
                             <a href="{% url "pubsub-topic-messages" item.id item.name|slugify %}?cluster={{ cluster_id }}&amp;has_gd=True">{{ item.current_depth_gd }}</a>
                             /
-                            <a href="{% url "pubsub-topic-messages" item.id item.name|slugify %}?cluster={{ cluster_id }}&amp;has_gd=False">{{ item.current_depth_non_gd }}</a>
+                            {{ item.current_depth_non_gd }}
                         </td>
 
                         <td>
