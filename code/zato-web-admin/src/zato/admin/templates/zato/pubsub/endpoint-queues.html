@@ -221,7 +221,7 @@
                         <td id="total_depth_{{ item.sub_id}}">
                             <a href="{% url "pubsub-endpoint-queue-browser" "true" item.sub_id item.topic_name|slugify %}?cluster={{ cluster_id }}">{{ item.current_depth_gd }}</a>
                             /
-                            <a href="{% url "pubsub-endpoint-queue-browser" "false" item.sub_id item.topic_name|slugify %}?cluster={{ cluster_id }}">{{ item.current_depth_non_gd }}</a>
+                            {{ item.current_depth_non_gd }}
                         </td>
 
                         <td style="width:20%">
