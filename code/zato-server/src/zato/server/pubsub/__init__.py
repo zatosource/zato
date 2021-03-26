@@ -1641,7 +1641,7 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def publish(self, name, *args, **kwargs):
+    def publish(self, name, *args, mime_type=PUBSUB.MIMEType.Zato, **kwargs):
         """ Publishes a new message to input name, which may point either to a topic or service.
         POST /zato/pubsub/topic/{topic_name}
         """
