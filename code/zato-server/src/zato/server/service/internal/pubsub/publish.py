@@ -8,7 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
-from json import dumps
 from logging import DEBUG, getLogger
 from operator import itemgetter
 from traceback import format_exc
@@ -22,7 +21,7 @@ from gevent import spawn
 # Zato
 from zato.common.api import DATA_FORMAT, PUBSUB, ZATO_NONE
 from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
-from zato.common.json_internal import loads
+from zato.common.json_internal import json_dumps, json_loads
 from zato.common.odb.query.pubsub.cleanup import delete_enq_delivered, delete_enq_marked_deleted, delete_msg_delivered, \
      delete_msg_expired
 from zato.common.odb.query.pubsub.publish import sql_publish_with_retry
@@ -114,7 +113,7 @@ class Publish(AdminService):
 
     def _get_message(self, topic, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic, has_no_sk_server,
         _initialized=_initialized, _zato_none=ZATO_NONE, _skip=PUBSUB.HOOK_ACTION.SKIP, _default_pri=PUBSUB.PRIORITY.DEFAULT,
-        _opaque_only=PUBSUB.DEFAULT.SK_OPAQUE, _float_str=PUBSUB.FLOAT_STRING_CONVERT):
+        _opaque_only=PUBSUB.DEFAULT.SK_OPAQUE, _float_str=PUBSUB.FLOAT_STRING_CONVERT, _zato_mime_type=PUBSUB.MIMEType.Zato):
 
         priority = get_priority(self.cid, input)
 
@@ -172,10 +171,19 @@ class Publish(AdminService):
         ps_msg.pub_time = _float_str.format(now)
         ps_msg.ext_pub_time = _float_str.format(ext_pub_time) if ext_pub_time else ext_pub_time
 
+
+        # If the data published is not a string or object, we need to serialise it to JSON
+        # so as to be able to save it in the database - a delivery task will later
+        # need to de-serialise it.
+        data = input['data']
+        if not isinstance(data, (str, bytes)):
+            data = json_dumps(data)
+            mime_type = mime_type
+
         ps_msg.delivery_status = _initialized
         ps_msg.pub_pattern_matched = pub_pattern_matched
-        ps_msg.data = input['data']
-        ps_msg.mime_type = mime_type
+        ps_msg.data = data
+        ps_msg.mime_type = _zato_mime_type
         ps_msg.priority = priority
         ps_msg.expiration = expiration
         ps_msg.expiration_time = expiration_time
@@ -615,7 +623,7 @@ class Publish(AdminService):
                     if use_pipeline:
                         endpoint_topic_list = endpoint_topic_list.execute()[-1] # Elem [0] will be the result of .hmset
 
-                    endpoint_topic_list = loads(endpoint_topic_list) if endpoint_topic_list else []
+                    endpoint_topic_list = json_loads(endpoint_topic_list) if endpoint_topic_list else []
 
                     # If we already have something stored in Redis, find information about this topic and remove it
                     # to make room for the newest entry.
@@ -653,7 +661,7 @@ class Publish(AdminService):
                     endpoint_topic_list = endpoint_topic_list[:endpoint_max_history]
 
                     # Same as for topics, sends to Redis immediately or under the pipeline
-                    conn.set(endpoint_key, dumps(endpoint_topic_list))
+                    conn.set(endpoint_key, json_dumps(endpoint_topic_list))
 
             finally:
                 if use_pipeline:
