@@ -903,6 +903,9 @@ class PUBSUB:
         META_ENDPOINT_PUB_KEY = 'zato.ps.meta.endpoint.pub.%s.%s'
         META_ENDPOINT_SUB_KEY = 'zato.ps.meta.endpoint.sub.%s.%s'
 
+    class MIMEType:
+        Zato = 'application/vnd.zato.pubsub.json'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
