@@ -490,29 +490,33 @@ class DeliveryTask(object):
                                     logger.warn(msg_logger)
                                     logger_zato.warn(msg_logger_zato)
 
-                                # .. sleep for a while but only if this was an error (not a warning).
-                                if result.status_code == status_code.Error:
+                                # .. sleep only if there are still some messages to be delivered,
+                                # as it is possible that our lists has been cleared out since the last time we run ..
+                                if self.delivery_list:
 
-                                    if result.reason_code == reason_code.Error_IO:
-                                        sleep_time = self.wait_sock_err
-                                    else:
-                                        sleep_time = self.wait_non_sock_err
+                                    # .. sleep for a while but only if this was an error (not a warning).
+                                    if result.status_code == status_code.Error:
 
-                                    exc_len_one = 'an exception'
-                                    exc_len_multi = '{} exceptions'
+                                        if result.reason_code == reason_code.Error_IO:
+                                            sleep_time = self.wait_sock_err
+                                        else:
+                                            sleep_time = self.wait_non_sock_err
 
-                                    if len_exception_list == 1:
-                                        exc_len_msg = exc_len_one
-                                    else:
-                                        exc_len_msg = exc_len_multi.format(len_exception_list)
+                                        exc_len_one = 'an exception'
+                                        exc_len_multi = '{} exceptions'
 
-                                    sleep_msg = 'Sleeping for {}s after {} in iter #{}'.format(
-                                        sleep_time, exc_len_msg, result.delivery_iter)
+                                        if len_exception_list == 1:
+                                            exc_len_msg = exc_len_one
+                                        else:
+                                            exc_len_msg = exc_len_multi.format(len_exception_list)
 
-                                    logger.warn(sleep_msg)
-                                    logger_zato.warn(sleep_msg)
+                                        sleep_msg = 'Sleeping for {}s after {} in iter #{}'.format(
+                                            sleep_time, exc_len_msg, result.delivery_iter)
 
-                                    sleep(sleep_time)
+                                        logger.warn(sleep_msg)
+                                        logger_zato.warn(sleep_msg)
+
+                                        sleep(sleep_time)
 
                 # There was no message to deliver in this turn ..
                 else:
@@ -1168,16 +1172,14 @@ class PubSubTool(object):
     def delete_messages(self, sub_key, msg_list):
         """ Marks one or more to be deleted from the delivery task by the latter's sub_key.
         """
-        with self.lock:
-            self.delivery_tasks[sub_key].delete_messages(msg_list)
+        self.delivery_tasks[sub_key].delete_messages(msg_list)
 
 # ################################################################################################################################
 
     def get_messages(self, sub_key, has_gd=None):
         """ Returns all messages enqueued for sub_key without deleting them from their queue.
         """
-        with self.lock:
-            return self.delivery_tasks[sub_key].get_messages(has_gd)
+        return self.delivery_tasks[sub_key].get_messages(has_gd)
 
 # ################################################################################################################################
 
@@ -1192,7 +1194,6 @@ class PubSubTool(object):
     def get_message(self, sub_key, msg_id):
         """ Returns a particular message enqueued for sub_key.
         """
-        with self.lock:
-            return self.delivery_tasks[sub_key].get_message(msg_id)
+        return self.delivery_tasks[sub_key].get_message(msg_id)
 
 # ################################################################################################################################
