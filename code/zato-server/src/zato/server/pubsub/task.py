@@ -26,7 +26,7 @@ from future.utils import iteritems
 
 # Zato
 from zato.common.api import GENERIC, PUBSUB
-from zato.common.json_internal import loads
+from zato.common.json_internal import json_loads
 from zato.common.pubsub import PubSubMessage
 from zato.common.util.api import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
@@ -646,7 +646,7 @@ class GDMessage(Message):
     is_gd_message = True
 
     def __init__(self, sub_key, topic_name, msg, _sk_opaque=PUBSUB.DEFAULT.SK_OPAQUE, _gen_attr=GENERIC.ATTR_NAME,
-        _loads=loads):
+        _loads=json_loads, _zato_mime_type=PUBSUB.MIMEType.Zato):
 
         logger.info('Building task message (gd) from `%s`', msg)
 
@@ -661,7 +661,6 @@ class GDMessage(Message):
         self.position_in_group = msg.position_in_group
         self.pub_time = msg.pub_time
         self.ext_pub_time = msg.ext_pub_time
-        self.data = msg.data
         self.mime_type = msg.mime_type
         self.priority = msg.priority
         self.expiration = msg.expiration
@@ -674,8 +673,16 @@ class GDMessage(Message):
         self.user_ctx = msg.user_ctx
         self.zato_ctx = msg.zato_ctx
 
+        # Assign data but note that we may still need to modify it
+        # depending on what zato_ctx contains.
+        self.data = msg.data
+
+        # This is optional ..
         if self.zato_ctx:
-            self.zato_ctx = loads(self.zato_ctx)
+            self.zato_ctx = _loads(self.zato_ctx) # type: dict
+
+        if self.zato_ctx.get('zato_mime_type') == _zato_mime_type:
+            self.data = json_loads(self.data)
 
         # Load opaque attributes, if any were provided on input
         opaque = getattr(msg, _gen_attr, None)
@@ -687,7 +694,7 @@ class GDMessage(Message):
         # Add times in ISO-8601 for external subscribers
         self.add_iso_times()
 
-        logger.info('Built task message (gd) for `%s`', self.pub_msg_id)
+        logger.info('Built task message (gd) from `%s`', self.pub_msg_id)
 
 # ################################################################################################################################
 
