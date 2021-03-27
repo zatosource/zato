@@ -98,7 +98,7 @@ class Publish(AdminService):
         input_optional = (AsIs('data'), List('data_list'), AsIs('msg_id'), 'has_gd', Int('priority'), Int('expiration'),
             'mime_type', AsIs('correl_id'), 'in_reply_to', AsIs('ext_client_id'), 'ext_pub_time', 'pub_pattern_matched',
             'security_id', 'ws_channel_id', 'service_id', 'data_parsed', 'meta', AsIs('group_id'),
-            Int('position_in_group'), 'endpoint_id', List('reply_to_sk'), List('deliver_to_sk'), 'user_ctx', 'zato_ctx')
+            Int('position_in_group'), 'endpoint_id', List('reply_to_sk'), List('deliver_to_sk'), 'user_ctx', AsIs('zato_ctx'))
         output_optional = (AsIs('msg_id'), List('msg_id_list'))
 
 # ################################################################################################################################
@@ -159,7 +159,7 @@ class Publish(AdminService):
         deliver_to_sk = input.get('deliver_to_sk') or []
 
         user_ctx = input.get('user_ctx')
-        zato_ctx = input.get('zato_ctx')
+        zato_ctx = input.get('zato_ctx') or {}
 
         ps_msg = PubSubMessage()
         ps_msg.topic = topic
@@ -171,19 +171,20 @@ class Publish(AdminService):
         ps_msg.pub_time = _float_str.format(now)
         ps_msg.ext_pub_time = _float_str.format(ext_pub_time) if ext_pub_time else ext_pub_time
 
-
         # If the data published is not a string or object, we need to serialise it to JSON
         # so as to be able to save it in the database - a delivery task will later
         # need to de-serialise it.
         data = input['data']
         if not isinstance(data, (str, bytes)):
             data = json_dumps(data)
-            mime_type = mime_type
+            zato_ctx['zato_mime_type'] = _zato_mime_type
+
+        zato_ctx = json_dumps(zato_ctx)
 
         ps_msg.delivery_status = _initialized
         ps_msg.pub_pattern_matched = pub_pattern_matched
         ps_msg.data = data
-        ps_msg.mime_type = _zato_mime_type
+        ps_msg.mime_type = mime_type
         ps_msg.priority = priority
         ps_msg.expiration = expiration
         ps_msg.expiration_time = expiration_time
