@@ -29,7 +29,6 @@ from past.builtins import basestring, unicode
 from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
-from zato.common.json_internal import dumps
 from zato.common.odb.model import WebSocketClientPubSubKeys
 from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered as _confirm_pubsub_msg_delivered, \
      get_delivery_server_for_sub_key, get_sql_messages_by_msg_id_list as _get_sql_messages_by_msg_id_list, \
@@ -1641,7 +1640,7 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def publish(self, name, *args, mime_type=PUBSUB.MIMEType.Zato, **kwargs):
+    def publish(self, name, *args, **kwargs):
         """ Publishes a new message to input name, which may point either to a topic or service.
         POST /zato/pubsub/topic/{topic_name}
         """
@@ -1693,9 +1692,9 @@ class PubSub(object):
                 self.subscribe(topic_name, endpoint_name=endpoint.name, is_internal=True)
 
             # We need a Zato context to relay information about the service pointed to by the published message
-            zato_ctx = dumps({
+            zato_ctx = {
                 'target_service_name': name
-            })
+            }
 
         data = kwargs.get('data') or ''
         data_list = kwargs.get('data_list') or []
