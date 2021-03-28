@@ -377,9 +377,15 @@ class DeliveryTask(object):
 # ################################################################################################################################
 
     def _should_wake(self, _now=utcnow_as_ms):
-        """ Returns True if the task should be woken up g. because its time has come already to process messages,
+        """ Returns True if the task should be woken up e.g. because its time has come already to process messages,
         assumming there are any waiting for it.
         """
+        # Return quickly if we already know that there are some messages to deliver ..
+        if self.delivery_list:
+            return True
+
+        # .. otherwise, we will wait until self.delivery_interval lapsed.
+
         now = _now()
         diff = round(now - self.last_iter_run, 2)
 
@@ -490,6 +496,7 @@ class DeliveryTask(object):
                                     logger.warn(msg_logger)
                                     logger_zato.warn(msg_logger_zato)
 
+
                                 # .. sleep only if there are still some messages to be delivered,
                                 # as it is possible that our lists has been cleared out since the last time we run ..
                                 if self.delivery_list:
@@ -521,7 +528,7 @@ class DeliveryTask(object):
                 # There was no message to deliver in this turn ..
                 else:
 
-                    # .. so we can wait until one arrives.
+                    # .. thus, we can wait until one arrives.
                     sleep(default_sleep_time)
 
 # ################################################################################################################################
