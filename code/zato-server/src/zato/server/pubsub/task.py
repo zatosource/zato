@@ -496,7 +496,6 @@ class DeliveryTask(object):
                                     logger.warn(msg_logger)
                                     logger_zato.warn(msg_logger_zato)
 
-
                                 # .. sleep only if there are still some messages to be delivered,
                                 # as it is possible that our lists has been cleared out since the last time we run ..
                                 if self.delivery_list:
