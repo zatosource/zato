@@ -1,18 +1,22 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from logging import getLogger
 
 # Zato
 from zato.server.base.worker.common import WorkerImpl
+
+# ################################################################################################################################
+
+if 0:
+    from zato.server.pubsub import PubSub
+    PubSub = PubSub
 
 # ################################################################################################################################
 
@@ -23,6 +27,9 @@ logger = getLogger(__name__)
 class PubSub(WorkerImpl):
     """ Publish/subscribe-related functionality for worker objects.
     """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.pubsub = self.pubsub # type: PubSub
 
 # ################################################################################################################################
 
