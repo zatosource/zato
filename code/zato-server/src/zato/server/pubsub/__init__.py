@@ -1689,7 +1689,7 @@ class PubSub(object):
             # Subscribe the default service delivery endpoint to messages from this topic
             endpoint = self.get_endpoint_by_name(PUBSUB.SERVICE_SUBSCRIBER.NAME)
             if not self.is_subscribed_to(endpoint.id, topic_name):
-                self.subscribe(topic_name, endpoint_name=endpoint.name, is_internal=True)
+                self.subscribe(topic_name, endpoint_name=endpoint.name, is_internal=True, delivery_batch_size=1)
 
             # We need a Zato context to relay information about the service pointed to by the published message
             zato_ctx = {
