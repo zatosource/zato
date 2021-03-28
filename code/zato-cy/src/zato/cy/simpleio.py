@@ -741,7 +741,7 @@ class Int(Elem):
         if value and value != _zato_none:
             return _builtin_int(value)
         elif value is None:
-            return 0
+            return None
         else:
             return value
 
