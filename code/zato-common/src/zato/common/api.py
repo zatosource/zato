@@ -797,7 +797,7 @@ class PUBSUB:
         DEPTH_CHECK_FREQ = 100
         EXPIRATION = 2147483647 * 1000 # (2 ** 31 - 1) * 1000 milliseconds = around 70 years
         GET_BATCH_SIZE = 50
-        DELIVERY_BATCH_SIZE = 15000
+        DELIVERY_BATCH_SIZE = 500
         DELIVERY_MAX_RETRY = 123456789
         DELIVERY_MAX_SIZE = 500000 # 500 kB
         PUB_BUFFER_SIZE_GD = 0
