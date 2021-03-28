@@ -57,6 +57,7 @@ from zato.common.match import Matcher
 from zato.common.model.amqp_ import AMQPConnectorConfig
 from zato.common.model.wsx import WSXConnectorConfig
 from zato.common.odb.api import PoolStore, SessionWrapper
+from zato.common.pubsub import MSG_PREFIX as PUBSUB_MSG_PREFIX
 from zato.common.util.api import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
      import_module_from_path, new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, \
      start_connectors, store_tls, update_apikey_username_to_channel, update_bind_port, visit_py_source
@@ -912,12 +913,12 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def init_pubsub(self, _srv=PUBSUB.ENDPOINT_TYPE.SERVICE.id):
+    def init_pubsub(self):
         """ Sets up all pub/sub endpoints, subscriptions and topics. Also, configures pubsub with getters for each endpoint type.
         """
 
         # This is a pub/sub tool for delivery of Zato services within this server
-        service_pubsub_tool = PubSubTool(self.pubsub, self.server, _srv, True)
+        service_pubsub_tool = PubSubTool(self.pubsub, self.server, PUBSUB.ENDPOINT_TYPE.SERVICE.id, True)
         self.pubsub.service_pubsub_tool = service_pubsub_tool
 
         for value in self.worker_config.pubsub_endpoint.values():
@@ -931,15 +932,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             self.pubsub.create_subscription_object(config)
 
             # Special-case delivery of messages to services
-            if config.sub_key.startswith('zpsk.srv'):
-                service_pubsub_tool.add_sub_key(config['sub_key'])
-                self.pubsub.set_sub_key_server({
-                    'sub_key': config.sub_key,
-                    'cluster_id': self.server.cluster_id,
-                    'server_name': self.server.name,
-                    'server_pid': self.server.pid,
-                    'endpoint_type': _srv
-                })
+            if config.sub_key.startswith(PUBSUB_MSG_PREFIX.SERVICE_SK):
+                self.pubsub.set_config_for_service_subscription(config['sub_key'])
 
         for value in self.worker_config.pubsub_topic.values():
             self.pubsub.create_topic_object(bunchify(value['config']))
