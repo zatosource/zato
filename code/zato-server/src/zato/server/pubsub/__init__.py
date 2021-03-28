@@ -816,6 +816,19 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def set_config_for_service_subscription(self, sub_key, _endpoint_type=PUBSUB.ENDPOINT_TYPE.SERVICE.id):
+        # type: (str, str)
+        self.service_pubsub_tool.add_sub_key(sub_key)
+        self.set_sub_key_server({
+            'sub_key': sub_key,
+            'cluster_id': self.server.cluster_id,
+            'server_name': self.server.name,
+            'server_pid': self.server.pid,
+            'endpoint_type': _endpoint_type,
+        })
+
+# ################################################################################################################################
+
     def _is_allowed(self, target, name, is_pub, security_id, ws_channel_id, endpoint_id=None,
         _pub_role=_pub_role, _sub_role=_sub_role):
 
@@ -1687,9 +1700,15 @@ class PubSub(object):
             has_gd = True
 
             # Subscribe the default service delivery endpoint to messages from this topic
+
             endpoint = self.get_endpoint_by_name(PUBSUB.SERVICE_SUBSCRIBER.NAME)
             if not self.is_subscribed_to(endpoint.id, topic_name):
-                self.subscribe(topic_name, endpoint_name=endpoint.name, is_internal=True, delivery_batch_size=1)
+
+                # Subscribe the service to this topic ..
+                sub_key = self.subscribe(topic_name, endpoint_name=endpoint.name, is_internal=True, delivery_batch_size=1)
+
+                # .. and configure pub/sub metadata for the newly created subscription.
+                self.set_config_for_service_subscription(sub_key)
 
             # We need a Zato context to relay information about the service pointed to by the published message
             zato_ctx = {
