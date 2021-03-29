@@ -53,7 +53,8 @@ broker_message = CHANNEL
 broker_message_prefix = 'WEB_SOCKET_'
 list_func = channel_web_socket_list
 skip_input_params = ['service_id', 'is_out']
-create_edit_input_required_extra = ['service_name'] + generic_attrs
+create_edit_input_required_extra = ['service_name']
+create_edit_input_optional_extra = generic_attrs
 output_optional_extra = ['sec_type', 'service_name'] + generic_attrs
 
 # ################################################################################################################################
