@@ -253,8 +253,8 @@ class WebSocket(_WebSocket):
         self._disconnect_requested = False # Have we been asked to disconnect this client?
 
         # Audit log configuration ..
-        self.is_audit_log_sent_active     = self.config.is_audit_log_sent_active
-        self.is_audit_log_received_active = self.config.is_audit_log_received_active
+        self.is_audit_log_sent_active     = self.config.get('is_audit_log_sent_active') or False
+        self.is_audit_log_received_active = self.config.get('is_audit_log_received_active') or False
 
         # .. and audit log setup.
         self.parallel_server.set_up_object_audit_log_by_config(_audit_msg_type, self.pub_client_id, self.config, False)
