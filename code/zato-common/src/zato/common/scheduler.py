@@ -127,8 +127,6 @@ def get_config_from_string(data):
 
 def get_startup_job_services():
     # type: () -> list
-    from zato.common.util.api import get_config_from_string
-
     config = get_config_from_string(startup_jobs)
     return sorted(value.service for value in config.values())
 
