@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
@@ -224,10 +222,11 @@ class Ping(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_sql_ping_request'
         response_elem = 'zato_outgoing_sql_ping_response'
-        input_required = 'id'
+        input_required = 'id', 'should_raise_on_error'
         output_optional = 'id', 'response_time'
 
     def handle(self):
+
         with closing(self.odb.session()) as session:
             try:
                 item = session.query(SQLConnectionPool).\
@@ -241,11 +240,19 @@ class Ping(AdminService):
                 if response_time:
                     self.response.payload.response_time = str(response_time)
 
-            except Exception:
-                session.rollback()
-                self.logger.error('SQL connection could not be pinged, e:`{}`', format_exc())
+            except Exception as e:
 
-                raise
+                # Always roll back ..
+                session.rollback()
+
+                # .. and log or raise, depending on what we are instructed to do.
+                log_msg = 'SQL connection `{}` could not be pinged, e:`{}`'
+
+                if self.request.input.should_raise_on_error:
+                    self.logger.warn(log_msg.format(item.name, format_exc()))
+                    raise e
+                else:
+                    self.logger.warn(log_msg.format(item.name, e.args[0]))
 
 class AutoPing(AdminService):
     """ Invoked periodically from the scheduler - pings all the existing SQL connections.
@@ -258,9 +265,12 @@ class AutoPing(AdminService):
 
         for item in self.invoke(GetList.get_name(), {'cluster_id':self.server.cluster_id})['zato_outgoing_sql_get_list_response']:
             try:
-                self.invoke(Ping.get_name(), {'id': item['id']})
+                self.invoke(Ping.get_name(), {
+                    'id': item['id'],
+                    'should_raise_on_error': False,
+                })
             except Exception:
-                self.logger.warn('Could not ping SQL pool `%s`, config:`%s`, e:`%s`', item['name'], item, format_exc())
+                self.logger.warn('Could not auto-ping SQL pool `%s`, config:`%s`, e:`%s`', item['name'], item, format_exc())
 
 class GetEngineList(AdminService):
     """ Returns a list of all engines defined in sql.conf.
