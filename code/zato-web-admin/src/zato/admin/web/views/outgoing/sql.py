@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -142,7 +142,10 @@ def ping(req, cluster_id, id):
     """ Pings a database and returns the time it took, in milliseconds.
     """
     try:
-        response = req.zato.client.invoke('zato.outgoing.sql.ping', {'id':id})
+        response = req.zato.client.invoke('zato.outgoing.sql.ping', {
+            'id':id,
+            'should_raise_on_error': True,
+        })
 
         if response.ok:
 
