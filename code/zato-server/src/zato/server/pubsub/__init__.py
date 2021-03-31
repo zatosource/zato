@@ -1763,7 +1763,7 @@ class PubSub(object):
         response = self.invoke_service('zato.pubsub.endpoint.get-delivery-messages', {
             'cluster_id': self.server.cluster_id,
             'sub_key': sub_key,
-        }, serialize=False).response
+        }, serialize=False)
 
         # Already includes all the details ..
         if needs_details:
