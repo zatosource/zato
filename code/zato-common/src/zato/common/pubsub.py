@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from logging import getLogger
@@ -30,7 +28,7 @@ sk_lists = ('reply_to_sk', 'deliver_to_sk')
 
 skip_to_external=('delivery_status', 'topic_id', 'cluster_id', 'pub_pattern_matched', 'sub_pattern_matched',
     'published_by_id', 'data_prefix', 'data_prefix_short', 'pub_time', 'expiration_time', 'recv_time',
-    'pub_msg_id', 'pub_correl_id') + sk_lists
+    'pub_msg_id', 'pub_correl_id', 'zato_ctx') + sk_lists
 
 _data_keys=('data', 'data_prefix', 'data_prefix_short')
 
