@@ -92,7 +92,6 @@ class _RemoteServer(_Server):
 
         # Ping the remote server to quickly find out if it is still available
         requests_get(self.ping_address, timeout=self.ping_timeout)
-
         response = self.invoker.invoke(service, request, *args, **kwargs)
 
         if response.ok:
