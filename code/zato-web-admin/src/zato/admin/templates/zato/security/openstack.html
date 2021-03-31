@@ -51,7 +51,7 @@
         <div class='page_prompt'>
             <a href="javascript:$.fn.zato.security.openstack.create()">Create a new OpenStack definition</a>
         </div>
-        
+
         <div id="markup">
             <table id="data-table">
                 <thead>
@@ -113,7 +113,7 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" name="is_active" value="on" />
+                    <input type="hidden" name="edit-is_active" value="on" />
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>
@@ -159,7 +159,7 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Confirm password</td>
-                            <td>{{ change_password_form.password2 }} 
+                            <td>{{ change_password_form.password2 }}
                                 <input type="hidden" id="id_change_password-id" name="id" />
                                 <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
                             </td>

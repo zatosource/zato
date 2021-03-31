@@ -60,7 +60,7 @@
         <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.security.wss.create()">Create a new WS-Security definition</a>
         </div>
-        
+
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
                 <form action="{% url "security-wss-create" %}" method="post" id="create-form">
@@ -95,8 +95,8 @@
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
-                        </tr>                        
-                        
+                        </tr>
+
                     </table>
                     <input type="hidden" name="is_active" value="on" />
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
@@ -104,7 +104,7 @@
                 </form>
             </div>
         </div>
-        
+
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
                 <form action="{% url "security-wss-edit" %}" method="post" id="edit-form">
@@ -139,17 +139,17 @@
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
-                        </tr>                        
-                        
+                        </tr>
+
                     </table>
-                    <input type="hidden" name="is_active" value="on" />
+                    <input type="hidden" name="edit-is_active" value="on" />
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                     <input type="hidden" id="id_edit-password_type" name="edit-password_type" value="clear_text" />
                 </form>
             </div>
         </div>
-        
+
         <div id="change_password-div" class='data-popup ignore'>
             <div class="bd">
                 <form action="{% url "security-wss-change-password" %}" method="post" id="change_password-form">
@@ -172,8 +172,8 @@
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
-                        </tr>                        
-                        
+                        </tr>
+
                     </table>
                     <input type="hidden" id="id_change_password-id" name="id" />
                     <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
