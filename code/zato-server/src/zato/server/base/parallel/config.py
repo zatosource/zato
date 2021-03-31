@@ -525,7 +525,7 @@ class ConfigLoader(object):
     def set_up_object_audit_log_by_config(self, object_type, object_id, config, is_edit):
         # type: (str, str, WSXConnectorConfig, bool)
 
-        if config.is_audit_log_sent_active or config.is_audit_log_received_active:
+        if getattr(config, 'is_audit_log_sent_active', False) or getattr(config, 'is_audit_log_received_active', False):
 
             # These may be string objects
             config.max_len_messages_sent     = int(config.max_len_messages_sent or _audit_max_len_messages)
