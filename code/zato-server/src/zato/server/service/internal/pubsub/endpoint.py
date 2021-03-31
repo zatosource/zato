@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
@@ -662,8 +660,8 @@ class GetServerDeliveryMessages(AdminService):
     """ Returns a list of messages to be delivered to input endpoint. The messages must exist on current server.
     """
     class SimpleIO(AdminSIO):
-        input_required = ('sub_key',)
-        output_optional = ('msg_list',)
+        input_required = 'sub_key'
+        output_optional = List('msg_list')
 
     def handle(self):
         ps_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
@@ -691,7 +689,11 @@ class GetDeliveryMessages(AdminService, _GetMessagesBase):
             }, pid=sk_server.server_pid)
 
             if response:
-                self.response.payload[:] = reversed(response['response']['msg_list'])
+                response = response['response']
+                response = response['msg_list']
+                response = reversed(response)
+
+                self.response.payload[:] = response
         else:
             self.logger.info('Could not find delivery server for sub_key:`%s`', sub.sub_key)
 
