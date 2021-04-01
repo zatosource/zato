@@ -16,13 +16,11 @@ from traceback import format_exc
 from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 
-# anyjson
-from anyjson import dumps
-
 # Zato
 from zato.admin.settings import delivery_friendly_name
 from zato.admin.web.forms.outgoing.jms_wmq import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, get_definition_list, method_allowed, parse_response_data
+from zato.common.json_internal import dumps
 from zato.common.odb.model import OutgoingWMQ
 
 # ################################################################################################################################
@@ -85,7 +83,7 @@ def index(req):
 
         for item in data:
             _item = OutgoingWMQ(item.id, item.name, item.is_active, item.delivery_mode,
-                item.priority, item.expiration, item.def_id, delivery_friendly_name[item.delivery_mode],
+                item.priority, item.expiration, item.def_id, delivery_friendly_name[str(item.delivery_mode)],
                 item.def_name)
             items.append(_item)
 
@@ -108,7 +106,7 @@ def index(req):
 def create(req):
     try:
         response = req.zato.client.invoke('zato.outgoing.jms-wmq.create', _get_edit_create_message(req.POST))
-        delivery_mode_text = delivery_friendly_name[int(req.POST['delivery_mode'])]
+        delivery_mode_text = delivery_friendly_name[str(req.POST['delivery_mode'])]
 
         return _edit_create_response(req.zato.client, 'created', response.data.id,
             req.POST['name'], delivery_mode_text, req.POST['cluster_id'], req.POST['def_id'])
@@ -124,7 +122,7 @@ def edit(req):
     try:
         request = _get_edit_create_message(req.POST, 'edit-')
         req.zato.client.invoke('zato.outgoing.jms-wmq.edit', request)
-        delivery_mode_text = delivery_friendly_name[int(req.POST['edit-delivery_mode'])]
+        delivery_mode_text = delivery_friendly_name[str(req.POST['edit-delivery_mode'])]
 
         return _edit_create_response(req.zato.client, 'updated', req.POST['id'], req.POST['edit-name'],
             delivery_mode_text, req.POST['cluster_id'], req.POST['edit-def_id'])

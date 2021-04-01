@@ -18,7 +18,7 @@ from globre import match as globre_match
 from paste.util.converters import asbool
 
 # Zato
-from zato.common import FALSE_TRUE, TRUE_FALSE
+from zato.common.api import FALSE_TRUE, TRUE_FALSE
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -47,7 +47,7 @@ class _CreateEdit(CreateEdit):
         output_required = ('id', 'name')
 
     def success_message(self, item):
-        return 'Successfully {0} the AWS definition [{1}]'.format(self.verb, item.name)
+        return 'Successfully {} the AWS definition `{}`'.format(self.verb, item.name)
 
 class Create(_CreateEdit):
     url_name = 'security-aws-create'

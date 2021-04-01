@@ -18,7 +18,7 @@ from bunch import Bunch
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.pubsub.subscription import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, slugify
-from zato.common import PUBSUB
+from zato.common.api import PUBSUB
 from zato.common.odb.model import PubSubEndpoint
 
 # Python 2/3 compatibility
@@ -121,7 +121,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('endpoint_id', 'is_active', 'cluster_id', 'server_id')
+        input_required = ('endpoint_id', 'is_active', 'cluster_id', 'server_id', 'is_internal')
         input_optional = ('has_gd', 'topic_list_json', 'endpoint_type', 'endpoint_id', 'active_status',
             'delivery_method', 'delivery_data_format', 'delivery_batch_size', 'wrap_one_msg_in_list', 'delivery_max_retry',
             'delivery_err_should_block', 'wait_sock_err', 'wait_non_sock_err', 'out_amqp_id', 'amqp_exchange',
@@ -151,7 +151,6 @@ class _CreateEdit(CreateEdit):
             'cluster_id': self.req.zato.cluster_id,
             'endpoint_id': self.input.endpoint_id,
         }).data
-
 
         if response['last_seen']:
             response['last_seen'] = from_utc_to_user(response['last_seen']+'+00:00', self.req.zato.user_profile)
@@ -183,7 +182,7 @@ class Create(_CreateEdit):
 class Edit(_CreateEdit):
     url_name = 'pubsub-subscription-edit'
     form_prefix = 'edit-'
-    service_name = 'subscription-edit' #'zato.pubsub.subscription.edit'
+    service_name = 'zato.pubsub.subscription.edit'
 
 # ################################################################################################################################
 

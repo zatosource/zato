@@ -15,9 +15,6 @@ from random import choice, randint
 from unittest import TestCase
 from uuid import uuid4
 
-# anyjson
-from anyjson import loads
-
 # Bunch
 from bunch import Bunch, bunchify
 
@@ -37,7 +34,8 @@ from six import string_types
 from sqlalchemy import create_engine
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, SIMPLE_IO
+from zato.common.api import CHANNEL, DATA_FORMAT, SIMPLE_IO
+from zato.common.json_internal import loads
 from zato.common.log_message import CID_LENGTH
 from zato.common.odb import model
 from zato.common.odb.model import Cluster, ElasticSearch
@@ -45,7 +43,7 @@ from zato.common.odb.api import SessionWrapper, SQLConnectionPool
 from zato.common.odb.query import search_es_list
 from zato.common.simpleio_ import get_bytes_to_str_encoding, get_sio_server_config, simple_io_conf_contents
 from zato.common.py23_ import maxint
-from zato.common.util import is_port_taken, new_cid
+from zato.common.util.api import is_port_taken, new_cid
 from zato.server.service import Service
 
 # Zato - Cython
@@ -53,6 +51,13 @@ from zato.simpleio import CySimpleIO
 
 # Python 2/3 compatibility
 from past.builtins import basestring, cmp, unicode, xrange
+
+# ################################################################################################################################
+
+if 0:
+    from zato.common.util.search import SearchResults
+
+    SearchResults = SearchResults
 
 # ################################################################################################################################
 
@@ -208,7 +213,7 @@ def enrich_with_static_config(object_):
 
     object_._worker_config = Bunch(out_odoo=None, out_soap=None)
     object_._worker_store = Bunch(
-        sql_pool_store=None, stomp_outconn_api=None, outgoing_web_sockets=None, cassandra_api=None,
+        sql_pool_store=None, outgoing_web_sockets=None, cassandra_api=None,
         cassandra_query_api=None, email_smtp_api=None, email_imap_api=None, search_es_api=None, search_solr_api=None,
         target_matcher=Bunch(target_match=target_match, is_allowed=is_allowed), invoke_matcher=Bunch(is_allowed=is_allowed),
         vault_conn_api=None, sms_twilio_api=None)
@@ -397,9 +402,9 @@ class ServiceTestCase(TestCase):
             pass
 
         instance.handle()
-        #instance.update_handle(
-        #    set_response_func, instance, request_data, channel, data_format, None, server, None, worker_store, new_cid(),
-        #    None)
+        instance.update_handle(
+            set_response_func, instance, request_data, channel, data_format, None, server, None, worker_store, new_cid(),
+            None)
         return instance
 
     def _check_sio_request_input(self, instance, request_data):

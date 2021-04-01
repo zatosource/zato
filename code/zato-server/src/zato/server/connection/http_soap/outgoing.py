@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,8 +11,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from copy import deepcopy
 from datetime import datetime
+from http.client import OK
 from io import StringIO
-from json import loads
 from logging import DEBUG, getLogger
 from traceback import format_exc
 
@@ -34,10 +34,11 @@ from requests.sessions import Session as requests_session
 from past.builtins import basestring, unicode
 
 # Zato
-from zato.common import CONTENT_TYPE, DATA_FORMAT, Inactive, SEC_DEF_TYPE, soapenv11_namespace, soapenv12_namespace, TimeoutException, \
-     URL_TYPE, ZATO_NONE
-from zato.common.util import get_component_name
-from zato.common.util.json_ import dumps
+from zato.common.api import CONTENT_TYPE, DATA_FORMAT, SEC_DEF_TYPE, URL_TYPE
+from zato.common.exception import Inactive, TimeoutException
+from zato.common.json_internal import dumps, loads
+from zato.common.util.api import get_component_name
+from zato.common.xml_ import soapenv11_namespace, soapenv12_namespace
 from zato.server.connection.queue import ConnectionQueue
 
 # ################################################################################################################################
@@ -87,8 +88,8 @@ class BaseHTTPSOAPWrapper(object):
     def invoke_http(self, cid, method, address, data, headers, hooks, *args, **kwargs):
 
         cert = self.config['tls_key_cert_full_path'] if self.config['sec_type'] == SEC_DEF_TYPE.TLS_KEY_CERT else None
-        verify = False if self.config.get('tls_verify', ZATO_NONE) == ZATO_NONE else self.config['tls_verify']
-        verify = verify if isinstance(verify, bool) else verify.encode('utf-8')
+        tls_verify = self.config.get('tls_verify', True)
+        tls_verify = tls_verify if isinstance(tls_verify, bool) else tls_verify.encode('utf-8')
 
         try:
 
@@ -97,14 +98,14 @@ class BaseHTTPSOAPWrapper(object):
 
             return self.session.request(
                 method, address, data=data, auth=auth, headers=headers, hooks=hooks,
-                cert=cert, verify=verify, timeout=self.config['timeout'], *args, **kwargs)
+                cert=cert, verify=tls_verify, timeout=self.config['timeout'], *args, **kwargs)
         except RequestsTimeout:
             raise TimeoutException(cid, format_exc())
 
-    def ping(self, cid, _has_debug=has_debug):
+    def ping(self, cid, return_response=False, log_verbose=False):
         """ Pings a given HTTP/SOAP resource
         """
-        logger.info('About to ping:`%s`', self.config_no_sensitive)
+        logger.info('Pinging:`%s`', self.config_no_sensitive)
 
         # Session object will write some info to it ..
         verbose = StringIO()
@@ -126,7 +127,11 @@ class BaseHTTPSOAPWrapper(object):
         value = verbose.getvalue()
         verbose.close()
 
-        return value
+        if log_verbose:
+            func = logger.info if response.status_code == OK else logger.warn
+            func(value)
+
+        return response if return_response else value
 
     def get_default_content_type(self):
 
@@ -338,9 +343,9 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         self._enforce_is_active()
 
         # We never touch strings/unicode because apparently the user already serialized outgoing data
-        needs_serialize = not isinstance(data, basestring)
+        needs_request_serialize = not isinstance(data, basestring)
 
-        if needs_serialize:
+        if needs_request_serialize:
             if self.config['data_format'] == DATA_FORMAT.JSON:
                 data = dumps(data)
             elif data and self.config['data_format'] == DATA_FORMAT.XML:
@@ -349,7 +354,6 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         headers = self._create_headers(cid, kwargs.pop('headers', {}))
         if self.config['transport'] == 'soap':
             data, headers = self._soap_data(data, headers)
-
 
         params = params or {}
 
@@ -369,14 +373,15 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         if _has_debug:
             logger.debug('CID:`%s`, response:`%s`', cid, response.text)
 
-        if needs_serialize:
-
-            if self.config['data_format'] == DATA_FORMAT.JSON:
+        if self.config['data_format'] == DATA_FORMAT.JSON:
+            try:
                 response.data = loads(response.text)
+            except ValueError as e:
+                raise Exception('Could not parse JSON response `{}`; e:`{}`'.format(response.text, e.args[0]))
 
-            elif self.config['data_format'] == DATA_FORMAT.XML:
-                if response.text and response.headers.get('Content-Type') in ('application/xml', 'text/xml'):
-                    response.data = fromstring(response.text)
+        elif self.config['data_format'] == DATA_FORMAT.XML:
+            if response.text and response.headers.get('Content-Type') in ('application/xml', 'text/xml'):
+                response.data = fromstring(response.text)
 
         return response
 

@@ -21,10 +21,10 @@ from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.pubsub import MsgPublishForm
 from zato.admin.web.views import method_allowed
 from zato.admin.web.views.pubsub import get_message
-from zato.common import PUBSUB
+from zato.common.api import PUBSUB
+from zato.common.json_internal import dumps
 from zato.common.pubsub import new_msg_id
-from zato.common.util import asbool
-from zato.common.util.json_ import dumps
+from zato.common.util.api import asbool
 
 # ################################################################################################################################
 
@@ -98,11 +98,11 @@ def _publish_update_action(req, cluster_id, action, msg_id=None, topic_id=None):
                 expiration_time = """
                 <a
                     id="a_expiration_time"
-                    href="javascript:$.fn.zato.pubsub.message.details.toggle_time('expiration_time', '{expiration_time_user}', '{expiration_time_utc}')">{expiration_time_user}
+                    href="javascript:$.fn.zato.pubsub.message.details.toggle_time('expiration_time', '{exp_time_user}', '{exp_time_utc}')">{exp_time_user}
                 </a>
                 """.format(**{
-                       'expiration_time_utc': response.expiration_time,
-                       'expiration_time_user': from_utc_to_user(response.expiration_time+'+00:00', req.zato.user_profile),
+                       'exp_time_utc': response.expiration_time,
+                       'exp_time_user': from_utc_to_user(response.expiration_time+'+00:00', req.zato.user_profile),
                 })
 
     return HttpResponse(dumps({
@@ -201,7 +201,7 @@ def publish_action(req):
         req.zato.client.invoke('zato.pubsub.publish.publish', service_input)
 
     except Exception as e:
-        message = e.message
+        message = e.args[0]
         is_ok = False
     else:
         message = 'Successfully published message `{}`'.format(msg_id)

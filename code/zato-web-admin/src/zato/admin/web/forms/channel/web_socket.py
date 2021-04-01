@@ -12,10 +12,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_security_select, add_services, DataFormatForm, INITIAL_CHOICES
-from zato.common import SIMPLE_IO, WEB_SOCKET
+from zato.admin.web.forms import add_security_select, add_services, DataFormatForm, INITIAL_CHOICES, WithAuditLog
+from zato.common.api import SIMPLE_IO, WEB_SOCKET
 
-class CreateForm(DataFormatForm):
+class CreateForm(DataFormatForm, WithAuditLog):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
@@ -29,6 +29,7 @@ class CreateForm(DataFormatForm):
 
     def __init__(self, security_list=[], prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
+        super(WithAuditLog).__init__()
 
         self.fields['token_format'].choices = []
         self.fields['token_format'].choices.append(INITIAL_CHOICES)

@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from unittest import main, TestCase
 
 # Zato
-from zato.common import APISPEC
+from zato.common.api import APISPEC
 from zato.server.apispec import not_public, ServiceInfo
 from common import service_name, sio_config
 
@@ -82,7 +82,6 @@ class APISpecDocstringParsing(TestCase):
             - More bullets in the list
 
             """
-
 
         info = ServiceInfo(service_name, MyService, sio_config, 'public')
         self.assertEqual(info.docstring.summary, 'This is a one-line summary.')
@@ -192,8 +191,8 @@ class APISpecDocstringParsing(TestCase):
 
         expected_internal = {
              'tag':         'internal',
-             'description': '\n\n\n.. raw:: html\n\n    <span class="zato-tag-name-highlight">@internal</span>\n\nOne-line summary for internal uses.\n\nThis part is internal,\nit will not be visible\nto public users.',
-             'full':        '\n\n.. raw:: html\n\n    <span class="zato-tag-name-highlight">@internal</span>\n\n\nINFORMATION IN THIS SECTION IS NOT PUBLIC.\n\nOne-line summary for internal uses.\n\nThis part is internal,\nit will not be visible\nto public users.\n',
+             'description': '\n\n\n.. raw:: html\n\n    <span class="zato-tag-name-highlight">@internal</span>\n\nOne-line summary for internal uses.\n\nThis part is internal,\nit will not be visible\nto public users.', # noqa: E501
+             'full':        '\n\n.. raw:: html\n\n    <span class="zato-tag-name-highlight">@internal</span>\n\n\nINFORMATION IN THIS SECTION IS NOT PUBLIC.\n\nOne-line summary for internal uses.\n\nThis part is internal,\nit will not be visible\nto public users.\n', # noqa: E501
              'summary':     not_public
         }
 

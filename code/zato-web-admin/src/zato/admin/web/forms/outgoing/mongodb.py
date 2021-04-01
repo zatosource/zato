@@ -13,7 +13,7 @@ from django import forms
 
 # Zato
 from zato.admin.web.forms import add_select, WithTLSForm
-from zato.common import MONGODB
+from zato.common.api import MONGODB
 
 default = MONGODB.DEFAULT
 timeout = default.TIMEOUT

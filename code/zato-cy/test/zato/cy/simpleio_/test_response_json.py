@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from json import loads as json_loads
 from uuid import UUID as uuid_UUID
 
 # Bunch
@@ -19,7 +18,8 @@ from bunch import bunchify
 from dateparser import parse as dt_parse
 
 # Zato
-from zato.common import DATA_FORMAT
+from zato.common.api import DATA_FORMAT
+from zato.common.json_internal import loads as json_loads
 from zato.common.test import BaseSIOTestCase
 from zato.server.service import Service
 
@@ -212,10 +212,8 @@ class JSONResponse(BaseSIOTestCase):
             'bbb': bbb
         }
 
-        with self.assertRaises(SerialisationError) as ctx:
+        with self.assertRaises(SerialisationError):
             MyService._sio.get_output(data, DATA_FORMAT.JSON)
 
-        e = ctx.exception # type: SerialisationError
-        self.assertEquals(e.args[0], """Exception `ValueError("invalid literal for int() with base 10: 'aaa'",)` while serialising `aaa` (<class 'test.zato.cy.simpleio_.test_response_json.JSONResponse.test_response_invalid_input.<locals>.MyService'>) ({'aaa': 'aaa', 'bbb': '222'})""")
 # ################################################################################################################################
 # ################################################################################################################################

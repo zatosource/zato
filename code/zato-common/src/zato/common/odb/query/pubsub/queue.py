@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from sqlalchemy import func, update
 
 # Zato
-from zato.common import PUBSUB
+from zato.common.api import PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription
 from zato.common.odb.query import count, _pubsub_queue_message
 from zato.common.util.time_ import utcnow_as_ms
@@ -101,7 +101,7 @@ def get_queue_depth_by_sub_key(session, cluster_id, sub_key, now):
         filter(PubSubEnqMsg.pub_msg_id==PubSubMessage.pub_msg_id).\
         filter(PubSubMessage.expiration_time>=now).\
         filter(PubSubSubscription.sub_key==sub_key).\
-        filter(PubSubEnqMsg.cluster_id==cluster_id)
+        filter(PubSubEnqMsg.cluster_id==cluster_id) # noqa: E712
 
     return count(session, current_q)
 

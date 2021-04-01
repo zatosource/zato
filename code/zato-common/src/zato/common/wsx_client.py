@@ -12,7 +12,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import subprocess
 from datetime import datetime, timedelta
-from json import loads
 from traceback import format_exc
 from uuid import uuid4
 
@@ -27,7 +26,8 @@ from six.moves.http_client import OK
 from ws4py.client.geventclient import WebSocketClient
 
 # Zato
-from zato.common.util.json_ import dumps
+from zato.common.json_ import dumps
+from zato.common.json_internal import loads
 
 # ################################################################################################################################
 
@@ -406,14 +406,14 @@ class Client(object):
 
 # ################################################################################################################################
 
-    def invoke(self, request):
+    def invoke(self, request, timeout=5):
         if self.needs_auth and (not self.is_authenticated):
             raise Exception('Client is not authenticated')
 
         request_id = MSG_PREFIX.INVOKE_SERVICE.format(uuid4().hex)
         spawn(self.send, request_id, ServiceInvokeRequest(request_id, request, self.config, self.auth_token))
 
-        response = self._wait_for_response(request_id)
+        response = self._wait_for_response(request_id, wait_time=timeout)
 
         if not response:
             logger.warn('No response to invocation request `%s`', request_id)

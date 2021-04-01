@@ -15,7 +15,7 @@ from uuid import UUID as uuid_UUID
 from dateparser import parse as dt_parse
 
 # Zato
-from zato.common import DATA_FORMAT
+from zato.common.api import DATA_FORMAT
 from zato.common.test import BaseSIOTestCase
 from zato.server.service import Service
 
@@ -195,11 +195,8 @@ class XMLResponse(BaseSIOTestCase):
             'bbb': bbb
         }
 
-        with self.assertRaises(SerialisationError) as ctx:
+        with self.assertRaises(SerialisationError):
             MyService._sio.get_output(data, DATA_FORMAT.XML)
-
-        e = ctx.exception # type: SerialisationError
-        self.assertEquals(e.args[0], """Exception `ValueError("invalid literal for int() with base 10: 'aaa'",)` while serialising `aaa` (<class 'test.zato.cy.simpleio_.test_response_xml.XMLResponse.test_response_invalid_input.<locals>.MyService'>) ({'aaa': 'aaa', 'bbb': '222'})""")
 
 # ################################################################################################################################
 # ################################################################################################################################

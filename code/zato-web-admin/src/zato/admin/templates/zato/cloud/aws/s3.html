@@ -147,52 +147,80 @@
                     <table class="form-data">
 
                         <tr>
-                            <td style="vertical-align:middle;width:20%">Name</td>
-                            <td colspan="3">{{ create_form.name }}</td>
+                            <td style="vertical-align:middle;width:21%">Name</td>
+                            <td>{{ create_form.name }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Active</td>
-                            <td colspan="3">{{ create_form.is_active }}</td>
+                            <td style="vertical-align:middle">Options</td>
+                            <td>
+
+
+                            <label>
+                            Active
+                            {{ create_form.is_active }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Suppres slashes
+                            {{ create_form.suppr_cons_slashes }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Encrypt at rest
+                            {{ create_form.encrypt_at_rest }}
+                            </label>
+
+                            </td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Pool size</td>
-                            <td>{{ create_form.pool_size }}</td>
-                            <td style="vertical-align:middle; width:5%">Debug level</td>
-                            <td>{{ create_form.debug_level }}</td>
+                            <td style="vertical-align:middle"></td>
+                            <td>
+
+                            <label>
+                            Pool size
+                            {{ create_form.pool_size }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Debug level
+                            {{ create_form.debug_level }}
+                            </label>
+
+
+                            </td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">Address</td>
-                            <td colspan="3">{{ create_form.address }}</td>
+                            <td>{{ create_form.address }}</td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">Default bucket</td>
-                            <td colspan="3">{{ create_form.bucket }}</td>
+                            <td>{{ create_form.bucket }}</td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">Default content type</td>
-                            <td colspan="3">{{ create_form.content_type }}</td>
+                            <td>{{ create_form.content_type }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Default storage class</td>
-                            <td colspan="3">{{ create_form.storage_class }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Suppres consec. slashes</td>
-                            <td>{{ create_form.suppr_cons_slashes }}</td>
-                            <td style="vertical-align:middle">Encrypt at rest</td>
-                            <td>{{ create_form.encrypt_at_rest }}</td>
+                            <td style="vertical-align:middle">Default storage</td>
+                            <td>{{ create_form.storage_class }}</td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">Security</td>
-                            <td colspan="3">{{ create_form.security_id }}</td>
+                            <td>{{ create_form.security_id }}</td>
                         </tr>
 
                         <tr>
@@ -200,11 +228,11 @@
                             <br/>
                             <span class="form_hint">(key=value pairs, each on its own line)</span>
                             </td>
-                            <td colspan="3">{{ create_form.metadata_ }}</td>
+                            <td>{{ create_form.metadata_ }}</td>
                         </tr>
 
                         <tr>
-                            <td colspan="4" style="text-align:right">
+                            <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
@@ -221,52 +249,80 @@
                     <table class="form-data">
 
                         <tr>
-                            <td style="vertical-align:middle;width:20%">Name</td>
-                            <td colspan="3">{{ edit_form.name }}</td>
+                            <td style="vertical-align:middle;width:21%">Name</td>
+                            <td>{{ edit_form.name }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Active</td>
-                            <td colspan="3">{{ edit_form.is_active }}</td>
+                            <td style="vertical-align:middle">Options</td>
+                            <td>
+
+
+                            <label>
+                            Active
+                            {{ edit_form.is_active }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Suppres slashes
+                            {{ edit_form.suppr_cons_slashes }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Encrypt at rest
+                            {{ edit_form.encrypt_at_rest }}
+                            </label>
+
+                            </td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Pool size</td>
-                            <td>{{ edit_form.pool_size }}</td>
-                            <td style="vertical-align:middle; width:5%">Debug level</td>
-                            <td>{{ edit_form.debug_level }}</td>
+                            <td style="vertical-align:middle"></td>
+                            <td>
+
+                            <label>
+                            Pool size
+                            {{ edit_form.pool_size }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Debug level
+                            {{ edit_form.debug_level }}
+                            </label>
+
+
+                            </td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">Address</td>
-                            <td colspan="3">{{ edit_form.address }}</td>
+                            <td>{{ edit_form.address }}</td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">Default bucket</td>
-                            <td colspan="3">{{ edit_form.bucket }}</td>
+                            <td>{{ edit_form.bucket }}</td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">Default content type</td>
-                            <td colspan="3">{{ edit_form.content_type }}</td>
+                            <td>{{ edit_form.content_type }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Default storage class</td>
-                            <td colspan="3">{{ edit_form.storage_class }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Suppres consec. slashes</td>
-                            <td>{{ edit_form.suppr_cons_slashes }}</td>
-                            <td style="vertical-align:middle">Encrypt at rest</td>
-                            <td>{{ edit_form.encrypt_at_rest }}</td>
+                            <td style="vertical-align:middle">Default storage</td>
+                            <td>{{ edit_form.storage_class }}</td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">Security</td>
-                            <td colspan="3">{{ edit_form.security_id }}</td>
+                            <td>{{ edit_form.security_id }}</td>
                         </tr>
 
                         <tr>
@@ -274,11 +330,11 @@
                             <br/>
                             <span class="form_hint">(key=value pairs, each on its own line)</span>
                             </td>
-                            <td colspan="3">{{ edit_form.metadata_ }}</td>
+                            <td>{{ edit_form.metadata_ }}</td>
                         </tr>
 
                         <tr>
-                            <td colspan="4" style="text-align:right">
+                            <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>

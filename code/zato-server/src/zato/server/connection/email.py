@@ -6,8 +6,6 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 from contextlib import contextmanager
 from io import BytesIO
@@ -15,9 +13,9 @@ from logging import getLogger, INFO
 from traceback import format_exc
 
 # imbox
-from imbox import Imbox as _Imbox
-from imbox.imap import ImapTransport as _ImapTransport
-from imbox.parser import parse_email
+from zato.common.ext.imbox import Imbox as _Imbox
+from zato.common.ext.imbox.imap import ImapTransport as _ImapTransport
+from zato.common.ext.imbox.parser import parse_email
 
 # Outbox
 from zato.server.ext.outbox import AnonymousOutbox, Attachment, Email, Outbox
@@ -26,7 +24,7 @@ from zato.server.ext.outbox import AnonymousOutbox, Attachment, Email, Outbox
 from past.builtins import basestring, unicode
 
 # Zato
-from zato.common import IMAPMessage, EMAIL
+from zato.common.api import IMAPMessage, EMAIL
 from zato.server.store import BaseAPI, BaseStore
 
 # ################################################################################################################################
@@ -36,9 +34,9 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 _modes = {
-    EMAIL.SMTP.MODE.PLAIN.value: None,
-    EMAIL.SMTP.MODE.SSL.value: 'SSL',
-    EMAIL.SMTP.MODE.STARTTLS.value: 'TLS'
+    EMAIL.SMTP.MODE.PLAIN: None,
+    EMAIL.SMTP.MODE.SSL: 'SSL',
+    EMAIL.SMTP.MODE.STARTTLS: 'TLS'
 }
 
 # ################################################################################################################################
@@ -48,8 +46,8 @@ class Imbox(_Imbox):
     def __init__(self, config, config_no_sensitive):
         self.config = config
         self.config_no_sensitive = config_no_sensitive
-        self.server = ImapTransport(self.config.host, self.config.port, self.config.mode==EMAIL.IMAP.MODE.SSL.value)
-        self.connection = self.server.connect(self.config.username, self.config.password, self.config.debug_level)
+        self.server = ImapTransport(self.config.host, self.config.port, self.config.mode==EMAIL.IMAP.MODE.SSL)
+        self.connection = self.server.connect(self.config.username, self.config.password or '', self.config.debug_level)
 
     def __repr__(self):
         return '<{} at {}, config:`{}`>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
@@ -82,7 +80,6 @@ class Imbox(_Imbox):
 
 class ImapTransport(_ImapTransport):
     def connect(self, username, password, debug_level):
-        self.server = self.transport(self.hostname, self.port)
         self.server.debug = debug_level
         self.server.login(username, password)
         self.server.select()
@@ -189,24 +186,24 @@ class IMAPConnection(_Connection):
         conn.close()
 
     def get(self, folder='INBOX'):
-        with self.get_connection() as conn:
+        with self.get_connection() as conn: # type: Imbox
             conn.connection.select(folder)
 
             for uid, msg in conn.fetch_list(' '.join(self.config.get_criteria.splitlines())):
                 yield (uid, IMAPMessage(uid, conn, msg))
 
     def ping(self):
-        with self.get_connection() as conn:
+        with self.get_connection() as conn: # type: Imbox
             conn.connection.noop()
 
     def delete(self, *uids):
-        with self.get_connection() as conn:
+        with self.get_connection() as conn: # type: Imbox
             for uid in uids:
                 mov, data = self.connection.uid('STORE', uid, '+FLAGS', '(\\Deleted)')
             conn.connection.expunge()
 
     def mark_seen(self, *uids):
-        with self.get_connection() as conn:
+        with self.get_connection() as conn: # type: Imbox
             for uid in uids:
                 conn.connection.uid('STORE', uid, '+FLAGS', '\\Seen')
 

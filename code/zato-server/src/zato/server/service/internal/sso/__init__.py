@@ -16,7 +16,7 @@ from traceback import format_exc
 from ipaddress import ip_address
 
 # Zato
-from zato.common import NO_REMOTE_ADDRESS
+from zato.common.api import NO_REMOTE_ADDRESS
 from zato.server.service import List, Service
 from zato.sso import status_code, ValidationError
 
@@ -108,7 +108,7 @@ class BaseService(Service):
             remote_addr = None
         else:
             remote_addr = [elem.strip() for elem in remote_addr.strip().split(',')]
-            remote_addr =  [ip_address(elem) for elem in remote_addr]
+            remote_addr = [ip_address(elem) for elem in remote_addr]
 
         # OK, we can proceed to the actual call now
         self._call_sso_api(self._handle_sso, 'Could not call service',

@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from datetime import datetime, timedelta
 from hashlib import sha256
-from json import dumps
 from logging import getLogger
 from traceback import format_exc
 from uuid import uuid4
@@ -24,10 +23,11 @@ from ipaddress import ip_address
 from past.builtins import unicode
 
 # Zato
-from zato.common import GENERIC, SEC_DEF_TYPE
+from zato.common.api import GENERIC, SEC_DEF_TYPE
 from zato.common.audit import audit_pii
+from zato.common.json_internal import dumps
 from zato.common.odb.model import SSOSession as SessionModel
-from zato.common.crypto import CryptoManager
+from zato.common.crypto.totp_ import TOTPManager
 from zato.sso import const, status_code, Session as SessionEntity, ValidationError
 from zato.sso.attr import AttrAPI
 from zato.sso.odb.query import get_session_by_ext_id, get_session_by_ust, get_session_list_by_user_id, get_user_by_id, \
@@ -36,10 +36,7 @@ from zato.sso.util import check_credentials, check_remote_app_exists, new_user_s
 
 # ################################################################################################################################
 
-# Type checking
-import typing
-
-if typing.TYPE_CHECKING:
+if 0:
 
     # stdlib
     from typing import Callable
@@ -49,11 +46,13 @@ if typing.TYPE_CHECKING:
 
     # Zato
     from zato.common.odb.model import SSOUser
+    from zato.sso.user import User
 
     # For pyflakes
     Bunch = Bunch
     Callable = Callable
     SSOUser = SSOUser
+    User = User
 
 # ################################################################################################################################
 
@@ -478,7 +477,7 @@ class SessionAPI(object):
                     raise ValidationError(status_code.auth.not_allowed, False)
                 else:
                     user_totp_key = self.decrypt_func(user.totp_key)
-                    if not CryptoManager.verify_totp_code(user_totp_key, input_totp_code):
+                    if not TOTPManager.verify_totp_code(user_totp_key, input_totp_code):
                         logger.warn('Invalid TOTP code; user `%s`', user.username)
                         raise ValidationError(status_code.auth.not_allowed, False)
 

@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.common import IPC
+from zato.common.api import IPC
 from zato.common.broker_message import OUTGOING
 from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
 

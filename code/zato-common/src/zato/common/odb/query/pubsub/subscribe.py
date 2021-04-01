@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -13,7 +13,7 @@ from sqlalchemy import and_, exists, insert, update
 from sqlalchemy.sql import expression as expr
 
 # Zato
-from zato.common import PUBSUB
+from zato.common.api import PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, WebSocketSubscription
 from zato.common.util.time_ import utcnow_as_ms
 
@@ -190,4 +190,3 @@ def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, sub_p
         )
 
 # ################################################################################################################################
-

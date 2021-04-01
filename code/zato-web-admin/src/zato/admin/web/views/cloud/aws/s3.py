@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -44,6 +44,9 @@ class Index(_Index):
             'edit_form': EditForm(sec_list, prefix='edit'),
         }
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
@@ -57,18 +60,30 @@ class _CreateEdit(CreateEdit):
         self.input_dict['security_id'] = get_security_id_from_select(self.input, '', 'security_id')
 
     def success_message(self, item):
-        return 'Successfully {0} the AWS S3 connection [{1}]'.format(self.verb, item.name)
+        return 'AWS S3 connection `{}` {} successfully'.format(item.name, self.verb)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class Create(_CreateEdit):
     url_name = 'cloud-aws-s3-create'
     service_name = 'zato.cloud.aws.s3.create'
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class Edit(_CreateEdit):
     url_name = 'cloud-aws-s3-edit'
     form_prefix = 'edit-'
     service_name = 'zato.cloud.aws.s3.edit'
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Delete(_Delete):
     url_name = 'cloud-aws-s3-delete'
-    error_message = 'Could not delete the AWS S3 connection'
+    error_message = 'AWS S3 connection could not be deleted'
     service_name = 'zato.cloud.aws.s3.delete'
+
+# ################################################################################################################################
+# ################################################################################################################################

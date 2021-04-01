@@ -39,7 +39,7 @@ $.fn.zato.cloud.aws.s3.data_table.new_row = function(item, data, include_tr) {
     var is_active = item.is_active == true;
     var suppr_cons_slashes = item.suppr_cons_slashes == true;
 
-    var bucket = "<span class='form_hint'>(None)</span>";
+    var bucket = "<span class='form_hint'>---</span>";
     if(item.bucket) {
         bucket = item.bucket;
     }
@@ -63,9 +63,9 @@ $.fn.zato.cloud.aws.s3.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", suppr_cons_slashes);
     row += String.format("<td class='ignore'>{0}</td>", item.address);
     row += String.format("<td class='ignore'>{0}</td>", item.metadata_);
-    row += String.format("<td class='ignore'>{0}</td>", 'z');//item.bucket);
-    row += String.format("<td class='ignore'>{0}</td>", 'z');//item.encrypt_at_rest);
-    row += String.format("<td class='ignore'>{0}</td>", 'z');//item.storage_class);
+    row += String.format("<td class='ignore'>{0}</td>", item.bucket);
+    row += String.format("<td class='ignore'>{0}</td>", item.encrypt_at_rest);
+    row += String.format("<td class='ignore'>{0}</td>", item.storage_class);
 
     if(include_tr) {
         row += '</tr>';
@@ -76,7 +76,7 @@ $.fn.zato.cloud.aws.s3.data_table.new_row = function(item, data, include_tr) {
 
 $.fn.zato.cloud.aws.s3.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'AWS S3 connection [{0}] deleted',
-        'Are you sure you want to delete the AWS S3 connection [{0}]?',
+        'AWS S3 connection `{0}` deleted',
+        'Are you sure you want to delete the AWS S3 connection `{0}`?',
         true);
 }

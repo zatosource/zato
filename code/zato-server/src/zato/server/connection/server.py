@@ -21,8 +21,8 @@ from requests import get as requests_get
 
 # Zato
 from zato.client import AnyServiceInvoker
-from zato.common import SERVER_UP_STATUS
-from zato.common.util import make_repr
+from zato.common.api import SERVER_UP_STATUS
+from zato.common.util.api import make_repr
 from zato.common.odb.query import server_by_name, server_list
 from zato.server.service import Service
 
@@ -92,7 +92,6 @@ class _RemoteServer(_Server):
 
         # Ping the remote server to quickly find out if it is still available
         requests_get(self.ping_address, timeout=self.ping_timeout)
-
         response = self.invoker.invoke(service, request, *args, **kwargs)
 
         if response.ok:

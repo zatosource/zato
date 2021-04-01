@@ -1,0 +1,433 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Dropbox connections{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    {% comment %} Common JS {% endcomment %}
+    <script type="text/javascript" src="/static/js/common.js"></script>
+
+    {% comment %} Dropbox {% endcomment %}
+    <script type="text/javascript" src="/static/js/cloud/dropbox.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+
+            {% comment %} 1 {% endcomment %}
+            'name',
+            '_is_active',
+            'user_agent',
+
+            {% comment %} 2 {% endcomment %}
+            '_default_scope',
+            '_default_directory',
+
+            {% comment %} 3 {% endcomment %}
+            '_change_token',
+            '_edit',
+            '_delete',
+
+            {% comment %} 4 {% endcomment %}
+            '_ping',
+            'id',
+            'max_retries_on_error',
+
+            {% comment %} 5 {% endcomment %}
+            'max_retries_on_rate_limit',
+            'timeout',
+            'oauth2_access_token_expiration',
+
+            {% comment %} 6 {% endcomment %}
+            'default_scope',
+            'pool_size',
+
+            {% comment %} 7 {% endcomment %}
+            'default_directory',
+            'http_headers',
+            'is_active',
+        ]
+    }
+    </script>
+
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Dropbox connections</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% with has_generic="1" generic_type="cloud-dropbox" %}
+    {% include "zato/search-form.html" with page_prompt="Show connections" %}
+{% endwith %}
+
+
+    {% if cluster_id %}
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.cloud.dropbox.create()">Create a new Dropbox connection</a>
+        </div>
+
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        {% comment %} 1 {% endcomment %}
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+                        <th><a href="#">User agent</a></th>
+
+                        {% comment %} 2 {% endcomment %}
+                        <th><a href="#">Default scope</a></th>
+                        <th><a href="#">Default directory</a></th>
+
+                        {% comment %} 3 {% endcomment %}
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        {% comment %} 4 {% endcomment %}
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 5 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 6 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 7 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        {% comment %} 1 {% endcomment %}
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.user_agent }}</td>
+
+                        {% comment %} 2 {% endcomment %}
+                        <td>{{ item.default_scope }}</td>
+                        <td>{{ item.default_directory |default:"<span class='form_hint'>---</span>"}}</td>
+
+                        {% comment %} 3 {% endcomment %}
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}', 'Change token')">Change token</a></td>
+                        <td><a href="javascript:$.fn.zato.cloud.dropbox.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.cloud.dropbox.delete_('{{ item.id }}')">Delete</a></td>
+
+                        {% comment %} 4 {% endcomment %}
+                        <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.max_retries_on_error|default:'' }}</td>
+
+                        {% comment %} 5 {% endcomment %}
+                        <td class='ignore'>{{ item.max_retries_on_rate_limit|default:'' }}</td>
+                        <td class='ignore'>{{ item.timeout }}</td>
+                        <td class='ignore'>{{ item.oauth2_access_token_expiration|default:'' }}</td>
+
+                        {% comment %} 6 {% endcomment %}
+                        <td class='ignore'>{{ item.default_scope|default:'' }}</td>
+                        <td class='ignore'>{{ item.pool_size }}</td>
+
+                        {% comment %} 7 {% endcomment %}
+                        <td class='ignore'>{{ item.default_directory|default:'' }}</td>
+                        <td class='ignore'>{{ item.http_headers|default:'' }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='21'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "cloud-dropbox-create" %}" method="post" id="create-form">
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle;width:6%">Name</td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Options</td>
+                            <td>
+
+                                <label>
+                                Active
+                                {{ create_form.is_active }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Timeout
+                                {{ create_form.timeout }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Token expiration
+                                {{ create_form.oauth2_access_token_expiration }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Max. retries</td>
+                            <td>
+
+                                <label>
+                                On error
+                                {{ create_form.max_retries_on_error }}
+                                </label>
+
+                                |
+
+                                <label>
+                                On rate limit
+                                {{ create_form.max_retries_on_rate_limit }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Default
+                            </td>
+                            <td>
+                                <label>
+                                Scope
+                                {{ create_form.default_scope }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Directory
+                                {{ create_form.default_directory }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_user_agent">User agent</label>
+                            </td>
+                            <td>
+                                {{ create_form.user_agent }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2">
+                            <label for="id_http_headers">HTTP headers</label>
+                            <br/>
+                            {{ create_form.http_headers }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+
+                    </table>
+                    <input type="hidden" id="pool_size" name="pool_size" value="10" />
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "cloud-dropbox-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle;width:6%">Name</td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Options</td>
+                            <td>
+
+                                <label>
+                                Active
+                                {{ edit_form.is_active }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Timeout
+                                {{ edit_form.timeout }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Token expiration
+                                {{ edit_form.oauth2_access_token_expiration }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Max. retries</td>
+                            <td>
+
+                                <label>
+                                On error
+                                {{ edit_form.max_retries_on_error }}
+                                </label>
+
+                                |
+
+                                <label>
+                                On rate limit
+                                {{ edit_form.max_retries_on_rate_limit }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Default
+                            </td>
+                            <td>
+                                <label>
+                                Scope
+                                {{ edit_form.default_scope }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Directory
+                                {{ edit_form.default_directory }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_edit-user_agent">User agent</label>
+                            </td>
+                            <td>
+                                {{ edit_form.user_agent }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2">
+                            <label for="id_edit-http_headers">HTTP headers</label>
+                            <br/>
+                            {{ edit_form.http_headers }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+
+                    </table>
+                    <input type="hidden" id="id_edit-pool_size" name="pool_size" value="10" />
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+
+        <div id="change_password-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "cloud-dropbox-change-password" %}" method="post" id="change_password-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle; width:19%">Name</td>
+                            <td id="change-password-name"></td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Token</td>
+                            <td>{{ change_password_form.password1 }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Confirm token</td>
+                            <td>{{ change_password_form.password2 }}
+                                <input type="hidden" id="id_change_password-id" name="id" />
+                                <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
+
+    {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

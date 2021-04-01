@@ -9,14 +9,31 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 true_values = ('true', 'yes', 'on', 'y', 't', '1')
 false_values = ('false', 'no', 'off', 'n', 'f', '0', '', None)
 
-def to_bool(value):
-    if isinstance(value, basestring):
-        _value = value.strip().lower()
-        if _value in true_values:
+def to_bool(data):
+
+    if isinstance(data, (str, bytes)):
+        data = data.strip().lower()
+        if data in true_values:
             return True
-        elif _value in false_values:
+        elif data in false_values:
             return False
         else:
-            raise ValueError('Value `{}` is not an expected boolean'.format(value))
+            raise ValueError('String is not true/false: %r' % data)
+
+    return bool(data)
+
+def to_list(data, sep=None, strip=True):
+    if isinstance(data, (str, bytes)):
+        lst = data.split(sep)
+        if strip:
+            lst = [v.strip() for v in lst]
+        return lst
+    elif isinstance(data, (list, tuple)):
+        return data
+    elif data is None:
+        return []
     else:
-        return bool(value)
+        return [data]
+
+as_bool = to_bool
+as_list = to_list

@@ -11,9 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 
-# anyjson
-from anyjson import dumps
-
 # Django
 from django.http import HttpResponse
 from django.template.response import TemplateResponse
@@ -21,7 +18,8 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.forms.kvdb.data_dict.translation import CreateForm, EditForm, TranslateForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
-from zato.common import ZATO_NONE
+from zato.common.api import ZATO_NONE
+from zato.common.json_internal import dumps
 
 logger = logging.getLogger(__name__)
 

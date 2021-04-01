@@ -19,8 +19,10 @@ from operator import itemgetter
 # Bunch
 from bunch import Bunch
 
+# ciso8601
+from ciso8601 import parse_datetime
+
 # dateutil
-from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import MINUTELY, rrule, rruleset
 
@@ -29,8 +31,9 @@ from future.utils import iteritems
 from zato.common.py23_ import maxint
 
 # Zato
-from zato.common import KVDB, SECONDS_IN_DAY, StatsElem, ZatoException
+from zato.common.api import KVDB, SECONDS_IN_DAY, StatsElem
 from zato.common.broker_message import STATS
+from zato.common.exception import ZatoException
 from zato.common.odb.model import Service as ServiceModel
 from zato.common.util.stats import percentile, tmean
 from zato.server.service import Integer, Service, UTC
@@ -371,8 +374,8 @@ class StatsReturningService(AdminService):
         # A mean value of all the mean values (mean_all_services_list)
         mean_all_services = 0
 
-        start = parse(start)
-        stop = parse(stop)
+        start = parse_datetime(start)
+        stop = parse_datetime(stop)
         delta = (stop - start)
 
         if hasattr(delta, 'total_seconds'):

@@ -13,7 +13,7 @@ from django import forms
 
 # Zato
 from zato.admin.web.forms import add_security_select
-from zato.common import CLOUD
+from zato.common.api import CLOUD
 
 class CreateForm(forms.Form):
 

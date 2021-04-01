@@ -81,7 +81,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Pub/sub subscriptions{% if topic_id %} for topic <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ topic_id }}">{{ topic_name }}{% endif %}</a></h2>
+<h2 class="zato">Pub/sub subscriptions{% if topic_id %} for topic <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;query={{ topic_name }}">{{ topic_name }}{% endif %}</a></h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -128,7 +128,11 @@
                         <td class="impexp"><input type="checkbox" /></td>
 
                         <td>{{ item.is_active|yesno:"Yes,No" }}</td>
-                        <td>{{ item.endpoint_name }}</td>
+
+                        <td>
+                            <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;query={{ item.endpoint_name }}">{{ item.endpoint_name }}</a>
+                        </td>
+
                         <td>{{ item.endpoint_type }}</td>
 
                         <td>{{ item.role }}</td>
@@ -194,9 +198,11 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle; width:12%">Deliv. batch size<br/>(list required?)</td>
+                            <td style="vertical-align:middle; width:12%">Deliv. batch size</td>
                             <td>
                                 {{ create_form.delivery_batch_size }}
+                                |
+                                As list
                                 {{ create_form.wrap_one_msg_in_list }}
                                 |
                                 Deliv. max retries

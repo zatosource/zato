@@ -14,7 +14,7 @@ from decimal import Decimal as decimal_Decimal, getcontext
 from uuid import UUID as uuid_UUID
 
 # Zato
-from zato.common import DATA_FORMAT
+from zato.common.api import DATA_FORMAT
 from zato.common.test import BaseSIOTestCase
 
 # Zato - Cython
@@ -37,7 +37,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_as_is(self):
+    def test_as_is(self):
         sio = AsIs('myname')
         data = object()
         parsed = self._parse(sio, data)
@@ -46,7 +46,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_bool_true(self):
+    def test_bool_true(self):
         sio = AsIs('myname')
 
         for data in true_values + tuple(elem.upper() for elem in true_values) + (True, 1, -1):
@@ -55,16 +55,16 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_bool_false(self):
+    def test_bool_false(self):
         sio = Bool('myname')
 
-        for data in false_values + tuple(elem.upper() for elem in false_values) + (False, 0):
+        for data in false_values + tuple(elem.upper() for elem in false_values if elem is not None) + (False, 0, None):
             parsed = self._parse(sio, data)
             self.assertFalse(parsed)
 
 # ################################################################################################################################
 
-    def xtest_csv(self):
+    def test_csv(self):
         sio = CSV('myname')
         data = 'q,w,e,r,t,Y,U,I,O,P'
         parsed = self._parse(sio, data)
@@ -72,7 +72,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_date_valid(self):
+    def test_date_valid(self):
         sio = Date('myname')
         year = 1999
         month = 12
@@ -87,7 +87,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_date_invalid(self):
+    def test_date_invalid(self):
         sio = Date('myname')
         year = 1999
         month = 77
@@ -102,7 +102,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_date_time_valid(self):
+    def test_date_time_valid(self):
         sio = DateTime('myname')
         year = 1999
         month = 12
@@ -123,7 +123,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_date_time_invalid(self):
+    def test_date_time_invalid(self):
         sio = DateTime('myname')
         year = 1999
         month = 12
@@ -141,7 +141,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_decimal(self):
+    def test_decimal(self):
 
         sio = Decimal('mykey')
 
@@ -156,7 +156,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_dict_without_key_names(self):
+    def test_dict_without_key_names(self):
 
         sio = Dict('mykey')
 
@@ -174,7 +174,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_dict_with_key_names(self):
+    def test_dict_with_key_names(self):
 
         sio = Dict('mykey', 'aaa', 'bbb', 'ccc', '-ddd', '-eee')
 
@@ -198,7 +198,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_dict_list_with_key_names(self):
+    def test_dict_list_with_key_names(self):
 
         sio = DictList('mykey')
 
@@ -226,7 +226,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_dict_list_without_key_names(self):
+    def test_dict_list_without_key_names(self):
 
         sio = DictList('mykey', 'aaa', '-bbb', '-ccc')
 
@@ -260,7 +260,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_list_from_list(self):
+    def test_list_from_list(self):
         sio = List('myname')
         data = ['q,w,e,r,t,Y,U,I,O,P']
         parsed = self._parse(sio, data)
@@ -268,7 +268,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_float(self):
+    def test_float(self):
         sio = Float('myname')
         data = '1.23'
         parsed = self._parse(sio, data)
@@ -278,7 +278,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_int(self):
+    def test_int(self):
         sio = Int('myname')
         data = '12345678901234567890'
         parsed = self._parse(sio, data)
@@ -288,7 +288,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_list_from_tuple(self):
+    def test_list_from_tuple(self):
         sio = List('myname')
         data = tuple(['q,w,e,r,t,Y,U,I,O,P'])
         parsed = self._parse(sio, data)
@@ -298,7 +298,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_list_from_string(self):
+    def test_list_from_string(self):
         sio = List('myname')
         data = 'abcdef'
         parsed = self._parse(sio, data)
@@ -308,7 +308,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_list_from_int(self):
+    def test_list_from_int(self):
         sio = List('myname')
         data = 123
         parsed = self._parse(sio, data)
@@ -318,7 +318,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_opaque(self):
+    def test_opaque(self):
 
         class MyClass:
             pass
@@ -343,7 +343,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_uuid(self):
+    def test_uuid(self):
 
         sio = UUID('myname')
         data = 'e9c56bde-fab4-4adb-96c1-479c8246f308'

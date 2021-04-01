@@ -19,8 +19,8 @@ from bunch import Bunch, bunchify
 from yaml import dump as yaml_dump, Dumper as YAMLDumper
 
 # Zato
-from zato.common import URL_TYPE
-from zato.common.util import fs_safe_name
+from zato.common.api import URL_TYPE
+from zato.common.util.file_system import fs_safe_name
 
 # ################################################################################################################################
 
@@ -128,7 +128,7 @@ class OpenAPIGenerator(object):
 # ################################################################################################################################
 
     def has_path_elem(self, url_path, elem_name):
-        pattern = '{%s}' %  elem_name
+        pattern = '{%s}' % elem_name
         return pattern in url_path
 
 # ################################################################################################################################

@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # Zato
-from zato.common import HTTP_SOAP_SERIALIZATION_TYPE, PUBSUB, URL_TYPE
+from zato.common.api import HTTP_SOAP_SERIALIZATION_TYPE, PUBSUB, URL_TYPE
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.pubsub import HandleNewMessageCtx
 from zato.server.pubsub.task import PubSubTool
-from zato.common.util.json_ import dumps
+from zato.common.json_internal import dumps
 from zato.server.service import Int, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 
@@ -162,15 +160,24 @@ class DeliverMessage(AdminService):
 # ################################################################################################################################
 
     def _deliver_srv(self, msg, subscription, _ignored_impl_getter):
-        # type: (object, Subscription)
+        # type: (object, Subscription, object)
+
+        # Reusable
+        is_list = isinstance(msg, list)
 
         # Each message will be destinated for the same service so we can extract the target service's name
         # from the first message in list, assuming it is in a list at all.
-        zato_ctx = msg[0].zato_ctx if isinstance(msg, list) else msg.zato_ctx
+        zato_ctx = msg[0].zato_ctx if is_list else msg.zato_ctx
         target_service_name = zato_ctx['target_service_name']
 
-        # Invoke the target service, giving it on input everything that we had
-        self.invoke(target_service_name, msg)
+        # Invoke the target service, giving it on input everything that we had,
+        # do it either for each message from the list ..
+        if is_list:
+            for item in msg: # type: PubSubMessage
+                self.invoke(target_service_name, item)
+        else:
+            # .. or directly, if input is not a list
+            self.invoke(target_service_name, msg)
 
 # ################################################################################################################################
 

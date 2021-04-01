@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -17,7 +15,7 @@ from copy import deepcopy
 from datetime import datetime
 from errno import ENOENT
 from inspect import isclass
-from json import loads
+from os.path import abspath, join as path_join
 from shutil import rmtree
 from tempfile import gettempdir
 from threading import RLock
@@ -28,8 +26,10 @@ from uuid import uuid4
 # Bunch
 from bunch import bunchify
 
+# ciso8601
+from ciso8601 import parse_datetime
+
 # dateutil
-from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import DAILY, MINUTELY, rrule
 
@@ -45,15 +45,23 @@ from six import PY3
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
-from zato.common import broker_message, CHANNEL, DATA_FORMAT, GENERIC as COMMON_GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, IPC, \
-     KVDB, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, SECRETS, simple_types, URL_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
+from zato.common import broker_message
+from zato.common.api import CHANNEL, CONNECTION, DATA_FORMAT, FILE_TRANSFER, GENERIC as COMMON_GENERIC, \
+     HotDeploy, HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, simple_types, URL_TYPE, \
+     TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
+from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
+from zato.common.json_internal import loads
 from zato.common.match import Matcher
+from zato.common.model.amqp_ import AMQPConnectorConfig
+from zato.common.model.wsx import WSXConnectorConfig
 from zato.common.odb.api import PoolStore, SessionWrapper
-from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
-     import_module_from_path, new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, start_connectors, \
-     store_tls, update_apikey_username_to_channel, update_bind_port, visit_py_source
+from zato.common.pubsub import MSG_PREFIX as PUBSUB_MSG_PREFIX
+from zato.common.util.api import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
+     import_module_from_path, new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, \
+     start_connectors, store_tls, update_apikey_username_to_channel, update_bind_port, visit_py_source
+from zato.server.base.parallel.subprocess_.api import StartConfig as SubprocessStartConfig
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
 from zato.server.connection.cache import CacheAPI
@@ -72,13 +80,15 @@ from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConn
 from zato.server.connection.search.solr import SolrAPI, SolrConnStore
 from zato.server.connection.sftp import SFTPIPCFacade
 from zato.server.connection.sms.twilio import TwilioAPI, TwilioConnStore
-from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channel_main_loop as stomp_channel_main_loop, \
-     OutconnSTOMPConnStore
 from zato.server.connection.web_socket import ChannelWebSocket
 from zato.server.connection.vault import VaultConnAPI
 from zato.server.ext.zunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
+from zato.server.file_transfer.api import FileTransferAPI
 from zato.server.generic.api.channel_file_transfer import ChannelFileTransferWrapper
+from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper
+from zato.server.generic.api.cloud_dropbox import CloudDropbox
 from zato.server.generic.api.def_kafka import DefKafkaWrapper
+from zato.server.generic.api.outconn_hl7_mllp import OutconnHL7MLLPWrapper
 from zato.server.generic.api.outconn_im_slack import OutconnIMSlackWrapper
 from zato.server.generic.api.outconn_im_telegram import OutconnIMTelegramWrapper
 from zato.server.generic.api.outconn_ldap import OutconnLDAPWrapper
@@ -113,6 +123,10 @@ if 0:
 # ################################################################################################################################
 
 _data_format_dict = DATA_FORMAT.DICT
+
+# ################################################################################################################################
+
+pickup_conf_item_prefix = 'zato.pickup'
 
 # ################################################################################################################################
 
@@ -187,11 +201,26 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # To expedite look-ups
         self._simple_types = simple_types
 
-        # Generic connections - FTP channels
+        # Generic connections - File transfer channels
         self.channel_file_transfer = {}
+
+        # Generic connections - HL7 MLLP channels
+        self.channel_hl7_mllp = {}
+
+        # Generic connections - Cloud - Dropbox
+        self.cloud_dropbox = {}
 
         # Generic connections - Kafka definitions
         self.def_kafka = {}
+
+        # Generic connections - HL7 MLLP outconns
+        self.outconn_hl7_mllp = {}
+
+        # Generic connections - IM Slack
+        self.outconn_im_slack = {}
+
+        # Generic connections - IM Telegram
+        self.outconn_im_telegram = {}
 
         # Generic connections - LDAP outconns
         self.outconn_ldap = {}
@@ -201,12 +230,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Generic connections - WSX outconns
         self.outconn_wsx = {}
-
-        # Generic connections - IM Slack
-        self.outconn_im_slack = {}
-
-        # Generic connections - IM Telegram
-        self.outconn_im_telegram = {}
 
 # ################################################################################################################################
 
@@ -219,14 +242,10 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.json_pointer_store = self.worker_config.json_pointer_store
         self.xpath_store = self.worker_config.xpath_store
 
-        # CassandraOutconnSTOMPConnStore
+        # Cassandra
         self.cassandra_api = CassandraAPI(CassandraConnStore())
         self.cassandra_query_store = CassandraQueryStore()
         self.cassandra_query_api = CassandraQueryAPI(self.cassandra_query_store)
-
-        # STOMP
-        self.stomp_outconn_api = STOMPAPI(OutconnSTOMPConnStore())
-        self.stomp_channel_api = STOMPAPI(ChannelSTOMPConnStore())
 
         # Search
         self.search_es_api = ElasticSearchAPI(ElasticSearchConnStore())
@@ -257,10 +276,16 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Caches
         self.cache_api = CacheAPI(self.server)
 
+        # File transfer
+        self.file_transfer_api = FileTransferAPI(self.server, self)
+
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER: self.channel_file_transfer,
+            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: self.channel_hl7_mllp,
+            COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX: self.cloud_dropbox,
             COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: self.def_kafka,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: self.outconn_hl7_mllp,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK: self.outconn_im_slack,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_TELEGRAM: self.outconn_im_telegram,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: self.outconn_ldap,
@@ -270,7 +295,10 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         self._generic_conn_handler = {
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER: ChannelFileTransferWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: ChannelHL7MLLPWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX: CloudDropbox,
             COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: DefKafkaWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: OutconnHL7MLLPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK: OutconnIMSlackWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_TELEGRAM: OutconnIMTelegramWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: OutconnLDAPWrapper,
@@ -307,9 +335,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # E-mail
         self.init_email_smtp()
         self.init_email_imap()
-
-        # STOMP
-        self.init_stomp()
 
         # ZeroMQ
         self.init_zmq()
@@ -360,6 +385,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # AMQP
         self.init_amqp()
 
+        # Initialise file transfer-based pickup here because it is required when generic connections are being created
+        self.convert_pickup_to_file_transfer()
+
         # Generic connections
         self.init_generic_connections_config()
         self.init_generic_connections()
@@ -393,7 +421,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.init_pubsub()
 
         # WebSocket connections may depend on pub/sub so we create them only after pub/sub is initialized
-        self.init_web_socket()
+        self.init_wsx()
 
 # ################################################################################################################################
 
@@ -478,11 +506,29 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             }
         wrapper_config.update(sec_config)
 
-        if config.sec_tls_ca_cert_id and config.sec_tls_ca_cert_id != ZATO_NONE:
-            tls_verify = get_tls_ca_cert_full_path(self.server.tls_dir, get_tls_from_payload(
-                self.worker_config.tls_ca_cert[config.sec_tls_ca_cert_name].config.value))
+        # Key 'sec_tls_ca_cert_verify_strategy' was added in 3.2
+        # so we need to handle cases when it exists or it does not.
+        sec_tls_ca_cert_verify_strategy = config.get('sec_tls_ca_cert_verify_strategy')
+
+        # 3.2+
+        if sec_tls_ca_cert_verify_strategy:
+            if sec_tls_ca_cert_verify_strategy is True:
+                tls_verify = True
+
+            elif sec_tls_ca_cert_verify_strategy is False:
+                tls_verify = False
+
+            else:
+                tls_verify = get_tls_ca_cert_full_path(self.server.tls_dir, get_tls_from_payload(
+                    self.worker_config.tls_ca_cert[config.sec_tls_ca_cert_name].config.value))
+
+        # < 3.2
         else:
-            tls_verify = ZATO_NONE
+            if config.get('sec_tls_ca_cert_id') and config.sec_tls_ca_cert_id != ZATO_NONE:
+                tls_verify = get_tls_ca_cert_full_path(self.server.tls_dir, get_tls_from_payload(
+                    self.worker_config.tls_ca_cert[config.sec_tls_ca_cert_name].config.value))
+            else:
+                tls_verify = False
 
         wrapper_config['tls_verify'] = tls_verify
 
@@ -653,22 +699,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def init_stomp(self):
-
-        for k, v in self.worker_config.out_stomp.items():
-            try:
-                self.stomp_outconn_api.create_def(k, v.config)
-            except Exception:
-                logger.warn('Could not create a Stomp outgoing connection `%s`, e:`%s`', k, format_exc())
-
-        for k, v in self.worker_config.channel_stomp.items():
-            try:
-                self.stomp_channel_api.create_def(k, v.config, stomp_channel_main_loop, self)
-            except Exception:
-                logger.warn('Could not create a Stomp channel `%s`, e:`%s`', k, format_exc())
-
-# ################################################################################################################################
-
     def init_simple(self, config, api, name):
         for k, v in config.items():
             self._update_queue_build_cap(v.config)
@@ -772,14 +802,18 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def init_web_socket(self):
+    def init_wsx(self):
         """ Initializes all WebSocket connections.
         """
         # Channels
         for name, data in self.worker_config.channel_web_socket.items():
 
-            # Per-channel configuration ..
-            config = bunchify(data.config)
+            # Convert configuration to expected datatypes
+            data.config['max_len_messages_sent'] = int(data.config.get('max_len_messages_sent') or 0)
+            data.config['max_len_messages_received'] = int(data.config.get('max_len_messages_received') or 0)
+
+            # Create a new AMQP connector definition ..
+            config = WSXConnectorConfig.from_dict(data.config)
 
             # .. append common hook service to the configuration.
             config.hook_service = self.server.fs_server_config.get('wsx', {}).get('hook_service', '')
@@ -803,12 +837,17 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
             channels = self.worker_config.channel_amqp.get_config_list(_name_matches(def_name))
             outconns = self.worker_config.out_amqp.get_config_list(_name_matches(def_name))
+
             for outconn in outconns:
                 self.amqp_out_name_to_def[outconn['name']] = def_name
 
-            # AMQP definitions as such are always active. It's channels or outconns that can be inactive.
-            data.config.is_active = True
-            self.amqp_api.create(def_name, bunchify(data.config), self.invoke,
+            # Create a new AMQP connector definition ..
+            config = AMQPConnectorConfig.from_dict(data.config)
+
+            # .. AMQP definitions as such are always active. It is channels or outconns that can be inactive.
+            config.is_active = True
+
+            self.amqp_api.create(def_name, config, self.invoke,
                 channels=self._config_to_dict(channels), outconns=self._config_to_dict(outconns))
 
         self.amqp_api.start()
@@ -874,12 +913,12 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def init_pubsub(self, _srv=PUBSUB.ENDPOINT_TYPE.SERVICE.id):
+    def init_pubsub(self):
         """ Sets up all pub/sub endpoints, subscriptions and topics. Also, configures pubsub with getters for each endpoint type.
         """
 
         # This is a pub/sub tool for delivery of Zato services within this server
-        service_pubsub_tool = PubSubTool(self.pubsub, self.server, _srv, True)
+        service_pubsub_tool = PubSubTool(self.pubsub, self.server, PUBSUB.ENDPOINT_TYPE.SERVICE.id, True)
         self.pubsub.service_pubsub_tool = service_pubsub_tool
 
         for value in self.worker_config.pubsub_endpoint.values():
@@ -893,15 +932,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             self.pubsub.create_subscription_object(config)
 
             # Special-case delivery of messages to services
-            if config.sub_key.startswith('zpsk.srv'):
-                service_pubsub_tool.add_sub_key(config['sub_key'])
-                self.pubsub.set_sub_key_server({
-                    'sub_key': config.sub_key,
-                    'cluster_id': self.server.cluster_id,
-                    'server_name': self.server.name,
-                    'server_pid': self.server.pid,
-                    'endpoint_type': _srv
-                })
+            if config.sub_key.startswith(PUBSUB_MSG_PREFIX.SERVICE_SK):
+                self.pubsub.set_config_for_service_subscription(config['sub_key'])
 
         for value in self.worker_config.pubsub_topic.values():
             self.pubsub.create_topic_object(bunchify(value['config']))
@@ -988,14 +1020,131 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def init_generic_connections(self):
-        for config_dict in self.worker_config.generic_connection.values():
+    def _convert_pickup_config_to_file_transfer(self, name, config):
+        # type: (dict) -> Bunch
 
-            # Not all generic connections are created here
-            if config_dict['config']['type_'] == COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP:
+        # Convert paths to full ones
+        pickup_from_list = config.get('pickup_from') or []
+
+        if not pickup_from_list:
+            return
+
+        pickup_from_list = pickup_from_list if isinstance(pickup_from_list, list) else [pickup_from_list]
+        pickup_from_list = [abspath(path_join(self.server.base_dir, elem)) for elem in pickup_from_list]
+
+        move_processed_to = config.get('move_processed_to')
+        if move_processed_to:
+            move_processed_to = abspath(path_join(self.server.base_dir, move_processed_to))
+
+        # Make sure we have lists on input
+        service_list = config.get('services') or []
+        service_list = service_list if isinstance(service_list, list) else [service_list]
+
+        topic_list = config.get('topic_list') or []
+        topic_list = topic_list if isinstance(topic_list, list) else [topic_list]
+
+        return bunchify({
+
+          # Tell the manager to start this channel only
+          # if we are very first process among potentially many ones for this server.
+          '_start_channel': True if self.server.is_starting_first else False,
+
+          'type_': COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER,
+          'name': name,
+          'is_active': True,
+          'is_internal': True,
+          'data_encoding': config.get('data_encoding') or 'utf-8',
+          'source_type': FILE_TRANSFER.SOURCE_TYPE.LOCAL.id,
+          'pickup_from_list': pickup_from_list,
+          'is_hot_deploy': config.get('is_hot_deploy'),
+          'service_list': service_list,
+          'topic_list': topic_list,
+          'move_processed_to': move_processed_to,
+          'file_patterns': config.get('patterns') or '*',
+          'parse_with': config.get('parse_with'),
+          'should_read_on_pickup': config.get('read_on_pickup', True),
+          'should_parse_on_pickup': config.get('parse_on_pickup', False),
+          'should_delete_after_pickup': config.get('delete_after_pickup', True),
+          'is_case_sensitive': config.get('is_case_sensitive', True),
+          'is_line_by_line': config.get('is_line_by_line', False),
+          'binary_file_patterns': config.get('binary_file_patterns') or [],
+          'outconn_rest_list': [],
+        })
+
+# ################################################################################################################################
+
+    def convert_pickup_to_file_transfer(self):
+
+        # Default pickup directory
+        self._add_service_pickup_to_file_transfer(
+            'hot-deploy', self.server.hot_deploy_config.pickup_dir, self.server.hot_deploy_config.delete_after_pickup)
+
+        # User-defined pickup directories
+        for name, config in self.server.pickup_config.items():
+            if name.startswith(HotDeploy.UserPrefix):
+                self._add_service_pickup_to_file_transfer('hot-deploy-user-prefix', config.pickup_from, False)
+
+        # Convert all the other pickup entries
+        self._convert_pickup_to_file_transfer()
+
+# ################################################################################################################################
+
+    def _add_service_pickup_to_file_transfer(self, name, pickup_dir, delete_after_pickup):
+
+        # Explicitly create configuration for hot-deployment
+        hot_deploy_name = '{}.{}'.format(pickup_conf_item_prefix, name)
+        hot_deploy_config = self._convert_pickup_config_to_file_transfer(hot_deploy_name, {
+            'is_hot_deploy': True,
+            'patterns': '*.py',
+            'services': 'zato.hot-deploy.create',
+            'pickup_from': pickup_dir,
+            'delete_after_pickup': delete_after_pickup
+        })
+
+        # Add hot-deployment to local file transfer
+        self.worker_config.generic_connection[hot_deploy_name] = {'config': hot_deploy_config}
+
+# ################################################################################################################################
+
+    def _convert_pickup_to_file_transfer(self):
+
+        # Create transfer channels based on pickup.conf
+        for key, value in self.server.pickup_config.items(): # type: (str, dict)
+
+            # Skip user-defined service pickup because it was already added in self.convert_pickup_to_file_transfer
+            if key.startswith(HotDeploy.UserPrefix):
                 continue
 
-            self._create_generic_connection(bunchify(config_dict['config']), raise_exc=False)
+            # This is an internal name
+            name = '{}.{}'.format(pickup_conf_item_prefix, key)
+
+            # We need to convert between config formats
+            config = self._convert_pickup_config_to_file_transfer(name, value)
+
+            if not config:
+                continue
+
+            # Add pickup configuration to local file transfer
+            self.worker_config.generic_connection[name] = {'config': config}
+
+# ################################################################################################################################
+
+    def init_generic_connections(self):
+
+        # Some connection types are built elsewhere
+        to_skip = {
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP,
+        }
+
+        for config_dict in self.worker_config.generic_connection.values():
+
+            config_type = config_dict['config']['type_']
+
+            # Not all generic connections are created here
+            if config_type in to_skip:
+                continue
+
+            self._create_generic_connection(bunchify(config_dict['config']), raise_exc=False, is_starting=True)
 
 # ################################################################################################################################
 
@@ -1004,7 +1153,11 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Local aliases
         channel_file_transfer_map = self.generic_impl_func_map.setdefault(
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER, {})
+        channel_hl7_mllp_map = self.generic_impl_func_map.setdefault(
+            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP, {})
+        cloud_dropbox_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_DROPBOX, {})
         def_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA, {})
+        outconn_hl7_mllp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP, {})
         outconn_im_slack_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK, {})
         outconn_im_telegram_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_TELEGRAM, {})
         outconn_ldap_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP, {})
@@ -1015,8 +1168,12 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # These generic connections are regular - they use common API methods for such connections
         regular_maps = [
             channel_file_transfer_map,
+            channel_hl7_mllp_map,
+            cloud_dropbox_map,
             def_kafka_map,
+            outconn_hl7_mllp_map,
             outconn_im_slack_map,
+            outconn_im_telegram_map,
             outconn_im_telegram_map,
             outconn_ldap_map,
             outconn_mongodb_map,
@@ -1024,6 +1181,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         ]
 
         password_maps = [
+            cloud_dropbox_map,
             outconn_im_slack_map,
             outconn_im_telegram_map,
             outconn_ldap_map,
@@ -1046,6 +1204,16 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def _on_outconn_sftp_create(self, msg):
+
+        if not self.server.is_first_worker:
+            self.server._populate_connector_config(SubprocessStartConfig(has_sftp=True))
+            return
+
+        if not self.server.subproc_current_state.is_sftp_running:
+            config = SubprocessStartConfig()
+            config.has_sftp = True
+            self.server.init_subprocess_connectors(config)
+
         connector_msg = deepcopy(msg)
         self.worker_config.out_sftp[msg.name] = msg
         self.worker_config.out_sftp[msg.name].conn = SFTPIPCFacade(self.server, msg)
@@ -1054,6 +1222,11 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def _on_outconn_sftp_edit(self, msg):
+
+        if not self.server.is_first_worker:
+            self.server._populate_connector_config(SubprocessStartConfig(has_sftp=True))
+            return
+
         connector_msg = deepcopy(msg)
         del self.worker_config.out_sftp[msg.old_name]
         return self._on_outconn_sftp_create(connector_msg)
@@ -1061,6 +1234,11 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def _on_outconn_sftp_delete(self, msg):
+
+        if not self.server.is_first_worker:
+            self.server._populate_connector_config(SubprocessStartConfig(has_sftp=True))
+            return
+
         connector_msg = deepcopy(msg)
         del self.worker_config.out_sftp[msg.name]
         return self.server.connector_sftp.invoke_connector(connector_msg)
@@ -1299,6 +1477,12 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
+    def get_channel_file_transfer_config(self, name):
+        # type: (str) -> dict
+        return self.generic_conn_api[COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FILE_TRANSFER][name] # dict
+
+# ################################################################################################################################
+
     def oauth_get(self, name):
         """ Returns the configuration of the OAuth security definition
         of the given name.
@@ -1485,20 +1669,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def _set_service_response_data(self, serialize=True):
-
-        def inner(service, **ignored):
-            if not isinstance(service.response.payload, self._simple_types):
-
-                # If serialise is False, the operation below is essentially a no-op
-                # so we can skip it altogether.
-                if serialize:
-                    service.response.payload = service.response.payload.getvalue(serialize)
-
-        return inner
-
-# ################################################################################################################################
-
     def invoke(self, service, payload, **kwargs):
         """ Invokes a service by its name with request on input.
         """
@@ -1519,6 +1689,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             'callback': kwargs.get('callback'),
             'zato_ctx': kwargs.get('zato_ctx'),
             'wsgi_environ': kwargs.get('wsgi_environ'),
+            'channel_item': kwargs.get('channel_item'),
         }, channel, None, needs_response=True, serialize=serialize)
 
 # ################################################################################################################################
@@ -1562,6 +1733,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
                     else:
                         self.server.kvdb.conn.set(processed_key, KVDB.ASYNC_INVOKE_PROCESSED_FLAG_PATTERN, 300)
 
+        # The default WSGI environment that always exists ..
         wsgi_environ = {
             'zato.request_ctx.async_msg':msg,
             'zato.request_ctx.in_reply_to':msg.get('in_reply_to'),
@@ -1586,7 +1758,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             logger.warn(msg)
             raise Exception(msg)
 
-        service.update_handle(self._set_service_response_data(kwargs.get('serialize', True)), service, payload,
+        service.update_handle(service.set_response_data, service, payload,
             channel, data_format, transport, self.server, self.broker_client, self, cid,
             self.worker_config.simple_io, job_type=msg.get('job_type'), wsgi_environ=wsgi_environ,
             environ=msg.get('environ'))
@@ -1608,6 +1780,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             self.broker_client.invoke_async(cb_msg)
 
         if kwargs.get('needs_response'):
+
             return service.response.payload
 
 # ################################################################################################################################
@@ -1655,11 +1828,50 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def get_channel_plain_http(self, name):
+    def _get_channel_rest(self, connection_type, value, by_name=True):
+        # type: (str, str) -> dict
+
+        item_key = 'name' if by_name else 'id'
+
         with self.update_lock:
             for item in self.request_dispatcher.url_data.channel_data:
-                if item['connection'] == 'channel' and item['name'] == name:
-                    return item
+                if item['connection'] == connection_type:
+                    if item[item_key] == value:
+                        return item
+
+# ################################################################################################################################
+
+    def _get_outconn_rest(self, value, by_name=True):
+        # type: (str, str) -> HTTPSOAPWrapper
+
+        item_key = 'name' if by_name else 'id'
+
+        with self.update_lock:
+            for outconn_value in self.worker_config.out_plain_http.values():
+                if isinstance(outconn_value, dict):
+                    config = outconn_value['config'] # type: dict
+                    if config[item_key] == value:
+                        return outconn_value
+
+# ################################################################################################################################
+
+    def get_channel_rest(self, name):
+        # type: (str) -> dict
+        return self._get_channel_rest(CONNECTION.CHANNEL, name)
+
+# ################################################################################################################################
+
+    def get_outconn_rest(self, name):
+        # type: (str) -> HTTPSOAPWrapper
+        return self._get_outconn_rest(name)
+
+# ################################################################################################################################
+
+    def get_outconn_rest_by_id(self, id):
+        # type: (str) -> HTTPSOAPWrapper
+        return self._get_outconn_rest(int(id), False)
+
+# ################################################################################################################################
 
     def on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an HTTP/SOAP channel.
@@ -1671,7 +1883,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """
         # First, check if there was a cache for this channel. If so, make sure of all entries pointing
         # to the channel are deleted too.
-        item = self.get_channel_plain_http(msg.name)
+        item = self.get_channel_rest(msg.name)
         if item['cache_type']:
             cache = self.server.get_cache(item['cache_type'], item['cache_name'])
             cache.delete_by_prefix('http-channel-{}'.format(item['id']))
@@ -1836,8 +2048,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_broker_msg_HOT_DEPLOY_CREATE_STATIC(self, msg, *args):
-        return self.on_broker_msg_hot_deploy(msg, 'zato.pickup.on-update-static', {'data': msg.data, 'file_name': msg.file_name},
-            'CREATE_STATIC', *args)
+        return self.on_broker_msg_hot_deploy(msg, 'zato.pickup.on-update-static',
+            {'data': msg.data, 'file_name': msg.file_name}, 'CREATE_STATIC', *args)
 
 # ################################################################################################################################
 
@@ -1860,8 +2072,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_broker_msg_STATS_DELETE(self, msg, *args):
-        start = parse(msg.start)
-        stop = parse(msg.stop)
+        start = parse_datetime(msg.start)
+        stop = parse_datetime(msg.stop)
 
         # Looks weird but this is so we don't have to create a list instead of a generator
         # (and Python 3 won't leak the last element anymore)
@@ -1899,7 +2111,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             self.stats_maint.delete(start, stop, MINUTELY)
 
     def on_broker_msg_STATS_DELETE_DAY(self, msg, *args):
-        self.stats_maint.delete(parse(msg.start), parse(msg.stop), MINUTELY)
+        self.stats_maint.delete(parse_datetime(msg.start), parse_datetime(msg.stop), MINUTELY)
 
 # ################################################################################################################################
 
@@ -2264,44 +2476,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
     def on_broker_msg_OUTGOING_ZMQ_DELETE(self, msg):
         self.zmq_out_api.delete(msg.name)
-
-# ################################################################################################################################
-
-    def on_broker_msg_OUTGOING_STOMP_CREATE(self, msg):
-        self.stomp_outconn_api.create_def(msg.name, msg)
-
-    def on_broker_msg_OUTGOING_STOMP_EDIT(self, msg):
-        dispatcher.notify(broker_message.OUTGOING.STOMP_EDIT.value, msg)
-        old_name = msg.get('old_name')
-        del_name = old_name if old_name else msg['name']
-        self.stomp_outconn_api.edit_def(del_name, msg)
-
-    def on_broker_msg_OUTGOING_STOMP_DELETE(self, msg):
-        dispatcher.notify(broker_message.OUTGOING.STOMP_DELETE.value, msg)
-        self.stomp_outconn_api.delete_def(msg.name)
-
-    def on_broker_msg_OUTGOING_STOMP_CHANGE_PASSWORD(self, msg):
-        dispatcher.notify(broker_message.OUTGOING.STOMP_CHANGE_PASSWORD.value, msg)
-        self.stomp_outconn_api.change_password_def(msg)
-
-# ################################################################################################################################
-
-    def on_broker_msg_CHANNEL_STOMP_CREATE(self, msg):
-        self.stomp_channel_api.create_def(msg.name, msg, stomp_channel_main_loop, self)
-
-    def on_broker_msg_CHANNEL_STOMP_EDIT(self, msg):
-        dispatcher.notify(broker_message.CHANNEL.STOMP_EDIT.value, msg)
-        old_name = msg.get('old_name')
-        del_name = old_name if old_name else msg['name']
-        self.stomp_channel_api.edit_def(del_name, msg, stomp_channel_main_loop, self)
-
-    def on_broker_msg_CHANNEL_STOMP_DELETE(self, msg):
-        dispatcher.notify(broker_message.CHANNEL.STOMP_DELETE.value, msg)
-        self.stomp_channel_api.delete_def(msg.name)
-
-    def on_broker_msg_CHANNEL_STOMP_CHANGE_PASSWORD(self, msg):
-        dispatcher.notify(broker_message.CHANNEL.STOMP_CHANGE_PASSWORD.value, msg)
-        self.stomp_channel_api.change_password_def(msg)
 
 # ################################################################################################################################
 

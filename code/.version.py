@@ -6,8 +6,6 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 import inspect, json, os
 
@@ -17,7 +15,7 @@ import sh
 # Cannot use built in __file__ because we are execfile'd
 _file = inspect.currentframe().f_code.co_filename
 
-# Preapre all the directories needed
+# Prepare all the directories needed
 curdir = os.path.dirname(os.path.abspath(_file))
 release_info_dir = os.path.join(curdir, 'release-info')
 git_repo_dir = os.path.join(release_info_dir, '..')

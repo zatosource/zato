@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,14 +10,15 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from contextlib import closing
 from copy import deepcopy
 from datetime import datetime
-from json import loads
+from traceback import format_exc
 
 # Zato
-from zato.common import GENERIC as COMMON_GENERIC
+from zato.common.api import GENERIC as COMMON_GENERIC, generic_attrs
 from zato.common.broker_message import GENERIC
+from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.odb.query.generic import connection_list
-from zato.common.util.json_ import dumps
+from zato.common.util.api import parse_simple_type
 from zato.server.generic.connection import GenericConnection
 from zato.server.service import Bool, Int
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
@@ -59,13 +60,23 @@ config_dict_id_name_outconnn = {
 }
 
 # ################################################################################################################################
+
+extra_secret_keys = (
+
+    #
+    # Dropbox
+    #
+    'oauth2_access_token',
+)
+
 # ################################################################################################################################
 
 class _CreateEditSIO(AdminSIO):
     input_required = ('name', 'type_', 'is_active', 'is_internal', 'is_channel', 'is_outconn', Int('pool_size'),
         Bool('sec_use_rbac'), 'cluster_id')
     input_optional = ('id', Int('cache_expiry'), 'address', Int('port'), Int('timeout'), 'data_format', 'version',
-        'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id')
+        'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id') + \
+        extra_secret_keys + generic_attrs
     force_empty_keys = True
 
 # ################################################################################################################################
@@ -84,6 +95,7 @@ class _CreateEdit(_BaseService):
 # ################################################################################################################################
 
     def handle(self):
+
         data = deepcopy(self.request.input)
 
         raw_request = self.request.raw_request
@@ -92,7 +104,11 @@ class _CreateEdit(_BaseService):
 
         for key, value in raw_request.items():
             if key not in data:
-                data[key] = self._convert_sio_elem(key, value)
+
+                value = parse_simple_type(value)
+                value = self._sio.eval_(key, value, self.server.encrypt)
+
+                data[key] = value
 
         conn = GenericConnection.from_dict(data)
 
@@ -243,7 +259,10 @@ class ChangePassword(ChangePasswordBase):
     def handle(self):
 
         def _auth(instance, secret):
-            instance.secret = secret
+            if secret:
+
+                # Always encrypt the secret given on input
+                instance.secret = self.server.encrypt(secret)
 
         if self.request.input.id:
             instance_id = self.request.input.id
@@ -283,10 +302,52 @@ class Ping(_BaseService):
             ping_func = custom_ping_func_dict.get(instance.type_, self.server.worker_store.ping_generic_connection)
 
             start_time = datetime.utcnow()
-            ping_func(self.request.input.id)
-            response_time = datetime.utcnow() - start_time
 
-            self.response.payload.info = 'Connection pinged; response time: {}'.format(response_time)
+            try:
+                ping_func(self.request.input.id)
+            except Exception:
+                exc = format_exc()
+                self.logger.warn(exc)
+                self.response.payload.info = exc
+            else:
+                response_time = datetime.utcnow() - start_time
+                info = 'Connection pinged; response time: {}'.format(response_time)
+                self.logger.info(info)
+                self.response.payload.info = info
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Invoke(AdminService):
+    """ Invokes a generic connection by its name.
+    """
+    class SimpleIO:
+        input_required = 'conn_type', 'conn_name'
+        input_optional = 'request_data'
+        output_optional = 'response_data'
+        response_elem = None
+
+    def handle(self):
+
+        # Maps all known connection types to their implementation ..
+        conn_type_to_container = {
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: self.out.hl7.mllp
+        }
+
+        # .. get the actual implementation ..
+        container = conn_type_to_container[self.request.input.conn_type]
+
+        # .. and invoke it.
+        with container[self.request.input.conn_name].conn.client() as client:
+
+            try:
+                response = client.invoke(self.request.input.request_data)
+            except Exception:
+                exc = format_exc()
+                response = exc
+                self.logger.warn(exc)
+            finally:
+                self.response.payload.response_data = response
 
 # ################################################################################################################################
 # ################################################################################################################################

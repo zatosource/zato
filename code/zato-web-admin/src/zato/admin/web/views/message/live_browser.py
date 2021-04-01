@@ -17,7 +17,7 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import method_allowed
-from zato.common.util.json_ import dumps
+from zato.common.json_internal import dumps
 
 logger = logging.getLogger(__name__)
 

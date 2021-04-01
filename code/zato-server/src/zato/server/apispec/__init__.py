@@ -27,7 +27,7 @@ from future.utils import iteritems
 from past.builtins import basestring
 
 # Zato
-from zato.common import APISPEC
+from zato.common.api import APISPEC
 
 # Zato - Cython
 from zato.simpleio import AsIs, is_sio_bool, is_sio_int, SIO_TYPE_MAP
@@ -134,7 +134,7 @@ class SimpleIO(object):
             out[name] = getattr(self, name)
 
         if self.needs_sio_desc:
-            out.description = self.description
+            out.description = self.description.to_bunch()
 
         return out
 

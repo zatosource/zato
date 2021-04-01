@@ -1,36 +1,33 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 from contextlib import closing
-from json import loads
 from logging import DEBUG, getLogger
 from operator import itemgetter
 from traceback import format_exc
 
-# datetutil
-from dateparser import parse as dt_parse
+# ciso8601
+from ciso8601 import parse_datetime_as_naive
 
 # gevent
 from gevent import spawn
 
 # Zato
-from zato.common import DATA_FORMAT, PUBSUB, ZATO_NONE
+from zato.common.api import DATA_FORMAT, PUBSUB, ZATO_NONE
 from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
+from zato.common.json_internal import json_dumps, json_loads
 from zato.common.odb.query.pubsub.cleanup import delete_enq_delivered, delete_enq_marked_deleted, delete_msg_delivered, \
      delete_msg_expired
 from zato.common.odb.query.pubsub.publish import sql_publish_with_retry
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic
 from zato.common.pubsub import PubSubMessage
 from zato.common.pubsub import new_msg_id
-from zato.common.util.json_ import dumps
 from zato.common.util.sql import set_instance_opaque_attrs
 from zato.common.util.time_ import datetime_to_ms, utcnow_as_ms
 from zato.server.pubsub import get_expiration, get_priority, PubSub, Topic
@@ -94,12 +91,14 @@ class PubCtx(object):
 class Publish(AdminService):
     """ Actual implementation of message publishing exposed through other services to the outside world.
     """
+    call_hooks = False
+
     class SimpleIO:
         input_required = ('topic_name',)
         input_optional = (AsIs('data'), List('data_list'), AsIs('msg_id'), 'has_gd', Int('priority'), Int('expiration'),
             'mime_type', AsIs('correl_id'), 'in_reply_to', AsIs('ext_client_id'), 'ext_pub_time', 'pub_pattern_matched',
             'security_id', 'ws_channel_id', 'service_id', 'data_parsed', 'meta', AsIs('group_id'),
-            Int('position_in_group'), 'endpoint_id', List('reply_to_sk'), List('deliver_to_sk'), 'user_ctx', 'zato_ctx')
+            Int('position_in_group'), 'endpoint_id', List('reply_to_sk'), List('deliver_to_sk'), 'user_ctx', AsIs('zato_ctx'))
         output_optional = (AsIs('msg_id'), List('msg_id_list'))
 
 # ################################################################################################################################
@@ -114,7 +113,7 @@ class Publish(AdminService):
 
     def _get_message(self, topic, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic, has_no_sk_server,
         _initialized=_initialized, _zato_none=ZATO_NONE, _skip=PUBSUB.HOOK_ACTION.SKIP, _default_pri=PUBSUB.PRIORITY.DEFAULT,
-        _opaque_only=PUBSUB.DEFAULT.SK_OPAQUE, _float_str=PUBSUB.FLOAT_STRING_CONVERT):
+        _opaque_only=PUBSUB.DEFAULT.SK_OPAQUE, _float_str=PUBSUB.FLOAT_STRING_CONVERT, _zato_mime_type=PUBSUB.MIMEType.Zato):
 
         priority = get_priority(self.cid, input)
 
@@ -125,7 +124,7 @@ class Publish(AdminService):
         expiration = get_expiration(self.cid, input)
         expiration_time = now + (expiration / 1000.0)
 
-        pub_msg_id = input.get('msg_id', '').encode('utf8') or new_msg_id()
+        pub_msg_id = input.get('msg_id', '') or new_msg_id()
 
         # If there is at least one WSX subscriber to this topic which is not connected at the moment,
         # which means it has no delivery server, we uncoditionally turn this message into a GD one ..
@@ -149,18 +148,18 @@ class Publish(AdminService):
 
         ext_pub_time = input.get('ext_pub_time') or None
         if ext_pub_time:
-            ext_pub_time = dt_parse(ext_pub_time)
+            ext_pub_time = parse_datetime_as_naive(ext_pub_time)
             ext_pub_time = datetime_to_ms(ext_pub_time) / 1000.0
 
-        pub_correl_id = pub_correl_id.encode('utf8') if pub_correl_id else None
-        in_reply_to = in_reply_to.encode('utf8') if in_reply_to else None
-        ext_client_id = ext_client_id.encode('utf8') if ext_client_id else None
-        mime_type = mime_type.encode('utf8') if mime_type else None
+        pub_correl_id = pub_correl_id if pub_correl_id else None
+        in_reply_to = in_reply_to if in_reply_to else None
+        ext_client_id = ext_client_id if ext_client_id else None
+        mime_type = mime_type if mime_type else None
         reply_to_sk = input.get('reply_to_sk') or []
         deliver_to_sk = input.get('deliver_to_sk') or []
 
         user_ctx = input.get('user_ctx')
-        zato_ctx = input.get('zato_ctx')
+        zato_ctx = input.get('zato_ctx') or {}
 
         ps_msg = PubSubMessage()
         ps_msg.topic = topic
@@ -172,9 +171,19 @@ class Publish(AdminService):
         ps_msg.pub_time = _float_str.format(now)
         ps_msg.ext_pub_time = _float_str.format(ext_pub_time) if ext_pub_time else ext_pub_time
 
+        # If the data published is not a string or object, we need to serialise it to JSON
+        # so as to be able to save it in the database - a delivery task will later
+        # need to de-serialise it.
+        data = input['data']
+        if not isinstance(data, (str, bytes)):
+            data = json_dumps(data)
+            zato_ctx['zato_mime_type'] = _zato_mime_type
+
+        zato_ctx = json_dumps(zato_ctx)
+
         ps_msg.delivery_status = _initialized
         ps_msg.pub_pattern_matched = pub_pattern_matched
-        ps_msg.data = input['data']
+        ps_msg.data = data
         ps_msg.mime_type = mime_type
         ps_msg.priority = priority
         ps_msg.expiration = expiration
@@ -379,8 +388,9 @@ class Publish(AdminService):
                 # (E.g. this is a WSX that is not currently connected).
                 has_no_sk_server = True
 
-        logger_pubsub.info('Subscriptions for topic `%s` `%s` (a:%d, %d/%d, cid:%s)',
-            topic.name, _subs_found, has_all, len(subscriptions_by_topic), len_all_sub, self.cid)
+        if has_logger_pubsub_debug:
+            logger_pubsub.debug('Subscriptions for topic `%s` `%s` (a:%d, %d/%d, cid:%s)',
+                topic.name, _subs_found, has_all, len(subscriptions_by_topic), len_all_sub, self.cid)
 
         # If input.data is a list, it means that it is a list of messages, each of which has its own
         # metadata. Otherwise, it's a string to publish and other input parameters describe it.
@@ -410,9 +420,9 @@ class Publish(AdminService):
 # ################################################################################################################################
 
     def _publish(self, ctx):
-        # Type: PubCtx
         """ Publishes GD and non-GD messages to topics and, if subscribers exist, moves them to their queues / notifies them.
         """
+        # Type: PubCtx
         len_gd_msg_list = len(ctx.gd_msg_list)
         has_gd_msg_list = bool(len_gd_msg_list)
 
@@ -614,7 +624,7 @@ class Publish(AdminService):
                     if use_pipeline:
                         endpoint_topic_list = endpoint_topic_list.execute()[-1] # Elem [0] will be the result of .hmset
 
-                    endpoint_topic_list = loads(endpoint_topic_list) if endpoint_topic_list else []
+                    endpoint_topic_list = json_loads(endpoint_topic_list) if endpoint_topic_list else []
 
                     # If we already have something stored in Redis, find information about this topic and remove it
                     # to make room for the newest entry.
@@ -652,7 +662,7 @@ class Publish(AdminService):
                     endpoint_topic_list = endpoint_topic_list[:endpoint_max_history]
 
                     # Same as for topics, sends to Redis immediately or under the pipeline
-                    conn.set(endpoint_key, dumps(endpoint_topic_list))
+                    conn.set(endpoint_key, json_dumps(endpoint_topic_list))
 
             finally:
                 if use_pipeline:

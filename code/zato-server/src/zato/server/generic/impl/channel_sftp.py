@@ -76,7 +76,7 @@ class SFTPServer(object):
         args.append(self.model.host_key)
 
         # PID file
-        #args.append('-p {}'.format(self.model.pid))
+        # args.append('-p {}'.format(self.model.pid))
 
         # Base command to build additional arguments into
         command = getattr(sh, self.model.sftp_command)

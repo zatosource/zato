@@ -36,7 +36,7 @@ from paste.util.converters import asbool
 from past.builtins import long
 
 # Zato
-from zato.common import MSG_MAPPER, ZATO_NOT_GIVEN
+from zato.common.api import MSG_MAPPER, ZATO_NOT_GIVEN
 from zato.common.nav import DictNav
 
 logger = logging.getLogger(__name__)

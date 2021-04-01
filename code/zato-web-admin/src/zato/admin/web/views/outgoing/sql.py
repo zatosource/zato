@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,14 +14,13 @@ from traceback import format_exc
 from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 
-# anyjson
-from anyjson import dumps
-
 # Zato
 from zato.admin.web.views import change_password as _change_password, parse_response_data
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.sql import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, method_allowed
+from zato.common.api import engine_display_name
+from zato.common.json_internal import dumps
 from zato.common.odb.model import SQLConnectionPool
 
 logger = logging.getLogger(__name__)
@@ -77,11 +76,11 @@ def index(req):
         for item in data:
 
             _item = SQLConnectionPool()
-
-            for name in('id', 'name', 'is_active', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size',
-                'engine_display_name'):
+            for name in('id', 'name', 'is_active', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size', 'engine'):
                 value = getattr(item, name)
                 setattr(_item, name, value)
+
+            _item.engine_display_name = engine_display_name[_item.engine]
 
             _item.extra = item.extra or ''
             items.append(_item)
@@ -143,7 +142,10 @@ def ping(req, cluster_id, id):
     """ Pings a database and returns the time it took, in milliseconds.
     """
     try:
-        response = req.zato.client.invoke('zato.outgoing.sql.ping', {'id':id})
+        response = req.zato.client.invoke('zato.outgoing.sql.ping', {
+            'id':id,
+            'should_raise_on_error': True,
+        })
 
         if response.ok:
 

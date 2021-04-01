@@ -20,9 +20,9 @@ from django.template.response import TemplateResponse
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.security.wss import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, Delete as _Delete, method_allowed, parse_response_data
-from zato.common import ZATO_WSS_PASSWORD_TYPES
+from zato.common.api import ZATO_WSS_PASSWORD_TYPES
+from zato.common.json_internal import dumps
 from zato.common.odb.model import WSSDefinition
-from zato.common.util.json_ import dumps
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +108,7 @@ def create(req):
         response = req.zato.client.invoke('zato.security.wss.create', _get_edit_create_message(req.POST))
         return _edit_create_response(response, 'created', req.POST['name'], req.POST['password_type'])
     except Exception:
-        msg = "WS-Security definition could not be created, e:[{e}]".format(format_exc())
+        msg = 'WS-Security definition could not be created; e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 
