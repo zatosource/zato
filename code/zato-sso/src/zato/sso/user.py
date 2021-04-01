@@ -27,12 +27,13 @@ from sqlalchemy.exc import IntegrityError
 from past.builtins import basestring, unicode
 
 # Zato
-from zato.common import RATE_LIMIT, SEC_DEF_TYPE, TOTP
+from zato.common.api import RATE_LIMIT, SEC_DEF_TYPE, TOTP
 from zato.common.audit import audit_pii
-from zato.common.crypto import CryptoManager
+from zato.common.crypto.api import CryptoManager
+from zato.common.crypto.totp_ import TOTPManager
 from zato.common.exception import BadRequest
+from zato.common.json_internal import dumps
 from zato.common.odb.model import SSOLinkedAuth as LinkedAuth, SSOSession as SessionModel, SSOUser as UserModel
-from zato.common.util.json_ import dumps
 from zato.sso import const, not_given, status_code, User as UserEntity, ValidationError
 from zato.sso.attr import AttrAPI
 from zato.sso.odb.query import get_linked_auth_list, get_sign_up_status_by_token, get_user_by_id, get_user_by_linked_sec, \
@@ -380,7 +381,7 @@ class UserAPI(object):
         user_model.password_must_change = ctx.data.get('password_must_change') or False
         user_model.password_expiry = now + timedelta(days=self.password_expiry)
 
-        totp_key = ctx.data.get('totp_key') or CryptoManager.generate_totp_key()
+        totp_key = ctx.data.get('totp_key') or TOTPManager.generate_totp_key()
         totp_label = ctx.data.get('totp_label') or TOTP.default_label
 
         user_model.is_totp_enabled = ctx.data.get('is_totp_enabled')
@@ -705,7 +706,7 @@ class UserAPI(object):
             extra={'current_app':current_app, 'remote_addr':remote_addr, 'sec_type': sec_type})
 
         return self._get_user(
-            cid, get_user_by_linked_sec, (sec_type, sec_username) , current_ust, current_app, remote_addr, False, True)
+            cid, get_user_by_linked_sec, (sec_type, sec_username), current_ust, current_app, remote_addr, False, True)
 
 # ################################################################################################################################
 
@@ -1132,7 +1133,7 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def change_password(self, cid, data, current_ust, current_app, remote_addr, _no_user_id='no-user-id'.format(uuid4().hex)):
+    def change_password(self, cid, data, current_ust, current_app, remote_addr, _no_user_id='no-user-id.{}'.format(uuid4().hex)):
         """ Changes a user's password. Super-admins may also set its expiration
         and whether the user must set it to a new one on next login.
         """

@@ -1,19 +1,16 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
 from contextlib import closing
 from datetime import datetime, timedelta
 from io import StringIO
-from json import dumps
 from operator import attrgetter
 from traceback import format_exc
 
@@ -29,7 +26,7 @@ from future.utils import iteritems, itervalues
 from past.builtins import basestring, unicode
 
 # Zato
-from zato.common import DATA_FORMAT, PUBSUB, SEARCH
+from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.odb.model import WebSocketClientPubSubKeys
@@ -38,24 +35,26 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
      get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
-from zato.common.util import fs_safe_name, new_cid, spawn_greenlet
-from zato.common.util.event import EventLog
+from zato.common.util.api import new_cid, spawn_greenlet
+from zato.common.util.file_system import fs_safe_name
 from zato.common.util.hook import HookTool
-from zato.common.util.python_ import get_current_stack
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.common.util.wsx import find_wsx_environ
-from zato.server.pubsub.model import Endpoint, EventType, HookCtx, Subscription, SubKeyServer, Topic
+from zato.server.pubsub.model import Endpoint, HookCtx, Subscription, SubKeyServer, Topic
 from zato.server.pubsub.sync import InRAMSync
 
 # ################################################################################################################################
 
-# Type checking
 if 0:
+    from zato.cy.reqresp.payload import SimpleIOPayload
     from zato.server.base.parallel import ParallelServer
+    from zato.server.pubsub.task import PubSubTool
     from zato.server.service import Service
 
     ParallelServer = ParallelServer
+    PubSubTool = PubSubTool
     Service = Service
+    SimpleIOPayload = SimpleIOPayload
 
 # ################################################################################################################################
 
@@ -111,7 +110,7 @@ default_sk_server_table_columns = 6, 15, 8, 6, 17, 80
 
 _PRIORITY=PUBSUB.PRIORITY
 _JSON=DATA_FORMAT.JSON
-_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value
+_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE
 
 class msg:
     wsx_sub_resumed = 'WSX subscription resumed, sk:`%s`, peer:`%s`'
@@ -152,7 +151,6 @@ class PubSub(object):
         self.cluster_id = cluster_id
         self.server = server
         self.broker_client = broker_client
-        self.event_log = EventLog('ps.{}.{}.{}'.format(self.cluster_id, self.server.name, self.server.pid))
         self.lock = RLock()
         self.keep_running = True
         self.sk_server_table_columns = self.server.fs_server_config.pubsub.get('sk_server_table_columns') or \
@@ -217,7 +215,6 @@ class PubSub(object):
     @property
     def subscriptions_by_sub_key(self):
         # type: () -> dict
-        self.emit_about_to_access_sub_sk({'sub_sk':sorted(self._subscriptions_by_sub_key), 'stack':get_current_stack()})
         return self._subscriptions_by_sub_key
 
 # ################################################################################################################################
@@ -245,6 +242,7 @@ class PubSub(object):
     def get_subscriptions_by_topic(self, topic_name, require_backlog_messages=False):
         with self.lock:
             subs = self.subscriptions_by_topic.get(topic_name, [])
+            subs = subs[:]
             if require_backlog_messages:
                 out = []
                 for item in subs:
@@ -524,11 +522,13 @@ class PubSub(object):
 # ################################################################################################################################
 
     def _get_topic_by_sub_key(self, sub_key):
+        # type: (str) -> Topic
         return self._get_topic_by_name(self._get_subscription_by_sub_key(sub_key).topic_name)
 
 # ################################################################################################################################
 
     def get_topic_by_sub_key(self, sub_key):
+        # type: (str) -> Topic
         with self.lock:
             return self._get_topic_by_sub_key(sub_key)
 
@@ -549,10 +549,10 @@ class PubSub(object):
         if config['security_id']:
             self.sec_id_to_endpoint_id[config['security_id']] = config.id
 
-        if config['ws_channel_id']:
+        if config.get('ws_channel_id'):
             self.ws_channel_id_to_endpoint_id[config['ws_channel_id']] = config.id
 
-        if config['service_id']:
+        if config.get('service_id'):
             self.service_id_to_endpoint_id[config['service_id']] = config.id
 
 # ################################################################################################################################
@@ -624,6 +624,8 @@ class PubSub(object):
 
         existing_by_topic = self.subscriptions_by_topic.setdefault(config.topic_name, [])
         existing_by_topic.append(sub)
+
+        logger_zato.info('Added sub `%s` -> `%s`', config.sub_key, config.topic_name)
 
         self.subscriptions_by_sub_key[config.sub_key] = sub
 
@@ -750,8 +752,8 @@ class PubSub(object):
 # ################################################################################################################################
 
     def create_topic_for_service(self, service_name, topic_name):
-        # type: (PubSub, str, str)
-        self.create_topic(topic_name)
+        # type: (str, str)
+        self.create_topic(topic_name, is_internal=True)
         logger.info('Created topic `%s` for service `%s`', topic_name, service_name)
 
 # ################################################################################################################################
@@ -814,13 +816,16 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_topic_event_list(self, topic_name):
-        return self.topics[topic_name].get_event_list()
-
-# ################################################################################################################################
-
-    def get_event_list(self):
-        return self.event_log.get_event_list()
+    def set_config_for_service_subscription(self, sub_key, _endpoint_type=PUBSUB.ENDPOINT_TYPE.SERVICE.id):
+        # type: (str, str)
+        self.service_pubsub_tool.add_sub_key(sub_key)
+        self.set_sub_key_server({
+            'sub_key': sub_key,
+            'cluster_id': self.server.cluster_id,
+            'server_name': self.server.name,
+            'server_pid': self.server.pid,
+            'endpoint_type': _endpoint_type,
+        })
 
 # ################################################################################################################################
 
@@ -918,6 +923,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def get_pubsub_tool_by_sub_key(self, sub_key):
+        # type: (str) -> PubSubTool
         with self.lock:
             return self.pubsub_tool_by_sub_key[sub_key]
 
@@ -971,7 +977,7 @@ class PubSub(object):
             sub_key_info = [item.sub_key]
 
             if item.wsx_info:
-                for name in ('swc', 'name', 'pub_client_id', 'peer_fqdn', 'forwarded_for_fqdn', 'python_id', 'sock'):
+                for name in ('swc', 'name', 'pub_client_id', 'peer_fqdn', 'forwarded_for_fqdn'):
                     name = name if isinstance(name, unicode) else name.decode('utf8')
                     value = item.wsx_info[name]
                     if isinstance(value, basestring):
@@ -987,7 +993,6 @@ class PubSub(object):
                 item.channel_name or default,
                 '\n'.join(sub_key_info),
             ])
-
 
         # Add all rows to the table
         table.add_rows(rows)
@@ -1365,9 +1370,9 @@ class PubSub(object):
         """
         for msg in batch:
             response = hook(self.topics[topic_id], msg)
-            hook_action = response['hook_action'] or _deliver
+            hook_action = response.get('hook_action') or _deliver
 
-            if hook_action and hook_action not in actions:
+            if hook_action not in actions:
                 raise ValueError('Invalid action returned `{}` for msg `{}`'.format(hook_action, msg))
             else:
                 messages[hook_action].append(msg)
@@ -1381,7 +1386,7 @@ class PubSub(object):
             hook(topic, batch, http_soap=http_soap)
         else:
             # We know that this service exists, it just does not implement the expected method
-            service_info = self.server.service_store.get_service_class_by_id(topic.config.hook_service_id)
+            service_info = self.server.service_store.get_service_info_by_id(topic.config.hook_service_id)
             service_class = service_info['service_class']
             service_name = service_class.get_name()
             raise Exception('Hook service `{}` does not implement `on_outgoing_soap_invoke` method'.format(service_name))
@@ -1443,6 +1448,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def invoke_service(self, name, msg, *args, **kwargs):
+        # type: () -> SimpleIOPayload
         return self.server.invoke(name, msg, *args, **kwargs)
 
 # ################################################################################################################################
@@ -1489,18 +1495,6 @@ class PubSub(object):
         else:
             topic.sync_has_non_gd_msg = value
 
-        self.emit_set_sync_has_msg({
-            'topic_id': topic_id,
-            'is_gd': is_gd,
-            'value': value,
-            'source': source,
-            'gd_pub_time_max': gd_pub_time_max,
-            'topic.name': topic.name,
-            'topic.sync_has_gd_msg': topic.sync_has_gd_msg,
-            'topic.gd_pub_time_max': topic.gd_pub_time_max,
-            'topic.sync_has_non_gd_msg': topic.sync_has_non_gd_msg
-        })
-
 # ################################################################################################################################
 
     def set_sync_has_msg(self, topic_id, is_gd, value, source, gd_pub_time_max):
@@ -1509,46 +1503,12 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def emit_loop_topic_id_dict(self, ctx=None, _event=EventType.PubSub.loop_topic_id_dict):
-        self.event_log.emit(_event, ctx)
-
-    def emit_loop_sub_keys(self, ctx=None, _event=EventType.PubSub.loop_sub_keys):
-        self.event_log.emit(_event, ctx)
-
-    def emit_loop_before_has_msg(self, ctx=None, _event=EventType.PubSub.loop_before_has_msg):
-        self.event_log.emit(_event, ctx)
-
-    def emit_loop_has_msg(self, ctx=None, _event=EventType.PubSub.loop_has_msg):
-        self.event_log.emit(_event, ctx)
-
-    def emit_loop_before_sync(self, ctx=None, _event=EventType.PubSub.loop_before_sync):
-        self.event_log.emit(_event, ctx)
-
-    def emit_set_sync_has_msg(self, ctx=None, _event=EventType.PubSub._set_sync_has_msg):
-        self.event_log.emit(_event, ctx)
-
-    def emit_about_to_subscribe(self, ctx=None, _event=EventType.PubSub.about_to_subscribe):
-        self.event_log.emit(_event, ctx)
-
-    def emit_about_to_access_sub_sk(self, ctx=None, _event=EventType.PubSub.about_to_access_sub_sk):
-        self.event_log.emit(_event, ctx)
-
-    def emit_in_subscribe_impl(self, ctx=None, _event=EventType.PubSub.in_subscribe_impl):
-        self.event_log.emit(_event, ctx)
-
-# ################################################################################################################################
-
     def trigger_notify_pubsub_tasks(self):
-        """ A background greenlet which periodically lets delivery tasks that there are perhaps
+        """ A background greenlet which periodically lets delivery tasks know that there are perhaps
         new GD messages for the topic this class represents.
         """
 
         # Local aliases
-
-        _self_emit_loop_topic_id_dict  = self.emit_loop_topic_id_dict
-        _self_emit_loop_sub_keys       = self.emit_loop_sub_keys
-        _self_emit_loop_before_has_msg = self.emit_loop_before_has_msg
-        _self_emit_loop_before_sync    = self.emit_loop_before_sync
 
         _new_cid      = new_cid
         _spawn        = spawn
@@ -1573,45 +1533,6 @@ class PubSub(object):
 
         def _cmp_non_gd_msg(elem):
             return elem['pub_time']
-
-# ################################################################################################################################
-
-        def _do_emit_loop_topic_id_dict(_topic_id_dict):
-            _self_emit_loop_topic_id_dict({
-                'topic_id_dict': _topic_id_dict
-            })
-
-# ################################################################################################################################
-
-        def _do_emit_loop_sub_keys(topic_id, topic_name, sub_keys):
-            _self_emit_loop_sub_keys({
-                'topic_id': topic_id,
-                'topic.name': topic_name,
-                'sub_keys': sub_keys
-            })
-
-# ################################################################################################################################
-
-        def _do_emit_loop_before_has_msg(topic_id, topic_name, topic_sync_has_gd_msg, topic_sync_has_non_gd_msg):
-            _self_emit_loop_before_has_msg({
-                'topic_id': topic_id,
-                'topic.name': topic_name,
-                'topic.sync_has_gd_msg': topic_sync_has_gd_msg,
-                'topic.sync_has_non_gd_msg': topic_sync_has_non_gd_msg,
-            })
-
-# ################################################################################################################################
-
-        def _do_emit_loop_before_sync(topic_id, topic_name, topic_sync_has_gd_msg, topic_sync_has_non_gd_msg,
-            non_gd_msg_list_msg_id_list, pub_time_max):
-            _self_emit_loop_before_sync({
-                'topic_id': topic_id,
-                'topic.name': topic_name,
-                'topic.sync_has_gd_msg': topic_sync_has_gd_msg,
-                'topic.sync_has_non_gd_msg': topic_sync_has_non_gd_msg,
-                'non_gd_msg_list': non_gd_msg_list_msg_id_list,
-                'pub_time_max': pub_time_max
-            })
 
 # ################################################################################################################################
 
@@ -1655,17 +1576,9 @@ class PubSub(object):
                     if subs:
                         topic_id_dict[_topic.id] = (_topic.name, subs)
 
-
                 # OK, if we had any subscriptions for at least one topic and there are any messages waiting,
                 # we can continue.
                 try:
-
-                    if topic_id_dict:
-
-                        #
-                        # Event log
-                        #
-                        _do_emit_loop_topic_id_dict(topic_id_dict)
 
                     for topic_id in topic_id_dict:
 
@@ -1685,17 +1598,7 @@ class PubSub(object):
                         # Continue only if there are actually any sub_keys left = any tasks up and running ..
                         if sub_keys:
 
-                            #
-                            # Event log
-                            #
-                            _do_emit_loop_sub_keys(topic_id, topic.name, sub_keys)
-
                             non_gd_msg_list = _sync_backlog_get_delete_messages_by_sub_keys(topic_id, sub_keys)
-
-                            #
-                            # Event log
-                            #
-                            _do_emit_loop_before_has_msg(topic_id, topic.name, topic.sync_has_gd_msg, topic.sync_has_non_gd_msg)
 
                             # .. also, continue only if there are still messages for the ones that are up ..
                             if topic.sync_has_gd_msg or topic.sync_has_non_gd_msg:
@@ -1707,12 +1610,6 @@ class PubSub(object):
                                     pub_time_max = topic.gd_pub_time_max
 
                                 non_gd_msg_list_msg_id_list = [elem['pub_msg_id'] for elem in non_gd_msg_list]
-
-                                #
-                                # Event log
-                                #
-                                _do_emit_loop_before_sync(topic_id, topic.name, topic.sync_has_gd_msg, topic.sync_has_non_gd_msg,
-                                    non_gd_msg_list_msg_id_list, pub_time_max)
 
                                 _logger_info('Forwarding messages to a task for `%s` ngd-list:%s (sk_list:%s) cid:%s' % (
                                     topic_name, non_gd_msg_list_msg_id_list, sub_keys, cid))
@@ -1803,14 +1700,20 @@ class PubSub(object):
             has_gd = True
 
             # Subscribe the default service delivery endpoint to messages from this topic
+
             endpoint = self.get_endpoint_by_name(PUBSUB.SERVICE_SUBSCRIBER.NAME)
             if not self.is_subscribed_to(endpoint.id, topic_name):
-                self.subscribe(topic_name, endpoint_name=endpoint.name)
+
+                # Subscribe the service to this topic ..
+                sub_key = self.subscribe(topic_name, endpoint_name=endpoint.name, is_internal=True, delivery_batch_size=1)
+
+                # .. and configure pub/sub metadata for the newly created subscription.
+                self.set_config_for_service_subscription(sub_key)
 
             # We need a Zato context to relay information about the service pointed to by the published message
-            zato_ctx = dumps({
+            zato_ctx = {
                 'target_service_name': name
-            })
+            }
 
         data = kwargs.get('data') or ''
         data_list = kwargs.get('data_list') or []
@@ -1825,7 +1728,7 @@ class PubSub(object):
         user_ctx = kwargs.get('user_ctx')
         zato_ctx = zato_ctx or kwargs.get('zato_ctx')
 
-        response = self.invoke_service('zato.pubsub.publish.publish', {
+        request = {
             'topic_name': topic_name,
             'data': data,
             'data_list': data_list,
@@ -1843,9 +1746,12 @@ class PubSub(object):
             'deliver_to_sk': deliver_to_sk,
             'user_ctx': user_ctx,
             'zato_ctx': zato_ctx,
-        }, serialize=False)
+        }
 
-        return response.response['msg_id']
+        response = self.invoke_service('zato.pubsub.publish.publish', request, serialize=False)
+
+        if response.has_data():
+            return response.get('msg_id') or response.get('msg_id_list')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1857,7 +1763,7 @@ class PubSub(object):
         response = self.invoke_service('zato.pubsub.endpoint.get-delivery-messages', {
             'cluster_id': self.server.cluster_id,
             'sub_key': sub_key,
-        }, serialize=False).response
+        }, serialize=False)
 
         # Already includes all the details ..
         if needs_details:
@@ -1961,8 +1867,9 @@ class PubSub(object):
         # This is always needed to invoke the subscription service
         request = {
             'topic_name': topic_name,
+            'is_internal': kwargs.get('is_internal') or False,
             'wrap_one_msg_in_list': kwargs.get('wrap_one_msg_in_list', True),
-            'delivery_batch_size': kwargs.get('delivery_batch_size', PUBSUB.DEFAULT.DELIVERY_BATCH_SIZE)
+            'delivery_batch_size': kwargs.get('delivery_batch_size', PUBSUB.DEFAULT.DELIVERY_BATCH_SIZE),
         }
 
         # This is a subscription for a WebSocket client ..
@@ -2039,15 +1946,18 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def create_topic(self, name, has_gd=False, accept_on_no_sub=True, is_active=True, is_api_sub_allowed=True, hook_service_id=None,
-        task_sync_interval=_ps_default.TASK_SYNC_INTERVAL, task_delivery_interval=_ps_default.TASK_DELIVERY_INTERVAL,
-        depth_check_freq=_ps_default.DEPTH_CHECK_FREQ):
-        # type: (PubSub)
+    def create_topic(self, name, has_gd=False, accept_on_no_sub=True, is_active=True, is_internal=False, is_api_sub_allowed=True,
+        hook_service_id=None, task_sync_interval=_ps_default.TASK_SYNC_INTERVAL,
+        task_delivery_interval=_ps_default.TASK_DELIVERY_INTERVAL, depth_check_freq=_ps_default.DEPTH_CHECK_FREQ,
+        max_depth_gd=_ps_default.TOPIC_MAX_DEPTH_GD, max_depth_non_gd=_ps_default.TOPIC_MAX_DEPTH_NON_GD,
+        pub_buffer_size_gd=_ps_default.PUB_BUFFER_SIZE_GD,
+        ):
 
         self.invoke_service('zato.pubsub.topic.create', {
             'cluster_id': self.server.cluster_id,
             'name': name,
             'is_active': is_active,
+            'is_internal': is_internal,
             'is_api_sub_allowed': is_api_sub_allowed,
             'has_gd': has_gd,
             'hook_service_id': hook_service_id,
@@ -2055,6 +1965,9 @@ class PubSub(object):
             'task_sync_interval': task_sync_interval,
             'task_delivery_interval': task_delivery_interval,
             'depth_check_freq': depth_check_freq,
+            'max_depth_gd': PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_GD,
+            'max_depth_non_gd': PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_NON_GD,
+            'pub_buffer_size_gd': PUBSUB.DEFAULT.PUB_BUFFER_SIZE_GD,
         })
 
 # ################################################################################################################################

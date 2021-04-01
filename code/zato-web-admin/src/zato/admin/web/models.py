@@ -8,15 +8,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from json import loads
-
 # Django
 from django.db import models
 from django.contrib.auth.models import User
 
 # Zato
 from zato.admin.web import DATE_FORMATS, MONTH_YEAR_FORMATS, TIME_FORMATS
+from zato.common.json_internal import loads
 
 class TOTPData(object):
     def __init__(self):

@@ -8,12 +8,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-import os, signal, sys
-
 # Zato
 from zato.cli import ManageCommand
-from zato.common.util import get_haproxy_agent_pidfile
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class Stop(ManageCommand):
     """ Stops a Zato component
@@ -22,6 +21,11 @@ class Stop(ManageCommand):
         needs_logging=True):
         """ Sends a signal to a process known by its pidfile.
         """
+
+        # stdlib
+        import os
+        import sys
+
         component_dir = component_dir or self.component_dir
         pidfile = pidfile or os.path.join(component_dir, 'pidfile')
 
@@ -49,7 +53,14 @@ class Stop(ManageCommand):
         if needs_logging:
             self.logger.info('%s `%s` shutting down', component_name, component_dir)
 
+# ################################################################################################################################
+
     def _on_server(self, *ignored):
+
+        # stdlib
+        import os
+        import signal
+
         pidfile_ibm_mq = os.path.join(self.component_dir, 'pidfile-ibm-mq')
         pidfile_sftp = os.path.join(self.component_dir, 'pidfile-sftp')
 
@@ -58,7 +69,16 @@ class Stop(ManageCommand):
 
         self.signal('Server', 'SIGTERM', signal.SIGTERM)
 
+# ################################################################################################################################
+
     def stop_haproxy(self, component_dir):
+
+        # stdlib
+        import os
+        import signal
+
+        # Zato
+        from zato.common.util.api import get_haproxy_agent_pidfile
 
         # We much check whether the pidfile for agent exists, it won't if --fg was given on input in which case
         # Ctrl-C must have closed the agent thus we cannot send any signal.
@@ -68,11 +88,28 @@ class Stop(ManageCommand):
 
         self.signal('Load-balancer', 'SIGTERM', signal.SIGTERM, None, component_dir)
 
+# ################################################################################################################################
+
     def _on_lb(self, *ignored):
         self.stop_haproxy(self.component_dir)
 
+# ################################################################################################################################
+
     def _on_web_admin(self, *ignored):
+
+        # stdlib
+        import signal
+
         self.signal('Web admin', 'SIGTERM', signal.SIGTERM)
 
+# ################################################################################################################################
+
     def _on_scheduler(self, *ignored):
+
+        # stdlib
+        import signal
+
         self.signal('Scheduler', 'SIGTERM', signal.SIGTERM)
+
+# ################################################################################################################################
+# ################################################################################################################################

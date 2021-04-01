@@ -14,7 +14,7 @@ import logging
 # Zato
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.views import id_only_service, Index as _Index, method_allowed
-from zato.common.util import fs_safe_name
+from zato.common.util.file_system import fs_safe_name
 
 # ################################################################################################################################
 

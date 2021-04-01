@@ -23,11 +23,11 @@ $(document).ready(function() {
 
 
 $.fn.zato.security.aws.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create a new AWS definition', null);
+    $.fn.zato.data_table._create_edit('create', 'Create a new AWS security definition', null);
 }
 
 $.fn.zato.security.aws.edit = function(id) {
-    $.fn.zato.data_table._create_edit('edit', 'Update the AWS definition', id);
+    $.fn.zato.data_table._create_edit('edit', 'Update the AWS security definition', id);
 }
 
 $.fn.zato.security.aws.data_table.new_row = function(item, data, include_tr) {

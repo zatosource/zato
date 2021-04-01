@@ -1,8 +1,0 @@
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-                  xmlns:zato="https://zato.io/ns/20130518">
-    <soapenv:Body>
-        <zato:request>
-            <zato:service_request>hola</zato:service_request>
-        </zato:request>
-    </soapenv:Body>
-</soapenv:Envelope>

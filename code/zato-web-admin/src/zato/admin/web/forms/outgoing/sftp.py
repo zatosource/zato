@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.common import SFTP
+from zato.common.api import SFTP
 from zato.admin.web.forms import add_select
 
 # ################################################################################################################################
@@ -42,6 +42,7 @@ class CreateForm(forms.Form):
     should_flush = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     should_preserve_meta = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
+    default_directory = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     ssh_options = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%'}))
 
     def __init__(self, prefix=None, req=None):

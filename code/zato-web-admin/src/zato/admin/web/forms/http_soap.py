@@ -13,9 +13,9 @@ from django import forms
 
 # Zato
 from zato.admin.web.forms import add_security_select, add_select, add_services, SearchForm as _ChooseClusterForm, \
-     DataFormatForm, INITIAL_CHOICES
-from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP, HTTP_SOAP_SERIALIZATION_TYPE, \
-     MISC, PARAMS_PRIORITY, RATE_LIMIT, SIMPLE_IO, SOAP_VERSIONS, URL_PARAMS_PRIORITY, ZATO_NONE
+     DataFormatForm, INITIAL_CHOICES, WithAuditLog
+from zato.common.api import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP, HTTP_SOAP_SERIALIZATION_TYPE, \
+     MISC, PARAMS_PRIORITY, RATE_LIMIT, SIMPLE_IO, SOAP_VERSIONS, URL_PARAMS_PRIORITY, ZATO_DEFAULT, ZATO_NONE
 
 # ################################################################################################################################
 
@@ -34,7 +34,7 @@ url_params_priority = (
 # ################################################################################################################################
 # ################################################################################################################################
 
-class CreateForm(DataFormatForm):
+class CreateForm(DataFormatForm, WithAuditLog):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     host = forms.CharField(initial='http://', widget=forms.TextInput(attrs={'style':'width:100%'}))
@@ -69,9 +69,14 @@ class CreateForm(DataFormatForm):
     rate_limit_def = forms.CharField(widget=forms.Textarea(
         attrs={'style':'overflow:auto; width:100%; white-space: pre-wrap;height:100px'}))
 
+    hl7_version = forms.CharField(widget=forms.HiddenInput())
+    json_path = forms.CharField(widget=forms.HiddenInput())
+    data_encoding = forms.CharField(widget=forms.HiddenInput())
+
     def __init__(self, security_list=[], sec_tls_ca_cert_list={}, cache_list=[], soap_versions=SOAP_VERSIONS,
             prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
+        super(WithAuditLog).__init__()
 
         self.fields['url_params_pri'].choices = []
         for value, label in url_params_priority:
@@ -92,6 +97,7 @@ class CreateForm(DataFormatForm):
         self.fields['sec_tls_ca_cert_id'].choices = []
         self.fields['sec_tls_ca_cert_id'].choices.append(INITIAL_CHOICES)
         self.fields['sec_tls_ca_cert_id'].choices.append([ZATO_NONE, 'Skip validation'])
+        self.fields['sec_tls_ca_cert_id'].choices.append([ZATO_DEFAULT, 'Default bundle'])
 
         for value, label in sec_tls_ca_cert_list.items():
             self.fields['sec_tls_ca_cert_id'].choices.append([value, label])

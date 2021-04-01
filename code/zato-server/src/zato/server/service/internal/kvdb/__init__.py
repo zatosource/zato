@@ -22,9 +22,9 @@ from redis.sentinel import MasterNotFoundError
 from past.builtins import unicode
 
 # Zato
-from zato.common import ZatoException
-from zato.common.kvdb import redis_grammar
-from zato.common.util import has_redis_sentinels
+from zato.common.exception import ZatoException
+from zato.common.kvdb.parsing import redis_grammar
+from zato.common.util.kvdb import has_redis_sentinels
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
@@ -42,7 +42,7 @@ class ExecuteCommand(AdminService):
         request_elem = 'zato_kvdb_remote_command_execute_request'
         response_elem = 'zato_kvdb_remote_command_execute_response'
         input_required = ('command',)
-        output_required = ('result',)
+        output_optional = ('result',)
 
     def _fixup_parameters(self, parameters):
         """ Fix up quotes so stuff like [SISMEMBER key member] and [SISMEMBER key "member"] is treated the same
@@ -94,9 +94,10 @@ class ExecuteCommand(AdminService):
 
             self.response.payload.result = response or '(None)'
 
-        except Exception:
-            self.logger.error('Command parsing error, command:`%s`, e:`%s`', input_command, format_exc())
-            raise ZatoException(self.cid, msg)
+        except Exception as e:
+            msg = 'Command parsing error, command:`{}`, e:`{}`'.format(input_command, e.args[0])
+            self.logger.error('msg:`%s`, e:`%s`', msg, format_exc())
+            self.response.payload.result = msg
 
 # ################################################################################################################################
 

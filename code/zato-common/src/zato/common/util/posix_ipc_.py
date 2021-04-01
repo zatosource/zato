@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime, timedelta
-from json import loads
 from logging import getLogger
 from mmap import mmap
 from time import sleep
@@ -20,7 +19,7 @@ from traceback import format_exc
 import posix_ipc as ipc
 
 # Zato
-from zato.common.util.json_ import dumps
+from zato.common.json_internal import dumps, loads
 
 # ################################################################################################################################
 
@@ -33,7 +32,7 @@ _shmem_pattern = '/zato-shmem-{}'
 # ################################################################################################################################
 
 class SharedMemoryIPC(object):
-    """ An IPC object which Zato worker process use to communicate with each other using mmap files
+    """ An IPC object which Zato processes use to communicate with each other using mmap files
     backed by shared memory. All data in shared memory is kept as a dictionary and serialized as JSON
     each time any read or write is needed.
     """
@@ -208,5 +207,23 @@ class ConnectorConfigIPC(SharedMemoryIPC):
 
     def get_config(self, connector_key, timeout=60):
         return self.get_key(self.key_name, connector_key, timeout)
+
+# ################################################################################################################################
+
+class CommandStoreIPC(SharedMemoryIPC):
+    """ A shared memory-backed IPC object for CLI commands used by Zato.
+    """
+    needs_create = False
+
+    key_name = '/cli/command/store'
+
+    def create(self, size=100_000, needs_create=True):
+        super(CommandStoreIPC, self).create('cli-command-store', size, needs_create)
+
+    def add_parser(self, parser_data):
+        self.set_key(self.key_name, 'parser', parser_data)
+
+    def get_config(self, timeout=3):
+        return self.get_key(self.key_name, 'parser', timeout)
 
 # ################################################################################################################################

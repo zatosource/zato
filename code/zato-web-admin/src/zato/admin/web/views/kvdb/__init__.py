@@ -8,21 +8,16 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from traceback import format_exc
-
 # Django
 from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
-
-# anyjson
-from anyjson import dumps
 
 # Zato
 from zato.admin.web.forms import SearchForm
 from zato.admin.web.forms.kvdb import RemoteCommandForm
 from zato.admin.web.views import method_allowed
-from zato.common import ZatoException
+from zato.common.exception import ZatoException
+from zato.common.json_internal import dumps
 
 @method_allowed('GET')
 def remote_command(req):
@@ -46,5 +41,5 @@ def remote_command_execute(req):
             return HttpResponse(dumps({'message': dumps(response.data.result)}), content_type='application/javascript')
         else:
             raise ZatoException(msg=response.details)
-    except Exception:
-        return HttpResponseServerError(format_exc())
+    except Exception as e:
+        return HttpResponseServerError(e.args[0])

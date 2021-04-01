@@ -23,8 +23,9 @@ from zato.server.apispec.wsdl import WSDLGenerator
 from zato.server.service import List, Opaque, Service
 
 # Zato
-from zato.common.util import aslist, fs_safe_name
-from zato.common.util.json_ import dumps
+from zato.common.json_internal import dumps
+from zato.common.util.eval_ import as_list
+from zato.common.util.file_system import fs_safe_name
 from zato.server.apispec import Generator
 from zato.server.service import AsIs, Bool
 
@@ -48,15 +49,17 @@ class GetAPISpec(Service):
 
     def handle(self):
 
+        self.out.plain_http.get
+
         cluster_id = self.request.input.get('cluster_id')
 
-        include = aslist(self.request.input.include, ',')
-        exclude = aslist(self.request.input.exclude, ',')
+        include = as_list(self.request.input.include, ',')
+        exclude = as_list(self.request.input.exclude, ',')
 
         include = [elem for elem in include if elem]
         exclude = [elem for elem in exclude if elem]
 
-        api_invoke_path = aslist(self.request.input.api_invoke_path, ',')
+        api_invoke_path = as_list(self.request.input.api_invoke_path, ',')
         api_invoke_path = [elem for elem in api_invoke_path if elem]
 
         if not self.request.input.get('return_internal'):
@@ -155,7 +158,7 @@ class GetSphinx(Service):
         return bunchify({
             'ns': unicode(idx),
             'orig_name': name,
-            'sphinx_name': name.replace('_', '\_'), # Needed for Sphinx to ignore undescores
+            'sphinx_name': name.replace('_', '\_'), # Needed for Sphinx to ignore undescores # noqa: W605
             'name': name_fs_safe,
             'name_link': """:doc:`{} <./{}>`""".format(name, name_fs_safe),
             'file_name': file_name,
@@ -189,7 +192,7 @@ class GetSphinx(Service):
 
         # Find the longest elements for each column
         for elem in chain(input, output):
-            elem.name_sphinx = elem.name.replace('_', '\_') # Sphinx treats _ as hyperlinks
+            elem.name_sphinx = elem.name.replace('_', '\_') # Sphinx treats _ as hyperlinks # noqa: W605
             longest_name = max(longest_name, len(elem.name_sphinx))
             longest_datatype = max(longest_datatype, len(elem.subtype))
             longest_description = max(longest_description, len(elem.description))

@@ -16,13 +16,13 @@ from unittest import main
 from bunch import bunchify
 
 # PyYAML
-from yaml import load as yaml_load
+from yaml import FullLoader, load as yaml_load
 
 # Zato
 from common import MyService, service_name, sio_config
-from zato.common import APISPEC, URL_TYPE
+from zato.common.api import APISPEC, URL_TYPE
 from zato.common.test import BaseSIOTestCase
-from zato.common.util import fs_safe_name
+from zato.common.util.file_system import fs_safe_name
 from zato.server.apispec import Generator
 from zato.server.apispec.openapi import OpenAPIGenerator
 
@@ -80,7 +80,7 @@ class OpenAPITestCase(BaseSIOTestCase):
         open_api_generator = OpenAPIGenerator(info, channel_data, needs_api_invoke, needs_rest_channels, api_invoke_path)
 
         result = open_api_generator.generate()
-        result = yaml_load(result)
+        result = yaml_load(result, FullLoader)
         result = bunchify(result)
 
         result_components = result.components # type: Bunch

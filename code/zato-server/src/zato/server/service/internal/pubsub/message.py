@@ -19,7 +19,7 @@ from bunch import Bunch
 from sqlalchemy import and_, exists
 
 # Zato
-from zato.common import DATA_FORMAT
+from zato.common.api import DATA_FORMAT
 from zato.common.exception import NotFound
 from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage
 from zato.common.odb.query import pubsub_message, pubsub_queue_message
@@ -463,4 +463,3 @@ class GetFromQueueNonGD(AdminService):
                 self.response.payload = response['response']
 
 # ################################################################################################################################
-

@@ -24,9 +24,17 @@ from future.utils import itervalues
 from past.builtins import unicode
 
 # Zato
-from zato.common import SECRETS, ZATO_NONE
+from zato.common.api import ZATO_NONE
+from zato.common.const import SECRETS
 from zato.common.util.config import resolve_value
 from zato.common.util.sql import ElemsWithOpaqueMaker
+
+# ################################################################################################################################
+
+if 0:
+    from zato.server.connection.ftp import FTPStore
+
+    FTPStore = FTPStore
 
 # ################################################################################################################################
 
@@ -265,12 +273,11 @@ class ConfigStore(object):
     def __init__(self):
 
         # Outgoing connections
-        self.out_ftp = None   # type: ConfigDict
+        self.out_ftp = None   # type: FTPStore
         self.out_sftp = None  # type: ConfigDict
         self.out_odoo = None  # type: ConfigDict
         self.out_soap = None  # type: ConfigDict
         self.out_sql = None   # type: ConfigDict
-        self.out_stomp = None # type: ConfigDict
         self.out_sap = None   # type: ConfigDict
         self.out_plain_http = None # type: ConfigDict
 

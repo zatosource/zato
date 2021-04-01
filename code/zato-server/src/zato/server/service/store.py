@@ -6,8 +6,6 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 import inspect
 import logging
@@ -34,20 +32,20 @@ from humanize import naturalsize
 
 # PyYAML
 try:
-    from yaml import CDumper  # For pyflakes
+    from yaml import CDumper # For pyflakes
     Dumper = CDumper
 except ImportError:
-    from yaml import Dumper   # ditto
+    from yaml import Dumper  # (Ditto)
     Dumper = Dumper
 
 # Zato
-from zato.common import CHANNEL, DONT_DEPLOY_ATTR_NAME, KVDB, RATE_LIMIT, SourceCodeInfo, TRACE1
+from zato.common.api import CHANNEL, DONT_DEPLOY_ATTR_NAME, KVDB, RATE_LIMIT, SourceCodeInfo, TRACE1
+from zato.common.json_internal import dumps
 from zato.common.json_schema import get_service_config, ValidationConfig as JSONSchemaValidationConfig, \
      Validator as JSONSchemaValidator
 from zato.common.match import Matcher
 from zato.common.odb.model.base import Base as ModelBase
-from zato.common.util import deployment_info, import_module_from_path, is_func_overridden, is_python_file, visit_py_source
-from zato.common.util.json_ import dumps
+from zato.common.util.api import deployment_info, import_module_from_path, is_func_overridden, is_python_file, visit_py_source
 from zato.server.config import ConfigDict
 from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, PubSubHook, Service, \
      WSXFacade
@@ -90,6 +88,14 @@ has_trace1 = logger.isEnabledFor(TRACE1)
 
 # ################################################################################################################################
 
+# For backward compatibility we ignore certain modules
+internal_to_ignore = []
+
+# STOMP was removed in 3.2
+internal_to_ignore.append('stomp')
+
+# ################################################################################################################################
+
 _unsupported_pickle_protocol_msg = 'unsupported pickle protocol:'
 
 # ################################################################################################################################
@@ -100,7 +106,6 @@ hook_methods = ('accept', 'get_request_hash') + before_handle_hooks + after_hand
 
 class _TestingWorkerStore(object):
     sql_pool_store = None
-    stomp_outconn_api = None
     outconn_wsx = None
     vault_conn_api = None
     outconn_ldap = None
@@ -137,9 +142,9 @@ class InRAMService(object):
     def __init__(self):
         self.cluster_id = None       # type: int
         self.id = None               # type: int
-        self.impl_name = None        # type: unicode
-        self.name = None             # type: unicode
-        self.deployment_info = None  # type: unicode
+        self.impl_name = None        # type: str
+        self.name = None             # type: str
+        self.deployment_info = None  # type: str
         self.service_class = None    # type: object
         self.is_active = None        # type: bool
         self.is_internal = None      # type: bool
@@ -177,7 +182,7 @@ class DeploymentInfo(object):
     def __init__(self):
         self.to_process = []      # type: List
         self.total_size = 0       # type: int
-        self.total_size_human = 0 # type: text
+        self.total_size_human = 0 # type: str
 
 # ################################################################################################################################
 
@@ -256,7 +261,7 @@ class ServiceStore(object):
         self.needs_post_deploy_attr = 'needs_post_deploy'
 
         if self.is_testing:
-            self._testing_worker_store =  _TestingWorkerStore()
+            self._testing_worker_store = _TestingWorkerStore()
             self._testing_worker_store.worker_config = _TestingWorkerConfig()
 
 # ################################################################################################################################
@@ -274,10 +279,10 @@ class ServiceStore(object):
 # ################################################################################################################################
 
     def delete_service_data(self, name):
-        # type: (unicode)
+        # type: (str)
 
         with self.update_lock:
-            impl_name = self.name_to_impl_name[name]     # type: unicode
+            impl_name = self.name_to_impl_name[name]     # type: str
             service_id = self.impl_name_to_id[impl_name] # type: int
 
             del self.id_to_impl_name[service_id]
@@ -336,7 +341,7 @@ class ServiceStore(object):
 # ################################################################################################################################
 
     def set_up_rate_limiting(self, name, class_=None, _exact=RATE_LIMIT.TYPE.EXACT.id, _service=RATE_LIMIT.OBJECT_TYPE.SERVICE):
-        # type: (unicode, Service, unicode, unicode)
+        # type: (str, Service, str, str)
 
         if not class_:
             service_id = self.get_service_id_by_name(name) # type: int
@@ -352,7 +357,7 @@ class ServiceStore(object):
 # ################################################################################################################################
 
     def set_up_class_attributes(self, class_, service_store=None, name=None):
-        # type: (Service, ServiceStore, unicode)
+        # type: (Service, ServiceStore, str)
 
         # Set up enforcement of what other services a given service can invoke
         try:
@@ -385,9 +390,9 @@ class ServiceStore(object):
                 class_.component_enabled_email = True
                 class_.component_enabled_search = True
                 class_.component_enabled_msg_path = True
+                class_.component_enabled_hl7 = True
                 class_.component_enabled_ibm_mq = True
                 class_.component_enabled_odoo = True
-                class_.component_enabled_stomp = True
                 class_.component_enabled_zeromq = True
                 class_.component_enabled_patterns = True
                 class_.component_enabled_target_matcher = True
@@ -402,8 +407,9 @@ class ServiceStore(object):
                 class_.odb = service_store.server.odb
                 class_.kvdb = service_store.server.worker_store.kvdb
                 class_.pubsub = service_store.server.worker_store.pubsub
-                class_.cloud.openstack.swift = service_store.server.worker_store.worker_config.cloud_openstack_swift
                 class_.cloud.aws.s3 = service_store.server.worker_store.worker_config.cloud_aws_s3
+                class_.cloud.dropbox = service_store.server.worker_store.cloud_dropbox
+                class_.cloud.openstack.swift = service_store.server.worker_store.worker_config.cloud_openstack_swift
                 class_._out_ftp = service_store.server.worker_store.worker_config.out_ftp
                 class_._out_plain_http = service_store.server.worker_store.worker_config.out_plain_http
                 class_.amqp.invoke = service_store.server.worker_store.amqp_invoke # .send is for pre-3.0 backward compat
@@ -427,12 +433,14 @@ class ServiceStore(object):
                 class_.component_enabled_msg_path = service_store.server.fs_server_config.component_enabled.msg_path
                 class_.component_enabled_ibm_mq = service_store.server.fs_server_config.component_enabled.ibm_mq
                 class_.component_enabled_odoo = service_store.server.fs_server_config.component_enabled.odoo
-                class_.component_enabled_stomp = service_store.server.fs_server_config.component_enabled.stomp
                 class_.component_enabled_zeromq = service_store.server.fs_server_config.component_enabled.zeromq
                 class_.component_enabled_patterns = service_store.server.fs_server_config.component_enabled.patterns
                 class_.component_enabled_target_matcher = service_store.server.fs_server_config.component_enabled.target_matcher
                 class_.component_enabled_invoke_matcher = service_store.server.fs_server_config.component_enabled.invoke_matcher
                 class_.component_enabled_sms = service_store.server.fs_server_config.component_enabled.sms
+
+                # New in Zato 3.2, thus optional
+                class_.component_enabled_hl7 = service_store.server.fs_server_config.component_enabled.get('hl7')
 
             # JSON Schema
             if class_.schema:
@@ -518,7 +526,7 @@ class ServiceStore(object):
 # ################################################################################################################################
 
     def get_deployment_info(self, impl_name):
-        # type: (unicode) -> dict
+        # type: (str) -> dict
         return self.deployment_info[impl_name]
 
 # ################################################################################################################################
@@ -933,12 +941,24 @@ class ServiceStore(object):
     def import_services_from_anywhere(self, items, base_dir, work_dir=None, is_internal=None):
         """ Imports services from any of the supported sources.
         """
-        # type: (Any, text, text) -> DeploymentInfo
+        # type: (Any, str, str) -> DeploymentInfo
 
         items = items if isinstance(items, (list, tuple)) else [items]
         to_process = []
+        should_skip = False
 
         for item in items:
+
+            for ignored_name in internal_to_ignore:
+                if ignored_name in item:
+                    should_skip = True
+                    break
+            else:
+                should_skip = False
+
+            if should_skip:
+                continue
+
             if has_debug:
                 logger.debug('About to import services from:`%s`', item)
 
@@ -1110,7 +1130,7 @@ class ServiceStore(object):
     def _get_source_code_info(self, mod):
         """ Returns the source code of and the FS path to the given module.
         """
-        # type: (Any) -> SourceInfo
+        # type: (Any) -> SourceCodeInfo
 
         source_info = SourceCodeInfo()
         try:
@@ -1136,7 +1156,7 @@ class ServiceStore(object):
 # ################################################################################################################################
 
     def _visit_class(self, mod, class_, fs_location, is_internal, _utcnow=datetime.utcnow):
-        # type: (Any, Any, text, bool, Any, Any) -> InRAMService
+        # type: (Any, Any, str, bool, Any, Any) -> InRAMService
 
         name = class_.get_name()
         impl_name = class_.get_impl_name()
@@ -1186,7 +1206,7 @@ class ServiceStore(object):
 
             # .. try to find the deployed service's parents ..
             for base_class in service_mro:
-                if issubclass(base_class, Service) and (not base_class is Service):
+                if issubclass(base_class, Service) and (base_class is not Service):
                     if base_class.get_name() == changed_service_name:
 
                         # Do not deploy services that are defined in the same module their parent is

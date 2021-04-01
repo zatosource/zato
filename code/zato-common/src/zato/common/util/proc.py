@@ -22,7 +22,7 @@ from sarge import run as sarge_run, shell_format
 from six import PY2
 
 # Zato
-from zato.common import CLI_ARG_SEP
+from zato.common.api import CLI_ARG_SEP
 
 # ################################################################################################################################
 

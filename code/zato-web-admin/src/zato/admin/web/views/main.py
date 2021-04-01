@@ -27,7 +27,7 @@ from zato.admin import zato_settings
 from zato.admin.web.forms.main import AuthenticationForm
 from zato.admin.web.util import get_user_profile
 from zato.admin.web.views import method_allowed
-from zato.common.crypto import CryptoManager
+from zato.common.crypto.api import CryptoManager
 
 # ################################################################################################################################
 

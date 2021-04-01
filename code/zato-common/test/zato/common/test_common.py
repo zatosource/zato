@@ -15,7 +15,7 @@ from unittest import TestCase
 from nose.tools import eq_
 
 # Zato
-from zato.common import soapenv11_namespace, soapenv12_namespace, StatsElem
+from zato.common.api import soapenv11_namespace, soapenv12_namespace, StatsElem
 
 class StatsElemTestCase(TestCase):
     def test_from_json(self):

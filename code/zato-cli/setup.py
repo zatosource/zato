@@ -33,9 +33,5 @@ setup(
 
       namespace_packages = ['zato'],
 
-      zip_safe = False,
-      entry_points = """
-      [console_scripts]
-      zato = zato.cli.zato_command:main
-      """
+      zip_safe = False
 )

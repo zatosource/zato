@@ -3,7 +3,7 @@
 # cython: auto_pickle=False
 
 """
-Copyright (C) 2020, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,15 +11,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import types
 from builtins import bool as stdlib_bool
 from copy import deepcopy
 from csv import DictWriter, reader as csv_reader
 from datetime import date as stdlib_date, datetime as stdlib_datetime
 from decimal import Decimal as decimal_Decimal
 from io import StringIO
+from json import JSONEncoder
 from itertools import chain
-from json import dumps as json_dumps, JSONEncoder
 from logging import getLogger
 from traceback import format_exc
 from uuid import UUID as uuid_UUID
@@ -34,8 +33,9 @@ from dateutil.parser import parse as dt_parse
 from lxml.etree import _Element as EtreeElementClass, Element, SubElement, tostring as etree_to_string, XPath
 
 # Zato
-from zato.common import APISPEC, DATA_FORMAT, ZATO_NONE
+from zato.common.api import APISPEC, DATA_FORMAT, ZATO_NONE
 from zato.common.odb.api import WritableKeyedTuple
+from zato.common.pubsub import PubSubMessage
 from zato.util_convert import to_bool
 
 # Zato - Cython
@@ -280,6 +280,8 @@ class Elem(object):
     # From Python objects to external formats
     parse_to   = cy.declare(dict, visibility='public') # type: dict
 
+    get_default_value = None
+
 # ################################################################################################################################
 
     def __cinit__(self):
@@ -337,7 +339,6 @@ class Elem(object):
 
 # ################################################################################################################################
 
-    @cy.cfunc
     @cy.returns(str)
     def _get_unicode_name(self, name:object) -> str:
         if name:
@@ -411,17 +412,17 @@ class Elem(object):
             raise NotImplementedError('{} - operation not implemented'.format(func))
         return _inner
 
-    from_json = Elem._not_implemented('Elem.from_json')
-    to_json   = Elem._not_implemented('Elem.to_json')
+    from_json = Elem._not_implemented('Elem.from_json')  # noqa: F821
+    to_json   = Elem._not_implemented('Elem.to_json')    # noqa: F821
 
-    from_xml  = Elem._not_implemented('Elem.from_xml')
-    to_xml    = Elem._not_implemented('Elem.to_xml')
+    from_xml  = Elem._not_implemented('Elem.from_xml')   # noqa: F821
+    to_xml    = Elem._not_implemented('Elem.to_xml')     # noqa: F821
 
-    from_csv  = Elem._not_implemented('Elem.from_csv')
-    to_csv    = Elem._not_implemented('Elem.to_csv')
+    from_csv  = Elem._not_implemented('Elem.from_csv')   # noqa: F821
+    to_csv    = Elem._not_implemented('Elem.to_csv')     # noqa: F821
 
-    from_dict  = Elem._not_implemented('Elem.from_dict')
-    to_dict    = Elem._not_implemented('Elem.to_dict')
+    from_dict  = Elem._not_implemented('Elem.from_dict') # noqa: F821
+    to_dict    = Elem._not_implemented('Elem.to_dict')   # noqa: F821
 
 # ################################################################################################################################
 
@@ -462,6 +463,9 @@ class Bool(Elem):
 
     def to_json(self, value):
         return Bool.to_json_static(value)
+
+    def get_default_value(self):
+        return False
 
     to_dict = from_dict = to_csv = to_xml = from_csv = from_xml = from_json
 
@@ -513,7 +517,14 @@ class Date(Elem):
     @staticmethod
     def to_json_static(value, stdlib_type, *args, **kwargs):
 
-        if not isinstance(value, (stdlib_date, stdlib_datetime)):
+        if value is None:
+            return value
+
+        # Convert a timestamp in milliseconds to a datetime object
+        if isinstance(value, float):
+            value = stdlib_datetime.fromtimestamp(value)
+
+        elif not isinstance(value, (stdlib_date, stdlib_datetime)):
             value = dt_parse(value)
 
         if stdlib_type is stdlib_date:
@@ -706,7 +717,12 @@ class Float(Elem):
 
     @staticmethod
     def from_json_static(value, *args, **kwargs):
-        return _builtin_float(value)
+        if value and value != _zato_none:
+            return _builtin_float(value)
+        elif value is None:
+            return 0.0
+        else:
+            return value
 
     def from_json(self, value):
         return Float.from_json_static(value)
@@ -722,7 +738,12 @@ class Int(Elem):
 
     @staticmethod
     def from_json_static(value, *args, **kwargs):
-        return _builtin_int(value) if (value and value != _zato_none) else value
+        if value and value != _zato_none:
+            return _builtin_int(value)
+        elif value is None:
+            return None
+        else:
+            return value
 
     def from_json(self, value):
         return Int.from_json_static(value)
@@ -738,7 +759,10 @@ class List(Elem):
 
     @staticmethod
     def from_json_static(value, *args, **kwargs):
-        return value if isinstance(value, _list_like) else [value]
+        if value is not None:
+            return value if isinstance(value, _list_like) else [value]
+        else:
+            return []
 
     def from_json(self, value):
         return List.from_json_static(value)
@@ -1221,7 +1245,6 @@ class SIODefinition(object):
 
 # ################################################################################################################################
 
-    @cy.cfunc
     @cy.returns(str)
     def get_elems_pretty(self, required_list:SIOList, optional_list:SIOList) -> str:
         out:cy.unicode = ''
@@ -1239,14 +1262,12 @@ class SIODefinition(object):
 
 # ################################################################################################################################
 
-    @cy.ccall
     @cy.returns(str)
     def get_input_pretty(self) -> str:
         return self.get_elems_pretty(self._input_required, self._input_optional)
 
 # ################################################################################################################################
 
-    @cy.ccall
     @cy.returns(str)
     def get_output_pretty(self) -> str:
         return self.get_elems_pretty(self._output_required, self._output_optional)
@@ -1344,6 +1365,21 @@ class CySimpleIO(object):
             output_def = getattr(class_skip_empty, 'output_def', NotGiven)
             force_empty_input_set = getattr(class_skip_empty, 'force_empty_input', NotGiven)
             force_empty_output_set = getattr(class_skip_empty, 'force_empty_output', NotGiven)
+
+        # ####################################################################################
+        #
+        # As far as skipping of empty keys goes, we potentially have now
+        # its definition from SkipEmpty or from individual (pre-3.2) attributes.
+        # But if we do not have either of them, we need to look the defaults
+        # in the server's configuration.
+        #
+        # ####################################################################################
+
+        if input_def is NotGiven:
+            input_def = server_config.skip_empty_request_keys
+
+        if output_def is NotGiven:
+            output_def = server_config.skip_empty_response_keys
 
         if isinstance(input_def, basestring):
             input_def = [input_def]
@@ -1529,7 +1565,6 @@ class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    @cy.cfunc
     @cy.returns(Elem)
     def _convert_to_elem_instance(self, elem_name, is_required:cy.bint) -> Elem:
 
@@ -1539,7 +1574,6 @@ class CySimpleIO(object):
         exact:set
         prefixes:set
         suffixes:set
-        keep_running:cy.bint = True
 
         config_item:ConfigItem
 
@@ -1550,9 +1584,6 @@ class CySimpleIO(object):
         )
 
         for (ElemClass, config_item) in config_item_to_type:
-
-            if not keep_running:
-                break
 
             exact = config_item.exact
             prefixes = config_item.prefixes
@@ -1765,7 +1796,6 @@ class CySimpleIO(object):
     @cy.returns(cy.bint)
     @cy.exceptval(-1)
     def _should_skip_on_input(self, definition:SIODefinition, sio_item:Elem, input_value:object) -> cy.bint:
-        should_skip:cy.bint = False
         has_no_input_value:bool = not bool(input_value)
 
         matches_skip_all:cy.bint = definition.skip_empty.skip_all_empty_input and has_no_input_value # type: bool
@@ -1779,19 +1809,22 @@ class CySimpleIO(object):
             if sio_item.name not in definition.skip_empty.force_empty_input_set:
                 return True
 
-        # .. or, possibly, because this particular value cannot be converted to a SIO element.
-        if cy.cast(cy.int, sio_item._type) == cy.cast(cy.int, ElemType.int_):
-            if input_value in (None, ''):
-                return True
-
         # In all other cases, we explicitly say that this value should not be skipped
         return False
 
 # ################################################################################################################################
 
-    @cy.cfunc
     @cy.returns(object)
-    def _parse_input_elem(self, elem:object, data_format:cy.unicode, is_csv:cy.bint=False) -> object:
+    def _parse_input_elem(self, elem:object, data_format:cy.unicode, is_csv:cy.bint=False, extra:dict=None) -> object: # noqa: E252
+
+        # If this is a pub/sub message ..
+        if isinstance(elem, PubSubMessage):
+
+            # .. parse out its data ..
+            elem = elem.data
+
+            # .. and make sure it is something we can process.
+            elem = elem or {}
 
         is_dict:cy.bint = isinstance(elem, dict)
         is_xml:cy.bint  = isinstance(elem, EtreeElementClass)
@@ -1800,11 +1833,29 @@ class CySimpleIO(object):
             raise ValueError('Expected a dict, CSV or EtreeElementClass instead of input `{!r}` ({} in {})'.format(
                 elem, type(elem).__name__, self.service_class))
 
+        # This dictionary holds keys that were common to both 'elem' and 'extra'. If extra exists,
+        # and some of the extra keys already exist in elem, this dictionary is populated with such
+        # keys/value extracted from elem. Before we return, they are re-added. This is needed,
+        # because if extra exists, we update elem with extra's keys in-place so we need to make sure
+        # that elem is in the same state (has the same keys/values) as before we received it.
+        elem_shared_keys:dict = {}
+
         out:dict = {}
         idx:cy.int = -1
         sio_item:Elem = None
         sio_item_name:str = None
         items:list = self.definition.all_input_elems
+
+        # Overwrite and append any keys found in extra and elem, first make a backup of shared keys for later use.
+        if is_dict and extra:
+            for extra_key, extra_value in extra.items():
+
+                # .. make backup ..
+                if extra_key in elem:
+                    elem_shared_keys[extra_key] = elem[extra_key]
+
+                # .. overwrite (note that there is no 'else').
+                elem[extra_key] = extra_value
 
         for sio_item in items:
 
@@ -1859,20 +1910,21 @@ class CySimpleIO(object):
                     elif is_csv:
                         all_elems = elem
 
-                    raise ValueError('No such input elem `{}` among `{}` in `{}` ({})'.format(
-                        sio_item_name, all_elems, elem, self.service_class))
+                    raise ValueError('{}; No such input elem `{}` among `{}` in `{}`'.format(
+                        self.service_class, sio_item_name, all_elems, elem))
                 else:
                     if self._should_skip_on_input(self.definition, sio_item, input_value):
-                        # Continue to the next sio_item
                         continue
                     else:
-                        value = sio_item.default_value
+                        if sio_item.get_default_value:
+                            value = sio_item.get_default_value()
+                        else:
+                            value = sio_item.default_value
             else:
                 parse_func = sio_item.parse_from[data_format]
 
                 try:
                     if self._should_skip_on_input(self.definition, sio_item, input_value):
-                        # Continue to the next sio_item
                         continue
                     else:
                         value = parse_func(input_value)
@@ -1882,11 +1934,22 @@ class CySimpleIO(object):
             # We get here only if should_skip is not True
             out[sio_item_name] = value
 
+        # Before returning, if input was a dict (or dict-like, e.g. JSON), undo all the changes
+        # made when extra overwrote keys from the 'elem' dict.
+        if is_dict and extra:
+            for extra_key in extra:
+
+                # .. undo ..
+                elem.pop(extra_key)
+
+                # .. bring back the old value.
+                if extra_key in elem_shared_keys:
+                    elem[extra_key] = elem_shared_keys[extra_key]
+
         return out
 
 # ################################################################################################################################
 
-    @cy.cfunc
     @cy.returns(object)
     def _parse_input_list(self, data:object, data_format:cy.unicode, is_csv:cy.bint) -> object:
         out = []
@@ -1897,9 +1960,8 @@ class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    @cy.ccall
     @cy.returns(object)
-    def parse_input(self, data:object, data_format:cy.unicode) -> object:
+    def parse_input(self, data:object, data_format:cy.unicode, extra:dict=None) -> object:
 
         is_csv:cy.bint = data_format == DATA_FORMAT_CSV and isinstance(data, basestring)
 
@@ -1911,7 +1973,7 @@ class CySimpleIO(object):
                 csv_data = csv_reader(data, self.definition._csv_config.dialect, **self.definition._csv_config.common_config)
                 return self._parse_input_list(csv_data, data_format, is_csv)
             else:
-                out = self._parse_input_elem(data, data_format)
+                out = self._parse_input_elem(data, data_format, extra=extra)
             return bunchify(out)
 
 # ################################################################################################################################
@@ -1968,11 +2030,12 @@ class CySimpleIO(object):
                                 current_elem_name, input_data_dict, self.service_class))
                     else:
                         try:
+                            parse_func = None
                             parse_func = current_elem.parse_to[data_format]
                             value = parse_func(value)
                         except Exception as e:
-                            raise SerialisationError('Exception `{!r}` while serialising `{}` ({}) ({})'.format(
-                                e, value, self.service_class, input_data_dict))
+                            raise SerialisationError('Exception `{!r}` while serialising `{}` ({}) ({}) (func:{})'.format(
+                                e, value, self.service_class, input_data_dict, parse_func))
 
                         if cy.cast(cy.int, current_elem._type) == cy.cast(cy.int, sio_text_type):
                             if isinstance(value, bytes):
@@ -1987,7 +2050,6 @@ class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    @cy.cfunc
     @cy.returns(str)
     def _get_output_csv(self, data:object) -> str:
 
@@ -2019,7 +2081,6 @@ class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    @cy.cfunc
     @cy.returns(object)
     def _convert_to_dicts(self, data:object, data_format:cy.unicode) -> object:
 
@@ -2031,7 +2092,6 @@ class CySimpleIO(object):
         is_list:cy.bint
 
         # Local variables
-        current_idx:int = 0
         out_elems:list = []
 
         if isinstance(data, (list, tuple)):
@@ -2052,6 +2112,7 @@ class CySimpleIO(object):
         out:object = out_elems if is_list else out_elems[0]
 
         # Wrap the response in a top-level element if needed
+
         if data_format in (DATA_FORMAT_JSON, DATA_FORMAT_DICT):
             if self.definition._has_response_elem:
                 out = {
@@ -2062,7 +2123,6 @@ class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    @cy.cfunc
     @cy.returns(object)
     def _get_output_json(self, data:object, serialise:cy.bint) -> object:
         out:object = self._convert_to_dicts(data, DATA_FORMAT_JSON)
@@ -2081,7 +2141,6 @@ class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    @cy.cfunc
     @cy.returns(object)
     def _get_output_xml(self, data:object, serialise:cy.int) -> object:
         dict_items:object = self._convert_to_dicts(data, DATA_FORMAT_XML)
@@ -2108,9 +2167,8 @@ class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    @cy.ccall
     @cy.returns(object)
-    def get_output(self, data:object, data_format:cy.unicode, serialise:cy.int=True) -> object:
+    def get_output(self, data:object, data_format:cy.unicode, serialise:cy.int=True) -> object: # noqa: E252
         """ Returns input converted to the output format, possibly including serialisation to a string representation.
         """
         if data_format == DATA_FORMAT_JSON:
@@ -2132,7 +2190,6 @@ class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    @cy.ccall
     @cy.returns(object)
     def serialise(self, data:object, data_format:cy.unicode) -> object:
         """ Serialises input data to the data format specified.
@@ -2159,6 +2216,94 @@ class CySimpleIO(object):
 
         else:
             raise ValueError('Unrecognised output data format `{}`'.format(data_format))
+
+# ################################################################################################################################
+
+    def eval_multi(self, data, encrypt_func=None):
+        """ Runs self.eval_ for each item in the input data dict.
+        """
+        for elem_name, value in data.items():
+            data[elem_name] = self.eval_(elem_name, value, encrypt_func)
+
+# ################################################################################################################################
+
+    def eval_(self, elem_name, value, encrypt_func=None):
+        """ Tries to evaluate elem_name as if it was a SIO element, no matter if it belongs to any request or response element.
+        This is useful for dynamically created elements that should not be treated as mere strings.
+        """
+        # type: (str, object, object)
+
+        exact:set
+        prefixes:set
+        suffixes:set
+        is_int:bool
+
+        config_item:ConfigItem
+
+        handler_func_to_type:tuple = (
+            (to_bool,      self.server_config.bool_config),
+            (int,          self.server_config.int_config),
+            (encrypt_func, self.server_config.secret_config),
+        )
+
+        for (handler_func, config_item) in handler_func_to_type:
+
+            is_int    = handler_func is int
+            is_secret = handler_func is encrypt_func
+
+            exact = config_item.exact
+            prefixes = config_item.prefixes
+            suffixes = config_item.suffixes
+
+            # Try an exact match first ..
+            for config_elem in exact:
+                if elem_name == config_elem:
+
+                    # Special-case integers
+                    if is_int:
+                        if value is None or value == '':
+                            return None
+
+                    # Special-case secrets
+                    if is_secret:
+                        if encrypt_func:
+                            return encrypt_func(value)
+
+                    return handler_func(value)
+
+            # .. try prefix matching then ..
+            for config_elem in prefixes:
+                if elem_name.startswith(config_elem):
+
+                    # Special-case integers
+                    if is_int:
+                        if value is None or value == '':
+                            return None
+
+                    # Special-case secrets
+                    if is_secret:
+                        if encrypt_func:
+                            return encrypt_func(value)
+
+                    return handler_func(value)
+
+            # .. finally, try suffix matching.
+            for config_elem in suffixes:
+                if elem_name.endswith(config_elem):
+
+                    # Special-case integers
+                    if is_int:
+                        if value is None or value == '':
+                            return None
+
+                    # Special-case secrets
+                    if is_secret:
+                        if encrypt_func:
+                            return encrypt_func(value)
+
+                    return handler_func(value)
+
+        return value or ''
 
 # ################################################################################################################################
 

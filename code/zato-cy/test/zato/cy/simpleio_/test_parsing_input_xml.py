@@ -17,7 +17,7 @@ from uuid import UUID as uuid_UUID
 from lxml.etree import fromstring as lxml_fromstring, tostring as lxml_tostring
 
 # Zato
-from zato.common import DATA_FORMAT
+from zato.common.api import DATA_FORMAT
 from zato.common.test import BaseSIOTestCase
 from zato.server.service import Service
 

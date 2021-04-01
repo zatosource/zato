@@ -37,6 +37,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 """The debug module contains utilities and functions for better
 debugging Gunicorn."""
 
+# flake8: noqa
+
 import sys
 import linecache
 import re
@@ -72,7 +74,6 @@ class Spew(object):
                     line = 'Unknown code named [%s].  VM instruction #%d' % (
                         frame.f_code.co_name, frame.f_lasti)
             if self.trace_names is None or name in self.trace_names:
-                print('%s:%s: %s' % (name, lineno, line.rstrip()))
                 if not self.show_values:
                     return self
                 details = []
