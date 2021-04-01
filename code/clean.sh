@@ -44,13 +44,27 @@ rm -rf ./eggs
 rm -rf ./get-pip.py
 rm -rf ./include
 rm -rf ./lib
+rm -rf ./lib64
 rm -rf ./local
 rm -rf ./man
 rm -rf ./parts
 rm -rf ./share
 rm -rf ./tests
 rm -rf ./zato_extra_paths
+
+rm -rf ./zato-agent/build
+rm -rf ./zato-broker/build
+rm -rf ./zato-cli/build
+rm -rf ./zato-client/build
+rm -rf ./zato-common/build
 rm -rf ./zato-cy/build
+rm -rf ./zato-distlock/build
+rm -rf ./zato-lib/build
+rm -rf ./zato-scheduler/build
+rm -rf ./zato-server/build
+rm -rf ./zato-sso/build
+rm -rf ./zato-testing/build
+rm -rf ./zato-web-admin/build
 
 find . -name \*~ -delete
 find . -name \*.pyc -delete

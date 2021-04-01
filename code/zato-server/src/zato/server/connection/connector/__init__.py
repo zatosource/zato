@@ -19,7 +19,17 @@ from gevent import sleep, spawn
 from gevent.lock import RLock
 
 # Zato
-from zato.common.util import spawn_greenlet
+from zato.common.util.api import spawn_greenlet
+
+# ################################################################################################################################
+
+if 0:
+    from typing import Any, Callable, Dict as dict_
+    from zato.common.model.connector import ConnectorConfig
+
+    Any = Any
+    Callable = Callable
+    ConnectorConfig = ConnectorConfig
 
 # ################################################################################################################################
 
@@ -75,7 +85,7 @@ class Connector(object):
 
     def __init__(self, name, type, config, on_message_callback=None, auth_func=None, channels=None, outconns=None,
             parallel_server=None):
-        # type: (str, str, dict, Callable, Callable, dict, dict, Callable) -> None
+        # type: (str, str, ConnectorConfig, Callable, Callable, dict, dict, Callable) -> None
         self.name = name
         self.type = type
         self.config = config
@@ -84,7 +94,7 @@ class Connector(object):
         self.auth_func = auth_func # Invoked by channels that need to authenticate users
 
         # Service to invoke by channels for each message received
-        self.service = config.get('service_name')
+        self.service = config.service_name
 
         self.channels = channels or {} # type: dict
         self.outconns = outconns or {} # type: dict
@@ -231,7 +241,7 @@ class Connector(object):
         if self.is_active:
             logger.info(
                 '%s %s connector `%s` (id:%s) %s', verb, self.type, self.name, self.id_self,
-                ' ({})'.format(log_details if log_details else self.get_log_details()))
+                '({})'.format(log_details if log_details else self.get_log_details()))
 
 # ################################################################################################################################
 
@@ -259,7 +269,7 @@ class Connector(object):
             logger.warn('Skipped creation of an inactive connector `%s` (%s)', self.name, self.type)
             return
 
-        with self._start_stop_logger('Starting',' Started', self._wait_until_connected):
+        with self._start_stop_logger('Starting', 'Started', self._wait_until_connected):
             self.keep_running = True
             self.keep_connecting = True
 
@@ -287,6 +297,11 @@ class Connector(object):
 
 # ################################################################################################################################
 
+    def get_conn_report(self):
+        raise NotImplementedError('Needs to be implemented by subclasses')
+
+# ################################################################################################################################
+
 class ConnectorStore(object):
     """ Base container for all connectors.
     """
@@ -294,13 +309,13 @@ class ConnectorStore(object):
         self.type = type
         self.connector_class = connector_class
         self.parallel_server = parallel_server
-        self.connectors = {}
+        self.connectors = {} # type: dict_[str, Connector]
         self.lock = RLock()
 
 # ################################################################################################################################
 
     def _create(self, name, config, on_message_callback=None, auth_func=None, channels=None, outconns=None, needs_start=False):
-        # type: (str, dict, Callable, Callable, dict, dict, bool)
+        # type: (str, ConnectorConfig, Callable, Callable, dict, dict, bool)
         connector = self.connector_class(
             name, self.type, config, on_message_callback, auth_func, channels, outconns, self.parallel_server)
         self.connectors[name] = connector
@@ -310,14 +325,14 @@ class ConnectorStore(object):
 # ################################################################################################################################
 
     def create(self, name, config, on_message_callback=None, auth_func=None, channels=None, outconns=None, needs_start=False):
-        # type: (str, dict, Callable, Callable, dict, dict, bool)
+        # type: (str, ConnectorConfig, Callable, Callable, dict, dict, bool)
         with self.lock:
             self._create(name, config, on_message_callback, auth_func, channels, outconns, needs_start)
 
 # ################################################################################################################################
 
     def _edit(self, old_name, config):
-        # type: (str, dict)
+        # type: (str, ConnectorConfig)
         connector = self._delete(old_name)
         self._create(
             config.name, config, connector.on_message_callback, connector.auth_func, connector.channels,
@@ -349,7 +364,7 @@ class ConnectorStore(object):
 # ################################################################################################################################
 
     def change_password(self, name, config):
-        # type: (str, dict)
+        # type: (str, ConnectorConfig)
         with self.lock:
             new_config = deepcopy(self.connectors[name].config)
             new_config.password = config.password

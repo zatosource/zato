@@ -1,0 +1,17 @@
+--- pg8000/core.py.orig	2020-01-11 16:31:01.604783142 +0100
++++ pg8000/core.py	2020-01-11 16:31:05.060862102 +0100
+@@ -1903,8 +1903,12 @@
+         self._send_message(BIND, retval)
+         self.send_EXECUTE(cursor)
+         self._write(SYNC_MSG)
+-        self._flush()
+-        self.handle_messages(cursor)
++
++        try:
++            self._flush()
++            self.handle_messages(cursor)
++        except Exception as e:
++            raise OperationalError(e.args[0])
+ 
+     def _send_message(self, code, data):
+         try:

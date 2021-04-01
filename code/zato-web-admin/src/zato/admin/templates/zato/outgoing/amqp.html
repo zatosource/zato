@@ -1,4 +1,5 @@
 {% extends "zato/index.html" %}
+{% load extras %}
 
 {% block html_title %}AMQP outconns{% endblock %}
 
@@ -13,35 +14,55 @@
     <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
-    {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
-
-    {% comment %} HTTP Basic Auth {% endcomment %}
     <script type="text/javascript" src="/static/js/outgoing/amqp.js"></script>
 
 
     <script>
     $.fn.zato.data_table.get_columns = function() {
         return [
+
+            {% comment %} 1 {% endcomment %}
             '_numbering',
             '_selection',
+
+            {% comment %} 2 {% endcomment %}
             'name',
             '_is_active',
             '_def_name',
+
+            {% comment %} 3 {% endcomment %}
             '_delivery_mode',
-            'priority',
-            'content_type',
-            'content_encoding',
-            'expiration',
-            'pool_size',
-            'user_id',
-            'app_id',
+
+            {% comment %} 4 {% endcomment %}
+            '_expiration',
+            '_pool_size',
+
+            {% comment %} 5 {% endcomment %}
+            '_user_id',
+            '_app_id',
+            '_publish',
             '_edit',
+
+            {% comment %} 6 {% endcomment %}
             '_delete',
             'id',
             'is_active',
+
+            {% comment %} 7 {% endcomment %}
             'delivery_mode',
-            'def_id'
+            'def_id',
+            'priority',
+
+            {% comment %} 8 {% endcomment %}
+            'content_type',
+            'content_encoding',
+            'expiration',
+
+            {% comment %} 9 {% endcomment %}
+            'pool_size',
+            'user_id',
+            'app_id',
         ]
     }
     </script>
@@ -70,22 +91,45 @@
             <table id="data-table">
                 <thead>
                     <tr class='ignore'>
+
+                        {% comment %} 1 {% endcomment %}
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+
+                        {% comment %} 2 {% endcomment %}
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
                         <th><a href="#">Definition</a></th>
+
+                        {% comment %} 3 {% endcomment %}
                         <th><a href="#">Delivery mode</a></th>
-                        <th><a href="#">Priority</a></th>
-                        <th><a href="#">Content type</a></th>
-                        <th><a href="#">Encoding</a></th>
+
+                        {% comment %} 4 {% endcomment %}
                         <th><a href="#">Expiration (ms)</a></th>
                         <th><a href="#">Pool size</a></th>
+
+                        {% comment %} 5 {% endcomment %}
                         <th><a href="#">User ID</a></th>
                         <th><a href="#">App ID</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+
+                        {% comment %} 6 {% endcomment %}
+                        <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 7 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 8 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 9 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -95,30 +139,56 @@
                 {% if items %}
                 {% for item in items %}
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+
+                        {% comment %} 1 {% endcomment %}
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
+
+                        {% comment %} 2 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.def_name }}</td>
-                        <td>{{ item.delivery_mode_text|default_if_none:'' }}</td>
-                        <td>{{ item.priority|default_if_none:'' }}</td>
-                        <td>{{ item.content_type|default_if_none:'' }}</td>
-                        <td>{{ item.content_encoding|default_if_none:'' }}</td>
-                        <td>{{ item.expiration|default_if_none:'' }}</td>
+
+                        {% comment %} 3 {% endcomment %}
+                        <td>{{ item.delivery_mode_text|no_value_indicator }}</td>
+
+                        {% comment %} 4 {% endcomment %}
+                        <td>{{ item.expiration|no_value_indicator }}</td>
                         <td>{{ item.pool_size }}</td>
-                        <td>{{ item.user_id|default_if_none:'' }}</td>
-                        <td>{{ item.app_id|default_if_none:'' }}</td>
+
+                        {% comment %} 5 {% endcomment %}
+                        <td>{{ item.user_id|no_value_indicator }}</td>
+                        <td>{{ item.app_id|no_value_indicator }}</td>
+                        <td>
+                            <a href="{% url "out-amqp-invoke" item.id item.name item.name|slugify %}?cluster={{ cluster_id }}">Publish</a>
+                        </td>
                         <td><a href="javascript:$.fn.zato.outgoing.amqp.edit('{{ item.id }}')">Edit</a></td>
+
+                        {% comment %} 6 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.outgoing.amqp.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
+
+                        {% comment %} 7 {% endcomment %}
                         <td class='ignore'>{{ item.delivery_mode }}</td>
                         <td class='ignore'>{{ item.def_id }}</td>
+                        <td class='ignore'>{{ item.priority|default_if_none:'' }}</td>
+
+                        {% comment %} 8 {% endcomment %}
+                        <td class='ignore'>{{ item.content_type|default_if_none:'' }}</td>
+                        <td class='ignore'>{{ item.content_encoding|default_if_none:'' }}</td>
+                        <td class='ignore'>{{ item.expiration|default_if_none:'' }}</td>
+
+                        {% comment %} 9 {% endcomment %}
+                        <td class='ignore'>{{ item.pool_size|default_if_none:'' }}</td>
+                        <td class='ignore'>{{ item.user_id|default_if_none:'' }}</td>
+                        <td class='ignore'>{{ item.app_id|default_if_none:'' }}</td>
+
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='19'>No results</td>
+                        <td colspan='26'>No results</td>
                     </tr>
                 {% endif %}
 

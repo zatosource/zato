@@ -8,13 +8,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-import sys
-
 # Zato
 from zato.cli import ManageCommand
-from zato.common import NotGiven
-from zato.common.util.cache import Client as CacheClient, CommandConfig
 
 # ################################################################################################################################
 
@@ -60,6 +55,13 @@ class CacheCommand(ManageCommand):
 
     def _on_server(self, args, _modifiers=_modifiers):
         # type: (Namespace, tuple)
+
+        # stdlib
+        import sys
+
+        # Zato
+        from zato.common.api import NotGiven
+        from zato.common.util.cache import Client as CacheClient, CommandConfig
 
         if args.address:
             client = CacheClient.from_dict({

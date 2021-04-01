@@ -148,7 +148,7 @@ class Edit(AdminService):
                 first()
 
             if existing_one:
-                raise Exception('An outgoing IBM MQ connection `{`}` already exists on this cluster'.format(input.name))
+                raise Exception('An outgoing IBM MQ connection `{}` already exists on this cluster'.format(input.name))
 
             try:
                 item = session.query(OutgoingWMQ).filter_by(id=input.id).one()

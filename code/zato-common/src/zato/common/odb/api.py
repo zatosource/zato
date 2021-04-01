@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -32,17 +30,19 @@ from sqlalchemy.sql.type_api import TypeEngine
 from bunch import Bunch, bunchify
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, GENERIC, HTTP_SOAP, Inactive, MS_SQL, NotGiven, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, \
+from zato.common.api import DEPLOYMENT_STATUS, GENERIC, HTTP_SOAP, MS_SQL, NotGiven, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, \
      SERVER_UP_STATUS, UNITTEST, ZATO_NONE, ZATO_ODB_POOL_NAME
+from zato.common.exception import Inactive
 from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
-from zato.common.odb import get_ping_query, query
+from zato.common.odb import query
+from zato.common.odb.ping import get_ping_query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
      JWT, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, XPathSecurity, \
      WSSDefinition, VaultConnection
 from zato.common.odb.testing import UnittestEngine
 from zato.common.odb.query.pubsub import subscription as query_ps_subscription
 from zato.common.odb.query import generic as query_generic
-from zato.common.util import current_host, get_component_name, get_engine_url, new_cid, parse_extra_into_dict, \
+from zato.common.util.api import current_host, get_component_name, get_engine_url, new_cid, parse_extra_into_dict, \
      parse_tls_channel_security_definition, spawn_greenlet
 from zato.common.util.sql import ElemsWithOpaqueMaker, elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
@@ -115,14 +115,62 @@ class WritableKeyedTuple(object):
 # ################################################################################################################################
 
     def __repr__(self):
-        inner = [(key, getattr(self._elem, key)) for key in self._elem.keys()]
-        outer = [(key, getattr(self, key)) for key in dir(self) if not key.startswith('_')]
-        return 'WritableKeyedTuple(%s)' % (', '.join('%r=%r' % (key, value) for (key, value) in inner + outer))
+        return '<WritableKeyedTuple at {}>'.format(hex(id(self)))
 
 # ################################################################################################################################
 
     def get_value(self):
         return self._elem._asdict()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SessionWrapper(object):
+    """ Wraps an SQLAlchemy session.
+    """
+    def __init__(self):
+        self.session_initialized = False
+        self.pool = None      # type: SQLConnectionPool
+        self.config = None    # type: dict
+        self.is_sqlite = None # type: bool
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+    def init_session(self, *args, **kwargs):
+        spawn_greenlet(self._init_session, *args, **kwargs)
+
+    def _init_session(self, name, config, pool, use_scoped_session=True):
+        # type: (str, dict, SQLConnectionPool, bool)
+        self.config = config
+        self.fs_sql_config = config['fs_sql_config']
+        self.pool = pool
+
+        try:
+            self.pool.ping(self.fs_sql_config)
+        except Exception as e:
+            msg = 'Could not ping:`%s`, session will be left uninitialised, e:`%s`'
+            if self.config['is_active']:
+                err_details = format_exc()
+            else:
+                err_details = e.args[0]
+            self.logger.warn(msg, name, err_details)
+        else:
+            if config['engine'] == MS_SQL.ZATO_DIRECT:
+                self._Session = SimpleSession(self.pool.engine)
+            else:
+                if use_scoped_session:
+                    self._Session = scoped_session(sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery))
+                else:
+                    self._Session = sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery)
+                self._session = self._Session()
+
+            self.session_initialized = True
+            self.is_sqlite = self.pool.engine and self.pool.engine.name == 'sqlite'
+
+    def session(self):
+        return self._Session()
+
+    def close(self):
+        self._session.close()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -152,51 +200,6 @@ class WritableTupleQuery(Query):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SessionWrapper(object):
-    """ Wraps an SQLAlchemy session.
-    """
-    def __init__(self):
-        self.session_initialized = False
-        self.pool = None      # type: SQLConnectionPool
-        self.config = None    # type: dict
-        self.is_sqlite = None # type: bool
-        self.logger = logging.getLogger(self.__class__.__name__)
-
-    def init_session(self, *args, **kwargs):
-        spawn_greenlet(self._init_session, *args, **kwargs)
-
-    def _init_session(self, name, config, pool, use_scoped_session=True):
-        # type: (str, dict, SQLConnectionPool, bool)
-        self.config = config
-        self.fs_sql_config = config['fs_sql_config']
-        self.pool = pool
-
-        try:
-            self.pool.ping(self.fs_sql_config)
-        except Exception:
-            msg = 'Could not ping:`%s`, session will be left uninitialized, e:`%s`'
-            self.logger.warn(msg, name, format_exc())
-        else:
-            if config['engine'] == MS_SQL.ZATO_DIRECT:
-                self._Session = SimpleSession(self.pool.engine)
-            else:
-                if use_scoped_session:
-                    self._Session = scoped_session(sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery))
-                else:
-                    self._Session = sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery)
-                self._session = self._Session()
-
-            self.session_initialized = True
-            self.is_sqlite = self.pool.engine.name == 'sqlite'
-
-    def session(self):
-        return self._Session()
-
-    def close(self):
-        self._session.close()
-
-# ################################################################################################################################
-
 class SQLConnectionPool(object):
     """ A pool of SQL connections wrapping an SQLAlchemy engine.
     """
@@ -206,6 +209,7 @@ class SQLConnectionPool(object):
 
         self.name = name
         self.config = config
+        self.engine = None
         self.engine_name = config['engine'] # self.engine.name is 'mysql' while 'self.engine_name' is mysql+pymysql
 
         # Safe for printing out to logs, any sensitive data has been shadowed
@@ -233,7 +237,11 @@ class SQLConnectionPool(object):
                 _extra['poolclass'] = NullPool
 
         engine_url = get_engine_url(config)
-        self.engine = self._create_engine(engine_url, config, _extra)
+
+        try:
+            self.engine = self._create_engine(engine_url, config, _extra)
+        except Exception as e:
+            self.logger.warn('Could not create SQL connection `%s`, e:`%s`', config['name'], e.args[0])
 
         if self.engine and (not self._is_unittest_engine(engine_url)) and self._is_sa_engine(engine_url):
             event.listen(self.engine, 'checkin', self.on_checkin)
@@ -337,6 +345,9 @@ class SQLConnectionPool(object):
     def ping(self, fs_sql_config):
         """ Pings the SQL database and returns the response time, in milliseconds.
         """
+        if not self.engine:
+            return
+
         if hasattr(self.engine, 'ping'):
             func = self.engine.ping
             query = self.engine.ping_query
@@ -451,7 +462,9 @@ class PoolStore(object):
         """ Stops a pool and deletes it from the store.
         """
         with self._lock:
-            self.wrappers[name].pool.engine.dispose()
+            engine = self.wrappers[name].pool.engine
+            if engine:
+                engine.dispose()
             del self.wrappers[name]
 
 # ################################################################################################################################
@@ -512,7 +525,7 @@ class ODBManager(SessionWrapper):
     """
     def __init__(self, parallel_server=None, well_known_data=None, token=None, crypto_manager=None, server_id=None,
             server_name=None, cluster_id=None, pool=None, decrypt_func=None):
-        # type: (ParallelServer, unicode, unicode, object, int, unicode, int, object, object)
+        # type: (ParallelServer, str, str, object, int, str, int, object, object)
         super(ODBManager, self).__init__()
         self.parallel_server = parallel_server
         self.well_known_data = well_known_data
@@ -715,7 +728,7 @@ class ODBManager(SessionWrapper):
                     # Common things first
                     result[target].sec_def.id = sec_def.id
                     result[target].sec_def.name = sec_def.name
-                    result[target].sec_def.password = self.decrypt_func(sec_def.password)
+                    result[target].sec_def.password = self.decrypt_func(sec_def.password or '')
                     result[target].sec_def.sec_type = item.sec_type
 
                     if item.sec_type == SEC_DEF_TYPE.BASIC_AUTH:
@@ -805,7 +818,7 @@ class ODBManager(SessionWrapper):
 # ################################################################################################################################
 
     def add_services(self, session, data):
-        # type: (List[dict]) -> None
+        # type: (list[dict]) -> None
         try:
             session.execute(ServiceTableInsert().values(data))
         except IntegrityError:
@@ -817,7 +830,7 @@ class ODBManager(SessionWrapper):
 # ################################################################################################################################
 
     def add_deployed_services(self, session, data):
-        # type: (List[dict]) -> None
+        # type: (list[dict]) -> None
         session.execute(DeployedServiceInsert().values(data))
 
 # ################################################################################################################################
@@ -907,7 +920,7 @@ class ODBManager(SessionWrapper):
         """ Returns the list of all HTTP/SOAP connections.
         """
         with closing(self.session()) as session:
-            return query.http_soap_list(session, cluster_id, connection, transport, True, needs_columns)
+            return query.http_soap_list(session, cluster_id, connection, transport, True, None, needs_columns)
 
 # ################################################################################################################################
 
@@ -923,7 +936,7 @@ class ODBManager(SessionWrapper):
         """ Returns a list of services defined on the given cluster.
         """
         with closing(self.session()) as session:
-            return elems_with_opaque(query.service_list(session, cluster_id, needs_columns))
+            return elems_with_opaque(query.service_list(session, cluster_id, needs_columns=needs_columns))
 
 # ################################################################################################################################
 
@@ -1140,38 +1153,6 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             return query.channel_wmq_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_channel_stomp(self, cluster_id, channel_id):
-        """ Returns a particular STOMP channel.
-        """
-        with closing(self.session()) as session:
-            return query.channel_stomp(session, cluster_id, channel_id)
-
-# ################################################################################################################################
-
-    def get_channel_stomp_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of STOMP channels.
-        """
-        with closing(self.session()) as session:
-            return query.channel_stomp_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_out_stomp(self, cluster_id, out_id):
-        """ Returns an outgoing STOMP connection's details.
-        """
-        with closing(self.session()) as session:
-            return query.out_stomp(session, cluster_id, out_id)
-
-# ################################################################################################################################
-
-    def get_out_stomp_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of outgoing STOMP connections.
-        """
-        with closing(self.session()) as session:
-            return query.out_stomp_list(session, cluster_id, needs_columns)
 
 # ################################################################################################################################
 
@@ -1525,4 +1506,3 @@ class ODBManager(SessionWrapper):
     _migrate_30_encrypt_sec_xpath_sec          = _migrate_30_encrypt_sec_base
 
 # ################################################################################################################################
-

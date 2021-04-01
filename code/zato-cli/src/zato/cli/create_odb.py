@@ -18,10 +18,10 @@ from sqlalchemy.dialects.postgresql.base import PGTypeCompiler
 
 # Zato
 from zato.cli import common_odb_opts, is_arg_given, ZatoCommand
-from zato.common.odb import VERSION
 from zato.common.odb.model import AlembicRevision, Base, ZatoInstallState
 
 LATEST_ALEMBIC_REVISION = '0028_ae3419a9'
+VERSION = 1
 
 class Create(ZatoCommand):
     """ Creates a new Zato ODB (Operational Database)
@@ -46,8 +46,8 @@ class Create(ZatoCommand):
                 if show_output:
                     version = session.query(ZatoInstallState.version).one().version
                     msg = (
-                        'The ODB (v. {}) already exists, not creating it. ' +
-                        "Use the 'zato delete odb' command first if you'd like to start afresh and " +
+                        'The ODB (v. {}) already exists, not creating it. ' + \
+                        "Use the 'zato delete odb' command first if you'd like to start afresh and " + \
                         'recreate all ODB objects.').format(version)
                     self.logger.error(msg)
 

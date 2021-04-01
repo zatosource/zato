@@ -1,0 +1,405 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block html_title %}HL7 MLLP outconns{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    {% if items %}
+    <style type="text/css">
+        .ui-dialog-titlebar {
+            margin-bottom:-4px !important;
+        }
+    </style>
+    {% endif %}
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/outgoing/hl7/mllp.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+
+            {% comment %} 1 {% endcomment %}
+            'name',
+            '_is_active',
+            'address',
+
+            {% comment %} 2 {% endcomment %}
+            'pool_size',
+            '_audit_log',
+            '_invoke',
+
+            {% comment %} 3 {% endcomment %}
+            '_edit',
+            '_delete',
+            'id',
+
+            {% comment %} 4 {% endcomment %}
+            'is_active',
+
+            {% comment %} 5 {% endcomment %}
+            'is_audit_log_sent_active',
+            'is_audit_log_received_active',
+            'max_len_messages_sent',
+
+            {% comment %} 6 {% endcomment %}
+            'max_len_messages_received',
+            'max_bytes_per_message_sent',
+            'max_bytes_per_message_received',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">HL7 MLLP outgoing connections</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% with has_generic="1" generic_type="outconn-hl7-mllp" %}
+    {% include "zato/search-form.html" with page_prompt="Show connections"%}
+{% endwith %}
+
+    {% if cluster_id %}
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.outgoing.hl7.mllp.create()">Create a new connection</a>
+        </div>
+
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        {% comment %} 1 {% endcomment %}
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+                        <th><a href="#">Address</a></th>
+
+                        {% comment %} 2 {% endcomment %}
+                        <th><a href="#">Pool size</a></th>
+                        <th>Message log</th>
+                        <th></th>
+
+                        {% comment %} 3 {% endcomment %}
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 4 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 5 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 6 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        {% comment %} 1 {% endcomment %}
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.address }}</td>
+
+                        {% comment %} 2 {% endcomment %}
+                        <td>{{ item.pool_size }}</td>
+                        <td>
+                            <a href="{% url "audit-log" "outconn-hl7-mllp" item.id %}?cluster={{ cluster_id }}&amp;object_name={{ item.name }}&amp;object_type_label=HL7&nbsp;MLLP&nbsp;outgoing&nbsp;connection">View</a>
+                        </td>
+                        <td>
+                            <a href="{% url "outgoing-hl7-mllp-invoke" item.id item.max_wait_time item.name item.name|slugify %}?cluster={{ cluster_id }}">Invoke</a>
+                        </td>
+
+                        {% comment %} 3 {% endcomment %}
+                        <td><a href="javascript:$.fn.zato.outgoing.hl7.mllp.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.hl7.mllp.delete_('{{ item.id }}')">Delete</a></td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+
+                        {% comment %} 4 {% endcomment %}
+                        <td class='ignore'>{{ item.is_active }}</td>
+
+                        {% comment %} 5 {% endcomment %}
+                        <td class='ignore'>{{ item.is_audit_log_sent_active }}</td>
+                        <td class='ignore'>{{ item.is_audit_log_received_active }}</td>
+                        <td class='ignore'>{{ item.max_len_messages_sent|default:"" }}</td>
+
+                        {% comment %} 6 {% endcomment %}
+                        <td class='ignore'>{{ item.max_len_messages_received|default:"" }}</td>
+                        <td class='ignore'>{{ item.max_bytes_per_message_sent|default:"" }}</td>
+                        <td class='ignore'>{{ item.max_bytes_per_message_received|default:"" }}</td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='22'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "outgoing-hl7-mllp-create" %}" method="post" id="create-form">
+
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle;width:17%">
+                                <label for="id_name">
+                                Name
+                                </label>
+                            </td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td></td>
+                            <td>
+
+                                <label>
+                                Active
+                                {{ create_form.is_active }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Pool size
+                                {{ create_form.pool_size }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Log I/O
+                                {{ create_form.should_log_messages }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Timeout
+                                <span class="form_hint">(s)</span>
+                                {{ create_form.max_wait_time }}
+                                </label>
+
+                            </tr>
+                        <tr>
+                            <td>
+                                <label for="id_address">
+                                Address
+                                </label>
+                            </td>
+                            <td>
+                                {{ create_form.address }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>Max. size</td>
+                            <td>
+
+                                <label>
+                                Message
+                                {{ create_form.max_msg_size }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Read buffer
+                                {{ create_form.read_buffer_size }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>Separator</td>
+                            <td>
+
+                                <label>
+                                Start
+                                {{ create_form.start_seq }}
+                                </label>
+
+                                |
+
+                                <label>
+                                End
+                                {{ create_form.end_seq }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        {% include "zato/include/audit-log/create.html" %}
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+
+                        </tr>
+                    </table>
+
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "outgoing-hl7-mllp-edit" %}" method="post" id="edit-form">
+
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle;width:17%">
+                                <label for="id_name">
+                                Name
+                                </label>
+                            </td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td></td>
+                            <td>
+
+                                <label>
+                                Active
+                                {{ edit_form.is_active }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Pool size
+                                {{ edit_form.pool_size }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Log I/O
+                                {{ edit_form.should_log_messages }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Timeout
+                                <span class="form_hint">(s)</span>
+                                {{ edit_form.max_wait_time }}
+                                </label>
+
+                            </tr>
+                        <tr>
+                            <td>
+                                <label for="id_address">
+                                Address
+                                </label>
+                            </td>
+                            <td>
+                                {{ edit_form.address }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>Max. size</td>
+                            <td>
+
+                                <label>
+                                Message
+                                {{ edit_form.max_msg_size }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Read buffer
+                                {{ edit_form.read_buffer_size }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>Separator</td>
+                            <td>
+
+                                <label>
+                                Start
+                                {{ edit_form.start_seq }}
+                                </label>
+
+                                |
+
+                                <label>
+                                End
+                                {{ edit_form.end_seq }}
+                                </label>
+
+                            </td>
+                        </tr>
+
+                        {% include "zato/include/audit-log/edit.html" %}
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+
+                        </tr>
+                    </table>
+
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+    {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}
+

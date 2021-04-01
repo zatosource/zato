@@ -14,6 +14,7 @@ cloghandler = cloghandler # For pyflakes
 
 # stdlib
 import logging
+import os
 
 # MySQL
 try:
@@ -22,17 +23,15 @@ try:
 except ImportError:
     pass
 
-# stdlib
-import json, os
-
 # Django
 import django
 from django.core.management import call_command, execute_from_command_line
 
 # Zato
 from zato.admin.zato_settings import update_globals
+from zato.common.json_internal import loads
 from zato.common.repo import RepoManager
-from zato.common.util import store_pidfile
+from zato.common.util.api import store_pidfile
 
 logging.basicConfig(
     level=logging.INFO, format='%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s')
@@ -44,7 +43,7 @@ def main():
     repo_dir = os.path.join('.', 'config', 'repo')
 
     # Update Django settings
-    config = json.loads(open(os.path.join(repo_dir, 'web-admin.conf')).read())
+    config = loads(open(os.path.join(repo_dir, 'web-admin.conf')).read())
     config['config_dir'] = os.path.abspath('.')
     update_globals(config)
 

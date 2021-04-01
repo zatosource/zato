@@ -387,7 +387,7 @@ apispec_files['_templates/layout.html'] = """
 {%- endblock %}
   </body>
 </html>
-""".lstrip()
+""".lstrip() # noqa: E501
 
 
 # Custom HTML sidebar

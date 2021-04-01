@@ -18,8 +18,8 @@ from rbac.acl import Registry as _Registry
 from gevent.lock import RLock
 
 # Zato
-from zato.common import ZATO_NONE
-from zato.common.util import make_repr, wait_for_dict_key
+from zato.common.api import ZATO_NONE
+from zato.common.util.api import make_repr, wait_for_dict_key
 
 # ################################################################################################################################
 

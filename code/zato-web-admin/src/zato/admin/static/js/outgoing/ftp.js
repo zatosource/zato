@@ -38,22 +38,39 @@ $.fn.zato.outgoing.ftp.data_table.new_row = function(item, data, include_tr) {
 
     var is_active = item.is_active == true;
     var dircache = item.dircache == true;
-    
+
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
+
+    // 1
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', item.host);
-    row += String.format('<td>{0}</td>', item.user ? item.user : '');
-    row += String.format('<td>{0}</td>', item.acct ? item.acct : '');
-    row += String.format('<td>{0}</td>', item.timeout ? item.timeout : '');
+
+    // 2
+    row += String.format('<td>{0}</td>', item.user || '<span class="form_hint">---</span>');
+    row += String.format('<td>{0}</td>', item.acct || '<span class="form_hint">---</span>');
+    row += String.format('<td>{0}</td>', item.timeout || '<span class="form_hint">---</span>');
+
+    // 3
     row += String.format('<td>{0}</td>', item.port);
-    row += String.format('<td>{0}</td>', dircache ? 'Yes' : 'No');
+    row += String.format('<td>{0}</td>', item.default_directory || '<span class="form_hint">---</span>');
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password({0})'>Change password</a>", item.id));
+
+    // 4
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.ftp.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.outgoing.ftp.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
+
+    // 5
     row += String.format("<td class='ignore'>{0}</td>", is_active);
+    row += String.format("<td class='ignore'>{0}</td>", item.dircache);
+    row += String.format("<td class='ignore'>{0}</td>", item.default_directory);
+
+    // 6
+    row += String.format("<td class='ignore'>{0}</td>", item.user || '');
+    row += String.format("<td class='ignore'>{0}</td>", item.acct || '');
+    row += String.format("<td class='ignore'>{0}</td>", item.timeout || '');
 
     if(include_tr) {
         row += '</tr>';
@@ -64,7 +81,7 @@ $.fn.zato.outgoing.ftp.data_table.new_row = function(item, data, include_tr) {
 
 $.fn.zato.outgoing.ftp.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'Outgoing FTP connection [{0}] deleted',
-        'Are you sure you want to delete the outgoing FTP connection [{0}]?',
+        'Outgoing FTP connection `{0}` deleted',
+        'Are you sure you want to delete outgoing FTP connection `{0}`?',
         true);
 }

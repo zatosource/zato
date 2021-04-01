@@ -13,23 +13,23 @@ import logging
 import os
 from datetime import datetime
 from itertools import count
-from json import dumps, loads
 from unittest import TestCase
 
 # Bunch
 from bunch import bunchify
 
-# dateutil
-from dateutil.parser import parse as dt_parse
-
-# sh
-import sh
+# ciso8601
+from ciso8601 import parse_datetime
 
 # requests
 import requests
 
+# sh
+import sh
+
 # Zato
-from zato.common.crypto import CryptoManager
+from zato.common.json_internal import dumps, loads
+from zato.common.crypto.api import TOTPManager
 from zato.sso import const, status_code
 
 # ################################################################################################################################
@@ -63,8 +63,8 @@ class TestCtx(object):
         self.reset()
 
     def reset(self):
-        self.super_user_ust = None # type: unicode
-        self.super_user_id = None # type: unicode
+        self.super_user_ust = None # type: str
+        self.super_user_id = None # type: str
         self.config = Config
 
 # ################################################################################################################################
@@ -77,9 +77,9 @@ class BaseTest(TestCase):
     def setUp(self):
         try:
             # Try to create a super-user ..
-            #sh.zato('sso', 'create-super-user', Config.server_location, Config.super_user_name, '--password',
+            # sh.zato('sso', 'create-super-user', Config.server_location, Config.super_user_name, '--password',
             #    Config.super_user_password, '--verbose')
-            #sh.zato('sso', 'reset-totp-key', Config.server_location, Config.super_user_name, '--key',
+            # sh.zato('sso', 'reset-totp-key', Config.server_location, Config.super_user_name, '--key',
             #    Config.super_user_totp_key, '--verbose')
 
             pass
@@ -158,7 +158,7 @@ class BaseTest(TestCase):
         response = self.post('/zato/sso/user/login', {
             'username': Config.super_user_name,
             'password': Config.super_user_password,
-            'totp_code': CryptoManager.get_current_totp_code(Config.super_user_totp_key),
+            'totp_code': TOTPManager.get_current_totp_code(Config.super_user_totp_key),
         })
         self.ctx.super_user_ust = response.ust
 
@@ -193,10 +193,10 @@ class BaseTest(TestCase):
         now = now.isoformat()
 
         func = self.assertGreater if is_default_user else self.assertLess
-        func(now, dt_parse(response.approval_status_mod_time).isoformat() + '.999999')
-        func(now, dt_parse(response.password_last_set).isoformat() + '.999999')
-        func(now, dt_parse(response.sign_up_time).isoformat() + '.999999')
-        self.assertLess(now, dt_parse(response.password_expiry).isoformat() + '.999999')
+        func(now, parse_datetime(response.approval_status_mod_time).isoformat() + '.999999')
+        func(now, parse_datetime(response.password_last_set).isoformat() + '.999999')
+        func(now, parse_datetime(response.sign_up_time).isoformat() + '.999999')
+        self.assertLess(now, parse_datetime(response.password_expiry).isoformat() + '.999999')
 
 # ################################################################################################################################
 

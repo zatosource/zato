@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import os
-from json import loads
 from unittest import TestCase
 
 # Bunch
@@ -20,11 +19,12 @@ from bunch import bunchify
 from cryptography.fernet import Fernet
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, UNITTEST
-from zato.common.crypto import CryptoManager
-from zato.common.kvdb import KVDB
+from zato.common.api import CHANNEL, DATA_FORMAT, UNITTEST
+from zato.common.crypto.api import CryptoManager
+from zato.common.json_internal import loads
+from zato.common.kvdb.api import KVDB
 from zato.common.odb.api import PoolStore
-from zato.common.util import new_cid
+from zato.common.util.api import new_cid
 from zato.server.base.worker import WorkerStore
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.http_soap.channel import RequestHandler
@@ -167,7 +167,6 @@ class ServiceTestCase(TestCase):
 
         self.worker_store = WorkerStore(self.worker_config, self.server)
         self.worker_store.sql_pool_store = self.sql_pool_store
-        self.worker_store.stomp_outconn_api = None
         self.worker_store.outconn_wsx = None
         self.worker_store.vault_conn_api = self.vault_conn_api
         self.worker_store.sms_twilio_api = None
@@ -204,7 +203,7 @@ class ServiceTestCase(TestCase):
 # ################################################################################################################################
 
     def invoke_service(self, class_, request=None, **kwargs):
-        # type: (Service, object, **object)
+        # type: (Service, object, object)
 
         class_.name = class_.get_name()
         class_.impl_name = class_.get_impl_name()

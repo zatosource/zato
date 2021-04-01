@@ -29,7 +29,7 @@ import yaml
 from future.utils import iteritems
 
 # Zato
-from zato.common.util import absjoin, get_config, store_pidfile
+from zato.common.util.api import absjoin, get_config, store_pidfile
 from zato.scheduler.server import Config, SchedulerServer
 
 # ################################################################################################################################

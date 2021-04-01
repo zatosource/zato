@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from http.client import OK
-from json import loads
 
 # Bunch
 from bunch import Bunch
@@ -19,20 +18,15 @@ from bunch import Bunch
 from django.core.urlresolvers import resolve
 
 # Zato
-from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, ADMIN_INVOKE_PATH, SASession, settings_db
+from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, ADMIN_INVOKE_PATH, lb_tls_verify, \
+     lb_use_tls, SASession, settings_db
 from zato.admin.web.forms import SearchForm
 from zato.admin.web.models import ClusterColorMarker
 from zato.admin.web.util import get_user_profile
 from zato.client import AnyServiceInvoker
-from zato.common import get_version
+from zato.common.json_internal import loads
 from zato.common.odb.model import Cluster
-
-# New in 2.0.8 thus optional
-try:
-    from zato.admin.settings import lb_use_tls, lb_tls_verify
-except ImportError:
-    lb_use_tls = False
-    lb_tls_verify = True
+from zato.common.version import get_version
 
 # Zato version
 version = get_version()
@@ -78,8 +72,8 @@ class Client(AnyServiceInvoker):
     def invoke(self, *args, **kwargs):
         response = super(Client, self).invoke(*args, headers={'X-Zato-Forwarded-For': self.forwarded_for}, **kwargs)
         if response.inner.status_code != OK:
-            zato_env = loads(response.inner.text).get('zato_env', {})
-            raise Exception('CID: {}\nDetails: {}'.format(zato_env.get('cid'), zato_env.get('details')))
+            json_data = loads(response.inner.text)
+            raise Exception('CID: {}\nDetails: {}'.format(json_data.get('cid'), json_data.get('details')))
         return response
 
     def invoke_async(self, *args, **kwargs):

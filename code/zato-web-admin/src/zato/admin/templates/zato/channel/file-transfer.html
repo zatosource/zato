@@ -36,7 +36,7 @@
 
             {% comment %} 2 {% endcomment %}
             '_pickup_from_html',
-            'move_processed_to',
+            '_move_processed_to_html',
 
             {% comment %} 3 {% endcomment %}
             '_recipient',
@@ -46,16 +46,16 @@
             {% comment %} 4 {% endcomment %}
             'id',
             'is_active',
-            'service_list',
 
             {% comment %} 5 {% endcomment %}
+            'should_read_on_pickup',
+            'service_list',
             'topic_list',
-            'read_on_pickup',
 
             {% comment %} 6 {% endcomment %}
-            'parse_on_pickup',
+            'should_parse_on_pickup',
             'parse_with',
-            'delete_after_pickup',
+            'should_delete_after_pickup',
 
             {% comment %} 7 {% endcomment %}
             'is_internal',
@@ -68,14 +68,23 @@
             'scheduler_job_id',
 
             {% comment %} 9 {% endcomment %}
-            'service_list_json',
-            'topic_list_json',
-            'line_by_line',
+            'is_line_by_line',
 
             {% comment %} 10 {% endcomment %}
-            'pickup_from',
+            'pickup_from_list',
             'ftp_source_name',
             'sftp_source_name',
+
+            {% comment %} 11 {% endcomment %}
+            'is_case_sensitive',
+            'move_processed_to',
+            'is_hot_deploy',
+
+            {% comment %} 12 {% endcomment %}
+            'binary_file_patterns',
+            'data_encoding',
+            'outconn_rest_list',
+
         ]
     }
     </script>
@@ -126,9 +135,9 @@
                         {% comment %} 4 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
 
                         {% comment %} 5 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
@@ -149,10 +158,18 @@
 
                         {% comment %} 9 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 10 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
-                        {% comment %} 10 {% endcomment %}
+                        {% comment %} 11 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 12 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -173,34 +190,50 @@
                             {% if item.source_type == "local" %}
                                 Local
                             {% elif item.source_type == "ftp" %}
-                                <a href="{% url "out-ftp" %}?cluster={{ cluster_id }}&amp;query={{ item.ftp_source_name }}">{{ item.ftp_source_name }}</a>
+                                {% if item.ftp_source_name %}
+                                    <a href="{% url "out-ftp" %}?cluster={{ cluster_id }}&amp;query={{ item.ftp_source_name }}">{{ item.ftp_source_name }}</a>
+                                {% else %}
+                                    FTP <span class="form_hint"><br/>(No connection assigned)</span>
+                                {% endif %}
                             {% elif item.source_type == "sftp" %}
-                                <a href="{% url "out-sftp" %}?cluster={{ cluster_id }}&amp;type_=outconn-sftp&amp;query={{ item.sftp_source_name }}">{{ item.sftp_source_name }}</a>
+                                {% if item.sftp_source_name %}
+                                    <a href="{% url "out-sftp" %}?cluster={{ cluster_id }}&amp;type_=outconn-sftp&amp;query={{ item.sftp_source_name }}">{{ item.sftp_source_name }}</a>
+                                {% else %}
+                                    SFTP <span class="form_hint"><br/>(No connection assigned)</span>
+                                {% endif %}
                             {% endif %}
                         </td>
 
                         {% comment %} 2 {% endcomment %}
                         <td>
-                            {{ item.pickup_from }}
-                            <br/>
+                            {{ item.pickup_from_list|linebreaks }}
                             {{ item.file_patterns }}
                         </td>
-                        <td>{{ item.move_processed_to }}</td>
+                        <td>{{ item.move_processed_to|default:'<span class="form_hint">---</span>' }}</td>
 
                         {% comment %} 3 {% endcomment %}
 
                         <td>
-                            {% if item.service_list or item.topic_list %}
+                            {% if item.service_list or item.topic_list or item.outconn_rest_list_by_name %}
+
                                 {% for service_name in item.service_list %}
                                     <span class="form_hint">S</span>→
                                         <a href="{% url "service-overview" service_name %}?cluster={{ cluster_id }}">{{ service_name }}</a>
                                     <br/>
                                 {% endfor %}
+
                                 {% for topic_name in item.topic_list %}
                                     <span class="form_hint">T</span>→
                                         <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id}}&amp;query={{ topic_name }}">{{ topic_name }}</a>
                                     <br/>
                                 {% endfor %}
+
+                                {% for outconn_rest_name in item.outconn_rest_list_by_name %}
+                                    <span class="form_hint">R</span>→
+                                        <a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=plain_http&amp;query={{ outconn_rest_name }}">{{ outconn_rest_name }}</a>
+                                    <br/>
+                                {% endfor %}
+
                             {% else %}
                                 <span class="form_hint">---</span>
                             {% endif %}
@@ -212,16 +245,16 @@
                         {% comment %} 4 {% endcomment %}
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.service_list }}</td>
 
                         {% comment %} 5 {% endcomment %}
-                        <td class='ignore'>{{ item.move_processed_to }}</td>
-                        <td class='ignore'>{{ item.read_on_pickup }}</td>
+                        <td class='ignore'>{{ item.should_read_on_pickup }}</td>
+                        <td class='ignore'>{{ item.service_list_json|default:"[]" }}</td>
+                        <td class='ignore'>{{ item.topic_list_json|default:"[]" }}</td>
 
                         {% comment %} 6 {% endcomment %}
-                        <td class='ignore'>{{ item.parse_on_pickup }}</td>
+                        <td class='ignore'>{{ item.should_parse_on_pickup }}</td>
                         <td class='ignore'>{{ item.parse_with }}</td>
-                        <td class='ignore'>{{ item.delete_after_pickup }}</td>
+                        <td class='ignore'>{{ item.should_delete_after_pickup }}</td>
 
                         {% comment %} 7 {% endcomment %}
                         <td class='ignore'>{{ item.is_internal }}</td>
@@ -234,20 +267,28 @@
                         <td class='ignore'>{{ item.scheduler_job_id }}</td>
 
                         {% comment %} 9 {% endcomment %}
-                        <td class='ignore'>{{ item.service_list_json }}</td>
-                        <td class='ignore'>{{ item.topic_list_json }}</td>
-                        <td class='ignore'>{{ item.line_by_line }}</td>
+                        <td class='ignore'>{{ item.is_line_by_line }}</td>
 
                         {% comment %} 10 {% endcomment %}
-                        <td class='ignore'>{{ item.pickup_from }}</td>
+                        <td class='ignore'>{{ item.pickup_from_list }}</td>
                         <td class='ignore'>{{ item.ftp_source_name }}</td>
                         <td class='ignore'>{{ item.sftp_source_name }}</td>
+
+                        {% comment %} 11 {% endcomment %}
+                        <td class='ignore'>{{ item.is_case_sensitive }}</td>
+                        <td class='ignore'>{{ item.move_processed_to }}</td>
+                        <td class='ignore'>{{ item.is_hot_deploy }}</td>
+
+                        {% comment %} 12 {% endcomment %}
+                        <td class='ignore'>{{ item.binary_file_patterns }}</td>
+                        <td class='ignore'>{{ item.data_encoding }}</td>
+                        <td class='ignore'>{{ item.outconn_rest_list_json|default:"[]" }}</td>
 
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='17'>No results</td>
+                        <td colspan='31'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -262,7 +303,7 @@
                 <form action="{% url "channel-file-transfer-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:8%">
+                            <td style="vertical-align:middle;width:14%">
                                 <label for="id_name">Name</label>
                             </td>
                             <td>{{ create_form.name }}</td>
@@ -282,24 +323,48 @@
 
                             <label>
                             Read
-                            {{ create_form.read_on_pickup }}
-                            </label>
-
-                            <label>
-                            Parse
-                            {{ create_form.parse_on_pickup }}
-                            </label>
-
-                            <label>
-                            Delete
-                            {{ create_form.delete_after_pickup }}
+                            {{ create_form.should_read_on_pickup }}
                             </label>
 
                             |
 
                             <label>
-                            Line-by-line
-                            {{ create_form.line_by_line }}
+                            Parse
+                            {{ create_form.should_parse_on_pickup }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Delete
+                            {{ create_form.should_delete_after_pickup }}
+                            </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                            </td>
+                            <td>
+
+                            <label>
+                            Case sens.
+                            {{ create_form.is_case_sensitive }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Hot deploy
+                            {{ create_form.is_hot_deploy }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Encoding
+                            {{ create_form.data_encoding }}
                             </label>
 
                             </td>
@@ -316,8 +381,7 @@
                             </td>
                         </tr>
 
-
-                        <tr>
+                        <tr id="tr_create_scheduler_job_id" class="hidden">
                             <td style="vertical-align:middle">
                                 <label for="id_scheduler_job_id">Schedule</label>
                             </td>
@@ -331,7 +395,7 @@
                                 <label for="id_pickup_from">Dir. from</label>
                             </td>
                             <td>
-                                {{ create_form.pickup_from }}
+                                {{ create_form.pickup_from_list }}
                             </td>
                         </tr>
 
@@ -346,7 +410,7 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_move_processed_to">Dir. to</label>
+                                <label for="id_move_processed_to">Proc. to</label>
                             </td>
                             <td>{{ create_form.move_processed_to }}</td>
                         </tr>
@@ -356,6 +420,12 @@
                                 <label for="id_parse_with">Parse with</label>
                             </td>
                             <td>{{ create_form.parse_with }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle" colspan="2">
+                                Send to ↓
+                            </td>
                         </tr>
 
                         <tr>
@@ -372,6 +442,15 @@
                                 <label for="id_topic_list">Topic</label>
                             </td>
                             <td>{{ create_form.topic_list }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_outconn_rest_list">REST</label>
+                            </td>
+                            <td>
+                                {{ create_form.outconn_rest_list }}
+                            </td>
                         </tr>
 
                         <tr>
@@ -393,7 +472,7 @@
                 <form action="{% url "channel-file-transfer-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:8%">
+                            <td style="vertical-align:middle;width:14%">
                                 <label for="id_edit-name">Name</label>
                             </td>
                             <td>{{ edit_form.name }}</td>
@@ -413,24 +492,48 @@
 
                             <label>
                             Read
-                            {{ edit_form.read_on_pickup }}
-                            </label>
-
-                            <label>
-                            Parse
-                            {{ edit_form.parse_on_pickup }}
-                            </label>
-
-                            <label>
-                            Delete
-                            {{ edit_form.delete_after_pickup }}
+                            {{ edit_form.should_read_on_pickup }}
                             </label>
 
                             |
 
                             <label>
-                            Line-by-line
-                            {{ edit_form.line_by_line }}
+                            Parse
+                            {{ edit_form.should_parse_on_pickup }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Delete
+                            {{ edit_form.should_delete_after_pickup }}
+                            </label>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                            </td>
+                            <td>
+
+                            <label>
+                            Case sens.
+                            {{ edit_form.is_case_sensitive }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Hot deploy
+                            {{ edit_form.is_hot_deploy }}
+                            </label>
+
+                            |
+
+                            Encoding
+                            <label>
+                            {{ edit_form.data_encoding }}
                             </label>
 
                             </td>
@@ -448,7 +551,7 @@
                         </tr>
 
 
-                        <tr>
+                        <tr id="tr_edit_scheduler_job_id" class="hidden">
                             <td style="vertical-align:middle">
                                 <label for="id_edit-scheduler_job_id">Schedule</label>
                             </td>
@@ -459,10 +562,10 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_edit-pickup_from">Dir. from</label>
+                                <label for="id_edit-pickup_from_list">Dir. from</label>
                             </td>
                             <td>
-                                {{ edit_form.pickup_from }}
+                                {{ edit_form.pickup_from_list }}
                             </td>
                         </tr>
 
@@ -477,7 +580,7 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                <label for="id_edit-move_processed_to">Dir. to</label>
+                                <label for="id_edit-move_processed_to">Proc. to</label>
                             </td>
                             <td>{{ edit_form.move_processed_to }}</td>
                         </tr>
@@ -487,6 +590,12 @@
                                 <label for="id_edit-parse_with">Parse with</label>
                             </td>
                             <td>{{ edit_form.parse_with }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle" colspan="2">
+                                Send to ↓
+                            </td>
                         </tr>
 
                         <tr>
@@ -503,6 +612,15 @@
                                 <label for="id_edit-topic_list">Topic</label>
                             </td>
                             <td>{{ edit_form.topic_list }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                <label for="id_outconn_rest_list">REST</label>
+                            </td>
+                            <td>
+                                {{ edit_form.outconn_rest_list }}
+                            </td>
                         </tr>
 
                         <tr>

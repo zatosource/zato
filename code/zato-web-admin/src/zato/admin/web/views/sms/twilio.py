@@ -19,8 +19,8 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.forms.sms.twilio import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
+from zato.common.json_internal import dumps
 from zato.common.odb.model import SMSTwilio
-from zato.common.util.json_ import dumps
 
 # ################################################################################################################################
 

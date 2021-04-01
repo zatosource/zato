@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from ftplib import FTP_PORT
-from json import dumps as json_dumps
 
 # SQLAlchemy
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, false as sa_false, ForeignKey, Index, Integer, LargeBinary, \
@@ -18,9 +17,10 @@ from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, false as sa_
 from sqlalchemy.orm import backref, relationship
 
 # Zato
-from zato.common import AMQP, CASSANDRA, CLOUD, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MISC, NOTIF, ODOO, SAP, PUBSUB, \
+from zato.common.api import AMQP, CASSANDRA, CLOUD, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MISC, NOTIF, ODOO, SAP, PUBSUB, \
      SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY
-from zato.common.odb import WMQ_DEFAULT_PRIORITY
+from zato.common.json_internal import json_dumps
+from zato.common.odb.const import WMQ_DEFAULT_PRIORITY
 from zato.common.odb.model.base import Base, _JSON
 from zato.common.odb.model.sso import _SSOAttr, _SSOGroup, _SSOLinkedAuth, _SSOSession, _SSOUser
 
@@ -544,7 +544,7 @@ class HTTPSOAP(Base):
     is_active = Column(Boolean(), nullable=False)
     is_internal = Column(Boolean(), nullable=False)
 
-    connection = Column(String(200), nullable=False)
+    connection = Column(String(20), nullable=False)
     transport = Column(String(200), nullable=False)
 
     host = Column(String(200), nullable=True)
@@ -1697,7 +1697,7 @@ class NotificationOpenStackSwift(Notification):
 
     id = Column(Integer, ForeignKey('notif.id'), primary_key=True)
 
-    containers = Column(String(20000), nullable=False)
+    containers = Column(String(16380), nullable=False)
 
     def_id = Column(Integer, ForeignKey('os_swift.id'), primary_key=True)
     definition = relationship(
@@ -1733,10 +1733,10 @@ class CassandraConn(Base):
     id = Column(Integer, Sequence('conn_def_cassandra_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
-    contact_points = Column(String(400), nullable=False, default=CASSANDRA.DEFAULT.CONTACT_POINTS.value)
-    port = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.PORT.value)
-    exec_size = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.EXEC_SIZE.value)
-    proto_version = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.PROTOCOL_VERSION.value)
+    contact_points = Column(String(400), nullable=False, default=CASSANDRA.DEFAULT.CONTACT_POINTS)
+    port = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.PORT)
+    exec_size = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.EXEC_SIZE)
+    proto_version = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.PROTOCOL_VERSION)
     cql_version = Column(Integer, nullable=True)
     default_keyspace = Column(String(400), nullable=False)
     username = Column(String(200), nullable=True)
@@ -2647,6 +2647,62 @@ class SMSTwilio(Base):
 
 # ################################################################################################################################
 
+class GenericObject(Base):
+    """ A generic data object.
+    """
+    __tablename__ = 'generic_object'
+    __table_args__ = (
+        Index('gen_obj_uq_name_type', 'name', 'type_', 'cluster_id', unique=True,
+              mysql_length={'name':191, 'type_':191}),
+        Index('gen_obj_par_id', 'cluster_id', 'parent_id', 'parent_type', unique=False,
+              mysql_length={'parent_id':191, 'parent_type':191}),
+        Index('gen_obj_cat_id', 'cluster_id', 'category_id', unique=False,
+              mysql_length={'category_id':191}),
+        Index('gen_obj_cat_subcat_id', 'cluster_id', 'category_id', 'subcategory_id', unique=False,
+              mysql_length={'category_id':191, 'subcategory_id':191}),
+        Index('gen_obj_cat_name', 'cluster_id', 'category_name', unique=False,
+              mysql_length={'category_name':191}),
+        Index('gen_obj_cat_subc_name', 'cluster_id', 'category_name', 'subcategory_name', unique=False,
+              mysql_length={'category_name':191, 'subcategory_name':191}),
+        Index('gen_obj_par_obj_id', 'cluster_id', 'parent_object_id', unique=False),
+    {})
+
+    id = Column(Integer, Sequence('generic_object_seq'), primary_key=True)
+    name = Column(Text(191), nullable=False)
+
+    type_ = Column(Text(191), nullable=False)
+    subtype = Column(Text(191), nullable=True)
+
+    category_id = Column(Text(191), nullable=True)
+    subcategory_id = Column(Text(191), nullable=True)
+
+    creation_time = Column(DateTime, nullable=False)
+    last_modified = Column(DateTime, nullable=False)
+
+    category_name = Column(Text(191), nullable=True)
+    subcategory_name = Column(Text(191), nullable=True)
+
+    # This references back to generic objects
+    parent_object_id = Column(Integer, nullable=True)
+
+    # This may reference objects other than the current model
+    parent_id = Column(Text(191), nullable=True)
+    parent_type = Column(Text(191), nullable=True)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
+    generic_conn_def_id = Column(Integer, ForeignKey('generic_conn_def.id', ondelete='CASCADE'), nullable=True)
+    generic_conn_def_sec_id = Column(Integer, ForeignKey('generic_conn_def_sec.id', ondelete='CASCADE'), nullable=True)
+    generic_conn_id = Column(Integer, ForeignKey('generic_conn.id', ondelete='CASCADE'), nullable=True)
+    generic_conn_sec_id = Column(Integer, ForeignKey('generic_conn_sec.id', ondelete='CASCADE'), nullable=True)
+    generic_conn_client_id = Column(Integer, ForeignKey('generic_conn_client.id', ondelete='CASCADE'), nullable=True)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('generic_object_list', order_by=name, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
 class GenericConnDef(Base):
     """ Generic connection definitions - with details kept in JSON.
     """
@@ -2853,7 +2909,7 @@ class RateLimitState(Base):
     """
     __tablename__ = 'rate_limit_state'
     __table_args__ = (
-        Index('object_idx', 'object_type', 'object_id', 'period', 'last_network', unique=True,
+        Index('rate_lim_obj_idx', 'object_type', 'object_id', 'period', 'last_network', unique=True,
               mysql_length={'object_type':191, 'object_id':191, 'period':191, 'last_network':191}),
     {})
 

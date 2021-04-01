@@ -24,7 +24,7 @@ from sqlalchemy import Boolean, Integer
 from sqlalchemy.exc import IntegrityError
 
 # Zato
-from zato.common import ZATO_NOT_GIVEN
+from zato.common.api import ZATO_NOT_GIVEN
 from zato.common.odb.model import Base, Cluster
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import AsIs, Bool as BoolSIO, Int as IntSIO
@@ -174,6 +174,7 @@ def update_attrs(cls, name, attrs):
     attrs.input_required_extra = getattr(mod, 'input_required_extra', [])
     attrs.input_optional_extra = getattr(mod, 'input_optional_extra', [])
     attrs.create_edit_input_required_extra = getattr(mod, 'create_edit_input_required_extra', [])
+    attrs.create_edit_input_optional_extra = getattr(mod, 'create_edit_input_optional_extra', [])
     attrs.create_edit_rewrite = getattr(mod, 'create_edit_rewrite', [])
     attrs.check_existing_one = getattr(mod, 'check_existing_one', True)
     attrs.request_as_is = getattr(mod, 'request_as_is', [])
@@ -258,6 +259,9 @@ class AdminServiceMeta(type):
 
                 if attrs.is_create_edit and is_required:
                     sio_elem.extend(attrs.create_edit_input_required_extra)
+
+                if attrs.is_create_edit and (not is_required):
+                    sio_elem.extend(attrs.create_edit_input_optional_extra)
 
                 # Sorts and removes duplicates
                 setattr(SimpleIO, _name, list(set(sio_elem)))

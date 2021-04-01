@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -16,7 +16,7 @@ from future.utils import iteritems
 from past.builtins import basestring
 
 # Zato
-from zato.common import DELEGATED_TO_RBAC, RATE_LIMIT, SIMPLE_IO, TLS, ZATO_NONE, ZATO_SEC_USE_RBAC
+from zato.common.api import AuditLog, DELEGATED_TO_RBAC, RATE_LIMIT, SIMPLE_IO, TLS, ZATO_NONE, ZATO_SEC_USE_RBAC
 
 # ################################################################################################################################
 
@@ -119,7 +119,9 @@ def add_http_soap_select(form, field_name, req, connection, transport, needs_ini
 
 # ################################################################################################################################
 
-def add_services(form, req, by_id=False, initial_service=None, api_name='zato.service.get-list', has_name_filter=True):
+def add_services(form, req, by_id=False, initial_service=None, api_name='zato.service.get-list', has_name_filter=True,
+    should_include_scheduler=False):
+
     if req.zato.cluster_id:
 
         fields = {}
@@ -138,7 +140,12 @@ def add_services(form, req, by_id=False, initial_service=None, api_name='zato.se
             field.choices = []
             field.choices.append(INITIAL_CHOICES)
 
-            request = {'cluster_id': req.zato.cluster_id, 'name_filter':'*'}
+            request = {
+                'cluster_id': req.zato.cluster_id,
+                'name_filter':'*',
+                'should_include_scheduler': should_include_scheduler,
+            }
+
             if has_name_filter:
                 request['name_filter'] = '*'
 
@@ -298,6 +305,25 @@ class WithRateLimiting(forms.Form):
         super(WithRateLimiting, self).__init__(*args, **kwargs)
 
         add_select(self, 'rate_limit_type', RATE_LIMIT.TYPE(), needs_initial_select=False)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class WithAuditLog(forms.Form):
+    is_audit_log_sent_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_audit_log_received_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+
+    max_len_messages_sent = forms.CharField(
+        initial=AuditLog.Default.max_len_messages, widget=forms.TextInput(attrs={'style':'width:10%'}))
+
+    max_len_messages_received = forms.CharField(
+        initial=AuditLog.Default.max_len_messages, widget=forms.TextInput(attrs={'style':'width:10%'}))
+
+    max_bytes_per_message_sent = forms.CharField(
+        initial=AuditLog.Default.max_data_stored_per_message, widget=forms.TextInput(attrs={'style':'width:13%'}))
+
+    max_bytes_per_message_received = forms.CharField(
+        initial=AuditLog.Default.max_data_stored_per_message, widget=forms.TextInput(attrs={'style':'width:13%'}))
 
 # ################################################################################################################################
 # ################################################################################################################################

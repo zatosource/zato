@@ -30,6 +30,9 @@ from cpython.sequence cimport PySequence_ITEM
 from libc.stdint cimport uint64_t
 from posix.time cimport timeval, timezone, gettimeofday
 
+# gevent
+from gevent.lock import RLock
+
 # regex
 from regex import compile as re_compile
 
@@ -39,10 +42,7 @@ from six import binary_type, integer_types, string_types, text_type
 from zato.common.py23_ import maxint
 
 # Zato
-from zato.common import CACHE as _COMMON_CACHE
-
-# gevent
-from gevent.lock import RLock
+from zato.common.api import CACHE as _COMMON_CACHE
 
 # ################################################################################################################################
 

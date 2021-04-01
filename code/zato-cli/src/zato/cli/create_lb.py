@@ -19,7 +19,7 @@ config_template = """{{
   "haproxy_command": "haproxy",
   "host": "localhost",
   "port": 20151,
-  "is_tls_enabled": {is_tls_enabled},
+  "is_tls_enabled": false,
   "keyfile": "./zato-lba-priv-key.pem",
   "certfile": "./zato-lba-cert.pem",
   "ca_certs": "./zato-lba-ca-certs.pem",
@@ -80,15 +80,14 @@ frontend front_http_plain
 
     option forwardfor
     option httplog # ZATO frontend front_http_plain:option log-http-requests
-    bind 127.0.0.1:11223 # ZATO frontend front_http_plain:bind
+    bind 0.0.0.0:11223 # ZATO frontend front_http_plain:bind
     maxconn 200 # ZATO frontend front_http_plain:maxconn
 
     monitor-uri /zato-lb-alive # ZATO frontend front_http_plain:monitor-uri
-"""
+""" # noqa
 
 default_backend = """
     server http_plain--server1 127.0.0.1:{server01_port} check inter 2s rise 2 fall 2 # ZATO backend bck_http_plain:server--server1
-    server http_plain--server2 127.0.0.1:{server02_port} check inter 2s rise 2 fall 2 # ZATO backend bck_http_plain:server--server2
 """
 
 http_503 = """HTTP/1.0 503 Service Unavailable
@@ -130,7 +129,7 @@ class Create(ZatoCommand):
 
         is_tls_enabled = is_arg_given(args, 'priv_key_path')
         config = config_template.format(**{
-            'is_tls_enabled': 'true' if is_tls_enabled else 'false',
+            'is_tls_enabled': is_tls_enabled,
         })
 
         open(os.path.join(repo_dir, 'lb-agent.conf'), 'w').write(config) # noqa

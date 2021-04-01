@@ -50,7 +50,7 @@ class GetServerDeliveryTaskList(AdminService):
             with ps_tool.lock:
                 for sub_key, task in ps_tool.delivery_tasks.items(): # type: (str, DeliveryTask)
 
-                    last_sync = task.last_iter_run #ps_tool.last_gd_run
+                    last_sync = task.last_iter_run # ps_tool.last_gd_run
                     if last_sync:
                         last_sync = datetime_from_ms(last_sync * 1000)
 

@@ -17,7 +17,7 @@ from django.http import HttpResponse, HttpResponseServerError
 # Zato
 from zato.admin.web.forms.search.solr import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, id_only_service, Index as _Index, method_allowed
-from zato.common import SEARCH
+from zato.common.api import SEARCH
 from zato.common.odb.model import Solr
 
 logger = logging.getLogger(__name__)
@@ -39,9 +39,9 @@ class Index(_Index):
         return {
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
-            'default_timeout': SEARCH.SOLR.DEFAULTS.TIMEOUT.value,
-            'default_ping_path': SEARCH.SOLR.DEFAULTS.PING_PATH.value,
-            'default_pool_size': SEARCH.SOLR.DEFAULTS.POOL_SIZE.value,
+            'default_timeout': SEARCH.SOLR.DEFAULTS.TIMEOUT,
+            'default_ping_path': SEARCH.SOLR.DEFAULTS.PING_PATH,
+            'default_pool_size': SEARCH.SOLR.DEFAULTS.POOL_SIZE,
         }
 
 class _CreateEdit(CreateEdit):

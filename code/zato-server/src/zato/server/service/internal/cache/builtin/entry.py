@@ -19,7 +19,7 @@ from future.utils import iteritems
 from past.builtins import basestring, long
 
 # Zato
-from zato.common import CACHE
+from zato.common.api import CACHE
 from zato.common.exception import BadRequest
 from zato.common.util.search import SearchResults
 from zato.server.service import AsIs, Bool, Float, Int
@@ -204,7 +204,7 @@ class _CreateEdit(_Base):
         try:
             int(expiry)
         except ValueError:
-            raise BadRequest(self.cid, 'Expiry {} must be an integer instead of {}'.format(repr(expiry)), type(expiry))
+            raise BadRequest(self.cid, 'Expiry {} must be an integer instead of {}'.format(repr(expiry), type(expiry)))
 
         cache = self._get_cache_by_input()
 

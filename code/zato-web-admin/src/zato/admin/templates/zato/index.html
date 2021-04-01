@@ -30,12 +30,24 @@
     {% comment %} Our CSS must come last {% endcomment %}
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
 
-    {% if not items %}
-        <style type="text/css">
-            .ui-dialog-titlebar {
-                padding-bottom:10px !important;
-            }
-        </style>
+    {% if zato_template_name == "zato/scheduler.html" %}
+
+            <style type="text/css">
+                .ui-dialog-titlebar {
+                    padding-bottom:-4px !important;
+                }
+            </style>
+
+    {% else %}
+
+        {% if not items %}
+            <style type="text/css">
+                .ui-dialog-titlebar {
+                    padding-bottom:10px !important;
+                }
+            </style>
+        {% endif %}
+
     {% endif %}
 
     {% block "extra_css" %}
@@ -152,32 +164,49 @@
                         <li>
                             <span class="like-a">Channels &rarr;</span>
                             <ul>
-                                <li class='wide'><a href="{% url "channel-amqp" %}?cluster={{ cluster_id|default:'' }}">AMQP</a></li>
-                                <li class='wide'><a href="{% url "channel-file-transfer" %}?cluster={{ cluster_id|default:'' }}&amp;type_=channel-file-transfer">File transfer</a></li>
-                                <li class='wide'><a href="{% url "channel-jms-wmq" %}?cluster={{ cluster_id|default:'' }}">IBM MQ</a></li>
-                                <li class='wide'><a href="{% url "channel-json-rpc" %}?cluster={{ cluster_id|default:'' }}">JSON-RPC</a></li>
-                                <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=channel&amp;transport=plain_http">REST</a></li>
-                                <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=channel&amp;transport=soap">SOAP</a></li>
-                                <li class='wide'><a href="{% url "channel-web-socket" %}?cluster={{ cluster_id|default:'' }}">WebSockets</a></li>
-                                <li class='wide'><a href="{% url "channel-zmq" %}?cluster={{ cluster_id|default:'' }}">ZeroMQ</a></li>
+                                <li><a href="{% url "channel-amqp" %}?cluster={{ cluster_id|default:'' }}">AMQP</a></li>
+                                <li><a href="{% url "channel-file-transfer" %}?cluster={{ cluster_id|default:'' }}&amp;type_=channel-file-transfer">File transfer</a></li>
+
+                                <li>
+                                    <span class="like-a">HL7 &rarr;</span>
+                                    <ul>
+                                        <li><a href="{% url "channel-hl7-mllp" %}?cluster={{ cluster_id|default:'' }}&amp;type_=channel-hl7-mllp">MLLP</a></li>
+                                        <li><a href="{% url "channel-hl7-rest" %}?cluster={{ cluster_id|default:'' }}">REST</a></li>
+                                    </ul>
+                                </li>
+
+                                <li><a href="{% url "channel-jms-wmq" %}?cluster={{ cluster_id|default:'' }}">IBM MQ</a></li>
+                                <li><a href="{% url "channel-json-rpc" %}?cluster={{ cluster_id|default:'' }}">JSON-RPC</a></li>
+                                <li><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=channel&amp;transport=plain_http">REST</a></li>
+                                <li><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=channel&amp;transport=soap">SOAP</a></li>
+                                <li><a href="{% url "channel-web-socket" %}?cluster={{ cluster_id|default:'' }}">WebSockets</a></li>
+                                <li><a href="{% url "channel-zmq" %}?cluster={{ cluster_id|default:'' }}">ZeroMQ</a></li>
                             </ul>
                         </li>
                         <li>
                             <span class="like-a">Outgoing &rarr;</span>
                             <ul>
-                                <li class='wide'><a href="{% url "out-amqp" %}?cluster={{ cluster_id|default:'' }}">AMQP</a></li>
-                                <li class='wide'><a href="{% url "out-ftp" %}?cluster={{ cluster_id|default:'' }}">FTP</a></li>
-                                <li class='wide'><a href="{% url "out-jms-wmq" %}?cluster={{ cluster_id|default:'' }}">IBM MQ</a></li>
-                                <li class='wide'><a href="{% url "out-ldap" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-ldap">LDAP</a></li>
-                                <li class='wide'><a href="{% url "out-mongodb" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-mongodb">MongoDB</a></li>
-                                <li class='wide'><a href="{% url "out-odoo" %}?cluster={{ cluster_id|default:'' }}">Odoo</a></li>
-                                <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=plain_http">REST</a></li>
-                                <li class='wide'><a href="{% url "out-sap" %}?cluster={{ cluster_id|default:'' }}">SAP RFC</a></li>
-                                <li class='wide'><a href="{% url "out-sftp" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-sftp">SFTP</a></li>
-                                <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=soap">SOAP</a></li>
-                                <li class='wide'><a href="{% url "out-sql" %}?cluster={{ cluster_id|default:'' }}">SQL</a></li>
-                                <li class='wide'><a href="{% url "out-wsx" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-wsx">WebSockets</a></li>
-                                <li class='wide'><a href="{% url "out-zmq" %}?cluster={{ cluster_id|default:'' }}">ZeroMQ</a></li>
+                                <li><a href="{% url "out-amqp" %}?cluster={{ cluster_id|default:'' }}">AMQP</a></li>
+                                <li><a href="{% url "out-ftp" %}?cluster={{ cluster_id|default:'' }}">FTP</a></li>
+
+                                <li>
+                                    <span class="like-a">HL7 &rarr;</span>
+                                    <ul>
+                                        <li><a href="{% url "outgoing-hl7-mllp" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-hl7-mllp">MLLP</a></li>
+                                    </ul>
+                                </li>
+
+                                <li><a href="{% url "out-jms-wmq" %}?cluster={{ cluster_id|default:'' }}">IBM MQ</a></li>
+                                <li><a href="{% url "out-ldap" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-ldap">LDAP</a></li>
+                                <li><a href="{% url "out-mongodb" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-mongodb">MongoDB</a></li>
+                                <li><a href="{% url "out-odoo" %}?cluster={{ cluster_id|default:'' }}">Odoo</a></li>
+                                <li><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=plain_http">REST</a></li>
+                                <li><a href="{% url "out-sap" %}?cluster={{ cluster_id|default:'' }}">SAP RFC</a></li>
+                                <li><a href="{% url "out-sftp" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-sftp">SFTP</a></li>
+                                <li><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=soap">SOAP</a></li>
+                                <li><a href="{% url "out-sql" %}?cluster={{ cluster_id|default:'' }}">SQL</a></li>
+                                <li><a href="{% url "out-wsx" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-wsx">WebSockets</a></li>
+                                <li><a href="{% url "out-zmq" %}?cluster={{ cluster_id|default:'' }}">ZeroMQ</a></li>
                             </ul>
                         </li>
                         <li>
@@ -205,6 +234,7 @@
                                 </li>
                                 <li><a href="{% url "notif-sql" %}?cluster={{ cluster_id|default:'' }}">SQL</a></li>
                             </ul>
+                        </li>
                         <li>
                             <span class="like-a">Queries &rarr;</span>
                             <ul>
@@ -242,6 +272,7 @@
                                 <li class='wide'><a href="{% url "cloud-aws-s3" %}?cluster={{ cluster_id|default:'' }}">S3</a></li>
                             </ul>
                         </li>
+                        <li><a href="{% url "cloud-dropbox" %}?cluster={{ cluster_id|default:'' }}&amp;type_=cloud-dropbox">Dropbox</a></li>
                         <li>
                             <span class="like-a">OpenStack &rarr;</span>
                             <ul>

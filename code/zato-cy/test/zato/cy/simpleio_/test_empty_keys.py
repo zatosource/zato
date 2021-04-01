@@ -20,6 +20,7 @@ class SkipEmptyTestCase(BaseSIOTestCase):
 
         class SimpleIO:
             skip_empty_keys = True
+
             class SkipEmpty:
                 pass
 

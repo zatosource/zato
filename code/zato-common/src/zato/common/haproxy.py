@@ -14,7 +14,7 @@ from tempfile import NamedTemporaryFile
 from traceback import format_exc
 
 # Zato
-from zato.common.util import make_repr, timeouting_popen
+from zato.common.util.api import make_repr, timeouting_popen
 
 logger = getLogger(__name__)
 

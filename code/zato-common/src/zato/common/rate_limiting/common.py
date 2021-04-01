@@ -46,9 +46,9 @@ class ObjectInfo(object):
     __slots__ = 'type_', 'id', 'name'
 
     def __init__(self):
-        self.type_ = None # type: unicode
+        self.type_ = None # type: str
         self.id    = None # type: int
-        self.name  = None # type: unicode
+        self.name  = None # type: str
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,10 +60,10 @@ class DefinitionItem(object):
         self.config_line = None # type: int
         self.from_ = None # type: object
         self.rate = None  # type: int
-        self.unit = None  # type: unicode
+        self.unit = None  # type: str
         self.object_id = None   # type: int
-        self.object_type = None # type: unicode
-        self.object_name = None # type: unicode
+        self.object_type = None # type: str
+        self.object_name = None # type: str
 
     def __repr__(self):
         return '<{} at {}; line:{}, from:{}, rate:{}, unit:{} ({} {} {})>'.format(

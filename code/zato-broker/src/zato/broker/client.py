@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,11 +9,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, time
+import logging
+import time
+from json import dumps, loads
 from traceback import format_exc
-
-# anyjson
-from anyjson import dumps, loads
 
 # Bunch
 from bunch import Bunch
@@ -28,10 +27,10 @@ import redis
 from builtins import bytes
 
 # Zato
-from zato.common import BROKER, ZATO_NONE
+from zato.common.api import BROKER, ZATO_NONE
 from zato.common.broker_message import KEYS, MESSAGE_TYPE, TOPICS
-from zato.common.kvdb import LuaContainer
-from zato.common.util import new_cid, spawn_greenlet
+from zato.common.kvdb.api import LuaContainer
+from zato.common.util.api import new_cid, spawn_greenlet
 
 logger = logging.getLogger(__name__)
 has_debug = logger.isEnabledFor(logging.DEBUG)
@@ -52,7 +51,7 @@ CODE_NO_SUCH_FROM_KEY = 11
 # ################################################################################################################################
 
 if 0:
-    from zato.common.kvdb import KVDB
+    from zato.common.kvdb.api import KVDB
 
     KVDB = KVDB
 
@@ -70,11 +69,11 @@ class BrokerClientAPI(object):
         raise NotImplementedError()
 
     def publish(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL, *ignored_args, **ignored_kwargs):
-        # type: (dict, str, *object, **object)
+        # type: (dict, str, object, object)
         raise NotImplementedError()
 
     def invoke_async(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ANY, expiration=BROKER.DEFAULT_EXPIRATION):
-        # type: (dict, str, *object, **object)
+        # type: (dict, str, object, object)
         raise NotImplementedError()
 
     def on_message(self, msg):
@@ -200,6 +199,13 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
                 self.ready = True
 
         def publish(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL, *ignored_args, **ignored_kwargs):
+
+            # Make sure we do not publish bytes
+            if isinstance(msg, dict):
+                for key, value in list(msg.items()):
+                    if isinstance(value, bytes):
+                        msg[key] = value.decode('utf8')
+
             msg['msg_type'] = msg_type
             topic = TOPICS[msg_type]
             msg = dumps(msg)

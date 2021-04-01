@@ -14,7 +14,7 @@ import os
 import socket
 
 # Zato
-from zato.common.util import get_current_user
+from zato.common.util.api import get_current_user
 
 # Python 2/3 compatibility
 from six import PY2
@@ -73,10 +73,11 @@ class GitRepoManager(_BaseRepoManager):
         # Add all files
         sh.git.add('-A', self.repo_location)
 
-        has_channges = 'nothing to commit' not in sh.git.status()
+        output = sh.git.status('--porcelain') # type: str
+        output = output.strip()
 
         # And commit changes if there are any
-        if has_channges:
+        if output:
             sh.git.commit('-m', 'Committing latest changes')
 
 # ################################################################################################################################

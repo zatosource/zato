@@ -25,9 +25,9 @@ from paste.util.converters import asbool
 
 # Zato
 from zato.cache import Cache as _CyCache
-from zato.common import CACHE, ZATO_NOT_GIVEN
+from zato.common.api import CACHE, ZATO_NOT_GIVEN
 from zato.common.broker_message import CACHE as CACHE_BROKER_MSG
-from zato.common.util import parse_extra_into_dict
+from zato.common.util.api import parse_extra_into_dict
 
 # Python 2/3 compatibility
 from future.utils import iteritems, itervalues

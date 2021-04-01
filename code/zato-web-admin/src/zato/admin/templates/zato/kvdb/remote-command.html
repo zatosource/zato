@@ -15,12 +15,10 @@
 {% block "extra_js" %}
     {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/javascript" src="/static/js/service/request-response.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.form.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script type="text/javascript" src="/static/js/kvdb/remote-command.js"></script>
-{% endblock %}    
-    
+{% endblock %}
 
 {% block "content" %}
 <h2 class="zato">Key/value DB : Remote commands</h2>
@@ -42,68 +40,68 @@
                     <tr>
                         <td class='inline_header'>
                         <span class="form_hint" id="command-list">
-                            Commands available: 
+                            Commands available:
     <a href="javascript:$.fn.zato.kvdb.command_template('CONFIG GET')" onmouseover="javascript:$.fn.zato.kvdb.command_help('CONFIG GET')">CONFIG GET,</a>
     <a href="javascript:$.fn.zato.kvdb.command_template('CONFIG SET')" onmouseover="javascript:$.fn.zato.kvdb.command_help('CONFIG SET')">CONFIG SET,</a>
-    <a href="javascript:$.fn.zato.kvdb.command_template('CONFIG RESETSTAT')" onmouseover="javascript:$.fn.zato.kvdb.command_help('CONFIG RESETSTAT')">CONFIG RESETSTAT,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('DBSIZE')" onmouseover="javascript:$.fn.zato.kvdb.command_help('DBSIZE')">DBSIZE</a>, 
-    <a href="javascript:$.fn.zato.kvdb.command_template('DECR')" onmouseover="javascript:$.fn.zato.kvdb.command_help('DECR')">DECR,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('DECRBY')" onmouseover="javascript:$.fn.zato.kvdb.command_help('DECRBY')">DECRBY,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('DEL')" onmouseover="javascript:$.fn.zato.kvdb.command_help('DEL')">DEL,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('DUMP')" onmouseover="javascript:$.fn.zato.kvdb.command_help('DUMP')">DUMP,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('ECHO')" onmouseover="javascript:$.fn.zato.kvdb.command_help('ECHO')">ECHO,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('EXISTS')" onmouseover="javascript:$.fn.zato.kvdb.command_help('EXISTS')">EXISTS,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('EXPIRE')" onmouseover="javascript:$.fn.zato.kvdb.command_help('EXPIRE')">EXPIRE,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('EXPIREAT')" onmouseover="javascript:$.fn.zato.kvdb.command_help('EXPIREAT')">EXPIREAT,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('FLUSHDB')" onmouseover="javascript:$.fn.zato.kvdb.command_help('FLUSHDB')">FLUSHDB,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('GET')" onmouseover="javascript:$.fn.zato.kvdb.command_help('GET')">GET,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('HDEL')" onmouseover="javascript:$.fn.zato.kvdb.command_help('HDEL')">HDEL,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('HEXISTS')" onmouseover="javascript:$.fn.zato.kvdb.command_help('HEXISTS')">HEXISTS,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('HGET')" onmouseover="javascript:$.fn.zato.kvdb.command_help('HGET')">HGET,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('HGETALL')" onmouseover="javascript:$.fn.zato.kvdb.command_help('HGETALL')">HGETALL,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('HINCRBY')" onmouseover="javascript:$.fn.zato.kvdb.command_help('HINCRBY')">HINCRBY,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('HKEYS')" onmouseover="javascript:$.fn.zato.kvdb.command_help('HKEYS')">HKEYS,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('HLEN')" onmouseover="javascript:$.fn.zato.kvdb.command_help('HLEN')">HLEN,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('HSET')" onmouseover="javascript:$.fn.zato.kvdb.command_help('HSET')">HSET,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('HSETNX')" onmouseover="javascript:$.fn.zato.kvdb.command_help('HSETNX')">HSETNX,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('HVALS')" onmouseover="javascript:$.fn.zato.kvdb.command_help('HVALS')">HVALS,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('INCR')" onmouseover="javascript:$.fn.zato.kvdb.command_help('INCR')">INCR,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('INCRBY')" onmouseover="javascript:$.fn.zato.kvdb.command_help('INCRBY')">INCRBY,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('INFO')" onmouseover="javascript:$.fn.zato.kvdb.command_help('INFO')">INFO,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('KEYS')" onmouseover="javascript:$.fn.zato.kvdb.command_help('KEYS')">KEYS,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('LLEN')" onmouseover="javascript:$.fn.zato.kvdb.command_help('LLEN')">LLEN,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('LPOP')" onmouseover="javascript:$.fn.zato.kvdb.command_help('LPOP')">LPOP,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('LPUSH')" onmouseover="javascript:$.fn.zato.kvdb.command_help('LPUSH')">LPUSH,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('LPUSHX')" onmouseover="javascript:$.fn.zato.kvdb.command_help('LPUSHX')">LPUSHX,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('LRANGE')" onmouseover="javascript:$.fn.zato.kvdb.command_help('LRANGE')">LRANGE,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('LREM')" onmouseover="javascript:$.fn.zato.kvdb.command_help('LREM')">LREM,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('LSET')" onmouseover="javascript:$.fn.zato.kvdb.command_help('LSET')">LSET,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('LTRIM')" onmouseover="javascript:$.fn.zato.kvdb.command_help('LTRIM')">LTRIM,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('MGET')" onmouseover="javascript:$.fn.zato.kvdb.command_help('MGET')">MGET,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('MSET')" onmouseover="javascript:$.fn.zato.kvdb.command_help('MSET')">MSET,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('MSETNX')" onmouseover="javascript:$.fn.zato.kvdb.command_help('MSETNX')">MSETNX,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('OBJECT')" onmouseover="javascript:$.fn.zato.kvdb.command_help('OBJECT')">OBJECT,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('PERSIST')" onmouseover="javascript:$.fn.zato.kvdb.command_help('PERSIST')">PERSIST,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('PEXPIRE')" onmouseover="javascript:$.fn.zato.kvdb.command_help('PEXPIRE')">PEXPIRE,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('PEXPIREAT')" onmouseover="javascript:$.fn.zato.kvdb.command_help('PEXPIREAT')">PEXPIREAT,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('PING')" onmouseover="javascript:$.fn.zato.kvdb.command_help('PING')">PING,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('PSETEX')" onmouseover="javascript:$.fn.zato.kvdb.command_help('PSETEX')">PSETEX,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('PTTL')" onmouseover="javascript:$.fn.zato.kvdb.command_help('PTTL')">PTTL,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('RANDOMKEY')" onmouseover="javascript:$.fn.zato.kvdb.command_help('RANDOMKEY')">RANDOMKEY,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('RENAME')" onmouseover="javascript:$.fn.zato.kvdb.command_help('RENAME')">RENAME,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('RENAMENX')" onmouseover="javascript:$.fn.zato.kvdb.command_help('RENAMENX')">RENAMENX,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('RESTORE')" onmouseover="javascript:$.fn.zato.kvdb.command_help('RESTORE')">RESTORE,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('RPOP')" onmouseover="javascript:$.fn.zato.kvdb.command_help('RPOP')">RPOP,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('SADD')" onmouseover="javascript:$.fn.zato.kvdb.command_help('SADD')">SADD,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('SET')" onmouseover="javascript:$.fn.zato.kvdb.command_help('SET')">SET,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('SISMEMBER')" onmouseover="javascript:$.fn.zato.kvdb.command_help('SISMEMBER')">SISMEMBER,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('SMEMBERS')" onmouseover="javascript:$.fn.zato.kvdb.command_help('SMEMBERS')">SMEMBERS,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('SREM')" onmouseover="javascript:$.fn.zato.kvdb.command_help('SREM')">SREM,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('TIME')" onmouseover="javascript:$.fn.zato.kvdb.command_help('TIME')">TIME,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('TTL')" onmouseover="javascript:$.fn.zato.kvdb.command_help('TTL')">TTL,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('TYPE')" onmouseover="javascript:$.fn.zato.kvdb.command_help('TYPE')">TYPE,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('ZADD')" onmouseover="javascript:$.fn.zato.kvdb.command_help('ZADD')">ZADD,</a> 
-    <a href="javascript:$.fn.zato.kvdb.command_template('ZRANGE')" onmouseover="javascript:$.fn.zato.kvdb.command_help('ZRANGE')">ZRANGE,</a> 
+    <a href="javascript:$.fn.zato.kvdb.command_template('CONFIG RESETSTAT')" onmouseover="javascript:$.fn.zato.kvdb.command_help('CONFIG RESETSTAT')">CONFIG RESETSTAT,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('DBSIZE')" onmouseover="javascript:$.fn.zato.kvdb.command_help('DBSIZE')">DBSIZE</a>,
+    <a href="javascript:$.fn.zato.kvdb.command_template('DECR')" onmouseover="javascript:$.fn.zato.kvdb.command_help('DECR')">DECR,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('DECRBY')" onmouseover="javascript:$.fn.zato.kvdb.command_help('DECRBY')">DECRBY,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('DEL')" onmouseover="javascript:$.fn.zato.kvdb.command_help('DEL')">DEL,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('DUMP')" onmouseover="javascript:$.fn.zato.kvdb.command_help('DUMP')">DUMP,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('ECHO')" onmouseover="javascript:$.fn.zato.kvdb.command_help('ECHO')">ECHO,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('EXISTS')" onmouseover="javascript:$.fn.zato.kvdb.command_help('EXISTS')">EXISTS,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('EXPIRE')" onmouseover="javascript:$.fn.zato.kvdb.command_help('EXPIRE')">EXPIRE,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('EXPIREAT')" onmouseover="javascript:$.fn.zato.kvdb.command_help('EXPIREAT')">EXPIREAT,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('FLUSHDB')" onmouseover="javascript:$.fn.zato.kvdb.command_help('FLUSHDB')">FLUSHDB,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('GET')" onmouseover="javascript:$.fn.zato.kvdb.command_help('GET')">GET,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('HDEL')" onmouseover="javascript:$.fn.zato.kvdb.command_help('HDEL')">HDEL,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('HEXISTS')" onmouseover="javascript:$.fn.zato.kvdb.command_help('HEXISTS')">HEXISTS,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('HGET')" onmouseover="javascript:$.fn.zato.kvdb.command_help('HGET')">HGET,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('HGETALL')" onmouseover="javascript:$.fn.zato.kvdb.command_help('HGETALL')">HGETALL,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('HINCRBY')" onmouseover="javascript:$.fn.zato.kvdb.command_help('HINCRBY')">HINCRBY,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('HKEYS')" onmouseover="javascript:$.fn.zato.kvdb.command_help('HKEYS')">HKEYS,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('HLEN')" onmouseover="javascript:$.fn.zato.kvdb.command_help('HLEN')">HLEN,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('HSET')" onmouseover="javascript:$.fn.zato.kvdb.command_help('HSET')">HSET,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('HSETNX')" onmouseover="javascript:$.fn.zato.kvdb.command_help('HSETNX')">HSETNX,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('HVALS')" onmouseover="javascript:$.fn.zato.kvdb.command_help('HVALS')">HVALS,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('INCR')" onmouseover="javascript:$.fn.zato.kvdb.command_help('INCR')">INCR,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('INCRBY')" onmouseover="javascript:$.fn.zato.kvdb.command_help('INCRBY')">INCRBY,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('INFO')" onmouseover="javascript:$.fn.zato.kvdb.command_help('INFO')">INFO,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('KEYS')" onmouseover="javascript:$.fn.zato.kvdb.command_help('KEYS')">KEYS,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('LLEN')" onmouseover="javascript:$.fn.zato.kvdb.command_help('LLEN')">LLEN,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('LPOP')" onmouseover="javascript:$.fn.zato.kvdb.command_help('LPOP')">LPOP,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('LPUSH')" onmouseover="javascript:$.fn.zato.kvdb.command_help('LPUSH')">LPUSH,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('LPUSHX')" onmouseover="javascript:$.fn.zato.kvdb.command_help('LPUSHX')">LPUSHX,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('LRANGE')" onmouseover="javascript:$.fn.zato.kvdb.command_help('LRANGE')">LRANGE,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('LREM')" onmouseover="javascript:$.fn.zato.kvdb.command_help('LREM')">LREM,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('LSET')" onmouseover="javascript:$.fn.zato.kvdb.command_help('LSET')">LSET,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('LTRIM')" onmouseover="javascript:$.fn.zato.kvdb.command_help('LTRIM')">LTRIM,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('MGET')" onmouseover="javascript:$.fn.zato.kvdb.command_help('MGET')">MGET,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('MSET')" onmouseover="javascript:$.fn.zato.kvdb.command_help('MSET')">MSET,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('MSETNX')" onmouseover="javascript:$.fn.zato.kvdb.command_help('MSETNX')">MSETNX,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('OBJECT')" onmouseover="javascript:$.fn.zato.kvdb.command_help('OBJECT')">OBJECT,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('PERSIST')" onmouseover="javascript:$.fn.zato.kvdb.command_help('PERSIST')">PERSIST,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('PEXPIRE')" onmouseover="javascript:$.fn.zato.kvdb.command_help('PEXPIRE')">PEXPIRE,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('PEXPIREAT')" onmouseover="javascript:$.fn.zato.kvdb.command_help('PEXPIREAT')">PEXPIREAT,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('PING')" onmouseover="javascript:$.fn.zato.kvdb.command_help('PING')">PING,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('PSETEX')" onmouseover="javascript:$.fn.zato.kvdb.command_help('PSETEX')">PSETEX,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('PTTL')" onmouseover="javascript:$.fn.zato.kvdb.command_help('PTTL')">PTTL,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('RANDOMKEY')" onmouseover="javascript:$.fn.zato.kvdb.command_help('RANDOMKEY')">RANDOMKEY,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('RENAME')" onmouseover="javascript:$.fn.zato.kvdb.command_help('RENAME')">RENAME,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('RENAMENX')" onmouseover="javascript:$.fn.zato.kvdb.command_help('RENAMENX')">RENAMENX,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('RESTORE')" onmouseover="javascript:$.fn.zato.kvdb.command_help('RESTORE')">RESTORE,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('RPOP')" onmouseover="javascript:$.fn.zato.kvdb.command_help('RPOP')">RPOP,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('SADD')" onmouseover="javascript:$.fn.zato.kvdb.command_help('SADD')">SADD,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('SET')" onmouseover="javascript:$.fn.zato.kvdb.command_help('SET')">SET,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('SISMEMBER')" onmouseover="javascript:$.fn.zato.kvdb.command_help('SISMEMBER')">SISMEMBER,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('SMEMBERS')" onmouseover="javascript:$.fn.zato.kvdb.command_help('SMEMBERS')">SMEMBERS,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('SREM')" onmouseover="javascript:$.fn.zato.kvdb.command_help('SREM')">SREM,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('TIME')" onmouseover="javascript:$.fn.zato.kvdb.command_help('TIME')">TIME,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('TTL')" onmouseover="javascript:$.fn.zato.kvdb.command_help('TTL')">TTL,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('TYPE')" onmouseover="javascript:$.fn.zato.kvdb.command_help('TYPE')">TYPE,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('ZADD')" onmouseover="javascript:$.fn.zato.kvdb.command_help('ZADD')">ZADD,</a>
+    <a href="javascript:$.fn.zato.kvdb.command_template('ZRANGE')" onmouseover="javascript:$.fn.zato.kvdb.command_help('ZRANGE')">ZRANGE,</a>
     <a href="javascript:$.fn.zato.kvdb.command_template('ZREM')" onmouseover="javascript:$.fn.zato.kvdb.command_help('ZREM')">ZREM</a>
                         </span>
                             {{ form.command }}
@@ -120,13 +118,13 @@
                             </div>
                         </td>
                     </tr>
-        
+
                     <tr>
                         <td>
                             {{ form.result }}
                         </td>
                     </tr>
-        
+
                 </table>
             </form>
         </div>

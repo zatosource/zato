@@ -16,8 +16,8 @@ from traceback import format_exc
 from gevent.lock import RLock
 
 # Zato
-from zato.common import SECRETS
-from zato.common.util import ping_odoo
+from zato.common.const import SECRETS
+from zato.common.util.api import ping_odoo
 from zato.server.connection.queue import ConnectionQueue
 
 # Python 2/3 compatibility

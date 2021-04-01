@@ -15,8 +15,9 @@ import re
 from past.builtins import unicode
 
 # Zato
-from zato.common import KVDB, ZatoException
-from zato.common.util import dict_item_name
+from zato.common.api import KVDB
+from zato.common.exception import ZatoException
+from zato.common.util.api import dict_item_name
 from zato.server.service import Int
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.server.service.internal.kvdb.data_dict import DataDictService
@@ -36,7 +37,7 @@ class GetList(DataDictService):
         self.response.payload[:] = self.get_data()
 
 class _CreateEdit(DataDictService):
-    NAME_PATTERN = '\w+'
+    NAME_PATTERN = '\w+' # noqa: W605
     NAME_RE = re.compile(NAME_PATTERN)
 
     class SimpleIO(AdminSIO):
@@ -52,7 +53,8 @@ class _CreateEdit(DataDictService):
                 continue
             else:
                 msg = 'System and key may contain only letters, digits and an underscore, failed to validate `{}` ' + \
-                       'against the regular expression {}'.format(name, self.NAME_PATTERN)
+                       'against the regular expression {}'
+                msg = msg.format(name, self.NAME_PATTERN)
                 raise ZatoException(self.cid, msg)
 
         for item in self._get_dict_items():

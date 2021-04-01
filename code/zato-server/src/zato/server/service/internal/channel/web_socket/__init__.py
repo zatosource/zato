@@ -17,12 +17,12 @@ from traceback import format_exc
 from six import add_metaclass
 
 # Zato
-from zato.common import DATA_FORMAT
+from zato.common.api import DATA_FORMAT
 from zato.common.broker_message import CHANNEL
 from zato.common.odb.model import ChannelWebSocket, PubSubSubscription, PubSubTopic, Service as ServiceModel, WebSocketClient
 from zato.common.odb.query import channel_web_socket_list, channel_web_socket, service, web_socket_client, \
      web_socket_client_by_pub_id, web_socket_client_list, web_socket_sub_key_data_list
-from zato.common.util import is_port_taken
+from zato.common.util.api import is_port_taken
 from zato.common.util.sql import elems_with_opaque
 from zato.common.util.time_ import datetime_from_ms
 from zato.server.service import AsIs, DateTime, Int, Service
@@ -42,6 +42,9 @@ if 0:
 
 # ################################################################################################################################
 
+generic_attrs = ['is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', \
+    'max_len_messages_received', 'max_bytes_per_message_sent', 'max_bytes_per_message_received']
+
 elem = 'channel_web_socket'
 model = ChannelWebSocket
 label = 'a WebSocket channel'
@@ -51,7 +54,8 @@ broker_message_prefix = 'WEB_SOCKET_'
 list_func = channel_web_socket_list
 skip_input_params = ['service_id', 'is_out']
 create_edit_input_required_extra = ['service_name']
-output_optional_extra = ['sec_type']
+create_edit_input_optional_extra = generic_attrs
+output_optional_extra = ['sec_type', 'service_name'] + generic_attrs
 
 # ################################################################################################################################
 
@@ -95,10 +99,16 @@ def instance_hook(self, input, instance, attrs):
     if attrs.is_create_edit:
         instance.hook_service = _get_hook_service(self)
         instance.is_out = False
-        instance.service = attrs._meta_session.query(ServiceModel).\
+
+        service = attrs._meta_session.query(ServiceModel).\
             filter(ServiceModel.name==input.service_name).\
             filter(ServiceModel.cluster_id==input.cluster_id).\
-            one()
+            first()
+
+        if not service:
+            raise ValueError('Service not found `{}`'.format(input.service_name))
+        else:
+            instance.service = service
 
 # ################################################################################################################################
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,11 +12,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 from traceback import format_exc
 
+# ciso8601
+from ciso8601 import parse_datetime
+
 # crontab
 from crontab import CronTab
-
-# dateutil
-from dateutil.parser import parse
 
 # gevent
 from gevent import sleep
@@ -27,10 +27,10 @@ from past.builtins import basestring
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
-from zato.common import CHANNEL, DATA_FORMAT, SCHEDULER, ZATO_NONE
+from zato.common.api import CHANNEL, DATA_FORMAT, SCHEDULER, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER as SCHEDULER_MSG, SERVICE, TOPICS
-from zato.common.kvdb import KVDB
-from zato.common.util import new_cid, spawn_greenlet
+from zato.common.kvdb.api import KVDB
+from zato.common.util.api import new_cid, spawn_greenlet
 from zato.scheduler.backend import Interval, Job, Scheduler as _Scheduler
 
 # ################################################################################################################################
@@ -42,7 +42,7 @@ _has_debug = logger.isEnabledFor(logging.DEBUG)
 
 def _start_date(job_data):
     if isinstance(job_data.start_date, basestring):
-        return parse(job_data.start_date)
+        return parse_datetime(job_data.start_date)
     return job_data.start_date
 
 # ################################################################################################################################
@@ -94,11 +94,15 @@ class Scheduler(BrokerMessageReceiver):
         """
         name = ctx['name']
 
+        payload = ctx['cb_kwargs']['extra']
+        if isinstance(payload, bytes):
+            payload = payload.decode('utf8')
+
         msg = {
             'action': SCHEDULER_MSG.JOB_EXECUTED.value,
             'name':name,
             'service': ctx['cb_kwargs']['service'],
-            'payload':ctx['cb_kwargs']['extra'],
+            'payload':payload,
             'cid':ctx['cid'],
             'job_type': ctx['type']
         }
@@ -155,7 +159,7 @@ class Scheduler(BrokerMessageReceiver):
             interval = Interval(days=days, hours=hours, minutes=minutes, seconds=seconds)
 
         job = Job(id, name, job_type, interval, start_time, cb_kwargs=cb_kwargs, max_repeats=max_repeats,
-            is_active=is_active, cron_definition=cron_definition, old_name=old_name)
+            is_active=is_active, cron_definition=cron_definition, service=service, extra=extra, old_name=old_name)
 
         func = self.sched.create if is_create else self.sched.edit
         func(job, **kwargs)

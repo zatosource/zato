@@ -97,6 +97,8 @@ considered public as object names -- the API of the formatter objects is
 still considered an implementation detail.)
 """
 
+# flake8: noqa
+
 __version__ = '1.2.1'
 __all__ = [
     'ArgumentParser',

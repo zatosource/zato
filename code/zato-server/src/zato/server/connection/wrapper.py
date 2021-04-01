@@ -17,11 +17,11 @@ from gevent import spawn
 from gevent.lock import RLock
 
 # Zato
-from zato.common.util import spawn_greenlet
+from zato.common.util.api import spawn_greenlet
 
 # ################################################################################################################################
 
-logger = getLogger(__name__)
+logger = getLogger('zato')
 
 # ################################################################################################################################
 
@@ -46,31 +46,42 @@ if typing.TYPE_CHECKING:
 class Wrapper(object):
     """ Base class for non-queue based connections wrappers.
     """
+    needs_self_client = False
     wrapper_type = '<undefined-Wrapper>'
+    required_secret_attr = None
+    required_secret_label = None
+    build_if_not_active = False
 
     def __init__(self, config, server=None):
         # type: (Bunch, ParallelServer)
         self.config = config
         self.config.username_pretty = self.config.username or '(None)'
         self.server = server
-        self._client = None
+        self._impl = None
         self.delete_requested = False
         self.is_connected = False
         self.update_lock = RLock()
 
     @property
     def client(self):
-        if not self._client:
+        if not self._impl:
             self.build_wrapper(False)
-        return self._client
+        return self._impl
 
 # ################################################################################################################################
 
     def build_wrapper(self, should_spawn=True):
 
         if not self.config.is_active:
-            logger.info('Skipped building an inactive %s `%s`', self.wrapper_type, self.config.name)
-            return
+            if not self.build_if_not_active:
+                logger.info('Skipped building an inactive %s (%s)', self.wrapper_type, self.config.name)
+                return
+
+        if self.required_secret_attr:
+            if not self.config[self.required_secret_attr]:
+                logger.warn('Skipped building a %s without %s defined (%s)', self.wrapper_type,
+                    self.required_secret_label, self.config.name)
+                return
 
         # If we are to build the wrapper, it means that we are not connected at this time
         self.is_connected = False
@@ -114,7 +125,12 @@ class Wrapper(object):
 # ################################################################################################################################
 
     def delete(self):
-        if self.client:
+        if self.needs_self_client:
+            if not self._impl:
+                return
+            else:
+                self._delete()
+        else:
             self._delete()
 
 # ################################################################################################################################

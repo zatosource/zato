@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from json import dumps
 from traceback import format_exc
 
 # Django
@@ -18,7 +17,8 @@ from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 
 # Zato
-from zato.common import GENERIC
+from zato.common.api import GENERIC
+from zato.common.json_internal import dumps
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.sftp import CommandShellForm, CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, ping_connection, slugify
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 _sio_required = 'name', 'log_level'
 _sio_optional = 'is_active', 'host', 'port', 'username', 'password', 'identity_file', \
     'ssh_config_file', 'buffer_size', 'is_compression_enabled', 'bandwidth_limit', 'force_ip_type', 'should_flush', \
-    'should_preserve_meta', 'ssh_options', 'sftp_command', 'ping_command'
+    'should_preserve_meta', 'ssh_options', 'sftp_command', 'ping_command', 'default_directory'
 
 # ################################################################################################################################
 # ################################################################################################################################

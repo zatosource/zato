@@ -8,19 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-import os
-
-# PyOTP
-import pyotp
-
-# Zato
-from zato.client import AnyServiceInvoker
-from zato.common import odb, TOTP
-from zato.common.crypto import CryptoManager
-from zato.common.util import get_config, get_crypto_manager_from_server_config, get_odb_session_from_server_config, \
-     get_server_client_auth
-
 # ################################################################################################################################
 
 # Type checking
@@ -39,15 +26,6 @@ if typing.TYPE_CHECKING:
     unicode = unicode
 
 # ################################################################################################################################
-
-class ZatoClient(AnyServiceInvoker):
-    def __init__(self, *args, **kwargs):
-        super(ZatoClient, self).__init__(*args, **kwargs)
-        self.cluster_id = None
-        self.odb_session = None
-
-# ################################################################################################################################
-
 class Util(object):
     def __init__(self, server_path):
         self.server_path = server_path
@@ -57,6 +35,21 @@ class Util(object):
         return '<{} at {} for `{}`>'.format(self.__class__.__name__, hex(id(self)), self.server_path)
 
     def set_zato_client(self):
+
+        # stdlib
+        import os
+
+        # Zato
+        from zato.client import AnyServiceInvoker
+        from zato.common.api import odb
+        from zato.common.util.api import get_config, get_crypto_manager_from_server_config, get_odb_session_from_server_config, \
+             get_server_client_auth
+
+        class ZatoClient(AnyServiceInvoker):
+            def __init__(self, *args, **kwargs):
+                super(ZatoClient, self).__init__(*args, **kwargs)
+                self.cluster_id = None
+                self.odb_session = None
 
         repo_dir = os.path.join(os.path.abspath(os.path.join(self.server_path)), 'config', 'repo')
         config = get_config(repo_dir, 'server.conf')
@@ -78,11 +71,20 @@ class Util(object):
 
 # ################################################################################################################################
 
-def get_totp_info_from_args(args, default_key_label=TOTP.default_label):
+def get_totp_info_from_args(args, default_key_label=None):
     """ Returns a key and its label extracted from command line arguments
     or auto-generates a new pair if they are missing in args.
     """
     # type: (Namespace, unicode) -> (unicode, unicode)
+
+    # PyOTP
+    import pyotp
+
+    # Zato
+    from zato.common.crypto.totp import TOTPManager
+    from zato.common.api import TOTP
+
+    default_key_label = default_key_label or TOTP.default_label
 
     # If there was a key given on input, we need to validate it,
     # this report an erorr if the key cannot be used.
@@ -93,7 +95,7 @@ def get_totp_info_from_args(args, default_key_label=TOTP.default_label):
         # If we are here, it means that the key was valid
         key = args.key
     else:
-        key = CryptoManager.generate_totp_key()
+        key = TOTPManager.generate_totp_key()
 
     return key, args.key_label if args.key_label else default_key_label
 

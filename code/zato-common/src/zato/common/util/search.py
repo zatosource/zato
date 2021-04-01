@@ -37,7 +37,7 @@ class SearchResults(object):
 
     def __repr__(self):
         # To avoice circular imports - this is OK because we very rarely repr(self) anyway
-        from zato.common.util import make_repr
+        from zato.common.util.api import make_repr
         return make_repr(self)
 
 # ################################################################################################################################
