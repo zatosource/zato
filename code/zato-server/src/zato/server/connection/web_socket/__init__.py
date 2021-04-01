@@ -1041,7 +1041,7 @@ class WebSocket(_WebSocket):
 
             # Input bytes must be UTF-8
             try:
-                data = data.decode('utf8')
+                data.decode('utf8')
             except UnicodeDecodeError as e:
                 reason = 'Invalid UTF-8 bytes'
                 msg = '{}; `{}`'.format(reason, e.args)
