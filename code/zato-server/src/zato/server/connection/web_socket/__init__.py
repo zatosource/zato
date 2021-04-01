@@ -248,13 +248,13 @@ class WebSocket(_WebSocket):
         self.connection_time = self.last_seen = datetime.utcnow()
         self.sec_type = self.config.sec_type
         self.pings_missed = 0
-        self.pings_missed_threshold = self.config.get('pings_missed_threshold') or 2
+        self.pings_missed_threshold = self.config.pings_missed_threshold or 2
         self.user_data = Bunch() # Arbitrary user-defined data
         self._disconnect_requested = False # Have we been asked to disconnect this client?
 
         # Audit log configuration ..
-        self.is_audit_log_sent_active     = self.config.get('is_audit_log_sent_active') or False
-        self.is_audit_log_received_active = self.config.get('is_audit_log_received_active') or False
+        self.is_audit_log_sent_active     = self.config.is_audit_log_sent_active
+        self.is_audit_log_received_active = self.config.is_audit_log_received_active
 
         # .. and audit log setup.
         self.parallel_server.set_up_object_audit_log_by_config(_audit_msg_type, self.pub_client_id, self.config, False)
@@ -565,7 +565,6 @@ class WebSocket(_WebSocket):
         _response=WEB_SOCKET.ACTION.CLIENT_RESPONSE, _code_invalid_utf8=code_invalid_utf8):
         """ Parses an incoming message into a Bunch object.
         """
-
         # Parse JSON into a dictionary
         parsed = self._json_parser.parse(data)
         parsed = parsed.as_dict()
@@ -1041,7 +1040,7 @@ class WebSocket(_WebSocket):
 
             # Input bytes must be UTF-8
             try:
-                data = data.decode('utf8')
+                data.decode('utf8')
             except UnicodeDecodeError as e:
                 reason = 'Invalid UTF-8 bytes'
                 msg = '{}; `{}`'.format(reason, e.args)
