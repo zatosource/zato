@@ -147,7 +147,7 @@ typing==3.5.3.0
 tzlocal==2.1
 ujson==3.2.0
 umalqurra==0.2
-urllib3==1.26.2
+urllib3==1.26.4
 vine==5.0.0
 watchdog==0.9.0
 WebHelpers==1.3
