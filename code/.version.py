@@ -9,8 +9,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import inspect, json, os
 
+'''
 # sh
 import sh
+
 
 # Cannot use built in __file__ because we are execfile'd
 _file = inspect.currentframe().f_code.co_filename
@@ -37,3 +39,6 @@ with sh.pushd(release_info_dir):
     revision = sh.git('rev-parse', '--short', 'HEAD').strip()
 
 version = '{}.{}+rev.{}'.format(release['major'], release['minor'], revision)
+'''
+
+version = '3.2'
