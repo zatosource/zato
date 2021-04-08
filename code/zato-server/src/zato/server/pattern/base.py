@@ -59,7 +59,7 @@ class ParallelBase:
             entry.req_ts_utc = ctx.req_ts_utc
             entry.len_targets = len(ctx.target_list)
             entry.remaining_targets = entry.len_targets
-            entry.target_responses = {}
+            entry.target_responses = []
             entry.final_responses = {}
             entry.on_target_list = ctx.on_target_list
             entry.on_final_list = ctx.on_final_list
@@ -122,6 +122,10 @@ class ParallelBase:
             # .. find our cache entry ..
             entry = self.cache.get(invoked_service.cid) # type: CacheEntry
 
+            print()
+            print(111, entry)
+            print()
+
             # .. exit early if we cannot find the entry for any reason ..
             if not entry:
                 logger.warn('No such parallel cache key `%s`', invoked_service.cid)
@@ -153,7 +157,11 @@ class ParallelBase:
                     'resp_ts_utc': invocation_response.resp_ts_utc.isoformat(),
                     'ok': invocation_response.ok,
                     'exception': invocation_response.exception,
+                    'cid': invocation_response.cid,
                 }
+
+                # .. add the received response to the list of what we have so far ..
+                entry.target_responses.append(dict_payload)
 
                 # .. invoke any potential on-target callbacks ..
                 if entry.on_target_list:
@@ -177,7 +185,7 @@ class ParallelBase:
 
                             for on_final_item in entry.on_final_list: # type: str
                                 invoked_service.invoke_async(
-                                    on_final_item, dict_payload,
+                                    on_final_item, entry.target_responses,
                                     channel=self.on_final_channel, cid=invoked_service.cid)
 
                     # .. now, clean up by deleting the current entry from cache.
