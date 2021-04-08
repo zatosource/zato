@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import datetime
+from json import dumps
 from logging import getLogger
 from traceback import format_exc
 
@@ -16,8 +17,7 @@ from gevent import sleep
 
 # Zato
 from zato.common.exception import ZatoException
-from zato.common.json_internal import dumps
-from zato.common.util.api import new_cid
+from zato.common.util import new_cid
 
 # ################################################################################################################################
 # ################################################################################################################################

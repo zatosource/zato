@@ -49,9 +49,9 @@ from zato.server.connection.search import SearchAPI
 from zato.server.connection.sms import SMSAPI
 from zato.server.connection.zmq_.outgoing import ZMQFacade
 from zato.server.message import MessageFacade
-from zato.server.pattern.fanout import FanOut
-from zato.server.pattern.invoke_retry import InvokeRetry
-from zato.server.pattern.parallel import ParallelExec
+from zato.server.pattern.api import FanOut
+from zato.server.pattern.api import InvokeRetry
+from zato.server.pattern.api import ParallelExec
 from zato.server.pubsub import PubSub
 from zato.server.service.reqresp import AMQPRequestData, Cloud, Definition, IBMMQRequestData, InstantMessaging, Outgoing, \
      Request, Response
@@ -290,10 +290,11 @@ class PatternsFacade(object):
     """
     __slots__ = ('invoke_retry', 'fanout', 'parallel')
 
-    def __init__(self, invoking_service):
+    def __init__(self, invoking_service, cache, lock):
+        # type: (Service) -> None
         self.invoke_retry = InvokeRetry(invoking_service)
-        self.fanout = FanOut(invoking_service)
-        self.parallel = ParallelExec(invoking_service)
+        self.fanout = FanOut(invoking_service, cache, lock)
+        self.parallel = ParallelExec(invoking_service, cache, lock)
 
 # ################################################################################################################################
 
@@ -491,7 +492,7 @@ class Service(object):
                 self._json_pointer_store, self._xpath_store, self._msg_ns_store, self.request.payload, self.time)
 
         if self.component_enabled_patterns:
-            self.patterns = PatternsFacade(self)
+            self.patterns = PatternsFacade(self, self.server.internal_cache_patterns, self.server.internal_cache_lock_patterns)
 
         if may_have_wsgi_environ:
             self.request.http.init(self.wsgi_environ)
