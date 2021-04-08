@@ -1562,7 +1562,11 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         transport = msg.get('transport')
 
         if msg.get('channel') in (CHANNEL.FANOUT_ON_TARGET, CHANNEL.FANOUT_ON_FINAL, CHANNEL.PARALLEL_EXEC_ON_TARGET):
-            payload = loads(msg['payload'])
+
+            if not isinstance(msg['payload'], dict):
+                payload = loads(msg['payload'])
+            else:
+                payload = msg['payload']
         else:
             payload = msg['payload']
 
