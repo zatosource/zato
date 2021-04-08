@@ -14,7 +14,7 @@ try:
 
 # Python 3.6
 except ImportError:
-    from zato.common.ext.dataclasses import * #
+    from zato.common.ext._dataclasses import * #
 
 # Python 3.6+
 else:
