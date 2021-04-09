@@ -685,6 +685,13 @@ class WebSocket(_WebSocket):
                 # Ok, still connected
                 if self.stream and (not self.server_terminated):
                     try:
+
+                        _ts_before_invoke = _now()
+
+                        logger.info('Tok ext0: [%s / %s] ts:%s exp:%s -> %s',
+                            self.token.value, self.pub_client_id, _ts_before_invoke, self.token.expires_at,
+                             _ts_before_invoke > self.token.expires_at)
+
                         response = self.invoke_client(new_cid(), None, use_send=False)
                     except RuntimeError:
                         logger.warn('Closing connection due to `%s`', format_exc())
