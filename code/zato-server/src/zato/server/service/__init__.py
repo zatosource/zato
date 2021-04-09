@@ -717,7 +717,7 @@ class Service(object):
                     if channel in _pattern_channels:
                         func = self.patterns.fanout.on_call_finished if channel == CHANNEL.FANOUT_CALL else \
                             self.patterns.parallel.on_call_finished
-                        spawn(func, self, service.response.payload, exc_formatted)
+                        spawn(func, self, service.response.payload, e)
 
                 except Exception as resp_e:
 
