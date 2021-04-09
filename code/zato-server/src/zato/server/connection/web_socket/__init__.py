@@ -933,7 +933,7 @@ class WebSocket(_WebSocket):
         except AttributeError as e:
             if e.args[0] == "'NoneType' object has no attribute 'text_message'":
                 _msg = 'Service response discarded (client disconnected), cid:`%s`, msg.meta:`%s`'
-                _meta = msg.get_meta()
+                _meta = response.get_meta()
                 logger.warn(_msg, _meta)
                 logger_zato.warn(_msg, _meta)
 
