@@ -106,7 +106,13 @@ class ParallelBase:
             ctx.on_target_list = [on_target] if isinstance(on_target, str) else on_target
 
         # .. invoke our implementation in background ..
-        spawn_greenlet(self._invoke, ctx)
+        try:
+            spawn_greenlet(self._invoke, ctx)
+        except Exception:
+            # Explicitly ignore any exception caught - this is because we are catching
+            # deeper in the call stack to provide it to callback services so we do not want
+            # to raise it here too.
+            pass
 
         # .. and return the CID to the caller.
         return cid
@@ -176,12 +182,10 @@ class ParallelBase:
                     if self.needs_on_final:
                         if entry.on_final_list:
 
-                            # Updates the dictionary in-place
-                            dict_payload['phase'] = 'on-final'
-
                             # This message is what all the on-final callbacks
                             # receive in their self.request.payload attribute.
                             on_final_message = {
+                                'phase': 'on-final',
                                 'source': invocation_response.source,
                                 'req_ts_utc': entry.req_ts_utc,
                                 'on_target': entry.on_target_list,
