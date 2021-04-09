@@ -13,6 +13,7 @@ import logging
 from datetime import datetime
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED
 from traceback import format_exc
+from typing import Optional as optional
 
 # anyjson
 from anyjson import dumps
@@ -39,9 +40,11 @@ from zato.common import BROKER, CHANNEL, DATA_FORMAT, Inactive, KVDB, NO_DEFAULT
      ZatoException, zato_no_op_marker
 from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL, SERVICE
 from zato.common.exception import Reportable
+from zato.common.ext.dataclasses import dataclass
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException
 from zato.common.nav import DictNav, ListNav
-from zato.common.util import get_response_value, make_repr, new_cid, payload_from_request, service_name_from_impl, uncamelify
+from zato.common.util import get_response_value, make_repr, new_cid, payload_from_request, service_name_from_impl, \
+     spawn_greenlet, uncamelify
 from zato.server.connection import slow_response
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
@@ -131,6 +134,10 @@ PubSub = PubSub
 
 # ################################################################################################################################
 
+_async_callback = CHANNEL.INVOKE_ASYNC_CALLBACK
+
+# ################################################################################################################################
+
 _wsgi_channels = (CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC)
 
 # ################################################################################################################################
@@ -154,6 +161,22 @@ def call_hook_with_service(hook, service):
         hook(service)
     except Exception:
         logger.error('Can\'t run hook `%s`, e:`%s`', hook, format_exc())
+
+
+# ################################################################################################################################
+
+@dataclass(init=False)
+class AsyncCtx:
+    """ Used by self.invoke_async to relay context of the invocation.
+    """
+    calling_service: str
+    service_name: str
+    cid: str
+    data: str
+    data_format: str
+    callback: optional[list] = None
+    zato_ctx: object
+    environ: dict
 
 # ################################################################################################################################
 
@@ -801,11 +824,17 @@ class Service(object):
 
         return self.invoke_by_impl_name(self.server.service_store.id_to_impl_name[service_id], *args, **kwargs)
 
+# ################################################################################################################################
+
     def invoke_async(self, name, payload='', channel=CHANNEL.INVOKE_ASYNC, data_format=DATA_FORMAT.DICT,
-                     transport=None, expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=False, cid=None, callback=None,
-                     zato_ctx={}, environ={}):
+        transport=None, expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=False, cid=None, callback=None,
+        zato_ctx=None, environ=None):
         """ Invokes a service asynchronously by its name.
         """
+
+        zato_ctx = zato_ctx if zato_ctx is not None else {}
+        environ = environ if environ is not None else {}
+
         if self.component_enabled_target_matcher:
             name, target = self.extract_target(name)
             zato_ctx['zato.request_ctx.target'] = target
@@ -836,26 +865,41 @@ class Service(object):
             if sink in self.server.service_store.name_to_impl_name:
                 callback = sink
 
-            # Otherwise the callback must be a string pointing to the actual service to reply to so we don't need to do anything.
+            else:
+                # Otherwise the callback must be a string pointing to the actual service to reply to
+                # so we do not need to do anything.
+                pass
 
-        msg = {}
-        msg['action'] = SERVICE.PUBLISH.value
-        msg['service'] = name
-        msg['payload'] = payload
-        msg['cid'] = cid
-        msg['channel'] = channel
-        msg['data_format'] = data_format
-        msg['transport'] = transport
-        msg['is_async'] = True
-        msg['callback'] = callback
-        msg['zato_ctx'] = zato_ctx
-        msg['environ'] = environ
+        async_ctx = AsyncCtx()
+        async_ctx.calling_service = self.name
+        async_ctx.service_name = name
+        async_ctx.cid = cid
+        async_ctx.data = payload
+        async_ctx.data_format = data_format
+        async_ctx.zato_ctx = zato_ctx
+        async_ctx.environ = environ
 
-        # If we have a target we need to invoke all the servers
-        # and these which are not able to handle the target will drop the message.
-        (self.broker_client.publish if target else self.broker_client.invoke_async)(msg, expiration=expiration)
+        if callback:
+            async_ctx.callback = callback if isinstance(callback, (list, tuple)) else [callback]
+
+        spawn_greenlet(self._invoke_async, async_ctx, channel)
 
         return cid
+
+# ################################################################################################################################
+
+    def _invoke_async(self, ctx, channel, _async_callback=_async_callback, _new_cid=new_cid):
+        # type: (AsyncCtx, str, object) -> None
+
+        # Invoke our target service ..
+        response = self.invoke(ctx.service_name, ctx.data, data_format=ctx.data_format, channel=channel, skip_response_elem=True)
+
+        # .. and report back the response to our callback(s), if there are any.
+        if ctx.callback:
+            for callback_service in ctx.callback: # type: str
+                self.invoke(callback_service, payload=response, channel=_async_callback, cid=_new_cid,
+                    data_format=ctx.data_format, in_reply_to=ctx.cid, environ=ctx.environ,
+                    skip_response_elem=True)
 
     def post_handle(self, _get_response_value=get_response_value, _utcnow=datetime.utcnow,
         _service_time_basic=KVDB.SERVICE_TIME_BASIC, _service_time_raw=KVDB.SERVICE_TIME_RAW,
