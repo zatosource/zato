@@ -782,15 +782,20 @@ class Service(object):
 
                     # If this was fan-out/fan-in we need to always notify our callbacks no matter the result
                     if channel in _pattern_call_channels:
-                        func = self.patterns.fanout.on_call_finished if channel == CHANNEL.FANOUT_CALL else \
-                            self.patterns.parallel.on_call_finished
+
+                        if channel == CHANNEL.FANOUT_CALL:
+                            func = self.patterns.fanout.on_call_finished
+                            exc_data = e
+                        else:
+                            func = self.patterns.parallel.on_call_finished
+                            exc_data = exc_formatted
 
                         if isinstance(service.response.payload, SimpleIOPayload):
                             payload = service.response.payload.getvalue()
                         else:
                             payload = service.response.payload
 
-                        spawn_greenlet(func, service, payload, exc_formatted)
+                        spawn_greenlet(func, service, payload, exc_data)
 
                 except Exception as resp_e:
 
