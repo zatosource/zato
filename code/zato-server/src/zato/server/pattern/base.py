@@ -122,10 +122,6 @@ class ParallelBase:
             # .. find our cache entry ..
             entry = self.cache.get(invoked_service.cid) # type: CacheEntry
 
-            print()
-            print(111, entry)
-            print()
-
             # .. exit early if we cannot find the entry for any reason ..
             if not entry:
                 logger.warn('No such parallel cache key `%s`', invoked_service.cid)
@@ -183,9 +179,19 @@ class ParallelBase:
                             # Updates the dictionary in-place
                             dict_payload['phase'] = 'on-final'
 
+                            # This message is what all the on-final callbacks
+                            # receive in their self.request.payload attribute.
+                            on_final_message = {
+                                'source': invocation_response.source,
+                                'req_ts_utc': entry.req_ts_utc,
+                                'on_target': entry.on_target_list,
+                                'on_final': entry.on_final_list,
+                                'data': entry.target_responses,
+                            }
+
                             for on_final_item in entry.on_final_list: # type: str
                                 invoked_service.invoke_async(
-                                    on_final_item, entry.target_responses,
+                                    on_final_item, on_final_message,
                                     channel=self.on_final_channel, cid=invoked_service.cid)
 
                     # .. now, clean up by deleting the current entry from cache.
