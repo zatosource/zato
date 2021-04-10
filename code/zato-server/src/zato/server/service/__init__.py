@@ -162,22 +162,6 @@ def call_hook_with_service(hook, service):
     except Exception:
         logger.error('Can\'t run hook `%s`, e:`%s`', hook, format_exc())
 
-
-# ################################################################################################################################
-
-@dataclass(init=False)
-class AsyncCtx:
-    """ Used by self.invoke_async to relay context of the invocation.
-    """
-    calling_service: str
-    service_name: str
-    cid: str
-    data: str
-    data_format: str
-    callback: optional[list] = None
-    zato_ctx: object
-    environ: dict
-
 # ################################################################################################################################
 
 class ChannelInfo(object):
