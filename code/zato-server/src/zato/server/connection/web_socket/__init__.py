@@ -248,7 +248,8 @@ class WebSocket(_WebSocket):
         self.connection_time = self.last_seen = datetime.utcnow()
         self.sec_type = self.config.sec_type
         self.pings_missed = 0
-        self.pings_missed_threshold = self.config.pings_missed_threshold or 2
+        self.pings_missed_threshold = self.config.pings_missed_threshold or WEB_SOCKET.DEFAULT.PINGS_MISSED_THRESHOLD
+        self.ping_interval = self.config.ping_interval or WEB_SOCKET.DEFAULT.PING_INTERVAL
         self.user_data = Bunch() # Arbitrary user-defined data
         self._disconnect_requested = False # Have we been asked to disconnect this client?
 
@@ -724,17 +725,17 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def send_background_pings(self, ping_extend=5, _now=datetime.utcnow):
+    def send_background_pings(self, ping_interval, _now=datetime.utcnow):
 
-        if logger_has_debug:
-            logger.info('Starting WSX background pings for `%s`', self.peer_conn_info_pretty)
+        logger.info('Starting WSX background pings (%s:%s) for `%s`',
+            ping_interval, self.pings_missed_threshold, self.peer_conn_info_pretty)
 
         try:
             while self.stream and (not self.server_terminated):
 
                 # Sleep for N seconds before sending a ping but check if we are connected upfront because
                 # we could have disconnected in between while and sleep calls.
-                sleep(ping_extend)
+                sleep(ping_interval)
 
                 # Ok, still connected
                 if self.stream and (not self.server_terminated):
@@ -766,7 +767,7 @@ class WebSocket(_WebSocket):
                                 self.token.value, self.pub_client_id, _timestamp, self.token.expires_at,
                                 _timestamp > self.token.expires_at)
 
-                            self.token.extend(ping_extend)
+                            self.token.extend(ping_interval)
 
                             logger.info('Tok ext2: [%s / %s] ts:%s exp:%s -> %s',
                                 self.token.value, self.pub_client_id, _timestamp, self.token.expires_at,
@@ -868,7 +869,7 @@ class WebSocket(_WebSocket):
         if hook:
             hook(**self._get_hook_request())
 
-        spawn(self.send_background_pings)
+        spawn(self.send_background_pings, self.ping_interval)
 
 # ################################################################################################################################
 
