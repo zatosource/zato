@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from typing import Callable as callable_, Optional as optional
 
 # Zato
+from zato.common.api import WEB_SOCKET
 from zato.common.typing_ import dataclass, from_dict
 from zato.common.model.connector import ConnectorConfig
 
@@ -32,7 +33,8 @@ class WSXConnectorConfig(ConnectorConfig):
     vault_conn_default_auth_method: optional[str]
     on_message_callback: optional[callable_]
     parallel_server: optional[object] = None
-    pings_missed_threshold: optional[int] = 5
+    pings_missed_threshold: optional[int] = WEB_SOCKET.DEFAULT.PINGS_MISSED_THRESHOLD
+    ping_interval: optional[int] = WEB_SOCKET.DEFAULT.PING_INTERVAL
     is_audit_log_sent_active: optional[bool] = False
     is_audit_log_received_active: optional[bool] = False
 
