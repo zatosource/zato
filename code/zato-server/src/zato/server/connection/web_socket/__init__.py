@@ -725,7 +725,7 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def send_background_pings(self, ping_extend=5, _now=datetime.utcnow):
+    def send_background_pings(self, ping_interval, _now=datetime.utcnow):
 
         if logger_has_debug:
             logger.info('Starting WSX background pings for `%s`', self.peer_conn_info_pretty)
@@ -735,7 +735,7 @@ class WebSocket(_WebSocket):
 
                 # Sleep for N seconds before sending a ping but check if we are connected upfront because
                 # we could have disconnected in between while and sleep calls.
-                sleep(ping_extend)
+                sleep(ping_interval)
 
                 # Ok, still connected
                 if self.stream and (not self.server_terminated):
@@ -767,7 +767,7 @@ class WebSocket(_WebSocket):
                                 self.token.value, self.pub_client_id, _timestamp, self.token.expires_at,
                                 _timestamp > self.token.expires_at)
 
-                            self.token.extend(ping_extend)
+                            self.token.extend(ping_interval)
 
                             logger.info('Tok ext2: [%s / %s] ts:%s exp:%s -> %s',
                                 self.token.value, self.pub_client_id, _timestamp, self.token.expires_at,
@@ -869,7 +869,7 @@ class WebSocket(_WebSocket):
         if hook:
             hook(**self._get_hook_request())
 
-        spawn(self.send_background_pings)
+        spawn(self.send_background_pings, self.ping_interval)
 
 # ################################################################################################################################
 
