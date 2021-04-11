@@ -61,6 +61,10 @@
             'max_bytes_per_message_sent',
             'max_bytes_per_message_received',
 
+            {% comment %} 9 {% endcomment %}
+            'pings_missed_threshold',
+            'ping_interval',
+
         ]
     }
     </script>
@@ -121,6 +125,16 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 8 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 9 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
                 </thead>
 
                 <tbody>
@@ -165,11 +179,15 @@
                         <td class='ignore'>{{ item.max_bytes_per_message_sent|default:audit_max_data_stored_per_message }}</td>
                         <td class='ignore'>{{ item.max_bytes_per_message_received|default:audit_max_data_stored_per_message }}</td>
 
+                        {% comment %} 9 {% endcomment %}
+                        <td class='ignore'>{{ item.pings_missed_threshold|default:pings_missed_threshold }}</td>
+                        <td class='ignore'>{{ item.ping_interval|default:ping_interval }}</td>
+
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='21'>No results</td>
+                        <td colspan='20'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -217,6 +235,17 @@
                             Token TTL
                             {{ create_form.token_ttl }}
                             <span class="form_hint">(in seconds)</span>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Ping interval</td>
+                            <td>{{ create_form.ping_interval }}
+                            <span class="form_hint">(in seconds)</span>
+                            |
+
+                            Threshold
+                            {{ create_form.pings_missed_threshold }}
                             </td>
                         </tr>
 
@@ -272,6 +301,17 @@
                             Token TTL
                             {{ edit_form.token_ttl }}
                             <span class="form_hint">(in seconds)</span>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Ping interval</td>
+                            <td>{{ edit_form.ping_interval }}
+                            <span class="form_hint">(in seconds)</span>
+                            |
+
+                            Threshold
+                            {{ edit_form.pings_missed_threshold }}
                             </td>
                         </tr>
 
