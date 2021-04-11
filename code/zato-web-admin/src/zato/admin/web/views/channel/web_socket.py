@@ -6,8 +6,6 @@ Copyright (C) Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 import logging
 
@@ -18,7 +16,7 @@ from django.template.response import TemplateResponse
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.channel.web_socket import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, invoke_action_handler, method_allowed
-from zato.common.api import AuditLog, ZATO_NONE
+from zato.common.api import AuditLog, WEB_SOCKET, ZATO_NONE
 from zato.common.odb.model import ChannelWebSocket
 
 # ################################################################################################################################
@@ -30,10 +28,14 @@ logger = logging.getLogger(__name__)
 _max_len_messages = AuditLog.Default.max_len_messages
 _max_data_stored_per_message = AuditLog.Default.max_data_stored_per_message
 
+_pings_missed_threshold = WEB_SOCKET.DEFAULT.PINGS_MISSED_THRESHOLD
+_ping_interval = WEB_SOCKET.DEFAULT.PING_INTERVAL
+
 # ################################################################################################################################
 
 generic_attrs = ('is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', \
-    'max_len_messages_received', 'max_bytes_per_message_sent', 'max_bytes_per_message_received')
+    'max_len_messages_received', 'max_bytes_per_message_sent', 'max_bytes_per_message_received',
+    'ping_interval', 'pings_missed_threshold')
 
 # ################################################################################################################################
 
@@ -98,6 +100,8 @@ class Index(_Index):
             'edit_form': EditForm(sec_list, prefix='edit', req=self.req),
             'audit_max_len_messages': _max_len_messages,
             'audit_max_data_stored_per_message': _max_data_stored_per_message,
+            'pings_missed_threshold': _pings_missed_threshold,
+            'ping_interval': _ping_interval,
         }
 
 # ################################################################################################################################

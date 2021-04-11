@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Django
 from django import forms
@@ -22,10 +20,18 @@ class CreateForm(DataFormatForm, WithAuditLog):
     service_name = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
     security_id = forms.ChoiceField(widget=forms.Select())
     token_format = forms.ChoiceField(widget=forms.Select())
+
     new_token_wait_time = forms.CharField(initial=WEB_SOCKET.DEFAULT.NEW_TOKEN_TIMEOUT,
         widget=forms.TextInput(attrs={'style':'width:10%'}))
+
     token_ttl = forms.CharField(initial=WEB_SOCKET.DEFAULT.TOKEN_TTL,
         widget=forms.TextInput(attrs={'style':'width:20%'}))
+
+    ping_interval = forms.CharField(initial=WEB_SOCKET.DEFAULT.PING_INTERVAL,
+        widget=forms.TextInput(attrs={'style':'width:10%'}))
+
+    pings_missed_threshold = forms.CharField(initial=WEB_SOCKET.DEFAULT.PINGS_MISSED_THRESHOLD,
+        widget=forms.TextInput(attrs={'style':'width:10%'}))
 
     def __init__(self, security_list=[], prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
