@@ -727,8 +727,8 @@ class WebSocket(_WebSocket):
 
     def send_background_pings(self, ping_interval, _now=datetime.utcnow):
 
-        if logger_has_debug:
-            logger.info('Starting WSX background pings for `%s`', self.peer_conn_info_pretty)
+        logger.info('Starting WSX background pings (%s:%s) for `%s`',
+            ping_interval, self.pings_missed_threshold, self.peer_conn_info_pretty)
 
         try:
             while self.stream and (not self.server_terminated):
