@@ -211,9 +211,21 @@ class WebSocket(_WebSocket):
         self.connection_time = self.last_seen = datetime.utcnow()
         self.sec_type = self.config.sec_type
         self.pings_missed = 0
-        self.pings_missed_threshold = self.config.get('pings_missed_threshold', 2)
         self.user_data = Bunch() # Arbitrary user-defined data
         self._disconnect_requested = False # Have we been asked to disconnect this client?
+
+        # These default values are used unless they are overridden via server.conf
+        default_pings_missed_threshold = 2
+        default_ping_interval = 30
+
+        pings_missed_threshold = self.parallel_server.fs_server_config.wsx.get('pings_missed_threshold')
+        pings_missed_threshold = int(pings_missed_threshold or default_pings_missed_threshold)
+
+        ping_interval = self.parallel_server.fs_server_config.wsx.get('ping_interval')
+        ping_interval = int(ping_interval or default_ping_interval)
+
+        self.pings_missed_threshold = pings_missed_threshold
+        self.ping_interval = ping_interval
 
         # This will be populated by the on_vault_mount_point_needed hook
         self.vault_mount_point = None
@@ -671,7 +683,7 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def send_background_pings(self, ping_extend=30, _now=datetime.utcnow):
+    def send_background_pings(self, ping_interval, _now=datetime.utcnow):
 
         logger.info('Starting WSX background pings for `%s`', self.peer_conn_info_pretty)
 
@@ -680,7 +692,7 @@ class WebSocket(_WebSocket):
 
                 # Sleep for N seconds before sending a ping but check if we are connected upfront because
                 # we could have disconnected in between while and sleep calls.
-                sleep(ping_extend)
+                sleep(ping_interval)
 
                 # Ok, still connected
                 if self.stream and (not self.server_terminated):
@@ -709,7 +721,7 @@ class WebSocket(_WebSocket):
                                 self.token.value, self.pub_client_id, _timestamp, self.token.expires_at,
                                 _timestamp > self.token.expires_at)
 
-                            self.token.extend(ping_extend)
+                            self.token.extend(ping_interval)
 
                             logger.info('Tok ext2: [%s / %s] ts:%s exp:%s -> %s',
                                 self.token.value, self.pub_client_id, _timestamp, self.token.expires_at,
@@ -811,7 +823,7 @@ class WebSocket(_WebSocket):
         if hook:
             hook(**self._get_hook_request())
 
-        spawn(self.send_background_pings)
+        spawn(self.send_background_pings, self.ping_interval)
 
 # ################################################################################################################################
 
