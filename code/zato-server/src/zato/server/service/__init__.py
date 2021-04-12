@@ -13,7 +13,6 @@ import logging
 from datetime import datetime
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED
 from traceback import format_exc
-from typing import Optional as optional
 
 # anyjson
 from anyjson import dumps
@@ -38,7 +37,7 @@ from zato.common.py23_ import maxint
 from zato.bunch import Bunch
 from zato.common import BROKER, CHANNEL, DATA_FORMAT, Inactive, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, PUBSUB, WEB_SOCKET, \
      ZatoException, zato_no_op_marker
-from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL, SERVICE
+from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL
 from zato.common.exception import Reportable
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException
 from zato.common.nav import DictNav, ListNav
@@ -55,6 +54,7 @@ from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
 from zato.server.pattern.api import ParallelExec
 from zato.server.pubsub import PubSub
+from zato.server.service._model_3_1 import AsyncCtx
 from zato.server.service.reqresp import AMQPRequestData, Cloud, Definition, IBMMQRequestData, InstantMessaging, Outgoing, \
      Request, Response
 

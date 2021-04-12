@@ -14,12 +14,20 @@ from logging import getLogger
 from zato.common import CHANNEL
 from zato.common.util import spawn_greenlet
 
+# Python 2/3 compatibility
+from six import PY3
+
+
+if PY3:
+    from zato.server.pattern.model import CacheEntry, InvocationResponse, ParallelCtx, Target
+
 # ################################################################################################################################
 
 if 0:
     from gevent.lock import RLock
     from zato.server.service import Service
 
+    RLock = RLock
     Service = Service
 
 # ################################################################################################################################
