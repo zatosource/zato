@@ -1134,6 +1134,8 @@ class WEB_SOCKET:
         TOKEN_TTL = 3600
         FQDN_UNKNOWN = '(Unknown)'
         INTERACT_UPDATE_INTERVAL = 60 # 60 minutes = 1 hour
+        PINGS_MISSED_THRESHOLD = 2
+        PING_INTERVAL = 30
 
     class PATTERN:
         BY_EXT_ID = 'zato.by-ext-id.{}'

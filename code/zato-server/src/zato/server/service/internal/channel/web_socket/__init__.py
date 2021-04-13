@@ -43,7 +43,8 @@ if 0:
 # ################################################################################################################################
 
 generic_attrs = ['is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', \
-    'max_len_messages_received', 'max_bytes_per_message_sent', 'max_bytes_per_message_received']
+    'max_len_messages_received', 'max_bytes_per_message_sent', 'max_bytes_per_message_received',
+    Int('pings_missed_threshold'), Int('ping_interval')]
 
 elem = 'channel_web_socket'
 model = ChannelWebSocket
