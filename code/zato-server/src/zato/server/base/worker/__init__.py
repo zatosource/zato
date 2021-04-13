@@ -48,7 +48,7 @@ from zato.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import CHANNEL, CONNECTION, DATA_FORMAT, FILE_TRANSFER, GENERIC as COMMON_GENERIC, \
      HotDeploy, HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, simple_types, URL_TYPE, \
-     TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
+     TRACE1, WEB_SOCKET, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
@@ -811,6 +811,12 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             # Convert configuration to expected datatypes
             data.config['max_len_messages_sent'] = int(data.config.get('max_len_messages_sent') or 0)
             data.config['max_len_messages_received'] = int(data.config.get('max_len_messages_received') or 0)
+
+            data.config['pings_missed_threshold'] = int(
+                data.config.get('pings_missed_threshold') or WEB_SOCKET.DEFAULT.PINGS_MISSED_THRESHOLD)
+
+            data.config['ping_interval'] = int(
+                data.config.get('ping_interval') or WEB_SOCKET.DEFAULT.PING_INTERVAL)
 
             # Create a new AMQP connector definition ..
             config = WSXConnectorConfig.from_dict(data.config)
