@@ -17,9 +17,8 @@ from zato.common.util import spawn_greenlet
 # Python 2/3 compatibility
 from six import PY3
 
-
 if PY3:
-    from zato.server.pattern.model import CacheEntry, InvocationResponse, ParallelCtx, Target
+    from zato.server.pattern._model_3_1 import CacheEntry, InvocationResponse, ParallelCtx, Target
 
 # ################################################################################################################################
 
