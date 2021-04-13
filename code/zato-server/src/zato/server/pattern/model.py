@@ -42,7 +42,7 @@ class CacheEntry:
     req_ts_utc: datetime
     len_targets: int
     remaining_targets: int
-    target_responses: dict
+    target_responses: list
     final_responses: dict
     on_target_list: optional[list] = None
     on_final_list: optional[list] = None

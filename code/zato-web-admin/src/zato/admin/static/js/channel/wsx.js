@@ -17,7 +17,16 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.ChannelWebSocket;
     $.fn.zato.data_table.new_row_func = $.fn.zato.channel.wsx.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'address', 'service_name', 'security_id', 'new_token_wait_time', 'token_ttl']);
+    $.fn.zato.data_table.setup_forms([
+        'name',
+        'address',
+        'service_name',
+        'security_id',
+        'new_token_wait_time',
+        'token_ttl',
+        'ping_interval',
+        'pings_missed_threshold',
+    ]);
 })
 
 $.fn.zato.channel.wsx.create = function() {
