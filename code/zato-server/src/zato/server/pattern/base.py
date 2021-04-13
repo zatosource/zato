@@ -59,7 +59,7 @@ class ParallelBase:
             entry.req_ts_utc = ctx.req_ts_utc
             entry.len_targets = len(ctx.target_list)
             entry.remaining_targets = entry.len_targets
-            entry.target_responses = {}
+            entry.target_responses = []
             entry.final_responses = {}
             entry.on_target_list = ctx.on_target_list
             entry.on_final_list = ctx.on_final_list
@@ -106,7 +106,13 @@ class ParallelBase:
             ctx.on_target_list = [on_target] if isinstance(on_target, str) else on_target
 
         # .. invoke our implementation in background ..
-        spawn_greenlet(self._invoke, ctx)
+        try:
+            spawn_greenlet(self._invoke, ctx)
+        except Exception:
+            # Explicitly ignore any exception caught - this is because we are catching
+            # deeper in the call stack to provide it to callback services so we do not want
+            # to raise it here too.
+            pass
 
         # .. and return the CID to the caller.
         return cid
@@ -153,7 +159,11 @@ class ParallelBase:
                     'resp_ts_utc': invocation_response.resp_ts_utc.isoformat(),
                     'ok': invocation_response.ok,
                     'exception': invocation_response.exception,
+                    'cid': invocation_response.cid,
                 }
+
+                # .. add the received response to the list of what we have so far ..
+                entry.target_responses.append(dict_payload)
 
                 # .. invoke any potential on-target callbacks ..
                 if entry.on_target_list:
@@ -172,12 +182,20 @@ class ParallelBase:
                     if self.needs_on_final:
                         if entry.on_final_list:
 
-                            # Updates the dictionary in-place
-                            dict_payload['phase'] = 'on-final'
+                            # This message is what all the on-final callbacks
+                            # receive in their self.request.payload attribute.
+                            on_final_message = {
+                                'phase': 'on-final',
+                                'source': invocation_response.source,
+                                'req_ts_utc': entry.req_ts_utc,
+                                'on_target': entry.on_target_list,
+                                'on_final': entry.on_final_list,
+                                'data': entry.target_responses,
+                            }
 
                             for on_final_item in entry.on_final_list: # type: str
                                 invoked_service.invoke_async(
-                                    on_final_item, dict_payload,
+                                    on_final_item, on_final_message,
                                     channel=self.on_final_channel, cid=invoked_service.cid)
 
                     # .. now, clean up by deleting the current entry from cache.
