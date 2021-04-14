@@ -1,31 +1,60 @@
 
-
 $CURDIR = (Split-Path $myInvocation.MyCommand.Path) -join "`n"
+$LocalAppDataPath = $env:LocalAppData
+$PythonPathVersion = "Python39"
 
+$installed = $null -ne (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where { $_.DisplayName -like "Git version*" })
+If(-Not $installed) {
+    Write-Output 'Installing Git for Windows'
+    $exeFile = 'Git-2.31.1-64-bit.exe'
+    if (-not(Test-Path "$CURDIR\$exeFile" -PathType Leaf)){
+        Invoke-WebRequest -Uri 'https://github.com/git-for-windows/git/releases/download/v2.31.1.windows.1/Git-2.31.1-64-bit.exe' -OutFile $exeFile
+    }
+    $exeArgs = @('/VERYSILENT', '/NORESTART', '/NOCANCEL', '/SP-', '/CLOSEAPPLICATIONS', '/RESTARTAPPLICATIONS', '/COMPONENTS="icons,ext\reg\shellhere,assoc,assoc_sh"')
+    Start-Process -Filepath "$CURDIR/$exeFile" -ArgumentList $exeArgs -Wait
+} else {
+    Write-Host "Git for Windows is installed."
+}
 
-Write-Output "Installing Git for Windows"
-Invoke-WebRequest -Uri "https://github.com/git-for-windows/git/releases/download/v2.31.1.windows.1/Git-2.31.1-64-bit.exe" -OutFile "Git-2.31.1-64-bit.exe"
-& Git-2.31.1-64-bit.exe "/VERYSILENT" "/NORESTART" "/NOCANCEL" "/SP-" "/CLOSEAPPLICATIONS" "/RESTARTAPPLICATIONS" '/COMPONENTS="icons,ext\reg\shellhere,assoc,assoc_sh"'
+$installed = $null -ne (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where { $_.DisplayName -like "*Visual C++*" })
+If(-Not $installed) {
+    Write-Output 'Installing Visual Studio Build Tools'
+    Write-Output 'Please install C++ Build tools'
+    $exeFile = 'vs_buildtools.exe'
+    if (-not(Test-Path "$CURDIR\$exeFile" -PathType Leaf)) {
+        Invoke-WebRequest -Uri 'https://aka.ms/vs/16/release/vs_buildtools.exe' -OutFile $exeFile
+    }
+    Start-Process -Filepath "$CURDIR/$exeFile" -Wait
+} else {
+    Write-Host "Visual Studio Build Tools is installed."
+}
 
-# setx PATH "%PATH%%ProgramFiles%\Git\bin;%ProgramFiles%\Git\usr\bin;"
+$installed = $null -ne (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where { $_.DisplayName -like "Python*" })
+If(-Not $installed) {
+    Write-Output 'Installing Python'
+    $exeFile = 'python-3.9.4-amd64.exe'
+    if (-not(Test-Path "$CURDIR\$exeFile" -PathType Leaf)) {
+        Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.9.4/python-3.9.4-amd64.exe' -OutFile $exeFile
+    }
+    Start-Process -Filepath "$CURDIR/$exeFile" -ArgumentList @('/quiet', 'SimpleInstall=1', 'PrependPath=1') -Wait
 
-Write-Output "Installing Visual Studio Build Tools"
-Invoke-WebRequest -Uri "https://aka.ms/vs/16/release/vs_buildtools.exe" -OutFile "vs_buildtools.exe"
-& vs_buildtools.exe
+} else {
+    Write-Host "Python is installed."
+}
 
-Write-Output "Installing Python"
-Invoke-WebRequest -Uri "https://www.python.org/ftp/python/3.9.4/python-3.9.4-amd64.exe" -OutFile "python-3.9.4-amd64.exe"
-& python-3.9.4-amd64.exe
+If(-Not ("$env:PATH" -like "*$PythonPathVersion*")) {
+    Write-Output 'Adding Python to PATH'
+    $INCLUDE = "$LocalAppDataPath\Programs\$PythonPathVersion;$LocalAppDataPath\Programs\$PythonPathVersion\Scripts"
+    $Env:Path += ";$INCLUDE"
+}
 
-Write-Output "Installing Python PIP"
-Invoke-WebRequest -Uri "https://bootstrap.pypa.io/get-pip.py" -OutFile "get-pip.py"
+Write-Output "PATH:"
+Write-Output ($env:PATH).split(";")
 
-& python get-pip.py
-& pip3 install virtualenv
-& python -m virtualenv --always-copy .
+Start-Process -Filepath "pip3.exe" -ArgumentList @('install', 'virtualenv') -Wait
+Start-Process -Filepath "python.exe" -ArgumentList @('-m', 'virtualenv', '--always-copy', '.') -Wait
 
-
-if(!Test-Path "$CURDIR\release-info"){
+if (-not(Test-Path "$CURDIR\release-info")) {
     New-Item -ItemType Directory -Name "$CURDIR\release-info"
 }
 New-Item -ItemType File -Name "$CURDIR\release-info\revision.txt"
@@ -53,7 +82,7 @@ call .\Scripts\activate.bat
 # ln -fs Lib/site-packages eggs
 New-Item -Path "$CURDIR\eggs" -ItemType SymbolicLink -Value "$CURDIR\Lib\site-packages"
 
-if(!Test-Path "$CURDIR\zato_extra_paths"){
+if (-not(Test-Path "$CURDIR\zato_extra_paths")) {
     New-Item -ItemType Directory -Name "$CURDIR\zato_extra_paths"
 }
 Set-Content "$CURDIR\eggs\easy-install.pth" "$CURDIR\zato_extra_paths"
