@@ -51,44 +51,53 @@ If(-Not ("$env:PATH" -like "*$PythonPathVersion*")) {
 Write-Output "PATH:"
 Write-Output ($env:PATH).split(";")
 
-Start-Process -Filepath "pip3.exe" -ArgumentList @('install', 'virtualenv') -Wait
-Start-Process -Filepath "python.exe" -ArgumentList @('-m', 'virtualenv', '--always-copy', '.') -Wait
+Get-Command pip | Select-Object -ExpandProperty Definition
+Start-Process -Filepath (Get-Command pip | Select-Object -ExpandProperty Definition) -ArgumentList @('install', 'virtualenv') -Wait
 
-if (-not(Test-Path "$CURDIR\release-info")) {
-    New-Item -ItemType Directory -Name "$CURDIR\release-info"
+Get-Command python | Select-Object -ExpandProperty Definition
+Start-Process -Filepath (Get-Command python | Select-Object -ExpandProperty Definition) -ArgumentList @('--always-copy', '.') -Wait
+
+if (-not(Test-Path ".\release-info")) {
+    New-Item -ItemType Directory -Name ".\release-info"
 }
-New-Item -ItemType File -Name "$CURDIR\release-info\revision.txt"
-$revision = (git log -n 1 --pretty=format:"%H") -join "`n"
-Set-Content "$CURDIR\release-info\revision.txt" $revision
+if (-not(Test-Path ".\release-info\revision.txt" -PathType Leaf)) {
+    New-Item -ItemType File -Name ".\release-info\revision.txt"
+    $revision = (git log -n 1 --pretty=format:"%H") -join "`n"
+    Set-Content ".\release-info\revision.txt" $revision
+}
 
-call .\Scripts\activate.bat
-.\Scripts\pip install -r .\requirements.txt
-.\Scripts\pip install -e .\zato-common
-.\Scripts\pip install -e .\zato-agent
-.\Scripts\pip install -e .\zato-broker
-.\Scripts\pip install -e .\zato-cli
-.\Scripts\pip install -e .\zato-client
-.\Scripts\pip install -e .\zato-cy
-.\Scripts\pip install -e .\zato-distlock
-.\Scripts\pip install -e .\zato-hl7
-.\Scripts\pip install -e .\zato-lib
-.\Scripts\pip install -e .\zato-scheduler
-.\Scripts\pip install -e .\zato-server
-.\Scripts\pip install -e .\zato-web-admin
-.\Scripts\pip install -e .\zato-zmq
-.\Scripts\pip install -e .\zato-sso
-.\Scripts\pip install -e .\zato-testing
+Start-Process -Filepath (Get-Command python | Select-Object -ExpandProperty Definition) -ArgumentList @('-m', 'virtualenv', '--always-copy', '.') -Wait
+
+Set-ExecutionPolicy Unrestricted -Scope Process
+
+.\Scripts\activate.ps1
+.\Scripts\pip.exe install -r .\requirements.txt
+.\Scripts\pip.exe install -e .\zato-common
+.\Scripts\pip.exe install -e .\zato-agent
+.\Scripts\pip.exe install -e .\zato-broker
+.\Scripts\pip.exe install -e .\zato-cli
+.\Scripts\pip.exe install -e .\zato-client
+.\Scripts\pip.exe install -e .\zato-cy
+.\Scripts\pip.exe install -e .\zato-distlock
+.\Scripts\pip.exe install -e .\zato-hl7
+.\Scripts\pip.exe install -e .\zato-lib
+.\Scripts\pip.exe install -e .\zato-scheduler
+.\Scripts\pip.exe install -e .\zato-server
+.\Scripts\pip.exe install -e .\zato-web-admin
+.\Scripts\pip.exe install -e .\zato-zmq
+.\Scripts\pip.exe install -e .\zato-sso
+.\Scripts\pip.exe install -e .\zato-testing
 
 # ln -fs Lib/site-packages eggs
-New-Item -Path "$CURDIR\eggs" -ItemType SymbolicLink -Value "$CURDIR\Lib\site-packages"
+New-Item -Path ".\eggs" -ItemType SymbolicLink -Value ".\Lib\site-packages"
 
-if (-not(Test-Path "$CURDIR\zato_extra_paths")) {
-    New-Item -ItemType Directory -Name "$CURDIR\zato_extra_paths"
+if (-not(Test-Path ".\zato_extra_paths")) {
+    New-Item -ItemType Directory -Name ".\zato_extra_paths"
 }
-Set-Content "$CURDIR\eggs\easy-install.pth" "$CURDIR\zato_extra_paths"
+Set-Content ".\eggs\easy-install.pth" ".\zato_extra_paths"
 
 # Create a symlink to zato_extra_paths to make it easier to type it out
-New-Item -Path "$CURDIR\extlib" -ItemType SymbolicLink -Value "$CURDIR\zato_extra_paths"
+New-Item -Path ".\extlib" -ItemType SymbolicLink -Value ".\zato_extra_paths"
 # ln -fs $VIRTUAL_ENV/zato_extra_paths extlib
 
 
@@ -104,7 +113,7 @@ New-Item -Path "$CURDIR\extlib" -ItemType SymbolicLink -Value "$CURDIR\zato_extr
 # "C:\Program Files\Git\usr\bin\patch" --forward -p0 -d eggs < patches\sqlalchemy\sql\dialects\postgresql\pg8000.py.diff
 # "C:\Program Files\Git\usr\bin\patch" --forward -p0 -d eggs < patches\pg8000\core.py.diff
 
-New-Item -ItemType File -Name "$CURDIR\Scripts\zato"
+New-Item -ItemType File -Name ".\Scripts\zato"
 # $ZatoScriptContent = @"#! python
 
 # # Zato
@@ -122,4 +131,4 @@ New-Item -ItemType File -Name "$CURDIR\Scripts\zato"
 #     sys.argv[0] = re.sub(r'(-script\.pyw?|\.exe)?$', '', sys.argv[0])
 #     sys.exit(main())
 # "@
-# Set-Content "$CURDIR\Scripts\zato" $ZatoScriptContent
+# Set-Content ".\Scripts\zato" $ZatoScriptContent
