@@ -16,6 +16,11 @@ If(-Not $installed) {
     Write-Host "Git for Windows is installed."
 }
 
+If(-Not ("$env:PATH" -like "*$env:ProgramFiles\Git\usr\bin*")) {
+    Write-Output 'Adding Git\usr\bin to PATH'
+    $Env:Path += ";$env:ProgramFiles\Git\usr\bin\"
+}
+
 $installed = $null -ne (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where { $_.DisplayName -like "*Visual C++*" })
 If(-Not $installed) {
     Write-Output 'Installing Visual Studio Build Tools'
@@ -42,20 +47,27 @@ If(-Not $installed) {
     Write-Host "Python is installed."
 }
 
-If(-Not ("$env:PATH" -like "*$PythonPathVersion*")) {
+If(-Not ("$env:PATH" -like "*\Python*")) {
     Write-Output 'Adding Python to PATH'
     $INCLUDE = "$LocalAppDataPath\Programs\$PythonPathVersion;$LocalAppDataPath\Programs\$PythonPathVersion\Scripts"
+    if (Test-Path "$LocalAppDataPath\Programs\Python\$PythonPathVersion") {
+        $INCLUDE = "$LocalAppDataPath\Programs\Python\$PythonPathVersion;$LocalAppDataPath\Programs\Python\$PythonPathVersion\Scripts"
+    }
     $Env:Path += ";$INCLUDE"
 }
 
 Write-Output "PATH:"
 Write-Output ($env:PATH).split(";")
 
-Get-Command pip | Select-Object -ExpandProperty Definition
-Start-Process -Filepath (Get-Command pip | Select-Object -ExpandProperty Definition) -ArgumentList @('install', 'virtualenv') -Wait
+If(-Not (Get-Command "virtualenv.exe" | Select-Object -ExpandProperty Definition)) {
+    Write-Output 'Installing virtualenv'
+    Start-Process -Filepath (Get-Command "pip.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('install', 'virtualenv') -Wait
+}
 
-Get-Command python | Select-Object -ExpandProperty Definition
-Start-Process -Filepath (Get-Command python | Select-Object -ExpandProperty Definition) -ArgumentList @('--always-copy', '.') -Wait
+if (-not(Test-Path ".\Lib")) {
+    Write-Output 'Creating virtualenv environment'
+    Start-Process -Filepath (Get-Command "python.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('-m', 'virtualenv', '--always-copy', '.') -Wait
+}
 
 if (-not(Test-Path ".\release-info")) {
     New-Item -ItemType Directory -Name ".\release-info"
@@ -88,47 +100,60 @@ Set-ExecutionPolicy Unrestricted -Scope Process
 .\Scripts\pip.exe install -e .\zato-sso
 .\Scripts\pip.exe install -e .\zato-testing
 
-# ln -fs Lib/site-packages eggs
-New-Item -Path ".\eggs" -ItemType SymbolicLink -Value ".\Lib\site-packages"
+if (-not(Test-Path ".\eggs" -PathType Any)) {
+    New-Item -Path ".\eggs" -ItemType SymbolicLink -Value ".\Lib\site-packages"
+}
 
 if (-not(Test-Path ".\zato_extra_paths")) {
     New-Item -ItemType Directory -Name ".\zato_extra_paths"
 }
-Set-Content ".\eggs\easy-install.pth" ".\zato_extra_paths"
 
-# Create a symlink to zato_extra_paths to make it easier to type it out
-New-Item -Path ".\extlib" -ItemType SymbolicLink -Value ".\zato_extra_paths"
-# ln -fs $VIRTUAL_ENV/zato_extra_paths extlib
+if (-not(Test-Path ".\release-info\revision.txt" -PathType Leaf)) {
+    New-Item -ItemType File -Name ".\release-info\revision.txt"
+    $revision = (git log -n 1 --pretty=format:"%H") -join "`n"
+    Set-Content ".\release-info\revision.txt" $revision
+}
+if (-not(Test-Path ".\eggs\easy-install.pth" -PathType Leaf)) {
+    Set-Content ".\eggs\easy-install.pth" "$CURDIR\zato_extra_paths"
+}
+
+if (-not(Test-Path ".\extlib" -PathType Any)) {
+    New-Item -Path ".\extlib" -ItemType SymbolicLink -Value ".\zato_extra_paths"
+}
+
+Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '<', 'patches\butler\__init__.py.diff') -Wait
+Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '<', 'patches\configobj.py.diff') -Wait
+Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '<', 'patches\django\db\models\base.py.diff') -Wait
+Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '--binary', '-d', 'eggs', '<', 'patches\ntlm\HTTPNtlmAuthHandler.py.diff') -Wait
+Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '<', 'patches\pykafka\topic.py.diff') -Wait
+Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '<', 'patches\redis\redis\connection.py.diff') -Wait
+Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '<', 'patches\requests\models.py.diff') -Wait
+Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '<', 'patches\requests\sessions.py.diff') -Wait
+Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '<', 'patches\ws4py\server\geventserver.py.diff') -Wait
+Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '<', 'patches\sqlalchemy\sql\dialects\postgresql\pg8000.py.diff') -Wait
+Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '<', 'patches\pg8000\core.py.diff') -Wait
 
 
-# "C:\Program Files\Git\usr\bin\patch" --forward -p0 -d eggs < patches\butler\__init__.py.diff
-# "C:\Program Files\Git\usr\bin\patch" --forward -p0 -d eggs < patches\configobj.py.diff
-# "C:\Program Files\Git\usr\bin\patch" --forward -p0 -d eggs < patches\django\db\models\base.py.diff
-# "C:\Program Files\Git\usr\bin\patch" --forward -p0 --binary -d eggs < patches\ntlm\HTTPNtlmAuthHandler.py.diff
-# "C:\Program Files\Git\usr\bin\patch" --forward -p0 -d eggs < patches\pykafka\topic.py.diff
-# "C:\Program Files\Git\usr\bin\patch" --forward -p0 -d eggs < patches\redis\redis\connection.py.diff
-# "C:\Program Files\Git\usr\bin\patch" --forward -p0 -d eggs < patches\requests\models.py.diff
-# "C:\Program Files\Git\usr\bin\patch" --forward -p0 -d eggs < patches\requests\sessions.py.diff
-# "C:\Program Files\Git\usr\bin\patch" --forward -p0 -d eggs < patches\ws4py\server\geventserver.py.diff
-# "C:\Program Files\Git\usr\bin\patch" --forward -p0 -d eggs < patches\sqlalchemy\sql\dialects\postgresql\pg8000.py.diff
-# "C:\Program Files\Git\usr\bin\patch" --forward -p0 -d eggs < patches\pg8000\core.py.diff
+if (-not(Test-Path ".\Scripts\zato.py" -PathType Leaf)) {
+    New-Item -ItemType File -Name ".\Scripts\zato.py"
 
-New-Item -ItemType File -Name ".\Scripts\zato"
-# $ZatoScriptContent = @"#! python
+    $MultilineComment = @"
+#!$CURDIR\Scripts\python
 
-# # Zato
-# from zato.cli.zato_command import main
+# Zato
+from zato.cli.zato_command import main
 
-# if __name__ == '__main__':
+if __name__ == '__main__':
 
-#     # stdlib
-#     import re
-#     import sys
+    # stdlib
+    import re
+    import sys
 
-#     # This is needed by SUSE
-#     sys.path.append('$VIRTUAL_ENV/lib64/python3.6/site-packages/')
+    sys.path.append('$CURDIR\Lib\site-packages\')
 
-#     sys.argv[0] = re.sub(r'(-script\.pyw?|\.exe)?$', '', sys.argv[0])
-#     sys.exit(main())
-# "@
-# Set-Content ".\Scripts\zato" $ZatoScriptContent
+    sys.argv[0] = re.sub(r'(-script\.pyw?|\.exe)?$', '', sys.argv[0])
+    sys.exit(main())
+"@
+
+    $MultilineComment -f 'string' | Out-File ".\Scripts\zato.py"
+}
