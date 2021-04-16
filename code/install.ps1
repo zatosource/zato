@@ -56,6 +56,11 @@ If(-Not ("$env:PATH" -like "*\Python*")) {
     $Env:Path += ";$INCLUDE"
 }
 
+# Add Python permanently to PATH
+$oldPATH = $Env:Path
+$Env:Path = $oldPATH.Replace('-', '&')
+Set-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH -Value $env:PATH
+
 Write-Output "PATH:"
 Write-Output ($env:PATH).split(";")
 
@@ -138,7 +143,7 @@ if (-not(Test-Path ".\Scripts\zato.py" -PathType Leaf)) {
     New-Item -ItemType File -Name ".\Scripts\zato.py"
 
     $MultilineComment = @"
-#!$CURDIR\Scripts\python
+# -*- coding: utf-8 -*-
 
 # Zato
 from zato.cli.zato_command import main
