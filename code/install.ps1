@@ -126,18 +126,18 @@ if (-not(Test-Path ".\extlib" -PathType Any)) {
     New-Item -Path ".\extlib" -ItemType SymbolicLink -Value ".\zato_extra_paths"
 }
 
-Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '<', 'patches\butler\__init__.py.diff') -Wait
-Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '<', 'patches\configobj.py.diff') -Wait
-Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '<', 'patches\django\db\models\base.py.diff') -Wait
-Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '--binary', '-d', 'eggs', '<', 'patches\ntlm\HTTPNtlmAuthHandler.py.diff') -Wait
-Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '<', 'patches\pykafka\topic.py.diff') -Wait
-Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '<', 'patches\redis\redis\connection.py.diff') -Wait
-Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '<', 'patches\requests\models.py.diff') -Wait
-Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '<', 'patches\requests\sessions.py.diff') -Wait
-Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '<', 'patches\ws4py\server\geventserver.py.diff') -Wait
-Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '<', 'patches\sqlalchemy\sql\dialects\postgresql\pg8000.py.diff') -Wait
-Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '<', 'patches\pg8000\core.py.diff') -Wait
-
+Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '-i', 'patches\butler\__init__.py.diff') -Wait
+Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '-i', 'patches\configobj.py.diff') -Wait
+Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '-i', 'patches\django\db\models\base.py.diff') -Wait
+Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '--binary', '-d', 'eggs', '-i', 'patches\ntlm\HTTPNtlmAuthHandler.py.diff') -Wait
+Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '-i', 'patches\pykafka\topic.py.diff') -Wait
+Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '-i', 'patches\redis\redis\connection.py.diff') -Wait
+Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '-i', 'patches\requests\models.py.diff') -Wait
+Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '-i', 'patches\requests\sessions.py.diff') -Wait
+Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '-i', 'patches\ws4py\server\geventserver.py.diff') -Wait
+Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '-i', 'patches\sqlalchemy\sql\dialects\postgresql\pg8000.py.diff') -Wait
+Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '-i', 'patches\pg8000\core.py.diff') -Wait
+Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '-i', 'patches\sqlalchemy\sql\crud.py.diff') -Wait
 
 if (-not(Test-Path ".\Scripts\zato.py" -PathType Leaf)) {
     New-Item -ItemType File -Name ".\Scripts\zato.py"
