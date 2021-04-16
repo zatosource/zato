@@ -140,25 +140,5 @@ Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" |
 Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '-i', 'patches\sqlalchemy\sql\crud.py.diff') -Wait
 
 if (-not(Test-Path ".\Scripts\zato.py" -PathType Leaf)) {
-    New-Item -ItemType File -Name ".\Scripts\zato.py"
-
-    $MultilineComment = @"
-# -*- coding: utf-8 -*-
-
-# Zato
-from zato.cli.zato_command import main
-
-if __name__ == '__main__':
-
-    # stdlib
-    import re
-    import sys
-
-    sys.path.append('$CURDIR\Lib\site-packages\')
-
-    sys.argv[0] = re.sub(r'(-script\.pyw?|\.exe)?$', '', sys.argv[0])
-    sys.exit(main())
-"@
-
-    $MultilineComment -f 'string' | Out-File ".\Scripts\zato.py"
+    Copy-Item ".\extras\zato-windows.py" -Destination ".\Scripts\zato.py"
 }
