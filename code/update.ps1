@@ -3,18 +3,34 @@ $CURDIR = (Split-Path $myInvocation.MyCommand.Path) -join "`n"
 $LocalAppDataPath = $env:LocalAppData
 $PythonPathVersion = "Python39"
 
-$installed = $null -ne (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where { $_.DisplayName -like "Git version*" })
-If(-Not $installed) {
-    Write-Output 'Installing Git for Windows'
-    $exeFile = 'Git-2.31.1-64-bit.exe'
-    if (-not(Test-Path "$CURDIR\$exeFile" -PathType Leaf)){
-        Invoke-WebRequest -Uri 'https://github.com/git-for-windows/git/releases/download/v2.31.1.windows.1/Git-2.31.1-64-bit.exe' -OutFile $exeFile
-    }
-    $exeArgs = @('/VERYSILENT', '/NORESTART', '/NOCANCEL', '/SP-', '/CLOSEAPPLICATIONS', '/RESTARTAPPLICATIONS', '/COMPONENTS="icons,ext\reg\shellhere,assoc,assoc_sh"')
-    Start-Process -Filepath "$CURDIR/$exeFile" -ArgumentList $exeArgs -Wait
-} else {
-    Write-Host "Git for Windows is installed."
+. .\_common.ps1
+
+# Git
+Invoke-InstallIfNotInstalled -ExeFile "Git-2.31.1-64-bit.exe" -URL 'https://github.com/git-for-windows/git/releases/download/v2.31.1.windows.1/Git-2.31.1-64-bit.exe' -Name "Git for Windows" -InstalledRegistryRegExp "Git version*" -ExeArgs @('/VERYSILENT', '/NORESTART', '/NOCANCEL', '/SP-', '/CLOSEAPPLICATIONS', '/RESTARTAPPLICATIONS', '/COMPONENTS="icons,ext\reg\shellhere,assoc,assoc_sh"')
+# Git PATH
+If(-Not ("$env:PATH" -like "*$env:ProgramFiles\Git\usr\bin*")) {
+    Write-Output 'Adding Git\usr\bin to PATH'
+    $Env:Path += ";$env:ProgramFiles\Git\usr\bin\"
 }
+
+# C++ Build tools
+Invoke-InstallIfNotInstalled -ExeFile "vs_buildtools.exe" -URL "https://aka.ms/vs/16/release/vs_buildtools.exe" -Name "Visual C++ Build tools" -InstalledRegistryRegExp "*Visual C++*"
+
+# Python
+Invoke-InstallIfNotInstalled -ExeFile "python-3.9.4-amd64.exe" -URL 'https://www.python.org/ftp/python/3.9.4/python-3.9.4-amd64.exe' -Name "Python" -InstalledRegistryRegExp "Python*" -ExeArgs @('/quiet', 'SimpleInstall=1', 'PrependPath=1')
+# Python PATH
+If(-Not ("$env:PATH" -like "*\Python*")) {
+    Write-Output 'Adding Python to PATH'
+    $INCLUDE = "$LocalAppDataPath\Programs\$PythonPathVersion;$LocalAppDataPath\Programs\$PythonPathVersion\Scripts"
+    If(Test-Path "$LocalAppDataPath\Programs\Python\$PythonPathVersion") {
+        $INCLUDE = "$LocalAppDataPath\Programs\Python\$PythonPathVersion;$LocalAppDataPath\Programs\Python\$PythonPathVersion\Scripts"
+    }
+    $Env:Path += ";$INCLUDE"
+}
+# Add Python permanently to PATH
+$oldPATH = $Env:Path
+$Env:Path = $oldPATH.Replace('-', '&')
+Set-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH -Value $env:PATH
 
 Write-Output "*** Downloading updates ***"
 Start-Process -Filepath (Get-Command "git.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('pull') -Wait
@@ -27,32 +43,6 @@ Start-Process -Filepath (Get-Command "git.exe" | Select-Object -ExpandProperty D
 Set-ExecutionPolicy Unrestricted -Scope Process
 
 .\Scripts\activate.ps1
-.\Scripts\pip.exe install -r .\requirements.txt
-.\Scripts\pip.exe install -e .\zato-common
-.\Scripts\pip.exe install -e .\zato-agent
-.\Scripts\pip.exe install -e .\zato-broker
-.\Scripts\pip.exe install -e .\zato-cli
-.\Scripts\pip.exe install -e .\zato-client
-.\Scripts\pip.exe install -e .\zato-cy
-.\Scripts\pip.exe install -e .\zato-distlock
-.\Scripts\pip.exe install -e .\zato-hl7
-.\Scripts\pip.exe install -e .\zato-lib
-.\Scripts\pip.exe install -e .\zato-scheduler
-.\Scripts\pip.exe install -e .\zato-server
-.\Scripts\pip.exe install -e .\zato-web-admin
-.\Scripts\pip.exe install -e .\zato-zmq
-.\Scripts\pip.exe install -e .\zato-sso
-.\Scripts\pip.exe install -e .\zato-testing
+Invoke-InstallAllWithPip
 
-Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '-i', 'patches\butler\__init__.py.diff') -Wait
-Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '-i', 'patches\configobj.py.diff') -Wait
-Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '-i', 'patches\django\db\models\base.py.diff') -Wait
-Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '--binary', '-d', 'eggs', '-i', 'patches\ntlm\HTTPNtlmAuthHandler.py.diff') -Wait
-Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '-i', 'patches\pykafka\topic.py.diff') -Wait
-Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '-i', 'patches\redis\redis\connection.py.diff') -Wait
-Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '-i', 'patches\requests\models.py.diff') -Wait
-Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '-i', 'patches\requests\sessions.py.diff') -Wait
-Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '-i', 'patches\ws4py\server\geventserver.py.diff') -Wait
-Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '-i', 'patches\sqlalchemy\sql\dialects\postgresql\pg8000.py.diff') -Wait
-Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '-i', 'patches\pg8000\core.py.diff') -Wait
-Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('--forward', '-p0', '-d', 'eggs', '-i', 'patches\sqlalchemy\sql\crud.py.diff') -Wait
+Invoke-ApplyPatches
