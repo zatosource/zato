@@ -36,10 +36,9 @@ from inspect import isfunction, ismethod
 from itertools import tee
 from io import StringIO
 from operator import itemgetter
-from os import getuid
+from os import getlogin
 from os.path import abspath, isabs, join
 from pprint import pprint as _pprint, PrettyPrinter
-from pwd import getpwuid
 from string import Template
 from subprocess import Popen, PIPE
 from tempfile import NamedTemporaryFile
@@ -172,7 +171,7 @@ wait_until_port_taken = wait_until_port_taken
 _hostname = socket.gethostname()
 _fqdn = socket.getfqdn()
 _current_host = '{}/{}'.format(_hostname, _fqdn)
-_current_user = getpwuid(getuid()).pw_name
+_current_user = getlogin()
 
 # ################################################################################################################################
 
