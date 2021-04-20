@@ -21,11 +21,11 @@ dir                            = {target_dir}
 default_ca                     = CA_default
 
 [ CA_default ]
-serial                         = $dir/ca-material/ca-serial
-database                       = $dir/ca-material/ca-certindex
+serial                         = $dir\\ca-material\\ca-serial
+database                       = $dir\\ca-material\\ca-certindex
 new_certs_dir                  = $dir
-certificate                    = $dir/ca-material/ca-cert.pem
-private_key                    = $dir/ca-material/ca-key.pem
+certificate                    = $dir\\ca-material\\ca-cert.pem
+private_key                    = $dir\\ca-material\\ca-key.pem
 default_days                   = 3650
 default_md                     = sha1
 preserve                       = no
@@ -102,14 +102,14 @@ class Create(ZatoCommand):
         self.target_dir = os.path.abspath(args.path)
 
     def execute(self, args, show_output=True):
-
+        self.logger.info("Create CA execute")
         # Prepare the directory layout
         os.mkdir(os.path.join(self.target_dir, 'ca-material'))
-        open(os.path.join(self.target_dir, 'ca-material/ca-serial'), 'w').write('01')
-        open(os.path.join(self.target_dir, 'ca-material/ca-password'), 'w').write(uuid.uuid4().hex)
-        open(os.path.join(self.target_dir, 'ca-material/ca-certindex'), 'w')
-        open(os.path.join(self.target_dir, 'ca-material/ca-certindex.attr'), 'w').write('unique_subject = no')
-        open(os.path.join(self.target_dir, 'ca-material/openssl-template.conf'), 'w').write(openssl_template)
+        open(os.path.join(self.target_dir, 'ca-material', 'ca-serial'), 'w').write('01')
+        open(os.path.join(self.target_dir, 'ca-material', 'ca-password'), 'w').write(uuid.uuid4().hex)
+        open(os.path.join(self.target_dir, 'ca-material', 'ca-certindex'), 'w')
+        open(os.path.join(self.target_dir, 'ca-material', 'ca-certindex.attr'), 'w').write('unique_subject = no')
+        open(os.path.join(self.target_dir, 'ca-material', 'openssl-template.conf'), 'w').write(openssl_template)
 
         # Create the CA's cert and the private key
 
@@ -126,9 +126,13 @@ class Create(ZatoCommand):
         f.flush()
 
         cmd = """openssl req -batch -new -x509 -newkey rsa:2048 -extensions v3_ca -keyout \
-                   {target_dir}/ca-material/ca-key.pem -out {target_dir}/ca-material/ca-cert.pem -days 3650 \
-                   -config {config} -passout file:{target_dir}/ca-material/ca-password >/dev/null 2>&1""".format(
-                       config=f.name, target_dir=self.target_dir)
+                   {ca_key} -out {ca_cert} -days 3650 \
+                   -config {config} -passout file:{ca_password}""".format(
+                       config=f.name, target_dir=self.target_dir,
+                       ca_key=os.path.join(self.target_dir, 'ca-material', 'ca-key.pem'),
+                       ca_cert=os.path.join(self.target_dir, 'ca-material', 'ca-cert.pem'),
+                       ca_password=os.path.relpath(os.path.join(self.target_dir, 'ca-material', 'ca-password'))
+                       )
         os.system(cmd)
         f.close()
 
