@@ -11,6 +11,7 @@ from base64 import b64decode, b64encode
 from contextlib import closing
 from http.client import BAD_REQUEST, NOT_FOUND
 from mimetypes import guess_type
+from operator import attrgetter
 from tempfile import NamedTemporaryFile
 from traceback import format_exc
 from uuid import uuid4
@@ -68,22 +69,14 @@ class GetList(AdminService):
         output_repeated = True
         default_value = ''
 
-    def get_data(self, session):
-
-        return_internal = is_boolean(self.server.fs_server_config.misc.return_internal_objects)
-        internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
-
-        # By default, we do not return internal services, unless we are specifically told to
-        include_list = []
-
-        if self.request.input.should_include_scheduler:
-            include_list.extend(get_startup_job_services())
+    def _get_data(self, session, return_internal, include_list, internal_del):
 
         out = []
         search_result = self._search(
             service_list, session, self.request.input.cluster_id, return_internal, include_list, False)
 
         for item in elems_with_opaque(search_result):
+
             item.may_be_deleted = internal_del if item.is_internal else True
             item.usage = self.server.kvdb.conn.get('{}{}'.format(KVDB.SERVICE_USAGE, item.name)) or 0
 
@@ -95,6 +88,36 @@ class GetList(AdminService):
 
             out.append(item)
 
+        return out
+
+    def get_data(self, session):
+
+        # Reusable
+        return_internal = is_boolean(self.server.fs_server_config.misc.return_internal_objects)
+        internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
+
+        # We issue one or two queries to populate this list - the latter case only if we are to return scheduler's jobs.
+        out = []
+
+        # Confirm if we are to return services for the scheduler
+        if self.request.input.should_include_scheduler:
+            scheduler_service_list = get_startup_job_services()
+        else:
+            scheduler_service_list = []
+
+        # This query runs only if there are scheduler services to return ..
+        if scheduler_service_list:
+            result = self._get_data(session, return_internal, scheduler_service_list, internal_del)
+            out.extend(result)
+
+        # .. while this query runs always (note the empty include_list).
+        result = self._get_data(session, return_internal, [], internal_del)
+        out.extend(result)
+
+        # .. sort the result before returning ..
+        out.sort(key=attrgetter('name'))
+
+        # .. finally, return all that we found.
         return out
 
     def handle(self):
