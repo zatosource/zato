@@ -26,6 +26,131 @@ from zato.server.service import Service
 
 # ################################################################################################################################
 
+if 0:
+    from typing import Callable
+    from zato.common.odb.api import SessionWrapper
+    from zato.server.base.parallel import ParallelServer
+
+    Callable = Callable
+    ParallelServer = ParallelServer
+    SessionWrapper = SessionWrapper
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+sec_def_name = 'zato.internal.invoke'
+api_user = sec_def_name + '.user'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ODBConfigSource:
+    """ Returns server configuration based on information the cluster's ODB.
+    """
+    def __init__(self, odb, cluster_name, server_name):
+        # type: (SessionWrapper) -> None
+        self.odb = odb
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Server:
+    """ A base class for local and remote server invocations.
+    """
+    def __init__(self, server_name):
+        # type: (str) -> None
+        self.server_name = server_name
+
+    def invoke(self, service_name, request=None, pid=None):
+        # type: (str, dict, int) -> None
+        pass
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class LocalServer(Server):
+    """ Invokes services directly on the current server, without any RPC.
+    """
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class RemoteServer(Server):
+    """ Invokes services on a remote server using RPC.
+    """
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ServerRPC:
+    """ A facade through which Zato servers can be invoked.
+    """
+    def __init__(self, parallel_server, server_builder, get_server_list_func, decrypt_func):
+        # type: (ParallelServer, Callable, Callable, Callable) -> None
+        self.parallel_server = parallel_server
+        self.get_remote_server_func = get_remote_server_func
+        self.get_server_list_func = get_server_list_func
+        self.decrypt_func = decrypt_func
+        self._servers = {}
+
+# ################################################################################################################################
+
+    def _get_server_by_name(self, server_name):
+        # type: (str) -> Server
+        if server_name == self.parallel_server.name:
+            return LocalServer(server_name)
+        else:
+            return self.get_remote_server_func(server_name)
+
+# ################################################################################################################################
+
+    def __getitem__(self, server_name):
+        # type: (str) -> Server
+        if server_name not in self._servers:
+            server = self._get_server_by_name(server_name)
+            self._servers[server_name] = server
+
+        return self._servers[server_name]
+
+# ################################################################################################################################
+
+    def invoke_async_all(self, request):
+        pass
+
+# ################################################################################################################################
+
+    def invoke_all(self, request):
+        pass
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+'''
+# stdlib
+from contextlib import closing
+from logging import getLogger
+from traceback import format_exc
+
+# gevent
+from gevent import spawn
+
+# requests
+from requests import get as requests_get
+
+# Zato
+from zato.client import AnyServiceInvoker
+from zato.common.api import SERVER_UP_STATUS
+from zato.common.util.api import make_repr
+from zato.common.odb.query import server_by_name, server_list
+from zato.server.service import Service
+
+# ################################################################################################################################
+
 logger = getLogger(__name__)
 
 # ################################################################################################################################
@@ -292,3 +417,4 @@ class Servers(object):
         return out_ok, out
 
 # ################################################################################################################################
+'''
