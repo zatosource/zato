@@ -94,7 +94,7 @@ class Connector(object):
         self.auth_func = auth_func # Invoked by channels that need to authenticate users
 
         # Service to invoke by channels for each message received
-        self.service = config.service_name
+        self.service = getattr(config, 'service_name', None)
 
         self.channels = channels or {} # type: dict
         self.outconns = outconns or {} # type: dict
