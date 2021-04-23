@@ -23,6 +23,11 @@ def get_sys_info():
         info = distro.info()
         out = '{}.{}-{}'.format(info['id'], info['version'], info['codename'].lower())
 
+    elif is_windows:
+        _platform = platform.platform().lower()
+        _edition = platform.win32_edition()
+        out = '{}-{}'.format(_platform, _edition)
+
     return out
 
 # ################################################################################################################################
