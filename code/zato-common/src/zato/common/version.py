@@ -20,8 +20,14 @@ def get_sys_info():
 
     if is_linux:
         import distro
+
         info = distro.info()
-        out = '{}.{}-{}'.format(info['id'], info['version'], info['codename'].lower())
+        codename = info['codename'].lower()
+
+        out = '{}.{}'.format(info['id'], info['version'])
+
+        if codename:
+            out += '-{}'.format(codename)
 
     elif is_windows:
         _platform = platform.platform().lower()
