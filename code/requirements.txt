@@ -26,6 +26,7 @@ dateparser==0.7.6
 decorator==3.4.0
 dictalchemy==0.1.2.6
 dill==0.2.5
+distro==1.5.0
 Django==1.9.13
 docformatter==0.8
 dropbox==10.10.0
@@ -162,3 +163,4 @@ zope.event==4.5.0
 gevent-inotifyx==0.1.1; sys_platform != 'darwin'
 https://github.com/dsuch/inotifyx/archive/main.zip#egg=inotifyx; sys_platform != 'darwin'
 https://github.com/dsuch/warlock/archive/main.zip#egg=warlock
+pywin32!=226; platform_system == "Windows"
