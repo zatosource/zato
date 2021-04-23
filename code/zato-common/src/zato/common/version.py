@@ -28,6 +28,12 @@ def get_sys_info():
         _edition = platform.win32_edition()
         out = '{}-{}'.format(_platform, _edition)
 
+    elif is_mac:
+        out = 'mac'
+
+    else:
+        out = 'os.unrecognised'
+
     return out
 
 # ################################################################################################################################
