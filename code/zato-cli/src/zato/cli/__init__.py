@@ -927,7 +927,7 @@ class CACreateCommand(ZatoCommand):
         import tempfile
 
         now = self._get_now()
-        openssl_template = open(os.path.join(self.target_dir, 'ca-material/openssl-template.conf')).read()
+        openssl_template = open(os.path.join(self.target_dir, 'ca-material', 'openssl-template.conf')).read()
 
         ou_attrs = ('organizational_unit', 'organizational-unit')
         template_args = {}
@@ -950,6 +950,12 @@ class CACreateCommand(ZatoCommand):
         template_args['common_name'] = self._get_arg(args, 'common_name', default_common_name)
         template_args['target_dir'] = self.target_dir
 
+        template_args['ca_serial'] = os.path.relpath(os.path.join(self.target_dir, 'ca-material', 'ca-serial')).replace('\\','/')
+        template_args['ca_certindex'] = os.path.relpath(os.path.join(self.target_dir, 'ca-material', 'ca-certindex')).replace('\\','/')
+        template_args['target_dir_rel'] = os.path.relpath(self.target_dir).replace('\\','/')
+        template_args['ca_key'] = os.path.relpath(os.path.join(self.target_dir, 'ca-material', 'ca-cert.pem')).replace('\\','/')
+        template_args['private_key'] = os.path.relpath(os.path.join(self.target_dir, 'ca-material', 'ca-key.pem')).replace('\\','/')
+
         f = tempfile.NamedTemporaryFile(mode='w+') # noqa
         f.write(openssl_template.format(**template_args))
         f.flush()
@@ -965,10 +971,10 @@ class CACreateCommand(ZatoCommand):
 
         file_args['file_prefix'] = self.get_file_prefix(file_args)
 
-        csr_name = '{target_dir}/out-csr/{file_prefix}-csr-{now}.pem'.format(**file_args)
-        priv_key_name = '{target_dir}/out-priv/{file_prefix}-priv-{now}.pem'.format(**file_args)
-        pub_key_name = '{target_dir}/out-pub/{file_prefix}-pub-{now}.pem'.format(**file_args)
-        cert_name = '{target_dir}/out-cert/{file_prefix}-cert-{now}.pem'.format(**file_args)
+        csr_name = os.path.join(self.target_dir, 'out-priv', '{file_prefix}-priv-{now}.pem'.format(**file_args))
+        priv_key_name = os.path.join(self.target_dir, 'out-priv', '{file_prefix}-priv-{now}.pem'.format(**file_args))
+        pub_key_name = os.path.join(self.target_dir, 'out-pub', '{file_prefix}-pub-{now}.pem'.format(**file_args))
+        cert_name =  os.path.join(self.target_dir, 'out-cert', '{file_prefix}-cert-{now}.pem'.format(**file_args))
 
         format_args = {
             'config': f.name,
@@ -977,7 +983,8 @@ class CACreateCommand(ZatoCommand):
             'priv_key_name': priv_key_name,
             'pub_key_name': pub_key_name,
             'cert_name': cert_name,
-            'target_dir': self.target_dir
+            'target_dir': self.target_dir,
+            'ca_password': os.path.relpath(os.path.join(self.target_dir, 'ca-material', 'ca-password').replace('\\','\\\\'))
         }
 
         # Create the CSR and keys ..
@@ -985,8 +992,7 @@ class CACreateCommand(ZatoCommand):
                   -out {csr_name} \
                   -keyout {priv_key_name} \
                   -pubkey \
-                  -newkey rsa:2048 -config {config} \
-                  >/dev/null 2>&1""".format(**format_args)
+                  -newkey rsa:2048 -config {config} """.format(**format_args)
         os.system(cmd)
 
         # .. note that we were using "-pubkey" flag above so we now have to extract
@@ -1003,18 +1009,17 @@ class CACreateCommand(ZatoCommand):
         open(pub_key_name, 'w').write(pub)
 
         # Generate the certificate
-        cmd = """openssl ca -batch -passin file:{target_dir}/ca-material/ca-password -config {config} \
+        cmd = """openssl ca -batch -passin file:{ca_password} -config {config} \
                  -out {cert_name} \
                  -extensions {extension} \
-                 -in {csr_name} \
-                  >/dev/null 2>&1""".format(**format_args)
+                 -in {csr_name}""".format(**format_args)
 
         os.system(cmd)
         f.close()
 
-        # Now delete the default certificate stored in './', we don't really
-        # need it because we have its copy in './out-cert' anyway.
-        last_serial = open(os.path.join(self.target_dir, 'ca-material/ca-serial.old')).read().strip()
+        # Now delete the default certificate stored in '.\', we don't really
+        # need it because we have its copy in '.\out-cert' anyway.
+        last_serial = open(os.path.join(self.target_dir, 'ca-material', 'ca-serial.old')).read().strip()
         os.remove(os.path.join(self.target_dir, last_serial + '.pem'))
 
         msg = """Crypto material generated and saved in:

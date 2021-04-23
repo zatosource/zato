@@ -149,7 +149,7 @@ class Create(ZatoCommand):
             'lb_agent_use_tls': 'false',
             'zato_secret_key':zato_secret_key,
             'well_known_data': cm.encrypt(well_known_data.encode('utf8')),
-            'DATABASE_NAME': args.odb_db_name or args.sqlite_path,
+            'DATABASE_NAME': args.odb_db_name or args.sqlite_path.replace('\\','/'),
             'DATABASE_USER': args.odb_user or '',
             'DATABASE_PASSWORD': cm.encrypt(odb_password),
             'DATABASE_HOST': args.odb_host or '',
