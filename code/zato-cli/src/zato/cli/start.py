@@ -69,18 +69,8 @@ Examples:
 # ################################################################################################################################
 
     def delete_pidfile(self):
-
-        # stdlib
-        import os
-
-        # Zato
-        from zato.common.api import MISC
-
-        try:
-            path = os.path.join(self.component_dir, MISC.PIDFILE)
-            os.remove(path)
-        except Exception as e:
-            self.logger.info('Pidfile `%s` could not be deleted `%s`', path, e)
+        from zato.common.util.cli import delete_pidfile as cli_delete_pidfile
+        cli_delete_pidfile(self.logger, self.component_dir)
 
 # ################################################################################################################################
 

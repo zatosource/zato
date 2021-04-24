@@ -84,7 +84,8 @@ class _StdErr(object):
 # ################################################################################################################################
 
 def start_process(component_name, executable, run_in_fg, cli_options, extra_cli_options='', on_keyboard_interrupt=None,
-        failed_to_start_err=-100, extra_options=None, stderr_path=None, stdin_data=None, async_keyword=async_keyword):
+        failed_to_start_err=-100, extra_options=None, stderr_path=None, stdin_data=None,
+        should_sys_exit=True, async_keyword=async_keyword):
     """ Starts a new process from a given Python path, either in background or foreground (run_in_fg).
     """
     stderr_path = stderr_path or mkstemp('-zato-start-{}.txt'.format(component_name.replace(' ','')))[1]
@@ -114,16 +115,34 @@ def start_process(component_name, executable, run_in_fg, cli_options, extra_cli_
                 sys.exit(failed_to_start_err)
 
     except KeyboardInterrupt:
+
+        # Invoke a callback to handle Ctrl-C, e.g. to delete a pidfile
         if on_keyboard_interrupt:
             on_keyboard_interrupt()
-        sys.exit(0)
+
+        # This may be False if we run via unit-tests
+        if should_sys_exit:
+            sys.exit(0)
 
 # ################################################################################################################################
 
 def start_python_process(component_name, run_in_fg, py_path, program_dir, on_keyboard_interrupt=None, failed_to_start_err=-100,
-        extra_options=None, stderr_path=None, stdin_data=None):
+        extra_options=None, stderr_path=None, stdin_data=None, should_sys_exit=False):
     """ Starts a new process from a given Python path, either in background or foreground (run_in_fg).
     """
+
+    print()
+    print(111, component_name)
+    print(222, run_in_fg)
+    print(333, py_path)
+    print(444, program_dir)
+    print(555, on_keyboard_interrupt)
+    print(666, failed_to_start_err)
+    print(777, extra_options)
+    print(888, stderr_path)
+    print(999, stdin_data)
+    print()
+
     options = {
         'fg': run_in_fg,
     }
@@ -143,6 +162,6 @@ def start_python_process(component_name, run_in_fg, py_path, program_dir, on_key
     extra_cli_options += '{}'.format(options)
 
     return start_process(component_name, get_executable(), run_in_fg, None, extra_cli_options, on_keyboard_interrupt,
-        failed_to_start_err, extra_options, stderr_path, stdin_data)
+        failed_to_start_err, extra_options, stderr_path, stdin_data, should_sys_exit)
 
 # ################################################################################################################################

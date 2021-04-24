@@ -52,6 +52,7 @@ from zato.distlock import LockManager
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigStore
 from zato.server.connection.server import Servers
+from zato.server.base.parallel.api import PublicAPI
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
 from zato.server.base.parallel.subprocess_.api import CurrentState as SubprocessCurrentState, \
@@ -187,6 +188,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.user_config = Bunch()
         self.stderr_path = None # type: str
         self.json_parser = SIMDJSONParser()
+
+        # Public API to access the server from user services or tests
+        self.api = PublicAPI()
 
         # Audit log
         self.audit_log = AuditLog()

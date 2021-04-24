@@ -5,3 +5,12 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
+
+# stdlib
+from unittest import main
+
+# Zato
+from zato.testing.api import ZatoTestCase
+
+if __name__ == '__main__':
+    main()
