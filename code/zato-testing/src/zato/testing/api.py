@@ -41,6 +41,16 @@ class ZatoTestCase(TestCase):
         print(111, self)
         print()
 
+        # Zato
+        from zato.cli.create_cluster import Create as CreateCluster
+        from zato.cli.create_server import Create as CreateServer
+        from zato.cli.model import CreateClusterArgs
+
+        create_cluster_args = CreateClusterArgs()
+
+        create_cluster = CreateCluster(create_cluster_args)
+
+        '''
         #server = ParallelServer()
         #server.api.channel.rest.get('aaa')
 
@@ -62,6 +72,7 @@ class ZatoTestCase(TestCase):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', ResourceWarning)
             start_python_process(**start_kwargs)
+            '''
 
 # ################################################################################################################################
 # ################################################################################################################################
