@@ -40,10 +40,18 @@ async_keyword = 'async_' if PY2 else 'async_'
 
 # ################################################################################################################################
 
+import platform
+system = platform.system()
+is_windows = 'windows' in system.lower()
+
+# ################################################################################################################################
+
 def get_executable():
     """ Returns the wrapper which buildout uses for executing Zato commands,
     the one with all the dependencies added to PYTHONPATH.
     """
+    if is_windows:
+        return os.path.join(os.path.dirname(sys.executable), 'python.exe')
     return os.path.join(os.path.dirname(sys.executable), 'py')
 
 # ################################################################################################################################
@@ -88,8 +96,13 @@ def start_process(component_name, executable, run_in_fg, cli_options, extra_cli_
     """ Starts a new process from a given Python path, either in background or foreground (run_in_fg).
     """
     stderr_path = stderr_path or mkstemp('-zato-start-{}.txt'.format(component_name.replace(' ','')))[1]
-    stdout_redirect = '' if run_in_fg else '1> /dev/null'
-    stderr_redirect = '2> {}'.format(stderr_path)
+
+    stdout_redirect = ''
+    stderr_redirect = ''
+    if not is_windows:
+        if not run_in_fg:
+            stdout_redirect = '1> /dev/null'
+        stderr_redirect = '2> {}'.format(stderr_path)
 
     program = '{} {} {} {}'.format(executable, extra_cli_options, stdout_redirect, stderr_redirect)
 
