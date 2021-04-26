@@ -1,52 +1,152 @@
 Set-ExecutionPolicy Unrestricted -Scope Process
+function Invoke-Process {
+    [CmdletBinding(SupportsShouldProcess)]
+    param
+        (
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [string]$FilePath,
+
+        [Parameter()]
+        [ValidateNotNullOrEmpty()]
+        [string]$ArgumentList,
+
+        [ValidateSet("Full","StdOut","StdErr","ExitCode","None")]
+        [string]$DisplayLevel
+        )
+
+    $ErrorActionPreference = 'Stop'
+
+    try {
+        $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+        $pinfo.FileName = $FilePath
+        $pinfo.RedirectStandardError = $true
+        $pinfo.RedirectStandardOutput = $true
+        $pinfo.UseShellExecute = $false
+        $pinfo.WindowStyle = 'Hidden'
+        $pinfo.CreateNoWindow = $true
+        $pinfo.Arguments = $ArgumentList
+        $p = New-Object System.Diagnostics.Process
+        $p.StartInfo = $pinfo
+        $p.Start() | Out-Null
+        $result = [pscustomobject]@{
+        Title = ($MyInvocation.MyCommand).Name
+        Command = $FilePath
+        Arguments = $ArgumentList
+        StdOut = $p.StandardOutput.ReadToEnd()
+        StdErr = $p.StandardError.ReadToEnd()
+        ExitCode = $p.ExitCode
+        }
+        $p.WaitForExit()
+
+        if (-not([string]::IsNullOrEmpty($DisplayLevel))) {
+            switch($DisplayLevel) {
+                "Full" { return $result; break }
+                "StdOut" { return $result.StdOut; break }
+                "StdErr" { return $result.StdErr; break }
+                "ExitCode" { return $result.ExitCode; break }
+                }
+            }
+        }
+    catch {
+        exit
+        }
+}
+
 function Set-Patch {
     Param (
         [Parameter(Mandatory=$true)]  [String]$BasePath,
         [Parameter(Mandatory=$true)]  [String]$PatchFile,
-        [Parameter(mandatory=$false)]  [Boolean]$IsBinary = $false
+        [Parameter(mandatory=$false)]  [Boolean]$IsBinary = $false,
+        [Parameter(mandatory=$false)]  [Boolean]$IsVerbose = $false
     )
-
+    $outputLevel = "StdErr"
+    If($IsVerbose -eq $true) {
+        $outputLevel = "Full"
+    }
+    Write-Output "Patching $PatchFile"
     If(Test-Path "$PatchFile" -PathType Leaf) {
-        $params = @('--forward', '-p0', '-d', $BasePath, '-i', $PatchFile)
+        $params = "--forward -p0 -d $BasePath -i $PatchFile"
+        # $params = @('--forward', '-p0', '-d', $BasePath, '-i', $PatchFile)
         if($IsBinary -eq $true){
-            $first += '--binary'
+            $params = "--forward -p0 -d $BasePath -i $PatchFile --binary"
         }
-        Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList $params -Wait
+        $GitPath = (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition)
+        If($IsVerbose -eq $true) {
+            Write-Output "Running $GitPath $params"
+        }
+        Invoke-Process -FilePath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList "$params" -DisplayLevel "$outputLevel"
+        # Start-Process -Filepath (Get-Command "$env:ProgramFiles\Git\usr\bin\patch.exe" | Select-Object -ExpandProperty Definition) -ArgumentList $params -Wait
     } else {
         Write-Output "Patch $PatchFile not found"
     }
 }
 
 function Invoke-ApplyPatches {
-    Set-Patch -BasePath 'eggs' -PatchFile 'patches\butler\__init__.py.diff'
-    Set-Patch -BasePath 'eggs' -PatchFile 'patches\configobj.py.diff'
-    Set-Patch -BasePath 'eggs' -PatchFile 'patches\django\db\models\base.py.diff'
-    Set-Patch -BasePath 'eggs' -PatchFile 'patches\ntlm\HTTPNtlmAuthHandler.py.diff' -IsBinary $true
-    Set-Patch -BasePath 'eggs' -PatchFile 'patches\pykafka\topic.py.diff'
-    Set-Patch -BasePath 'eggs' -PatchFile 'patches\redis\redis\connection.py.diff'
-    Set-Patch -BasePath 'eggs' -PatchFile 'patches\requests\models.py.diff'
-    Set-Patch -BasePath 'eggs' -PatchFile 'patches\requests\sessions.py.diff'
-    Set-Patch -BasePath 'eggs' -PatchFile 'patches\ws4py\server\geventserver.py.diff'
-    Set-Patch -BasePath 'eggs' -PatchFile 'patches\sqlalchemy\sql\dialects\postgresql\pg8000.py.diff'
-    Set-Patch -BasePath 'eggs' -PatchFile 'patches\pg8000\core.py.diff'
-    Set-Patch -BasePath 'eggs' -PatchFile 'patches\sqlalchemy\sql\crud.py.diff'
+    Param (
+        [Parameter(Mandatory=$true)]  [String]$CurDir
+    )
+    
+    Write-Output "Invoke-ApplyPatches:"
+    Write-Output '    patches\butler\__init__.py.diff'
+    Set-Patch -BasePath "$CurDir\Lib\site-packages\" -PatchFile "$CurDir\patches\butler\__init__.py.diff"
+    Write-Output '    patches\configobj.py.diff'
+    Set-Patch -BasePath "$CurDir\Lib\site-packages\" -PatchFile "$CurDir\patches\configobj.py.diff"
+    Write-Output '    patches\django\db\models\base.py.diff'
+    Set-Patch -BasePath "$CurDir\Lib\site-packages\" -PatchFile "$CurDir\patches\django\db\models\base.py.diff"
+    Write-Output '    patches\ntlm\HTTPNtlmAuthHandler.py.diff'
+    Set-Patch -BasePath "$CurDir\Lib\site-packages\" -PatchFile "$CurDir\patches\ntlm\HTTPNtlmAuthHandler.py.diff" -IsBinary $true
+    Write-Output '    patches\pykafka\topic.py.diff'
+    Set-Patch -BasePath "$CurDir\Lib\site-packages\" -PatchFile "$CurDir\patches\pykafka\topic.py.diff"
+    Write-Output '    patches\redis\redis\connection.py.diff'
+    Set-Patch -BasePath "$CurDir\Lib\site-packages\" -PatchFile "$CurDir\patches\redis\redis\connection.py.diff"
+    Write-Output '    patches\requests\models.py.diff'
+    Set-Patch -BasePath "$CurDir\Lib\site-packages\" -PatchFile "$CurDir\patches\requests\models.py.diff"
+    Write-Output '    patches\requests\sessions.py.diff'
+    Set-Patch -BasePath "$CurDir\Lib\site-packages\" -PatchFile "$CurDir\patches\requests\sessions.py.diff"
+    Write-Output '    patches\ws4py\server\geventserver.py.diff'
+    Set-Patch -BasePath "$CurDir\Lib\site-packages\" -PatchFile "$CurDir\patches\ws4py\server\geventserver.py.diff"
+    Write-Output '    patches\sqlalchemy\sql\dialects\postgresql\pg8000.py.diff'
+    Set-Patch -BasePath "$CurDir\Lib\site-packages\" -PatchFile "$CurDir\patches\sqlalchemy\sql\dialects\postgresql\pg8000.py.diff"
+    Write-Output '    patches\pg8000\core.py.diff'
+    Set-Patch -BasePath "$CurDir\Lib\site-packages\" -PatchFile "$CurDir\patches\pg8000\core.py.diff"
+    Write-Output '    patches\sqlalchemy\sql\crud.py.diff'
+    Set-Patch -BasePath "$CurDir\Lib\site-packages\" -PatchFile "$CurDir\patches\sqlalchemy\sql\crud.py.diff"
 }
+
 function Invoke-InstallAllWithPip {
+    Write-Output "Invoke-InstallAllWithPip"
+    Write-Output '    .\requirements.txt'
     .\Scripts\pip.exe install -r .\requirements.txt
+    Write-Output '    .\zato-common'
     .\Scripts\pip.exe install -e .\zato-common
+    Write-Output '    .\zato-agent'
     .\Scripts\pip.exe install -e .\zato-agent
+    Write-Output '    .\zato-broker'
     .\Scripts\pip.exe install -e .\zato-broker
+    Write-Output '    .\zato-cli'
     .\Scripts\pip.exe install -e .\zato-cli
+    Write-Output '    .\zato-client'
     .\Scripts\pip.exe install -e .\zato-client
+    Write-Output '    .\zato-cy'
     .\Scripts\pip.exe install -e .\zato-cy
+    Write-Output '    .\zato-distlock'
     .\Scripts\pip.exe install -e .\zato-distlock
+    Write-Output '    .\zato-hl7'
     .\Scripts\pip.exe install -e .\zato-hl7
+    Write-Output '    .\zato-lib'
     .\Scripts\pip.exe install -e .\zato-lib
+    Write-Output '    .\zato-scheduler'
     .\Scripts\pip.exe install -e .\zato-scheduler
+    Write-Output '    .\zato-server'
     .\Scripts\pip.exe install -e .\zato-server
+    Write-Output '    .\zato-web-admin'
     .\Scripts\pip.exe install -e .\zato-web-admin
+    Write-Output '    .\zato-zmq'
     .\Scripts\pip.exe install -e .\zato-zmq
+    Write-Output '    .\zato-sso'
     .\Scripts\pip.exe install -e .\zato-sso
+    Write-Output '    .\zato-testing'
     .\Scripts\pip.exe install -e .\zato-testing
 }
 
