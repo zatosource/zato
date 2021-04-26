@@ -38,23 +38,19 @@ Try
     Write-Output "*** Downloading updates ***"
     Start-Process -Filepath (Get-Command "git.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('pull') -Wait
 
-    # if [[ -n "${ZATO_BRANCH}" ]];then
-    #     # Checkout a local branch/commit or create the branch from the remote one
-    #     git checkout "${ZATO_BRANCH}" 2>/dev/null || git checkout -b "${ZATO_BRANCH}" "origin/${ZATO_BRANCH}"
-    # fi
-
     Set-ExecutionPolicy Unrestricted -Scope Process
 
     .\Scripts\activate.ps1
+    Write-Output "*** Updating dependencies ***"
     Invoke-InstallAllWithPip
 
-    Invoke-ApplyPatches
+    Write-Output "*** Applying patches ***"
+    Push-Location .\Lib\site-packages\
+    Invoke-ApplyPatches -CurDir "$CURDIR"
+    Pop-Location
 }
 Catch
 {
     Write-Output "Ran into an issue: $($PSItem.ToString())"
-}
-Finally
-{
     Pop-Location
 }
