@@ -67,15 +67,16 @@ Try
 
 
     # Apply patches
-    Invoke-ApplyPatches
+    Push-Location .\Lib\site-packages\
+    Invoke-ApplyPatches -CurDir "$CURDIR"
+    Pop-Location
 
-    Copy-Item ".\extras\zato-windows.py" -Destination ".\Scripts\zato.py" -Force
+    Copy-Item ".\extras\zato-windows.py" -Destination ".\Scripts\zato-windows.py" -Force
+    Copy-Item ".\extras\zato.ps1" -Destination ".\Scripts\zato.ps1" -Force
+    Pop-Location
 }
 Catch
 {
     Write-Output "Ran into an issue: $($PSItem.ToString())"
-}
-Finally
-{
     Pop-Location
 }
