@@ -119,24 +119,45 @@ class Create(ZatoCommand):
             template_args[name] = value
 
         template_args['common_name'] = self._get_arg(args, 'common_name', default_ca_name)
-        template_args['target_dir'] = self.target_dir.replace('\\','/')
-        template_args['ca_serial'] = os.path.relpath(os.path.join(self.target_dir, 'ca-material', 'ca-serial')).replace('\\','/')
-        template_args['ca_certindex'] = os.path.relpath(os.path.join(self.target_dir, 'ca-material', 'ca-certindex')).replace('\\','/')
-        template_args['target_dir_rel'] = os.path.relpath(self.target_dir).replace('\\','/')
-        template_args['ca_key'] = os.path.relpath(os.path.join(self.target_dir, 'ca-material', 'ca-cert.pem')).replace('\\','/')
-        template_args['private_key'] = os.path.relpath(os.path.join(self.target_dir, 'ca-material', 'ca-key.pem')).replace('\\','/')
+        template_args['target_dir'] = self.target_dir
+        template_args['ca_serial'] = '$dir/ca-material/ca-serial'
+        template_args['ca_certindex'] = '$dir/ca-material/ca-certindex'
+        template_args['target_dir_rel'] = '$dir'
+        template_args['ca_key'] = '$dir/ca-material/ca-cert.pem'
+        template_args['private_key'] = '$dir/ca-material/ca-key.pem'
+
+        import platform
+        system = platform.system()
+        is_windows = 'windows' in system.lower()
+
+        if is_windows:
+            template_args['target_dir'] = self.target_dir.replace('\\','/')
+            template_args['ca_serial'] = os.path.relpath(os.path.join(self.target_dir, 'ca-material', 'ca-serial')).replace('\\','/')
+            template_args['ca_certindex'] = os.path.relpath(os.path.join(self.target_dir, 'ca-material', 'ca-certindex')).replace('\\','/')
+            template_args['target_dir_rel'] = os.path.relpath(self.target_dir).replace('\\','/')
+            template_args['ca_key'] = os.path.relpath(os.path.join(self.target_dir, 'ca-material', 'ca-cert.pem')).replace('\\','/')
+            template_args['private_key'] = os.path.relpath(os.path.join(self.target_dir, 'ca-material', 'ca-key.pem')).replace('\\','/')
 
         f = tempfile.NamedTemporaryFile(mode='w+')
         f.write(openssl_template.format(**template_args))
         f.flush()
 
+        ca_key = os.path.join(self.target_dir, 'ca-material', 'ca-key.pem')
+        ca_cert = os.path.join(self.target_dir, 'ca-material', 'ca-cert.pem')
+        ca_password = os.path.relpath(os.path.join(self.target_dir, 'ca-material', 'ca-password'))
+        
+        if is_windows:
+            ca_key = os.path.join(self.target_dir, 'ca-material', 'ca-key.pem').replace('\\','\\\\')
+            ca_cert = os.path.join(self.target_dir, 'ca-material', 'ca-cert.pem').replace('\\','\\\\')
+            ca_password = os.path.relpath(os.path.join(self.target_dir, 'ca-material', 'ca-password')).replace('\\','\\\\')
+
         cmd = """openssl req -batch -new -x509 -newkey rsa:2048 -extensions v3_ca -keyout \
                    {ca_key} -out {ca_cert} -days 3650 \
                    -config {config} -passout file:{ca_password}""".format(
                        config=f.name, target_dir=self.target_dir,
-                       ca_key=os.path.join(self.target_dir, 'ca-material', 'ca-key.pem').replace('\\','\\\\'),
-                       ca_cert=os.path.join(self.target_dir, 'ca-material', 'ca-cert.pem').replace('\\','\\\\'),
-                       ca_password=os.path.relpath(os.path.join(self.target_dir, 'ca-material', 'ca-password').replace('\\','\\\\'))
+                       ca_key=ca_key,
+                       ca_cert=ca_cert,
+                       ca_password=ca_password
                        )
         os.system(cmd)
         f.close()

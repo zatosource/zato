@@ -149,7 +149,7 @@ class Create(ZatoCommand):
             'lb_agent_use_tls': 'false',
             'zato_secret_key':zato_secret_key,
             'well_known_data': cm.encrypt(well_known_data.encode('utf8')),
-            'DATABASE_NAME': args.odb_db_name or args.sqlite_path.replace('\\','/'),
+            'DATABASE_NAME': args.odb_db_name or args.sqlite_path,
             'DATABASE_USER': args.odb_user or '',
             'DATABASE_PASSWORD': cm.encrypt(odb_password),
             'DATABASE_HOST': args.odb_host or '',
@@ -159,6 +159,12 @@ class Create(ZatoCommand):
             'ADMIN_INVOKE_NAME':'admin.invoke',
             'ADMIN_INVOKE_PASSWORD':cm.encrypt(admin_invoke_password),
         }
+        import platform
+        system = platform.system()
+        is_windows = 'windows' in system.lower()
+
+        if is_windows:
+            config['DATABASE_NAME'] = args.odb_db_name or args.sqlite_path.replace('\\','/'),
 
         for name in 'zato_secret_key', 'well_known_data', 'DATABASE_PASSWORD', 'SECRET_KEY', 'ADMIN_INVOKE_PASSWORD':
             config[name] = config[name].decode('utf8')
@@ -177,32 +183,33 @@ class Create(ZatoCommand):
 
         os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
 
-        import django
-        django.setup()
-        self.reset_logger(args, True)
+        admin_created = True
+        # import django
+        # django.setup()
+        # self.reset_logger(args, True)
 
-        # Can't import these without DJANGO_SETTINGS_MODULE being set
-        from django.contrib.auth.models import User
-        from django.db import connection
-        from django.db.utils import IntegrityError
+        # # Can't import these without DJANGO_SETTINGS_MODULE being set
+        # from django.contrib.auth.models import User
+        # from django.db import connection
+        # from django.db.utils import IntegrityError
 
-        call_command('migrate', run_syncdb=True, interactive=False, verbosity=0)
-        call_command('loaddata', initial_data_json_path, verbosity=0)
+        # call_command('migrate', run_syncdb=True, interactive=False, verbosity=0)
+        # call_command('loaddata', initial_data_json_path, verbosity=0)
 
-        try:
-            call_command(
-                'createsuperuser', interactive=False, username=user_name, first_name='admin-first-name',
-                last_name='admin-last-name', email='admin@invalid.example.com')
-            admin_created = True
+        # try:
+        #     call_command(
+        #         'createsuperuser', interactive=False, username=user_name, first_name='admin-first-name',
+        #         last_name='admin-last-name', email='admin@invalid.example.com')
+        #     admin_created = True
 
-            user = User.objects.get(username=user_name)
-            user.set_password(admin_password)
-            user.save()
+        #     user = User.objects.get(username=user_name)
+        #     user.set_password(admin_password)
+        #     user.save()
 
-        except IntegrityError:
-            # This will happen if user 'admin' already exists, e.g. if this is not the first cluster in this database
-            admin_created = False
-            connection._rollback()
+        # except IntegrityError:
+        #     # This will happen if user 'admin' already exists, e.g. if this is not the first cluster in this database
+        #     admin_created = False
+        #     connection._rollback()
 
         # Needed because Django took over our logging config
         self.reset_logger(args, True)
