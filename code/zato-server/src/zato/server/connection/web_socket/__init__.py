@@ -168,7 +168,7 @@ class WebSocket(_WebSocket):
 
         super(WebSocket, self).__init__(_unusued_sock, _unusued_protocols, _unusued_extensions, wsgi_environ, **kwargs)
 
-    def _set_json_dump_func(self, _default='rapidjson', _supported=('rapidjson', 'bson')):
+    def _set_json_dump_func(self, _default='json', _supported=('rapidjson', 'bson')):
         json_library = self.parallel_server.fs_server_config.wsx.get('json_library', _default)
 
         if json_library not in _supported:

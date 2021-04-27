@@ -23,8 +23,8 @@ from uuid import uuid4
 # gevent
 from gevent import sleep
 
-# pyrapidjson
-from rapidjson import loads
+# json
+from json import loads
 
 # Python 2/3 compatibility
 from builtins import bytes

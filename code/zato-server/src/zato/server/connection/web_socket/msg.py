@@ -17,8 +17,8 @@ from traceback import format_exc
 # Bunch
 from bunch import Bunch
 
-# pyrapidjson
-from rapidjson import dumps
+# json
+from json import dumps
 
 # Zato
 from zato.common import DATA_FORMAT

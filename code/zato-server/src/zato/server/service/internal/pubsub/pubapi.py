@@ -11,8 +11,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from traceback import format_exc
 
-# rapidjson
-from rapidjson import dumps
+# json
+from json import dumps
 
 # Python 2/3 compatibility
 from future.utils import itervalues
