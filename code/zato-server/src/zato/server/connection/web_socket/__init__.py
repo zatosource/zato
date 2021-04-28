@@ -8,8 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # Make sure we are gevent-friendly - this is needed if we run
 # the code from the __main__ block.
-from gevent.monkey import patch_all
-patch_all()
+if 0:
+    from gevent.monkey import patch_all
+    patch_all()
 
 # ################################################################################################################################
 # ################################################################################################################################
