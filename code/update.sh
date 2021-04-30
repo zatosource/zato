@@ -6,6 +6,9 @@ N="/dev/null";pushd .>$N;cd `dirname ${CURDIR}`>$N;CURDIR=`pwd`;popd>$N
 
 source $CURDIR/_common.sh
 
+echo "*** Downloading updates ***"
+git -C $CURDIR pull
+
 while getopts "c:" opt; do
     case "$opt" in
     c)
@@ -13,9 +16,6 @@ while getopts "c:" opt; do
         ;;
     esac
 done
-
-echo "*** Downloading updates ***"
-git -C $CURDIR pull
 
 if [[ -n "${ZATO_BRANCH}" ]];then
     # Checkout a local branch/commit or create the branch from the remote one
