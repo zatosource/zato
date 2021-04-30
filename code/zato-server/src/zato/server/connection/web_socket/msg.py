@@ -17,8 +17,8 @@ from traceback import format_exc
 # Bunch
 from bunch import Bunch
 
-# json
-from json import dumps
+# BSON
+from bson.json_util import dumps
 
 # Zato
 from zato.common import DATA_FORMAT

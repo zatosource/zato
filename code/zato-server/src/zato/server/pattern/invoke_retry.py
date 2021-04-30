@@ -8,9 +8,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import datetime
-from json import dumps
 from logging import getLogger
 from traceback import format_exc
+
+# BSON
+from bson.json_util import dumps
 
 # gevent
 from gevent import sleep

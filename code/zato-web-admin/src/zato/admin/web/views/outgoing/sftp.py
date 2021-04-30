@@ -10,8 +10,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from json import dumps
 from traceback import format_exc
+
+# BSON
+from bson.json_util import dumps
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
