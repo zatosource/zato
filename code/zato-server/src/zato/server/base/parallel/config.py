@@ -97,7 +97,6 @@ class ConfigLoader(object):
         # SMS - end
         #
 
-
         #
         # Cloud - start
         #
