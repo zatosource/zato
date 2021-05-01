@@ -101,10 +101,7 @@ class ConfigLoader(object):
         # Cloud - start
         #
 
-        # OpenStack - Swift
-
-        query = self.odb.get_cloud_openstack_swift_list(server.cluster.id, True)
-        self.config.cloud_openstack_swift = ConfigDict.from_query('cloud_openstack_swift', query, decrypt_func=self.decrypt)
+        # AWS S3
 
         query = self.odb.get_cloud_aws_s3_list(server.cluster.id, True)
         self.config.cloud_aws_s3 = ConfigDict.from_query('cloud_aws_s3', query, decrypt_func=self.decrypt)
@@ -236,11 +233,6 @@ class ConfigLoader(object):
         # Notifications - start
         #
 
-        # OpenStack Swift
-        query = self.odb.get_notif_cloud_openstack_swift_list(server.cluster.id, True)
-        self.config.notif_cloud_openstack_swift = ConfigDict.from_query('notif_cloud_openstack_swift',
-            query, decrypt_func=self.decrypt)
-
         # SQL
         query = self.odb.get_notif_sql_list(server.cluster.id, True)
         self.config.notif_sql = ConfigDict.from_query('notif_sql', query, decrypt_func=self.decrypt)
@@ -278,10 +270,6 @@ class ConfigLoader(object):
         # OAuth
         query = self.odb.get_oauth_list(server.cluster.id, True)
         self.config.oauth = ConfigDict.from_query('oauth', query, decrypt_func=self.decrypt)
-
-        # OpenStack
-        query = self.odb.get_openstack_security_list(server.cluster.id, True)
-        self.config.openstack_security = ConfigDict.from_query('openstack_security', query, decrypt_func=self.decrypt)
 
         # RBAC - permissions
         query = self.odb.get_rbac_permission_list(server.cluster.id, True)
@@ -599,7 +587,7 @@ class ConfigLoader(object):
         """ All passwords are always encrypted so we need to look up any that are not,
         for instance, because it is a cluster newly migrated from 2.0 to 3.0, and encrypt them now in ODB.
         """
-        sec_config_dict_types = ('apikey', 'aws', 'basic_auth', 'jwt', 'ntlm', 'oauth', 'openstack_security',
+        sec_config_dict_types = ('apikey', 'aws', 'basic_auth', 'jwt', 'ntlm', 'oauth',
             'tls_key_cert', 'wss', 'vault_conn_sec', 'xpath_sec')
 
         # Global lock to make sure only one server attempts to do it at a time

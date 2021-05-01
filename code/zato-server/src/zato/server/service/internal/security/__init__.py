@@ -69,7 +69,6 @@ class GetList(AdminService):
                      (SEC_DEF_TYPE.JWT, query.jwt_list),
                      (SEC_DEF_TYPE.NTLM, query.ntlm_list),
                      (SEC_DEF_TYPE.OAUTH, query.oauth_list),
-                     (SEC_DEF_TYPE.OPENSTACK, query.openstack_security_list),
                      (SEC_DEF_TYPE.WSS, query.wss_list),
                      (SEC_DEF_TYPE.VAULT, query.vault_connection_list),
                      (SEC_DEF_TYPE.TLS_CHANNEL_SEC, query.tls_channel_sec_list),
