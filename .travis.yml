@@ -26,7 +26,7 @@ env:
 sudo: required
 os:
   - linux
-  #- osx
+  - windows
 
 services:
   - docker
@@ -41,4 +41,12 @@ notifications:
   email: false
 
 script:
-  - source .travis/test_${MODE}.sh
+  - |-
+    case $TRAVIS_OS_NAME in
+      windows)
+        [[ ! -f $TRAVIS_BUILD_DIR/code/install.ps1 ]] && exit 1
+        powershell $TRAVIS_BUILD_DIR/code/install.ps1 || exit 1
+        ;;
+      linux)
+        source .travis/test_${MODE}.sh
+    esac
