@@ -226,12 +226,6 @@
                         <li>
                             <span class="like-a">Notifications &rarr;</span>
                             <ul>
-                                <li>
-                                    <span class="like-a">Cloud &rarr;</span>
-                                    <ul>
-                                        <li class='wide'><a href="{% url "notif-cloud-openstack-swift" %}?cluster={{ cluster_id|default:'' }}">OpenStack Swift</a></li>
-                                    </ul>
-                                </li>
                                 <li><a href="{% url "notif-sql" %}?cluster={{ cluster_id|default:'' }}">SQL</a></li>
                             </ul>
                         </li>
@@ -273,12 +267,6 @@
                             </ul>
                         </li>
                         <li><a href="{% url "cloud-dropbox" %}?cluster={{ cluster_id|default:'' }}&amp;type_=cloud-dropbox">Dropbox</a></li>
-                        <li>
-                            <span class="like-a">OpenStack &rarr;</span>
-                            <ul>
-                                <li class='wide'><a href="{% url "cloud-openstack-swift" %}?cluster={{ cluster_id|default:'' }}">Swift</a></li>
-                            </ul>
-                        </li>
                     </ul>
                 </li>
 

@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # ################################################################################################################################
 
@@ -54,12 +52,14 @@ class LuaContainer(object):
         return self.lua_programs[name](keys or [], args or [])
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class KVDB(object):
     """ A wrapper around the Zato's key-value database.
     """
-    def __init__(self, conn=None, config=None, decrypt_func=None):
-        self.conn = conn
+    def __init__(self, config=None, decrypt_func=None):
+
+        self.conn = None
         self.config = config
         self.decrypt_func = decrypt_func
         self.conn_class = None # Introduced so it's easier to test the class
@@ -187,6 +187,13 @@ class KVDB(object):
     def close(self):
         self.conn.connection_pool.disconnect()
 
+    @staticmethod
+    def is_config_enabled(config):
+        """ Returns True if the configuration indicates that Redis is enabled.
+        """
+        # type: (dict) -> bool
+        return config.get('host') and config.get('port')
+
 # ################################################################################################################################
 
     # OAuth
@@ -208,4 +215,5 @@ class KVDB(object):
         """
         return self.conn.zscore(NONCE_STORE.KEY_PATTERN.format('oauth', username), nonce)
 
+# ################################################################################################################################
 # ################################################################################################################################
