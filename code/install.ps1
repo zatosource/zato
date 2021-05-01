@@ -53,8 +53,11 @@ Try
     New-Item -ItemType File -Name ".\release-info\revision.txt" -Force -Value $revision
     If(-Not (Test-Path ".\Scripts")) {
         Write-Output 'Virtual environment created:'
-        Get-ChildItem ".\Scripts"
+    } Else {
+        Write-Output 'Virtual environment was not created'
     }
+    Get-ChildItem ".\Scripts"
+    Get-ChildItem ".\Lib"
 
     .\Scripts\activate.ps1
     Invoke-InstallAllWithPip

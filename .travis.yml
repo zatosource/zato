@@ -36,6 +36,8 @@ matrix:
     - osx
 
   include:
+    - os: windows
+      language: shell
     - os: linux
       env: MODE=packaging IMAGE=centos:7 PY_VERSION=python3
       services:
@@ -56,8 +58,6 @@ matrix:
       env: MODE=packaging IMAGE=debian:10 PY_VERSION=python3
       services:
         - docker
-    - os: windows
-      language: shell
 
 notifications:
   email: false
