@@ -9,7 +9,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from unittest import main, TestCase
 
+# SQLAlchemy
+from sqlalchemy import create_engine
+
 # Zato
+from zato.common.odb.model import Base
 from zato.common.odb.api import SessionWrapper
 from zato.server.connection.server.rpc.api import ConfigCtx, ServerRPC
 from zato.server.connection.server.rpc.config import ODBConfigSource
@@ -18,7 +22,7 @@ from zato.server.connection.server.rpc.invoker import LocalServerInvoker, Remote
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _FakeCluster:
+class _TestCluster:
     def __init__(self, name):
         # type: (str) -> None
         self.name = name
@@ -26,9 +30,9 @@ class _FakeCluster:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _FakeParallelServer:
+class _TestParallelServer:
     def __init__(self, cluster, odb, server_name):
-        # type: (_FakeCluster, SessionWrapper, str) -> None
+        # type: (_TestCluster, SessionWrapper, str) -> None
         self.cluster = cluster
         self.odb = odb
         self.name = server_name
@@ -38,13 +42,23 @@ class _FakeParallelServer:
 
 class ServerRPCTestCase(TestCase):
 
-    def test_get_item_local_server(self):
+    def setUp(self):
+        engine =  create_engine('sqlite://')
+
+        Base.metadata.create_all(engine)
+
+        print(111, dir(engine))
+        print(222, engine.table_names())
+
+# ################################################################################################################################
+
+    def xtest_get_item_local_server(self):
 
         cluster_name = 'cluster.1'
         server_name = 'abc'
 
-        cluster = _FakeCluster(cluster_name)
-        parallel_server = _FakeParallelServer(cluster, None, server_name)
+        cluster = _TestCluster(cluster_name)
+        parallel_server = _TestParallelServer(cluster, None, server_name)
 
         # These three will not be called because the server is local
         get_remote_server_func = object
@@ -69,10 +83,12 @@ class ServerRPCTestCase(TestCase):
         server_name = 'abc'
 
         odb = SessionWrapper()
-        odb.init_session()
+        #odb.init_session()
 
-        cluster = _FakeCluster(cluster_name)
-        parallel_server = _FakeParallelServer(cluster, odb, server_name)
+        return
+
+        cluster = _TestCluster(cluster_name)
+        parallel_server = _TestParallelServer(cluster, odb, server_name)
 
         get_remote_server_func = object
         decrypt_func = object
