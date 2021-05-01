@@ -44,7 +44,8 @@ Try
     # virtual environment
     If(-Not (Test-Path ".\Lib")) {
         Write-Output 'Creating virtual environment'
-        Start-Process -Filepath (Get-Command "python.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('-m', 'virtualenv', '--always-copy', '.') -Wait
+        # Start-Process -Filepath (Get-Command "python.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('-m', 'virtualenv', '--always-copy', '.') -Wait
+        Invoke-Process -FilePath (Get-Command "python.exe" | Select-Object -ExpandProperty Definition) -ArgumentList "-m virtualenv --always-copy ." -DisplayLevel "Full"
     }
 
     New-Item -ItemType Directory -Name ".\release-info" -Force
