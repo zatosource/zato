@@ -38,13 +38,11 @@ Try
     Set-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH -Value $env:PATH
 
     # virtualenv
-    If(-Not (Get-Command "virtualenv.exe" | Select-Object -ExpandProperty Definition)) {
-        Write-Output 'Installing virtualenv'
-        Start-Process -Filepath (Get-Command "pip.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('install', 'virtualenv') -Wait
-    }
+    Write-Output 'Installing virtualenv'
+    Start-Process -Filepath (Get-Command "pip.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('install', 'virtualenv') -Wait
 
     # virtual environment
-    If(-not(Test-Path ".\Lib")) {
+    If(-Not (Test-Path ".\Lib")) {
         Write-Output 'Creating virtual environment'
         Start-Process -Filepath (Get-Command "python.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('-m', 'virtualenv', '--always-copy', '.') -Wait
     }
