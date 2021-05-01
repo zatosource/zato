@@ -86,8 +86,6 @@ matrix:
         - docker
     - os: windows
       language: shell
-      before_install:
-        - PowerShell -Command 'Set-ExecutionPolicy -ExecutionPolicy RemoteSigned'
 
 notifications:
   email: false
@@ -97,6 +95,7 @@ script:
     case $TRAVIS_OS_NAME in
       windows)
         [[ ! -f $TRAVIS_BUILD_DIR/code/install.ps1 ]] && exit 1
+        powershell -Command 'Set-ExecutionPolicy -ExecutionPolicy RemoteSigned'
         powershell $TRAVIS_BUILD_DIR/code/install.ps1 || exit 1
         ;;
       linux)
