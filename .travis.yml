@@ -41,15 +41,7 @@ matrix:
       services:
         - docker
     - os: linux
-      env: MODE=packaging IMAGE=centos:7 PY_VERSION=python3
-      services:
-        - docker
-    - os: linux
-      env: MODE=packaging IMAGE=ubuntu:16.04
-      services:
-        - docker
-    - os: linux
-      env: MODE=packaging IMAGE=ubuntu:16.04 PY_VERSION=python3
+      env: MODE=packaging IMAGE=centos:8
       services:
         - docker
     - os: linux
@@ -57,31 +49,11 @@ matrix:
       services:
         - docker
     - os: linux
-      env: MODE=packaging IMAGE=ubuntu:18.04 PY_VERSION=python3
+      env: MODE=packaging IMAGE=ubuntu:20.04
       services:
         - docker
     - os: linux
-      env: MODE=packaging IMAGE=debian:8
-      services:
-        - docker
-    - os: linux
-      env: MODE=packaging IMAGE=debian:8 PY_VERSION=python3
-      services:
-        - docker
-    - os: linux
-      env: MODE=packaging IMAGE=debian:9
-      services:
-        - docker
-    - os: linux
-      env: MODE=packaging IMAGE=debian:9 PY_VERSION=python3
-      services:
-        - docker
-    - os: linux
-      env: MODE=packaging IMAGE=alpine:3.11
-      services:
-        - docker
-    - os: linux
-      env: MODE=packaging IMAGE=alpine:3.11 PY_VERSION=python3
+      env: MODE=packaging IMAGE=debian:10
       services:
         - docker
     - os: windows
