@@ -37,23 +37,23 @@ matrix:
 
   include:
     - os: linux
-      env: MODE=packaging IMAGE=centos:7
+      env: MODE=packaging IMAGE=centos:7 PY_VERSION=python3
       services:
         - docker
     - os: linux
-      env: MODE=packaging IMAGE=centos:8
+      env: MODE=packaging IMAGE=centos:8 PY_VERSION=python3
       services:
         - docker
     - os: linux
-      env: MODE=packaging IMAGE=ubuntu:18.04
+      env: MODE=packaging IMAGE=ubuntu:18.04 PY_VERSION=python3
       services:
         - docker
     - os: linux
-      env: MODE=packaging IMAGE=ubuntu:20.04
+      env: MODE=packaging IMAGE=ubuntu:20.04 PY_VERSION=python3
       services:
         - docker
     - os: linux
-      env: MODE=packaging IMAGE=debian:10
+      env: MODE=packaging IMAGE=debian:10 PY_VERSION=python3
       services:
         - docker
     - os: windows
