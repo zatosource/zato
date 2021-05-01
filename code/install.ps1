@@ -54,12 +54,13 @@ Try
 
     $revision = (git log -n 1 --pretty=format:"%H") -join "`n"
     New-Item -ItemType File -Name ".\release-info\revision.txt" -Force -Value $revision
-    If(-Not (Test-Path ".\Scripts")) {
+    If(Test-Path ".\Scripts") {
         Write-Output 'Virtual environment created'
-        Get-ChildItem ".\"
     } Else {
         Write-Output 'Virtual environment was not created'
     }
+    Get-ChildItem ".\"
+    Invoke-Process -FilePath (Get-Command "git.exe" | Select-Object -ExpandProperty Definition) -ArgumentList "status" -DisplayLevel "Full"
     Get-ChildItem ".\Scripts"
     Get-ChildItem ".\Lib"
 
