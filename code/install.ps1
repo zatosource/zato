@@ -39,7 +39,8 @@ Try
 
     # virtualenv
     Write-Output 'Installing virtualenv'
-    Start-Process -Filepath (Get-Command "pip.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('install', 'virtualenv') -Wait
+    # Start-Process -Filepath (Get-Command "pip.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('install', 'virtualenv') -Wait
+    Invoke-Process -FilePath (Get-Command "pip.exe" | Select-Object -ExpandProperty Definition) -ArgumentList "install virtualenv" -DisplayLevel "Full"
 
     # virtual environment
     If(-Not (Test-Path ".\Lib")) {
