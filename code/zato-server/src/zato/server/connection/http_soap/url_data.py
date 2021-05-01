@@ -311,7 +311,7 @@ class URLData(CyURLData, OAuthDataStore):
                 return False
 
         token = authorization.split('Bearer ', 1)[1]
-        result = JWT(self.kvdb, self.odb, self.worker.server.decrypt, self.jwt_secret).validate(
+        result = JWT(self.odb, self.worker.server.decrypt, self.jwt_secret).validate(
             sec_def.username, token.encode('utf8'))
 
         if not result.valid:
