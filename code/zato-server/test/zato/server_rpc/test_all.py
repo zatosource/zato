@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main, TestCase
 
 # Zato
+from zato.common.odb.api import SessionWrapper
 from zato.server.connection.server.rpc import ConfigCtx, LocalServerInvoker, ODBConfigSource, RemoteServerInvoker, \
      ServerInvoker, ServerRPC
 
@@ -26,7 +27,7 @@ class _FakeCluster:
 
 class _FakeParallelServer:
     def __init__(self, cluster, odb, server_name):
-        # type: (_FakeCluster, object, str) -> None
+        # type: (_FakeCluster, SessionWrapper, str) -> None
         self.cluster = cluster
         self.odb = odb
         self.name = server_name
@@ -66,8 +67,10 @@ class ServerRPCTestCase(TestCase):
         cluster_name = 'cluster.1'
         server_name = 'abc'
 
+        odb = SessionWrapper()
+
         cluster = _FakeCluster(cluster_name)
-        parallel_server = _FakeParallelServer(cluster, None, server_name)
+        parallel_server = _FakeParallelServer(cluster, odb, server_name)
 
         get_remote_server_func = object
         decrypt_func = object
@@ -84,6 +87,8 @@ class ServerRPCTestCase(TestCase):
 
         self.assertIsInstance(server, ServerInvoker)
         self.assertIsInstance(server, RemoteServerInvoker)
+
+        print(111, server.invoke('zzz'))
 
 # ################################################################################################################################
 # ################################################################################################################################

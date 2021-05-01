@@ -6,96 +6,19 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from contextlib import closing
-from logging import getLogger
-from traceback import format_exc
-
-# gevent
-from gevent import spawn
-
-# requests
-from requests import get as requests_get
-
 # Zato
-from zato.client import AnyServiceInvoker
-from zato.common.api import SERVER_UP_STATUS
-from zato.common.util.api import make_repr
-from zato.common.odb.query import server_by_name, server_list
-from zato.server.service import Service
+from zato.server.connection.server.rpc.invoker import LocalServerInvoker, RemoteServerInvoker
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from typing import Callable
-    from zato.common.odb.api import SessionWrapper
     from zato.server.base.parallel import ParallelServer
+    from zato.server.connection.server.rpc.config import ConfigSource
+    from zato.server.connection.server.rpc.invoker import ServerInvoker
 
-    Callable = Callable
+    ConfigSource = ConfigSource
     ParallelServer = ParallelServer
-    SessionWrapper = SessionWrapper
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-logger = getLogger(__name__)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-sec_def_name = 'zato.internal.invoke'
-api_user = sec_def_name + '.user'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class ConfigSource:
-    """ A base class for returning server configuration.
-    """
-    def __init__(self, cluster_name, server_name):
-        # type: (str, str) -> None
-        self.cluster_name = cluster_name
-        self.server_name = server_name
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class ODBConfigSource(ConfigSource):
-    """ Returns server configuration based on information in the cluster's ODB.
-    """
-    def __init__(self, odb, cluster_name, server_name):
-        # type: (SessionWrapper, str, str) -> None
-        super().__init__(cluster_name, server_name)
-        self.odb = odb
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class ServerInvoker:
-    """ A base class for local and remote server invocations.
-    """
-    def __init__(self, cluster_name, server_name):
-        # type: (str, str) -> None
-        self.cluster_name = cluster_name
-        self.server_name = server_name
-
-    def invoke(self, service_name, request=None, pid=None):
-        # type: (str, dict, int) -> None
-        pass
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class LocalServerInvoker(ServerInvoker):
-    """ Invokes services directly on the current server, without any RPC.
-    """
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class RemoteServerInvoker(ServerInvoker):
-    """ Invokes services on a remote server using RPC.
-    """
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -110,7 +33,8 @@ class ConfigCtx:
 
     def get_remote_server_invoker(self, server_name):
         # type: (str) -> RemoteServerInvoker
-        return RemoteServerInvoker(self.config_source.cluster_name, server_name)
+        ctx = self.config_source.get_remote_server_invocation_ctx(self.config_source.current_cluster_name, server_name)
+        return RemoteServerInvoker(ctx)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -128,7 +52,7 @@ class ServerRPC:
     def _get_server_by_name(self, server_name):
         # type: (str) -> ServerInvoker
         if server_name == self.config_ctx.parallel_server.name:
-            return LocalServerInvoker(self.config_ctx.config_source.cluster_name, server_name)
+            return LocalServerInvoker(self.config_ctx.config_source.current_cluster_name, server_name)
         else:
             return self.config_ctx.get_remote_server_invoker(server_name)
 
