@@ -36,18 +36,18 @@ Try
     $oldPATH = $Env:Path
     $Env:Path = $oldPATH.Replace('-', '&')
     Set-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH -Value $env:PATH
-    Invoke-Process -FilePath (Get-Command "pip.exe" | Select-Object -ExpandProperty Definition) -ArgumentList "install --upgrade pip" -DisplayLevel "Full"
+    Invoke-Process -FilePath (Get-Command "pip.exe" | Select-Object -ExpandProperty Definition) -ArgumentList "install --upgrade pip"
 
     # virtualenv
     Write-Output 'Installing virtualenv'
     # Start-Process -Filepath (Get-Command "pip.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('install', 'virtualenv') -Wait
-    Invoke-Process -FilePath (Get-Command "pip.exe" | Select-Object -ExpandProperty Definition) -ArgumentList "install virtualenv" -DisplayLevel "Full"
+    Invoke-Process -FilePath (Get-Command "pip.exe" | Select-Object -ExpandProperty Definition) -ArgumentList "install virtualenv"
 
     # virtual environment
     If(-Not (Test-Path ".\Lib")) {
         Write-Output 'Creating virtual environment'
         # Start-Process -Filepath (Get-Command "python.exe" | Select-Object -ExpandProperty Definition) -ArgumentList @('-m', 'virtualenv', '--always-copy', '.') -Wait
-        Invoke-Process -FilePath (Get-Command "virtualenv.exe" | Select-Object -ExpandProperty Definition) -ArgumentList "--always-copy ." -DisplayLevel "Full"
+        Invoke-Process -FilePath (Get-Command "virtualenv.exe" | Select-Object -ExpandProperty Definition) -ArgumentList "--always-copy ."
     }
 
     New-Item -ItemType Directory -Name ".\release-info" -Force
@@ -55,7 +55,8 @@ Try
     $revision = (git log -n 1 --pretty=format:"%H") -join "`n"
     New-Item -ItemType File -Name ".\release-info\revision.txt" -Force -Value $revision
     If(-Not (Test-Path ".\Scripts")) {
-        Write-Output 'Virtual environment created:'
+        Write-Output 'Virtual environment created'
+        Get-ChildItem ".\"
     } Else {
         Write-Output 'Virtual environment was not created'
     }
