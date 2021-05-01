@@ -49,21 +49,34 @@ api_user = sec_def_name + '.user'
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ODBConfigSource:
-    """ Returns server configuration based on information the cluster's ODB.
+class ConfigSource:
+    """ A base class for returning server configuration.
+    """
+    def __init__(self, cluster_name, server_name):
+        # type: (str, str) -> None
+        self.cluster_name = cluster_name
+        self.server_name = server_name
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ODBConfigSource(ConfigSource):
+    """ Returns server configuration based on information in the cluster's ODB.
     """
     def __init__(self, odb, cluster_name, server_name):
-        # type: (SessionWrapper) -> None
+        # type: (SessionWrapper, str, str) -> None
+        super().__init__(cluster_name, server_name)
         self.odb = odb
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Server:
+class ServerInvoker:
     """ A base class for local and remote server invocations.
     """
-    def __init__(self, server_name):
-        # type: (str) -> None
+    def __init__(self, cluster_name, server_name):
+        # type: (str, str) -> None
+        self.cluster_name = cluster_name
         self.server_name = server_name
 
     def invoke(self, service_name, request=None, pid=None):
@@ -73,16 +86,31 @@ class Server:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class LocalServer(Server):
+class LocalServerInvoker(ServerInvoker):
     """ Invokes services directly on the current server, without any RPC.
     """
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class RemoteServer(Server):
+class RemoteServerInvoker(ServerInvoker):
     """ Invokes services on a remote server using RPC.
     """
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ConfigCtx:
+    """ A config-like class that knows how to return details needed to invoke local or remote servers.
+    """
+    def __init__(self, config_source, parallel_server):
+        # type: (ConfigSource, ParallelServer) -> None
+        self.config_source = config_source
+        self.parallel_server = parallel_server
+
+    def get_remote_server_invoker(self, server_name):
+        # type: (str) -> RemoteServerInvoker
+        return RemoteServerInvoker(self.config_source.cluster_name, server_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -90,27 +118,24 @@ class RemoteServer(Server):
 class ServerRPC:
     """ A facade through which Zato servers can be invoked.
     """
-    def __init__(self, parallel_server, server_builder, get_server_list_func, decrypt_func):
-        # type: (ParallelServer, Callable, Callable, Callable) -> None
-        self.parallel_server = parallel_server
-        self.get_remote_server_func = get_remote_server_func
-        self.get_server_list_func = get_server_list_func
-        self.decrypt_func = decrypt_func
+    def __init__(self, config_ctx):
+        # type: (ConfigCtx) -> None
+        self.config_ctx = config_ctx
         self._servers = {}
 
 # ################################################################################################################################
 
     def _get_server_by_name(self, server_name):
-        # type: (str) -> Server
-        if server_name == self.parallel_server.name:
-            return LocalServer(server_name)
+        # type: (str) -> ServerInvoker
+        if server_name == self.config_ctx.parallel_server.name:
+            return LocalServerInvoker(self.config_ctx.config_source.cluster_name, server_name)
         else:
-            return self.get_remote_server_func(server_name)
+            return self.config_ctx.get_remote_server_invoker(server_name)
 
 # ################################################################################################################################
 
     def __getitem__(self, server_name):
-        # type: (str) -> Server
+        # type: (str) -> ServerInvoker
         if server_name not in self._servers:
             server = self._get_server_by_name(server_name)
             self._servers[server_name] = server
