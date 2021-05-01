@@ -1,11 +1,11 @@
-language: python
 cache:
   directories:
     - /tmp/travis-cache
 
 # # List of environment variable combinations to test against (first dimension)
 # # https://zato.io/docs/admin/guide/install/index.html#operating-system-considerations
-# env:
+env:
+  - MODE=packaging
 #   # For later use with matrix.include later and OS X.
 #   #- MODE=packaging IMAGE=
 #   - MODE=packaging IMAGE=centos:7
@@ -28,40 +28,73 @@ os:
   - linux
   - windows
 
-services:
-  - docker
-
 # List of matrix exclusions
 matrix:
   allow_failures:
     # Don't fail the build for a problem with OS X
     - osx
-matrix:
+
   include:
     - os: linux
       env: MODE=packaging IMAGE=centos:7
+      services:
+        - docker
+      language: python
     - os: linux
       env: MODE=packaging IMAGE=centos:7 PY_VERSION=python3
+      services:
+        - docker
+      language: python
     - os: linux
       env: MODE=packaging IMAGE=ubuntu:16.04
+      services:
+        - docker
+      language: python
     - os: linux
       env: MODE=packaging IMAGE=ubuntu:16.04 PY_VERSION=python3
+      services:
+        - docker
+      language: python
     - os: linux
       env: MODE=packaging IMAGE=ubuntu:18.04
+      services:
+        - docker
+      language: python
     - os: linux
       env: MODE=packaging IMAGE=ubuntu:18.04 PY_VERSION=python3
+      services:
+        - docker
+      language: python
     - os: linux
       env: MODE=packaging IMAGE=debian:8
+      services:
+        - docker
+      language: python
     - os: linux
       env: MODE=packaging IMAGE=debian:8 PY_VERSION=python3
+      services:
+        - docker
+      language: python
     - os: linux
       env: MODE=packaging IMAGE=debian:9
+      services:
+        - docker
+      language: python
     - os: linux
       env: MODE=packaging IMAGE=debian:9 PY_VERSION=python3
+      services:
+        - docker
+      language: python
     - os: linux
       env: MODE=packaging IMAGE=alpine:3.11
+      services:
+        - docker
+      language: python
     - os: linux
       env: MODE=packaging IMAGE=alpine:3.11 PY_VERSION=python3
+      services:
+        - docker
+      language: python
     - os: windows
 
 notifications:
