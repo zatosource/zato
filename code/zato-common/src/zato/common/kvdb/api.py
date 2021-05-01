@@ -90,8 +90,6 @@ class KVDB(object):
 
     def init(self):
 
-        zz
-
         config = {}
         self.has_sentinel = has_redis_sentinels(self.config)
 
