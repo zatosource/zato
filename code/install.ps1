@@ -77,6 +77,7 @@ Try
 }
 Catch
 {
-    Write-Output "Ran into an issue: $($PSItem.ToString())"
+    $errormsg = "Ran into an issue: $($PSItem.ToString())"
     Pop-Location
+    throw $errormsg
 }

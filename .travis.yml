@@ -5,8 +5,8 @@ cache:
 
 # # List of environment variable combinations to test against (first dimension)
 # # https://zato.io/docs/admin/guide/install/index.html#operating-system-considerations
-env:
-  - MODE=packaging
+# env:
+#   - MODE=packaging
 #   # For later use with matrix.include later and OS X.
 #   #- MODE=packaging IMAGE=
 #   - MODE=packaging IMAGE=centos:7
@@ -25,9 +25,9 @@ env:
 # List of operating systems to test under (second dimension)
 # https://docs.travis-ci.com/user/reference/overview/
 sudo: required
-os:
-  - linux
-  - windows
+# os:
+#   - linux
+#   - windows
 
 # List of matrix exclusions
 matrix:
@@ -94,9 +94,7 @@ script:
   - |-
     case $TRAVIS_OS_NAME in
       windows)
-        [[ ! -f $TRAVIS_BUILD_DIR/code/install.ps1 ]] && exit 1
-        powershell -Command 'Set-ExecutionPolicy -ExecutionPolicy RemoteSigned'
-        powershell $TRAVIS_BUILD_DIR/code/install.ps1 || exit 1
+        .travis/test_installing.sh || exit 1
         ;;
       linux)
         source .travis/test_${MODE}.sh
