@@ -36,6 +36,7 @@ Try
     $oldPATH = $Env:Path
     $Env:Path = $oldPATH.Replace('-', '&')
     Set-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH -Value $env:PATH
+    Invoke-Process -FilePath (Get-Command "pip.exe" | Select-Object -ExpandProperty Definition) -ArgumentList "install --upgrade pip" -DisplayLevel "Full"
 
     # virtualenv
     Write-Output 'Installing virtualenv'
