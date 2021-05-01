@@ -58,7 +58,7 @@ from zato.common.ipaddress_ import get_preferred_ip
 from zato.common.kvdb.api import KVDB
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.repo import RepoManager
-from zato.common.util.api import absjoin, asbool, clear_locks, get_config, get_kvdb_config_for_log, parse_cmd_line_options, \
+from zato.common.util.api import absjoin, asbool, get_config, get_kvdb_config_for_log, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
 from zato.common.util.cli import read_stdin_data
 from zato.common.simpleio_ import get_sio_server_config
@@ -292,10 +292,6 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     if server.is_sso_enabled:
         server.sso_api = SSOAPI(server, sso_config, None, crypto_manager.encrypt, crypto_manager.decrypt,
             crypto_manager.hash_secret, crypto_manager.verify_hash, new_user_id)
-
-    # Remove all locks possibly left over by previous server instances
-    kvdb.component = 'master-proc'
-    clear_locks(kvdb, server_config.main.token, server_config.kvdb, crypto_manager.decrypt)
 
     # New in 2.0.8
     server.return_tracebacks = asbool(server_config.misc.get('return_tracebacks', True))
