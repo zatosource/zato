@@ -11,8 +11,9 @@ from unittest import main, TestCase
 
 # Zato
 from zato.common.odb.api import SessionWrapper
-from zato.server.connection.server.rpc import ConfigCtx, LocalServerInvoker, ODBConfigSource, RemoteServerInvoker, \
-     ServerInvoker, ServerRPC
+from zato.server.connection.server.rpc.api import ConfigCtx, ServerRPC
+from zato.server.connection.server.rpc.config import ODBConfigSource
+from zato.server.connection.server.rpc.invoker import LocalServerInvoker, RemoteServerInvoker, ServerInvoker
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -68,6 +69,7 @@ class ServerRPCTestCase(TestCase):
         server_name = 'abc'
 
         odb = SessionWrapper()
+        odb.init_session()
 
         cluster = _FakeCluster(cluster_name)
         parallel_server = _FakeParallelServer(cluster, odb, server_name)
