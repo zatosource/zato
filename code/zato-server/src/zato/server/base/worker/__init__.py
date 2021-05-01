@@ -68,7 +68,6 @@ from zato.server.connection.cache import CacheAPI
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.connector import ConnectorStore, connector_type
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
-from zato.server.connection.cloud.openstack.swift import SwiftWrapper
 from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPConnStore
 from zato.server.connection.ftp import FTPStore
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
@@ -370,7 +369,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
             self.worker_config.basic_auth, self.worker_config.jwt, self.worker_config.ntlm, self.worker_config.oauth,
             self.worker_config.wss, self.worker_config.apikey, self.worker_config.aws,
-            self.worker_config.openstack_security, self.worker_config.xpath_sec, self.worker_config.tls_channel_sec,
+            self.worker_config.xpath_sec, self.worker_config.tls_channel_sec,
             self.worker_config.tls_key_cert, self.worker_config.vault_conn_sec, self.kvdb, self.broker_client, self.server.odb,
             self.json_pointer_store, self.xpath_store, self.server.jwt_secret, self.vault_conn_api)
 
@@ -380,7 +379,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.init_sql()
         self.init_http_soap()
         self.init_cloud()
-        self.init_notifiers()
 
         # AMQP
         self.init_amqp()
@@ -604,7 +602,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """ Initializes all the cloud connections.
         """
         data = (
-            ('cloud_openstack_swift', SwiftWrapper),
             ('cloud_aws_s3', S3Wrapper),
         )
 
@@ -618,24 +615,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
                 config_attr[name].conn = wrapper(config, self.server)
                 config_attr[name].conn.build_queue()
 
-    def _update_cloud_openstack_swift_container(self, config_dict):
-        """ Makes sure OpenStack Swift containers always have a path to prefix queries with.
-        """
-        config_dict.containers = [elem.split(':') for elem in config_dict.containers.splitlines()]
-        for item in config_dict.containers:
-            # No path specified so we use an empty string to catch everything.
-            if len(item) == 1:
-                item.append('')
-
-            item.append('{}:{}'.format(item[0], item[1]))
-
-    def init_notifiers(self):
-        for config_dict in self.worker_config.notif_cloud_openstack_swift.values():
-            self._update_cloud_openstack_swift_container(config_dict.config)
-
     def get_notif_config(self, notif_type, name):
         config_dict = {
-            NOTIF.TYPE.OPENSTACK_SWIFT: self.worker_config.notif_cloud_openstack_swift,
             NOTIF.TYPE.SQL: self.worker_config.notif_sql,
         }[notif_type]
 
@@ -1325,37 +1306,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """ Changes password of an AWS security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.AWS,
-                self._visit_wrapper_change_password)
-
-# ################################################################################################################################
-
-    def openstack_get(self, name):
-        """ Returns the configuration of the OpenStack security definition
-        of the given name.
-        """
-        self.request_dispatcher.url_data.openstack_get(name)
-
-    def on_broker_msg_SECURITY_OPENSTACK_CREATE(self, msg, *args):
-        """ Creates a new OpenStack security definition
-        """
-        dispatcher.notify(broker_message.SECURITY.OPENSTACK_CREATE.value, msg)
-
-    def on_broker_msg_SECURITY_OPENSTACK_EDIT(self, msg, *args):
-        """ Updates an existing OpenStack security definition.
-        """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.OPENSTACK,
-                self._visit_wrapper_edit, keys=('username', 'name'))
-
-    def on_broker_msg_SECURITY_OPENSTACK_DELETE(self, msg, *args):
-        """ Deletes an OpenStack security definition.
-        """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.OPENSTACK,
-                self._visit_wrapper_delete)
-
-    def on_broker_msg_SECURITY_OPENSTACK_CHANGE_PASSWORD(self, msg, *args):
-        """ Changes password of an OpenStack security definition.
-        """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.OPENSTACK,
                 self._visit_wrapper_change_password)
 
 # ################################################################################################################################
@@ -2203,18 +2153,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def on_broker_msg_CLOUD_OPENSTACK_SWIFT_CREATE_EDIT(self, msg, *args):
-        """ Creates or updates an OpenStack Swift connection.
-        """
-        self._on_broker_msg_cloud_create_edit(msg, 'OpenStack Swift', self.worker_config.cloud_openstack_swift, SwiftWrapper)
-
-    def on_broker_msg_CLOUD_OPENSTACK_SWIFT_DELETE(self, msg, *args):
-        """ Closes and deletes an OpenStack Swift connection.
-        """
-        self._delete_config_close_wrapper(msg['name'], self.worker_config.cloud_openstack_swift, 'OpenStack Swift', logger.debug)
-
-# ################################################################################################################################
-
     def on_broker_msg_CLOUD_AWS_S3_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an AWS S3 connection.
         """
@@ -2260,16 +2198,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
     def on_broker_msg_NOTIF_RUN_NOTIFIER(self, msg):
         self.on_message_invoke_service(loads(msg.request), CHANNEL.NOTIFIER_RUN, 'NOTIF_RUN_NOTIFIER')
-
-# ################################################################################################################################
-
-    def on_broker_msg_NOTIF_CLOUD_OPENSTACK_SWIFT_CREATE_EDIT(self, msg):
-        self.create_edit_notifier(msg, 'NOTIF_CLOUD_OPENSTACK_SWIFT_CREATE_EDIT',
-            self.server.worker_store.worker_config.notif_cloud_openstack_swift,
-            self._update_cloud_openstack_swift_container)
-
-    def on_broker_msg_NOTIF_CLOUD_OPENSTACK_SWIFT_DELETE(self, msg):
-        del self.server.worker_store.worker_config.notif_cloud_openstack_swift[msg.name]
 
 # ################################################################################################################################
 
