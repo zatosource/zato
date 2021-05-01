@@ -86,6 +86,8 @@ matrix:
         - docker
     - os: windows
       language: shell
+      before_install:
+        - PowerShell -Command 'Set-ExecutionPolicy -ExecutionPolicy RemoteSigned'
 
 notifications:
   email: false
