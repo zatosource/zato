@@ -97,6 +97,20 @@ class ConfigLoader(object):
         # SMS - end
         #
 
+
+        #
+        # Cloud - start
+        #
+
+        # AWS S3
+
+        query = self.odb.get_cloud_aws_s3_list(server.cluster.id, True)
+        self.config.cloud_aws_s3 = ConfigDict.from_query('cloud_aws_s3', query, decrypt_func=self.decrypt)
+
+        #
+        # Cloud - end
+        #
+
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         # Services
