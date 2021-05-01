@@ -27,8 +27,8 @@ from zato.common.json_internal import loads
 from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, CacheBuiltin, CacheMemcached, CassandraConn, \
      CassandraQuery, ChannelAMQP, ChannelWebSocket, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, \
      CronStyleJob, ElasticSearch, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, JSONPointer, JWT, \
-     MsgNamespace, NotificationOpenStackSwift as NotifOSS, NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, \
-     OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, PubSubEndpoint, \
+     MsgNamespace, NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, \
+     OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, PubSubEndpoint, \
      PubSubEndpointTopic, PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, PubSubTopic, RBACClientRole, \
      RBACPermission, RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMSTwilio, SMTP, Solr, SQLConnectionPool, \
      TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, WebSocketClientPubSubKeys, WebSocketSubscription, \
@@ -357,18 +357,6 @@ def oauth_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==OAuth.cluster_id).\
         filter(SecurityBase.id==OAuth.id).\
-        order_by(SecurityBase.name)
-
-@query_wrapper
-def openstack_security_list(session, cluster_id, needs_columns=False):
-    """ All the OpenStackSecurity definitions.
-    """
-    return session.query(
-        OpenStackSecurity.id, OpenStackSecurity.name, OpenStackSecurity.is_active,
-        OpenStackSecurity.username, OpenStackSecurity.sec_type).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==OpenStackSecurity.cluster_id).\
-        filter(SecurityBase.id==OpenStackSecurity.id).\
         order_by(SecurityBase.name)
 
 @query_wrapper
@@ -889,27 +877,6 @@ def json_pointer_list(session, cluster_id, needs_columns=False):
 
 # ################################################################################################################################
 
-def _cloud_openstack_swift(session, cluster_id):
-    return session.query(OpenStackSwift).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==OpenStackSwift.cluster_id).\
-        order_by(OpenStackSwift.name)
-
-def cloud_openstack_swift(session, cluster_id, id):
-    """ An OpenStack Swift connection.
-    """
-    return _cloud_openstack_swift(session, cluster_id).\
-        filter(OpenStackSwift.id==id).\
-        one()
-
-@query_wrapper
-def cloud_openstack_swift_list(session, cluster_id, needs_columns=False):
-    """ OpenStack Swift connections.
-    """
-    return _cloud_openstack_swift(session, cluster_id)
-
-# ################################################################################################################################
-
 def _cloud_aws_s3(session, cluster_id):
     return session.query(
         AWSS3.id, AWSS3.name, AWSS3.is_active, AWSS3.pool_size, AWSS3.address, AWSS3.debug_level, AWSS3.suppr_cons_slashes,
@@ -1198,36 +1165,6 @@ def pubsub_hook_service(session, cluster_id, endpoint_id, model_class):
         filter(Cluster.id==Service.cluster_id).\
         filter(Service.id==model_class.hook_service_id).\
         first()
-
-# ################################################################################################################################
-
-def _notif_cloud_openstack_swift(session, cluster_id, needs_password):
-    """ OpenStack Swift notifications.
-    """
-
-    columns = [NotifOSS.id, NotifOSS.name, NotifOSS.is_active, NotifOSS.notif_type, NotifOSS.def_id, NotifOSS.containers,
-        NotifOSS.interval, NotifOSS.name_pattern, NotifOSS.name_pattern_neg, NotifOSS.get_data, NotifOSS.get_data_patt,
-        NotifOSS.get_data_patt_neg, OpenStackSwift.name.label('def_name'), Service.name.label('service_name')]
-
-    return session.query(*columns).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==NotifOSS.cluster_id).\
-        filter(NotifOSS.def_id==OpenStackSwift.id).\
-        filter(NotifOSS.service_id==Service.id).\
-        order_by(NotifOSS.name)
-
-def notif_cloud_openstack_swift(session, cluster_id, id, needs_password=False):
-    """ An OpenStack Swift notification definition.
-    """
-    return _notif_cloud_openstack_swift(session, cluster_id, needs_password).\
-        filter(NotifOSS.id==id).\
-        one()
-
-@query_wrapper
-def notif_cloud_openstack_swift_list(session, cluster_id, needs_password=False, needs_columns=False):
-    """ OpenStack Swift connection definitions.
-    """
-    return _notif_cloud_openstack_swift(session, cluster_id, needs_password)
 
 # ################################################################################################################################
 

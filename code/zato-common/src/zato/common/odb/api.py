@@ -1004,14 +1004,6 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_openstack_security_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of OpenStack security accounts existing on the given cluster.
-        """
-        with closing(self.session()) as session:
-            return query.openstack_security_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
     def get_tls_ca_cert_list(self, cluster_id, needs_columns=False):
         """ Returns a list of TLS CA certs on the given cluster.
         """
@@ -1341,14 +1333,6 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_cloud_openstack_swift_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of OpenStack Swift connections.
-        """
-        with closing(self.session()) as session:
-            return query.cloud_openstack_swift_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
     def get_cloud_aws_s3_list(self, cluster_id, needs_columns=False):
         """ Returns a list of AWS S3 connections.
         """
@@ -1368,13 +1352,6 @@ class ODBManager(SessionWrapper):
         """ Returns a list of pub/sub subscriptions defined in a cluster.
         """
         return query_ps_subscription.pubsub_subscription_list(self._session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_notif_cloud_openstack_swift_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of OpenStack Swift notification definitions.
-        """
-        return query.notif_cloud_openstack_swift_list(self._session, cluster_id, needs_columns)
 
 # ################################################################################################################################
 
@@ -1500,7 +1477,6 @@ class ODBManager(SessionWrapper):
     _migrate_30_encrypt_sec_jwt                = _migrate_30_encrypt_sec_base
     _migrate_30_encrypt_sec_ntlm               = _migrate_30_encrypt_sec_base
     _migrate_30_encrypt_sec_oauth              = _migrate_30_encrypt_sec_base
-    _migrate_30_encrypt_sec_openstack_security = _migrate_30_encrypt_sec_base
     _migrate_30_encrypt_sec_vault_conn_sec     = _migrate_30_encrypt_sec_base
     _migrate_30_encrypt_sec_wss                = _migrate_30_encrypt_sec_base
     _migrate_30_encrypt_sec_xpath_sec          = _migrate_30_encrypt_sec_base

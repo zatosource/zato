@@ -113,11 +113,6 @@ class SECURITY(Constants):
     AWS_DELETE = ValueConstant('')
     AWS_CHANGE_PASSWORD = ValueConstant('')
 
-    OPENSTACK_CREATE = ValueConstant('')
-    OPENSTACK_EDIT = ValueConstant('')
-    OPENSTACK_DELETE = ValueConstant('')
-    OPENSTACK_CHANGE_PASSWORD = ValueConstant('')
-
     APIKEY_CREATE = ValueConstant('')
     APIKEY_EDIT = ValueConstant('')
     APIKEY_DELETE = ValueConstant('')
@@ -333,9 +328,6 @@ class PUB_SUB_CONSUMER(Constants):
 class CLOUD(Constants):
     code_start = 103800
 
-    OPENSTACK_SWIFT_CREATE_EDIT = ValueConstant('')
-    OPENSTACK_SWIFT_DELETE = ValueConstant('')
-
     AWS_S3_CREATE_EDIT = ValueConstant('')
     AWS_S3_DELETE = ValueConstant('')
 
@@ -343,9 +335,6 @@ class NOTIF(Constants):
     code_start = 104000
 
     RUN_NOTIFIER = ValueConstant('')
-
-    CLOUD_OPENSTACK_SWIFT_CREATE_EDIT = ValueConstant('')
-    CLOUD_OPENSTACK_SWIFT_DELETE = ValueConstant('')
 
     SQL_CREATE = ValueConstant('')
     SQL_EDIT = ValueConstant('')
