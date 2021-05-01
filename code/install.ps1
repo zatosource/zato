@@ -51,8 +51,10 @@ Try
 
     $revision = (git log -n 1 --pretty=format:"%H") -join "`n"
     New-Item -ItemType File -Name ".\release-info\revision.txt" -Force -Value $revision
-
-    Start-Process -Filepath (Get-Command python | Select-Object -ExpandProperty Definition) -ArgumentList @('-m', 'virtualenv', '--always-copy', '.') -Wait
+    If(-Not (Test-Path ".\Scripts")) {
+        Write-Output 'Virtual environment created:'
+        Get-ChildItem ".\Scripts"
+    }
 
     .\Scripts\activate.ps1
     Invoke-InstallAllWithPip
@@ -62,7 +64,6 @@ Try
 
     New-Item -ItemType Directory -Name ".\zato_extra_paths" -Force
     New-Symlink -Target ".\extlib" -Link ".\zato_extra_paths"
-
 
     # Apply patches
     Push-Location .\Lib\site-packages\
