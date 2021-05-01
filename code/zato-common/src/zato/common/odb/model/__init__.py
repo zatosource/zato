@@ -401,7 +401,7 @@ class AWSSecurity(SecurityBase):
 # ################################################################################################################################
 
 class OpenStackSecurity(SecurityBase):
-    """ Stores OpenStack credentials..
+    """ Stores OpenStack credentials (no longer used, to be removed).
     """
     __tablename__ = 'sec_openstack'
     __mapper_args__ = {'polymorphic_identity': 'openstack'}
@@ -1569,7 +1569,7 @@ class JSONPointer(Base):
 # ################################################################################################################################
 
 class OpenStackSwift(Base):
-    """ A connection to OpenStack's Swift.
+    """ A connection to OpenStack's Swift (no longer used, to be removed).
     """
     __tablename__ = 'os_swift'
     __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
@@ -1577,16 +1577,16 @@ class OpenStackSwift(Base):
     id = Column(Integer, Sequence('os_swift_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
-    pool_size = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.POOL_SIZE)
+    pool_size = Column(Integer, nullable=False)
 
     auth_url = Column(String(200), nullable=False)
-    auth_version = Column(String(200), nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.AUTH_VERSION)
+    auth_version = Column(String(200), nullable=False)
     user = Column(String(200), nullable=True)
     secret_key = Column(String(200), nullable=True)
-    retries = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.RETRIES)
+    retries = Column(Integer, nullable=False)
     is_snet = Column(Boolean(), nullable=False)
-    starting_backoff = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.BACKOFF_STARTING)
-    max_backoff = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.BACKOFF_MAX)
+    starting_backoff = Column(Integer, nullable=False)
+    max_backoff = Column(Integer, nullable=False)
     tenant_name = Column(String(200), nullable=True)
     should_validate_cert = Column(Boolean(), nullable=False)
     cacert = Column(String(200), nullable=True)
@@ -1690,7 +1690,7 @@ class Notification(Base):
 # ################################################################################################################################
 
 class NotificationOpenStackSwift(Notification):
-    """ Stores OpenStack Swift notifications.
+    """ Stores OpenStack Swift notifications (no longer used).
     """
     __tablename__ = 'notif_os_swift'
     __mapper_args__ = {'polymorphic_identity': 'openstack_swift'}
