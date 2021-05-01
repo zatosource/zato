@@ -3,6 +3,7 @@
 set -ex
 
 if [[ "${TRAVIS_OS_NAME}" == "windows" ]];then
+    choco install make
     powershell -Command 'Set-ExecutionPolicy -ExecutionPolicy RemoteSigned'
     cd $TRAVIS_BUILD_DIR/code
     [[ -f ./install.ps1 ]]

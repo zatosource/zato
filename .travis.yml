@@ -38,6 +38,8 @@ matrix:
   include:
     - os: windows
       language: shell
+      before_install:
+        - choco install make
     - os: linux
       env: MODE=packaging IMAGE=centos:7 PY_VERSION=python3
       services:
