@@ -59,8 +59,9 @@ Try
     } Else {
         Write-Output 'Virtual environment was not created'
     }
-    Get-ChildItem ".\"
     Invoke-Process -FilePath (Get-Command "git.exe" | Select-Object -ExpandProperty Definition) -ArgumentList "status" -DisplayLevel "Full"
+    Get-ChildItem ".\"
+    Get-ChildItem "$CURDIR\"
     Get-ChildItem ".\Scripts"
     Get-ChildItem ".\Lib"
 
