@@ -4,7 +4,10 @@ set -ex
 
 if [[ "${TRAVIS_OS_NAME}" == "windows" ]];then
     choco install make
-    export TEMPDIR="$LOCALAPPDATA\\TempDir"
+    mkdir -p $TRAVIS_BUILD_DIR/TempDir
+    export TEMP="$TRAVIS_BUILD_DIR\\TempDir"
+    export TEMPDIR="$TRAVIS_BUILD_DIR\\TempDir"
+    export TMP="$TRAVIS_BUILD_DIR\\TempDir"
     powershell Add-MpPreference -ExclusionPath ${TEMPDIR}
 
     echo "DisableArchiveScanning..."
