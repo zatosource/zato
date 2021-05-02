@@ -18,9 +18,8 @@ if [[ "${TRAVIS_OS_NAME}" == "windows" ]];then
     powershell Start-Process -PassThru -Wait PowerShell -ArgumentList "'-Command Set-MpPreference -DisableRealtimeMonitoring \$true'"
 
     powershell -Command 'Set-ExecutionPolicy -ExecutionPolicy RemoteSigned'
-    cd $TRAVIS_BUILD_DIR/code
-    [[ -f ./install.ps1 ]]
-    powershell ./install.ps1
+    [[ -f $TRAVIS_BUILD_DIR/code/install.ps1 ]]
+    powershell $TRAVIS_BUILD_DIR/code/install.ps1
     cd $TRAVIS_BUILD_DIR
     # Adjusting path for Windows
     find -type f -name Makefile -exec sed -i -e 's|/bin|/Scripts|' {} \;
