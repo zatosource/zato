@@ -1533,6 +1533,10 @@ class SECRETS:
     # Zato secret (Fernet)
     PREFIX = 'zato.secf.'
 
+    # Indicates that the value is encrypted
+    ENCRYPTED_PREFIX_STR   = 'gAAAA'
+    ENCRYPTED_PREFIX_BYTES = b'gAAAA'
+
     # Zato secret (configuration)
     URL_PREFIX = 'zato+secret://'
 
