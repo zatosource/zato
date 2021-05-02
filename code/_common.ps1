@@ -11,6 +11,9 @@ function Invoke-Process {
         [ValidateNotNullOrEmpty()]
         [string]$ArgumentList,
 
+        [Parameter()]
+        [string]$CurPath,
+
         [ValidateSet("Full","StdOut","StdErr","ExitCode","None")]
         [string]$DisplayLevel
         )
@@ -26,16 +29,19 @@ function Invoke-Process {
         $pinfo.WindowStyle = 'Hidden'
         $pinfo.CreateNoWindow = $true
         $pinfo.Arguments = $ArgumentList
+        If(-Not($CurPath -eq "") -and -Not($CurPath -eq $null)) {
+            $pinfo.WorkingDirectory = $CurPath
+        }
         $p = New-Object System.Diagnostics.Process
         $p.StartInfo = $pinfo
         $p.Start() | Out-Null
         $result = [pscustomobject]@{
-        Title = ($MyInvocation.MyCommand).Name
-        Command = $FilePath
-        Arguments = $ArgumentList
-        StdOut = $p.StandardOutput.ReadToEnd()
-        StdErr = $p.StandardError.ReadToEnd()
-        ExitCode = $p.ExitCode
+            Title = ($MyInvocation.MyCommand).Name
+            Command = $FilePath
+            Arguments = $ArgumentList
+            StdOut = $p.StandardOutput.ReadToEnd()
+            StdErr = $p.StandardError.ReadToEnd()
+            ExitCode = $p.ExitCode
         }
         $p.WaitForExit()
 
