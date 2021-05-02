@@ -22,7 +22,7 @@ if [[ "${TRAVIS_OS_NAME}" == "windows" ]];then
     powershell $TRAVIS_BUILD_DIR/code/install.ps1
     cd $TRAVIS_BUILD_DIR
     # Adjusting path for Windows
-    sed -i -e 's|with NamedTemporaryFile() as f:|with NamedTemporaryFile() as f:\n            print("{} -> isFile({})".format(f.name, os.path.isfile(f.name)))\n|' \
+    sed -i -e 's|with NamedTemporaryFile() as f:|with NamedTemporaryFile() as f:\n            import os\n            print("{} -> isFile({})".format(f.name, os.path.isfile(f.name)))\n|' \
         $TRAVIS_BUILD_DIR/code/zato-common/src/zato/common/test/__init__.py
     find -type f -name Makefile -exec sed -i -e 's|/bin|/Scripts|' {} \;
     make
