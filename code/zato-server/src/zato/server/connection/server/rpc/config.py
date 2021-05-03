@@ -33,8 +33,9 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-sec_def_name = 'zato.internal.invoke'
-api_user = sec_def_name + '.user'
+class CredentialsConfig:
+    sec_def_name = 'zato.internal.invoke'
+    api_user = 'zato.internal.invoke.user'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -77,8 +78,11 @@ class ODBConfigSource(ConfigSource):
 
     def _get_invoke_sec_def(self, session, cluster_name):
         for sec_item in self.odb.get_basic_auth_list(None, cluster_name):
-            if sec_item.name == sec_def_name:
+            if sec_item.name == CredentialsConfig.sec_def_name:
                 return sec_item
+        else:
+            raise ValueError('No such security definition `{}` in cluster `{}`'.format(
+                CredentialsConfig.sec_def_name, cluster_name))
 
 # ################################################################################################################################
 
@@ -92,13 +96,6 @@ class ODBConfigSource(ConfigSource):
         out.server_name = server_name
 
         with closing(self.odb.session()) as session:
-
-            result = server_list(session, None, cluster_name)
-
-            print()
-            print(444, result)
-            print()
-
             result = server_by_name(session, None, cluster_name, server_name)
 
         if not result:
