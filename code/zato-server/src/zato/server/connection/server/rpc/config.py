@@ -13,7 +13,7 @@ from logging import getLogger
 # Zato
 from zato.common.ext.dataclasses import dataclass
 from zato.common.odb.model import SecurityBase as SecurityBaseModel, Server as ServerModel
-from zato.common.odb.query import server_by_name
+from zato.common.odb.query import server_by_name, server_list
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -92,7 +92,14 @@ class ODBConfigSource(ConfigSource):
         out.server_name = server_name
 
         with closing(self.odb.session()) as session:
-            result = server_by_name(self.odb.session(), None, cluster_name, server_name)
+
+            result = server_list(session, None, cluster_name)
+
+            print()
+            print(444, result)
+            print()
+
+            result = server_by_name(session, None, cluster_name, server_name)
 
         if not result:
             msg = 'No such server or cluster {}@{}'.format(server_name, cluster_name)
@@ -118,3 +125,4 @@ class ODBConfigSource(ConfigSource):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
