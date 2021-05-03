@@ -51,7 +51,7 @@ from zato.common.util.time_ import TimeUtil
 from zato.distlock import LockManager
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigStore
-#from zato.server.connection.server import Servers
+from zato.server.connection.server import Servers
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
 from zato.server.base.parallel.subprocess_.api import CurrentState as SubprocessCurrentState, \
