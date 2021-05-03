@@ -222,7 +222,6 @@ class SQLConnectionPool(object):
 
         _extra = {
             'pool_pre_ping': True, # Make sure SQLAlchemy 1.2+ can refresh connections on transient errors
-            'echo': True,
         }
 
         # MySQL only
