@@ -190,7 +190,14 @@ class ServerRPCTestCase(TestCase):
         invoker.invoke(*args1, **kwargs1)
         invoker.invoke(*args2, **kwargs2)
 
-        print(111, invoker.invocation_history)
+        history1 = invoker.invocation_history[0] # type: TestRemoteServerInvoker.InvocationEntry
+        history2 = invoker.invocation_history[1] # type: TestRemoteServerInvoker.InvocationEntry
+
+        self.assertTupleEqual(history1.args, args1)
+        self.assertDictEqual(history1.kwargs, kwargs1)
+
+        self.assertTupleEqual(history2.args, args2)
+        self.assertDictEqual(history2.kwargs, kwargs2)
 
 # ################################################################################################################################
 # ################################################################################################################################
