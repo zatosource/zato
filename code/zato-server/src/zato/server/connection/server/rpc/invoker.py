@@ -45,7 +45,7 @@ class RemoteServerInvoker(ServerInvoker):
     def __init__(self, ctx):
         # type: (RemoteServerInvocationCtx) -> None
         super().__init__(ctx.cluster_name, ctx.server_name)
-        self.remote_server_invocation_ctx = ctx
+        self.invocation_ctx = ctx
 
 # ################################################################################################################################
 # ################################################################################################################################
