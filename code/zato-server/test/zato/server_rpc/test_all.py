@@ -7,17 +7,26 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from contextlib import closing
 from unittest import main, TestCase
 
 # SQLAlchemy
 from sqlalchemy import create_engine
 
 # Zato
-from zato.common.odb.model import Base
-from zato.common.odb.api import SessionWrapper
+from zato.common.odb.model import Base, Cluster, Server as ServerModel
+from zato.common.odb.api import SessionWrapper, SQLConnectionPool
+from zato.common.util.api import get_session
 from zato.server.connection.server.rpc.api import ConfigCtx, ServerRPC
 from zato.server.connection.server.rpc.config import ODBConfigSource
 from zato.server.connection.server.rpc.invoker import LocalServerInvoker, RemoteServerInvoker, ServerInvoker
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestConfig:
+    cluster_name = 'rpc_test'
+    server_remote_1 = 'server_remote_1'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,12 +52,56 @@ class _TestParallelServer:
 class ServerRPCTestCase(TestCase):
 
     def setUp(self):
-        engine =  create_engine('sqlite://')
 
-        Base.metadata.create_all(engine)
+        # Prepare in-memory ODB configuration ..
+        odb_name = 'ServerRPCTestCase'
+        odb_config = {
+            'engine': 'sqlite',
+            'is_active': True,
+            'fs_sql_config': {},
+            'echo': True,
+        }
 
-        print(111, dir(engine))
-        print(222, engine.table_names())
+        pool_config = {
+            'engine': 'sqlite',
+            'path': ':memory:',
+            'echo': True,
+        }
+
+        # .. set up ODB ..
+        odb_pool = SQLConnectionPool(odb_name, odb_config, odb_config)
+        self.odb = SessionWrapper()
+        self.odb.init_session(odb_name, odb_config, odb_pool)
+
+        # .. create SQL schema ..
+        Base.metadata.create_all(self.odb.pool.engine)
+
+        with closing(self.odb.session()) as session:
+
+            cluster = Cluster()
+            cluster.name = TestConfig.cluster_name
+            cluster.odb_type = 'sqlite'
+            cluster.broker_host = 'localhost-test-broker-host'
+            cluster.broker_port = 123456
+            cluster.lb_host = 'localhost-test-lb-host'
+            cluster.lb_port = 1234561
+            cluster.lb_agent_port = 1234562
+
+            session.flush()
+
+            server_remote_1 = ServerModel()
+            server_remote_1.name = TestConfig.server_remote_1
+            server_remote_1.cluster_id = cluster
+            server_remote_1.token = 'abc'
+
+            session.add(cluster)
+            session.add(server_remote_1)
+
+            session.commit()
+
+        print()
+        print(111, self.odb)
+        print()
 
 # ################################################################################################################################
 
@@ -79,16 +132,12 @@ class ServerRPCTestCase(TestCase):
 
     def test_get_item_remote_server(self):
 
+
         cluster_name = 'cluster.1'
         server_name = 'abc'
 
-        odb = SessionWrapper()
-        #odb.init_session()
-
-        return
-
         cluster = _TestCluster(cluster_name)
-        parallel_server = _TestParallelServer(cluster, odb, server_name)
+        parallel_server = _TestParallelServer(cluster, self.odb, server_name)
 
         get_remote_server_func = object
         decrypt_func = object
@@ -101,7 +150,7 @@ class ServerRPCTestCase(TestCase):
 
         rpc = ServerRPC(config_ctx)
 
-        server = rpc['not-local']
+        server = rpc[TestConfig.server_remote_1]
 
         self.assertIsInstance(server, ServerInvoker)
         self.assertIsInstance(server, RemoteServerInvoker)
