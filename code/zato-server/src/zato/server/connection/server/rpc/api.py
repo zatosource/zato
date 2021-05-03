@@ -26,15 +26,22 @@ if 0:
 class ConfigCtx:
     """ A config-like class that knows how to return details needed to invoke local or remote servers.
     """
-    def __init__(self, config_source, parallel_server):
+    def __init__(self,
+            config_source,
+            parallel_server,
+            local_server_invoker_class=LocalServerInvoker,
+            remote_server_invoker_class=RemoteServerInvoker
+        ):
         # type: (ConfigSource, ParallelServer) -> None
         self.config_source = config_source
         self.parallel_server = parallel_server
+        self.local_server_invoker_class = local_server_invoker_class
+        self.remote_server_invoker_class = remote_server_invoker_class
 
     def get_remote_server_invoker(self, server_name):
         # type: (str) -> RemoteServerInvoker
         ctx = self.config_source.get_remote_server_invocation_ctx(self.config_source.current_cluster_name, server_name)
-        return RemoteServerInvoker(ctx)
+        return self.remote_server_invoker_class(ctx)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,7 +59,7 @@ class ServerRPC:
     def _get_server_by_name(self, server_name):
         # type: (str) -> ServerInvoker
         if server_name == self.config_ctx.parallel_server.name:
-            return LocalServerInvoker(self.config_ctx.config_source.current_cluster_name, server_name)
+            return self.config_ctx.local_server_invoker_class(self.config_ctx.config_source.current_cluster_name, server_name)
         else:
             return self.config_ctx.get_remote_server_invoker(server_name)
 
