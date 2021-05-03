@@ -10,13 +10,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from contextlib import closing
 from unittest import main, TestCase
 
-# SQLAlchemy
-from sqlalchemy import create_engine
-
 # Zato
 from zato.common.odb.model import Base, HTTPBasicAuth, Cluster, Server as ServerModel
 from zato.common.odb.api import ODBManager, SQLConnectionPool
-from zato.common.util.api import get_session
 from zato.server.connection.server.rpc.api import ConfigCtx, ServerRPC
 from zato.server.connection.server.rpc.config import CredentialsConfig, ODBConfigSource
 from zato.server.connection.server.rpc.invoker import LocalServerInvoker, RemoteServerInvoker, ServerInvoker
@@ -60,12 +56,6 @@ class ServerRPCTestCase(TestCase):
             'engine': 'sqlite',
             'is_active': True,
             'fs_sql_config': {},
-            'echo': True,
-        }
-
-        pool_config = {
-            'engine': 'sqlite',
-            'path': ':memory:',
             'echo': True,
         }
 
@@ -122,11 +112,6 @@ class ServerRPCTestCase(TestCase):
         cluster = _TestCluster(cluster_name)
         parallel_server = _TestParallelServer(cluster, None, server_name)
 
-        # These three will not be called because the server is local
-        get_remote_server_func = object
-        get_server_list_func = object
-        decrypt_func = object
-
         config_source = ODBConfigSource(parallel_server.odb, cluster.name, parallel_server.name)
         config_ctx = ConfigCtx(config_source, parallel_server)
 
@@ -143,12 +128,6 @@ class ServerRPCTestCase(TestCase):
 
         cluster = _TestCluster(TestConfig.cluster_name)
         parallel_server = _TestParallelServer(cluster, self.odb, TestConfig.server1)
-
-        get_remote_server_func = object
-        decrypt_func = object
-
-        # This one will not be called because we access a specific server by name
-        get_server_list_func = object
 
         config_source = ODBConfigSource(parallel_server.odb, cluster.name, parallel_server.name)
         config_ctx = ConfigCtx(config_source, parallel_server)

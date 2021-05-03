@@ -13,7 +13,7 @@ from logging import getLogger
 # Zato
 from zato.common.ext.dataclasses import dataclass
 from zato.common.odb.model import SecurityBase as SecurityBaseModel, Server as ServerModel
-from zato.common.odb.query import server_by_name, server_list
+from zato.common.odb.query import server_by_name
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -122,4 +122,3 @@ class ODBConfigSource(ConfigSource):
 
 # ################################################################################################################################
 # ################################################################################################################################
-
