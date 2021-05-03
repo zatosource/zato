@@ -252,6 +252,13 @@ class ServerRPCTestCase(TestCase):
         self.assertDictEqual(history2.kwargs, kwargs2)
 
 # ################################################################################################################################
+
+    def test_remote_server_invocation_ctx_is_populated(self):
+        """ Confirms that remote server's invocation_ctx contains remote address and API credentials.
+        """
+        raise NotImplementedError()
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
