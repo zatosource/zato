@@ -228,22 +228,10 @@ class CryptoManager(object):
         if not isinstance(encrypted, bytes):
             encrypted = encrypted.encode('utf8')
 
-        print()
-        print('VALUE', encrypted)
-        print('TYPE', type(encrypted))
-        print('SEC', encrypted.startswith(SECRETS.ENCRYPTED_PREFIX_BYTES))
-
         if encrypted.startswith(SECRETS.ENCRYPTED_PREFIX_BYTES):
-            print('OUT-1a', encrypted)
             out = self.secret_key.decrypt(encrypted)
-            print('OUT-1b', out)
         else:
-            print('OUT-2a', encrypted)
             out = encrypted
-            print('OUT-2b', out)
-
-        print('OUT-3', out)
-        print()
 
         return out.decode('utf8')
 
