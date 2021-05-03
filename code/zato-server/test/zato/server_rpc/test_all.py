@@ -49,14 +49,37 @@ class TestParallelServer:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestRemoteServerInvoker(RemoteServerInvoker):
+class BaseTestServerInvoker:
 
     @dataclass
     class InvocationEntry:
         args: tuple
         kwargs: dict
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestLocalServerInvoker(LocalServerInvoker, BaseTestServerInvoker):
+
     def __init__(self, *args, **kwargs):
+
+        # Initialise our base class
+        super().__init__(*args, **kwargs)
+
+        # An entry is added each time self.invoke is called
+        self.invocation_history = []
+
+    def invoke(self, *args, **kwargs):
+        self.invocation_history.append(self.InvocationEntry(args, kwargs))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestRemoteServerInvoker(RemoteServerInvoker, BaseTestServerInvoker):
+
+    def __init__(self, *args, **kwargs):
+
+        # Initialise our base class
         super().__init__(*args, **kwargs)
 
         # An entry is added each time self.invoke is called
@@ -132,7 +155,22 @@ class ServerRPCTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def get_remote_server(self, server_name, remote_server_invoker_class=RemoteServerInvoker):
+    def get_local_server_invoker(self, local_server_invoker_class=LocalServerInvoker):
+
+        cluster = TestCluster(TestConfig.cluster_name)
+        parallel_server = TestParallelServer(cluster, None, TestConfig.server1)
+
+        config_source = ODBConfigSource(parallel_server.odb, cluster.name, parallel_server.name)
+        config_ctx = ConfigCtx(config_source, parallel_server, local_server_invoker_class=local_server_invoker_class)
+
+        rpc = ServerRPC(config_ctx)
+        invoker = rpc[TestConfig.server1]
+
+        return invoker
+
+# ################################################################################################################################
+
+    def get_remote_server_invoker(self, server_name, remote_server_invoker_class=RemoteServerInvoker):
 
         cluster = TestCluster(TestConfig.cluster_name)
         parallel_server = TestParallelServer(cluster, self.odb, TestConfig.server1)
@@ -141,26 +179,15 @@ class ServerRPCTestCase(TestCase):
         config_ctx = ConfigCtx(config_source, parallel_server, remote_server_invoker_class=remote_server_invoker_class)
 
         rpc = ServerRPC(config_ctx)
-        server = rpc[TestConfig.server2]
+        invoker = rpc[TestConfig.server2]
 
-        return server
+        return invoker
 
 # ################################################################################################################################
 
     def test_get_item_local_server(self):
 
-        cluster_name = 'cluster.1'
-        server_name = 'abc'
-
-        cluster = TestCluster(cluster_name)
-        parallel_server = TestParallelServer(cluster, None, server_name)
-
-        config_source = ODBConfigSource(parallel_server.odb, cluster.name, parallel_server.name)
-        config_ctx = ConfigCtx(config_source, parallel_server)
-
-        rpc = ServerRPC(config_ctx)
-
-        invoker = rpc[server_name]
+        invoker = self.get_local_server_invoker()
 
         self.assertIsInstance(invoker, ServerInvoker)
         self.assertIsInstance(invoker, LocalServerInvoker)
@@ -169,16 +196,41 @@ class ServerRPCTestCase(TestCase):
 
     def test_get_item_remote_server(self):
 
-        invoker = self.get_remote_server(TestConfig.server2)
+        invoker = self.get_remote_server_invoker(TestConfig.server2)
 
         self.assertIsInstance(invoker, ServerInvoker)
         self.assertIsInstance(invoker, RemoteServerInvoker)
 
 # ################################################################################################################################
 
+    def test_invoke_local_server(self):
+
+        invoker = self.get_local_server_invoker(
+            local_server_invoker_class=TestLocalServerInvoker) # type: TestLocalServerInvoker
+
+        args1 = (1, 2, 3, 4)
+        kwargs1 = {'a1':'a2', 'b1':'b2'}
+
+        args2 = (5, 6, 7, 8)
+        kwargs2 = {'a3':'a4', 'b3':'b4'}
+
+        invoker.invoke(*args1, **kwargs1)
+        invoker.invoke(*args2, **kwargs2)
+
+        history1 = invoker.invocation_history[0] # type: TestLocalServerInvoker.InvocationEntry
+        history2 = invoker.invocation_history[1] # type: TestLocalServerInvoker.InvocationEntry
+
+        self.assertTupleEqual(history1.args, args1)
+        self.assertDictEqual(history1.kwargs, kwargs1)
+
+        self.assertTupleEqual(history2.args, args2)
+        self.assertDictEqual(history2.kwargs, kwargs2)
+
+# ################################################################################################################################
+
     def test_invoke_remote_server(self):
 
-        invoker = self.get_remote_server(
+        invoker = self.get_remote_server_invoker(
             TestConfig.server2, remote_server_invoker_class=TestRemoteServerInvoker) # type: TestRemoteServerInvoker
 
         args1 = (1, 2, 3, 4)
