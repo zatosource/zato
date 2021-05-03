@@ -87,7 +87,7 @@ class Create(ZatoCommand):
         from uuid import uuid4
 
         # Django
-        from django.core.management import call_command
+        # from django.core.management import call_command
 
         # Python 2/3 compatibility
         from past.builtins import unicode
@@ -111,7 +111,7 @@ class Create(ZatoCommand):
         os.mkdir(os.path.join(self.target_dir, 'config'))
         os.mkdir(repo_dir)
 
-        user_name = 'admin'
+        # user_name = 'admin'
         admin_password = admin_password if admin_password else WebAdminCryptoManager.generate_password()
 
         # If we have a CA's certificate then it implicitly means that there is some CA

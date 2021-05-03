@@ -154,7 +154,7 @@ class Create(ZatoCommand):
         cmd = """openssl req -batch -new -x509 -newkey rsa:2048 -extensions v3_ca -keyout \
                    {ca_key} -out {ca_cert} -days 3650 \
                    -config {config} -passout file:{ca_password}""".format(
-                       config=f.name, target_dir=self.target_dir,
+                       config=f.name,
                        ca_key=ca_key,
                        ca_cert=ca_cert,
                        ca_password=ca_password
