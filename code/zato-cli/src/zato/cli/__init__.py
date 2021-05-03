@@ -985,7 +985,7 @@ class CACreateCommand(ZatoCommand):
         csr_name = os.path.join(self.target_dir, 'out-priv', '{file_prefix}-priv-{now}.pem'.format(**file_args))
         priv_key_name = os.path.join(self.target_dir, 'out-priv', '{file_prefix}-priv-{now}.pem'.format(**file_args))
         pub_key_name = os.path.join(self.target_dir, 'out-pub', '{file_prefix}-pub-{now}.pem'.format(**file_args))
-        cert_name =  os.path.join(self.target_dir, 'out-cert', '{file_prefix}-cert-{now}.pem'.format(**file_args))
+        cert_name = os.path.join(self.target_dir, 'out-cert', '{file_prefix}-cert-{now}.pem'.format(**file_args))
 
         format_args = {
             'config': f.name,
