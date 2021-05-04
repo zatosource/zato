@@ -51,6 +51,11 @@ class RemoteServerInvocationCtx:
     username: str = None
     password: str = None
 
+@dataclass(init=False)
+class InvocationCredentials:
+    username: str = None
+    password: str = None
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -66,6 +71,14 @@ class ConfigSource:
         # type: (str, str) -> RemoteServerInvocationCtx
         raise NotImplementedError('Should be overridden by subclasses')
 
+    def get_server_ctx_list(self, cluster_name):
+        # type: (str) -> list[RemoteServerInvocationCtx]
+        raise NotImplementedError('Should be overridden by subclasses')
+
+    def get_invoke_credentials(self, cluster_name):
+        # type: (str) -> list[RemoteServerInvocationCtx]
+        raise NotImplementedError('Should be overridden by subclasses')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -79,18 +92,21 @@ class ODBConfigSource(ConfigSource):
 
 # ################################################################################################################################
 
-    def get_invoke_sec_def(self, session, cluster_name):
-        for sec_item in self.odb.get_basic_auth_list(None, cluster_name):
+    def get_invocation_credentials(self, session, cluster_name):
+        for sec_item in self.odb.get_basic_auth_list(None, cluster_name): # type: SecurityBaseModel
             if sec_item.name == CredentialsConfig.sec_def_name:
-                return sec_item
+                out = InvocationCredentials()
+                out.username = sec_item.username
+                out.password = sec_item.password
+                return out
         else:
             raise ValueError('No such security definition `{}` in cluster `{}`'.format(
                 CredentialsConfig.sec_def_name, cluster_name))
 
 # ################################################################################################################################
 
-    def build_server_ctx(self, server_model, invoke_sec_def):
-        # type: (ServerModel, SecurityBaseModel) -> RemoteServerInvocationCtx
+    def build_server_ctx(self, server_model, credentials):
+        # type: (ServerModel, InvocationCredentials) -> RemoteServerInvocationCtx
 
         out = RemoteServerInvocationCtx()
         out.cluster_name = server_model.cluster_name
@@ -98,8 +114,8 @@ class ODBConfigSource(ConfigSource):
         out.address = server_model.preferred_address
         out.crypto_use_tls = server_model.crypto_use_tls
 
-        out.username = invoke_sec_def.username
-        out.password = invoke_sec_def.password
+        out.username = credentials.username
+        out.password = credentials.password
 
         return out
 
@@ -127,9 +143,9 @@ class ODBConfigSource(ConfigSource):
 
         else:
             server_model = result[0] # type: ServerModel
-            invoke_sec_def = self.get_invoke_sec_def(session, cluster_name) # type: SecurityBaseModel
+            credentials = self.get_invocation_credentials(session, cluster_name) # type: SecurityBaseModel
 
-            return self.build_server_ctx(server_model, invoke_sec_def)
+            return self.build_server_ctx(server_model, credentials)
 
 # ################################################################################################################################
 # ################################################################################################################################
