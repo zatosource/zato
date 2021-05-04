@@ -468,7 +468,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def build_server_rpc(self):
 
         # What our configuration backend is
-        config_source = ODBConfigSource(self.odb, self.cluster_name, self.name)
+        config_source = ODBConfigSource(self.odb, self.cluster_name, self.name, self.decrypt)
 
         # A combination of backend and runtime configuration
         config_ctx = _ServerRPC_ConfigCtx(config_source, self)
