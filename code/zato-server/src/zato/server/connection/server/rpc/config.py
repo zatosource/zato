@@ -61,7 +61,7 @@ class ConfigSource:
         self.current_cluster_name = cluster_name
         self.current_server_name = server_name
 
-    def get_remote_server_invocation_ctx(self, cluster_name, server_name):
+    def get_server_ctx(self, cluster_name, server_name):
         # type: (str, str) -> RemoteServerInvocationCtx
         raise NotImplementedError('Should be overridden by subclasses')
 
@@ -78,7 +78,7 @@ class ODBConfigSource(ConfigSource):
 
 # ################################################################################################################################
 
-    def _get_invoke_sec_def(self, session, cluster_name):
+    def get_invoke_sec_def(self, session, cluster_name):
         for sec_item in self.odb.get_basic_auth_list(None, cluster_name):
             if sec_item.name == CredentialsConfig.sec_def_name:
                 return sec_item
@@ -88,7 +88,7 @@ class ODBConfigSource(ConfigSource):
 
 # ################################################################################################################################
 
-    def get_remote_server_invocation_ctx(self, cluster_name, server_name):
+    def get_server_ctx(self, cluster_name, server_name):
         """ Returns a specific server defined in ODB.
         """
         # type: (str, str) -> RemoteServerInvocationCtx
@@ -114,7 +114,7 @@ class ODBConfigSource(ConfigSource):
 
         else:
             server_model = result[0] # type: ServerModel
-            invoke_sec_def = self._get_invoke_sec_def(session, cluster_name) # type: SecurityBaseModel
+            invoke_sec_def = self.get_invoke_sec_def(session, cluster_name) # type: SecurityBaseModel
 
             out.address = server_model.preferred_address
             out.crypto_use_tls = server_model.crypto_use_tls
