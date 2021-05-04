@@ -545,7 +545,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.name = server.name
         self.cluster = self.odb.cluster
         self.cluster_id = self.cluster.id
-        self.cluster_name = self.cluster_name
+        self.cluster_name = self.cluster.name
         self.worker_id = '{}.{}.{}.{}'.format(self.cluster_id, self.id, self.worker_pid, new_cid())
 
         # SQL post-processing
