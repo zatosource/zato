@@ -75,8 +75,8 @@ class ConfigSource:
         # type: (str) -> list[RemoteServerInvocationCtx]
         raise NotImplementedError('Should be overridden by subclasses')
 
-    def get_invoke_credentials(self, cluster_name):
-        # type: (str) -> list[RemoteServerInvocationCtx]
+    def get_invocation_credentials(self, cluster_name):
+        # type: (str) -> InvocationCredentials
         raise NotImplementedError('Should be overridden by subclasses')
 
 # ################################################################################################################################
