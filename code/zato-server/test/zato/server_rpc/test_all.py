@@ -31,6 +31,7 @@ class TestConfig:
     server1_preferred_address = 'https://abc1'
     server2_preferred_address = 'https://abc2'
     server3_preferred_address = 'https://abc3'
+    crypto_use_tls = True
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -132,18 +133,21 @@ class ServerRPCTestCase(TestCase):
             server1.name = TestConfig.server1_name
             server1.token = 'abc1'
             server1.preferred_address = TestConfig.server1_preferred_address
+            server1.crypto_use_tls = TestConfig.crypto_use_tls
 
             server2 = ServerModel()
             server2.cluster = cluster
             server2.name = TestConfig.server2_name
             server2.token = 'abc2'
             server2.preferred_address = TestConfig.server2_preferred_address
+            server2.crypto_use_tls = TestConfig.crypto_use_tls
 
             server3 = ServerModel()
             server3.cluster = cluster
             server3.name = TestConfig.server3_name
             server3.token = 'abc3'
             server3.preferred_address = TestConfig.server3_preferred_address
+            server3.crypto_use_tls = TestConfig.crypto_use_tls
 
             api_credentials = HTTPBasicAuth()
             api_credentials.cluster = cluster
@@ -274,6 +278,7 @@ class ServerRPCTestCase(TestCase):
         self.assertEqual(ctx.server_name, TestConfig.server2_name)
         self.assertEqual(ctx.username, CredentialsConfig.api_user)
         self.assertEqual(ctx.password, TestConfig.api_credentials_password)
+        self.assertIs(ctx.crypto_use_tls, TestConfig.crypto_use_tls)
 
 # ################################################################################################################################
 # ################################################################################################################################
