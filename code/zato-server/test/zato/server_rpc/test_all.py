@@ -24,9 +24,13 @@ from zato.server.connection.server.rpc.invoker import LocalServerInvoker, Remote
 
 class TestConfig:
     cluster_name = 'rpc_test_cluster'
-    server1 = 'server1'
-    server2 = 'server2'
-    server3 = 'server3'
+    server1_name = 'server1'
+    server2_name = 'server2'
+    server3_name = 'server3'
+    api_credentials_password = 'api_credentials_password'
+    server1_preferred_address = 'https://abc1'
+    server2_preferred_address = 'https://abc2'
+    server3_preferred_address = 'https://abc3'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -125,18 +129,21 @@ class ServerRPCTestCase(TestCase):
 
             server1 = ServerModel()
             server1.cluster = cluster
-            server1.name = TestConfig.server1
+            server1.name = TestConfig.server1_name
             server1.token = 'abc1'
+            server1.preferred_address = TestConfig.server1_preferred_address
 
             server2 = ServerModel()
             server2.cluster = cluster
-            server2.name = TestConfig.server2
+            server2.name = TestConfig.server2_name
             server2.token = 'abc2'
+            server2.preferred_address = TestConfig.server2_preferred_address
 
             server3 = ServerModel()
             server3.cluster = cluster
-            server3.name = TestConfig.server3
+            server3.name = TestConfig.server3_name
             server3.token = 'abc3'
+            server3.preferred_address = TestConfig.server3_preferred_address
 
             api_credentials = HTTPBasicAuth()
             api_credentials.cluster = cluster
@@ -144,6 +151,7 @@ class ServerRPCTestCase(TestCase):
             api_credentials.name = CredentialsConfig.sec_def_name
             api_credentials.username = CredentialsConfig.api_user
             api_credentials.realm = CredentialsConfig.sec_def_name
+            api_credentials.password = TestConfig.api_credentials_password
 
             session.add(cluster)
             session.add(server1)
@@ -158,13 +166,13 @@ class ServerRPCTestCase(TestCase):
     def get_local_server_invoker(self, local_server_invoker_class=LocalServerInvoker):
 
         cluster = TestCluster(TestConfig.cluster_name)
-        parallel_server = TestParallelServer(cluster, None, TestConfig.server1)
+        parallel_server = TestParallelServer(cluster, None, TestConfig.server1_name)
 
         config_source = ODBConfigSource(parallel_server.odb, cluster.name, parallel_server.name)
         config_ctx = ConfigCtx(config_source, parallel_server, local_server_invoker_class=local_server_invoker_class)
 
         rpc = ServerRPC(config_ctx)
-        invoker = rpc[TestConfig.server1]
+        invoker = rpc[TestConfig.server1_name]
 
         return invoker
 
@@ -173,13 +181,13 @@ class ServerRPCTestCase(TestCase):
     def get_remote_server_invoker(self, server_name, remote_server_invoker_class=RemoteServerInvoker):
 
         cluster = TestCluster(TestConfig.cluster_name)
-        parallel_server = TestParallelServer(cluster, self.odb, TestConfig.server1)
+        parallel_server = TestParallelServer(cluster, self.odb, TestConfig.server1_name)
 
         config_source = ODBConfigSource(parallel_server.odb, cluster.name, parallel_server.name)
         config_ctx = ConfigCtx(config_source, parallel_server, remote_server_invoker_class=remote_server_invoker_class)
 
         rpc = ServerRPC(config_ctx)
-        invoker = rpc[TestConfig.server2]
+        invoker = rpc[TestConfig.server2_name]
 
         return invoker
 
@@ -196,7 +204,7 @@ class ServerRPCTestCase(TestCase):
 
     def test_get_item_remote_server(self):
 
-        invoker = self.get_remote_server_invoker(TestConfig.server2)
+        invoker = self.get_remote_server_invoker(TestConfig.server2_name)
 
         self.assertIsInstance(invoker, ServerInvoker)
         self.assertIsInstance(invoker, RemoteServerInvoker)
@@ -231,7 +239,7 @@ class ServerRPCTestCase(TestCase):
     def test_invoke_remote_server(self):
 
         invoker = self.get_remote_server_invoker(
-            TestConfig.server2, remote_server_invoker_class=TestRemoteServerInvoker) # type: TestRemoteServerInvoker
+            TestConfig.server2_name, remote_server_invoker_class=TestRemoteServerInvoker) # type: TestRemoteServerInvoker
 
         args1 = (1, 2, 3, 4)
         kwargs1 = {'a1':'a2', 'b1':'b2'}
@@ -256,7 +264,16 @@ class ServerRPCTestCase(TestCase):
     def test_remote_server_invocation_ctx_is_populated(self):
         """ Confirms that remote server's invocation_ctx contains remote address and API credentials.
         """
-        raise NotImplementedError()
+        invoker = self.get_remote_server_invoker(
+            TestConfig.server2_name, remote_server_invoker_class=TestRemoteServerInvoker) # type: TestRemoteServerInvoker
+
+        ctx = invoker.invocation_ctx
+
+        self.assertEqual(ctx.address, TestConfig.server2_preferred_address)
+        self.assertEqual(ctx.cluster_name, TestConfig.cluster_name)
+        self.assertEqual(ctx.server_name, TestConfig.server2_name)
+        self.assertEqual(ctx.username, CredentialsConfig.api_user)
+        self.assertEqual(ctx.password, TestConfig.api_credentials_password)
 
 # ################################################################################################################################
 # ################################################################################################################################
