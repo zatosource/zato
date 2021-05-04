@@ -167,33 +167,33 @@ class ServerRPCTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def get_local_server_invoker(self, local_server_invoker_class=LocalServerInvoker):
+    def get_server_rpc(self, odb, local_server_invoker_class=None, remote_server_invoker_class=None):
 
         cluster = TestCluster(TestConfig.cluster_name)
-        parallel_server = TestParallelServer(cluster, None, TestConfig.server1_name)
+        parallel_server = TestParallelServer(cluster, odb, TestConfig.server1_name)
 
         config_source = ODBConfigSource(parallel_server.odb, cluster.name, parallel_server.name)
-        config_ctx = ConfigCtx(config_source, parallel_server, local_server_invoker_class=local_server_invoker_class)
+        config_ctx = ConfigCtx(
+            config_source,
+            parallel_server,
+            local_server_invoker_class=local_server_invoker_class,
+            remote_server_invoker_class=remote_server_invoker_class,
+        )
 
-        rpc = ServerRPC(config_ctx)
-        invoker = rpc[TestConfig.server1_name]
+        return ServerRPC(config_ctx)
 
-        return invoker
+# ################################################################################################################################
+
+    def get_local_server_invoker(self, local_server_invoker_class=LocalServerInvoker):
+        rpc = self.get_server_rpc(None, local_server_invoker_class=local_server_invoker_class)
+        return rpc[TestConfig.server1_name]
 
 # ################################################################################################################################
 
     def get_remote_server_invoker(self, server_name, remote_server_invoker_class=RemoteServerInvoker):
 
-        cluster = TestCluster(TestConfig.cluster_name)
-        parallel_server = TestParallelServer(cluster, self.odb, TestConfig.server1_name)
-
-        config_source = ODBConfigSource(parallel_server.odb, cluster.name, parallel_server.name)
-        config_ctx = ConfigCtx(config_source, parallel_server, remote_server_invoker_class=remote_server_invoker_class)
-
-        rpc = ServerRPC(config_ctx)
-        invoker = rpc[TestConfig.server2_name]
-
-        return invoker
+        rpc = self.get_server_rpc(self.odb, remote_server_invoker_class=remote_server_invoker_class)
+        return rpc[TestConfig.server2_name]
 
 # ################################################################################################################################
 
@@ -279,6 +279,11 @@ class ServerRPCTestCase(TestCase):
         self.assertEqual(ctx.username, CredentialsConfig.api_user)
         self.assertEqual(ctx.password, TestConfig.api_credentials_password)
         self.assertIs(ctx.crypto_use_tls, TestConfig.crypto_use_tls)
+
+# ################################################################################################################################
+
+    def test_populate_servers(self):
+        pass
 
 # ################################################################################################################################
 # ################################################################################################################################
