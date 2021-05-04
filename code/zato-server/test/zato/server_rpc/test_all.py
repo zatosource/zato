@@ -283,7 +283,42 @@ class ServerRPCTestCase(TestCase):
 # ################################################################################################################################
 
     def test_populate_servers(self):
-        pass
+
+        # Get our RPC client ..
+        server_rpc = self.get_server_rpc(self.odb, remote_server_invoker_class=RemoteServerInvoker)
+
+        # .. this reads all the servers from the database ..
+        server_rpc.populate_servers()
+
+        # .. so we can start our tests now.
+        invoker_list = server_rpc._servers
+
+        self.assertEqual(len(invoker_list), 3)
+
+        ctx1 = invoker_list['server1']
+        ctx2 = invoker_list['server2']
+        ctx3 = invoker_list['server3']
+
+        self.assertEqual(ctx1.address, TestConfig.server1_preferred_address)
+        self.assertEqual(ctx1.cluster_name, TestConfig.cluster_name)
+        self.assertEqual(ctx1.server_name, TestConfig.server1_name)
+        self.assertEqual(ctx1.username, CredentialsConfig.api_user)
+        self.assertEqual(ctx1.password, TestConfig.api_credentials_password)
+        self.assertIs(ctx1.crypto_use_tls, TestConfig.crypto_use_tls)
+
+        self.assertEqual(ctx2.address, TestConfig.server2_preferred_address)
+        self.assertEqual(ctx2.cluster_name, TestConfig.cluster_name)
+        self.assertEqual(ctx2.server_name, TestConfig.server2_name)
+        self.assertEqual(ctx2.username, CredentialsConfig.api_user)
+        self.assertEqual(ctx2.password, TestConfig.api_credentials_password)
+        self.assertIs(ctx2.crypto_use_tls, TestConfig.crypto_use_tls)
+
+        self.assertEqual(ctx3.address, TestConfig.server3_preferred_address)
+        self.assertEqual(ctx3.cluster_name, TestConfig.cluster_name)
+        self.assertEqual(ctx3.server_name, TestConfig.server3_name)
+        self.assertEqual(ctx3.username, CredentialsConfig.api_user)
+        self.assertEqual(ctx3.password, TestConfig.api_credentials_password)
+        self.assertIs(ctx3.crypto_use_tls, TestConfig.crypto_use_tls)
 
 # ################################################################################################################################
 # ################################################################################################################################
