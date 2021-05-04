@@ -288,10 +288,10 @@ class ServerRPCTestCase(TestCase):
         server_rpc = self.get_server_rpc(self.odb, remote_server_invoker_class=RemoteServerInvoker)
 
         # .. this reads all the servers from the database ..
-        server_rpc.populate_servers()
+        server_rpc.populate_invokers()
 
         # .. so we can start our tests now.
-        invoker_list = server_rpc._servers
+        invoker_list = server_rpc._invokers
 
         self.assertEqual(len(invoker_list), 3)
 

@@ -43,6 +43,12 @@ class ConfigCtx:
         ctx = self.config_source.get_server_ctx(self.config_source.current_cluster_name, server_name)
         return self.remote_server_invoker_class(ctx)
 
+    def get_remote_server_invoker_list(self):
+        # type: (str) -> list[RemoteServerInvoker]
+        ctx_list = self.config_source.get_server_ctx_list(self.config_source.current_cluster_name)
+        for ctx in ctx_list: # type: RemoteServerInvocationCtx
+            yield self.remote_server_invoker_class(ctx)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -53,11 +59,11 @@ class ServerRPC:
         # type: (ConfigCtx) -> None
         self.config_ctx = config_ctx
         self.current_cluster_name = self.config_ctx.config_source.current_cluster_name
-        self._servers = {}
+        self._invokers = {}
 
 # ################################################################################################################################
 
-    def _get_server_by_name(self, server_name):
+    def _get_invoker_by_server_name(self, server_name):
         # type: (str) -> ServerInvoker
         if server_name == self.config_ctx.parallel_server.name:
             return self.config_ctx.local_server_invoker_class(self.current_cluster_name, server_name)
@@ -68,28 +74,28 @@ class ServerRPC:
 
     def __getitem__(self, server_name):
         # type: (str) -> ServerInvoker
-        if server_name not in self._servers:
-            server = self._get_server_by_name(server_name)
-            self._servers[server_name] = server
+        if server_name not in self._invokers:
+            server = self._get_invoker_by_server_name(server_name)
+            self._invokers[server_name] = server
 
-        return self._servers[server_name]
+        return self._invokers[server_name]
 
 # ################################################################################################################################
 
-    def populate_servers(self):
-        for server in self.config_ctx.config_source.get_server_ctx_list(self.current_cluster_name): # type: ServerInvoker
-            self._servers[server.server_name] = server
+    def populate_invokers(self):
+        for invoker in self.config_ctx.get_remote_server_invoker_list(): # type: RemoteServerInvoker
+            self._invokers[invoker.server_name] = invoker
 
 # ################################################################################################################################
 
     def invoke_all(self, service, request=None, *args, **kwargs):
 
         # First, make sure that we are aware of all the servers currently available
-        self.populate_servers()
+        self.populate_invokers()
 
         # Now, invoke all the servers ..
-        for server in self._servers: # type: ServerInvoker
-            response = server.invoke_all_pids(service, request, *args, **kwargs)
+        for invoker in self._invokers.values(): # type: ServerInvoker
+            response = invoker.invoke_all_pids(service, request, *args, **kwargs)
 
             print()
             print(111, response)
