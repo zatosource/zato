@@ -48,8 +48,13 @@ class ServerInvoker:
         self.cluster_name = cluster_name
         self.server_name = server_name
 
-    def invoke(self, service_name, request=None, pid=None):
-        # type: (str, dict, int) -> None
+    def invoke(self, *args, **kwargs):
+        raise NotImplementedError()
+
+    def invoke_async(self, *args, **kwargs):
+        raise NotImplementedError()
+
+    def invoke_all_pids(self, *args, **kwargs):
         raise NotImplementedError()
 
 # ################################################################################################################################

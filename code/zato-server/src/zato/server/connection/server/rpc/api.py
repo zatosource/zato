@@ -52,6 +52,7 @@ class ServerRPC:
     def __init__(self, config_ctx):
         # type: (ConfigCtx) -> None
         self.config_ctx = config_ctx
+        self.current_cluster_name = self.config_ctx.config_source.current_cluster_name
         self._servers = {}
 
 # ################################################################################################################################
@@ -59,7 +60,7 @@ class ServerRPC:
     def _get_server_by_name(self, server_name):
         # type: (str) -> ServerInvoker
         if server_name == self.config_ctx.parallel_server.name:
-            return self.config_ctx.local_server_invoker_class(self.config_ctx.config_source.current_cluster_name, server_name)
+            return self.config_ctx.local_server_invoker_class(current_cluster_name, server_name)
         else:
             return self.config_ctx.get_remote_server_invoker(server_name)
 
@@ -76,12 +77,23 @@ class ServerRPC:
 # ################################################################################################################################
 
     def populate_servers(self):
-        pass
+        for server in self.config_ctx.config_source.get_server_ctx_list(self.current_cluster_name): # type: ServerInvoker
+            self._servers[server.server_name] = server
 
 # ################################################################################################################################
 
-    def invoke_all(self, request):
-        pass
+    def invoke_all(self, service, request=None, *args, **kwargs):
+
+        # First, make sure that we are aware of all the servers currently available
+        self.populate_servers()
+
+        # Now, invoke all the servers ..
+        for server in self._servers: # type: ServerInvoker
+            response = server.invoke_all_pids(service, request, *args, **kwargs)
+
+            print()
+            print(111, response)
+            print()
 
 # ################################################################################################################################
 # ################################################################################################################################
