@@ -45,6 +45,8 @@ class RemoteServerInvocationCtx:
     cluster_name: str = None
     server_name:  str = None
     address:  str = None
+    port: int = None
+    crypto_use_tls: bool
     username: str = None
     password: str = None
 
@@ -115,6 +117,7 @@ class ODBConfigSource(ConfigSource):
             invoke_sec_def = self._get_invoke_sec_def(session, cluster_name) # type: SecurityBaseModel
 
             out.address = server_model.preferred_address
+            out.crypto_use_tls = server_model.crypto_use_tls
             out.username = invoke_sec_def.username
             out.password = invoke_sec_def.password
 
