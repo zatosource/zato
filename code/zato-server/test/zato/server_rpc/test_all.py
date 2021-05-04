@@ -51,6 +51,9 @@ class TestParallelServer:
         self.odb = odb
         self.name = server_name
 
+    def decrypt(self, data):
+        return data
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -172,7 +175,7 @@ class ServerRPCTestCase(TestCase):
         cluster = TestCluster(TestConfig.cluster_name)
         parallel_server = TestParallelServer(cluster, odb, TestConfig.server1_name)
 
-        config_source = ODBConfigSource(parallel_server.odb, cluster.name, parallel_server.name)
+        config_source = ODBConfigSource(parallel_server.odb, cluster.name, parallel_server.name, parallel_server.decrypt)
         config_ctx = ConfigCtx(
             config_source,
             parallel_server,
