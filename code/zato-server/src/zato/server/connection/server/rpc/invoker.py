@@ -83,10 +83,6 @@ class RemoteServerInvoker(ServerInvoker):
         self.ping_address = '{}://{}:{}/zato/ping'.format(protocol, self.invocation_ctx.address, self.invocation_ctx.port)
         self.ping_timeout = 1
 
-        print()
-        print(111, self.ping_address)
-        print()
-
         # Build the full address to the remote server
         self.address = '{}://{}:{}'.format(protocol, self.invocation_ctx.address, self.invocation_ctx.port)
 
