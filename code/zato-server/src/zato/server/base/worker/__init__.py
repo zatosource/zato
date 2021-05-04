@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -61,6 +61,7 @@ from zato.common.pubsub import MSG_PREFIX as PUBSUB_MSG_PREFIX
 from zato.common.util.api import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
      import_module_from_path, new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, \
      start_connectors, store_tls, update_apikey_username_to_channel, update_bind_port, visit_py_source
+from zato.cy.reqresp.payload import SimpleIOPayload
 from zato.server.base.parallel.subprocess_.api import StartConfig as SubprocessStartConfig
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
@@ -2494,7 +2495,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # We get here if there is no target_pid or if there is one and it matched that of ours.
 
         try:
-            response = self.invoke(msg.service, msg.payload, channel=CHANNEL.IPC, data_format=msg.data_format)
+            response = self.invoke(msg.service, msg.payload, channel=CHANNEL.IPC, data_format=DATA_FORMAT.JSON, serialize=True)
+            response = response.getvalue() if isinstance(response, SimpleIOPayload) else response
             status = success
         except Exception:
             response = format_exc()
