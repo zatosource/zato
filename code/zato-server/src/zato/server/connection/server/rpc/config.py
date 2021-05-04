@@ -19,6 +19,7 @@ from zato.common.odb.query import server_by_name, server_list
 # ################################################################################################################################
 
 if 0:
+    from typing import Callable
     from zato.common.odb.api import SessionWrapper
     from zato.common.odb.model import Server as ServerModel
     from zato.server.base.parallel import ParallelServer
@@ -62,10 +63,11 @@ class InvocationCredentials:
 class ConfigSource:
     """ A base class for returning server configuration.
     """
-    def __init__(self, cluster_name, server_name):
-        # type: (str, str) -> None
+    def __init__(self, cluster_name, server_name, decrypt_func):
+        # type: (str, str, Callable) -> None
         self.current_cluster_name = cluster_name
         self.current_server_name = server_name
+        self.decrypt_func = decrypt_func
 
     def get_server_ctx(self, cluster_name, server_name):
         # type: (str, str) -> RemoteServerInvocationCtx
@@ -85,9 +87,9 @@ class ConfigSource:
 class ODBConfigSource(ConfigSource):
     """ Returns server configuration based on information in the cluster's ODB.
     """
-    def __init__(self, odb, cluster_name, server_name):
-        # type: (SessionWrapper, str, str) -> None
-        super().__init__(cluster_name, server_name)
+    def __init__(self, odb, cluster_name, server_name, decrypt_func):
+        # type: (SessionWrapper, str, str, Callable) -> None
+        super().__init__(cluster_name, server_name, decrypt_func)
         self.odb = odb
 
 # ################################################################################################################################
@@ -97,7 +99,7 @@ class ODBConfigSource(ConfigSource):
             if sec_item.name == CredentialsConfig.sec_def_name:
                 out = InvocationCredentials()
                 out.username = sec_item.username
-                out.password = sec_item.password
+                out.password = self.decrypt_func(sec_item.password)
                 return out
         else:
             raise ValueError('No such security definition `{}` in cluster `{}`'.format(
