@@ -13,7 +13,7 @@ from logging import getLogger
 # Zato
 from zato.common.ext.dataclasses import dataclass
 from zato.common.odb.model import SecurityBase as SecurityBaseModel
-from zato.common.odb.query import server_by_name
+from zato.common.odb.query import server_by_name, server_list
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -146,6 +146,33 @@ class ODBConfigSource(ConfigSource):
             credentials = self.get_invocation_credentials(session, cluster_name) # type: SecurityBaseModel
 
             return self.build_server_ctx(server_model, credentials)
+
+# ################################################################################################################################
+
+    def get_server_ctx_list(self, cluster_name):
+        # type: (str) -> list[RemoteServerInvocationCtx]
+
+        # Response to return
+        out = []
+
+        with closing(self.odb.session()) as session:
+
+            # First, get API credentials that will be the same for all servers ..
+            credentials = self.get_invocation_credentials(session, cluster_name)
+
+            # .. now, get servers from the database ..
+            result = server_list(session, None, cluster_name)
+            result = result[0]
+            result = result.result
+
+        # .. combine the two ..
+
+        for item in result:
+            server_ctx = self.build_server_ctx(item, credentials)
+            out.append(server_ctx)
+
+        # .. and return everything to our caller.
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
