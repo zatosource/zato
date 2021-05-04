@@ -12,7 +12,7 @@ from logging import getLogger
 
 # Zato
 from zato.common.ext.dataclasses import dataclass
-from zato.common.odb.model import SecurityBase as SecurityBaseModel, Server as ServerModel
+from zato.common.odb.model import SecurityBase as SecurityBaseModel
 from zato.common.odb.query import server_by_name
 
 # ################################################################################################################################
@@ -20,6 +20,7 @@ from zato.common.odb.query import server_by_name
 
 if 0:
     from zato.common.odb.api import SessionWrapper
+    from zato.common.odb.model import Server as ServerModel
     from zato.server.base.parallel import ParallelServer
 
     ParallelServer = ParallelServer
@@ -88,14 +89,26 @@ class ODBConfigSource(ConfigSource):
 
 # ################################################################################################################################
 
+    def build_server_ctx(self, server_model, invoke_sec_def):
+        # type: (ServerModel, SecurityBaseModel) -> RemoteServerInvocationCtx
+
+        out = RemoteServerInvocationCtx()
+        out.cluster_name = server_model.cluster_name
+        out.server_name = server_model.name
+        out.address = server_model.preferred_address
+        out.crypto_use_tls = server_model.crypto_use_tls
+
+        out.username = invoke_sec_def.username
+        out.password = invoke_sec_def.password
+
+        return out
+
+# ################################################################################################################################
+
     def get_server_ctx(self, cluster_name, server_name):
         """ Returns a specific server defined in ODB.
         """
         # type: (str, str) -> RemoteServerInvocationCtx
-
-        out = RemoteServerInvocationCtx()
-        out.cluster_name = cluster_name
-        out.server_name = server_name
 
         with closing(self.odb.session()) as session:
             result = server_by_name(session, None, cluster_name, server_name)
@@ -116,12 +129,7 @@ class ODBConfigSource(ConfigSource):
             server_model = result[0] # type: ServerModel
             invoke_sec_def = self.get_invoke_sec_def(session, cluster_name) # type: SecurityBaseModel
 
-            out.address = server_model.preferred_address
-            out.crypto_use_tls = server_model.crypto_use_tls
-            out.username = invoke_sec_def.username
-            out.password = invoke_sec_def.password
-
-        return out
+            return self.build_server_ctx(server_model, invoke_sec_def)
 
 # ################################################################################################################################
 # ################################################################################################################################
