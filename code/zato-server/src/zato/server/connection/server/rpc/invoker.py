@@ -18,9 +18,11 @@ from zato.common.ext.dataclasses import dataclass
 
 if 0:
     from requests import Response
+    from typing import Callable
     from zato.client import ServiceInvokeResponse
     from zato.server.connection.server.rpc.config import RemoteServerInvocationCtx
 
+    Callable = Callable
     RemoteServerInvocationCtx = RemoteServerInvocationCtx
     Response = Response
     ServiceInvokeResponse = ServiceInvokeResponse
@@ -85,13 +87,16 @@ class RemoteServerInvoker(ServerInvoker):
         # Now, we can build a client to the remote server
         self.invoker = AnyServiceInvoker(self.address, '/zato/internal/invoke', credentials)
 
-    def invoke(self):
+# ################################################################################################################################
+
+    def _invoke(self, invoke_func, service, request=None, *args, **kwargs):
+        # type: (Callable, str, object) -> InvocationResult
 
         # Ping the remote server to quickly find out if it is still available ..
         requests_get(self.ping_address, timeout=self.ping_timeout)
 
         # .. actually invoke the server now ..
-        response = self.invoker.invoke(service, request, *args, **kwargs) # type: ServiceInvokeResponse
+        response = invoke_func(service, request, *args, **kwargs) # type: ServiceInvokeResponse
 
         # .. build the results object ..
         out = InvocationResult()
@@ -102,6 +107,22 @@ class RemoteServerInvoker(ServerInvoker):
 
         # .. and return the result to our caller.
         return out
+
+# ################################################################################################################################
+
+    def invoke(self, *args, **kwargs):
+        return self._invoke(self.invoker.invoke, *args, **kwargs)
+
+# ################################################################################################################################
+
+    def invoke_async(self, *args, **kwargs):
+        return self._invoke(self.invoker.invoke_async, *args, **kwargs)
+
+# ################################################################################################################################
+
+    def invoke_all_pids(self, *args, **kwargs):
+        kwargs['all_pids'] = True
+        return self._invoke(self.invoker.invoke, *args, **kwargs)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -40,7 +40,7 @@ class ConfigCtx:
 
     def get_remote_server_invoker(self, server_name):
         # type: (str) -> RemoteServerInvoker
-        ctx = self.config_source.get_remote_server_invocation_ctx(self.config_source.current_cluster_name, server_name)
+        ctx = self.config_source.get_server_ctx(self.config_source.current_cluster_name, server_name)
         return self.remote_server_invoker_class(ctx)
 
 # ################################################################################################################################
@@ -75,7 +75,7 @@ class ServerRPC:
 
 # ################################################################################################################################
 
-    def invoke_async_all(self, request):
+    def populate_servers(self):
         pass
 
 # ################################################################################################################################
