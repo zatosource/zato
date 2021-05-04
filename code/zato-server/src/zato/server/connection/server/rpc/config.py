@@ -113,6 +113,7 @@ class ODBConfigSource(ConfigSource):
         out.server_name = server_model.name
         out.address = server_model.preferred_address
         out.crypto_use_tls = server_model.crypto_use_tls
+        out.port = server_model.bind_port
 
         out.username = credentials.username
         out.password = credentials.password

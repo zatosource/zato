@@ -75,13 +75,17 @@ class RemoteServerInvoker(ServerInvoker):
         super().__init__(ctx.cluster_name, ctx.server_name)
         self.invocation_ctx = ctx
 
-        # These two are used to ping each server right before an actual request is sent - with a short timeout,
-        # this lets out quickly discover whether the server is up and running.
-        self.ping_address = '{}/zato/ping'.format(self.invocation_ctx.address)
-        self.ping_timeout = 1
-
         # We need to cover both HTTP and HTTPS connections to other servers
         protocol = 'https' if self.invocation_ctx.crypto_use_tls else 'http'
+
+        # These two are used to ping each server right before an actual request is sent - with a short timeout,
+        # this lets out quickly discover whether the server is up and running.
+        self.ping_address = '{}://{}:{}/zato/ping'.format(protocol, self.invocation_ctx.address, self.invocation_ctx.port)
+        self.ping_timeout = 1
+
+        print()
+        print(111, self.ping_address)
+        print()
 
         # Build the full address to the remote server
         self.address = '{}://{}:{}'.format(protocol, self.invocation_ctx.address, self.invocation_ctx.port)
