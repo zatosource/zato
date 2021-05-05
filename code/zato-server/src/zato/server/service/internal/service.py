@@ -387,12 +387,6 @@ class Invoke(AdminService):
             else:
                 use_all_pids = False
 
-            print()
-            print('QQQ-1', skip_response_elem)
-            print('QQQ-2', self.request.input)
-            print('QQQ-3', use_all_pids)
-            print()
-
             if use_all_pids:
                 args = (name, payload, timeout) if timeout else (name, payload)
                 response = dumps(self.server.invoke_all_pids(*args, skip_response_elem=skip_response_elem))
@@ -408,11 +402,6 @@ class Invoke(AdminService):
         if isinstance(response, basestring):
             if response:
                 response = response if isinstance(response, bytes) else response.encode('utf8')
-
-                print()
-                print(555, response)
-                print()
-
                 self.response.payload.response = b64encode(response).decode('utf8') if response else ''
 
 # ################################################################################################################################

@@ -816,11 +816,6 @@ class Service(object):
             response.payload = ''
             response.status_code = BAD_REQUEST
 
-        print()
-        print('ZZZ-1', kwargs.get('skip_response_elem'), hasattr(response, 'keys'))
-        print('ZZZ-2', response)
-        print()
-
         if kwargs.get('skip_response_elem') and hasattr(response, 'keys'):
             keys = list(iterkeys(response))
             response_elem = keys[0]

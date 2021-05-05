@@ -103,10 +103,6 @@ class RemoteServerInvoker(ServerInvoker):
         # .. actually invoke the server now ..
         response = invoke_func(service, request, skip_response_elem=True, *args, **kwargs) # type: ServiceInvokeResponse
 
-        print()
-        print(222, response.data)
-        print()
-
         # .. build the results object ..
         out = InvocationResult()
         out.is_ok = response.ok
