@@ -11,13 +11,12 @@ from contextlib import closing
 from unittest import main, TestCase
 
 # Zato
-from zato.common.ext.dataclasses import dataclass
+from zato.common.ext.dataclasses import dataclass, field
 from zato.common.odb.model import Base, HTTPBasicAuth, Cluster, Server as ServerModel
 from zato.common.odb.api import ODBManager, SQLConnectionPool
 from zato.server.connection.server.rpc.api import ConfigCtx, ServerRPC
 from zato.server.connection.server.rpc.config import CredentialsConfig, ODBConfigSource
-from zato.server.connection.server.rpc.invoker import LocalServerInvoker, RemoteServerInvoker, \
-     ServerInvoker
+from zato.server.connection.server.rpc.invoker import LocalServerInvoker, RemoteServerInvoker, ServerInvoker
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -331,6 +330,98 @@ class ServerRPCTestCase(TestCase):
         self.assertEqual(ctx3.username, CredentialsConfig.api_user)
         self.assertEqual(ctx3.password, TestConfig.api_credentials_password)
         self.assertIs(ctx3.crypto_use_tls, TestConfig.crypto_use_tls)
+
+    def test_invoke_all(self):
+
+        @dataclass(init=False)
+        class TestServiceInvokeResponse:
+            ok: bool = True
+            has_data: bool = True
+            details: str = ''
+            data: dict = field(default_factory=dict)
+
+        def invoke_func(server_name):
+
+            def _inner(service, request, skip_response_elem=True, *args, **kwargs):
+
+                # This simulates a response from the Zato client ..
+                response = TestServiceInvokeResponse()
+
+                # .. keyed by PID ..
+                data = {}
+
+                pid_prefix = server_name[-1]
+                pid_responses_len = 4
+
+                # .. generate responses for several PIDs ..
+                for idx in range(pid_responses_len):
+                    pid_suffix = pid_prefix * 2 + str(idx)
+                    pid = int(pid_prefix + pid_suffix)
+
+                    # .. a per-PID response ..
+                    pid_response = {
+                        'is_ok': True,
+                        'pid_data': {'pong':'zato-{}'.format(pid)},
+                        'error_info': None,
+                    }
+
+                    # .. assign to output ..
+                    data[pid] = pid_response
+
+                # .. the overall reply ..
+                response.data = data
+
+                # .. now, we can return everything to the caller.
+                return response
+
+            return _inner
+
+        class StaticRemoteServerInvoker(RemoteServerInvoker):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.invocation_ctx.needs_ping = False
+                self.invoker.invoke = invoke_func(self.server_name)
+
+        service_name = 'zato.ping'
+        request = {'abc':123}
+
+        # Get our RPC client ..
+        server_rpc = self.get_server_rpc(self.odb, remote_server_invoker_class=StaticRemoteServerInvoker)
+
+        # .. invoke all the servers and PIDs ..
+        response = server_rpc.invoke_all(service_name, request)
+
+        # .. we have three servers with four PIDs each and we need to check each ..
+
+        server1_pid_0_data = response.data[0]
+        server1_pid_1_data = response.data[1]
+        server1_pid_2_data = response.data[2]
+        server1_pid_3_data = response.data[3]
+
+        server2_pid_0_data = response.data[4]
+        server2_pid_1_data = response.data[5]
+        server2_pid_2_data = response.data[6]
+        server2_pid_3_data = response.data[7]
+
+        server3_pid_0_data = response.data[8]
+        server3_pid_1_data = response.data[9]
+        server3_pid_2_data = response.data[10]
+        server3_pid_3_data = response.data[11]
+
+        self.assertDictEqual(server1_pid_0_data, {'pong': 'zato-1110'})
+        self.assertDictEqual(server1_pid_1_data, {'pong': 'zato-1111'})
+        self.assertDictEqual(server1_pid_2_data, {'pong': 'zato-1112'})
+        self.assertDictEqual(server1_pid_3_data, {'pong': 'zato-1113'})
+
+        self.assertDictEqual(server2_pid_0_data, {'pong': 'zato-2220'})
+        self.assertDictEqual(server2_pid_1_data, {'pong': 'zato-2221'})
+        self.assertDictEqual(server2_pid_2_data, {'pong': 'zato-2222'})
+        self.assertDictEqual(server2_pid_3_data, {'pong': 'zato-2223'})
+
+        self.assertDictEqual(server3_pid_0_data, {'pong': 'zato-3330'})
+        self.assertDictEqual(server3_pid_1_data, {'pong': 'zato-3331'})
+        self.assertDictEqual(server3_pid_2_data, {'pong': 'zato-3332'})
+        self.assertDictEqual(server3_pid_3_data, {'pong': 'zato-3333'})
 
 # ################################################################################################################################
 # ################################################################################################################################
