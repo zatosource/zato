@@ -23,15 +23,21 @@ from zato.server.connection.server.rpc.invoker import LocalServerInvoker, Remote
 # ################################################################################################################################
 
 class TestConfig:
+    crypto_use_tls = True
     cluster_name = 'rpc_test_cluster'
+    api_credentials_password = 'api_credentials_password'
+
     server1_name = 'server1'
     server2_name = 'server2'
     server3_name = 'server3'
-    api_credentials_password = 'api_credentials_password'
-    server1_preferred_address = 'https://abc1'
-    server2_preferred_address = 'https://abc2'
-    server3_preferred_address = 'https://abc3'
-    crypto_use_tls = True
+
+    server1_preferred_address = '10.151.1.1'
+    server2_preferred_address = '10.152.2.2'
+    server3_preferred_address = '10.152.3.3'
+
+    server1_port = 1111
+    server2_port = 2222
+    server3_port = 3333
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -136,6 +142,7 @@ class ServerRPCTestCase(TestCase):
             server1.name = TestConfig.server1_name
             server1.token = 'abc1'
             server1.preferred_address = TestConfig.server1_preferred_address
+            server1.bind_port = TestConfig.server1_port
             server1.crypto_use_tls = TestConfig.crypto_use_tls
 
             server2 = ServerModel()
@@ -143,6 +150,7 @@ class ServerRPCTestCase(TestCase):
             server2.name = TestConfig.server2_name
             server2.token = 'abc2'
             server2.preferred_address = TestConfig.server2_preferred_address
+            server2.bind_port = TestConfig.server2_port
             server2.crypto_use_tls = TestConfig.crypto_use_tls
 
             server3 = ServerModel()
@@ -150,6 +158,7 @@ class ServerRPCTestCase(TestCase):
             server3.name = TestConfig.server3_name
             server3.token = 'abc3'
             server3.preferred_address = TestConfig.server3_preferred_address
+            server3.bind_port = TestConfig.server3_port
             server3.crypto_use_tls = TestConfig.crypto_use_tls
 
             api_credentials = HTTPBasicAuth()
@@ -298,9 +307,9 @@ class ServerRPCTestCase(TestCase):
 
         self.assertEqual(len(invoker_list), 3)
 
-        ctx1 = invoker_list['server1']
-        ctx2 = invoker_list['server2']
-        ctx3 = invoker_list['server3']
+        ctx1 = invoker_list['server1'].invocation_ctx
+        ctx2 = invoker_list['server2'].invocation_ctx
+        ctx3 = invoker_list['server3'].invocation_ctx
 
         self.assertEqual(ctx1.address, TestConfig.server1_preferred_address)
         self.assertEqual(ctx1.cluster_name, TestConfig.cluster_name)
