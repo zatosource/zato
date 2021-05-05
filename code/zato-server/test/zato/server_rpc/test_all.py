@@ -15,7 +15,7 @@ from zato.common.ext.dataclasses import dataclass
 from zato.common.odb.model import Base, HTTPBasicAuth, Cluster, Server as ServerModel
 from zato.common.odb.api import ODBManager, SQLConnectionPool
 from zato.server.connection.server.rpc.api import ConfigCtx, ServerRPC
-from zato.server.connection.server.rpc.config import CredentialsConfig, ODBConfigSource, RemoteServerInvocationCtx
+from zato.server.connection.server.rpc.config import CredentialsConfig, ODBConfigSource
 from zato.server.connection.server.rpc.invoker import LocalServerInvoker, RemoteServerInvoker, \
      ServerInvoker
 

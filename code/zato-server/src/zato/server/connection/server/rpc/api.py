@@ -14,11 +14,12 @@ from zato.server.connection.server.rpc.invoker import LocalServerInvoker, Remote
 
 if 0:
     from zato.server.base.parallel import ParallelServer
-    from zato.server.connection.server.rpc.config import ConfigSource
+    from zato.server.connection.server.rpc.config import ConfigSource, RemoteServerInvocationCtx
     from zato.server.connection.server.rpc.invoker import ServerInvoker
 
     ConfigSource = ConfigSource
     ParallelServer = ParallelServer
+    RemoteServerInvocationCtx = RemoteServerInvocationCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
