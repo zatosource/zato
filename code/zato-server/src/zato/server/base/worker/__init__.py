@@ -36,6 +36,9 @@ from dateutil.rrule import DAILY, MINUTELY, rrule
 # gevent
 import gevent
 
+# orjson
+from orjson import dumps
+
 # Python 2/3 compatibility
 from future.utils import iterkeys
 from future.moves.urllib.parse import urlparse
@@ -1647,7 +1650,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             'zato_ctx': kwargs.get('zato_ctx'),
             'wsgi_environ': kwargs.get('wsgi_environ'),
             'channel_item': kwargs.get('channel_item'),
-        }, channel, None, needs_response=True, serialize=serialize)
+        }, channel, None, needs_response=True, serialize=serialize, skip_response_elem=kwargs.get('skip_response_elem'))
 
 # ################################################################################################################################
 
@@ -1715,10 +1718,16 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             logger.warn(msg)
             raise Exception(msg)
 
-        service.update_handle(service.set_response_data, service, payload,
+        skip_response_elem=kwargs.get('skip_response_elem')
+
+        response = service.update_handle(service.set_response_data, service, payload,
             channel, data_format, transport, self.server, self.broker_client, self, cid,
             self.worker_config.simple_io, job_type=msg.get('job_type'), wsgi_environ=wsgi_environ,
             environ=msg.get('environ'))
+
+        if skip_response_elem:
+            response = dumps(response) # type: bytes
+            response = response.decode('utf8')
 
         # Invoke the callback, if any.
         if msg.get('is_async') and msg.get('callback'):
@@ -1726,7 +1735,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             cb_msg = {}
             cb_msg['action'] = SERVICE.PUBLISH.value
             cb_msg['service'] = msg['callback']
-            cb_msg['payload'] = service.response.payload
+            cb_msg['payload'] = response if skip_response_elem else service.response.payload
             cb_msg['cid'] = new_cid()
             cb_msg['channel'] = CHANNEL.INVOKE_ASYNC_CALLBACK
             cb_msg['data_format'] = data_format
@@ -1738,7 +1747,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         if kwargs.get('needs_response'):
 
-            return service.response.payload
+            return response if skip_response_elem else service.response.payload
 
 # ################################################################################################################################
 
@@ -2423,7 +2432,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # We get here if there is no target_pid or if there is one and it matched that of ours.
 
         try:
-            response = self.invoke(msg.service, msg.payload, channel=CHANNEL.IPC, data_format=DATA_FORMAT.JSON, serialize=True)
+            response = self.invoke(
+                msg.service,
+                msg.payload,
+                skip_response_elem=True,
+                channel=CHANNEL.IPC,
+                data_format=DATA_FORMAT.JSON,
+                serialize=True,
+            )
             response = response.getvalue() if isinstance(response, SimpleIOPayload) else response
             status = success
         except Exception:

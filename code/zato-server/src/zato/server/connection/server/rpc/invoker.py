@@ -101,7 +101,11 @@ class RemoteServerInvoker(ServerInvoker):
         requests_get(self.ping_address, timeout=self.ping_timeout)
 
         # .. actually invoke the server now ..
-        response = invoke_func(service, request, *args, **kwargs) # type: ServiceInvokeResponse
+        response = invoke_func(service, request, skip_response_elem=True, *args, **kwargs) # type: ServiceInvokeResponse
+
+        print()
+        print(222, response.data)
+        print()
 
         # .. build the results object ..
         out = InvocationResult()
