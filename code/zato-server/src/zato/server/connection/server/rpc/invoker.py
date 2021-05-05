@@ -6,12 +6,16 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from typing import Optional as optional
+
 # Requests
 from requests import get as requests_get
 
 # Zato
 from zato.client import AnyServiceInvoker
-from zato.common.ext.dataclasses import dataclass
+from zato.common.ext.dataclasses import dataclass, field
+from zato.common.typing_ import from_dict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,11 +35,18 @@ if 0:
 # ################################################################################################################################
 
 @dataclass(init=False)
-class InvocationResult:
-    is_ok: bool
-    has_data: bool
-    data: object
-    error: object
+class ServerInvocationResult:
+    is_ok: bool = False
+    has_data: bool = False
+    data: object = ''
+    error_info: object = ''
+
+@dataclass
+class PerPIDResponse:
+    is_ok: bool = False
+    pid: int = 0
+    pid_data: optional[dict] = field(default_factory=dict)
+    error_info: object = 'zzz'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,6 +66,7 @@ class ServerInvoker:
         raise NotImplementedError()
 
     def invoke_all_pids(self, *args, **kwargs):
+        # type: () -> ServerInvocationResult
         raise NotImplementedError()
 
 # ################################################################################################################################
@@ -95,20 +107,27 @@ class RemoteServerInvoker(ServerInvoker):
 # ################################################################################################################################
 
     def _invoke(self, invoke_func, service, request=None, *args, **kwargs):
-        # type: (Callable, str, object) -> InvocationResult
+        # type: (Callable, str, object) -> ServerInvocationResult
 
-        # Ping the remote server to quickly find out if it is still available ..
-        requests_get(self.ping_address, timeout=self.ping_timeout)
+        # Optionally, ping the remote server to quickly find out if it is still available ..
+        if self.invocation_ctx.needs_ping:
+            requests_get(self.ping_address, timeout=self.ping_timeout)
 
         # .. actually invoke the server now ..
         response = invoke_func(service, request, skip_response_elem=True, *args, **kwargs) # type: ServiceInvokeResponse
 
         # .. build the results object ..
-        out = InvocationResult()
+        out = ServerInvocationResult()
         out.is_ok = response.ok
         out.has_data = response.has_data
-        out.data = response.data
-        out.error = response.details
+        out.data = {}
+        out.error_info = response.details
+
+        if response.ok:
+            for pid, pid_data in response.data.items():
+                per_pid_response = from_dict(PerPIDResponse, pid_data) # type: PerPIDResponse
+                per_pid_response.pid = pid
+                out.data[pid] = per_pid_response
 
         # .. and return the result to our caller.
         return out

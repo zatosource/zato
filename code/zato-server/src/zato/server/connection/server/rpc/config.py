@@ -51,6 +51,7 @@ class RemoteServerInvocationCtx:
     crypto_use_tls: bool
     username: str = None
     password: str = None
+    needs_ping: bool = True
 
 @dataclass(init=False)
 class InvocationCredentials:
