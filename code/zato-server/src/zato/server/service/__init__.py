@@ -816,7 +816,17 @@ class Service(object):
             response.payload = ''
             response.status_code = BAD_REQUEST
 
-        return response
+        print()
+        print('ZZZ-1', kwargs.get('skip_response_elem'), hasattr(response, 'keys'))
+        print('ZZZ-2', response)
+        print()
+
+        if kwargs.get('skip_response_elem') and hasattr(response, 'keys'):
+            keys = list(iterkeys(response))
+            response_elem = keys[0]
+            return response[response_elem]
+        else:
+            return response
 
 # ################################################################################################################################
 
@@ -865,14 +875,7 @@ class Service(object):
                 if raise_timeout:
                     raise
         else:
-            out = self.update_handle(*invoke_args, **kwargs)
-
-            if kwargs.get('skip_response_elem') and hasattr(out, 'keys'):
-                keys = list(iterkeys(out))
-                response_elem = keys[0]
-                return out[response_elem]
-            else:
-                return out
+            return self.update_handle(*invoke_args, **kwargs)
 
 # ################################################################################################################################
 

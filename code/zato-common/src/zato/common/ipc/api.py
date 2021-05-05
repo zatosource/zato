@@ -126,6 +126,10 @@ class IPCAPI(object):
             response = response[IPC.STATUS.LENGTH+1:] # Add 1 to account for the separator
             is_success = status == IPC.STATUS.SUCCESS
 
+            print()
+            print(555, repr(response))
+            print()
+
             if is_success:
                 response = loads(response) if response else ''
 
@@ -140,7 +144,7 @@ class IPCAPI(object):
 # ################################################################################################################################
 
     def invoke_by_pid(self, service, payload, cluster_name, server_name, target_pid,
-        fifo_response_buffer_size, timeout=90, is_async=False):
+        fifo_response_buffer_size, timeout=90, is_async=False, skip_response_elem=False):
         """ Invokes a service through IPC, synchronously or in background. If target_pid is an exact PID then this one worker
         process will be invoked if it exists at all.
         """
