@@ -126,10 +126,6 @@ class IPCAPI(object):
             response = response[IPC.STATUS.LENGTH+1:] # Add 1 to account for the separator
             is_success = status == IPC.STATUS.SUCCESS
 
-            print()
-            print(555, repr(response))
-            print()
-
             if is_success:
                 response = loads(response) if response else ''
 
