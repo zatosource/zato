@@ -27,6 +27,12 @@ if 0:
 
 @dataclass
 class InvokeAllResult:
+
+    # By default, we assume that the invocation succeeded,
+    # unless it is overwritten by one of the per-PID responses
+    is_ok: bool = True
+
+    # This is a list of responses from each PID of each server
     data: list = field(default_factory=list)
 
 # ################################################################################################################################
@@ -116,8 +122,16 @@ class ServerRPC:
 
                 # .. check all per-PID responses ..
                 for pid, per_pid_response in response.data.items(): # type: (int, PerPIDResponse)
-                    out.data.append(per_pid_response.pid_data)
 
+                    # .. append the response if everything went fine ..
+                    if per_pid_response.is_ok:
+                        out.data.append(per_pid_response.pid_data)
+
+                    # .. otherwise, just set the overall response's success flag to false ..
+                    else:
+                        out.is_ok = False
+
+        # .. now we can return the result.
         return out
 
 # ################################################################################################################################

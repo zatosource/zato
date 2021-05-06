@@ -99,7 +99,6 @@ if 0:
     from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict, ConfigStore
-    from zato.server.connection.server import Servers
     from zato.server.connection.cassandra import CassandraAPI
     from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
     from zato.server.query import CassandraQueryAPI
@@ -125,7 +124,6 @@ if 0:
     ODBManager = ODBManager
     ParallelServer = ParallelServer
     ServerCryptoManager = ServerCryptoManager
-    Servers = Servers
     SSOAPI = SSOAPI
     timedelta = timedelta
     WorkerStore = WorkerStore
@@ -409,9 +407,6 @@ class Service(object):
 
     # Audit log
     audit_pii = None # type: AuditPII
-
-    # For invoking other servers directly
-    servers = None # type: Servers
 
     # By default, services do not use JSON Schema
     schema = '' # type: str
