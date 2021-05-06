@@ -229,10 +229,9 @@ class Clear(AdminService):
             session.commit()
 
         # Delete non-GD messages for that topic on all servers
-        self.servers.invoke_all(ClearTopicNonGD.get_name(), {
+        self.server.rpc.invoke_all(ClearTopicNonGD.get_name(), {
             'topic_id': topic_id,
         }, timeout=90)
-        # TODO
 
 # ################################################################################################################################
 
@@ -315,30 +314,13 @@ class GetNonGDMessageList(NonGDSearchService):
         msg_list = []
 
         # Collects responses from all server processes
-        is_all_ok, all_data = self.servers.invoke_all('zato.pubsub.topic.get-server-message-list', {
+        reply = self.server.rpc.invoke_all('zato.pubsub.topic.get-server-message-list', {
             'topic_id': topic_id,
             'query': self.request.input.query,
         }, timeout=30)
-        # TODO
-
-        # Check if everything is OK on each level - overall, per server and then per process
-        if is_all_ok:
-            for server_name, server_data in iteritems(all_data):
-                if server_data['is_ok']:
-                    for server_pid, server_pid_data in iteritems(server_data['server_data']):
-                        if server_pid_data['is_ok']:
-                            pid_data = server_pid_data['pid_data']['response']['data']
-                            msg_list.extend(pid_data)
-                        else:
-                            self.logger.warn('Caught an error (server_pid_data) %s', server_pid_data['error_info'])
-                else:
-                    self.logger.warn('Caught an error (server_data) %s', server_data['error_info'])
-
-        else:
-            self.logger.warn('Caught an error (all_data) %s', all_data)
 
         # Use a util function to produce a paginated response
-        self.set_non_gd_msg_list_response(msg_list, self.request.input.cur_page)
+        self.set_non_gd_msg_list_response(reply.data, self.request.input.cur_page)
 
 # ################################################################################################################################
 
