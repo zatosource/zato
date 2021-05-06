@@ -120,7 +120,7 @@ python-novaclient==2.17.0
 python-ntlm==1.1.0
 python-stdnum==1.14
 pytz==2020.1
-pyyaml==5.3.1
+pyyaml==5.4
 pyzmq==19.0.2
 raven==5.1.1
 recommonmark==0.6.0
