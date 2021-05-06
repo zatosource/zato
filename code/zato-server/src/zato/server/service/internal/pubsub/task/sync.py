@@ -12,9 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from datetime import datetime
 from operator import itemgetter
 
-# Bunch
-from bunch import bunchify
-
 # Zato
 from zato.common.exception import BadRequest
 from zato.common.json_internal import dumps
