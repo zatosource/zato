@@ -51,7 +51,8 @@ from zato.common.util.time_ import TimeUtil
 from zato.distlock import LockManager
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigStore
-from zato.server.connection.server import Servers
+from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
+from zato.server.connection.server.rpc.config import ODBConfigSource
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
 from zato.server.base.parallel.subprocess_.api import CurrentState as SubprocessCurrentState, \
@@ -73,6 +74,7 @@ if 0:
     # Zato
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
+    from zato.common.odb.model import Cluster as ClusterModel
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
     from zato.server.service.store import ServiceStore
     from zato.simpleio import SIOServerConfig
@@ -139,8 +141,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.name = None # type: unicode
         self.worker_id = None # type: int
         self.worker_pid = None # type: int
-        self.cluster = None
+        self.cluster = None # type: ClusterModel
         self.cluster_id = None # type: int
+        self.cluster_name = None # type: str
         self.kvdb = None # type: KVDB
         self.startup_jobs = None # type: dict
         self.worker_store = None # type: WorkerStore
@@ -160,7 +163,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.time_util = None # type: TimeUtil
         self.preferred_address = None # type: unicode
         self.crypto_use_tls = None # type: bool
-        self.servers = None # type: Servers
+        self.rpc = None # type: ServerRPC
         self.zato_lock_manager = None # type: LockManager
         self.pid = None # type: int
         self.sync_internal = None # type: bool
@@ -385,7 +388,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def get_full_name(self):
         """ Returns this server's full name in the form of server@cluster.
         """
-        return '{}@{}'.format(self.name, self.cluster.name)
+        return '{}@{}'.format(self.name, self.cluster_name)
 
 # ################################################################################################################################
 
@@ -462,6 +465,19 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def build_server_rpc(self):
+
+        # What our configuration backend is
+        config_source = ODBConfigSource(self.odb, self.cluster_name, self.name, self.decrypt)
+
+        # A combination of backend and runtime configuration
+        config_ctx = _ServerRPC_ConfigCtx(config_source, self)
+
+        # A publicly available RPC client
+        return ServerRPC(config_ctx)
+
+# ################################################################################################################################
+
     @staticmethod
     def start_server(parallel_server, zato_deployment_key=None):
 
@@ -527,8 +543,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Basic metadata
         self.id = server.id
         self.name = server.name
-        self.cluster_id = server.cluster_id
         self.cluster = self.odb.cluster
+        self.cluster_id = self.cluster.id
+        self.cluster_name = self.cluster.name
         self.worker_id = '{}.{}.{}.{}'.format(self.cluster_id, self.id, self.worker_pid, new_cid())
 
         # SQL post-processing
@@ -537,10 +554,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Looked up upfront here and assigned to services in their store
         self.enforce_service_invokes = asbool(self.fs_server_config.misc.enforce_service_invokes)
 
-        # For server-to-server communication
-        self.servers = Servers(self.odb, self.cluster.name, self.decrypt)
+        # For server-to-server RPC
+        self.rpc = self.build_server_rpc()
+
         logger.info('Preferred address of `%s@%s` (pid: %s) is `http%s://%s:%s`', self.name,
-                    self.cluster.name, self.pid, 's' if use_tls else '', self.preferred_address,
+                    self.cluster_name, self.pid, 's' if use_tls else '', self.preferred_address,
             self.port)
 
         # Configure which HTTP methods can be invoked via REST or SOAP channels
@@ -712,7 +730,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 self._populate_connector_config(subprocess_start_config)
 
         # IPC
-        self.ipc_api.name = self.ipc_api.get_endpoint_name(self.cluster.name, self.name, self.pid)
+        self.ipc_api.name = self.ipc_api.get_endpoint_name(self.cluster_name, self.name, self.pid)
         self.ipc_api.pid = self.pid
         self.ipc_api.on_message_callback = self.worker_store.on_ipc_message
         spawn_greenlet(self.ipc_api.run)
@@ -892,7 +910,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def invoke_by_pid(self, service, request, target_pid, *args, **kwargs):
         """ Invokes a service in a worker process by the latter's PID.
         """
-        return self.ipc_api.invoke_by_pid(service, request, self.cluster.name, self.name, target_pid,
+        return self.ipc_api.invoke_by_pid(service, request, self.cluster_name, self.name, target_pid,
             self.fifo_response_buffer_size, *args, **kwargs)
 
 # ################################################################################################################################
