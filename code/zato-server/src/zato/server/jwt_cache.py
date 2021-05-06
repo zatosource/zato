@@ -28,14 +28,13 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
-class RobustCache(object):
-    """ Robust Cache that uses KVDB as a first option but keeps ODB as a fail-safe alternative.
+class JWTCache(object):
+    """ A previous-generation, JWT-only, cache that uses ODB.
     """
 
 # ################################################################################################################################
 
-    def __init__(self, kvdb, odb, miss_fallback=False, cluster_id=None):
-        self.kvdb = kvdb
+    def __init__(self, odb, miss_fallback=False, cluster_id=None):
         self.odb = odb
         self.miss_fallback = miss_fallback
         self.cluster_id = cluster_id
@@ -44,17 +43,6 @@ class RobustCache(object):
 
     def _get_odb_key(self, key):
         return 'cluster_id:{}/{}'.format(self.cluster_id, key) if self.cluster_id else key
-
-# ################################################################################################################################
-
-    def _kvdb_put(self, key, value, ttl):
-        try:
-            self.kvdb.conn.set(key, value)
-            if ttl:
-                self.kvdb.conn.expire(key, ttl)
-
-        except Exception:
-            logger.exception('KVDB Exception while putting %s.', key)
 
 # ################################################################################################################################
 
@@ -99,13 +87,10 @@ class RobustCache(object):
 # ################################################################################################################################
 
     def put(self, key, value, ttl=None, is_async=True):
-        """Put key/value into both KVDB and ODB, in parallel.
-
-        if is_async is False, we join the greenlets until they are done.
+        """Put key/value into ODB. If is_async is False, we join the greenlets until they are done.
         otherwise, we do not wait for them to finish.
         """
         greenlets = [
-            gevent.spawn(self._kvdb_put, key, value, ttl),
             gevent.spawn(self._odb_put, key, value, ttl)
         ]
 
@@ -115,23 +100,11 @@ class RobustCache(object):
 # ################################################################################################################################
 
     def get(self, key):
-        try:
-            return self.kvdb.conn.get(key)
-
-        except Exception:
-            logger.exception('KVDB Exception while getting key %s. Falling back to ODB.', key)
-            return self._odb_get(key)
-
-        if self.miss_fallback:
-            logger.warning('Key %s not found in KVDB. Falling back to ODB.', key)
-            return self._odb_get(key)
+        return self._odb_get(key)
 
 # ################################################################################################################################
 
     def delete(self, key):
-
-        # Delete from KVDB
-        self.kvdb.conn.delete(key)
 
         # Delete from ODB
         key = self._get_odb_key(key)
