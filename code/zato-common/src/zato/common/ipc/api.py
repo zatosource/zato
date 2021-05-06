@@ -140,7 +140,7 @@ class IPCAPI(object):
 # ################################################################################################################################
 
     def invoke_by_pid(self, service, payload, cluster_name, server_name, target_pid,
-        fifo_response_buffer_size, timeout=90, is_async=False):
+        fifo_response_buffer_size, timeout=90, is_async=False, skip_response_elem=False):
         """ Invokes a service through IPC, synchronously or in background. If target_pid is an exact PID then this one worker
         process will be invoked if it exists at all.
         """
