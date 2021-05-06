@@ -99,7 +99,6 @@ if 0:
     from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict, ConfigStore
-    from zato.server.connection.server import Servers
     from zato.server.connection.cassandra import CassandraAPI
     from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
     from zato.server.query import CassandraQueryAPI
@@ -125,7 +124,6 @@ if 0:
     ODBManager = ODBManager
     ParallelServer = ParallelServer
     ServerCryptoManager = ServerCryptoManager
-    Servers = Servers
     SSOAPI = SSOAPI
     timedelta = timedelta
     WorkerStore = WorkerStore
@@ -409,9 +407,6 @@ class Service(object):
 
     # Audit log
     audit_pii = None # type: AuditPII
-
-    # For invoking other servers directly
-    servers = None # type: Servers
 
     # By default, services do not use JSON Schema
     schema = '' # type: str
@@ -816,7 +811,12 @@ class Service(object):
             response.payload = ''
             response.status_code = BAD_REQUEST
 
-        return response
+        if kwargs.get('skip_response_elem') and hasattr(response, 'keys'):
+            keys = list(iterkeys(response))
+            response_elem = keys[0]
+            return response[response_elem]
+        else:
+            return response
 
 # ################################################################################################################################
 
@@ -865,14 +865,7 @@ class Service(object):
                 if raise_timeout:
                     raise
         else:
-            out = self.update_handle(*invoke_args, **kwargs)
-
-            if kwargs.get('skip_response_elem') and hasattr(out, 'keys'):
-                keys = list(iterkeys(out))
-                response_elem = keys[0]
-                return out[response_elem]
-            else:
-                return out
+            return self.update_handle(*invoke_args, **kwargs)
 
 # ################################################################################################################################
 

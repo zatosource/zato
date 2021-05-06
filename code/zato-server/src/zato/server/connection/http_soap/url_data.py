@@ -85,7 +85,7 @@ class URLData(CyURLData, OAuthDataStore):
     """
     def __init__(self, worker, channel_data=None, url_sec=None, basic_auth_config=None, jwt_config=None, ntlm_config=None, \
                  oauth_config=None, wss_config=None, apikey_config=None, aws_config=None, \
-                 openstack_config=None, xpath_sec_config=None, tls_channel_sec_config=None, tls_key_cert_config=None, \
+                 xpath_sec_config=None, tls_channel_sec_config=None, tls_key_cert_config=None, \
                  vault_conn_sec_config=None, kvdb=None, broker_client=None, odb=None, json_pointer_store=None, xpath_store=None,
                  jwt_secret=None, vault_conn_api=None):
         super(URLData, self).__init__(channel_data)
@@ -99,7 +99,6 @@ class URLData(CyURLData, OAuthDataStore):
         self.wss_config = wss_config # type: dict
         self.apikey_config = apikey_config # type: dict
         self.aws_config = aws_config # type: dict
-        self.openstack_config = openstack_config # type: dict
         self.xpath_sec_config = xpath_sec_config # type: dict
         self.tls_channel_sec_config = tls_channel_sec_config # type: dict
         self.tls_key_cert_config = tls_key_cert_config # type: dict
@@ -312,7 +311,7 @@ class URLData(CyURLData, OAuthDataStore):
                 return False
 
         token = authorization.split('Bearer ', 1)[1]
-        result = JWT(self.kvdb, self.odb, self.worker.server.decrypt, self.jwt_secret).validate(
+        result = JWT(self.odb, self.worker.server.decrypt, self.jwt_secret).validate(
             sec_def.username, token.encode('utf8'))
 
         if not result.valid:
@@ -783,44 +782,6 @@ class URLData(CyURLData, OAuthDataStore):
         """
         with self.url_sec_lock:
             self.aws_config[msg.name]['config']['password'] = msg.password
-
-# ################################################################################################################################
-
-    def _update_openstack(self, name, config):
-        self.openstack_config[name] = Bunch()
-        self.openstack_config[name].config = config
-
-    def openstack_get(self, name):
-        """ Returns the configuration of the OpenStack security definition of the given name.
-        """
-        with self.url_sec_lock:
-            return self.openstack_config.get(name)
-
-    def on_broker_msg_SECURITY_OPENSTACK_CREATE(self, msg, *args):
-        """ Creates a new OpenStack security definition.
-        """
-        with self.url_sec_lock:
-            self._update_openstack(msg.name, msg)
-
-    def on_broker_msg_SECURITY_OPENSTACK_EDIT(self, msg, *args):
-        """ Updates an existing OpenStack security definition.
-        """
-        with self.url_sec_lock:
-            del self.openstack_config[msg.old_name]
-            self._update_openstack(msg.name, msg)
-
-    def on_broker_msg_SECURITY_OPENSTACK_DELETE(self, msg, *args):
-        """ Deletes an OpenStack security definition.
-        """
-        with self.url_sec_lock:
-            self._delete_channel_data('openstack', msg.name)
-            del self.openstack_config[msg.name]
-
-    def on_broker_msg_SECURITY_OPENSTACK_CHANGE_PASSWORD(self, msg, *args):
-        """ Changes password of an OpenStack security definition.
-        """
-        with self.url_sec_lock:
-            self.openstack_config[msg.name]['config']['password'] = msg.password
 
 # ################################################################################################################################
 
