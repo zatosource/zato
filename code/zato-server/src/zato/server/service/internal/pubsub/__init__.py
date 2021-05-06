@@ -283,11 +283,13 @@ class ResumeWSXSubscription(AdminService):
                 with pubsub_tool.lock:
 
                     get_in_ram_service = 'zato.pubsub.topic.get-in-ram-message-list'
-                    _, non_gd_messages = self.servers.invoke_all(get_in_ram_service, {'sub_key_list':sub_key_list}, timeout=120)
+                    reply = self.server.rpc.invoke_all(get_in_ram_service, {
+                        'sub_key_list':sub_key_list
+                    }, timeout=120)
 
                     # Parse non-GD messages on output from all servers, if any at all, into per-sub_key lists ..
-                    if non_gd_messages:
-                        non_gd_messages = self._parse_non_gd_messages(sub_key_list, non_gd_messages)
+                    if reply.data:
+                        non_gd_messages = self._parse_non_gd_messages(sub_key_list, reply.data)
 
                         # If there are any non-GD messages, add them to this WebSocket's pubsub tool.
                         if non_gd_messages:
@@ -327,25 +329,14 @@ class ResumeWSXSubscription(AdminService):
 
 # ################################################################################################################################
 
-    def _parse_non_gd_messages(self, sub_key_list, server_response):
+    def _parse_non_gd_messages(self, sub_key_list, messages_list):
+        # type: (list, list)
         out = dict.fromkeys(sub_key_list, [])
 
-        for server_name, server_data_dict in server_response.items():
-            if server_data_dict['is_ok']:
-                server_data = server_data_dict['server_data']
-
-                for server_pid, pid_data_dict in server_data.items():
-                    if not pid_data_dict['is_ok']:
-                        self.logger.warn('Could not retrieve non-GD in-RAM messages from PID %s of %s (%s), details:`%s`',
-                            server_pid, server_name, server_data_dict['meta']['address'], pid_data_dict)
-                    else:
-                        messages = pid_data_dict['pid_data']['response']['messages']
-                        for sub_key, sub_key_data in messages.items():
-                            for msg in sub_key_data.values():
-                                out[sub_key].append(msg)
-            else:
-                self.logger.warn('Could not retrieve non-GD in-RAM messages from %s (%s), details:`%s`',
-                    server_name, server_data_dict['meta']['address'], server_data_dict)
+        for messages in messages_list: # type: dict
+            for sub_key, sub_key_data in messages.items():
+                for msg in sub_key_data.values():
+                    out[sub_key].append(msg)
 
         # Do not return empty lists unnecessarily - note that it may happen that all sub_keys
         # will be deleted in which cases only an empty dictionary remains.
