@@ -28,7 +28,7 @@ from zato.server.service import PatternsFacade
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Random data to seed our data with
+# Random bytes to seed our data with
 seed = 'FVD2nbPOVIXZ6'
 
 Faker.seed(seed)
