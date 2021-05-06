@@ -232,6 +232,7 @@ class Clear(AdminService):
         self.servers.invoke_all(ClearTopicNonGD.get_name(), {
             'topic_id': topic_id,
         }, timeout=90)
+        # TODO
 
 # ################################################################################################################################
 
@@ -318,6 +319,7 @@ class GetNonGDMessageList(NonGDSearchService):
             'topic_id': topic_id,
             'query': self.request.input.query,
         }, timeout=30)
+        # TODO
 
         # Check if everything is OK on each level - overall, per server and then per process
         if is_all_ok:
@@ -406,20 +408,14 @@ class CollectNonGDDepth(AdminService):
 
     def handle(self):
 
-        all_depth = self.servers.invoke_all('zato.pubsub.topic.get-non-gd-depth', {
+        reply = self.server.rpc.invoke_all('zato.pubsub.topic.get-non-gd-depth', {
             'topic_name':self.request.input.topic_name
             }, timeout=10)
 
         total = 0
 
-        data = all_depth[1]
-        for server_name in data:
-            if data[server_name]['is_ok']:
-                server_data = data[server_name]['server_data']
-                for pid in server_data:
-                    if server_data[pid]['is_ok']:
-                        pid_data = server_data[pid]['pid_data']
-                        total += pid_data['response']['depth']
+        for response in reply.data:
+            total += response['depth']
 
         self.response.payload.current_depth_non_gd = total
 

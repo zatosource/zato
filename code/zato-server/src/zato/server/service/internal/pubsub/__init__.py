@@ -284,6 +284,7 @@ class ResumeWSXSubscription(AdminService):
 
                     get_in_ram_service = 'zato.pubsub.topic.get-in-ram-message-list'
                     _, non_gd_messages = self.servers.invoke_all(get_in_ram_service, {'sub_key_list':sub_key_list}, timeout=120)
+                    # TODO
 
                     # Parse non-GD messages on output from all servers, if any at all, into per-sub_key lists ..
                     if non_gd_messages:

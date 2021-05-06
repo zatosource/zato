@@ -164,6 +164,8 @@ class GetList(AdminService):
         out = []
 
         info = self.servers.invoke_all(GetServerList.get_name(), timeout=10)
+        # TODO
+
         info = bunchify(info)
         data = info[1]
 

@@ -378,8 +378,6 @@ class ServiceStore(object):
 
             # Set up all attributes that do not have to be assigned to each instance separately
             # and can be shared as class attributes.
-
-            class_.servers = service_store.server.servers
             class_.wsx = WSXFacade(service_store.server)
 
             if self.is_testing:
