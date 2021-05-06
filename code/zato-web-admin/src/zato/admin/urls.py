@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Django
 from django.conf.urls import url
@@ -30,7 +28,6 @@ from zato.admin.web.views.channel import web_socket as channel_web_socket
 from zato.admin.web.views.channel import zmq as channel_zmq
 from zato.admin.web.views.cloud.aws import s3 as cloud_aws_s3
 from zato.admin.web.views.cloud import dropbox as cloud_dropbox
-from zato.admin.web.views.cloud.openstack import swift as cloud_openstack_swift
 from zato.admin.web.views import config_file
 from zato.admin.web.views.definition import amqp_ as def_amqp
 from zato.admin.web.views.definition import cassandra as def_cassandra
@@ -40,7 +37,6 @@ from zato.admin.web.views.email import imap as email_imap
 from zato.admin.web.views.email import smtp as email_smtp
 from zato.admin.web.views.kvdb.data_dict import dictionary, impexp, translation
 from zato.admin.web.views.message import json_pointer, live_browser, namespace, xpath
-from zato.admin.web.views.notif.cloud.openstack import swift as notif_cloud_openstack_swift
 from zato.admin.web.views.notif import sql as notif_sql
 from zato.admin.web.views.outgoing import amqp_ as out_amqp
 from zato.admin.web.views.outgoing import ftp as out_ftp
@@ -68,7 +64,7 @@ from zato.admin.web.views.query import cassandra as query_cassandra
 from zato.admin.web.views.search import es
 from zato.admin.web.views.search import solr
 from zato.admin.web.views.sms import twilio
-from zato.admin.web.views.security import apikey, aws, basic_auth, jwt, ntlm, oauth, openstack as openstack_security, rbac, \
+from zato.admin.web.views.security import apikey, aws, basic_auth, jwt, ntlm, oauth, rbac, \
      wss, xpath as xpath_sec
 from zato.admin.web.views.security.tls import ca_cert as tls_ca_cert, channel as tls_channel, key_cert as tls_key_cert
 from zato.admin.web.views.security.vault import connection as vault_conn
@@ -397,26 +393,6 @@ urlpatterns += [
         login_required(oauth.change_secret), name='security-oauth-change-secret'),
     url(r'^zato/security/oauth/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(oauth.Delete()), name=oauth.Delete.url_name),
-    ]
-
-# ################################################################################################################################
-
-urlpatterns += [
-
-    # .. OpenStack security
-
-    url(r'^zato/security/openstack_security/$',
-        login_required(openstack_security.Index()), name=openstack_security.Index.url_name),
-    url(r'^zato/security/openstack_security/$',
-        login_required(openstack_security.Index()), name=openstack_security.Index.url_name),
-    url(r'^zato/security/openstack_security/create/$',
-        login_required(openstack_security.Create()), name=openstack_security.Create.url_name),
-    url(r'^zato/security/openstack_security/edit/$',
-        login_required(openstack_security.Edit()), name=openstack_security.Edit.url_name),
-    url(r'^zato/security/openstack_security/change-password/$',
-        login_required(openstack_security.change_password), name='security-openstack-change-password'),
-    url(r'^zato/security/openstack_security/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(openstack_security.Delete()), name=openstack_security.Delete.url_name),
     ]
 
 # ################################################################################################################################
@@ -1212,17 +1188,6 @@ urlpatterns += [
 
 urlpatterns += [
 
-    # .. OpenStack Swift
-
-    url(r'^zato/notif/cloud/openstack/swift/$',
-        login_required(notif_cloud_openstack_swift.Index()), name=notif_cloud_openstack_swift.Index.url_name),
-    url(r'^zato/notif/cloud/openstack/swift/create/$',
-        login_required(notif_cloud_openstack_swift.Create()), name=notif_cloud_openstack_swift.Create.url_name),
-    url(r'^zato/notif/cloud/openstack/swift/edit/$',
-        login_required(notif_cloud_openstack_swift.Edit()), name=notif_cloud_openstack_swift.Edit.url_name),
-    url(r'^zato/notif/cloud/openstack/swift/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(notif_cloud_openstack_swift.Delete()), name=notif_cloud_openstack_swift.Delete.url_name),
-
     url(r'^zato/notif/sql/$',
         login_required(notif_sql.Index()), name=notif_sql.Index.url_name),
     url(r'^zato/notif/sql/create/$',
@@ -1428,22 +1393,6 @@ urlpatterns += [
         login_required(cloud_dropbox.ping), name='cloud-dropbox-ping'),
     url(r'^zato/cloud/dropbox/change-password/$',
         login_required(cloud_dropbox.change_password), name='cloud-dropbox-change-password'),
-    ]
-
-# ################################################################################################################################
-
-urlpatterns += [
-
-    # .. OpenStack - Swift
-
-    url(r'^zato/cloud/openstack/swift/$',
-        login_required(cloud_openstack_swift.Index()), name=cloud_openstack_swift.Index.url_name),
-    url(r'^zato/cloud/openstack/swift/create/$',
-        login_required(cloud_openstack_swift.Create()), name=cloud_openstack_swift.Create.url_name),
-    url(r'^zato/cloud/openstack/swift/edit/$',
-        login_required(cloud_openstack_swift.Edit()), name=cloud_openstack_swift.Edit.url_name),
-    url(r'^zato/cloud/openstack/swift/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(cloud_openstack_swift.Delete()), name=cloud_openstack_swift.Delete.url_name),
     ]
 
 # ################################################################################################################################

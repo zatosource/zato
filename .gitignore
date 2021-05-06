@@ -46,5 +46,6 @@ pidfile
 *.pyc
 *.pyo
 *.so
+*.swp
 *.*~
 ~

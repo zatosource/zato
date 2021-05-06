@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
 from zato.cli import ManageCommand
@@ -116,7 +114,12 @@ class CheckConfig(ManageCommand):
         from future.utils import iteritems
 
         kvdb_config = Bunch(dict(iteritems((conf[conf_key]))))
-        kvdb = KVDB(None, kvdb_config, cm.decrypt)
+
+        # Redis is not enabled = we can return
+        if not KVDB.is_config_enabled(kvdb_config):
+            return
+
+        kvdb = KVDB(kvdb_config, cm.decrypt)
         kvdb.init()
         kvdb.conn.info()
         kvdb.close()

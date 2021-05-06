@@ -246,7 +246,6 @@ class SEC_DEF_TYPE:
     JWT = 'jwt'
     NTLM = 'ntlm'
     OAUTH = 'oauth'
-    OPENSTACK = 'openstack'
     TLS_CHANNEL_SEC = 'tls_channel_sec'
     TLS_KEY_CERT = 'tls_key_cert'
     WSS = 'wss'
@@ -263,7 +262,6 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.JWT: 'JWT',
     SEC_DEF_TYPE.NTLM: 'NTLM',
     SEC_DEF_TYPE.OAUTH: 'OAuth 1.0',
-    SEC_DEF_TYPE.OPENSTACK: 'OpenStack',
     SEC_DEF_TYPE.TLS_CHANNEL_SEC: 'TLS channel',
     SEC_DEF_TYPE.TLS_KEY_CERT: 'TLS key/cert',
     SEC_DEF_TYPE.WSS: 'WS-Security',
@@ -662,15 +660,6 @@ class MSG_MAPPER:
 # ################################################################################################################################
 
 class CLOUD:
-    class OPENSTACK:
-        class SWIFT:
-            class DEFAULTS:
-                AUTH_VERSION = '1'
-                BACKOFF_STARTING = 1
-                BACKOFF_MAX = 64
-                POOL_SIZE = 5
-                RETRIES = 5
-
     class AWS:
         class S3:
             class STORAGE_CLASS:
@@ -981,7 +970,6 @@ class NOTIF:
         GET_DATA_PATTERN = '**'
 
     class TYPE:
-        OPENSTACK_SWIFT = 'openstack_swift'
         SQL = 'sql'
 
 # ################################################################################################################################
@@ -1777,7 +1765,6 @@ default_internal_modules = {
     'zato.server.service.internal.channel.web_socket.subscription': True,
     'zato.server.service.internal.channel.zmq': True,
     'zato.server.service.internal.cloud.aws.s3': True,
-    'zato.server.service.internal.cloud.openstack.swift': True,
     'zato.server.service.internal.connector.amqp_': True,
     'zato.server.service.internal.crypto': True,
     'zato.server.service.internal.definition.amqp_': True,
@@ -1800,7 +1787,6 @@ default_internal_modules = {
     'zato.server.service.internal.message.xpath': True,
     'zato.server.service.internal.message.json_pointer': True,
     'zato.server.service.internal.notif': True,
-    'zato.server.service.internal.notif.cloud.openstack.swift': True,
     'zato.server.service.internal.notif.sql': True,
     'zato.server.service.internal.outgoing.amqp_': True,
     'zato.server.service.internal.outgoing.ftp': True,
