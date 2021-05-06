@@ -163,7 +163,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.time_util = None # type: TimeUtil
         self.preferred_address = None # type: unicode
         self.crypto_use_tls = None # type: bool
-        self.server_rpc = self.servers = None # type: ServerRPC
+        self.rpc = None # type: ServerRPC
         self.zato_lock_manager = None # type: LockManager
         self.pid = None # type: int
         self.sync_internal = None # type: bool
@@ -555,7 +555,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.enforce_service_invokes = asbool(self.fs_server_config.misc.enforce_service_invokes)
 
         # For server-to-server RPC
-        self.server_rpc = self.build_server_rpc()
+        self.rpc = self.build_server_rpc()
 
         logger.info('Preferred address of `%s@%s` (pid: %s) is `http%s://%s:%s`', self.name,
                     self.cluster_name, self.pid, 's' if use_tls else '', self.preferred_address,
