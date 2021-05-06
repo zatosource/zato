@@ -11,7 +11,6 @@ from contextlib import closing
 
 # Python 2/3 compatibility
 from six import add_metaclass
-from future.utils import iteritems
 
 # Zato
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
@@ -309,9 +308,6 @@ class GetNonGDMessageList(NonGDSearchService):
 
         # Local aliases
         topic_id = self.request.input.topic_id
-
-        # Response to produce
-        msg_list = []
 
         # Collects responses from all server processes
         reply = self.server.rpc.invoke_all('zato.pubsub.topic.get-server-message-list', {
