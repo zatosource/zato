@@ -745,26 +745,6 @@ def datetime_to_seconds(dt):
 
 # ################################################################################################################################
 
-def clear_locks(kvdb, server_token, kvdb_config=None, decrypt_func=None):
-    """ Clears out any KVDB locks held by Zato servers.
-    """
-    if kvdb_config:
-        kvdb.config = kvdb_config
-
-    if decrypt_func:
-        kvdb.decrypt_func = decrypt_func
-
-    kvdb.init()
-
-    for name in kvdb.conn.keys('{}*{}*'.format(KVDB.LOCK_PREFIX, server_token)):
-        value = kvdb.conn.get(name)
-        logger.debug('Deleting lock:[{}], value:[{}]'.format(name, value))
-        kvdb.conn.delete(name)
-
-    kvdb.close()
-
-# ################################################################################################################################
-
 # Inspired by http://stackoverflow.com/a/9283563
 def uncamelify(s, separator='-', elem_func=unicode.lower):
     """ Converts a CamelCaseName into a more readable one, e.g.

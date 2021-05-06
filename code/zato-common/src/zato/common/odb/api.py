@@ -203,20 +203,25 @@ class WritableTupleQuery(Query):
 class SQLConnectionPool(object):
     """ A pool of SQL connections wrapping an SQLAlchemy engine.
     """
-    def __init__(self, name, config, config_no_sensitive):
+    def __init__(self, name, config, config_no_sensitive, should_init=True):
+        # type: (str, dict, dict) -> None
+        self.name = name
+        self.config = config
+        self.config_no_sensitive = config_no_sensitive
+
         self.logger = getLogger(self.__class__.__name__)
         self.has_debug = self.logger.isEnabledFor(DEBUG)
 
-        self.name = name
-        self.config = config
         self.engine = None
         self.engine_name = config['engine'] # self.engine.name is 'mysql' while 'self.engine_name' is mysql+pymysql
 
-        # Safe for printing out to logs, any sensitive data has been shadowed
-        self.config_no_sensitive = config_no_sensitive
+        if should_init:
+            self.init()
+
+    def init(self):
 
         _extra = {
-            'pool_pre_ping': True # Make sure SQLAlchemy 1.2+ can refresh connections on transient errors
+            'pool_pre_ping': True, # Make sure SQLAlchemy 1.2+ can refresh connections on transient errors
         }
 
         # MySQL only
@@ -232,16 +237,16 @@ class SQLConnectionPool(object):
 
         # SQLite has no pools
         if self.engine_name != 'sqlite':
-            _extra['pool_size'] = int(config.get('pool_size', 1))
+            _extra['pool_size'] = int(self.config.get('pool_size', 1))
             if _extra['pool_size'] == 0:
                 _extra['poolclass'] = NullPool
 
-        engine_url = get_engine_url(config)
+        engine_url = get_engine_url(self.config)
 
         try:
-            self.engine = self._create_engine(engine_url, config, _extra)
+            self.engine = self._create_engine(engine_url, self.config, _extra)
         except Exception as e:
-            self.logger.warn('Could not create SQL connection `%s`, e:`%s`', config['name'], e.args[0])
+            self.logger.warn('Could not create SQL connection `%s`, e:`%s`', self.config['name'], e.args[0])
 
         if self.engine and (not self._is_unittest_engine(engine_url)) and self._is_sa_engine(engine_url):
             event.listen(self.engine, 'checkin', self.on_checkin)
@@ -1004,14 +1009,6 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_openstack_security_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of OpenStack security accounts existing on the given cluster.
-        """
-        with closing(self.session()) as session:
-            return query.openstack_security_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
     def get_tls_ca_cert_list(self, cluster_id, needs_columns=False):
         """ Returns a list of TLS CA certs on the given cluster.
         """
@@ -1341,14 +1338,6 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_cloud_openstack_swift_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of OpenStack Swift connections.
-        """
-        with closing(self.session()) as session:
-            return query.cloud_openstack_swift_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
     def get_cloud_aws_s3_list(self, cluster_id, needs_columns=False):
         """ Returns a list of AWS S3 connections.
         """
@@ -1368,13 +1357,6 @@ class ODBManager(SessionWrapper):
         """ Returns a list of pub/sub subscriptions defined in a cluster.
         """
         return query_ps_subscription.pubsub_subscription_list(self._session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def get_notif_cloud_openstack_swift_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of OpenStack Swift notification definitions.
-        """
-        return query.notif_cloud_openstack_swift_list(self._session, cluster_id, needs_columns)
 
 # ################################################################################################################################
 
@@ -1500,7 +1482,6 @@ class ODBManager(SessionWrapper):
     _migrate_30_encrypt_sec_jwt                = _migrate_30_encrypt_sec_base
     _migrate_30_encrypt_sec_ntlm               = _migrate_30_encrypt_sec_base
     _migrate_30_encrypt_sec_oauth              = _migrate_30_encrypt_sec_base
-    _migrate_30_encrypt_sec_openstack_security = _migrate_30_encrypt_sec_base
     _migrate_30_encrypt_sec_vault_conn_sec     = _migrate_30_encrypt_sec_base
     _migrate_30_encrypt_sec_wss                = _migrate_30_encrypt_sec_base
     _migrate_30_encrypt_sec_xpath_sec          = _migrate_30_encrypt_sec_base
