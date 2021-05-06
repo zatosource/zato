@@ -339,7 +339,7 @@ class Invoke(AdminService):
         request_elem = 'zato_service_invoke_request'
         response_elem = 'zato_service_invoke_response'
         input_optional = ('id', 'name', 'payload', 'channel', 'data_format', 'transport', Boolean('is_async'),
-            Integer('expiration'), Integer('pid'), Boolean('all_pids'), Integer('timeout'))
+            Integer('expiration'), Integer('pid'), Boolean('all_pids'), Integer('timeout'), Boolean('skip_response_elem'))
         output_optional = ('response',)
 
     def handle(self):
@@ -354,6 +354,7 @@ class Invoke(AdminService):
         pid = self.request.input.get('pid') or 0
         all_pids = self.request.input.get('all_pids')
         timeout = self.request.input.get('timeout') or None
+        skip_response_elem = self.request.input.get('skip_response_elem') or False
 
         channel = self.request.input.get('channel')
         data_format = self.request.input.get('data_format')
@@ -388,13 +389,15 @@ class Invoke(AdminService):
 
             if use_all_pids:
                 args = (name, payload, timeout) if timeout else (name, payload)
-                response = dumps(self.server.invoke_all_pids(*args))
+                response = dumps(self.server.invoke_all_pids(*args, skip_response_elem=skip_response_elem))
             else:
                 if pid and pid != self.server.pid:
-                    response = self.server.invoke(name, payload, pid=pid, data_format=data_format)
+                    response = self.server.invoke(
+                        name, payload, pid=pid, data_format=data_format, skip_response_elem=skip_response_elem)
                 else:
                     func, id_ = (self.invoke, name) if name else (self.invoke_by_id, id)
-                    response = func(id_, payload, channel, data_format, transport, serialize=True)
+                    response = func(
+                        id_, payload, channel, data_format, transport, skip_response_elem=skip_response_elem, serialize=True)
 
         if isinstance(response, basestring):
             if response:
