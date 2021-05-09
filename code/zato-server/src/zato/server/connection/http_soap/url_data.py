@@ -464,7 +464,7 @@ class URLData(CyURLData, OAuthDataStore):
 
     def _handle_security_tls_channel_sec(self, cid, sec_def, ignored_path_info, ignored_body, wsgi_environ,
         ignored_post_data=None, enforce_auth=True):
-        user_msg = 'Failed to satisfy TLS conditions'
+        user_msg = 'You are not allowed to access this resource'
 
         for header, expected_value in sec_def.value.items():
             given_value = wsgi_environ.get(header)
