@@ -121,7 +121,7 @@ if 0:
     from typing import Iterable as iterable
     from simdjson import Parser as SIMDJSONParser
 
-    Iterable = Iterable
+    iterable = iterable
     SIMDJSONParser = SIMDJSONParser
 
 # ################################################################################################################################
