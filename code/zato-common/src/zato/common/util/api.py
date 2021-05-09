@@ -6,8 +6,6 @@ Copyright (C) Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 import copy
 import errno
@@ -120,7 +118,10 @@ from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_req
 # ################################################################################################################################
 
 if 0:
+    from typing import Iterable as iterable
     from simdjson import Parser as SIMDJSONParser
+
+    iterable = iterable
     SIMDJSONParser = SIMDJSONParser
 
 # ################################################################################################################################
@@ -1233,8 +1234,12 @@ def get_basic_auth_credentials(auth):
 # ################################################################################################################################
 
 def parse_tls_channel_security_definition(value):
+    # type: (bytes) -> iterable(str, str)
     if not value:
         raise ValueError('No definition given `{}`'.format(repr(value)))
+    else:
+        if isinstance(value, bytes):
+            value = value.decode('utf8')
 
     for line in value.splitlines():
         line = line.strip()
