@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Python 2/3 compatibility
 from six import add_metaclass
@@ -34,12 +32,15 @@ skip_input_params = ['sec_type']
 
 def instance_hook(self, input, instance, attrs):
 
-    # Parsing returns a generator which we exhaust be converting it into a list.
-    # An exception is raised on any parsing error.
-    list(parse_tls_channel_security_definition(self.request.input.value))
+    if attrs.is_create_edit:
 
-    # So that username, an artificial and inherited field, is not an empty string.
-    instance.username = input.username = input.name
+        # Parsing returns a generator which we exhaust be converting it into a list.
+        # An exception is raised on any parsing error.
+        list(parse_tls_channel_security_definition(self.request.input.value))
+
+        # So that username, an artificial and inherited field, is not an empty string.
+        instance.username = input.username = input.name
+        instance.value = (input.get('value') or '').encode('utf8')
 
 # ################################################################################################################################
 
