@@ -12,6 +12,11 @@ Try
     Invoke-InstallIfNotInstalled -ExeFile "Git-2.31.1-64-bit.exe" -URL 'https://github.com/git-for-windows/git/releases/download/v2.31.1.windows.1/Git-2.31.1-64-bit.exe' -Name "Git for Windows" -InstalledRegistryRegExp "Git version*" -ExeArgs @('/VERYSILENT', '/NORESTART', '/NOCANCEL', '/SP-', '/CLOSEAPPLICATIONS', '/RESTARTAPPLICATIONS', '/COMPONENTS="icons,ext\reg\shellhere,assoc,assoc_sh"')
 
     # Git PATH
+    If(-Not ("$env:PATH" -like "*$env:ProgramFiles\Git\bin*")) {
+        Write-Output 'Adding Git\bin to PATH'
+        $Env:Path += ";$env:ProgramFiles\Git\bin\"
+    }
+
     If(-Not ("$env:PATH" -like "*$env:ProgramFiles\Git\usr\bin*")) {
         Write-Output 'Adding Git\usr\bin to PATH'
         $Env:Path += ";$env:ProgramFiles\Git\usr\bin\"
