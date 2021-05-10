@@ -6,9 +6,8 @@ Try
     
     $params = "$CURDIR\zato-windows.py "
     $params += $args
-    Write-Output "*** Running $CURDIR\python.exe $params ***"
     
-    Start-Process -FilePath $CURDIR\python.exe -ArgumentList $params -Wait
+    Invoke-Process -FilePath $CURDIR\python.exe -ArgumentList $params -DisplayLevel "Verbose"
 }
 Catch
 {

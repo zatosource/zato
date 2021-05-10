@@ -14,7 +14,7 @@ function Invoke-Process {
         [Parameter()]
         [string]$CurPath,
 
-        [ValidateSet("Full","StdOut","StdErr","ExitCode","None")]
+        [ValidateSet("Full","Verbose","StdOut","StdErr","ExitCode","None")]
         [string]$DisplayLevel
         )
 
@@ -48,6 +48,7 @@ function Invoke-Process {
         if (-not([string]::IsNullOrEmpty($DisplayLevel))) {
             switch($DisplayLevel) {
                 "Full" { return $result; break }
+                "Verbose" { return $result.StdOut + $result.StdErr; break }
                 "StdOut" { return $result.StdOut; break }
                 "StdErr" { return $result.StdErr; break }
                 "ExitCode" { return $result.ExitCode; break }
@@ -68,7 +69,7 @@ function Set-Patch {
     )
     $outputLevel = "StdErr"
     If($IsVerbose -eq $true) {
-        $outputLevel = "Full"
+        $outputLevel = "Verbose"
     }
     Write-Output "Patching $PatchFile"
     If(Test-Path "$PatchFile" -PathType Leaf) {
