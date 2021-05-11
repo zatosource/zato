@@ -29,6 +29,6 @@ class ServerStatus(WorkerImpl):
     def on_broker_msg_SERVER_STATUS_STATUS_CHANGED(self, msg):
         """ If current status of any server changes, re-populate local information for all of them.
         """
-        self.server.servers.populate_servers()
+        self.server.servers.populate_invokers()
 
 # ################################################################################################################################

@@ -20,7 +20,7 @@ from gevent.lock import RLock
 from gevent.queue import Empty, Queue
 
 # A set of utilities for constructing greenlets-safe outgoing connection objects.
-# Used, for instance, in SOAP Suds and OpenStack Swift outconns.
+# Used, for instance, in SOAP Suds connections.
 
 # ################################################################################################################################
 

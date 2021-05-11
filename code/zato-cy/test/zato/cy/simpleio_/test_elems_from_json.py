@@ -97,8 +97,8 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
         with self.assertRaises(ValueError) as ctx:
             self._parse(sio, data)
 
-        expected = 'Could not parse `31-77-1999` as a Date object (month must be in 1..12)'
-        self.assertEquals(ctx.exception.args[0], expected)
+        expected = 'Could not parse `31-77-1999` as a Date object (month must be in 1..12'
+        self.assertIn(expected, ctx.exception.args[0])
 
 # ################################################################################################################################
 
@@ -136,8 +136,8 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
         with self.assertRaises(ValueError) as ctx:
             self._parse(sio, data)
 
-        expected = 'Could not parse `31-12-1999T11:22:99.000Z` as a DateTime object (second must be in 0..59)'
-        self.assertEquals(ctx.exception.args[0], expected)
+        expected = 'Could not parse `31-12-1999T11:22:99.000Z` as a DateTime object (second must be in 0..59'
+        self.assertIn(expected, ctx.exception.args[0])
 
 # ################################################################################################################################
 
