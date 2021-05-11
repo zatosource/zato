@@ -465,7 +465,8 @@ class AnyServiceInvoker(_Client):
     """
     def _invoke(self, name=None, payload='', headers=None, channel='invoke', data_format='json',
                 transport=None, is_async=False, expiration=BROKER.DEFAULT_EXPIRATION, id=None,
-                to_json=True, output_repeated=ZATO_NOT_GIVEN, pid=None, all_pids=False, timeout=None):
+                to_json=True, output_repeated=ZATO_NOT_GIVEN, pid=None, all_pids=False, timeout=None,
+                skip_response_elem=True):
 
         if not(name or id):
             raise ZatoException(msg='Either name or id must be provided')
@@ -489,6 +490,7 @@ class AnyServiceInvoker(_Client):
             'pid':pid,
             'all_pids': all_pids,
             'timeout': timeout,
+            'skip_response_elem': skip_response_elem,
         }
 
         return super(AnyServiceInvoker, self).invoke(dumps(request, default=default_json_handler),

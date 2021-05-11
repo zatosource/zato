@@ -378,8 +378,6 @@ class ServiceStore(object):
 
             # Set up all attributes that do not have to be assigned to each instance separately
             # and can be shared as class attributes.
-
-            class_.servers = service_store.server.servers
             class_.wsx = WSXFacade(service_store.server)
 
             if self.is_testing:
@@ -409,7 +407,6 @@ class ServiceStore(object):
                 class_.pubsub = service_store.server.worker_store.pubsub
                 class_.cloud.aws.s3 = service_store.server.worker_store.worker_config.cloud_aws_s3
                 class_.cloud.dropbox = service_store.server.worker_store.cloud_dropbox
-                class_.cloud.openstack.swift = service_store.server.worker_store.worker_config.cloud_openstack_swift
                 class_._out_ftp = service_store.server.worker_store.worker_config.out_ftp
                 class_._out_plain_http = service_store.server.worker_store.worker_config.out_plain_http
                 class_.amqp.invoke = service_store.server.worker_store.amqp_invoke # .send is for pre-3.0 backward compat

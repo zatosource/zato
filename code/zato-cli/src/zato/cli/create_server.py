@@ -234,6 +234,8 @@ data_len=0
 [wsx]
 hook_service=
 json_library=stdlib
+pings_missed_threshold=2
+ping_interval=30
 
 [content_type]
 json = {JSON}

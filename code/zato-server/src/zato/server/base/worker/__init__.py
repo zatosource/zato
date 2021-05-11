@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -36,6 +36,9 @@ from dateutil.rrule import DAILY, MINUTELY, rrule
 # gevent
 import gevent
 
+# orjson
+from orjson import dumps
+
 # Python 2/3 compatibility
 from future.utils import iterkeys
 from future.moves.urllib.parse import urlparse
@@ -61,6 +64,7 @@ from zato.common.pubsub import MSG_PREFIX as PUBSUB_MSG_PREFIX
 from zato.common.util.api import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
      import_module_from_path, new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, \
      start_connectors, store_tls, update_apikey_username_to_channel, update_bind_port, visit_py_source
+from zato.cy.reqresp.payload import SimpleIOPayload
 from zato.server.base.parallel.subprocess_.api import StartConfig as SubprocessStartConfig
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
@@ -68,7 +72,6 @@ from zato.server.connection.cache import CacheAPI
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.connector import ConnectorStore, connector_type
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
-from zato.server.connection.cloud.openstack.swift import SwiftWrapper
 from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPConnStore
 from zato.server.connection.ftp import FTPStore
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
@@ -370,7 +373,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
             self.worker_config.basic_auth, self.worker_config.jwt, self.worker_config.ntlm, self.worker_config.oauth,
             self.worker_config.wss, self.worker_config.apikey, self.worker_config.aws,
-            self.worker_config.openstack_security, self.worker_config.xpath_sec, self.worker_config.tls_channel_sec,
+            self.worker_config.xpath_sec, self.worker_config.tls_channel_sec,
             self.worker_config.tls_key_cert, self.worker_config.vault_conn_sec, self.kvdb, self.broker_client, self.server.odb,
             self.json_pointer_store, self.xpath_store, self.server.jwt_secret, self.vault_conn_api)
 
@@ -380,7 +383,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.init_sql()
         self.init_http_soap()
         self.init_cloud()
-        self.init_notifiers()
 
         # AMQP
         self.init_amqp()
@@ -604,7 +606,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """ Initializes all the cloud connections.
         """
         data = (
-            ('cloud_openstack_swift', SwiftWrapper),
             ('cloud_aws_s3', S3Wrapper),
         )
 
@@ -618,24 +619,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
                 config_attr[name].conn = wrapper(config, self.server)
                 config_attr[name].conn.build_queue()
 
-    def _update_cloud_openstack_swift_container(self, config_dict):
-        """ Makes sure OpenStack Swift containers always have a path to prefix queries with.
-        """
-        config_dict.containers = [elem.split(':') for elem in config_dict.containers.splitlines()]
-        for item in config_dict.containers:
-            # No path specified so we use an empty string to catch everything.
-            if len(item) == 1:
-                item.append('')
-
-            item.append('{}:{}'.format(item[0], item[1]))
-
-    def init_notifiers(self):
-        for config_dict in self.worker_config.notif_cloud_openstack_swift.values():
-            self._update_cloud_openstack_swift_container(config_dict.config)
-
     def get_notif_config(self, notif_type, name):
         config_dict = {
-            NOTIF.TYPE.OPENSTACK_SWIFT: self.worker_config.notif_cloud_openstack_swift,
             NOTIF.TYPE.SQL: self.worker_config.notif_sql,
         }[notif_type]
 
@@ -1329,37 +1314,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def openstack_get(self, name):
-        """ Returns the configuration of the OpenStack security definition
-        of the given name.
-        """
-        self.request_dispatcher.url_data.openstack_get(name)
-
-    def on_broker_msg_SECURITY_OPENSTACK_CREATE(self, msg, *args):
-        """ Creates a new OpenStack security definition
-        """
-        dispatcher.notify(broker_message.SECURITY.OPENSTACK_CREATE.value, msg)
-
-    def on_broker_msg_SECURITY_OPENSTACK_EDIT(self, msg, *args):
-        """ Updates an existing OpenStack security definition.
-        """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.OPENSTACK,
-                self._visit_wrapper_edit, keys=('username', 'name'))
-
-    def on_broker_msg_SECURITY_OPENSTACK_DELETE(self, msg, *args):
-        """ Deletes an OpenStack security definition.
-        """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.OPENSTACK,
-                self._visit_wrapper_delete)
-
-    def on_broker_msg_SECURITY_OPENSTACK_CHANGE_PASSWORD(self, msg, *args):
-        """ Changes password of an OpenStack security definition.
-        """
-        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.OPENSTACK,
-                self._visit_wrapper_change_password)
-
-# ################################################################################################################################
-
     def ntlm_get(self, name):
         """ Returns the configuration of the NTLM security definition
         of the given name.
@@ -1696,7 +1650,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             'zato_ctx': kwargs.get('zato_ctx'),
             'wsgi_environ': kwargs.get('wsgi_environ'),
             'channel_item': kwargs.get('channel_item'),
-        }, channel, None, needs_response=True, serialize=serialize)
+        }, channel, None, needs_response=True, serialize=serialize, skip_response_elem=kwargs.get('skip_response_elem'))
 
 # ################################################################################################################################
 
@@ -1764,10 +1718,16 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             logger.warn(msg)
             raise Exception(msg)
 
-        service.update_handle(service.set_response_data, service, payload,
+        skip_response_elem=kwargs.get('skip_response_elem')
+
+        response = service.update_handle(service.set_response_data, service, payload,
             channel, data_format, transport, self.server, self.broker_client, self, cid,
             self.worker_config.simple_io, job_type=msg.get('job_type'), wsgi_environ=wsgi_environ,
             environ=msg.get('environ'))
+
+        if skip_response_elem:
+            response = dumps(response) # type: bytes
+            response = response.decode('utf8')
 
         # Invoke the callback, if any.
         if msg.get('is_async') and msg.get('callback'):
@@ -1775,7 +1735,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             cb_msg = {}
             cb_msg['action'] = SERVICE.PUBLISH.value
             cb_msg['service'] = msg['callback']
-            cb_msg['payload'] = service.response.payload
+            cb_msg['payload'] = response if skip_response_elem else service.response.payload
             cb_msg['cid'] = new_cid()
             cb_msg['channel'] = CHANNEL.INVOKE_ASYNC_CALLBACK
             cb_msg['data_format'] = data_format
@@ -1787,7 +1747,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         if kwargs.get('needs_response'):
 
-            return service.response.payload
+            return response if skip_response_elem else service.response.payload
 
 # ################################################################################################################################
 
@@ -2203,18 +2163,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def on_broker_msg_CLOUD_OPENSTACK_SWIFT_CREATE_EDIT(self, msg, *args):
-        """ Creates or updates an OpenStack Swift connection.
-        """
-        self._on_broker_msg_cloud_create_edit(msg, 'OpenStack Swift', self.worker_config.cloud_openstack_swift, SwiftWrapper)
-
-    def on_broker_msg_CLOUD_OPENSTACK_SWIFT_DELETE(self, msg, *args):
-        """ Closes and deletes an OpenStack Swift connection.
-        """
-        self._delete_config_close_wrapper(msg['name'], self.worker_config.cloud_openstack_swift, 'OpenStack Swift', logger.debug)
-
-# ################################################################################################################################
-
     def on_broker_msg_CLOUD_AWS_S3_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an AWS S3 connection.
         """
@@ -2260,16 +2208,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
     def on_broker_msg_NOTIF_RUN_NOTIFIER(self, msg):
         self.on_message_invoke_service(loads(msg.request), CHANNEL.NOTIFIER_RUN, 'NOTIF_RUN_NOTIFIER')
-
-# ################################################################################################################################
-
-    def on_broker_msg_NOTIF_CLOUD_OPENSTACK_SWIFT_CREATE_EDIT(self, msg):
-        self.create_edit_notifier(msg, 'NOTIF_CLOUD_OPENSTACK_SWIFT_CREATE_EDIT',
-            self.server.worker_store.worker_config.notif_cloud_openstack_swift,
-            self._update_cloud_openstack_swift_container)
-
-    def on_broker_msg_NOTIF_CLOUD_OPENSTACK_SWIFT_DELETE(self, msg):
-        del self.server.worker_store.worker_config.notif_cloud_openstack_swift[msg.name]
 
 # ################################################################################################################################
 
@@ -2494,7 +2432,15 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # We get here if there is no target_pid or if there is one and it matched that of ours.
 
         try:
-            response = self.invoke(msg.service, msg.payload, channel=CHANNEL.IPC, data_format=msg.data_format)
+            response = self.invoke(
+                msg.service,
+                msg.payload,
+                skip_response_elem=True,
+                channel=CHANNEL.IPC,
+                data_format=DATA_FORMAT.JSON,
+                serialize=True,
+            )
+            response = response.getvalue() if isinstance(response, SimpleIOPayload) else response
             status = success
         except Exception:
             response = format_exc()
