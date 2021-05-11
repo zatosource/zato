@@ -241,6 +241,12 @@ class WebSocket(_WebSocket):
         # to accept connections, and we need to postpone their processing until we are initialized fully.
         self._initialized = False
 
+        pings_missed_threshold = getattr(self.config, 'pings_missed_threshold', None)
+        pings_missed_threshold = pings_missed_threshold or WEB_SOCKET.DEFAULT.PINGS_MISSED_THRESHOLD
+
+        ping_interval = getattr(self.config, 'ping_interval', None)
+        ping_interval = ping_interval or WEB_SOCKET.DEFAULT.PING_INTERVAL
+
         self.has_session_opened = False
         self._token = None
         self.update_lock = RLock()
@@ -249,14 +255,14 @@ class WebSocket(_WebSocket):
         self.connection_time = self.last_seen = datetime.utcnow()
         self.sec_type = self.config.sec_type
         self.pings_missed = 0
-        self.pings_missed_threshold = self.config.pings_missed_threshold or WEB_SOCKET.DEFAULT.PINGS_MISSED_THRESHOLD
-        self.ping_interval = self.config.ping_interval or WEB_SOCKET.DEFAULT.PING_INTERVAL
+        self.pings_missed_threshold = pings_missed_threshold
+        self.ping_interval = ping_interval
         self.user_data = Bunch() # Arbitrary user-defined data
         self._disconnect_requested = False # Have we been asked to disconnect this client?
 
         # Audit log configuration ..
-        self.is_audit_log_sent_active     = self.config.is_audit_log_sent_active
-        self.is_audit_log_received_active = self.config.is_audit_log_received_active
+        self.is_audit_log_sent_active     = getattr(self.config, 'is_audit_log_sent_active', False)
+        self.is_audit_log_received_active = getattr(self.config, 'is_audit_log_received_active', False)
 
         # .. and audit log setup.
         self.parallel_server.set_up_object_audit_log_by_config(_audit_msg_type, self.pub_client_id, self.config, False)

@@ -233,7 +233,7 @@ class LogIn(Service):
     def handle(self, _sec_type=SEC_DEF_TYPE.JWT):
 
         try:
-            auth_info = JWTBackend(self.kvdb, self.odb, self.server.decrypt, self.server.jwt_secret).authenticate(
+            auth_info = JWTBackend(self.odb, self.server.decrypt, self.server.jwt_secret).authenticate(
                 self.request.input.username, self.server.decrypt(self.request.input.password))
 
             if auth_info:

@@ -137,7 +137,6 @@ SHORTNAME_BY_PREFIX = [
     ('zato.email.', 'email'),
     ('zato.message.namespace', 'def_namespace'),
     ('zato.cloud.aws.s3', 'cloud_aws_s3'),
-    ('zato.cloud.openstack.swift', 'def_cloud_openstack_swift'),
     ('zato.message.xpath', 'xpath'),
     ('zato.message.json-pointer', 'json_pointer'),
     ('zato.notif.', 'notif'),
