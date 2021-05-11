@@ -724,10 +724,11 @@ class MSG_PATTERN_TYPE:
 class HTTP_SOAP_SERIALIZATION_TYPE:
     STRING_VALUE = NameId('String', 'string')
     SUDS = NameId('Suds', 'suds')
+    ZEEP = NameId('Zeep', 'zeep')
     DEFAULT = STRING_VALUE
 
     def __iter__(self):
-        return iter((self.STRING_VALUE, self.SUDS))
+        return iter((self.STRING_VALUE, self.SUDS, self.ZEEP))
 
 # ################################################################################################################################
 # ################################################################################################################################
