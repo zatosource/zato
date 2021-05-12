@@ -75,7 +75,7 @@ from zato.server.connection.cloud.aws.s3 import S3Wrapper
 from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPConnStore
 from zato.server.connection.ftp import FTPStore
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
-from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper, SudsSOAPWrapper
+from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper, SudsSOAPWrapper, ZeepSOAPWrapper
 from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.odoo import OdooWrapper
 from zato.server.connection.sap import SAPWrapper
@@ -536,13 +536,21 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         conn_soap = wrapper_config['transport'] == URL_TYPE.SOAP
         conn_suds = wrapper_config['serialization_type'] == HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id
+        conn_zeep = wrapper_config['serialization_type'] == HTTP_SOAP_SERIALIZATION_TYPE.ZEEP.id
 
-        if conn_soap and conn_suds:
-            wrapper_config['queue_build_cap'] = float(self.server.fs_server_config.misc.queue_build_cap)
-            wrapper = SudsSOAPWrapper(wrapper_config)
-            if wrapper_config['is_active']:
-                wrapper.build_client_queue()
-            return wrapper
+        if conn_soap:
+            if conn_suds:
+                wrapper_config['queue_build_cap'] = float(self.server.fs_server_config.misc.queue_build_cap)
+                wrapper = SudsSOAPWrapper(wrapper_config)
+                if wrapper_config['is_active']:
+                    wrapper.build_client_queue()
+                return wrapper
+            elif conn_zeep:
+                wrapper_config['queue_build_cap'] = float(self.server.fs_server_config.misc.queue_build_cap)
+                wrapper = ZeepSOAPWrapper(wrapper_config)
+                if wrapper_config['is_active']:
+                    wrapper.build_client_queue()
+                return wrapper
 
         return HTTPSOAPWrapper(wrapper_config)
 

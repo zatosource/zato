@@ -478,3 +478,59 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
             self.client.build_queue()
 
 # ################################################################################################################################
+
+class ZeepSOAPWrapper(BaseHTTPSOAPWrapper):
+    """ A thin wrapper around the zeep SOAP library
+    """
+    def __init__(self, config):
+        super(ZeepSOAPWrapper, self).__init__(config)
+        self.set_auth()
+        self.update_lock = RLock()
+        self.config = config
+        self.config['timeout'] = float(self.config['timeout'])
+        self.config_no_sensitive = deepcopy(self.config)
+        self.config_no_sensitive['password'] = '***'
+        self.address = '{}{}'.format(self.config['address_host'], self.config['address_url_path'])
+        self.conn_type = 'Zeep SOAP'
+        self.client = ConnectionQueue(
+            self.config['pool_size'], self.config['queue_build_cap'], self.config['name'], self.conn_type, self.address,
+            self.add_client)
+
+    def set_auth(self):
+        """ Configures the security for requests, if any is to be configured at all.
+        """
+        self.zeep_auth = {'username':self.config['username'], 'password':self.config['password']}
+
+    def add_client(self):
+
+        logger.info('About to add a client to `%s` (%s)', self.address, self.conn_type)
+
+        try:
+
+            # Lazily-imported here to make sure gevent monkey patches everything well in advance
+            from requests import Session
+            from requests.auth import HTTPBasicAuth
+            from zeep import Client
+            from zeep.transports import Transport
+
+            sec_type = self.config['sec_type']
+            session = Session()
+
+            if sec_type == SEC_DEF_TYPE.BASIC_AUTH:
+                session.auth = HTTPBasicAuth(self.zeep_auth['username'], self.zeep_auth['password'])
+
+            # Still could be either none at all or WSS
+            if not sec_type:
+                client = Client(self.address, transport=Transport(session=session))
+
+            self.client.put_client(client)
+
+        except Exception:
+            logger.warn('Error while adding a SOAP client to `%s` (%s) e:`%s`', self.address, self.conn_type, format_exc())
+
+    def build_client_queue(self):
+
+        with self.update_lock:
+            self.client.build_queue()
+
+# ################################################################################################################################
