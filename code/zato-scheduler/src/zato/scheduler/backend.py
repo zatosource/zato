@@ -36,7 +36,7 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
-initial_sleep = 30
+initial_sleep = 0.1
 
 # ################################################################################################################################
 
@@ -333,9 +333,8 @@ class Scheduler(object):
                 if spawn:
                     self.spawn_job(job)
                     self.job_log('Job scheduled `%s` (%s, start: %s UTC)', job.name, job.type, job.start_time)
-
             else:
-                logger.debug('Skipping inactive job `%s`', job)
+                logger.info('Skipping inactive job `%s`', job)
         except Exception:
             logger.warn(format_exc())
 
@@ -377,7 +376,7 @@ class Scheduler(object):
             name = job.old_name if job.old_name else job.name
             logger.info('Unscheduled %s job %s `%s`', job.type, name, message)
         else:
-            logger.debug('Job not found `%s`', job)
+            logger.info('Job not found `%s`', job)
 
     def unschedule(self, job):
         """ Deletes a job.
@@ -431,7 +430,7 @@ class Scheduler(object):
                 logger.warn('No such job `%s` in `%s`', name, [elem.get_context() for elem in itervalues(self.jobs)])
 
     def on_job_executed(self, ctx, unschedule_one_time=True):
-        logger.debug('Executing `%s`, `%s`', ctx['name'], ctx)
+        logger.info('Executing `%s`, `%s`', ctx['name'], ctx)
         self.on_job_executed_cb(ctx)
         self.job_log('Job executed `%s`, `%s`', ctx['name'], ctx)
 
