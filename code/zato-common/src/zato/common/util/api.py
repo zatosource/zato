@@ -1205,14 +1205,17 @@ def add_scheduler_jobs(api, odb, cluster_id, spawn=True):
         _, weeks, days, hours, minutes, seconds, repeats, cron_definition)\
             in odb.get_job_list(cluster_id):
 
+        job_data = Bunch({'id':id, 'name':name, 'is_active':is_active,
+            'job_type':job_type, 'start_date':start_date,
+            'extra':extra, 'service':service_name, 'weeks':weeks,
+            'days':days, 'hours':hours, 'minutes':minutes,
+            'seconds':seconds, 'repeats':repeats,
+            'cron_definition':cron_definition})
+
         if is_active:
-            job_data = Bunch({'id':id, 'name':name, 'is_active':is_active,
-                'job_type':job_type, 'start_date':start_date,
-                'extra':extra, 'service':service_name, 'weeks':weeks,
-                'days':days, 'hours':hours, 'minutes':minutes,
-                'seconds':seconds, 'repeats':repeats,
-                'cron_definition':cron_definition})
             api.create_edit('create', job_data, spawn=spawn)
+        else:
+            logger.info('Not adding an inactive job `%s`', job_data)
 
 # ################################################################################################################################
 

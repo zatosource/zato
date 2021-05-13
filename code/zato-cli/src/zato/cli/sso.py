@@ -344,9 +344,12 @@ class ResetUserPassword(SSOCommand):
         from zato.common.crypto.api import CryptoManager
 
         new_password = CryptoManager.generate_password()
+        new_password = new_password.decode('utf8')
+
         user_api.set_password(
             self._get_cid(), user.user_id, new_password, args.must_change, args.expiry, self._get_current_app(),
             self._get_current_host())
+
         self.logger.info('Password for user `%s` reset to `%s`', args.username, new_password)
 
 # ################################################################################################################################
