@@ -321,10 +321,18 @@ class ChangeUserPassword(SSOCommand):
     def _on_sso_command(self, args, user, user_api):
         # type: (Namespace, SSOUser, UserAPI)
 
-        user_api.set_password(
-            self._get_cid(), user.user_id, args.password, args.must_change, args.expiry, self._get_current_app(),
-            self._get_current_host())
-        self.logger.info('Changed password for user `%s`', args.username)
+        # Zato
+        from zato.sso import ValidationError
+
+        try:
+            user_api.set_password(
+                self._get_cid(), user.user_id, args.password, args.must_change, args.expiry, self._get_current_app(),
+                self._get_current_host())
+        except ValidationError as e:
+            self.logger.warn('Password validation error, reason code:`%s`', ', '.join(e.sub_status))
+            return self.SYS_ERROR.VALIDATION_ERROR
+        else:
+            self.logger.info('Changed password for user `%s`', args.username)
 
 # ################################################################################################################################
 
