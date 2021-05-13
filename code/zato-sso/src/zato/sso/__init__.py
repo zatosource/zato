@@ -51,6 +51,8 @@ class status_code:
         e_about_to_exp = 'E003006'
         must_send_new  = 'E003007'
 
+        not_complex_enough = 'E003008'
+
     class app_list:
         invalid   = 'E004001'
         no_signup = 'E004002'

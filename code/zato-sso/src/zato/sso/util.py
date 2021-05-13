@@ -22,6 +22,9 @@ from ipaddress import ip_network
 # SQLAlchemy
 from sqlalchemy import update
 
+# zxcvbn
+from zxcvbn import zxcvbn
+
 # Python 2/3 compatibility
 from past.builtins import unicode
 
@@ -64,6 +67,15 @@ def new_user_session_token(_new_id=_new_id):
 def validate_password(sso_conf, password):
     """ Raises ValidationError if password is invalid, e.g. it is too simple.
     """
+
+    # This is optional
+    min_complexity = int(sso_conf.password.get('min_complexity', 4))
+
+    if min_complexity:
+        result = zxcvbn(password)
+        if result['score'] < min_complexity:
+            raise ValidationError(status_code.password.not_complex_enough, sso_conf.password.inform_if_invalid)
+
     # Password may not be too short
     if len(password) < sso_conf.password.min_length:
         raise ValidationError(status_code.password.too_short, sso_conf.password.inform_if_invalid)
