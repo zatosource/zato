@@ -118,7 +118,7 @@ def normalize_password_reject_list(sso_conf):
 # ################################################################################################################################
 
 def set_password(odb_session_func, encrypt_func, hash_func, sso_conf, user_id, password, must_change=None, password_expiry=None,
-        _utcnow=1):
+        _utcnow=_utcnow):
     """ Sets a new password for user.
     """
     # Just to be doubly sure, validate the password before saving it to DB.
