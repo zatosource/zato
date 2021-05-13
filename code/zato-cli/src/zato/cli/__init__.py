@@ -850,29 +850,18 @@ class ZatoCommand(object):
     def get_crypto_manager_from_server_config(self, config, repo_dir):
 
         # Zato
-        from zato.cli import util as cli_util
+        from zato.common.util.api import get_crypto_manager_from_server_config
 
-        return cli_util.get_crypto_manager_from_server_config(config, repo_dir)
+        return get_crypto_manager_from_server_config(config, repo_dir)
 
 # ################################################################################################################################
 
     def get_odb_session_from_server_config(self, config, cm):
 
         # Zato
-        from zato.cli import util as cli_util
+        from zato.common.util.api import get_odb_session_from_server_config
 
-        return cli_util.get_odb_session_from_server_config(config, cm, False)
-
-# ################################################################################################################################
-
-    def get_server_client_auth(self, config, repo_dir):
-        """ Returns credentials to authenticate with against Zato's own /zato/admin/invoke channel.
-        """
-
-        # Zato
-        from zato.cli import util as cli_util
-
-        return cli_util.get_server_client_auth(config, repo_dir)
+        return get_odb_session_from_server_config(config, cm, False)
 
 # ################################################################################################################################
 
