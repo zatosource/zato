@@ -157,6 +157,11 @@ class SessionAPI(object):
 
     def _check_credentials(self, ctx, user_password):
         # type: (LoginCtx) -> bool
+
+        print()
+        print(111, ctx.input)
+        print()
+
         return check_credentials(self.decrypt_func, self.verify_hash_func, user_password, ctx.input['password'])
 
 # ################################################################################################################################

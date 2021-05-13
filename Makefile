@@ -10,6 +10,9 @@ cy-tests:
 server-tests:
 	cd $(CURDIR)/code/zato-server && make run-tests
 
+sso-tests:
+	cd $(CURDIR)/code/zato-sso && make run-tests
+
 static-check:
 	cd $(CURDIR)/code/zato-agent && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-broker && $(MAKE) static-check
@@ -30,4 +33,5 @@ static-check:
 run-tests:
 	$(MAKE) cy-tests
 	$(MAKE) server-tests
+	$(MAKE) sso-tests
 	$(MAKE) static-check
