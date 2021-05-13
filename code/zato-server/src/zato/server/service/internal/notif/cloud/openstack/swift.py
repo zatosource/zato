@@ -10,7 +10,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from zato.server.service.internal import AdminService
 
 class GetList(AdminService):
-    pass
+    def handle(self):
+        self.response.payload = '[]'
 
 class _CreateEdit(AdminService):
     pass
