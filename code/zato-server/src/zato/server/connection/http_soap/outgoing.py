@@ -520,8 +520,7 @@ class ZeepSOAPWrapper(BaseHTTPSOAPWrapper):
                 session.auth = HTTPBasicAuth(self.zeep_auth['username'], self.zeep_auth['password'])
 
             # Still could be either none at all or WSS
-            if not sec_type:
-                client = Client(self.address, transport=Transport(session=session))
+            client = Client(self.address, transport=Transport(session=session))
 
             self.client.put_client(client)
 
