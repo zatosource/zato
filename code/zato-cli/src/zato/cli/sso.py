@@ -392,9 +392,23 @@ class CreateODB(ZatoCommand):
         # type: (Namespace)
 
         # Zato
-        from zato.common.odb.model.sso import _SSOAttr, _SSOSession, _SSOUser, Base as SSOModelBase
+        from zato.common.odb.model.sso import \
+             _SSOAttr, \
+             _SSOGroup, \
+             _SSOLinkedAuth, \
+             _SSOSession, \
+             _SSOUser, \
+             _SSOUserGroup, \
+             Base as SSOModelBase
 
-        _sso_tables = [_SSOAttr.__table__, _SSOSession.__table__, _SSOUser.__table__]
+        _sso_tables = [
+            _SSOAttr.__table__,
+            _SSOGroup.__table__,
+            _SSOLinkedAuth.__table__,
+            _SSOSession.__table__,
+            _SSOUser.__table__,
+            _SSOUserGroup.__table__,
+        ]
 
         engine = self._get_engine(args)
         SSOModelBase.metadata.create_all(engine, tables=_sso_tables)
