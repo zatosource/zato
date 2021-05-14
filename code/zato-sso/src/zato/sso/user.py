@@ -627,13 +627,6 @@ class UserAPI(object):
             # Validate and get session
             current_session = self._get_current_session(cid, current_ust, current_app, remote_addr, _needs_super_user)
 
-            print()
-            print(111, current_session)
-            print(222, current_ust)
-            print(333, func)
-            print(444, queries_current_session)
-            print()
-
             # If func was to query current session, we can just re-use what we have fetched above,
             # so as to have one SQL query less in a piece of code that will be likely used very often.
             if queries_current_session:
