@@ -1349,8 +1349,8 @@ class CySimpleIO(object):
 
         if class_skip_empty is NotGiven:
             empty_output_value = NotGiven
-            input_def = raw_skip_empty if raw_skip_empty is not NotGiven else NotGiven
-            output_def = NotGiven
+            input_def = NotGiven
+            output_def = raw_skip_empty if raw_skip_empty is not NotGiven else NotGiven
             force_empty_input_set = NotGiven
             force_empty_output_set = raw_force_empty_output_set if raw_force_empty_output_set is not NotGiven else NotGiven
 
