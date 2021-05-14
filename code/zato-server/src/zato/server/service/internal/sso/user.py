@@ -19,9 +19,10 @@ from dateutil.parser import parser as DateTimeParser
 from past.builtins import unicode
 
 # Zato
-from zato.common.api import NotGiven
+from zato.common import NotGiven
 from zato.common.broker_message import SSO as BROKER_MSG_SSO
-from zato.common.util.api import asbool
+from zato.common.util import asbool
+from zato.cy.simpleio import Elem
 from zato.server.service import AsIs, Bool, Int, List, Opaque
 from zato.server.service.internal.sso import BaseService, BaseRESTService, BaseSIO
 from zato.sso import status_code, SearchCtx, SignupCtx, ValidationError
@@ -29,11 +30,11 @@ from zato.sso.user import update
 
 # ################################################################################################################################
 
-_create_user_attrs = ('username', 'password', 'password_must_change', 'display_name', 'first_name', 'middle_name', 'last_name', \
-    'email', 'is_locked', 'sign_up_status', 'is_rate_limit_active', 'rate_limit_def', 'is_totp_enabled', 'totp_label',
-    'totp_key')
-_date_time_attrs = ('approv_rej_time', 'locked_time', 'password_expiry', 'password_last_set', 'sign_up_time',
-    'approval_status_mod_time')
+_create_user_attrs = sorted(('username', 'password', Bool('password_must_change'), 'display_name', 'first_name', 'middle_name',
+    'last_name', 'email', 'is_locked', 'sign_up_status', 'is_rate_limit_active', 'rate_limit_def', 'is_totp_enabled',
+    'totp_label', 'totp_key'))
+_date_time_attrs = sorted(('approv_rej_time', 'locked_time', 'password_expiry', 'password_last_set', 'sign_up_time',
+    'approval_status_mod_time'))
 
 # ################################################################################################################################
 
@@ -125,8 +126,8 @@ class User(BaseRESTService):
         output_optional = BaseSIO.output_optional + (AsIs('user_id'), 'username', 'email', 'display_name', 'first_name',
             'middle_name', 'last_name', 'is_active', 'is_internal', 'is_super_user', 'is_approval_needed',
             'approval_status', 'approval_status_mod_time', 'approval_status_mod_by', 'is_locked', 'locked_time',
-            'creation_ctx', 'locked_by', 'approv_rej_time', 'approv_rej_by', 'password_expiry', 'password_is_set',
-            'password_must_change', 'password_last_set', 'sign_up_status','sign_up_time', 'is_totp_enabled',
+            'creation_ctx', 'locked_by', 'approv_rej_time', 'approv_rej_by', 'password_expiry', Bool('password_is_set'),
+            Bool('password_must_change'), 'password_last_set', 'sign_up_status','sign_up_time', 'is_totp_enabled',
             'totp_label')
 
         default_value = _invalid
@@ -139,14 +140,27 @@ class User(BaseRESTService):
         user_id = ctx.input.get('user_id')
         attrs = []
 
+        print()
+        print(111, repr(user_id))
+        print(222, repr(self.SimpleIO.default_value))
+        print()
+
         if user_id != self.SimpleIO.default_value:
             func = self.sso.user.get_user_by_id
             attrs.append(user_id)
         else:
             func = self.sso.user.get_current_user
 
+        print()
+        print(333, func)
+        print()
+
         # These will be always needed, no matter which function is used
         attrs += [ctx.input.ust, ctx.input.current_app, ctx.remote_addr]
+
+        print()
+        print(444, func(self.cid, *attrs).to_dict())
+        print()
 
         # Func will return a dictionary describing the required user, already taking permissions into account
         self.response.payload = func(self.cid, *attrs).to_dict()
@@ -161,8 +175,11 @@ class User(BaseRESTService):
         data = {}
         for name in _create_user_attrs:
             value = ctx.input.get(name)
+            print()
+            print('ZZZ', name, value, type(value), dir(value))
+            print()
             if value != self.SimpleIO.default_value:
-                data[name] = value
+                data[name] = value.value if isinstance(value, Elem) else value
 
         auto_approve = self.request.input.auto_approve
         if auto_approve == self.SimpleIO.default_value:
@@ -191,6 +208,12 @@ class User(BaseRESTService):
                 'is_rate_limit_active': True,
                 'rate_limit_def': ctx.input.rate_limit_def if ctx.input.rate_limit_def != _invalid else None
             })
+
+        print()
+        print()
+        print(222, data)
+        print()
+        print()
 
         # .. and finally we can create the response.
         self.response.payload = data
