@@ -740,8 +740,8 @@ class JSONInputParsing(BaseSIOTestCase):
         self.assertDictEqual(input, {
             'aaa': 'aaa',
             'bbb': 'bbb',
-            'ccc': '',
-            'ddd': '',
+            'ccc': '', # This should be empty by default because they are input data
+            'ddd': '', # (Ditto)
         })
 
 # ################################################################################################################################
