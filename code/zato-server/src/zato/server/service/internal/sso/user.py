@@ -22,8 +22,7 @@ from past.builtins import unicode
 from zato.common import NotGiven
 from zato.common.broker_message import SSO as BROKER_MSG_SSO
 from zato.common.util import asbool
-from zato.cy.simpleio import Elem
-from zato.server.service import AsIs, Bool, Int, List, Opaque
+from zato.server.service import AsIs, Bool, Int, List, Opaque, SIOElem
 from zato.server.service.internal.sso import BaseService, BaseRESTService, BaseSIO
 from zato.sso import status_code, SearchCtx, SignupCtx, ValidationError
 from zato.sso.user import update
@@ -140,27 +139,14 @@ class User(BaseRESTService):
         user_id = ctx.input.get('user_id')
         attrs = []
 
-        print()
-        print(111, repr(user_id))
-        print(222, repr(self.SimpleIO.default_value))
-        print()
-
         if user_id != self.SimpleIO.default_value:
             func = self.sso.user.get_user_by_id
             attrs.append(user_id)
         else:
             func = self.sso.user.get_current_user
 
-        print()
-        print(333, func)
-        print()
-
         # These will be always needed, no matter which function is used
         attrs += [ctx.input.ust, ctx.input.current_app, ctx.remote_addr]
-
-        print()
-        print(444, func(self.cid, *attrs).to_dict())
-        print()
 
         # Func will return a dictionary describing the required user, already taking permissions into account
         self.response.payload = func(self.cid, *attrs).to_dict()
@@ -174,12 +160,10 @@ class User(BaseRESTService):
         # to create a new user.
         data = {}
         for name in _create_user_attrs:
+            name = name.name if isinstance(name, SIOElem) else name
             value = ctx.input.get(name)
-            print()
-            print('ZZZ', name, value, type(value), dir(value))
-            print()
             if value != self.SimpleIO.default_value:
-                data[name] = value.value if isinstance(value, Elem) else value
+                data[name] = value
 
         auto_approve = self.request.input.auto_approve
         if auto_approve == self.SimpleIO.default_value:
@@ -209,12 +193,6 @@ class User(BaseRESTService):
                 'rate_limit_def': ctx.input.rate_limit_def if ctx.input.rate_limit_def != _invalid else None
             })
 
-        print()
-        print()
-        print(222, data)
-        print()
-        print()
-
         # .. and finally we can create the response.
         self.response.payload = data
 
@@ -237,10 +215,15 @@ class User(BaseRESTService):
 
         # Explicitly provide only what we know is allowed
         data = {}
-        for name in update.all_attrs:
-            value = ctx.input.get(name, _not_given)
+        for name in sorted(update.all_attrs):
 
             # No such key on input, we can ignore it
+            if name not in self.request.payload:
+                continue
+
+            value = ctx.input.get(name, _not_given)
+
+            # Just to be doubly sure, check the value too
             if value is _not_given:
                 continue
 
@@ -364,10 +347,16 @@ class Password(BaseRESTService):
                 password_expiry = self.sso.password.expiry
             data['password_expiry'] = password_expiry
 
-        must_change = ctx.input.get('must_change')
-        if must_change != '':
+        if 'must_change' in self.request.payload:
+            must_change = ctx.input.get('must_change')
             must_change = asbool(must_change)
             data['must_change'] = must_change
+
+        print()
+        print(111, data)
+        print(222, ctx.input)
+        print(333, self.request.payload)
+        print()
 
         self.sso.user.change_password(self.cid, data, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
 
