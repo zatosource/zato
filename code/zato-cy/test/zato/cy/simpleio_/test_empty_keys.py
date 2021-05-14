@@ -44,7 +44,11 @@ class SkipEmptyTestCase(BaseSIOTestCase):
         self.assertTrue(isinstance(result.definition.skip_empty.skip_input_set, set))
         self.assertEquals(list(result.definition.skip_empty.skip_output_set), ['abc'])
 
+<<<<<<< HEAD
         # This should be False as we gave a string on input, rather than True
+=======
+        # This should be False because skip_empty_keys deals with responses, not requests ..
+>>>>>>> main
         self.assertFalse(result.definition.skip_empty.skip_all_empty_input)
 
 # ################################################################################################################################
@@ -74,6 +78,9 @@ class SkipEmptyTestCase(BaseSIOTestCase):
 
         self.assertTrue(isinstance(result.definition.skip_empty.skip_input_set, set))
         self.assertEquals(list(result.definition.skip_empty.skip_input_set), [])
+        self.assertFalse(result.definition.skip_empty.skip_all_empty_input)
+
+        # This should be False if only skip_empty_keys is used, no matter if skip_empty_keys is True or False
         self.assertTrue(result.definition.skip_empty.skip_all_empty_output)
 
 # ################################################################################################################################
