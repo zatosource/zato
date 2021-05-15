@@ -45,11 +45,13 @@ UserModelTable = UserModel.__table__
 # ################################################################################################################################
 
 def _new_id(prefix, _uuid4=uuid4, _crockford_encode=crockford_encode):
+    # type: (object) -> str
     return '%s%s' % (prefix, _crockford_encode(_uuid4().int).lower())
 
 # ################################################################################################################################
 
 def new_confirm_token(_gen_secret=_gen_secret):
+    # type: (object) -> str
     return _gen_secret(192)
 
 # ################################################################################################################################
@@ -60,7 +62,23 @@ def new_user_id(_new_id=_new_id):
 # ################################################################################################################################
 
 def new_user_session_token(_new_id=_new_id):
+    # type: (object) -> str
     return _new_id('zust')
+
+# ################################################################################################################################
+
+def new_prt(_new_id=_new_id):
+    # type: (object) -> str
+
+    # Note that these tokens are to be publicly visible and this is why we prefer
+    # not to be conspicuous about the prefix.
+    return _new_id('')
+
+# ################################################################################################################################
+
+def new_prt_reset_key(_new_id=_new_id):
+    # type: (object) -> str
+    return _new_id('zprtrkey')
 
 # ################################################################################################################################
 

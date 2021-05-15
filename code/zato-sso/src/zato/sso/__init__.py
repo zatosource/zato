@@ -21,6 +21,7 @@ not_given = object()
 class Default:
     prt_valid_for = 1440 # In minutes = 1 day
     prt_password_change_session_duration=1800 # In seconds = 30 minutes
+    prt_user_search_by = 'username'
 
 # ################################################################################################################################
 
@@ -121,6 +122,9 @@ class const:
         basic_auth = 'basic_auth'
         default    = 'default'
         jwt        = 'jwt'
+
+    class prt:
+        token_type = 'prt'
 
 # ################################################################################################################################
 
