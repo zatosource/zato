@@ -19,19 +19,7 @@ from ipaddress import ip_address
 from zato.common.api import NO_REMOTE_ADDRESS
 from zato.server.service import List, Service
 from zato.sso import status_code, ValidationError
-
-# ################################################################################################################################
-
-class SSOCtx(object):
-    """ A set of attributes describing current SSO request.
-    """
-    __slots__ = ('input', 'sso_conf', 'remote_addr', 'user_agent')
-
-    def __init__(self, input, sso_conf, remote_addr, user_agent):
-        self.input = input
-        self.sso_conf = sso_conf
-        self.remote_addr = remote_addr
-        self.user_agent = user_agent
+from zato.sso.common import SSOCtx
 
 # ################################################################################################################################
 
