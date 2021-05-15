@@ -352,12 +352,6 @@ class Password(BaseRESTService):
             must_change = asbool(must_change)
             data['must_change'] = must_change
 
-        print()
-        print(111, data)
-        print(222, ctx.input)
-        print(333, self.request.payload)
-        print()
-
         self.sso.user.change_password(self.cid, data, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
 
 # ################################################################################################################################

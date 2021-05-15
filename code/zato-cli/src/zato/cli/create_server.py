@@ -379,6 +379,10 @@ inform_if_locked=True
 inform_if_not_confirmed=True
 inform_if_not_approved=True
 
+[prt]
+valid_for=1440 # In minutes = 1 day
+password_change_session_duration=1800 # In seconds = 30 minutes
+
 [user_address_list]
 
 [session]

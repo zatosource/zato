@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
@@ -32,6 +30,8 @@ from zato.sso import const, status_code, Session as SessionEntity, ValidationErr
 from zato.sso.attr import AttrAPI
 from zato.sso.odb.query import get_session_by_ext_id, get_session_by_ust, get_session_list_by_user_id, get_user_by_id, \
      get_user_by_username
+from zato.sso.common import insert_sso_session, SessionInsertCtx, \
+     update_session_state_change_list as _update_session_state_change_list
 from zato.sso.util import check_credentials, check_remote_app_exists, new_user_session_token, set_password, validate_password
 
 # ################################################################################################################################
@@ -524,28 +524,24 @@ class SessionAPI(object):
             expiration_time = creation_time + timedelta(minutes=self.sso_conf.session.expiry)
             ust = new_user_session_token()
 
-            # Create current interaction details for this session
-            session_state_change_list = []
-            self.update_session_state_change_list(
-                session_state_change_list, ctx.remote_addr, ctx.user_agent, 'login', creation_time)
-            opaque = {
-                'session_state_change_list': session_state_change_list
-            }
+            # All the data needed to insert a new session into the database ..
+            insert_ctx = SessionInsertCtx()
+            insert_ctx.ust = ust
+            insert_ctx.interaction_max_len = self.interaction_max_len
 
-            session.execute(
-                SessionModelInsert().values({
-                    'ust': ust,
-                    'creation_time': creation_time,
-                    'expiration_time': expiration_time,
-                    'user_id': user.id,
-                    'auth_type': ctx.input.get('sec_type') or const.auth_type.default,
-                    'auth_principal': user.username,
-                    'remote_addr': ', '.join(str(elem) for elem in ctx.remote_addr),
-                    'user_agent': ctx.user_agent,
-                    'ext_session_id': ctx.ext_session_id,
-                    GENERIC.ATTR_NAME: dumps(opaque)
-            }))
-            session.commit()
+            insert_ctx.remote_addr = ctx.remote_addr
+            insert_ctx.user_agent = ctx.user_agent
+            insert_ctx.ctx_source = 'login'
+            insert_ctx.creation_time = creation_time
+            insert_ctx.expiration_time = expiration_time
+
+            insert_ctx.user_id = user.id
+            insert_ctx.auth_type = ctx.input.get('sec_type') # or const.auth_type.default
+            insert_ctx.auth_principal = user.username
+            insert_ctx.ext_session_id = ctx.ext_session_id
+
+            # .. insert the session into the SQL database now.
+            insert_sso_session(session, insert_ctx)
 
             info = SessionInfo()
             info.username = user.username
@@ -612,29 +608,15 @@ class SessionAPI(object):
         """ Adds information about a user interaction with SSO, keeping the history
         of such interactions to up to max_len entries.
         """
-        # type: (list, unicode, unicode, datetime, int)
-        if current_state:
-            idx = current_state[-1]['idx']
-        else:
-            idx = 0
-
-        remote_addr = remote_addr if isinstance(remote_addr, list) else [remote_addr]
-
-        if len(remote_addr) == 1:
-            remote_addr = str(remote_addr[0])
-        else:
-            remote_addr = [str(elem) for elem in remote_addr]
-
-        current_state.append({
-            'remote_addr': remote_addr,
-            'user_agent': user_agent,
-            'timestamp_utc': now.isoformat(),
-            'ctx_source': ctx_source,
-            'idx': idx + 1
-        })
-
-        if len(current_state) > self.interaction_max_len:
-            current_state.pop(0)
+        # type: (list, str, str, str, datetime)
+        return _update_session_state_change_list(
+            current_state,
+            self.interaction_max_len,
+            remote_addr,
+            user_agent,
+            ctx_source,
+            now
+        )
 
 # ################################################################################################################################
 
