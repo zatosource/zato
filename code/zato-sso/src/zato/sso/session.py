@@ -29,7 +29,7 @@ from zato.common.crypto.totp_ import TOTPManager
 from zato.sso import const, status_code, Session as SessionEntity, ValidationError
 from zato.sso.attr import AttrAPI
 from zato.sso.odb.query import get_session_by_ext_id, get_session_by_ust, get_session_list_by_user_id, get_user_by_id, \
-     get_user_by_username
+     get_user_by_name
 from zato.sso.common import insert_sso_session, SessionInsertCtx, \
      update_session_state_change_list as _update_session_state_change_list
 from zato.sso.util import check_credentials, check_remote_app_exists, new_user_session_token, set_password, validate_password
@@ -452,7 +452,7 @@ class SessionAPI(object):
         with closing(self.odb_session_func()) as session:
 
             if ctx.input.get('username'):
-                user = get_user_by_username(session, ctx.input['username']) # type: SSOUser
+                user = get_user_by_name(session, ctx.input['username']) # type: SSOUser
             else:
                 user = get_user_by_id(session, ctx.input['user_id']) # type: SSOUser
 
