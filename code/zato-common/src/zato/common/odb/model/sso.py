@@ -267,3 +267,24 @@ class _SSOLinkedAuth(Base):
     user_id = Column(String(191), ForeignKey('zato_sso_user.user_id', ondelete='CASCADE'), nullable=False)
 
 # ################################################################################################################################
+
+class _SSOFlowPRT(Base):
+    __tablename__ = 'zato_sso_flow_prt'
+
+    __table_args__ = (
+        Index('zato_prt_value', 'value', unique=True),
+    {})
+
+    # Not exposed publicly, used only because SQLAlchemy requires an FK
+    id = Column(Integer, Sequence('zato_sso_flow_prt_seq'), primary_key=True)
+
+    creation_time = Column(DateTime(), nullable=False)
+    expiration_time = Column(DateTime(), nullable=False)
+
+    # The actual PRT (password reset token)
+    value = Column(String(191), nullable=False)
+
+    # SSO user this entry links to
+    user_id = Column(String(191), ForeignKey('zato_sso_user.user_id', ondelete='CASCADE'), nullable=False)
+
+# ################################################################################################################################

@@ -18,6 +18,12 @@ not_given = object()
 
 # ################################################################################################################################
 
+class Default:
+    prt_valid_for = 1440 # In minutes = 1 day
+    prt_password_change_session_duration=1800 # In seconds = 30 minutes
+
+# ################################################################################################################################
+
 class status_code:
     """ Reason codes pointing to specific API validation errors.
     """
