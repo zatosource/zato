@@ -51,7 +51,7 @@ class _SSOUser(Base):
         UniqueConstraint('username', name='zato_u_usrn_uq'),
         UniqueConstraint('user_id', name='zato_user_id_uq'),
         Index('zato_u_email_idx', 'email', unique=False, mysql_length={'email':767}),
-        Index('zato_u_appr_stat_idx', 'approval_status', unique=False, mysql_length={'email':767}),
+        Index('zato_u_appr_stat_idx', 'approval_status', unique=False),
         Index('zato_u_dspn_idx', 'display_name_upper', unique=False),
         Index('zato_u_alln_idx', 'first_name_upper', 'middle_name_upper', 'last_name_upper', unique=False),
         Index('zato_u_lastn_idx', 'last_name_upper', unique=False),
