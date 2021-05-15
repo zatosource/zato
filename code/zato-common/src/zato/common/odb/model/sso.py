@@ -272,7 +272,7 @@ class _SSOFlowPRT(Base):
     __tablename__ = 'zato_sso_flow_prt'
 
     __table_args__ = (
-        Index('zato_prt_value', 'value', unique=True),
+        Index('zato_prt_value_type', 'value', 'type_', unique=True),
     {})
 
     # Not exposed publicly, used only because SQLAlchemy requires an FK
@@ -283,6 +283,12 @@ class _SSOFlowPRT(Base):
 
     # The actual PRT (password reset token)
     value = Column(String(191), nullable=False)
+
+    # PRT type - what kind is it of, e.g. a Zato built-in one or an external one?
+    type_ = Column(String(191), nullable=False)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     # SSO user this entry links to
     user_id = Column(String(191), ForeignKey('zato_sso_user.user_id', ondelete='CASCADE'), nullable=False)

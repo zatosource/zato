@@ -394,6 +394,7 @@ class CreateODB(ZatoCommand):
         # Zato
         from zato.common.odb.model.sso import \
              _SSOAttr, \
+             _SSOFlowPRT, \
              _SSOGroup, \
              _SSOLinkedAuth, \
              _SSOSession, \
@@ -404,6 +405,7 @@ class CreateODB(ZatoCommand):
         _sso_tables = [
             _SSOAttr.__table__,
             _SSOGroup.__table__,
+            _SSOFlowPRT.__table__,
             _SSOLinkedAuth.__table__,
             _SSOSession.__table__,
             _SSOUser.__table__,
