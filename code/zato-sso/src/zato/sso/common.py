@@ -10,6 +10,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from datetime import datetime
 from typing import Optional as optional
 
+# Bunch
+from bunch import Bunch
+
 # Zato
 from zato.common.api import GENERIC
 from zato.common.ext.dataclasses import dataclass
@@ -22,6 +25,18 @@ from zato.sso import const
 
 SessionModelTable = SessionModel.__table__
 SessionModelInsert = SessionModelTable.insert
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass
+class SSOCtx:
+    """ A set of attributes describing current SSO request.
+    """
+    input: Bunch
+    sso_conf: dict
+    remote_addr: str
+    user_agent: str
 
 # ################################################################################################################################
 # ################################################################################################################################

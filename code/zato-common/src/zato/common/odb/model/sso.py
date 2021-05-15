@@ -287,6 +287,32 @@ class _SSOFlowPRT(Base):
     # PRT type - what kind is it of, e.g. a Zato built-in one or an external one?
     type_ = Column(String(191), nullable=False)
 
+    # This key is used to reset the password after the PRT has been accessed
+    reset_key = Column(String(512), nullable=False)
+
+    # This is set when the PRT is accessed in order to set a time limit
+    # for the password reset procedure (using prt.password_change_session_duration from sso.conf)
+    reset_key_exp_time = Column(DateTime(), nullable=False)
+
+    # Will be set to True when the PRT has been accessed in any way,
+    # e.g. a user clicks on a link.
+    has_been_accessed = Column(Boolean(), nullable=False, default=False)
+
+    # When was the PRT accessed
+    access_time = Column(DateTime(), nullable=True)
+
+    # Access metadata in JSON
+    access_ctx = Column(_JSON(), nullable=True)
+
+    # Will be set to True when a password is reset using this PRT and reset_key
+    is_password_reset = Column(Boolean(), nullable=False, default=False)
+
+    # When was the password reset
+    password_reset_time = Column(DateTime(), nullable=True)
+
+    # Password reset metadata in JSON
+    password_reset_ctx = Column(_JSON(), nullable=True)
+
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
 

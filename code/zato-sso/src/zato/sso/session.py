@@ -61,7 +61,6 @@ logger = getLogger('zato')
 # ################################################################################################################################
 
 SessionModelTable = SessionModel.__table__
-SessionModelInsert = SessionModelTable.insert
 SessionModelUpdate = SessionModelTable.update
 SessionModelDelete = SessionModelTable.delete
 
@@ -315,6 +314,9 @@ class SessionAPI(object):
         """ Runs a series of checks for incoming request and user.
         """
         # type: (LoginCtx, SSOUser, bool)
+
+        # Move checks to UserChecker in tools
+        zzz
 
         # Input application must have been previously defined
         if not self._check_remote_app_exists(ctx):
