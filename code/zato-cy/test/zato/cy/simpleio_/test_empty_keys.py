@@ -44,11 +44,7 @@ class SkipEmptyTestCase(BaseSIOTestCase):
         self.assertTrue(isinstance(result.definition.skip_empty.skip_input_set, set))
         self.assertEquals(list(result.definition.skip_empty.skip_output_set), ['abc'])
 
-<<<<<<< HEAD
-        # This should be False as we gave a string on input, rather than True
-=======
-        # This should be False because skip_empty_keys deals with responses, not requests ..
->>>>>>> main
+        # This should be False because skip_empty_keys deals with responses, not requests
         self.assertFalse(result.definition.skip_empty.skip_all_empty_input)
 
 # ################################################################################################################################
@@ -85,7 +81,7 @@ class SkipEmptyTestCase(BaseSIOTestCase):
 
 # ################################################################################################################################
 
-    def xtest_raw_skip_bool_input_false(self):
+    def test_raw_skip_bool_input_false(self):
 
         class SimpleIO:
             skip_empty_keys = False

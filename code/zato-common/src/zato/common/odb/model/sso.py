@@ -251,8 +251,6 @@ class _SSOLinkedAuth(Base):
     # Note that if the SSO ODB is installed in a standalone database, this column will not be an FK
     # because there will be no parent sec_base.id column to point to. The Alembic logic to add
     # the FK after the table is created is implemented in cli/create_odb.py:Create.
-    #
-    # auth_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True)
     auth_id = Column(Integer, nullable=True)
 
     # Will be given if auth_id is not provided.
