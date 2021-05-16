@@ -11,7 +11,6 @@ from unittest import main
 
 # Zato
 from base import BaseTest
-from zato.sso import status_code
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -28,14 +27,14 @@ class FlowPRTTestCase(BaseTest):
         })
 
         # .. access the PRT received ..
-        response = self.patch('/zato/sso/flow/prt', {
+        self.patch('/zato/sso/flow/prt', {
             'token': '7xatacm95c89vs6xb3mgpbxsrj',
         })
 
         # .. change the password ..
-        #response = self.delete('/zato/sso/flow/prt', {
+        # response = self.delete('/zato/sso/flow/prt', {
         #    'credential': 'admin3',
-        #})
+        # })
 
         # .. confirm that the new password can be used for logging in.
 
