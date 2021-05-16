@@ -93,7 +93,6 @@ UserModelTableUpdate = UserModelTable.update
 
 # Attributes accessible to both account owner and super-users
 regular_attrs = {
-    'user_id': None,
     'username': None,
     'email': b'',
     'display_name': '',
@@ -106,7 +105,9 @@ regular_attrs = {
 
 # Attributes accessible only to super-users
 super_user_attrs = {
+    'user_id': None,
     'is_active': False,
+    'is_approval_needed': None,
     'is_internal': False,
     'is_super_user': False,
     'is_locked': True,
@@ -634,7 +635,7 @@ class UserAPI(object):
             else:
                 info = func(session, query_criteria, _utcnow())
 
-            # Input UST is invalid for any reason (perhaps has just expired), raise an exception in that case
+            # Input UST is invalid for any reason (perhaps it has just expired), raise an exception in that case
             if not info:
                 raise ValidationError(status_code.auth.not_allowed, True)
 
@@ -643,6 +644,7 @@ class UserAPI(object):
 
                 # Main user entity
                 out = UserEntity()
+                out.is_current_super_user = current_session.is_super_user
 
                 if current_session.is_super_user:
                     attrs = _all_super_user_attrs
@@ -651,13 +653,20 @@ class UserAPI(object):
                     attrs = regular_attrs
 
                 for key in attrs:
-                    value = getattr(info, key)
+
+                    value = getattr(info, key, None)
 
                     if isinstance(value, datetime):
                         value = value.isoformat()
 
+                    # This will be encrypted ..
                     elif key in ('totp_key', 'totp_label'):
                         value = self.decrypt_func(value)
+
+                        # .. do not return our internal constant  if not label has been assign to TOTP.
+                        if key == 'totp_label':
+                            if value == TOTP.default_label:
+                                value = ''
 
                     setattr(out, key, value)
 
@@ -1552,7 +1561,7 @@ class UserAPI(object):
 
                 # Write out all super-user accessible attributes for each output row
                 for name in sorted(_all_super_user_attrs):
-                    value = sql_item[name]
+                    value = sql_item.get(name)
 
                     # Serialize datetime objects to string, if needed
                     if serialize_dt and isinstance(value, datetime):
