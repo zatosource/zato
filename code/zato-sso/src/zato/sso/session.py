@@ -316,7 +316,7 @@ class SessionAPI(object):
         # type: (LoginCtx, SSOUser, bool)
 
         # Move checks to UserChecker in tools
-        zzz
+        #zzz
 
         # Input application must have been previously defined
         if not self._check_remote_app_exists(ctx):
