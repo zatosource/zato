@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from traceback import format_exc
@@ -25,7 +23,14 @@ from zato.common.util import asbool
 from zato.server.service import AsIs, Bool, Int, List, Opaque, SIOElem
 from zato.server.service.internal.sso import BaseService, BaseRESTService, BaseSIO
 from zato.sso import status_code, SearchCtx, SignupCtx, ValidationError
-from zato.sso.user import update
+from zato.sso.user import super_user_attrs, update
+
+# ################################################################################################################################
+
+if 0:
+    from zato.sso import User as UserEntity
+
+    UserEntity = UserEntity
 
 # ################################################################################################################################
 
@@ -148,8 +153,17 @@ class User(BaseRESTService):
         # These will be always needed, no matter which function is used
         attrs += [ctx.input.ust, ctx.input.current_app, ctx.remote_addr]
 
+        # Get the dict describing this user
+        user_entity = func(self.cid, *attrs) # type: UserEntity
+        out = user_entity.to_dict()
+
+        # Make sure regular users do not receive super-user specific details
+        if not user_entity.is_current_super_user:
+            for name in super_user_attrs:
+                out.pop(name, None)
+
         # Func will return a dictionary describing the required user, already taking permissions into account
-        self.response.payload = func(self.cid, *attrs).to_dict()
+        self.response.payload = out
 
 # ################################################################################################################################
 
