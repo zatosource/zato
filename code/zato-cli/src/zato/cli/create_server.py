@@ -1,19 +1,17 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from copy import deepcopy
 
 # Zato
 from zato.cli import common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents, ZatoCommand
-from zato.common.api import CONTENT_TYPE, default_internal_modules
+from zato.common.api import CONTENT_TYPE, default_internal_modules, SSO as CommonSSO
 from zato.common.simpleio_ import simple_io_conf_contents
 
 # ################################################################################################################################
@@ -590,8 +588,8 @@ directories = (
     'config/repo/static',
     'config/repo/static/sso',
     'config/repo/static/sso/email',
-    'config/repo/static/sso/email/en-GB',
-    'config/repo/static/sso/email/en-US',
+    'config/repo/static/sso/email/en_GB',
+    'config/repo/static/sso/email/en_US',
     'config/repo/tls',
     'config/repo/tls/keys-certs',
     'config/repo/tls/ca-certs',
@@ -605,13 +603,13 @@ files = {
     'config/repo/lua/internal/zato.rename_if_exists.lua': lua_zato_rename_if_exists,
     'config/repo/sql.conf': sql_conf_contents,
 
-    'config/repo/static/sso/email/en-GB/signup-confirm.txt': sso_confirm_template,
-    'config/repo/static/sso/email/en-GB/signup-welcome.txt': sso_welcome_template,
-    'config/repo/static/sso/email/en-GB/reset-password-link.txt': sso_password_reset_template,
+    'config/repo/static/sso/email/en_GB/signup-confirm.txt': CommonSSO.EmailTemplate.SignupConfirm,
+    'config/repo/static/sso/email/en_GB/signup-welcome.txt': CommonSSO.EmailTemplate.SignupWelcome,
+    'config/repo/static/sso/email/en_GB/password-reset-link.txt': CommonSSO.EmailTemplate.PasswordResetLink,
 
-    'config/repo/static/sso/email/en-US/signup-confirm.txt': sso_confirm_template,
-    'config/repo/static/sso/email/en-US/signup-welcome.txt': sso_welcome_template,
-    'config/repo/static/sso/email/en-US/reset-password-link.txt': sso_password_reset_template,
+    'config/repo/static/sso/email/en_US/signup-confirm.txt': CommonSSO.EmailTemplate.SignupConfirm,
+    'config/repo/static/sso/email/en_US/signup-welcome.txt': CommonSSO.EmailTemplate.SignupWelcome,
+    'config/repo/static/sso/email/en_US/password-reset-link.txt': CommonSSO.EmailTemplate.PasswordResetLink,
 }
 
 # ################################################################################################################################
