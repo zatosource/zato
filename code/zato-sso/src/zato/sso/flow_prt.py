@@ -17,7 +17,7 @@ from zato.common.json_internal import json_dumps
 from zato.common.odb.model import SSOFlowPRT as FlowPRTModel
 from zato.sso import const, Default
 from zato.sso.odb.query import get_user_by_email, get_user_by_name, get_user_by_name_or_email
-from zato.sso.util import new_prt, new_prt_reset_key, new_user_session_token
+from zato.sso.util import new_prt, new_prt_reset_key, new_user_session_token, UserChecker
 
 # ################################################################################################################################
 
@@ -58,11 +58,13 @@ user_search_by_map = {
 class FlowPRTAPI(object):
     """ Message flow around password-reset tokens (PRT).
     """
-    def __init__(self, server, sso_conf, odb_session_func):
-        # type: (ParallelServer, dict, Callable) -> None
+    def __init__(self, server, sso_conf, odb_session_func, decrypt_func, verify_hash_func):
+        # type: (ParallelServer, dict, Callable, Callable, Callable) -> None
         self.server = server
         self.sso_conf = sso_conf
         self.odb_session_func = odb_session_func
+        self.decrypt_func = decrypt_func
+        self.verify_hash_func = verify_hash_func
         self.is_sqlite = None
 
         # PRT runtime configuration
@@ -82,6 +84,9 @@ class FlowPRTAPI(object):
         user_search_by = prt_config.get('user_search_by')
         user_search_by = user_search_by or Default.prt_user_search_by
         self.user_search_by_func = user_search_by_map[user_search_by]
+
+        # Checks user context when a PRT is being accessed
+        self.user_checker = UserChecker(self.decrypt_func, self.verify_hash_func, self.sso_conf)
 
 # ################################################################################################################################
 
@@ -151,6 +156,9 @@ class FlowPRTAPI(object):
 
     def access(self, ctx, _utcnow=datetime.utcnow, _timedelta=timedelta):
         # type: (SSOCtx, object, object) -> str
+
+        # First, check if the user is still allowed to access the system
+        self.user_checker.check(ctx)
 
         # MySQL does not support UPDATE .. RETURNING so we need to run the select query first
         # to get the PRT's access key and update it in another query.
