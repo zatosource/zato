@@ -13,12 +13,18 @@ from typing import Optional as optional
 # Bunch
 from bunch import Bunch
 
+# ipaddress
+from ipaddress import ip_address
+
 # Zato
 from zato.common.api import GENERIC
 from zato.common.ext.dataclasses import dataclass
 from zato.common.json_internal import dumps
 from zato.common.odb.model import SSOSession as SessionModel
 from zato.sso import const
+
+# Python 2/3 compatibility
+from past.builtins import unicode
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,6 +60,41 @@ class SessionInsertCtx:
     ctx_source: str
     ext_session_id: optional[str]
     interaction_max_len: int
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class LoginCtx(object):
+    """ A set of data about a login request.
+    """
+    __slots__ = ('remote_addr', 'user_agent', 'has_remote_addr', 'has_user_agent', 'input', 'ext_session_id')
+
+    def __init__(self, remote_addr, user_agent, has_remote_addr, has_user_agent, input, ext_session_id=None):
+        # type: (unicode, unicode, bool, bool, dict)
+        self.remote_addr = [ip_address(remote_addr)]
+        self.user_agent = user_agent
+        self.has_remote_addr = has_remote_addr
+        self.has_user_agent = has_user_agent
+        self.input = input
+        self.ext_session_id = ext_session_id
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class VerifyCtx(object):
+    """ Wraps information about a verification request.
+    """
+    __slots__ = ('ust', 'remote_addr', 'input', 'has_remote_addr', 'has_user_agent')
+
+    def __init__(self, ust, remote_addr, current_app, has_remote_addr=None, has_user_agent=None):
+        # type: (unicode, unicode, unicode, bool, bool)
+        self.ust = ust
+        self.remote_addr = remote_addr
+        self.has_remote_addr = has_remote_addr
+        self.has_user_agent = has_user_agent
+        self.input = {
+            'current_app': current_app
+        }
 
 # ################################################################################################################################
 # ################################################################################################################################
