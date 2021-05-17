@@ -466,34 +466,54 @@ max_page_size=100
 # ################################################################################################################################
 
 sso_confirm_template = """
-Hello {data.display_name},
+Hello {data.username},
 
 your account is almost ready - all we need to do is make sure that this is your email.
 
-Use this URL to confirm your address:
+Use this link to confirm your address:
 
 https://example.com/zato/sso/confirm?token={data.token}
 
 If you didn't want to create the account, just delete this email and everything will go back to the way it was.
 
---
+ZATO_FOOTER_MARKER
 Your Zato SSO team.
 """.strip()
 
 # ################################################################################################################################
 
 sso_welcome_template = """
-Hello {data.display_name}!
+Hello {data.username},
 
-Thanks for joining us. Here are a couple great ways to get started:
+thanks for joining us. Here are a couple great ways to get started:
 
 * https://example.com/link/1
 * https://example.com/link/2
 * https://example.com/link/3
 
---
+ZATO_FOOTER_MARKER
 Your Zato SSO team.
 """.strip()
+
+sso_password_reset_template = """
+Hello {data.username},
+
+a password reset was recently requested on your {site_name} account. If this was you, please click the link below to update your password.
+
+This link will expire in {expiration_time_hours} hours.
+
+If you do not want to reset your password, please ignore the message and the password will not be changed.
+
+ZATO_FOOTER_MARKER
+Your Zato SSO team.
+""".strip()
+
+# ################################################################################################################################
+
+# We need to do it because otherwise IDEs may replace '-- ' with '--' (stripping the whitespace)
+sso_confirm_template = sso_confirm_template.replace('ZATO_FOOTER_MARKER', '-- ')
+sso_welcome_template = sso_welcome_template.replace('ZATO_FOOTER_MARKER', '-- ')
+sso_password_reset_template = sso_password_reset_template.replace('ZATO_FOOTER_MARKER', '-- ')
 
 # ################################################################################################################################
 
@@ -568,7 +588,10 @@ directories = (
     'config/repo/sftp',
     'config/repo/sftp/channel',
     'config/repo/static',
-    'config/repo/static/email',
+    'config/repo/static/sso',
+    'config/repo/static/sso/email',
+    'config/repo/static/sso/email/en-GB',
+    'config/repo/static/sso/email/en-US',
     'config/repo/tls',
     'config/repo/tls/keys-certs',
     'config/repo/tls/ca-certs',
@@ -581,8 +604,14 @@ files = {
     'config/repo/service-sources.txt': service_sources_contents,
     'config/repo/lua/internal/zato.rename_if_exists.lua': lua_zato_rename_if_exists,
     'config/repo/sql.conf': sql_conf_contents,
-    'config/repo/static/email/sso-confirm.txt': sso_confirm_template,
-    'config/repo/static/email/sso-welcome.txt': sso_welcome_template,
+
+    'config/repo/static/sso/email/en-GB/signup-confirm.txt': sso_confirm_template,
+    'config/repo/static/sso/email/en-GB/signup-welcome.txt': sso_welcome_template,
+    'config/repo/static/sso/email/en-GB/reset-password-link.txt': sso_password_reset_template,
+
+    'config/repo/static/sso/email/en-US/signup-confirm.txt': sso_confirm_template,
+    'config/repo/static/sso/email/en-US/signup-welcome.txt': sso_welcome_template,
+    'config/repo/static/sso/email/en-US/reset-password-link.txt': sso_password_reset_template,
 }
 
 # ################################################################################################################################

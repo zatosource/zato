@@ -88,13 +88,15 @@ class Create(ZatoCommand):
             alembic_ctx = MigrationContext.configure(engine.connect())
             alembic_ops = Operations(alembic_ctx)
 
-            alembic_ops.create_foreign_key(
-                'fk_sso_linked_base_id',
-                'zato_sso_linked_auth',
-                'sec_base',
-                ['auth_id'], ['id'],
-                ondelete='CASCADE',
-            )
+            # There is no support for FKs during ALTER TABLE statements in SQLite.
+            if args.odb_type != 'sqlite':
+                alembic_ops.create_foreign_key(
+                    'fk_sso_linked_base_id',
+                    'zato_sso_linked_auth',
+                    'sec_base',
+                    ['auth_id'], ['id'],
+                    ondelete='CASCADE',
+                )
 
             if show_output:
                 if self.verbose:
