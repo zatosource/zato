@@ -11,7 +11,6 @@ import os
 from contextlib import closing
 from datetime import datetime, timedelta
 from logging import getLogger
-from string import Template
 
 # Zato
 from zato.common import GENERIC
@@ -96,8 +95,14 @@ class FlowPRTAPI(object):
         # Checks user context when a PRT is being accessed
         self.user_checker = UserChecker(self.decrypt_func, self.verify_hash_func, self.sso_conf)
 
+        # Name of the site, e.g. the environemnt the SSO servers in
+        self.site_name = self.sso_conf.main.get('site_name') or 'site'
+
         # This is constructed in self.post_configure
         self.template_base_path = 'initial-flow-prt-api'
+
+        # Convert minutes to hours as it is hours that are sent in notification emails
+        self.expiration_time_hours = int(self.sso_conf.prt.valid_for) // 60
 
         # Email templates are cached here. Key = language code, value = template string.
         self.email_template_cache = {
@@ -161,7 +166,7 @@ class FlowPRTAPI(object):
         pref_lang = Default.prt_locale
 
         # Try to read the template from already cached ones.
-        template = self.email_template_cache.get(pref_lang)
+        template = self.email_template_cache.get(pref_lang) # type: Template
 
         # We have not seen this language before so we need to cache it first.
         if not template:
@@ -173,7 +178,6 @@ class FlowPRTAPI(object):
             if os.path.exists(template_path):
                 with open(template_path) as f:
                     template = f.read()
-                    template = Template(template)
 
             # .. otherwise, indicate that the locale was not recognised.
             else:
@@ -188,10 +192,20 @@ class FlowPRTAPI(object):
             logger.warn('Ignoring an unrecognised template for `%s` (%s)', user.user_id, pref_lang)
             return
 
+        # Prepare the details for the template ..
+        template_params = {
+            'username': user.username,
+            'site_name': self.site_name,
+            'token': prt,
+            'expiration_time_hours': self.expiration_time_hours
+        }
+
+        # .. fill it in ..
+        result = template.format(**template_params)
 
         print()
         print(111, user)
-        print(222, template)
+        print(222, result)
         print()
 
         if not self.sso_conf.main.smtp_conn:
