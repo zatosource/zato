@@ -29,7 +29,7 @@ from zato.sso.odb.query import get_session_by_ext_id, get_session_by_ust, get_se
      get_user_by_name
 from zato.sso.common import insert_sso_session, LoginCtx, SessionInsertCtx, \
      update_session_state_change_list as _update_session_state_change_list, VerifyCtx
-from zato.sso.util import new_user_session_token, set_password, validate_password
+from zato.sso.util import new_user_session_token, set_password, UserChecker, validate_password
 
 # ################################################################################################################################
 
@@ -108,6 +108,7 @@ class SessionAPI(object):
         self.odb_session_func = None
         self.is_sqlite = None
         self.interaction_max_len = 100
+        self.user_checker = UserChecker(self.decrypt_func, self.verify_hash_func, self.sso_conf)
 
 # ################################################################################################################################
 
@@ -233,7 +234,7 @@ class SessionAPI(object):
 
                     # Check credentials first to make sure that attackers do not learn about any sort
                     # of metadata (e.g. is the account locked) if they do not know username and password.
-                    if not self._check_credentials(ctx, user.password if user else _dummy_password):
+                    if not self.user_checker.check_credentials(ctx, user.password if user else _dummy_password):
                         raise ValidationError(status_code.auth.not_allowed, False)
 
             # Check input TOTP key if two-factor authentication is enabled ..
@@ -254,14 +255,14 @@ class SessionAPI(object):
             if not skip_sec:
 
                 # It must be possible to log into the application requested (CRM above)
-                self._check_login_to_app_allowed(ctx)
+                self.user_checker.check_login_to_app_allowed(ctx)
 
                 # Common auth checks
-                self._run_user_checks(ctx, user)
+                self.user_checker.check(ctx, user)
 
                 # If applicable, password may be about to expire (this must be after checking that it has not already).
                 # Note that it may return a specific status to return (warning or error)
-                _about_status = self._check_password_about_to_expire(user)
+                _about_status = self.user_checker.check_password_about_to_expire(user)
                 if _about_status is not True:
                     if _about_status == status_code.warning:
                         has_w_about_to_exp = True
@@ -269,7 +270,7 @@ class SessionAPI(object):
                         raise ValidationError(status_code.password.e_about_to_exp, False, _about_status)
 
                 # If password is marked as requiring a change upon next login but a new one was not sent, reject the request.
-                self._check_must_send_new_password(ctx, user)
+                self.user_checker.check_must_send_new_password(ctx, user)
 
             # If new password is required, we need to validate and save it before session can be created.
             # Note that at this point we already know that the old password was correct so it is safe to set the new one
@@ -411,7 +412,7 @@ class SessionAPI(object):
         else:
 
             # Common auth checks
-            self._run_user_checks(ctx, sso_info, check_if_password_expired)
+            self.user_checker.check(ctx, sso_info, check_if_password_expired)
 
             # Everything is validated, we can renew the session, if told to.
             if renew:
