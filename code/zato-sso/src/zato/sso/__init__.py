@@ -24,7 +24,7 @@ class Default:
     prt_user_search_by = 'username'
 
     # User notifications are sent in this language by default
-    prt_locale = 'en-GB'
+    prt_locale = 'en_GB'
 
 # ################################################################################################################################
 

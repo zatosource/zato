@@ -7,12 +7,15 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from contextlib import closing
 from datetime import datetime, timedelta
 from logging import getLogger
+from string import Template
 
 # Zato
 from zato.common import GENERIC
+from zato.common.api import SSO as CommonSSO
 from zato.common.json_internal import json_dumps
 from zato.common.odb.model import SSOFlowPRT as FlowPRTModel
 from zato.sso import const, Default
@@ -41,6 +44,11 @@ logger = getLogger('zato')
 
 FlowPRTModelTable = FlowPRTModel.__table__
 FlowPRTModelInsert = FlowPRTModelTable.insert
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_unrecognised_locale = object()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -87,6 +95,13 @@ class FlowPRTAPI(object):
 
         # Checks user context when a PRT is being accessed
         self.user_checker = UserChecker(self.decrypt_func, self.verify_hash_func, self.sso_conf)
+
+        # This is constructed in self.post_configure
+        self.template_base_path = 'initial-flow-prt-api'
+
+        # Email templates are cached here. Key = language code, value = template string.
+        self.email_template_cache = {
+        }
 
 # ################################################################################################################################
 
@@ -140,9 +155,43 @@ class FlowPRTAPI(object):
 
     def send_notification(self, user, prt):
         # type: (SSOUser, str)
+
+        # When user preferences, including the preferred language, are added,
+        # we can look it up here.
+        pref_lang = Default.prt_locale
+
+        # Try to read the template from already cached ones.
+        template = self.email_template_cache.get(pref_lang)
+
+        # We have not seen this language before so we need to cache it first.
+        if not template:
+
+            # Construct a full path to the template ..
+            template_path = os.path.join(self.template_base_path, pref_lang, CommonSSO.EmailTemplate.PasswordResetLink)
+
+            # .. if the path exists, read the template in ..
+            if os.path.exists(template_path):
+                with open(template_path) as f:
+                    template = f.read()
+                    template = Template(template)
+
+            # .. otherwise, indicate that the locale was not recognised.
+            else:
+                logger.warn('Unrecognised language `%s` (e-mail template not found at `%s`)', pref_lang, template_path)
+                template = _unrecognised_locale
+
+            # Cache for later use
+            self.email_template_cache[pref_lang] = template
+
+        # We have a template but we still need to reject any previously cached unrecognised ones
+        if template is _unrecognised_locale:
+            logger.warn('Ignoring an unrecognised template for `%s` (%s)', user.user_id, pref_lang)
+            return
+
+
         print()
         print(111, user)
-        print(222, self.sso_conf.main.smtp_conn)
+        print(222, template)
         print()
 
         if not self.sso_conf.main.smtp_conn:
@@ -158,13 +207,14 @@ class FlowPRTAPI(object):
         # type: (SSOCtx, object, object) -> str
 
         # First, check if the user is still allowed to access the system
-        self.user_checker.check(ctx)
+        #self.user_checker.check(ctx)
 
         # MySQL does not support UPDATE .. RETURNING so we need to run the select query first
         # to get the PRT's access key and update it in another query.
-        print()
-        print(111, ctx)
-        print()
+        #print()
+        #print(111, ctx)
+        #print()
+        pass
 
 # ################################################################################################################################
 
@@ -172,6 +222,9 @@ class FlowPRTAPI(object):
         # type: (Callable, bool) -> None
         self.odb_session_func = func
         self.is_sqlite = is_sqlite
+
+        # Base of the path to filesystem templates
+        self.template_base_path = os.path.join(self.server.static_config.base_dir, 'sso', 'email')
 
 # ################################################################################################################################
 # ################################################################################################################################
