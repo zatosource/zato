@@ -81,6 +81,10 @@ class Create(ZatoCommand):
 
     def execute(self, args, show_output=True, admin_password=None, needs_admin_created_flag=False):
 
+        # We need it here to make Django accept PyMySQL as if it was MySQLdb.
+        import pymysql
+        pymysql.install_as_MySQLdb()
+
         # stdlib
         import os, json
         from random import getrandbits
