@@ -464,15 +464,15 @@ max_page_size=100
 # ################################################################################################################################
 
 sso_confirm_template = """
-Hello {data.username},
+Hello {username},
 
 your account is almost ready - all we need to do is make sure that this is your email.
 
 Use this link to confirm your address:
 
-https://example.com/zato/sso/confirm?token={data.token}
+https://example.com/signup-confirm/{token}
 
-If you didn't want to create the account, just delete this email and everything will go back to the way it was.
+If you did not want to create the account, just delete this email and everything will go back to the way it was.
 
 ZATO_FOOTER_MARKER
 Your Zato SSO team.
@@ -481,7 +481,7 @@ Your Zato SSO team.
 # ################################################################################################################################
 
 sso_welcome_template = """
-Hello {data.username},
+Hello {username},
 
 thanks for joining us. Here are a couple great ways to get started:
 
@@ -494,9 +494,11 @@ Your Zato SSO team.
 """.strip()
 
 sso_password_reset_template = """
-Hello {data.username},
+Hello {username},
 
 a password reset was recently requested on your {site_name} account. If this was you, please click the link below to update your password.
+
+https://example.com/reset-password/{token}
 
 This link will expire in {expiration_time_hours} hours.
 
