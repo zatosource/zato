@@ -44,7 +44,7 @@ class SSOAPI(object):
             new_user_id_func)
 
         # Management of Password reset tokens (PRT)
-        self.flow_prt = FlowPRTAPI(server, sso_conf, odb_session_func)
+        self.flow_prt = FlowPRTAPI(server, sso_conf, odb_session_func, decrypt_func, verify_hash_func)
 
     def post_configure(self, func, is_sqlite):
         self.odb_session_func = func

@@ -36,7 +36,10 @@ from zato.sso.common import LoginCtx
 # ################################################################################################################################
 
 if 0:
+    from typing import Callable
     from zato.common.odb.model import SSOUser
+
+    Callable = Callable
     SSOUser = SSOUser
 
 # ################################################################################################################################
@@ -271,6 +274,7 @@ class UserChecker:
     """ Checks whether runtime information about the user making a request is valid.
     """
     def __init__(self, decrypt_func, verify_hash_func, sso_conf):
+        # type: (Callable, Callable, dict)
         self.decrypt_func = decrypt_func
         self.verify_hash_func = verify_hash_func
         self.sso_conf = sso_conf
