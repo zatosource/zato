@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from logging import getLogger
 
 # Zato
-from zato.common import GENERIC
+from zato.common import GENERIC, SMTPMessage
 from zato.common.api import SSO as CommonSSO
 from zato.common.json_internal import json_dumps
 from zato.common.odb.model import SSOFlowPRT as FlowPRTModel
@@ -27,10 +27,12 @@ if 0:
     from typing import Callable
     from zato.common.odb.model import SSOUser
     from zato.server.base.parallel import ParallelServer
+    from zato.server.connection.email import SMTPConnection
     from zato.sso.common import SSOCtx
 
     Callable = Callable
     ParallelServer = ParallelServer
+    SMTPConnection = SMTPConnection
     SSOCtx = SSOCtx
     SSOUser = SSOUser
 
@@ -104,6 +106,12 @@ class FlowPRTAPI(object):
         # Convert minutes to hours as it is hours that are sent in notification emails
         self.expiration_time_hours = int(self.sso_conf.prt.valid_for) // 60
 
+        # Name of an outgoing SMTP connections to send notifications through
+        self.smtp_conn_name = sso_conf.main.smtp_conn # type: str
+
+        # From who the SMTP messages will be sent
+        self.email_from = sso_conf.prt.email_from
+
         # Email templates are cached here. Key = language code, value = template string.
         self.email_template_cache = {
         }
@@ -161,12 +169,25 @@ class FlowPRTAPI(object):
     def send_notification(self, user, prt):
         # type: (SSOUser, str)
 
+        if not self.smtp_conn_name:
+            msg = 'Could not notify user `%s`, SSO SMTP connection not configured in sso.conf (main.smtp_conn)'
+            logger.warn(msg, user.user_id)
+            return
+
+        # Decrypt email for later user
+        user_email = self.decrypt_func(user.email)
+
+        # Make sure an email is associated with the user
+        if not user_email:
+            logger.warn('Could not notify user `%s` (no email found)', user.user_id)
+            return
+
         # When user preferences, including the preferred language, are added,
         # we can look it up here.
         pref_lang = Default.prt_locale
 
         # Try to read the template from already cached ones.
-        template = self.email_template_cache.get(pref_lang) # type: Template
+        template = self.email_template_cache.get(pref_lang)
 
         # We have not seen this language before so we need to cache it first.
         if not template:
@@ -201,19 +222,25 @@ class FlowPRTAPI(object):
         }
 
         # .. fill it in ..
-        result = template.format(**template_params)
+        msg_body = template.format(**template_params)
 
-        print()
-        print(111, user)
-        print(222, result)
-        print()
+        # .. get a handle to an SMTP connection ..
+        smtp_conn = self.server.worker_store.email_smtp_api.get(self.smtp_conn_name).conn # type: SMTPConnection
 
-        if not self.sso_conf.main.smtp_conn:
-            msg = 'Could not notify user `%s`, SSO SMTP connection not configured in sso.conf (main.smtp_conn)'
-            logger.warn(msg, user.user_id)
-            return
-        else:
-            zzz
+        # .. create a new message ..
+        msg = SMTPMessage()
+        msg.is_html = False
+
+        # .. provide metadata ..
+        msg.subject = self.sso_conf.prt.get('email_title_' + pref_lang) or 'Password reset'
+        msg.to = user_email
+        msg.from_ = self.email_from
+
+        # .. attach payload ..
+        msg.body = msg_body
+
+        # .. and send it to the user.
+        smtp_conn.send(msg)
 
 # ################################################################################################################################
 

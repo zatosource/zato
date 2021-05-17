@@ -380,6 +380,12 @@ inform_if_not_approved=True
 [prt]
 valid_for=1440 # In minutes = 1 day
 password_change_session_duration=1800 # In seconds = 30 minutes
+inform_if_user_not_found=False
+user_search_by=username
+is_multi_access_allowed=True
+email_title_en_GB=Password reset
+email_title_en_US=Password reset
+email_from=hello@example.com
 
 [user_address_list]
 
@@ -502,7 +508,7 @@ https://example.com/reset-password/{token}
 
 This link will expire in {expiration_time_hours} hours.
 
-If you do not want to reset your password, please ignore the message and the password will not be changed.
+If you do not want to reset your password, please ignore this message and the password will not be changed.
 
 ZATO_FOOTER_MARKER
 Your Zato SSO team.
