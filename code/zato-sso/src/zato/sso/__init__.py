@@ -23,6 +23,9 @@ class Default:
     prt_password_change_session_duration=1800 # In seconds = 30 minutes
     prt_user_search_by = 'username'
 
+    # User notifications are sent in this language by default
+    prt_locale = 'en-GB'
+
 # ################################################################################################################################
 
 class status_code:
