@@ -8,14 +8,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from traceback import format_exc
-from uuid import uuid4
 
 # Zato
-from zato.common.api import GENERIC
-from zato.common.json_internal import loads
 from zato.common.util.api import spawn_greenlet
-from zato.server.service.internal.sso import BaseRESTService, BaseSIO
-from zato.sso import status_code, ValidationError
+from zato.server.service.internal.sso import BaseRESTService
 
 # ################################################################################################################################
 
