@@ -277,19 +277,19 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def _check_credentials(self, ctx, user_password):
+    def check_credentials(self, ctx, user_password):
         # type: (LoginCtx) -> bool
         return check_credentials(self.decrypt_func, self.verify_hash_func, user_password, ctx.input['password'])
 
 # ################################################################################################################################
 
-    def _check_remote_app_exists(self, ctx):
+    def check_remote_app_exists(self, ctx):
         # type: (LoginCtx) -> bool
         return check_remote_app_exists(ctx.input['current_app'], self.sso_conf.apps.all, logger)
 
 # ################################################################################################################################
 
-    def _check_login_to_app_allowed(self, ctx):
+    def check_login_to_app_allowed(self, ctx):
         # type: (LoginCtx) -> bool
         if ctx.input['current_app'] not in self.sso_conf.apps.login_allowed:
             if self.sso_conf.apps.inform_if_app_invalid:
@@ -301,7 +301,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def _check_remote_ip_allowed(self, ctx, user, _invalid=object()):
+    def check_remote_ip_allowed(self, ctx, user, _invalid=object()):
         # type: (LoginCtx, SSOUser) -> bool
 
         ip_allowed = self.sso_conf.user_address_list.get(user.username, _invalid)
@@ -344,7 +344,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def _check_user_not_locked(self, user):
+    def check_user_not_locked(self, user):
         # type: (SSOUser) -> bool
 
         if user.is_locked:
@@ -355,7 +355,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def _check_signup_status(self, user):
+    def check_signup_status(self, user):
         # type: (SSOUser) -> bool
 
         if user.sign_up_status != const.signup_status.final:
@@ -366,7 +366,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def _check_is_approved(self, user):
+    def check_is_approved(self, user):
         # type: (SSOUser) -> bool
 
         if not user.approval_status == const.approval_status.approved:
@@ -377,7 +377,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def _check_password_expired(self, user, _now=datetime.utcnow):
+    def check_password_expired(self, user, _now=datetime.utcnow):
         # type: (SSOUser, datetime) -> bool
 
         if _now() > user.password_expiry:
@@ -388,7 +388,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def _check_password_about_to_expire(self, user, _now=datetime.utcnow, _timedelta=timedelta):
+    def check_password_about_to_expire(self, user, _now=datetime.utcnow, _timedelta=timedelta):
         # type: (SSOUser, datetime, timedelta) -> object
 
         # Find time after which the password is considered to be about to expire
@@ -411,7 +411,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def _check_must_send_new_password(self, ctx, user):
+    def check_must_send_new_password(self, ctx, user):
         # type: (LoginCtx, SSOUser) -> bool
 
         if user.password_must_change and not ctx.input.get('new_password'):
@@ -422,7 +422,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def _check_login_metadata_allowed(self, ctx):
+    def check_login_metadata_allowed(self, ctx):
         # type: (LoginCtx) -> bool
 
         if ctx.has_remote_addr or ctx.has_user_agent:
@@ -433,7 +433,7 @@ class UserChecker:
 
 # ################################################################################################################################
 
-    def _run_user_checks(self, ctx, user, check_if_password_expired=True):
+    def check(self, ctx, user, check_if_password_expired=True):
         """ Runs a series of checks for incoming request and user.
         """
         # type: (LoginCtx, SSOUser, bool)
@@ -441,23 +441,23 @@ class UserChecker:
         # Move checks to UserChecker in tools
 
         # Input application must have been previously defined
-        if not self._check_remote_app_exists(ctx):
+        if not self.check_remote_app_exists(ctx):
             raise ValidationError(status_code.auth.not_allowed, True)
 
         # If applicable, requests must originate in a white-listed IP address
-        if not self._check_remote_ip_allowed(ctx, user):
+        if not self.check_remote_ip_allowed(ctx, user):
             raise ValidationError(status_code.auth.not_allowed, True)
 
         # User must not have been locked out of the auth system
-        if not self._check_user_not_locked(user):
+        if not self.check_user_not_locked(user):
             raise ValidationError(status_code.auth.not_allowed, True)
 
         # If applicable, user must be fully signed up, including account creation's confirmation
-        if not self._check_signup_status(user):
+        if not self.check_signup_status(user):
             raise ValidationError(status_code.auth.not_allowed, True)
 
         # If applicable, user must be approved by a super-user
-        if not self._check_is_approved(user):
+        if not self.check_is_approved(user):
             raise ValidationError(status_code.auth.not_allowed, True)
 
         # Password must not have expired, but only if input flag tells us to,
@@ -466,11 +466,11 @@ class UserChecker:
         # we cannot reject it on the basis that it is expired - no one would be able
         # to change expired passwords then.
         if check_if_password_expired:
-            if not self._check_password_expired(user):
+            if not self.check_password_expired(user):
                 raise ValidationError(status_code.auth.not_allowed, True)
 
         # Current application must be allowed to send login metadata
-        if not self._check_login_metadata_allowed(ctx):
+        if not self.check_login_metadata_allowed(ctx):
             raise ValidationError(status_code.auth.not_allowed, True)
 
 # ################################################################################################################################
