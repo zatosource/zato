@@ -86,7 +86,8 @@ class OnUpdateUserConf(Service):
 
         with self.lock('{}-{}-{}'.format(self.name, self.server.name, input.file_name)):
             with open(os.path.join(self.server.user_conf_location, input.file_name), 'wb') as f:
-                f.write(input.data)
+                if isinstance(input.data, str):
+                    f.write(input.data.encode('utf8'))
 
             conf = get_config(self.server.user_conf_location, input.file_name)
             entry = self.server.user_config.setdefault(get_user_config_name(input.file_name), Bunch())
