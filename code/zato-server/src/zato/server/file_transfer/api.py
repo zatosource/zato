@@ -111,6 +111,9 @@ class FileTransferAPI(object):
         # Caches parser objects by their name
         self._parser_cache = {}
 
+        # Information about what local paths should be ignored, i.e. we should not send events about them.
+        self._local_ignored = set()
+
         if is_linux:
 
             # inotify_simple
@@ -586,3 +589,25 @@ class FileTransferAPI(object):
         self._run_snapshot_observer(observer, max_iters)
 
 # ################################################################################################################################
+
+    def add_local_ignored_path(self, path):
+        # type: (str) -> None
+        print()
+        print(111, path)
+        print()
+        self._local_ignored.add(path)
+
+# ################################################################################################################################
+
+    def remove_local_ignored_path(self, path):
+        # type: (str) -> None
+        print()
+        print(222, path)
+        print()
+        try:
+            self._local_ignored.remove(path)
+        except KeyError:
+            logger.info('Path `%s` not among `%s`', path, sorted(self._local_ignored))
+
+# ################################################################################################################################
+

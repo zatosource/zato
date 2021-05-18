@@ -372,10 +372,15 @@ def get_config(repo_location, config_name, bunchified=True, needs_user_config=Tr
     """ Returns the configuration object. Will load additional user-defined config files, if any are available.
     """
     # type: (str, str, bool, bool, object, object) -> Bunch
-    conf_location = os.path.join(repo_location, config_name)
-    conf = ConfigObj(conf_location, zato_crypto_manager=crypto_manager, zato_secrets_conf=secrets_conf)
-
-    return _get_config(conf, bunchified, needs_user_config, repo_location)
+    try:
+        conf_location = os.path.join(repo_location, config_name)
+        conf = ConfigObj(conf_location, zato_crypto_manager=crypto_manager, zato_secrets_conf=secrets_conf)
+        result = _get_config(conf, bunchified, needs_user_config, repo_location)
+    except Exception:
+        logger.warn('Error while reading %s from %s; e:`%s`', config_name, repo_location, format_exc())
+        result = Bunch()
+    finally:
+        return result
 
 # ################################################################################################################################
 
