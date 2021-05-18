@@ -44,13 +44,24 @@ singleton = object()
 class FileTransferEvent(object):
     """ Encapsulates information about a file picked up from file system.
     """
-    __slots__ = ('base_dir', 'file_name', 'full_path', 'channel_name', 'ts_utc', 'raw_data', 'data', 'has_raw_data', 'has_data',
-        'parse_error')
+    __slots__ = ('base_dir', 'relative_dir', 'file_name', 'full_path', 'channel_name', 'ts_utc', 'raw_data', 'data',
+        'has_raw_data', 'has_data', 'parse_error')
 
     def __init__(self):
+
+        # This is the directory where the file is located
         self.base_dir = None      # type: str
+
+        # This is the directory of the file relative to the server's base directory.
+        # It will stay None if self.full_path is an absolute directory.
+        self.relative_dir = None  # type: str
+
+        # This is the file name only
         self.file_name = None     # type: str
+
+        # Full path to the file
         self.full_path = None     # type: str
+
         self.channel_name = None  # type: str
         self.ts_utc = None        # type: str
         self.raw_data = ''        # type: str
@@ -83,6 +94,16 @@ class FileTransferEventHandler:
         # type: (PathCreatedEvent, BaseObserver, BaseSnapshotMaker) -> None
 
         try:
+
+            import os
+
+            print()
+            for k, v in sorted(self.config.items()):
+                print('QQQ-1', k, v)
+            print('QQQ-2', observer)
+            print('QQQ-3', snapshot_maker)
+            print('QQQ-4', os.stat(transfer_event.src_path).st_ino)
+            print()
 
             # Ignore the event if it points to the directory itself,
             # as inotify will send CLOSE_WRITE when it is not a creation of a file

@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 import csv
 import os
+from pathlib import PurePath
 
 # Bunch
 from bunch import Bunch
@@ -39,6 +38,7 @@ class _Updater(Service):
             'action': self.pickup_action.value,
             'msg_type': MESSAGE_TYPE.TO_PARALLEL_ALL,
             'file_name': self.request.raw_request['file_name'],
+            'full_path': self.request.raw_request['full_path'],
 
             # We use raw_data to make sure we always have access
             # to what was saved in the file, even if it is not parsed.
@@ -75,24 +75,59 @@ class UpdateStatic(_Updater):
 
 # ################################################################################################################################
 
+zzz
+
 class OnUpdateUserConf(Service):
     """ Updates user configuration in memory and file system.
     """
     class SimpleIO(object):
-        input_required = ('data', 'file_name')
+        input_required = ('data', 'file_name', 'full_path')
 
     def handle(self):
+
+        # For later use
         input = self.request.input
 
-        with self.lock('{}-{}-{}'.format(self.name, self.server.name, input.file_name)):
-            with open(os.path.join(self.server.user_conf_location, input.file_name), 'wb') as f:
-                if isinstance(input.data, str):
-                    f.write(input.data.encode('utf8'))
+        #
+        # We have a file on input and we want to save it. However, we cannot do it under the input file_name
+        # because that would trigger hot-deployment again leading to an infinite loop
+        # of hot-deployment of the same file over and over again.
+        #
+        # This is why we first (1) add the file name to a skiplist of ignored files,
+        # so that our own local notifier does not want to hot-deploy it,
+        # then (2) we save the file, and then (3) we remove the name from the ignore ones.
+        #
 
-            conf = get_config(self.server.user_conf_location, input.file_name)
-            entry = self.server.user_config.setdefault(get_user_config_name(input.file_name), Bunch())
-            entry.clear()
-            entry.update(conf)
+        #
+        # Step (1) - Add the file name to ignored ones
+        #
+        self.server.worker_store.file_transfer_api.add_local_ignored_path(input.full_path)
+
+        zzz
+
+        return
+
+        #
+        # Step (2) - Save the file
+        #
+        try:
+            with self.lock('{}-{}-{}'.format(self.name, self.server.name, input.file_name)):
+                with open(os.path.join(self.server.user_conf_location, input.file_name), 'wb') as f:
+                    if isinstance(input.data, str):
+                        f.write(input.data.encode('utf8'))
+
+                # .. the file is saved so we can update our in-RAM mirror of it ..
+
+                conf = get_config(self.server.user_conf_location, input.file_name)
+                entry = self.server.user_config.setdefault(get_user_config_name(input.file_name), Bunch())
+                entry.clear()
+                entry.update(conf)
+        #
+        # Step (3) - Remove the file name from the ignored ones
+        #
+        finally:
+            # No matter what happened in step (2), we always remove the file from the ignored list.
+            self.server.worker_store.file_transfer_api.remove_local_ignored_path(input.file_name)
 
 # ################################################################################################################################
 

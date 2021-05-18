@@ -2014,14 +2014,20 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_broker_msg_HOT_DEPLOY_CREATE_STATIC(self, msg, *args):
-        return self.on_broker_msg_hot_deploy(msg, 'zato.pickup.on-update-static',
-            {'data': msg.data, 'file_name': msg.file_name}, 'CREATE_STATIC', *args)
+        return self.on_broker_msg_hot_deploy(msg, 'zato.pickup.on-update-static', {
+            'data': msg.data,
+            'file_name': msg.file_name,
+            'full_path': msg.full_path
+        }, 'CREATE_STATIC', *args)
 
 # ################################################################################################################################
 
     def on_broker_msg_HOT_DEPLOY_CREATE_USER_CONF(self, msg, *args):
-        return self.on_broker_msg_hot_deploy(msg, 'zato.pickup.on-update-user-conf',
-            {'data': msg.data, 'file_name': msg.file_name}, 'CREATE_USER_CONF', *args)
+        return self.on_broker_msg_hot_deploy(msg, 'zato.pickup.on-update-user-conf', {
+            'data': msg.data,
+            'file_name': msg.file_name,
+            'full_path': msg.full_path
+        }, 'CREATE_USER_CONF', *args)
 
 # ################################################################################################################################
 
