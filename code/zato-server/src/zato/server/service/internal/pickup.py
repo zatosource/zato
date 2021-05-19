@@ -18,9 +18,21 @@ from bunch import Bunch
 
 # Zato
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE
+from zato.common.typing_ import dataclass, from_dict
 from zato.common.util.api import get_config, get_user_config_name
 from zato.server.service import Service
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass
+class UpdateCtx:
+    data: str
+    full_path: str
+    file_name: str
+    relative_dir: str
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _Logger(Service):
@@ -29,6 +41,35 @@ class _Logger(Service):
     def handle(self):
         self.logger.info('%s data received: `%s`', self.pickup_data_type, self.request.raw_request)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class LogJSON(_Logger):
+    """ Picks up JSON files and logs their contents.
+    """
+    pickup_data_type = 'JSON'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class LogXML(_Logger):
+    """ Picks up XML files and logs their contents.
+    """
+    pickup_data_type = 'XML'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class LogCSV(Service):
+    """ Picks up CSV files and logs their contents.
+    """
+    def handle(self):
+        with open(self.request.raw_request['full_path'], 'r') as f:
+            reader = csv.reader(f)
+            for idx, line in enumerate(reader, 1):
+                self.logger.info('CSV line #%s `%s`', idx, line)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _Updater(Service):
@@ -48,27 +89,8 @@ class _Updater(Service):
             'data': self.request.raw_request['raw_data']
         })
 
+
 # ################################################################################################################################
-
-class OnUpdateStatic(Service):
-    """ Updates a static resource in memory and file system.
-    """
-    class SimpleIO(object):
-        input_required = ('data', 'file_name')
-
-    def handle(self):
-
-        input = self.request.input
-        static_config = self.server.static_config
-
-        with self.lock('{}-{}-{}'.format(self.name, self.server.name, input.file_name)):
-            with open(os.path.join(static_config.base_dir, input.file_name), 'wb') as f:
-                if input.data:
-                    data = input.data if isinstance(input.data, bytes) else input.data.encode('utf8')
-                    f.write(data)
-
-        static_config.read_file(input.file_name)
-
 # ################################################################################################################################
 
 class UpdateStatic(_Updater):
@@ -77,8 +99,17 @@ class UpdateStatic(_Updater):
     pickup_action = HOT_DEPLOY.CREATE_STATIC
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-class OnUpdateUserConf(Service):
+class UpdateUserConf(_Updater):
+    """ Picks up user-defined config files and distributes them to all server processes.
+    """
+    pickup_action = HOT_DEPLOY.CREATE_USER_CONF
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _OnUpdate(Service):
     """ Updates user configuration in memory and file system.
     """
     class SimpleIO(object):
@@ -87,7 +118,7 @@ class OnUpdateUserConf(Service):
     def handle(self):
 
         # For later use
-        input = self.request.input
+        ctx = from_dict(UpdateCtx, self.request.input) # type: UpdateCtx
 
         #
         # First, we need to combine relative_dir with our own server's root directory.
@@ -108,13 +139,13 @@ class OnUpdateUserConf(Service):
         #
 
         # Use tue full path from input ..
-        if not input.relative_dir:
-            file_path = input.file_path
+        if not ctx.relative_dir:
+            file_path = ctx.file_path
 
         # Build relative_dir from its constituents
         else:
 
-            relative_dir = PurePath(input.relative_dir)
+            relative_dir = PurePath(ctx.relative_dir)
             relative_dir_parts = relative_dir.parts
 
             #
@@ -126,9 +157,12 @@ class OnUpdateUserConf(Service):
             #
             elems = []
             elems.extend(relative_dir_parts)
-            elems.append(input.file_name)
+            elems.append(ctx.file_name)
 
             file_path = os.path.join(self.server.base_dir, *elems)
+
+        # Assign the newly constructed file_path to our input for later use
+        ctx.file_path = file_path
 
         #
         # We have a file on input and we want to save it. However, we cannot do it under the input file_name
@@ -145,28 +179,27 @@ class OnUpdateUserConf(Service):
             #
             # Step (1) - Add the file name to ignored ones
             #
-            self.server.worker_store.file_transfer_api.add_local_ignored_path(file_path)
+            self.server.worker_store.file_transfer_api.add_local_ignored_path(ctx.file_path)
 
             #
             # Step (2) - Save the file
             #
-            with self.lock('{}-{}-{}'.format(self.name, self.server.name, file_path)):
-                with open(file_path, 'wb') as f:
-                    if isinstance(input.data, str):
-                        f.write(input.data.encode('utf8'))
-
-                # .. the file is saved so we can update our in-RAM mirror of it ..
-                self.logger.info('Syncing in-RAM contents of `%s`', file_path)
+            with self.lock('{}-{}-{}'.format(self.name, self.server.name, ctx.file_path)):
+                with open(ctx.file_path, 'wb') as f:
+                    if isinstance(ctx.data, str):
+                        f.write(ctx.data.encode('utf8'))
 
                 try:
-                    conf = get_config(self.server.user_conf_location, file_path, raise_on_error=True, log_exception=False)
-                    entry = self.server.user_config.setdefault(get_user_config_name(file_path), Bunch())
-                    entry.clear()
-                    entry.update(conf)
-                except Exception:
-                    self.logger.warn('Could not sync in-RAM contents of `%s`, e:`%s`', file_path, format_exc())
+                    # The file is saved so we can update our in-RAM mirror of it ..
+                    self.logger.info('Syncing in-RAM contents of `%s`', ctx.file_path)
+
+                    # The file is saved on disk so we can call our handler function to post-process it.
+                    self.sync_pickup_file_in_ram(ctx)
+
+                except Exception as e:
+                    self.logger.warn('Could not sync in-RAM contents of `%s`, e:`%s`', ctx.file_path, format_exc())
                 else:
-                    self.logger.info('Finished syncing in-RAM contents of `%s`', file_path)
+                    self.logger.info('Successfully finished syncing in-RAM contents of `%s`', ctx.file_path)
 
         except Exception:
             self.logger.warn('Could not update file `%s`, e:`%s`', format_exc())
@@ -184,38 +217,34 @@ class OnUpdateUserConf(Service):
             # to pick up the file again while we are modifying it.
             sleep(1)
 
-            self.server.worker_store.file_transfer_api.remove_local_ignored_path(file_path)
+            self.server.worker_store.file_transfer_api.remove_local_ignored_path(ctx.file_path)
 
 # ################################################################################################################################
 
-class UpdateUserConf(_Updater):
-    """ Picks up user-defined config files and distributes them to all server processes.
-    """
-    pickup_action = HOT_DEPLOY.CREATE_USER_CONF
+    def sync_pickup_file_in_ram(self, *args, **kwargs):
+        raise NotImplementedError('Should be implemented by subclasses')
 
 # ################################################################################################################################
-
-class LogJSON(_Logger):
-    """ Picks up JSON files and logs their contents.
-    """
-    pickup_data_type = 'JSON'
-
 # ################################################################################################################################
 
-class LogXML(_Logger):
-    """ Picks up XML files and logs their contents.
+class OnUpdateUserConf(_OnUpdate):
+    """ Updates user configuration in memory and file system.
     """
-    pickup_data_type = 'XML'
+    def sync_pickup_file_in_ram(self, ctx):
+        # type: (UpdateCtx) -> None
+        conf = get_config(self.server.user_conf_location, ctx.file_path, raise_on_error=True, log_exception=False)
+        entry = self.server.user_config.setdefault(get_user_config_name(ctx.file_path), Bunch())
+        entry.clear()
+        entry.update(conf)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-class LogCSV(Service):
-    """ Picks up CSV files and logs their contents.
+class OnUpdateStatic(_OnUpdate):
+    """ Updates a static resource in memory and file system.
     """
-    def handle(self):
-        with open(self.request.raw_request['full_path'], 'r') as f:
-            reader = csv.reader(f)
-            for idx, line in enumerate(reader, 1):
-                self.logger.info('CSV line #%s `%s`', idx, line)
+    def sync_pickup_file_in_ram(self, ctx):
+        static_config.read_file(ctx.file_name)
 
+# ################################################################################################################################
 # ################################################################################################################################
