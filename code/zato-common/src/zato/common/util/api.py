@@ -1188,30 +1188,33 @@ def ping_sap(conn):
 
 class StaticConfig(Bunch):
     def __init__(self, base_dir):
+        # type: (str) -> None
         super(StaticConfig, self).__init__()
         self.base_dir = base_dir
 
-    def read_file(self, name):
-        f = open(os.path.join(self.base_dir, name))
+    def read_file(self, full_path, file_name):
+        # type: (str, str) -> None
+        f = open(full_path)
         value = f.read()
         f.close()
 
-        name = name.split('.')
+        file_name = file_name.split('.')
         _bunch = self
 
-        while name:
+        while file_name:
 
-            if len(name) == 1:
+            if len(file_name) == 1:
                 break
 
-            elem = name.pop(0)
+            elem = file_name.pop(0)
             _bunch = _bunch.setdefault(elem, Bunch())
 
-        _bunch[name[0]] = value
+        _bunch[file_name[0]] = value
 
     def read(self):
-        for item in os.listdir(self.base_dir):
-            self.read_file(item)
+        for file_name in os.listdir(self.base_dir):
+            full_path = os.path.join(self.base_dir, item)
+            self.read_file(full_path, file_name)
 
 # ################################################################################################################################
 
