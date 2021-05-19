@@ -38,10 +38,6 @@ class ChannelFileTransferWrapper(Wrapper):
 
         with self.update_lock:
 
-            print()
-            print(111, self.config)
-            print()
-
             # Create a new observer ..
             self.server.worker_store.file_transfer_api.create(self.config)
 

@@ -10,6 +10,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import csv
 import os
 from pathlib import PurePath
+from time import sleep
+from traceback import format_exc
 
 # Bunch
 from bunch import Bunch
@@ -37,8 +39,9 @@ class _Updater(Service):
         self.broker_client.publish({
             'action': self.pickup_action.value,
             'msg_type': MESSAGE_TYPE.TO_PARALLEL_ALL,
-            'file_name': self.request.raw_request['file_name'],
             'full_path': self.request.raw_request['full_path'],
+            'file_name': self.request.raw_request['file_name'],
+            'relative_dir': self.request.raw_request['relative_dir'],
 
             # We use raw_data to make sure we always have access
             # to what was saved in the file, even if it is not parsed.
@@ -75,18 +78,57 @@ class UpdateStatic(_Updater):
 
 # ################################################################################################################################
 
-zzz
-
 class OnUpdateUserConf(Service):
     """ Updates user configuration in memory and file system.
     """
     class SimpleIO(object):
-        input_required = ('data', 'file_name', 'full_path')
+        input_required = ('data', 'full_path', 'file_name', 'relative_dir')
 
     def handle(self):
 
         # For later use
         input = self.request.input
+
+        #
+        # First, we need to combine relative_dir with our own server's root directory.
+        # This is needed because other servers may be in different root directories
+        # yet the relative_dir to the file will be the same.
+        #
+        # For instance, we can have server directories as such
+        #
+        # /home/zato/env/server1/pickup/incoming/user-conf
+        # /zatoroot/server2/pickup/incoming/user-conf
+        # C:\prod\zatoserver3\pickup\incoming\user-conf
+        #
+        # In each case relative_dir is the same  - pickup/incoming/user-conf (slashes do not matter) -
+        # but the path leading to it may be different.
+        #
+        # However, if we do not have relative_dir on input, meaning the event notifier could not build it,
+        # we just use the full_path from input which will be always available.
+        #
+
+        # Use tue full path from input ..
+        if not input.relative_dir:
+            file_path = input.file_path
+
+        # Build relative_dir from its constituents
+        else:
+
+            relative_dir = PurePath(input.relative_dir)
+            relative_dir_parts = relative_dir.parts
+
+            #
+            # Now, we can combine all the three elements to give us the full path to save the file under.
+            #
+            # * Our server directory
+            # * The relative path to the file
+            # * The actual file name
+            #
+            elems = []
+            elems.extend(relative_dir_parts)
+            elems.append(input.file_name)
+
+            file_path = os.path.join(self.server.base_dir, *elems)
 
         #
         # We have a file on input and we want to save it. However, we cannot do it under the input file_name
@@ -98,36 +140,51 @@ class OnUpdateUserConf(Service):
         # then (2) we save the file, and then (3) we remove the name from the ignore ones.
         #
 
-        #
-        # Step (1) - Add the file name to ignored ones
-        #
-        self.server.worker_store.file_transfer_api.add_local_ignored_path(input.full_path)
-
-        zzz
-
-        return
-
-        #
-        # Step (2) - Save the file
-        #
         try:
-            with self.lock('{}-{}-{}'.format(self.name, self.server.name, input.file_name)):
-                with open(os.path.join(self.server.user_conf_location, input.file_name), 'wb') as f:
+
+            #
+            # Step (1) - Add the file name to ignored ones
+            #
+            self.server.worker_store.file_transfer_api.add_local_ignored_path(file_path)
+
+            #
+            # Step (2) - Save the file
+            #
+            with self.lock('{}-{}-{}'.format(self.name, self.server.name, file_path)):
+                with open(file_path, 'wb') as f:
                     if isinstance(input.data, str):
                         f.write(input.data.encode('utf8'))
 
                 # .. the file is saved so we can update our in-RAM mirror of it ..
+                self.logger.info('Syncing in-RAM contents of `%s`', file_path)
 
-                conf = get_config(self.server.user_conf_location, input.file_name)
-                entry = self.server.user_config.setdefault(get_user_config_name(input.file_name), Bunch())
-                entry.clear()
-                entry.update(conf)
+                try:
+                    conf = get_config(self.server.user_conf_location, file_path, raise_on_error=True, log_exception=False)
+                    entry = self.server.user_config.setdefault(get_user_config_name(file_path), Bunch())
+                    entry.clear()
+                    entry.update(conf)
+                except Exception:
+                    self.logger.warn('Could not sync in-RAM contents of `%s`, e:`%s`', file_path, format_exc())
+                else:
+                    self.logger.info('Finished syncing in-RAM contents of `%s`', file_path)
+
+        except Exception:
+            self.logger.warn('Could not update file `%s`, e:`%s`', format_exc())
+
         #
         # Step (3) - Remove the file name from the ignored ones
         #
         finally:
+
+            #
             # No matter what happened in step (2), we always remove the file from the ignored list.
-            self.server.worker_store.file_transfer_api.remove_local_ignored_path(input.file_name)
+            #
+
+            # Sleep for a moment to make sure the local notifier loop does not attempt
+            # to pick up the file again while we are modifying it.
+            sleep(1)
+
+            self.server.worker_store.file_transfer_api.remove_local_ignored_path(file_path)
 
 # ################################################################################################################################
 

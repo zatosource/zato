@@ -95,16 +95,6 @@ class FileTransferEventHandler:
 
         try:
 
-            import os
-
-            print()
-            for k, v in sorted(self.config.items()):
-                print('QQQ-1', k, v)
-            print('QQQ-2', observer)
-            print('QQQ-3', snapshot_maker)
-            print('QQQ-4', os.stat(transfer_event.src_path).st_ino)
-            print()
-
             # Ignore the event if it points to the directory itself,
             # as inotify will send CLOSE_WRITE when it is not a creation of a file
             # but a fact that a directory has been deleted that the event is about.
@@ -139,8 +129,9 @@ class FileTransferEventHandler:
 
             event = FileTransferEvent()
             event.full_path = transfer_event.src_path
-            event.base_dir = os.path.dirname(transfer_event.src_path)
             event.file_name = file_name
+            event.base_dir = os.path.dirname(event.full_path)
+            event.relative_dir = self.manager.build_relative_dir(event.full_path)
             event.channel_name = self.channel_name
 
             if self.config.is_hot_deploy:
