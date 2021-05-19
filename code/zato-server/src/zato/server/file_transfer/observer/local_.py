@@ -42,19 +42,22 @@ class LocalObserver(BaseObserver):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if is_linux:
-            self.observer_type_impl = FILE_TRANSFER.SOURCE_TYPE_IMPL.LOCAL_INOTIFY
-            self._observe_func = self.observe_with_inotify
+        if self.manager.is_notify_preferred(self.channel_config):
+            self.set_local_inotify_observer()
         else:
-            self.observer_type_impl = FILE_TRANSFER.SOURCE_TYPE_IMPL.LOCAL_SNAPSHOT
-            self._observe_func = self.observe_with_snapshots
+            self.set_local_snapshot_observer()
 
 # ################################################################################################################################
 
-    def get_dir_snapshot(path, is_recursive):
-        """ Returns a directory snapshot (unused under Linux with inotify).
-        """
-        return DirectorySnapshot(path, recursive=is_recursive)
+    def set_local_inotify_observer(self):
+        self.observer_type_impl = FILE_TRANSFER.SOURCE_TYPE_IMPL.LOCAL_INOTIFY
+        self._observe_func = self.observe_with_inotify
+
+# ################################################################################################################################
+
+    def set_local_snapshot_observer(self):
+        self.observer_type_impl = FILE_TRANSFER.SOURCE_TYPE_IMPL.LOCAL_SNAPSHOT
+        self._observe_func = self.observe_with_snapshots
 
 # ################################################################################################################################
 

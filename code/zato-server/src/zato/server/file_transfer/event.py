@@ -20,12 +20,12 @@ if 0:
 
     from zato.server.file_transfer.api import FileTransferAPI
     from zato.server.file_transfer.observer.base import BaseObserver, PathCreatedEvent
-    from zato.server.file_transfer.snapshot import BaseSnapshotMaker
+    from zato.server.file_transfer.snapshot import BaseRemoteSnapshotMaker
 
     Bunch = Bunch
     FileTransferAPI = FileTransferAPI
     BaseObserver = BaseObserver
-    BaseSnapshotMaker = BaseSnapshotMaker
+    BaseRemoteSnapshotMaker = BaseRemoteSnapshotMaker
     PathCreatedEvent = PathCreatedEvent
 
 # ################################################################################################################################
@@ -115,7 +115,8 @@ class FileTransferEventHandler:
                     self.manager.wait_for_deleted_path(transfer_event.src_path)
 
                 else:
-                    logger.info('Ignoring local file event; path not found `%s` (%r)', transfer_event.src_path, self.config.name)
+                    logger.info('Ignoring local file event; path not in pickup_from_list `%s` (%r -> %r)', 
+                        transfer_event.src_path, self.config.name, self.config.pickup_from_list)
 
                 # .. in either case, there is nothing else we can do here.
                 return

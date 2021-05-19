@@ -218,7 +218,7 @@ class _OnUpdate(Service):
 
             # Sleep for a moment to make sure the local notifier loop does not attempt
             # to pick up the file again while we are modifying it.
-            sleep(1)
+            sleep(2)
 
             self.server.worker_store.file_transfer_api.remove_local_ignored_path(ctx.file_path)
 
@@ -242,6 +242,8 @@ class OnUpdateUserConf(_OnUpdate):
         entry.clear()
         entry.update(conf)
 
+zzz
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -252,7 +254,17 @@ class OnUpdateStatic(_OnUpdate):
 
     def sync_pickup_file_in_ram(self, ctx):
         # type: (UpdateCtx) -> None
+
+        # The .read_file method needs to take into account the full file_path
+        # instead of file_name only. Also, it needs to make files names Python name-safe,
+        # e.g 'static-config' should be turned into 'static_config'.
+        zzz
+
         self.server.static_config.read_file(ctx.file_path, ctx.file_name)
+
+        print()
+        print(111, self.server.static_config)
+        print()
 
 # ################################################################################################################################
 # ################################################################################################################################

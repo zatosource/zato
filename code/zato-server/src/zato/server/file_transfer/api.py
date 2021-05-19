@@ -28,7 +28,7 @@ import globre
 # Zato
 from zato.common.api import FILE_TRANSFER
 from zato.common.util.api import new_cid, spawn_greenlet
-from zato.common.util.platform_ import is_linux
+from zato.common.util.platform_ import is_linux, is_other_than_linux
 from zato.server.file_transfer.event import FileTransferEventHandler, singleton
 from zato.server.file_transfer.observer.base import BackgroundPathInspector, PathCreatedEvent
 from zato.server.file_transfer.observer.local_ import LocalObserver
@@ -45,10 +45,10 @@ if 0:
     from zato.server.base.worker import WorkerStore
     from zato.server.file_transfer.event import FileTransferEvent
     from zato.server.file_transfer.observer.base import BaseObserver
-    from zato.server.file_transfer.snapshot import BaseSnapshotMaker
+    from zato.server.file_transfer.snapshot import BaseRemoteSnapshotMaker
 
     BaseObserver = BaseObserver
-    BaseSnapshotMaker = BaseSnapshotMaker
+    BaseRemoteSnapshotMaker = BaseRemoteSnapshotMaker
     Bunch = Bunch
     FileTransferEvent
     ParallelServer = ParallelServer
@@ -81,9 +81,6 @@ source_type_to_snapshot_maker_class = {
     source_type_local: LocalSnapshotMaker,
     source_type_sftp:  SFTPSnapshotMaker,
 }
-
-# Under Linux, we prefer to use inotify instead of snapshots.
-prefer_inotify = is_linux
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -151,6 +148,9 @@ class FileTransferAPI(object):
         pattern_matcher_list = [globre.compile(elem, flags) for elem in file_patterns]
         self.pattern_matcher_dict[config.name] = pattern_matcher_list
 
+        # This is optional and usually will not exist
+        config.is_recursive = config.get('is_recursive') or False
+
         # This will be a list in the case of pickup.conf and not a list if read from ODB-based file transfer channels
         if isinstance(config.pickup_from_list, list):
             pickup_from_list = config.pickup_from_list
@@ -182,7 +182,7 @@ class FileTransferAPI(object):
 
         # .. finally, set up directories and callbacks for the observer.
         event_handler = FileTransferEventHandler(self, config.name, config)
-        observer.set_up(event_handler, pickup_from_list, recursive=False)
+        observer.set_up(event_handler, pickup_from_list, recursive=config.is_recursive)
 
 # ################################################################################################################################
 
@@ -496,7 +496,7 @@ class FileTransferAPI(object):
                         path_observer_list.append(BackgroundPathInspector(path, observer, self.observer_start_args))
 
                 # Inotify-based observers are set up here but their main loop is in _run_linux_inotify_loop ..
-                if prefer_inotify:
+                if self.is_notify_preferred(observer.channel_config):
                     observer.start(self.observer_start_args)
 
                 # .. whereas snapshot observers are started here.
@@ -519,7 +519,7 @@ class FileTransferAPI(object):
         # Under Linux, run the inotify main loop for each watch descriptor created for paths that do exist.
         # Note that if we are not on Linux, each observer.start call above already ran a new greenlet with an observer
         # for a particular directory.
-        if prefer_inotify:
+        if self.is_notify_preferred(observer.channel_config):
             spawn_greenlet(self._run_linux_inotify_loop)
 
 # ################################################################################################################################
@@ -645,5 +645,21 @@ class FileTransferAPI(object):
     def is_local_path_ignored(self, path):
         # type: (str) -> bool
         return path in self._local_ignored
+
+# ################################################################################################################################
+
+    def is_notify_preferred(self, channel_config):
+        """ Returns True if inotify is the preferred notification method for input configuration and current OS.
+        """
+        # type: (Bunch) -> None
+
+        # We do not prefer inotify only if we need recursive scans or if we are not under Linux ..
+        if channel_config.is_recursive or is_other_than_linux:
+            return False
+
+        # .. otherwise, we prefer inotify.
+        else:
+            return True
+
 
 # ################################################################################################################################
