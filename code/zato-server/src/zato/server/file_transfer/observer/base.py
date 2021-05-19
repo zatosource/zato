@@ -28,10 +28,10 @@ from zato.server.file_transfer.snapshot import default_interval, DirSnapshotDiff
 if 0:
     from bunch import Bunch
     from zato.server.file_transfer.api import FileTransferAPI
-    from zato.server.file_transfer.snapshot import BaseSnapshotMaker
+    from zato.server.file_transfer.snapshot import BaseRemoteSnapshotMaker
 
     Bunch = Bunch
-    BaseSnapshotMaker
+    BaseRemoteSnapshotMaker
     FileTransferAPI = FileTransferAPI
 
 # ################################################################################################################################
@@ -248,22 +248,10 @@ class BaseObserver:
                     diff = DirSnapshotDiff(snapshot, new_snapshot)
 
                     for path_created in diff.files_created:
-
-                        print()
-                        print(444, handler_func)
-                        print()
-
-                        full_event_path = os.path.join(path, path_created)
-                        handler_func(FileCreatedEvent(full_event_path), self, snapshot_maker)
+                        handler_func(FileCreatedEvent(path_created), self, snapshot_maker)
 
                     for path_modified in diff.files_modified:
-                        full_event_path = os.path.join(path, path_modified)
-
-                        print()
-                        print(333, handler_func)
-                        print()
-
-                        handler_func(FileModifiedEvent(full_event_path), self, snapshot_maker)
+                        handler_func(FileModifiedEvent(path_modified), self, snapshot_maker)
 
                     # .. a new snapshot which will be treated as the old one in the next iteration
                     snapshot = snapshot_maker.get_snapshot(path, is_recursive, False, True)
