@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from datetime import datetime
 from logging import getLogger
+from pathlib import Path
 from traceback import format_exc
 
 # ciso8601
@@ -90,7 +91,7 @@ class DirSnapshot:
         for item in data: # type: (dict)
 
             file_info = FileInfo()
-            file_info.full_path = os.path.join(self.path, item['name'])
+            file_info.full_path = self.get_full_path(item)
             file_info.name = item['name']
             file_info.size = item['size']
 
@@ -98,7 +99,22 @@ class DirSnapshot:
             last_modified = item['last_modified']
             file_info.last_modified = last_modified if isinstance(last_modified, datetime) else parse_datetime(last_modified)
 
-            self.file_data[file_info.name] = file_info
+            self.file_data[file_info.full_path] = file_info
+
+# ################################################################################################################################
+
+    def get_full_path(self, item):
+        # type: (dict) -> str
+
+        # Notifiers will sometimes have access to a full path to a file (e.g. local ones)
+        # but sometimes they will only have the file name and the full path will have to be built
+        # using the path assigned to us in the initialiser.
+        full_path = item.get('full_path')
+
+        if full_path:
+            return full_path
+        else:
+            return os.path.join(self.path, item['name'])
 
 # ################################################################################################################################
 
@@ -160,15 +176,17 @@ class DirSnapshotDiff:
         # but the size remains the size and at the same time the timestamp is the same too,
         # we will not be able to tell the difference and the file will not be reported as modified
         # (we would have to download it and check its contents to cover such a case).
+
         for current in current_snapshot.file_data.values(): # type: FileInfo
-            previous = previous_snapshot.file_data.get(current.name) # type: FileInfo
+            previous = previous_snapshot.file_data.get(current.full_path) # type: FileInfo
+
             if previous:
 
                 size_differs = current.size != previous.size
                 last_modified_differs = current.last_modified != previous.last_modified
 
                 if size_differs or last_modified_differs:
-                    self.files_modified.add(current.name)
+                    self.files_modified.add(current.full_path)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -220,12 +238,16 @@ class LocalSnapshotMaker(AbstractSnapshotMaker):
         # All files found in path
         file_list = []
 
-        for item in os.listdir(path): # type: str
-            full_path = os.path.abspath(os.path.join(path, item))
-            if os.path.isfile(full_path):
-                stat = os.stat(full_path)
+        listing = os.listdir(path)
+        listing2 = Path(path).rglob('*')
+
+        for item in listing2: # type: Path
+            if item.is_file():
+                full_path = str(item)
+                stat = item.stat()
                 file_list.append({
-                    'name': item,
+                    'full_path': full_path,
+                    'name': item.name,
                     'size': stat.st_size,
                     'last_modified': datetime.fromtimestamp(stat.st_mtime)
                 })
@@ -243,7 +265,7 @@ class LocalSnapshotMaker(AbstractSnapshotMaker):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class BaseSnapshotMaker(AbstractSnapshotMaker):
+class BaseRemoteSnapshotMaker(AbstractSnapshotMaker):
     """ Functionality shared by FTP and SFTP.
     """
     transfer_wrapper_class = None
@@ -361,7 +383,7 @@ class BaseSnapshotMaker(AbstractSnapshotMaker):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class FTPSnapshotMaker(BaseSnapshotMaker):
+class FTPSnapshotMaker(BaseRemoteSnapshotMaker):
     transfer_wrapper_class = FTPFileTransferWrapper
     worker_config_out_name = 'out_ftp'
     source_id_attr_name = 'ftp_source_id'
@@ -371,7 +393,7 @@ class FTPSnapshotMaker(BaseSnapshotMaker):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SFTPSnapshotMaker(BaseSnapshotMaker):
+class SFTPSnapshotMaker(BaseRemoteSnapshotMaker):
     transfer_wrapper_class = SFTPFileTransferWrapper
     worker_config_out_name = 'out_sftp'
     source_id_attr_name = 'sftp_source_id'

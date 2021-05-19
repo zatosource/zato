@@ -1058,6 +1058,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
           'should_delete_after_pickup': config.get('delete_after_pickup', True),
           'is_case_sensitive': config.get('is_case_sensitive', True),
           'is_line_by_line': config.get('is_line_by_line', False),
+          'is_recursive': config.get('is_recursive', False),
           'binary_file_patterns': config.get('binary_file_patterns') or [],
           'outconn_rest_list': [],
         })
