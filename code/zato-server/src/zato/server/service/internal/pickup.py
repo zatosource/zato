@@ -111,6 +111,8 @@ class UpdateUserConf(_Updater):
 class _OnUpdate(Service):
     """ Updates user configuration in memory and file system.
     """
+    update_type = '<update-type-_OnUpdate>'
+
     class SimpleIO(object):
         input_required = ('data', 'full_path', 'file_name', 'relative_dir')
 
@@ -190,15 +192,17 @@ class _OnUpdate(Service):
 
                 try:
                     # The file is saved so we can update our in-RAM mirror of it ..
-                    self.logger.info('Syncing in-RAM contents of `%s`', ctx.file_path)
+                    self.logger.info('Syncing in-RAM contents of `%s` (%s)', ctx.file_path, self.update_type)
 
                     # The file is saved on disk so we can call our handler function to post-process it.
                     self.sync_pickup_file_in_ram(ctx)
 
                 except Exception:
-                    self.logger.warn('Could not sync in-RAM contents of `%s`, e:`%s`', ctx.file_path, format_exc())
+                    self.logger.warn('Could not sync in-RAM contents of `%s`, e:`%s` (%s)',
+                        ctx.file_path, format_exc(), self.update_type)
                 else:
-                    self.logger.info('Successfully finished syncing in-RAM contents of `%s`', ctx.file_path)
+                    self.logger.info('Successfully finished syncing in-RAM contents of `%s` (%s)',
+                        ctx.file_path, self.update_type)
 
         except Exception:
             self.logger.warn('Could not update file `%s`, e:`%s`', format_exc())
@@ -229,6 +233,8 @@ class _OnUpdate(Service):
 class OnUpdateUserConf(_OnUpdate):
     """ Updates user configuration in memory and file system.
     """
+    update_type = 'user config file'
+
     def sync_pickup_file_in_ram(self, ctx):
         # type: (UpdateCtx) -> None
         conf = get_config(self.server.user_conf_location, ctx.file_path, raise_on_error=True, log_exception=False)
@@ -242,6 +248,8 @@ class OnUpdateUserConf(_OnUpdate):
 class OnUpdateStatic(_OnUpdate):
     """ Updates a static resource in memory and file system.
     """
+    update_type = 'static file'
+
     def sync_pickup_file_in_ram(self, ctx):
         # type: (UpdateCtx) -> None
         self.server.static_config.read_file(ctx.file_path, ctx.file_name)
