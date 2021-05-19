@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -15,6 +13,7 @@ from datetime import datetime
 from http.client import OK
 from importlib import import_module
 from mimetypes import guess_type as guess_mime_type
+from pathlib import PurePath
 from re import IGNORECASE
 from sys import maxsize
 from traceback import format_exc
@@ -321,12 +320,17 @@ class FileTransferAPI(object):
     def invoke_callbacks(self, event, service_list, topic_list, outconn_rest_list):
         # type: (FileTransferEvent, list, list, list) -> None
 
+        # Do not invoke callbacks if the path is to be ignored
+        if self.is_local_path_ignored(event.full_path):
+            return
+
         config = self.worker_store.get_channel_file_transfer_config(event.channel_name)
 
         request = {
-            'base_dir': event.base_dir,
-            'file_name': event.file_name,
             'full_path': event.full_path,
+            'file_name': event.file_name,
+            'relative_dir': event.relative_dir,
+            'base_dir': event.base_dir,
             'channel_name': event.channel_name,
             'ts_utc': datetime.utcnow().isoformat(),
             'raw_data': event.raw_data,
@@ -590,20 +594,47 @@ class FileTransferAPI(object):
 
 # ################################################################################################################################
 
+    def build_relative_dir(self, path):
+        """ Builds a path based on input relative to the server's top-level directory.
+        I.e. it extracts what is known as pickup_from in pickup.conf from the incoming path.
+        """
+        # type: (str) -> str
+
+        # By default, we have no result
+        relative_dir = None
+
+        try:
+            server_base_dir = PurePath(self.server.base_dir)
+            path = PurePath(path)
+            relative_dir = path.relative_to(server_base_dir)
+        except Exception as e:
+
+            # This is used when the .relative_do was not able to build relative_dir
+            if isinstance(e, ValueError):
+                log_func = logger.info
+            else:
+                log_func = logger.warn
+                log_func('Could not build relative_dir from `%s` and `%s` (%s)', self.server.base_dir, path, e.args[0])
+
+        else:
+            # No ValueError = relative_dir was extracted, but it still contains the file name
+            # so we need to get the directory leading to it.
+            relative_dir = os.path.dirname(relative_dir)
+
+        finally:
+            # Now, we can return the result
+            return relative_dir
+
+# ################################################################################################################################
+
     def add_local_ignored_path(self, path):
         # type: (str) -> None
-        print()
-        print(111, path)
-        print()
         self._local_ignored.add(path)
 
 # ################################################################################################################################
 
     def remove_local_ignored_path(self, path):
         # type: (str) -> None
-        print()
-        print(222, path)
-        print()
         try:
             self._local_ignored.remove(path)
         except KeyError:
@@ -611,3 +642,8 @@ class FileTransferAPI(object):
 
 # ################################################################################################################################
 
+    def is_local_path_ignored(self, path):
+        # type: (str) -> bool
+        return path in self._local_ignored
+
+# ################################################################################################################################

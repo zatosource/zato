@@ -2017,7 +2017,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         return self.on_broker_msg_hot_deploy(msg, 'zato.pickup.on-update-static', {
             'data': msg.data,
             'file_name': msg.file_name,
-            'full_path': msg.full_path
+            'full_path': msg.full_path,
+            'relative_dir': msg.relative_dir
         }, 'CREATE_STATIC', *args)
 
 # ################################################################################################################################
@@ -2026,7 +2027,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         return self.on_broker_msg_hot_deploy(msg, 'zato.pickup.on-update-user-conf', {
             'data': msg.data,
             'file_name': msg.file_name,
-            'full_path': msg.full_path
+            'full_path': msg.full_path,
+            'relative_dir': msg.relative_dir
         }, 'CREATE_USER_CONF', *args)
 
 # ################################################################################################################################
