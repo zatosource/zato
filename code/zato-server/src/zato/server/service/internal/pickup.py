@@ -89,7 +89,6 @@ class _Updater(Service):
             'data': self.request.raw_request['raw_data']
         })
 
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -196,7 +195,7 @@ class _OnUpdate(Service):
                     # The file is saved on disk so we can call our handler function to post-process it.
                     self.sync_pickup_file_in_ram(ctx)
 
-                except Exception as e:
+                except Exception:
                     self.logger.warn('Could not sync in-RAM contents of `%s`, e:`%s`', ctx.file_path, format_exc())
                 else:
                     self.logger.info('Successfully finished syncing in-RAM contents of `%s`', ctx.file_path)
@@ -244,7 +243,8 @@ class OnUpdateStatic(_OnUpdate):
     """ Updates a static resource in memory and file system.
     """
     def sync_pickup_file_in_ram(self, ctx):
-        static_config.read_file(ctx.file_name)
+        # type: (UpdateCtx) -> None
+        self.server.static_config.read_file(ctx.file_path, ctx.file_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
