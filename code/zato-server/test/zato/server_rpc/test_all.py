@@ -53,6 +53,7 @@ class TestParallelServer:
     def __init__(self, cluster, odb, server_name):
         # type: (TestCluster, ODBManager, str) -> None
         self.cluster = cluster
+        self.cluster_name = self.cluster.name
         self.odb = odb
         self.name = server_name
 
