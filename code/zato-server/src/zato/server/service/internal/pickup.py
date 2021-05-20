@@ -252,21 +252,7 @@ class OnUpdateStatic(_OnUpdate):
 
     def sync_pickup_file_in_ram(self, ctx):
         # type: (UpdateCtx) -> None
-
-        # The .read_file method needs to take into account the full file_path
-        # instead of file_name only. Also, it needs to make files names Python name-safe,
-        # e.g 'static-config' should be turned into 'static_config'.
-
-        print()
-        print('QQQ-1-1', ctx)
-        print('QQQ-1-2', self.server.static_dir)
-        print()
-
         self.server.static_config.read_file(ctx.file_path, ctx.file_name)
-
-        print()
-        print('QQQ-2', self.server.static_config)
-        print()
 
 # ################################################################################################################################
 # ################################################################################################################################
