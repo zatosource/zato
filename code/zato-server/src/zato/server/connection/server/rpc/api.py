@@ -55,7 +55,7 @@ class ConfigCtx:
 
     def get_remote_server_invoker(self, server_name):
         # type: (str) -> RemoteServerInvoker
-        ctx = self.config_source.get_server_ctx(self.config_source.current_cluster_name, server_name)
+        ctx = self.config_source.get_server_ctx(self.parallel_server, self.config_source.current_cluster_name, server_name)
         return self.remote_server_invoker_class(ctx)
 
     def get_remote_server_invoker_list(self):
@@ -81,9 +81,13 @@ class ServerRPC:
     def _get_invoker_by_server_name(self, server_name):
         # type: (str) -> ServerInvoker
         if server_name == self.config_ctx.parallel_server.name:
-            return self.config_ctx.local_server_invoker_class(self.config_ctx.parallel_server)
+            return self.config_ctx.local_server_invoker_class(
+                self.config_ctx.parallel_server,
+                self.config_ctx.parallel_server.cluster_name,
+                self.config_ctx.parallel_server.name,
+            )
         else:
-            return self.config_ctx.get_remote_server_invoker(self.config_ctx.parallel_server)
+            return self.config_ctx.get_remote_server_invoker(server_name)
 
 # ################################################################################################################################
 
