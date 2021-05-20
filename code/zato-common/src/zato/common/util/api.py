@@ -1219,9 +1219,8 @@ class StaticConfig(Bunch):
             _bunch[file_name] = file_contents
             return
 
-
         # .. otherwise, if there are directories leading to the file,
-        # iterate until they exist and conert their names to Bunch keys ..
+        # iterate until they exist and convert their names to Bunch keys ..
         while relative_dir_elems:
 
             # .. name of a directory = a Bunch key ..
@@ -1234,8 +1233,6 @@ class StaticConfig(Bunch):
             # to the Bunch instance representing this directory.
             if not relative_dir_elems:
                 _bunch[file_name] = file_contents
-
-        print()
 
     def read(self):
         for file_name in os.listdir(self.base_dir):
