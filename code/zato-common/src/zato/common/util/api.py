@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -36,6 +36,7 @@ from io import StringIO
 from operator import itemgetter
 from os import getuid
 from os.path import abspath, isabs, join
+from pathlib import Path
 from pprint import pprint as _pprint, PrettyPrinter
 from pwd import getpwuid
 from string import Template
@@ -1088,7 +1089,7 @@ def validate_tls_from_payload(payload, is_key=False):
 
         cert_info = crypto.load_certificate(crypto.FILETYPE_PEM, pem)
         cert_info = sorted(cert_info.get_subject().get_components())
-        cert_info = '; '.join('{}={}'.format(k, v) for k, v in cert_info)
+        cert_info = '; '.join('{}={}'.format(k.decode('utf8'), v.decode('utf8')) for k, v in cert_info)
 
         if is_key:
             key_info = crypto.load_privatekey(crypto.FILETYPE_PEM, pem)
@@ -1195,21 +1196,46 @@ class StaticConfig(Bunch):
     def read_file(self, full_path, file_name):
         # type: (str, str) -> None
         f = open(full_path)
-        value = f.read()
+        file_contents = f.read()
         f.close()
 
-        file_name = file_name.split('.')
+        # Convert to a Path object to prepare to manipulations ..
+        full_path = Path(full_path)
+
+        # .. this is the path to the directory containing the file
+        # relative to the base directory, e.g. the "config/repo/static" part
+        # in "/home/zato/server1/config/repo/static" ..
+        relative_dir = Path(full_path.parent).relative_to(self.base_dir)
+
+        # .. now, convert all the components from relative_dir into a nested Bunch of Bunch instances ..
+        relative_dir_elems = list(relative_dir.parts)
+
+        # .. start with ourselves ..
         _bunch = self
 
-        while file_name:
+        # .. if there are no directories leading to the file, simply assign
+        # its name to self and return ..
+        if not relative_dir_elems:
+            _bunch[file_name] = file_contents
+            return
 
-            if len(file_name) == 1:
-                break
 
-            elem = file_name.pop(0)
+        # .. otherwise, if there are directories leading to the file,
+        # iterate until they exist and conert their names to Bunch keys ..
+        while relative_dir_elems:
+
+            # .. name of a directory = a Bunch key ..
+            elem = relative_dir_elems.pop(0)
+
+            # .. attach to the parent Bunch as a new Bunch instance ..
             _bunch = _bunch.setdefault(elem, Bunch())
 
-        _bunch[file_name[0]] = value
+            # .. this was the last directory to visit so we can now attach the file name and its contents
+            # to the Bunch instance representing this directory.
+            if not relative_dir_elems:
+                _bunch[file_name] = file_contents
+
+        print()
 
     def read(self):
         for file_name in os.listdir(self.base_dir):
