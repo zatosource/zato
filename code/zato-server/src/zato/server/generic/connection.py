@@ -57,7 +57,7 @@ class GenericConnection(object):
     def from_dict(data, skip=None):
         conn = GenericConnection()
         skip = skip or []
-        for key, value in data.items():
+        for key, value in sorted(data.items()):
             if key in skip:
                 continue
             try:

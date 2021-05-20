@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 from datetime import datetime
 from logging import getLogger
 from traceback import format_exc
@@ -28,10 +27,10 @@ from zato.server.file_transfer.snapshot import default_interval, DirSnapshotDiff
 if 0:
     from bunch import Bunch
     from zato.server.file_transfer.api import FileTransferAPI
-    from zato.server.file_transfer.snapshot import BaseSnapshotMaker
+    from zato.server.file_transfer.snapshot import BaseRemoteSnapshotMaker
 
     Bunch = Bunch
-    BaseSnapshotMaker
+    BaseRemoteSnapshotMaker
     FileTransferAPI = FileTransferAPI
 
 # ################################################################################################################################
@@ -219,7 +218,7 @@ class BaseObserver:
     def observe_with_snapshots(self, snapshot_maker, path, max_iters, log_stop_event=True, *args, **kwargs):
         """ An observer's main loop that uses snapshots.
         """
-        # type: (BaseSnapshotMaker, str, int) -> None
+        # type: (BaseRemoteSnapshotMaker, str, int) -> None
 
         try:
 
@@ -248,12 +247,10 @@ class BaseObserver:
                     diff = DirSnapshotDiff(snapshot, new_snapshot)
 
                     for path_created in diff.files_created:
-                        full_event_path = os.path.join(path, path_created)
-                        handler_func(FileCreatedEvent(full_event_path), self, snapshot_maker)
+                        handler_func(FileCreatedEvent(path_created), self, snapshot_maker)
 
                     for path_modified in diff.files_modified:
-                        full_event_path = os.path.join(path, path_modified)
-                        handler_func(FileModifiedEvent(full_event_path), self, snapshot_maker)
+                        handler_func(FileModifiedEvent(path_modified), self, snapshot_maker)
 
                     # .. a new snapshot which will be treated as the old one in the next iteration
                     snapshot = snapshot_maker.get_snapshot(path, is_recursive, False, True)
