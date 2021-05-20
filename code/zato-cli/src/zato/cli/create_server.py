@@ -320,6 +320,16 @@ parse_on_pickup=False
 delete_after_pickup=False
 services=zato.pickup.update-static
 topics=
+
+[_user_conf_backward_compatibility]
+# This is needed only for compatibility with pre-3.2 environments.
+# Do not use it in new environments. Instead, use the [user_conf] entry.
+pickup_from=./config/repo/user-conf
+patterns=*.conf
+parse_on_pickup=False
+delete_after_pickup=False
+services=zato.pickup.update-user-conf
+topics=
 """
 
 # ################################################################################################################################

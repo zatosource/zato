@@ -1058,6 +1058,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
           'should_delete_after_pickup': config.get('delete_after_pickup', True),
           'is_case_sensitive': config.get('is_case_sensitive', True),
           'is_line_by_line': config.get('is_line_by_line', False),
+          'is_recursive': config.get('is_recursive', False),
           'binary_file_patterns': config.get('binary_file_patterns') or [],
           'outconn_rest_list': [],
         })
@@ -2014,14 +2015,22 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_broker_msg_HOT_DEPLOY_CREATE_STATIC(self, msg, *args):
-        return self.on_broker_msg_hot_deploy(msg, 'zato.pickup.on-update-static',
-            {'data': msg.data, 'file_name': msg.file_name}, 'CREATE_STATIC', *args)
+        return self.on_broker_msg_hot_deploy(msg, 'zato.pickup.on-update-static', {
+            'data': msg.data,
+            'file_name': msg.file_name,
+            'full_path': msg.full_path,
+            'relative_dir': msg.relative_dir
+        }, 'CREATE_STATIC', *args)
 
 # ################################################################################################################################
 
     def on_broker_msg_HOT_DEPLOY_CREATE_USER_CONF(self, msg, *args):
-        return self.on_broker_msg_hot_deploy(msg, 'zato.pickup.on-update-user-conf',
-            {'data': msg.data, 'file_name': msg.file_name}, 'CREATE_USER_CONF', *args)
+        return self.on_broker_msg_hot_deploy(msg, 'zato.pickup.on-update-user-conf', {
+            'data': msg.data,
+            'file_name': msg.file_name,
+            'full_path': msg.full_path,
+            'relative_dir': msg.relative_dir
+        }, 'CREATE_USER_CONF', *args)
 
 # ################################################################################################################################
 
