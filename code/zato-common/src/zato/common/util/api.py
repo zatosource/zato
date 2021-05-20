@@ -1234,10 +1234,14 @@ class StaticConfig(Bunch):
             if not relative_dir_elems:
                 _bunch[file_name] = file_contents
 
-    def read(self):
-        for file_name in os.listdir(self.base_dir):
-            full_path = os.path.join(self.base_dir, file_name)
-            self.read_file(full_path, file_name)
+    def read_directory(self, root_dir):
+        for elem in Path(root_dir).rglob('*'): # type: Path
+            full_path = str(elem)
+            try:
+                if elem.is_file():
+                    self.read_file(full_path, elem.name)
+            except Exception as e:
+                logger.warn('Could not read file `%s`, e:`%s`', full_path, e.args)
 
 # ################################################################################################################################
 
