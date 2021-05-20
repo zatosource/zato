@@ -262,6 +262,7 @@ class Publish(AdminService):
         else:
             msg = self._get_message(topic, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic,
                 has_no_sk_server)
+
             if msg:
                 msg_id_list.append(msg.pub_msg_id)
                 msg_as_dict = msg.to_dict()
@@ -269,22 +270,6 @@ class Publish(AdminService):
                 target_list.append(msg_as_dict)
 
         return msg_id_list, gd_msg_list, non_gd_msg_list
-
-# ################################################################################################################################
-
-    def _notify_pubsub_tasks(self, topic_id, topic_name, subscriptions, non_gd_msg_list, has_gd_msg_list):
-        try:
-            self.invoke('zato.pubsub.after-publish', {
-                'cid': self.cid,
-                'topic_id':topic_id,
-                'topic_name':topic_name,
-                'subscriptions': subscriptions,
-                'non_gd_msg_list': non_gd_msg_list,
-                'has_gd_msg_list': has_gd_msg_list,
-                'is_bg_call': False, # This is not a background call, i.e. we are being called by a pub/sub client
-            })
-        except Exception:
-            self.logger.warn('Could not notify pub/sub tasks, e:`%s`', format_exc())
 
 # ################################################################################################################################
 
