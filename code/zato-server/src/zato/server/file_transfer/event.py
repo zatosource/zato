@@ -20,12 +20,12 @@ if 0:
 
     from zato.server.file_transfer.api import FileTransferAPI
     from zato.server.file_transfer.observer.base import BaseObserver, PathCreatedEvent
-    from zato.server.file_transfer.snapshot import BaseSnapshotMaker
+    from zato.server.file_transfer.snapshot import BaseRemoteSnapshotMaker
 
     Bunch = Bunch
     FileTransferAPI = FileTransferAPI
     BaseObserver = BaseObserver
-    BaseSnapshotMaker = BaseSnapshotMaker
+    BaseRemoteSnapshotMaker = BaseRemoteSnapshotMaker
     PathCreatedEvent = PathCreatedEvent
 
 # ################################################################################################################################
@@ -44,13 +44,24 @@ singleton = object()
 class FileTransferEvent(object):
     """ Encapsulates information about a file picked up from file system.
     """
-    __slots__ = ('base_dir', 'file_name', 'full_path', 'channel_name', 'ts_utc', 'raw_data', 'data', 'has_raw_data', 'has_data',
-        'parse_error')
+    __slots__ = ('base_dir', 'relative_dir', 'file_name', 'full_path', 'channel_name', 'ts_utc', 'raw_data', 'data',
+        'has_raw_data', 'has_data', 'parse_error')
 
     def __init__(self):
+
+        # This is the directory where the file is located
         self.base_dir = None      # type: str
+
+        # This is the directory of the file relative to the server's base directory.
+        # It will stay None if self.full_path is an absolute directory.
+        self.relative_dir = None  # type: str
+
+        # This is the file name only
         self.file_name = None     # type: str
+
+        # Full path to the file
         self.full_path = None     # type: str
+
         self.channel_name = None  # type: str
         self.ts_utc = None        # type: str
         self.raw_data = ''        # type: str
@@ -80,7 +91,7 @@ class FileTransferEventHandler:
                config.parse_with == 'py:csv.reader'
 
     def on_created(self, transfer_event, observer, snapshot_maker=None):
-        # type: (PathCreatedEvent, BaseObserver, BaseSnapshotMaker) -> None
+        # type: (PathCreatedEvent, BaseObserver, BaseRemoteSnapshotMaker) -> None
 
         try:
 
@@ -104,7 +115,8 @@ class FileTransferEventHandler:
                     self.manager.wait_for_deleted_path(transfer_event.src_path)
 
                 else:
-                    logger.info('Ignoring local file event; path not found `%s` (%r)', transfer_event.src_path, self.config.name)
+                    logger.info('Ignoring local file event; path not in pickup_from_list `%s` (%r -> %r)',
+                        transfer_event.src_path, self.config.name, self.config.pickup_from_list)
 
                 # .. in either case, there is nothing else we can do here.
                 return
@@ -118,8 +130,9 @@ class FileTransferEventHandler:
 
             event = FileTransferEvent()
             event.full_path = transfer_event.src_path
-            event.base_dir = os.path.dirname(transfer_event.src_path)
             event.file_name = file_name
+            event.base_dir = os.path.dirname(event.full_path)
+            event.relative_dir = self.manager.build_relative_dir(event.full_path)
             event.channel_name = self.channel_name
 
             if self.config.is_hot_deploy:
