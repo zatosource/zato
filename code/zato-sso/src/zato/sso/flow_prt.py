@@ -24,12 +24,14 @@ from zato.sso.util import new_prt, new_prt_reset_key, new_user_session_token, Us
 # ################################################################################################################################
 
 if 0:
+    from bunch import Bunch
     from typing import Callable
     from zato.common.odb.model import SSOUser
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.email import SMTPConnection
     from zato.sso.common import SSOCtx
 
+    Bunch = Bunch
     Callable = Callable
     ParallelServer = ParallelServer
     SMTPConnection = SMTPConnection
@@ -166,7 +168,7 @@ class FlowPRTAPI(object):
 
 # ################################################################################################################################
 
-    def send_notification(self, user, prt):
+    def send_notification(self, user, prt, _template_name=CommonSSO.EmailTemplate.PasswordResetLink):
         # type: (SSOUser, str)
 
         if not self.smtp_conn_name:
@@ -186,31 +188,22 @@ class FlowPRTAPI(object):
         # we can look it up here.
         pref_lang = Default.prt_locale
 
-        # Try to read the template from already cached ones.
-        template = self.email_template_cache.get(pref_lang)
+        # All email templates for the preferred language
+        pref_lang_templates = self.server.static_config.sso.email.get(pref_lang) # type: Bunch
 
-        # We have not seen this language before so we need to cache it first.
+        # Make sure we have the correct templates prepared
+        if not pref_lang_templates:
+            msg = 'Could not send a password reset notification to `%s`. Language `%s` not found among `%s``'
+            logger.warn(msg, user.user_id, pref_lang, sorted(self.server.static_config.sso.email))
+            return
+
+        # Template with the body to send
+        template = pref_lang_templates.get(_template_name)
+
+        # Make sure we have the correct templates prepared
         if not template:
-
-            # Construct a full path to the template ..
-            template_path = os.path.join(self.template_base_path, pref_lang, CommonSSO.EmailTemplate.PasswordResetLink)
-
-            # .. if the path exists, read the template in ..
-            if os.path.exists(template_path):
-                with open(template_path) as f:
-                    template = f.read()
-
-            # .. otherwise, indicate that the locale was not recognised.
-            else:
-                logger.warn('Unrecognised language `%s` (e-mail template not found at `%s`)', pref_lang, template_path)
-                template = _unrecognised_locale
-
-            # Cache for later use
-            self.email_template_cache[pref_lang] = template
-
-        # We have a template but we still need to reject any previously cached unrecognised ones
-        if template is _unrecognised_locale:
-            logger.warn('Ignoring an unrecognised template for `%s` (%s)', user.user_id, pref_lang)
+            msg = 'Could not send a password reset notification to `%s`. Template `%s` not found among `%s`.'
+            logger.warn(msg, user.user_id, _template_name, sorted(pref_lang_templates))
             return
 
         # Prepare the details for the template ..
