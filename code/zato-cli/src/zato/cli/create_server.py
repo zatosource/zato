@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from copy import deepcopy
@@ -321,6 +319,16 @@ patterns=*
 parse_on_pickup=False
 delete_after_pickup=False
 services=zato.pickup.update-static
+topics=
+
+[_user_conf_backward_compatibility]
+# This is needed only for compatibility with pre-3.2 environments.
+# Do not use it in new environments. Instead, use the [user_conf] entry.
+pickup_from=./config/repo/user-conf
+patterns=*.conf
+parse_on_pickup=False
+delete_after_pickup=False
+services=zato.pickup.update-user-conf
 topics=
 """
 
