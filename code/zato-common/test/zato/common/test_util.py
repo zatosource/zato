@@ -11,7 +11,6 @@ import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
-from uuid import uuid4
 
 # Bunch
 from bunch import Bunch

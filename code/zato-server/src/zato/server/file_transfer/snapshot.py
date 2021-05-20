@@ -238,10 +238,10 @@ class LocalSnapshotMaker(AbstractSnapshotMaker):
         # All files found in path
         file_list = []
 
-        listing = os.listdir(path)
-        listing2 = Path(path).rglob('*')
+        # Recursively, get all files
+        listing = Path(path).rglob('*')
 
-        for item in listing2: # type: Path
+        for item in listing: # type: Path
             if item.is_file():
                 full_path = str(item)
                 stat = item.stat()

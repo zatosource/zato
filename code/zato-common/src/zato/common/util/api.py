@@ -1236,7 +1236,7 @@ class StaticConfig(Bunch):
 
     def read(self):
         for file_name in os.listdir(self.base_dir):
-            full_path = os.path.join(self.base_dir, item)
+            full_path = os.path.join(self.base_dir, file_name)
             self.read_file(full_path, file_name)
 
 # ################################################################################################################################
