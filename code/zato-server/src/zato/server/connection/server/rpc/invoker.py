@@ -73,7 +73,7 @@ class ServerInvoker:
 # ################################################################################################################################
 
 class LocalServerInvoker(ServerInvoker):
-    """ Invokes services directly on the current server, without any RPC.
+    """ Invokes services directly on the current server, without any network-based RPC.
     """
 
 # ################################################################################################################################
