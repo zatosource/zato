@@ -48,7 +48,7 @@ class PerPIDResponse:
     is_ok: bool = False
     pid: int = 0
     pid_data: optional[dict] = field(default_factory=dict)
-    error_info: object = 'zzz'
+    error_info: object = ''
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,11 +56,15 @@ class PerPIDResponse:
 class ServerInvoker:
     """ A base class for local and remote server invocations.
     """
-    def __init__(self, server):
+    def __init__(self, parallel_server, cluster_name, server_name):
         # type: (ParallelServer) -> None
-        self.server = server
-        self.cluster_name = server.cluster_name
-        self.server_name = server.name
+
+        # This parameter is used for local invocations only
+        # to have access to self.parallel_server.invoke/.invoke_async/.invoke_all_pids
+        self.parallel_server = parallel_server
+
+        self.cluster_name = cluster_name
+        self.server_name = server_name
 
     def invoke(self, *args, **kwargs):
         raise NotImplementedError(self.__class__)
@@ -79,17 +83,17 @@ class LocalServerInvoker(ServerInvoker):
     """ Invokes services directly on the current server, without any network-based RPC.
     """
     def invoke(self, *args, **kwargs):
-        return self.server.invoke(*args, **kwargs)
+        return self.parallel_server.invoke(*args, **kwargs)
 
 # ################################################################################################################################
 
     def invoke_async(self, *args, **kwargs):
-        return self.server.invoke_async(*args, **kwargs)
+        return self.parallel_server.invoke_async(*args, **kwargs)
 
 # ################################################################################################################################
 
     def invoke_all_pids(self, *args, **kwargs):
-        return self.server.invoke_all_pids(*args, **kwargs)
+        return self.parallel_server.invoke_all_pids(*args, **kwargs)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -99,7 +103,7 @@ class RemoteServerInvoker(ServerInvoker):
     """
     def __init__(self, ctx):
         # type: (RemoteServerInvocationCtx) -> None
-        super().__init__(ctx.cluster_name, ctx.server_name)
+        super().__init__(None, ctx.cluster_name, ctx.server_name)
         self.invocation_ctx = ctx
 
         # We need to cover both HTTP and HTTPS connections to other servers
