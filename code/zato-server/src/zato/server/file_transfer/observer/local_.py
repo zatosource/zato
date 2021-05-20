@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from traceback import format_exc
@@ -16,12 +14,8 @@ import os
 from logging import getLogger
 from shutil import copy as shutil_copy
 
-# Watchdog
-from watchdog.utils.dirsnapshot import DirectorySnapshot
-
 # Zato
 from zato.common.api import FILE_TRANSFER
-from zato.common.util.platform_ import is_linux
 from .base import BaseObserver
 
 # ################################################################################################################################

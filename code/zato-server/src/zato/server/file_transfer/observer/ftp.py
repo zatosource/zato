@@ -41,13 +41,13 @@ class FTPObserver(BaseObserver):
 # ################################################################################################################################
 
     def path_exists(self, path, snapshot_maker):
-        # type: (str, BaseSnapshotMaker) -> bool
+        # type: (str, BaseRemoteSnapshotMaker) -> bool
         return snapshot_maker.file_client.path_exists(path)
 
 # ################################################################################################################################
 
     def path_is_directory(self, path, snapshot_maker):
-        # type: (str, BaseSnapshotMaker) -> bool
+        # type: (str, BaseRemoteSnapshotMaker) -> bool
         raise NotImplementedError()
 
 # ################################################################################################################################
@@ -61,7 +61,7 @@ class FTPObserver(BaseObserver):
     def move_file(self, path_from, path_to, event, snapshot_maker):
         """ Moves a file to a selected directory.
         """
-        # type: (str, str, FileTransferEvent, BaseSnapshotMaker)
+        # type: (str, str, FileTransferEvent, BaseRemoteSnapshotMaker)
 
         #
         # 1) If we have the data to be moved in the event, we can just store it
@@ -89,7 +89,7 @@ class FTPObserver(BaseObserver):
     def delete_file(self, path, snapshot_maker):
         """ Deletes a file pointed to by path.
         """
-        # type: (str, BaseSnapshotMaker)
+        # type: (str, BaseRemoteSnapshotMaker)
         snapshot_maker.file_client.delete_file(path)
 
 # ################################################################################################################################
