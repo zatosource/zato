@@ -206,6 +206,9 @@ class FileTransferAPI(object):
         # .. paths under which the observer may be listed (used only under Linux with inotify).
         observer_path_list = []
 
+        # .. have we preferred to use inotify for this channel ..
+        prefer_inotify = self.is_notify_preferred(config)
+
         # .. stop its main loop ..
         for observer in self.observer_list: # type: LocalObserver
             if observer.channel_id == config.id:
@@ -422,7 +425,7 @@ class FileTransferAPI(object):
     def post_handle(self, event, config, observer, snapshot_maker):
         """ Runs after callback services have been already invoked, performs clean up if configured to.
         """
-        # type: (FileTransferEvent, Bunch, BaseObserver, BaseSnapshotMaker) -> None
+        # type: (FileTransferEvent, Bunch, BaseObserver, BaseRemoteSnapshotMaker) -> None
         if config.move_processed_to:
             observer.move_file(event.full_path, config.move_processed_to, observer, snapshot_maker)
 
@@ -579,7 +582,7 @@ class FileTransferAPI(object):
         source_type = observer.channel_config.source_type   # type: str
         snapshot_maker_class = source_type_to_snapshot_maker_class[source_type]
 
-        snapshot_maker = snapshot_maker_class(self, observer.channel_config) # type: (BaseSnapshotMaker)
+        snapshot_maker = snapshot_maker_class(self, observer.channel_config) # type: (BaseRemoteSnapshotMaker)
         snapshot_maker.connect()
 
         for item in observer.path_list: # type: (str)

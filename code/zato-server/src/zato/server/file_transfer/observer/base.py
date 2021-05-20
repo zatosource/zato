@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 from datetime import datetime
 from logging import getLogger
 from traceback import format_exc
@@ -219,7 +218,7 @@ class BaseObserver:
     def observe_with_snapshots(self, snapshot_maker, path, max_iters, log_stop_event=True, *args, **kwargs):
         """ An observer's main loop that uses snapshots.
         """
-        # type: (BaseSnapshotMaker, str, int) -> None
+        # type: (BaseRemoteSnapshotMaker, str, int) -> None
 
         try:
 

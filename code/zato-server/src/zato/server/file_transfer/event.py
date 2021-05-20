@@ -91,7 +91,7 @@ class FileTransferEventHandler:
                config.parse_with == 'py:csv.reader'
 
     def on_created(self, transfer_event, observer, snapshot_maker=None):
-        # type: (PathCreatedEvent, BaseObserver, BaseSnapshotMaker) -> None
+        # type: (PathCreatedEvent, BaseObserver, BaseRemoteSnapshotMaker) -> None
 
         try:
 
@@ -115,7 +115,7 @@ class FileTransferEventHandler:
                     self.manager.wait_for_deleted_path(transfer_event.src_path)
 
                 else:
-                    logger.info('Ignoring local file event; path not in pickup_from_list `%s` (%r -> %r)', 
+                    logger.info('Ignoring local file event; path not in pickup_from_list `%s` (%r -> %r)',
                         transfer_event.src_path, self.config.name, self.config.pickup_from_list)
 
                 # .. in either case, there is nothing else we can do here.
