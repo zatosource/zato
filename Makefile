@@ -4,6 +4,9 @@ MAKEFLAGS += --silent
 
 default: run-tests
 
+common-tests:
+	cd $(CURDIR)/code/zato-common && make run-tests
+
 cy-tests:
 	cd $(CURDIR)/code/zato-cy && make run-tests
 
@@ -31,6 +34,7 @@ static-check:
 	echo "Static checks OK"
 
 run-tests:
+	$(MAKE) common-tests
 	$(MAKE) cy-tests
 	$(MAKE) server-tests
 	$(MAKE) sso-tests
