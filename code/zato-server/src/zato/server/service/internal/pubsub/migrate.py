@@ -64,7 +64,7 @@ class MigrateDeliveryServer(AdminService):
         self.logger.info('Notifying server `%s` to start delivery task for `%s` (%s)', new_delivery_server_name,
                 sub_key, endpoint_type)
 
-        self.servers[new_delivery_server_name].invoke('zato.pubsub.delivery.create-delivery-task', {
+        self.server.rpc[new_delivery_server_name].invoke('zato.pubsub.delivery.create-delivery-task', {
             'sub_key': sub_key,
             'endpoint_type': endpoint_type,
             'task_delivery_interval': self.pubsub.get_subscription_by_sub_key(sub_key).task_delivery_interval
