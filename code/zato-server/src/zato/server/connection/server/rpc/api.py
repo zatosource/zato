@@ -81,9 +81,9 @@ class ServerRPC:
     def _get_invoker_by_server_name(self, server_name):
         # type: (str) -> ServerInvoker
         if server_name == self.config_ctx.parallel_server.name:
-            return self.config_ctx.local_server_invoker_class(self.current_cluster_name, server_name)
+            return self.config_ctx.local_server_invoker_class(self.config_ctx.parallel_server)
         else:
-            return self.config_ctx.get_remote_server_invoker(server_name)
+            return self.config_ctx.get_remote_server_invoker(self.config_ctx.parallel_server)
 
 # ################################################################################################################################
 

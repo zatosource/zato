@@ -24,9 +24,11 @@ if 0:
     from requests import Response
     from typing import Callable
     from zato.client import ServiceInvokeResponse
+    from zato.server.base.parallel import ParallelServer
     from zato.server.connection.server.rpc.config import RemoteServerInvocationCtx
 
     Callable = Callable
+    ParallelServer = ParallelServer
     RemoteServerInvocationCtx = RemoteServerInvocationCtx
     Response = Response
     ServiceInvokeResponse = ServiceInvokeResponse
@@ -54,20 +56,21 @@ class PerPIDResponse:
 class ServerInvoker:
     """ A base class for local and remote server invocations.
     """
-    def __init__(self, cluster_name, server_name):
-        # type: (str, str) -> None
-        self.cluster_name = cluster_name
-        self.server_name = server_name
+    def __init__(self, server):
+        # type: (ParallelServer) -> None
+        self.server = server
+        self.cluster_name = server.cluster_name
+        self.server_name = server.name
 
     def invoke(self, *args, **kwargs):
-        raise NotImplementedError()
+        raise NotImplementedError(self.__class__)
 
     def invoke_async(self, *args, **kwargs):
-        raise NotImplementedError()
+        raise NotImplementedError(self.__class__)
 
     def invoke_all_pids(self, *args, **kwargs):
         # type: () -> ServerInvocationResult
-        raise NotImplementedError()
+        raise NotImplementedError(self.__class__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,6 +78,18 @@ class ServerInvoker:
 class LocalServerInvoker(ServerInvoker):
     """ Invokes services directly on the current server, without any network-based RPC.
     """
+    def invoke(self, *args, **kwargs):
+        return self.server.invoke(*args, **kwargs)
+
+# ################################################################################################################################
+
+    def invoke_async(self, *args, **kwargs):
+        return self.server.invoke_async(*args, **kwargs)
+
+# ################################################################################################################################
+
+    def invoke_all_pids(self, *args, **kwargs):
+        return self.server.invoke_all_pids(*args, **kwargs)
 
 # ################################################################################################################################
 # ################################################################################################################################
