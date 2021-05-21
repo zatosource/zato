@@ -93,6 +93,10 @@ class status_code:
         already_exists = 'E009001'
         no_such_attr   = 'E009002'
 
+    class prt:
+        could_not_access = 'E010001'
+        user_rejected    = 'E010002'
+
 # ################################################################################################################################
 
 class const:
