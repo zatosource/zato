@@ -152,8 +152,6 @@ def _get_user_by_prt(session, prt, now):
         filter(SSOFlowPRT.expiration_time > now).\
         filter(SSOFlowPRT.reset_key_exp_time > now)
 
-    # filter(SSOFlowPRT.is_password_reset.is_(False)).\
-
 # ################################################################################################################################
 
 def get_user_by_prt(session, prt, now):
@@ -167,6 +165,12 @@ def get_user_by_prt(session, prt, now):
     # Let's be explicit about by using the 'pass' statement.
     pass
 
+    print()
+    print(111, q)
+    print(222, prt)
+    print(333, now)
+    print()
+
     # .. and return the result.
     return q.first()
 
@@ -176,6 +180,8 @@ def get_user_by_prt_and_reset_key(session, prt, now, reset_key):
 
     # Get the base query ..
     q = _get_user_by_prt(session, prt, now)
+
+    # filter(SSOFlowPRT.is_password_reset.is_(False)).\
 
     # .. and return the result.
     return q.first()

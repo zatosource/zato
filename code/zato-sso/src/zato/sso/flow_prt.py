@@ -17,7 +17,7 @@ from zato.common import GENERIC, SMTPMessage
 from zato.common.api import SSO as CommonSSO
 from zato.common.json_internal import json_dumps
 from zato.common.odb.model import SSOFlowPRT as FlowPRTModel
-from zato.sso import const, Default
+from zato.sso import const, Default, status_code, ValidationError
 from zato.sso.odb.query import get_user_by_email, get_user_by_name, get_user_by_name_or_email, get_user_by_prt, \
      get_user_by_prt_and_reset_key
 from zato.sso.util import new_prt, new_prt_reset_key, new_user_session_token, UserChecker
@@ -115,10 +115,6 @@ class FlowPRTAPI(object):
         # From who the SMTP messages will be sent
         self.email_from = sso_conf.prt.email_from
 
-        # Email templates are cached here. Key = language code, value = template string.
-        self.email_template_cache = {
-        }
-
 # ################################################################################################################################
 
     def create_token(self, ctx, _utcnow=datetime.utcnow, _timedelta=timedelta):
@@ -145,6 +141,9 @@ class FlowPRTAPI(object):
             creation_time = _utcnow()
             expiration_time = creation_time + timedelta(minutes=self.valid_for)
 
+            # .. these are the same so be explicit about it ..
+            reset_key_exp_time = expiration_time
+
             # .. reset key used along with the PRT to reset the password ..
             reset_key = new_prt_reset_key()
 
@@ -153,8 +152,9 @@ class FlowPRTAPI(object):
                 FlowPRTModelInsert().values({
                     'creation_time': creation_time,
                     'expiration_time': expiration_time,
+                    'reset_key_exp_time': expiration_time,
                     'user_id': user.user_id,
-                    'value': prt,
+                    'token': prt,
                     'type_': const.prt.token_type,
                     'reset_key': reset_key,
                     GENERIC.ATTR_NAME: json_dumps(None)
@@ -253,7 +253,9 @@ class FlowPRTAPI(object):
 
             # .. no data matching the PRT, we need to reject the request ..
             if not user_info:
-                zzz
+                msg = 'Token rejected. No valid PRT matched input `%s` (now: %s)'
+                logger.warn(msg, ctx.input.token, now)
+                raise ValidationError(status_code.prt.could_not_access, False)
 
             print()
             print(111, user_info)
