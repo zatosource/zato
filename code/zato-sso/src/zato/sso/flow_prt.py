@@ -18,7 +18,8 @@ from zato.common.api import SSO as CommonSSO
 from zato.common.json_internal import json_dumps
 from zato.common.odb.model import SSOFlowPRT as FlowPRTModel
 from zato.sso import const, Default
-from zato.sso.odb.query import get_user_by_email, get_user_by_name, get_user_by_name_or_email
+from zato.sso.odb.query import get_user_by_email, get_user_by_name, get_user_by_name_or_email, get_user_by_prt, \
+     get_user_by_prt_and_reset_key
 from zato.sso.util import new_prt, new_prt_reset_key, new_user_session_token, UserChecker
 
 # ################################################################################################################################
@@ -146,7 +147,6 @@ class FlowPRTAPI(object):
 
             # .. reset key used along with the PRT to reset the password ..
             reset_key = new_prt_reset_key()
-            reset_key = self.server.encrypt(reset_key)
 
             # .. insert it into the database ..
             session.execute(
@@ -160,10 +160,11 @@ class FlowPRTAPI(object):
                     GENERIC.ATTR_NAME: json_dumps(None)
             }))
 
-            # .. commit the operation ..
+            # .. commit the operation.
             session.commit()
 
-        # .. and notify the user.
+        # Now, we canot notify the user (note that we are doing it outside the "with" block above
+        # so as not to block the SQL connection).
         self.send_notification(user, prt)
 
 # ################################################################################################################################
@@ -233,14 +234,39 @@ class FlowPRTAPI(object):
         msg.body = msg_body
 
         # .. and send it to the user.
-        smtp_conn.send(msg)
+        #smtp_conn.send(msg)
 
 # ################################################################################################################################
 
     def access(self, ctx, _utcnow=datetime.utcnow, _timedelta=timedelta):
         # type: (SSOCtx, object, object) -> str
 
-        # First, check if the user is still allowed to access the system
+        # For later use
+        now = _utcnow()
+
+        # We need an SQL session ..
+        with closing(self.odb_session_func()) as session:
+
+            # .. try to look up the user by the incoming PRT which must exist and not to have expired,
+            # or otherwise have been invalidated (e.g. already accessed) ..
+            user_info = get_user_by_prt(session, ctx.input.token, now)
+
+            # .. no data matching the PRT, we need to reject the request ..
+            if not user_info:
+                zzz
+
+            print()
+            print(111, user_info)
+            print()
+
+            # First, get the user ID corresponding to the input PRT ..
+
+            # .. now, check if the user is still allowed to access the system,
+            # we make an assuption that it is true (the user is still allowed),
+            # which is why we conduct this check under the same SQL session.
+            self.user_checker.check(ctx, user_info)
+
+        # First,
         #self.user_checker.check(ctx)
 
         # MySQL does not support UPDATE .. RETURNING so we need to run the select query first
