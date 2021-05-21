@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from datetime import datetime
@@ -15,12 +13,12 @@ from datetime import datetime
 from bunch import bunchify
 
 # SQLAlchemy
-from sqlalchemy import or_
+from sqlalchemy import exists, or_
 
 # Zato
 from zato.common.api import GENERIC
 from zato.common.json_internal import loads
-from zato.common.odb.model import SecurityBase, SSOLinkedAuth, SSOSession, SSOUser
+from zato.common.odb.model import SecurityBase, SSOFlowPRT, SSOLinkedAuth, SSOSession, SSOUser
 from zato.common.util.sql import elems_with_opaque
 from zato.sso import const
 
@@ -132,6 +130,68 @@ def get_user_by_name_or_email(session, credential, needs_approved=True):
 
     # .. and return the result.
     return q.first()
+
+# ################################################################################################################################
+
+def _get_user_by_prt(session, prt, now):
+
+    # Get the base query ..
+    return session.query(
+        SSOUser.user_id,
+        SSOUser.password_expiry,
+        SSOUser.username,
+        SSOUser.is_locked,
+        SSOUser.sign_up_status,
+        SSOUser.approval_status,
+        SSOUser.password_expiry,
+        SSOUser.password_must_change,
+        SSOFlowPRT.reset_key,
+        ).\
+        filter(SSOUser.user_id == SSOFlowPRT.user_id).\
+        filter(SSOFlowPRT.has_been_accessed.is_(False)).\
+        filter(SSOFlowPRT.expiration_time > now).\
+        filter(SSOFlowPRT.reset_key_exp_time > now)
+
+    # filter(SSOFlowPRT.is_password_reset.is_(False)).\
+
+# ################################################################################################################################
+
+def get_user_by_prt(session, prt, now):
+
+    # Get the base query ..
+    q = _get_user_by_prt(session, prt, now)
+
+    # .. at this point, the password is still not reset
+    # and the reset key has not been accessed yet so we
+    # do not add any additional conditions to this query.
+    # Let's be explicit about by using the 'pass' statement.
+    pass
+
+    # .. and return the result.
+    return q.first()
+
+# ################################################################################################################################
+
+def get_user_by_prt_and_reset_key(session, prt, now, reset_key):
+
+    # Get the base query ..
+    q = _get_user_by_prt(session, prt, now)
+
+    # .. and return the result.
+    return q.first()
+
+# ################################################################################################################################
+
+
+'''
+def exists(self, name):
+    """ Returns a boolean flag indicating whether the input name is already stored in the ODB. False otherwise.
+    """
+    where_query = self._build_get_where_query(name)
+    exists_query = exists().where(where_query)
+    return self.session.query(exists_query).\
+        scalar()
+'''
 
 # ################################################################################################################################
 
