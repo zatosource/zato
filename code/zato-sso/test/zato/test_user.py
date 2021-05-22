@@ -295,7 +295,7 @@ class UserGetTestCase(BaseTest):
         self.assertEqual(response.username, Config.super_user_name)
         self.assertEqual(response.sign_up_status, const.signup_status.final)
 
-        self.assertTrue(response.is_approval_needed)
+        self.assertFalse(response.is_approval_needed)
         self.assertTrue(response.is_super_user)
         self.assertTrue(response.password_is_set)
 
@@ -356,13 +356,14 @@ class UserUpdateTestCase(BaseTest):
             'ust': ust,
         })
 
-        self.assertIsNotNone(response.user_id)
+        invalid = object()
 
-        self.assertFalse(response.is_active)
-        self.assertFalse(response.is_approval_needed)
-        self.assertFalse(response.is_internal)
-        self.assertFalse(response.is_locked)
-        self.assertFalse(response.is_super_user)
+        # This is a regular user so these attributes should not exist
+        self.assertIs(response.get('is_active', invalid), invalid)
+        self.assertIs(response.get('is_approval_needed', invalid), invalid)
+        self.assertIs(response.get('is_internal', invalid), invalid)
+        self.assertIs(response.get('is_locked', invalid), invalid)
+        self.assertIs(response.get('is_super_user', invalid), invalid)
 
         self.assertEqual(response.display_name, display_name)
         self.assertEqual(response.email, email)
