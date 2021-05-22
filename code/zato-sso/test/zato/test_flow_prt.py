@@ -23,7 +23,7 @@ class FlowPRTTestCase(BaseTest):
     def test_user_reset_password(self):
 
         # This needs to be filled in manually
-        token = 'q63mn38ah9hav2vaz32625azj'
+        token = '9z0hv4qs59sqt1rskna3k3t9e'
 
         # Generated in each test
         password = CryptoManager.generate_password(to_str=True)

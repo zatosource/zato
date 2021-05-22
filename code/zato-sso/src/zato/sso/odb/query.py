@@ -160,10 +160,10 @@ def get_user_by_prt(session, prt, now):
     q = _get_user_by_prt(session, prt, now)
 
     # .. at this point, the password is still not reset
-    # and the reset key has not been accessed but we need
-    # to ensure that the PRT has not been accessed either.
+    # and we need to ensure that the PRT has not been accessed either ..
     q = q.\
-        filter(SSOFlowPRT.has_been_accessed.is_(False))
+        filter(SSOFlowPRT.has_been_accessed.is_(False)).\
+        filter(SSOFlowPRT.is_password_reset.is_(False))
 
     # .. and return the result.
     return q.first()
@@ -175,7 +175,7 @@ def get_user_by_prt_and_reset_key(session, prt, reset_key, now):
     # Get the base query ..
     q = _get_user_by_prt(session, prt, now)
 
-    q2 = q.\
+    q = q.\
         filter(SSOFlowPRT.reset_key == reset_key).\
         filter(SSOFlowPRT.has_been_accessed.is_(True)).\
         filter(SSOFlowPRT.is_password_reset.is_(False))

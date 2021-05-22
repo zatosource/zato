@@ -12,6 +12,8 @@ from contextlib import closing
 from datetime import datetime, timedelta
 from logging import getLogger
 
+from ipaddress import IPv4Address
+
 # SQLAlchemy
 from sqlalchemy import and_
 
@@ -287,7 +289,7 @@ class FlowPRTAPI(object):
                 'has_been_accessed': True,
                 'access_time': now,
                 'access_ctx': json_dumps({
-                    'remote_addr': str(ctx.remote_addr),
+                    'remote_addr': [elem.exploded for elem in ctx.remote_addr],
                     'user_agent': ctx.user_agent,
                     'has_remote_addr': ctx.has_remote_addr,
                     'has_user_agent': ctx.has_user_agent,
@@ -353,12 +355,12 @@ class FlowPRTAPI(object):
             #
             session.execute(FlowPRTModelUpdate().where(and_(
                 FlowPRTModelTable.c.token==ctx.input.token,
-                FlowPRTModelTable.c.reset_key==ctx.input.reset_key,
+                FlowPRTModelTable.c.reset_key==reset_key,
             )).values({
                 'is_password_reset': True,
                 'password_reset_time': now,
                 'password_reset_ctx': json_dumps({
-                    'remote_addr': str(ctx.remote_addr),
+                    'remote_addr': [elem.exploded for elem in ctx.remote_addr],
                     'user_agent': ctx.user_agent,
                     'has_remote_addr': ctx.has_remote_addr,
                     'has_user_agent': ctx.has_user_agent,
