@@ -28,7 +28,7 @@ class FlowPRTTestCase(BaseTest):
 
         # .. access the PRT received ..
         self.patch('/zato/sso/flow/prt', {
-            'token': '5spsy3fgv49swaw876gh34d5fk',
+            'token': 'ttpmrh58v8c0841prbgvj7yqx',
         })
 
         # .. change the password ..

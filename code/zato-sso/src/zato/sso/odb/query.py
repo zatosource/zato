@@ -147,8 +147,9 @@ def _get_user_by_prt(session, prt, now):
         SSOUser.password_must_change,
         SSOFlowPRT.reset_key,
         ).\
+        filter(SSOFlowPRT.token == prt).\
         filter(SSOUser.user_id == SSOFlowPRT.user_id).\
-        filter(SSOFlowPRT.has_been_accessed.is_(False)).\
+        filter(SSOFlowPRT.is_password_reset.is_(False)).\
         filter(SSOFlowPRT.expiration_time > now).\
         filter(SSOFlowPRT.reset_key_exp_time > now)
 
@@ -163,7 +164,6 @@ def get_user_by_prt(session, prt, now):
     # and the reset key has not been accessed yet so we
     # do not add any additional conditions to this query.
     # Let's be explicit about by using the 'pass' statement.
-    pass
 
     print()
     print(111, q)
@@ -181,23 +181,15 @@ def get_user_by_prt_and_reset_key(session, prt, now, reset_key):
     # Get the base query ..
     q = _get_user_by_prt(session, prt, now)
 
-    # filter(SSOFlowPRT.is_password_reset.is_(False)).\
+    q = q.\
+        filter(SSOFlowPRT.reset_key == reset_key).\
+        filter(SSOFlowPRT.has_been_accessed.is_(True)).\
+        filter(SSOFlowPRT.is_password_reset.is_(False)).\
+        filter(SSOFlowPRT.expiration_time > now).\
+        filter(SSOFlowPRT.reset_key_exp_time > now)
 
     # .. and return the result.
     return q.first()
-
-# ################################################################################################################################
-
-
-'''
-def exists(self, name):
-    """ Returns a boolean flag indicating whether the input name is already stored in the ODB. False otherwise.
-    """
-    where_query = self._build_get_where_query(name)
-    exists_query = exists().where(where_query)
-    return self.session.query(exists_query).\
-        scalar()
-'''
 
 # ################################################################################################################################
 
