@@ -48,6 +48,7 @@ logger = getLogger('zato')
 
 FlowPRTModelTable = FlowPRTModel.__table__
 FlowPRTModelInsert = FlowPRTModelTable.insert
+FlowPRTModelUpdate = FlowPRTModelTable.update
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -257,26 +258,35 @@ class FlowPRTAPI(object):
                 logger.warn(msg, ctx.input.token, now)
                 raise ValidationError(status_code.prt.could_not_access, False)
 
-            #print()
-            #print(111, user_info)
-            #print()
-
-            # First, get the user ID corresponding to the input PRT ..
-
             # .. now, check if the user is still allowed to access the system,
             # we make an assuption that it is true (the user is still allowed),
-            # which is why we conduct this check under the same SQL session.
+            # which is why we conduct this check under the same SQL session ..
             self.user_checker.check(ctx, user_info)
 
-        # First,
-        #self.user_checker.check(ctx)
+            # .. if we are here, it means that the user checks above succeeded,
+            # which means that we can modify the state to indicate that the token
+            # has been accessed and we can return an encrypted access token
+            # to the caller to let the user update the password ..
 
-        # MySQL does not support UPDATE .. RETURNING so we need to run the select query first
-        # to get the PRT's access key and update it in another query.
-        #print()
-        #print(111, ctx)
-        #print()
-        pass
+            session.execute(FlowPRTModelUpdate().where(
+                FlowPRTModelTable.c.token==ctx.input.token
+            ).values({
+                'has_been_accessed': True,
+                'access_time': now,
+                'access_ctx': json_dumps({
+                    'remote_addr': str(ctx.remote_addr),
+                    'user_agent': ctx.user_agent,
+                    'has_remote_addr': ctx.has_remote_addr,
+                    'has_user_agent': ctx.has_user_agent,
+                })
+            }))
+
+            # .. commit the operation.
+            session.commit()
+
+        # Now, outside the SQL block, encrypt the reset key and return it to the caller
+        # so that the user can provide it in the subsequent call to reset the password.
+        return self.server.encrypt(user_info.reset_key, prefix='')
 
 # ################################################################################################################################
 
