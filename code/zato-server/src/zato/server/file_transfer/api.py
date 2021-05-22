@@ -85,6 +85,14 @@ source_type_to_snapshot_maker_class = {
 # ################################################################################################################################
 # ################################################################################################################################
 
+suffix_ignored = (
+    '.swp',
+    '~',
+)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class FileTransferAPI(object):
     """ Manages file transfer observers and callbacks.
     """
@@ -313,10 +321,21 @@ class FileTransferAPI(object):
 
 # ################################################################################################################################
 
-    def should_handle(self, channel_name, file_name):
+    def should_handle(self, channel_name, file_name, suffix_ignored=suffix_ignored):
+        # type: (str, str, str) -> bool
+
+        # Chech all the patterns configured ..
         for pattern in self.pattern_matcher_dict[channel_name]:
+
+            # .. we have a match against a pattern ..
             if pattern.match(file_name):
-                return True
+
+                # .. however, we may be still required to ignore this file ..
+                for elem in suffix_ignored:
+                    if file_name.endswith(elem):
+                        return False
+                else:
+                    return True
 
 # ################################################################################################################################
 
