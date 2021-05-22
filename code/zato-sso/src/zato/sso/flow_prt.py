@@ -12,6 +12,9 @@ from contextlib import closing
 from datetime import datetime, timedelta
 from logging import getLogger
 
+# SQLAlchemy
+from sqlalchemy import and_
+
 # Zato
 from zato.common import GENERIC, SMTPMessage
 from zato.common.api import SSO as CommonSSO
@@ -115,6 +118,16 @@ class FlowPRTAPI(object):
 
         # From who the SMTP messages will be sent
         self.email_from = sso_conf.prt.email_from
+
+# ################################################################################################################################
+
+    def post_configure(self, func, is_sqlite):
+        # type: (Callable, bool) -> None
+        self.odb_session_func = func
+        self.is_sqlite = is_sqlite
+
+        # Base of the path to filesystem templates
+        self.template_base_path = os.path.join(self.server.static_config.base_dir, 'sso', 'email')
 
 # ################################################################################################################################
 
@@ -258,7 +271,7 @@ class FlowPRTAPI(object):
                 logger.warn(msg, ctx.input.token, now)
                 raise ValidationError(status_code.prt.could_not_access, False)
 
-            # .. now, check if the user is still allowed to access the system,
+            # .. now, check if the user is still allowed to access the system;
             # we make an assuption that it is true (the user is still allowed),
             # which is why we conduct this check under the same SQL session ..
             self.user_checker.check(ctx, user_info)
@@ -290,13 +303,72 @@ class FlowPRTAPI(object):
 
 # ################################################################################################################################
 
-    def post_configure(self, func, is_sqlite):
-        # type: (Callable, bool) -> None
-        self.odb_session_func = func
-        self.is_sqlite = is_sqlite
+    def change_password(self, ctx, _utcnow=datetime.utcnow, _timedelta=timedelta):
+        # type: (SSOCtx, object, object) -> str
 
-        # Base of the path to filesystem templates
-        self.template_base_path = os.path.join(self.server.static_config.base_dir, 'sso', 'email')
+        # For later use
+        now = _utcnow()
+
+        # This will be encrypted on input so we need to get a clear-text version of it
+        reset_key = self.server.decrypt_no_prefix(ctx.input.reset_key)
+
+        # We need an SQL session ..
+        with closing(self.odb_session_func()) as session:
+
+            # .. try to look up the user by the incoming PRT and reset key which must exist and not to have expired,
+            # or otherwise have been invalidated (e.g. already accessed) ..
+            user_info = get_user_by_prt_and_reset_key(session, ctx.input.token, reset_key, now)
+
+            # .. no data matching the PRT, we need to reject the request ..
+            if not user_info:
+                msg = 'Token or reset key rejected. No valid PRT or reset key matched input `%s` `%s` (now: %s)'
+                logger.warn(msg, ctx.input.token, reset_key, now)
+                raise ValidationError(status_code.prt.could_not_access, False)
+
+            # .. now, check if the user is still allowed to access the system;
+            # we make an assuption that it is true (the user is still allowed),
+            # which is why we conduct this check under the same SQL session ..
+            self.user_checker.check(ctx, user_info)
+
+            # .. if we are here, it means that the user checks above succeeded
+            # and we can update the user's password too ..
+            self.server.sso_api.user.set_password(
+                ctx.cid,
+                user_info.user_id,
+                ctx.input.password,
+                must_change=False,
+                password_expiry=None,
+                current_app=ctx.input.current_app,
+                remote_addr=ctx.remote_addr,
+                details={
+                    'user_agent': ctx.user_agent,
+                    'has_remote_addr': ctx.has_remote_addr,
+                    'has_user_agent': ctx.has_user_agent,
+            })
+
+            #
+            # .. the password above was accepted and set which means that we can
+            # modify the state to indicate that the reset key has been accessed
+            # and that the password is changed ..
+            #
+            session.execute(FlowPRTModelUpdate().where(and_(
+                FlowPRTModelTable.c.token==ctx.input.token,
+                FlowPRTModelTable.c.reset_key==ctx.input.reset_key,
+            )).values({
+                'is_password_reset': True,
+                'password_reset_time': now,
+                'password_reset_ctx': json_dumps({
+                    'remote_addr': str(ctx.remote_addr),
+                    'user_agent': ctx.user_agent,
+                    'has_remote_addr': ctx.has_remote_addr,
+                    'has_user_agent': ctx.has_user_agent,
+                })
+            }))
+
+            # .. commit the operation.
+            session.commit()
+
+        # This is everything, we have just updated the user's password.
 
 # ################################################################################################################################
 # ################################################################################################################################
