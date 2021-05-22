@@ -1007,9 +1007,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         """ Returns data decrypted using server's CryptoManager.
         """
         if data.startswith(_prefix):
-            return self.crypto_manager.decrypt(data.replace(_prefix, '', 1))
+            return self.decrypt_no_prefix(data.replace(_prefix, '', 1))
         else:
             return data # Already decrypted, return as is
+
+# ################################################################################################################################
+
+    def decrypt_no_prefix(self, data):
+        return self.crypto_manager.decrypt(data)
 
 # ################################################################################################################################
 

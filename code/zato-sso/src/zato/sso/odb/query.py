@@ -149,7 +149,6 @@ def _get_user_by_prt(session, prt, now):
         ).\
         filter(SSOFlowPRT.token == prt).\
         filter(SSOUser.user_id == SSOFlowPRT.user_id).\
-        filter(SSOFlowPRT.is_password_reset.is_(False)).\
         filter(SSOFlowPRT.expiration_time > now).\
         filter(SSOFlowPRT.reset_key_exp_time > now)
 
@@ -161,32 +160,25 @@ def get_user_by_prt(session, prt, now):
     q = _get_user_by_prt(session, prt, now)
 
     # .. at this point, the password is still not reset
-    # and the reset key has not been accessed yet so we
-    # do not add any additional conditions to this query.
-    # Let's be explicit about by using the 'pass' statement.
-
-    print()
-    print(111, q)
-    print(222, prt)
-    print(333, now)
-    print()
+    # and the reset key has not been accessed but we need
+    # to ensure that the PRT has not been accessed either.
+    q = q.\
+        filter(SSOFlowPRT.has_been_accessed.is_(False))
 
     # .. and return the result.
     return q.first()
 
 # ################################################################################################################################
 
-def get_user_by_prt_and_reset_key(session, prt, now, reset_key):
+def get_user_by_prt_and_reset_key(session, prt, reset_key, now):
 
     # Get the base query ..
     q = _get_user_by_prt(session, prt, now)
 
-    q = q.\
+    q2 = q.\
         filter(SSOFlowPRT.reset_key == reset_key).\
         filter(SSOFlowPRT.has_been_accessed.is_(True)).\
-        filter(SSOFlowPRT.is_password_reset.is_(False)).\
-        filter(SSOFlowPRT.expiration_time > now).\
-        filter(SSOFlowPRT.reset_key_exp_time > now)
+        filter(SSOFlowPRT.is_password_reset.is_(False))
 
     # .. and return the result.
     return q.first()
