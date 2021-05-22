@@ -12,9 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from http.client import FORBIDDEN
 from traceback import format_exc
 
-# ipaddress
-from ipaddress import ip_address
-
 # Zato
 from zato.common.api import NO_REMOTE_ADDRESS
 from zato.server.service import List, Service

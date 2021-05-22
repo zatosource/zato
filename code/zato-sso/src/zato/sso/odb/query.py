@@ -13,7 +13,7 @@ from datetime import datetime
 from bunch import bunchify
 
 # SQLAlchemy
-from sqlalchemy import exists, or_
+from sqlalchemy import or_
 
 # Zato
 from zato.common.api import GENERIC
