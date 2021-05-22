@@ -880,7 +880,7 @@ class UserAPI(object):
           'new_password': new_password,
           'totp_code': totp_code,
         }
-        login_ctx = LoginCtx(remote_addr, user_agent, has_remote_addr, has_user_agent, ctx_input)
+        login_ctx = LoginCtx(remote_addr, user_agent, ctx_input)
         return self.session.login(login_ctx, is_logged_in_ext=False, skip_sec=skip_sec)
 
 # ################################################################################################################################
