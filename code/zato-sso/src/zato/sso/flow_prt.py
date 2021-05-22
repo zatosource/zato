@@ -12,8 +12,6 @@ from contextlib import closing
 from datetime import datetime, timedelta
 from logging import getLogger
 
-from ipaddress import IPv4Address
-
 # SQLAlchemy
 from sqlalchemy import and_
 
@@ -25,7 +23,7 @@ from zato.common.odb.model import SSOFlowPRT as FlowPRTModel
 from zato.sso import const, Default, status_code, ValidationError
 from zato.sso.odb.query import get_user_by_email, get_user_by_name, get_user_by_name_or_email, get_user_by_prt, \
      get_user_by_prt_and_reset_key
-from zato.sso.util import new_prt, new_prt_reset_key, new_user_session_token, UserChecker
+from zato.sso.util import new_prt, new_prt_reset_key, UserChecker
 
 # ################################################################################################################################
 
@@ -168,7 +166,7 @@ class FlowPRTAPI(object):
                 FlowPRTModelInsert().values({
                     'creation_time': creation_time,
                     'expiration_time': expiration_time,
-                    'reset_key_exp_time': expiration_time,
+                    'reset_key_exp_time': reset_key_exp_time,
                     'user_id': user.user_id,
                     'token': prt,
                     'type_': const.prt.token_type,
@@ -250,7 +248,7 @@ class FlowPRTAPI(object):
         msg.body = msg_body
 
         # .. and send it to the user.
-        #smtp_conn.send(msg)
+        smtp_conn.send(msg)
 
 # ################################################################################################################################
 
