@@ -18,7 +18,7 @@ from ipaddress import ip_address
 
 # Zato
 from zato.common.api import GENERIC
-from zato.common.ext.dataclasses import dataclass
+from zato.common.ext.dataclasses import dataclass, field
 from zato.common.json_internal import dumps
 from zato.common.odb.model import SSOSession as SessionModel
 from zato.sso import const
@@ -39,10 +39,37 @@ SessionModelInsert = SessionModelTable.insert
 class SSOCtx:
     """ A set of attributes describing current SSO request.
     """
-    input: Bunch
-    sso_conf: dict
     remote_addr: str
     user_agent: str
+    input: Bunch
+    has_remote_addr: bool = field(init=False)
+    has_user_agent: bool = field(init=False)
+
+    sso_conf: dict
+
+    def __post_init__(self):
+        self.has_remote_addr = bool(self.remote_addr)
+        self.has_user_agent = bool(self.user_agent)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass
+class LoginCtx(object):
+    """ A set of data about a login request.
+    """
+    remote_addr: str
+    user_agent: str
+    input: Bunch
+    has_remote_addr: bool = field(init=False)
+    has_user_agent: bool = field(init=False)
+
+    ext_session_id: str = field(init=False)
+
+    def __post_init__(self):
+        self.has_remote_addr = bool(self.remote_addr)
+        self.has_user_agent = bool(self.user_agent)
+        self.remote_addr = [ip_address(self.remote_addr)]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,23 +87,6 @@ class SessionInsertCtx:
     ctx_source: str
     ext_session_id: optional[str]
     interaction_max_len: int
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class LoginCtx(object):
-    """ A set of data about a login request.
-    """
-    __slots__ = ('remote_addr', 'user_agent', 'has_remote_addr', 'has_user_agent', 'input', 'ext_session_id')
-
-    def __init__(self, remote_addr, user_agent, has_remote_addr, has_user_agent, input, ext_session_id=None):
-        # type: (unicode, unicode, bool, bool, dict)
-        self.remote_addr = [ip_address(remote_addr)]
-        self.user_agent = user_agent
-        self.has_remote_addr = has_remote_addr
-        self.has_user_agent = has_user_agent
-        self.input = input
-        self.ext_session_id = ext_session_id
 
 # ################################################################################################################################
 # ################################################################################################################################
