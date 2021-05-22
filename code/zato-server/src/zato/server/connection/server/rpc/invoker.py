@@ -7,6 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from logging import getLogger
 from typing import Optional as optional
 
 # Requests
@@ -32,6 +33,11 @@ if 0:
     RemoteServerInvocationCtx = RemoteServerInvocationCtx
     Response = Response
     ServiceInvokeResponse = ServiceInvokeResponse
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger('zato')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -143,10 +149,11 @@ class RemoteServerInvoker(ServerInvoker):
         out.error_info = response.details
 
         if response.ok:
-            for pid, pid_data in response.data.items():
-                per_pid_response = from_dict(PerPIDResponse, pid_data) # type: PerPIDResponse
-                per_pid_response.pid = pid
-                out.data[pid] = per_pid_response
+            if response.has_data:
+                for pid, pid_data in response.data.items():
+                    per_pid_response = from_dict(PerPIDResponse, pid_data) # type: PerPIDResponse
+                    per_pid_response.pid = pid
+                    out.data[pid] = per_pid_response
 
         # .. and return the result to our caller.
         return out
