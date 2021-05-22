@@ -257,9 +257,9 @@ class FlowPRTAPI(object):
                 logger.warn(msg, ctx.input.token, now)
                 raise ValidationError(status_code.prt.could_not_access, False)
 
-            print()
-            print(111, user_info)
-            print()
+            #print()
+            #print(111, user_info)
+            #print()
 
             # First, get the user ID corresponding to the input PRT ..
 
