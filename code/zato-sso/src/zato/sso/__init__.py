@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from datetime import datetime
@@ -92,6 +90,10 @@ class status_code:
     class attr:
         already_exists = 'E009001'
         no_such_attr   = 'E009002'
+
+    class prt:
+        could_not_access = 'E010001'
+        user_rejected    = 'E010002'
 
 # ################################################################################################################################
 
