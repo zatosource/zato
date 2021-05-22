@@ -79,8 +79,8 @@ def response_hook(self, input, instance, attrs, service_type):
 
     if service_type == 'get_list':
 
-        # Details are needed when topics are in their own main screen but if only basic information
-        # is needed, like a list of topic IDs and names, we don't need to look up additional details.
+        # Details are needed when the main list of topics is requested but if only basic information
+        # is needed, like a list of topic IDs and their names, we don't need to look up additional details.
         # The latter is the case of the message publication screen which simply needs a list of topic IDs/names.
         if input.get('needs_details', True):
 
