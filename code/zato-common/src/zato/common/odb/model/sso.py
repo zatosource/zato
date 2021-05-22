@@ -272,7 +272,7 @@ class _SSOFlowPRT(Base):
     __tablename__ = 'zato_sso_flow_prt'
 
     __table_args__ = (
-        Index('zato_prt_value_type', 'value', 'type_', unique=True),
+        Index('zato_prt_value_type', 'token', 'type_', unique=True),
     {})
 
     # Not exposed publicly, used only because SQLAlchemy requires an FK
@@ -282,13 +282,13 @@ class _SSOFlowPRT(Base):
     expiration_time = Column(DateTime(), nullable=False)
 
     # The actual PRT (password reset token)
-    value = Column(String(191), nullable=False)
+    token = Column(String(191), nullable=False)
 
     # PRT type - what kind is it of, e.g. a Zato built-in one or an external one?
     type_ = Column(String(191), nullable=False)
 
     # This key is used to reset the password after the PRT has been accessed
-    reset_key = Column(String(512), nullable=False)
+    reset_key = Column(String(191), nullable=False)
 
     # This is set when the PRT is accessed in order to set a time limit
     # for the password reset procedure (using prt.password_change_session_duration from sso.conf)

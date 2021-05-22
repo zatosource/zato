@@ -185,7 +185,7 @@ class SessionAPI(object):
 
         # .. otherwise, create a new one. Note that we get here only if
         else:
-            ctx = LoginCtx(remote_addr, user_agent, False, False, {
+            ctx = LoginCtx(remote_addr, user_agent, {
                 'user_id': user_id,
                 'current_app': current_app,
                 'totp_code': totp_code,
