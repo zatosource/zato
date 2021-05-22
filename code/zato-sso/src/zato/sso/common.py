@@ -36,16 +36,12 @@ SessionModelInsert = SessionModelTable.insert
 # ################################################################################################################################
 
 @dataclass
-class SSOCtx:
-    """ A set of attributes describing current SSO request.
-    """
+class BaseRequestCtx:
     remote_addr: str
     user_agent: str
     input: Bunch
     has_remote_addr: bool = field(init=False)
     has_user_agent: bool = field(init=False)
-
-    sso_conf: dict
 
     def __post_init__(self):
         self.has_remote_addr = bool(self.remote_addr)
@@ -55,20 +51,22 @@ class SSOCtx:
 # ################################################################################################################################
 
 @dataclass
-class LoginCtx(object):
+class SSOCtx(BaseRequestCtx):
+    """ A set of attributes describing current SSO request.
+    """
+    sso_conf: dict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass
+class LoginCtx(BaseRequestCtx):
     """ A set of data about a login request.
     """
-    remote_addr: str
-    user_agent: str
-    input: Bunch
-    has_remote_addr: bool = field(init=False)
-    has_user_agent: bool = field(init=False)
-
     ext_session_id: str = field(init=False)
 
     def __post_init__(self):
-        self.has_remote_addr = bool(self.remote_addr)
-        self.has_user_agent = bool(self.user_agent)
+        super().__post_init__()
         self.remote_addr = [ip_address(self.remote_addr)]
 
 # ################################################################################################################################
