@@ -40,12 +40,18 @@ class BaseRequestCtx:
     remote_addr: str
     user_agent: str
     input: Bunch
-    has_remote_addr: bool = field(init=False)
-    has_user_agent: bool = field(init=False)
+    has_remote_addr: bool = field(init=False, default=False)
+    has_user_agent: bool = field(init=False, default=False)
 
     def __post_init__(self):
-        self.has_remote_addr = bool(self.remote_addr)
-        self.has_user_agent = bool(self.user_agent)
+        self.has_remote_addr = bool(self.input.get('remote_addr'))
+        self.has_user_agent = bool(self.input.get('user_agent'))
+
+        if self.remote_addr:
+            remote_addr = [elem.strip() for elem in self.remote_addr.strip().split(',')]
+            remote_addr = [ip_address(elem) for elem in remote_addr]
+
+        self.remote_addr = remote_addr
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -67,7 +73,7 @@ class LoginCtx(BaseRequestCtx):
 
     def __post_init__(self):
         super().__post_init__()
-        self.remote_addr = [ip_address(self.remote_addr)]
+        self.ext_session_id = ''
 
 # ################################################################################################################################
 # ################################################################################################################################
