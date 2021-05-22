@@ -18,6 +18,16 @@ not_given = object()
 
 # ################################################################################################################################
 
+class Default:
+    prt_valid_for = 1440 # In minutes = 1 day
+    prt_password_change_session_duration=1800 # In seconds = 30 minutes
+    prt_user_search_by = 'username'
+
+    # User notifications are sent in this language by default
+    prt_locale = 'en_GB'
+
+# ################################################################################################################################
+
 class status_code:
     """ Reason codes pointing to specific API validation errors.
     """
@@ -50,6 +60,8 @@ class status_code:
         w_about_to_exp = 'W003005'
         e_about_to_exp = 'E003006'
         must_send_new  = 'E003007'
+
+        not_complex_enough = 'E003008'
 
     class app_list:
         invalid   = 'E004001'
@@ -113,6 +125,9 @@ class const:
         basic_auth = 'basic_auth'
         default    = 'default'
         jwt        = 'jwt'
+
+    class prt:
+        token_type = 'prt'
 
 # ################################################################################################################################
 
@@ -187,7 +202,8 @@ class User(object):
         'email', 'first_name', 'is_active', 'is_approval_needed', 'is_internal', 'is_locked', 'is_super_user',
         'last_name', 'locked_by', 'locked_time', 'middle_name', 'password_expiry', 'password_is_set', 'password_last_set',
         'password_must_change', 'sign_up_status', 'sign_up_time', 'user_id', 'username', 'is_rate_limit_active',
-        'rate_limit_def', 'rate_limit_type', 'rate_limit_check_parent_def', 'is_totp_enabled', 'totp_label')
+        'rate_limit_def', 'rate_limit_type', 'rate_limit_check_parent_def', 'is_totp_enabled', 'totp_label', 'status',
+        'is_current_super_user')
 
     def __init__(self):
         self.approval_status = None
@@ -221,6 +237,10 @@ class User(object):
         self.rate_limit_check_parent_def = None
         self.is_totp_enabled = None
         self.totp_label = None
+        self.status = None
+
+        # Set to True if the user whose session created this object is a super-user
+        self.is_current_super_user = False
 
     def to_dict(self):
         return dict((name, getattr(self, name)) for name in self.__slots__ if name != 'attr')

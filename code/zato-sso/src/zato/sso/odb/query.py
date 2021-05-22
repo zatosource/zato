@@ -83,13 +83,54 @@ def get_user_by_id(session, user_id, *ignored_args):
 
 # ################################################################################################################################
 
-def get_user_by_username(session, username, needs_approved=True, _approved=_approved):
-    q = _get_model(session, _user_basic_columns).\
-        filter(SSOUser.username==username)
+def _get_user_base_query(session, needs_approved=True, _approved=_approved):
+    q = _get_model(session, _user_basic_columns)
 
     if needs_approved:
         q = q.filter(SSOUser.approval_status==_approved)
 
+    return q
+
+# ################################################################################################################################
+
+def get_user_by_name(session, username, needs_approved=True):
+
+    # Get the base query ..
+    q = _get_user_base_query(session, needs_approved)
+
+    # .. filter by username ..
+    q = q.filter(SSOUser.username==username)
+
+    # .. and return the result.
+    return q.first()
+
+# ################################################################################################################################
+
+def get_user_by_email(session, email, needs_approved=True):
+
+    # Get the base query ..
+    q = _get_user_base_query(session, needs_approved)
+
+    # .. filter by email ..
+    q = q.filter(SSOUser.email==email)
+
+    # .. and return the result.
+    return q.first()
+
+# ################################################################################################################################
+
+def get_user_by_name_or_email(session, credential, needs_approved=True):
+
+    # Get the base query ..
+    q = _get_user_base_query(session, needs_approved)
+
+    # .. filter by username or email..
+    q = q.filter(or_(
+        SSOUser.username==credential,
+        SSOUser.email==credential,
+    ))
+
+    # .. and return the result.
     return q.first()
 
 # ################################################################################################################################

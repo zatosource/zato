@@ -37,7 +37,7 @@ from zato.common.odb.model import SSOLinkedAuth as LinkedAuth, SSOSession as Ses
 from zato.sso import const, not_given, status_code, User as UserEntity, ValidationError
 from zato.sso.attr import AttrAPI
 from zato.sso.odb.query import get_linked_auth_list, get_sign_up_status_by_token, get_user_by_id, get_user_by_linked_sec, \
-     get_user_by_username, get_user_by_ust
+     get_user_by_name, get_user_by_ust
 from zato.sso.session import LoginCtx, SessionAPI
 from zato.sso.user_search import SSOSearch
 from zato.sso.util import check_credentials, check_remote_app_exists, make_data_secret, make_password_secret, new_confirm_token, \
@@ -93,7 +93,6 @@ UserModelTableUpdate = UserModelTable.update
 
 # Attributes accessible to both account owner and super-users
 regular_attrs = {
-    'user_id': None,
     'username': None,
     'email': b'',
     'display_name': '',
@@ -106,7 +105,9 @@ regular_attrs = {
 
 # Attributes accessible only to super-users
 super_user_attrs = {
+    'user_id': None,
     'is_active': False,
+    'is_approval_needed': None,
     'is_internal': False,
     'is_super_user': False,
     'is_locked': True,
@@ -453,7 +454,7 @@ class UserAPI(object):
                 raise ValidationError(status_code.username.invalid, True)
 
             # Make sure the username is unique
-            if get_user_by_username(session, ctx.data['username'], needs_approved=False):
+            if get_user_by_name(session, ctx.data['username'], needs_approved=False):
                 logger.warn('Username `%s` already exists', ctx.data['username'])
                 raise ValidationError(status_code.username.exists, False)
 
@@ -605,7 +606,7 @@ class UserAPI(object):
         audit_pii.info(cid, 'user.get_user_by_username', extra={'username':username})
 
         with closing(self.odb_session_func()) as session:
-            return get_user_by_username(session, username, needs_approved=needs_approved)
+            return get_user_by_name(session, username, needs_approved=needs_approved)
 
 # ################################################################################################################################
 
@@ -634,7 +635,7 @@ class UserAPI(object):
             else:
                 info = func(session, query_criteria, _utcnow())
 
-            # Input UST is invalid for any reason (perhaps has just expired), raise an exception in that case
+            # Input UST is invalid for any reason (perhaps it has just expired), raise an exception in that case
             if not info:
                 raise ValidationError(status_code.auth.not_allowed, True)
 
@@ -643,6 +644,7 @@ class UserAPI(object):
 
                 # Main user entity
                 out = UserEntity()
+                out.is_current_super_user = current_session.is_super_user
 
                 if current_session.is_super_user:
                     attrs = _all_super_user_attrs
@@ -651,13 +653,20 @@ class UserAPI(object):
                     attrs = regular_attrs
 
                 for key in attrs:
-                    value = getattr(info, key)
+
+                    value = getattr(info, key, None)
 
                     if isinstance(value, datetime):
                         value = value.isoformat()
 
+                    # This will be encrypted ..
                     elif key in ('totp_key', 'totp_label'):
                         value = self.decrypt_func(value)
+
+                        # .. do not return our internal constant  if not label has been assign to TOTP.
+                        if key == 'totp_label':
+                            if value == TOTP.default_label:
+                                value = ''
 
                     setattr(out, key, value)
 
@@ -738,7 +747,7 @@ class UserAPI(object):
 
             # .. or use username if this is what was given on input.
             elif username:
-                user = get_user_by_username(session, username, needs_approved=False)
+                user = get_user_by_name(session, username, needs_approved=False)
                 where = UserModelTable.c.username==username
 
             user_id = user.user_id
@@ -1552,7 +1561,7 @@ class UserAPI(object):
 
                 # Write out all super-user accessible attributes for each output row
                 for name in sorted(_all_super_user_attrs):
-                    value = sql_item[name]
+                    value = sql_item.get(name)
 
                     # Serialize datetime objects to string, if needed
                     if serialize_dt and isinstance(value, datetime):

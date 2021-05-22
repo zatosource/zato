@@ -1561,6 +1561,15 @@ class HotDeploy:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class SSO:
+    class EmailTemplate:
+        SignupConfirm = 'signup-confirm.txt'
+        SignupWelcome = 'signup-welcome.txt'
+        PasswordResetLink = 'password-reset-link.txt'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 ZATO_INFO_FILE = '.zato-info'
 
 # ################################################################################################################################
@@ -1844,6 +1853,7 @@ default_internal_modules = {
     'zato.server.service.internal.sms.twilio': True,
     'zato.server.service.internal.sso': True,
     'zato.server.service.internal.sso.cleanup': True,
+    'zato.server.service.internal.sso.flow_prt': True,
     'zato.server.service.internal.sso.password_reset': True,
     'zato.server.service.internal.sso.session': True,
     'zato.server.service.internal.sso.session_attr': True,

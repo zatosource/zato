@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
@@ -17,7 +15,7 @@ from traceback import format_exc
 from gevent import sleep
 
 # Zato
-from zato.common.odb.model import SSOAttr, SSOSession
+from zato.common.odb.model import SSOAttr, SSOFlowPRT, SSOSession
 from zato.server.service import Service
 
 # ################################################################################################################################
@@ -47,6 +45,9 @@ class Cleanup(Service):
                     # Clean up expired attributes
                     self._cleanup_attrs(session, now)
 
+                    # Clean up expired password reset tokens (PRT)
+                    self._cleanup_flow_prt(session, now)
+
                     # Commit all deletes
                     session.commit()
 
@@ -68,6 +69,13 @@ class Cleanup(Service):
     def _cleanup_attrs(self, session, now):
         return session.query(SSOAttr).\
             filter(SSOAttr.expiration_time <= now).\
+            delete()
+
+# ################################################################################################################################
+
+    def _cleanup_flow_prt(self, session, now):
+        return session.query(SSOFlowPRT).\
+            filter(SSOFlowPRT.expiration_time <= now).\
             delete()
 
 # ################################################################################################################################
