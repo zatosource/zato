@@ -1057,12 +1057,16 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def set_password(self, cid, user_id, password, must_change, password_expiry, current_app, remote_addr):
+    def set_password(self, cid, user_id, password, must_change, password_expiry, current_app, remote_addr, details=None):
         """ Sets a new password for user.
         """
         # PII audit comes first
-        audit_pii.info(cid, 'user.set_password', target_user=user_id,
-            extra={'current_app':current_app, 'remote_addr':remote_addr})
+        extra = {'current_app':current_app, 'remote_addr':remote_addr}
+
+        if details:
+            extra.update(details)
+
+        audit_pii.info(cid, 'user.set_password', target_user=user_id, extra=extra)
 
         set_password(self.odb_session_func, self.encrypt_func, self.hash_func, self.sso_conf, user_id, password,
             must_change, password_expiry)

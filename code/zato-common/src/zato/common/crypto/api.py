@@ -166,10 +166,12 @@ class CryptoManager(object):
 # ################################################################################################################################
 
     @staticmethod
-    def generate_password(bits=192):
+    def generate_password(bits=192, to_str=False):
         """ Generates a string strong enough to be a password (default: 192 bits)
         """
-        return CryptoManager.generate_secret(bits)
+        # type: (int, bool) -> str
+        value = CryptoManager.generate_secret(bits)
+        return value.decode('utf8') if to_str else value
 
 # ################################################################################################################################
 

@@ -97,7 +97,7 @@ class BaseService(Service):
 
         # OK, we can proceed to the actual call now
         self._call_sso_api(self._handle_sso, 'Could not call service',
-            ctx=SSOCtx(remote_addr, self.wsgi_environ.get('HTTP_USER_AGENT'), self.request.input, sso_conf))
+            ctx=SSOCtx(remote_addr, self.wsgi_environ.get('HTTP_USER_AGENT'), self.request.input, sso_conf, self.cid))
 
 # ################################################################################################################################
 
