@@ -89,6 +89,13 @@ DATA_FORMAT_XML:cy.unicode  = DATA_FORMAT.XML
 
 # ################################################################################################################################
 
+def _not_implemented(func):
+    def _inner(*args, **kwargs):
+        raise NotImplementedError('{} - operation not implemented'.format(func))
+    return _inner
+
+# ################################################################################################################################
+
 class SIOJSONEncoder(JSONEncoder):
 
     def __init__(self, *args, **kwargs):
@@ -406,23 +413,17 @@ class Elem(object):
 
 # ################################################################################################################################
 
-    @staticmethod
-    def _not_implemented(func):
-        def _inner(*args, **kwargs):
-            raise NotImplementedError('{} - operation not implemented'.format(func))
-        return _inner
+    from_json = _not_implemented('Elem.from_json')  # noqa: F821
+    to_json   = _not_implemented('Elem.to_json')    # noqa: F821
 
-    from_json = Elem._not_implemented('Elem.from_json')  # noqa: F821
-    to_json   = Elem._not_implemented('Elem.to_json')    # noqa: F821
+    from_xml  = _not_implemented('Elem.from_xml')   # noqa: F821
+    to_xml    = _not_implemented('Elem.to_xml')     # noqa: F821
 
-    from_xml  = Elem._not_implemented('Elem.from_xml')   # noqa: F821
-    to_xml    = Elem._not_implemented('Elem.to_xml')     # noqa: F821
+    from_csv  = _not_implemented('Elem.from_csv')   # noqa: F821
+    to_csv    = _not_implemented('Elem.to_csv')     # noqa: F821
 
-    from_csv  = Elem._not_implemented('Elem.from_csv')   # noqa: F821
-    to_csv    = Elem._not_implemented('Elem.to_csv')     # noqa: F821
-
-    from_dict  = Elem._not_implemented('Elem.from_dict') # noqa: F821
-    to_dict    = Elem._not_implemented('Elem.to_dict')   # noqa: F821
+    from_dict  = _not_implemented('Elem.from_dict') # noqa: F821
+    to_dict    = _not_implemented('Elem.to_dict')   # noqa: F821
 
 # ################################################################################################################################
 
@@ -490,8 +491,8 @@ class CSV(Elem):
     from_xml  = from_json
     to_dict   = to_json
     from_dict = from_json
-    to_csv    = Elem._not_implemented('CSV.to_csv')
-    from_csv  = Elem._not_implemented('CSV.from_csv')
+    to_csv    = _not_implemented('CSV.to_csv')
+    from_csv  = _not_implemented('CSV.from_csv')
 
 # ################################################################################################################################
 
@@ -678,10 +679,10 @@ class Dict(Elem):
 
     from_dict = to_dict = from_json
 
-    to_csv    = Elem._not_implemented('Dict.to_csv')
-    from_csv  = Elem._not_implemented('Dict.from_csv')
-    to_xml    = Elem._not_implemented('Dict.to_xml')
-    from_xml  = Elem._not_implemented('Dict.from_xml')
+    to_csv    = _not_implemented('Dict.to_csv')
+    from_csv  = _not_implemented('Dict.from_csv')
+    to_xml    = _not_implemented('Dict.to_xml')
+    from_xml  = _not_implemented('Dict.from_xml')
 
 # ################################################################################################################################
 
@@ -703,10 +704,10 @@ class DictList(Dict):
 
     from_dict = to_dict = from_json
 
-    to_csv    = Elem._not_implemented('DictList.to_csv')
-    from_csv  = Elem._not_implemented('DictList.from_csv')
-    to_xml    = Elem._not_implemented('DictList.to_xml')
-    from_xml  = Elem._not_implemented('DictList.from_xml')
+    to_csv    = _not_implemented('DictList.to_csv')
+    from_csv  = _not_implemented('DictList.from_csv')
+    to_xml    = _not_implemented('DictList.to_xml')
+    from_xml  = _not_implemented('DictList.from_xml')
 
 # ################################################################################################################################
 

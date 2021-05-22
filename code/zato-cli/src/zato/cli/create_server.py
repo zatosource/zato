@@ -11,7 +11,7 @@ from copy import deepcopy
 
 # Zato
 from zato.cli import common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents, ZatoCommand
-from zato.common.api import CONTENT_TYPE, default_internal_modules
+from zato.common.api import CONTENT_TYPE, default_internal_modules, SSO as CommonSSO
 from zato.common.simpleio_ import simple_io_conf_contents
 
 # ################################################################################################################################
@@ -387,6 +387,16 @@ inform_if_locked=True
 inform_if_not_confirmed=True
 inform_if_not_approved=True
 
+[prt]
+valid_for=1440 # In minutes = 1 day
+password_change_session_duration=1800 # In seconds = 30 minutes
+inform_if_user_not_found=False
+user_search_by=username
+is_multi_access_allowed=True
+email_title_en_GB=Password reset
+email_title_en_US=Password reset
+email_from=hello@example.com
+
 [user_address_list]
 
 [session]
@@ -402,6 +412,8 @@ about_to_expire_threshold=30 # In days
 log_in_if_about_to_expire=True
 min_length=8
 max_length=256
+min_complexity=4
+min_complexity_algorithm=zxcvbn
 reject_list = """
   111111
   123123
@@ -468,34 +480,56 @@ max_page_size=100
 # ################################################################################################################################
 
 sso_confirm_template = """
-Hello {data.display_name},
+Hello {username},
 
 your account is almost ready - all we need to do is make sure that this is your email.
 
-Use this URL to confirm your address:
+Use this link to confirm your address:
 
-https://example.com/zato/sso/confirm?token={data.token}
+https://example.com/signup-confirm/{token}
 
-If you didn't want to create the account, just delete this email and everything will go back to the way it was.
+If you did not want to create the account, just delete this email and everything will go back to the way it was.
 
---
+ZATO_FOOTER_MARKER
 Your Zato SSO team.
 """.strip()
 
 # ################################################################################################################################
 
 sso_welcome_template = """
-Hello {data.display_name}!
+Hello {username},
 
-Thanks for joining us. Here are a couple great ways to get started:
+thanks for joining us. Here are a couple great ways to get started:
 
 * https://example.com/link/1
 * https://example.com/link/2
 * https://example.com/link/3
 
---
+ZATO_FOOTER_MARKER
 Your Zato SSO team.
 """.strip()
+
+sso_password_reset_template = """
+Hello {username},
+
+a password reset was recently requested on your {site_name} account. If this was you, please click the link below to update your password.
+
+https://example.com/reset-password/{token}
+
+This link will expire in {expiration_time_hours} hours.
+
+If you do not want to reset your password, please ignore this message and the password will not be changed.
+
+ZATO_FOOTER_MARKER
+Your Zato SSO team.
+""".strip()
+
+# ################################################################################################################################
+
+# We need to do it because otherwise IDEs may replace '-- ' with '--' (stripping the whitespace)
+sso_confirm_template = sso_confirm_template.replace('ZATO_FOOTER_MARKER', '-- ')
+sso_welcome_template = sso_welcome_template.replace('ZATO_FOOTER_MARKER', '-- ')
+sso_password_reset_template = sso_password_reset_template.replace('ZATO_FOOTER_MARKER', '-- ')
 
 # ################################################################################################################################
 
@@ -570,7 +604,10 @@ directories = (
     'config/repo/sftp',
     'config/repo/sftp/channel',
     'config/repo/static',
-    'config/repo/static/email',
+    'config/repo/static/sso',
+    'config/repo/static/sso/email',
+    'config/repo/static/sso/email/en_GB',
+    'config/repo/static/sso/email/en_US',
     'config/repo/tls',
     'config/repo/tls/keys-certs',
     'config/repo/tls/ca-certs',
@@ -583,8 +620,14 @@ files = {
     'config/repo/service-sources.txt': service_sources_contents,
     'config/repo/lua/internal/zato.rename_if_exists.lua': lua_zato_rename_if_exists,
     'config/repo/sql.conf': sql_conf_contents,
-    'config/repo/static/email/sso-confirm.txt': sso_confirm_template,
-    'config/repo/static/email/sso-welcome.txt': sso_welcome_template,
+
+    'config/repo/static/sso/email/en_GB/signup-confirm.txt': CommonSSO.EmailTemplate.SignupConfirm,
+    'config/repo/static/sso/email/en_GB/signup-welcome.txt': CommonSSO.EmailTemplate.SignupWelcome,
+    'config/repo/static/sso/email/en_GB/password-reset-link.txt': CommonSSO.EmailTemplate.PasswordResetLink,
+
+    'config/repo/static/sso/email/en_US/signup-confirm.txt': CommonSSO.EmailTemplate.SignupConfirm,
+    'config/repo/static/sso/email/en_US/signup-welcome.txt': CommonSSO.EmailTemplate.SignupWelcome,
+    'config/repo/static/sso/email/en_US/password-reset-link.txt': CommonSSO.EmailTemplate.PasswordResetLink,
 }
 
 # ################################################################################################################################

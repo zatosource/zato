@@ -109,9 +109,19 @@ class SSOSearch(object):
 
     @query_wrapper
     def sql_search_func(self, session, ignored_cluster_id, order_by, where, needs_columns=False):
-        return session.query(*self.out_columns).\
-               filter(where).\
-               order_by(*order_by)
+
+        # Build a basic query
+        q = session.query(*self.out_columns)
+
+        # SQL WHERE parameters are optional
+        if (where != '') and (where is not None):
+            q = q.filter(where)
+
+        # These are always given
+        q = q.order_by(*order_by)
+
+        # We can return the result now
+        return q
 
 # ################################################################################################################################
 
@@ -189,7 +199,7 @@ class SSOSearch(object):
         # Convert a label to an actual SQALchemy-level function
         name_op = name_op_sa[name_op]
 
-        # We need to have a reference to a Python-level function suc
+        # We need to have a reference to a Python-level function
 
         # At this point we know all name-related input is correct and we have both criteria
         # and an operator to joined them with.
