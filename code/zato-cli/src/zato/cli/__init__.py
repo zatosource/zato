@@ -360,6 +360,7 @@ command_imports = (
     ('sso_create_user', 'zato.cli.sso.CreateUser'),
     ('sso_create_super_user', 'zato.cli.sso.CreateSuperUser'),
     ('sso_delete_user', 'zato.cli.sso.DeleteUser'),
+    ('sso_gendata', 'zato.cli.sso.GenData'),
     ('sso_login', 'zato.cli.sso.Login'),
     ('sso_logout', 'zato.cli.sso.Logout'),
     ('sso_lock_user', 'zato.cli.sso.LockUser'),

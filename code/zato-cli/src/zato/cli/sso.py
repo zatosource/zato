@@ -422,3 +422,98 @@ class CreateODB(ZatoCommand):
                 self.logger.info('OK')
 
 # ################################################################################################################################
+
+class GenData(ZatoCommand):
+    """ Generates test data for Zato SSO ODB
+    """
+
+    opts = [
+        {'name': '--n-users', 'help': "Number of users to create"},
+        {'name': '--mu', 'help': "Maximum number of attributes"},
+        {'name': '--current-app', 'help': "Name of the application the user is signing up through"},
+    ]
+
+    def _generate_entry(self, fields=0):
+        import random
+        from mimesis import Generic
+        generic = Generic()
+
+        fixed_fields = [
+            'username',
+            'name',
+            'first_name',
+            'full_name',
+            'first_name',
+            'last_name',
+            'nationality',
+            'occupation',
+            'language',
+            'height',
+            'weight',
+            'gender',
+            'academic_degree',
+            'age',
+            'avatar',
+            'blood_type',
+            'sexual_orientation',
+            'social_media_profile',
+            'surname',
+            'telephone',
+            'title',
+            'university',
+            'views_on',
+            'work_experience',
+            'worldview',
+        ]
+
+        person = {}
+        person['username'] = generic.person.username()
+        person['password'] = generic.person.password()
+        person['email'] = generic.person.email()
+
+        number_extra_fields = fields - len(fixed_fields)
+        for _ in range(fields - number_extra_fields):
+            attr = None
+            while attr is None and attr not in person.keys():
+                attr = random.choice(fixed_fields)
+            get_attr = getattr(generic.person, attr)
+            person[attr] = get_attr()
+
+        for _ in range(number_extra_fields):
+            field_name = None
+            while field_name is None and field_name not in person.keys():
+                field_name = generic.text.word()
+            person[field_name] = generic.text.sentence()
+
+        return person
+
+    def execute(self, args, show_output=True):
+        # type: (Namespace)
+
+        # Zato
+        import numpy as np
+        import pandas as pd
+
+        n = 20
+        mu, sigma = 0, 3 # mean and standard deviation
+
+        # generate sequence
+        random_nums = np.random.default_rng().normal(mu, sigma, 100)
+
+        # adjusting list's values by rule of three using the max number
+        random_ints = np.absolute(np.round(np.multiply(random_nums, n/random_nums.max())))
+
+        list_of_users = []
+
+        for i in random_ints.astype(int).tolist():
+            list_of_users.append(self._generate_entry(fields=i))
+
+        print(list_of_users)
+
+        if show_output:
+            if self.verbose:
+                self.logger.debug('SSO Data inserted successfully')
+            else:
+                self.logger.info('OK')
+
+# ################################################################################################################################

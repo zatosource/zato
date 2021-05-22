@@ -490,6 +490,14 @@ class CommandStore(object):
         self.add_opts(sso_create_odb, sso_mod.CreateODB.opts)
 
         #
+        # gendata (sso)
+        #
+        sso_gen_data = sso_subs.add_parser('gendata', description=sso_mod.GenData.__doc__, parents=[base_parser])
+        sso_gen_data.add_argument('path', help='Path to a Zato server')
+        sso_gen_data.set_defaults(command='sso_gendata')
+        self.add_opts(sso_gen_data, sso_mod.GenData.opts)
+
+        #
         # start
         #
         self.add_start_server_parser(parser, base_parser, subs, formatter_class)
