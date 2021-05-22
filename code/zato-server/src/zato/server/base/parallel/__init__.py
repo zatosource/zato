@@ -399,7 +399,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.service_store.patterns_matcher.read_config(self.fs_server_config.deploy_patterns_allowed)
 
         # Static config files
-        self.static_config = StaticConfig(os.path.join(self.repo_location, 'static'))
+        self.static_config = StaticConfig(self.static_dir)
+
+        # SSO e-mail templates
+        self.static_config.read_directory(os.path.join(self.static_dir, 'sso', 'email'))
 
         # Key-value DB
         kvdb_config = get_kvdb_config_for_log(self.fs_server_config.kvdb)
@@ -1004,9 +1007,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         """ Returns data decrypted using server's CryptoManager.
         """
         if data.startswith(_prefix):
-            return self.crypto_manager.decrypt(data.replace(_prefix, '', 1))
+            return self.decrypt_no_prefix(data.replace(_prefix, '', 1))
         else:
             return data # Already decrypted, return as is
+
+# ################################################################################################################################
+
+    def decrypt_no_prefix(self, data):
+        return self.crypto_manager.decrypt(data)
 
 # ################################################################################################################################
 
