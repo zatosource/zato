@@ -65,6 +65,10 @@ class Login(BaseService):
 
     def _handle_sso(self, ctx):
 
+        print()
+        print(111, ctx.input)
+        print()
+
         input = ctx.input
         input.cid = self.cid
 
