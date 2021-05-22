@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from datetime import datetime
@@ -20,7 +18,7 @@ from sqlalchemy import or_
 # Zato
 from zato.common.api import GENERIC
 from zato.common.json_internal import loads
-from zato.common.odb.model import SecurityBase, SSOLinkedAuth, SSOSession, SSOUser
+from zato.common.odb.model import SecurityBase, SSOFlowPRT, SSOLinkedAuth, SSOSession, SSOUser
 from zato.common.util.sql import elems_with_opaque
 from zato.sso import const
 
@@ -83,13 +81,106 @@ def get_user_by_id(session, user_id, *ignored_args):
 
 # ################################################################################################################################
 
-def get_user_by_username(session, username, needs_approved=True, _approved=_approved):
-    q = _get_model(session, _user_basic_columns).\
-        filter(SSOUser.username==username)
+def _get_user_base_query(session, needs_approved=True, _approved=_approved):
+    q = _get_model(session, _user_basic_columns)
 
     if needs_approved:
         q = q.filter(SSOUser.approval_status==_approved)
 
+    return q
+
+# ################################################################################################################################
+
+def get_user_by_name(session, username, needs_approved=True):
+
+    # Get the base query ..
+    q = _get_user_base_query(session, needs_approved)
+
+    # .. filter by username ..
+    q = q.filter(SSOUser.username==username)
+
+    # .. and return the result.
+    return q.first()
+
+# ################################################################################################################################
+
+def get_user_by_email(session, email, needs_approved=True):
+
+    # Get the base query ..
+    q = _get_user_base_query(session, needs_approved)
+
+    # .. filter by email ..
+    q = q.filter(SSOUser.email==email)
+
+    # .. and return the result.
+    return q.first()
+
+# ################################################################################################################################
+
+def get_user_by_name_or_email(session, credential, needs_approved=True):
+
+    # Get the base query ..
+    q = _get_user_base_query(session, needs_approved)
+
+    # .. filter by username or email..
+    q = q.filter(or_(
+        SSOUser.username==credential,
+        SSOUser.email==credential,
+    ))
+
+    # .. and return the result.
+    return q.first()
+
+# ################################################################################################################################
+
+def _get_user_by_prt(session, prt, now):
+
+    # Get the base query ..
+    return session.query(
+        SSOUser.user_id,
+        SSOUser.password_expiry,
+        SSOUser.username,
+        SSOUser.is_locked,
+        SSOUser.sign_up_status,
+        SSOUser.approval_status,
+        SSOUser.password_expiry,
+        SSOUser.password_must_change,
+        SSOFlowPRT.reset_key,
+        ).\
+        filter(SSOFlowPRT.token == prt).\
+        filter(SSOUser.user_id == SSOFlowPRT.user_id).\
+        filter(SSOFlowPRT.expiration_time > now).\
+        filter(SSOFlowPRT.reset_key_exp_time > now)
+
+# ################################################################################################################################
+
+def get_user_by_prt(session, prt, now):
+
+    # Get the base query ..
+    q = _get_user_by_prt(session, prt, now)
+
+    # .. at this point, the password is still not reset
+    # and we need to ensure that the PRT has not been accessed either ..
+    q = q.\
+        filter(SSOFlowPRT.has_been_accessed.is_(False)).\
+        filter(SSOFlowPRT.is_password_reset.is_(False))
+
+    # .. and return the result.
+    return q.first()
+
+# ################################################################################################################################
+
+def get_user_by_prt_and_reset_key(session, prt, reset_key, now):
+
+    # Get the base query ..
+    q = _get_user_by_prt(session, prt, now)
+
+    q = q.\
+        filter(SSOFlowPRT.reset_key == reset_key).\
+        filter(SSOFlowPRT.has_been_accessed.is_(True)).\
+        filter(SSOFlowPRT.is_password_reset.is_(False))
+
+    # .. and return the result.
     return q.first()
 
 # ################################################################################################################################
