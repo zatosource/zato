@@ -560,8 +560,13 @@ class ServiceStore(object):
 # ################################################################################################################################
 
     def new_instance_by_name(self, name, *args, **kwargs):
-        impl_name = self.name_to_impl_name[name]
-        return self.new_instance(impl_name, *args, **kwargs)
+        try:
+            impl_name = self.name_to_impl_name[name]
+        except KeyError:
+            logger.warn('No such key `{}` among `{}`'.format(name, sorted(self.name_to_impl_name)))
+            raise
+        else:
+            return self.new_instance(impl_name, *args, **kwargs)
 
 # ################################################################################################################################
 

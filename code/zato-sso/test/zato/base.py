@@ -29,7 +29,7 @@ import sh
 
 # Zato
 from zato.common.json_internal import dumps, loads
-from zato.common.crypto.api import TOTPManager
+from zato.common.crypto.totp_ import TOTPManager
 from zato.sso import const, status_code
 
 # ################################################################################################################################
@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 class Config:
     current_app = 'CRM'
 
-    super_user_name = 'admin1'
+    super_user_name = 'zato.unit-test.admin1'
     super_user_password = 'hQ9nl93UDqGus'
     super_user_totp_key = 'KMCLCWN4YPMD2WO3'
 
@@ -78,10 +78,9 @@ class BaseTest(TestCase):
         try:
             # Try to create a super-user ..
             # sh.zato('sso', 'create-super-user', Config.server_location, Config.super_user_name, '--password',
-            #    Config.super_user_password, '--verbose')
+            #   Config.super_user_password, '--verbose')
             # sh.zato('sso', 'reset-totp-key', Config.server_location, Config.super_user_name, '--key',
-            #    Config.super_user_totp_key, '--verbose')
-
+            #   Config.super_user_totp_key, '--verbose')
             pass
         except Exception as e:
             # .. but ignore it if such a user already exists.
@@ -135,8 +134,8 @@ class BaseTest(TestCase):
 
         # Most tests require status OK and CID
         if expect_ok:
-            self.assertNotEquals(data.get('cid', _not_given), _not_given)
-            self.assertEquals(data.status, status_code.ok)
+            self.assertNotEqual(data.get('cid', _not_given), _not_given)
+            self.assertEqual(data.status, status_code.ok)
 
         return data
 
@@ -171,8 +170,8 @@ class BaseTest(TestCase):
 
     def _assert_default_user_data(self, response, now, approval_status=None):
 
-        self.assertEquals(response.approval_status, approval_status or const.approval_status.before_decision)
-        self.assertEquals(response.sign_up_status, const.signup_status.final)
+        self.assertEqual(response.approval_status, approval_status or const.approval_status.before_decision)
+        self.assertEqual(response.sign_up_status, const.signup_status.final)
 
         self.assertTrue(response.is_active)
         self.assertTrue(response.password_is_set)
