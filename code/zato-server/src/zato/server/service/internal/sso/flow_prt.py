@@ -33,7 +33,7 @@ class FlowPRT(BaseRESTService):
         input_optional = 'current_app', 'credential', 'token', 'reset_key', 'password'
 
         output_required = 'status', 'cid'
-        output_optional = BaseSIO.output_optional = ('reset_key',)
+        output_optional = BaseSIO.output_optional + ('reset_key',)
 
         # Do not wrap elements in a top-level root element
         response_elem = None
@@ -60,6 +60,8 @@ class FlowPRT(BaseRESTService):
     def _handle_sso_PATCH(self, ctx):
         """ Accesses a PRT, returning its access key on output.
         """
+        # type: (SSOCtx) -> None
+
         # Try to get a reset key for the input PRT ..
         reset_key = self.sso.flow_prt.access(ctx)
 
@@ -72,8 +74,10 @@ class FlowPRT(BaseRESTService):
     def _handle_sso_DELETE(self, ctx):
         """ Updates a password based on a PRT and reset key.
         """
+        # type: (SSOCtx) -> None
+
         # Try to get a reset key for the input PRT and reset key ..
-        reset_key = self.sso.flow_prt.change_password(ctx)
+        self.sso.flow_prt.change_password(ctx)
 
         # .. if we are here, it means that the PRT and reset key
         # were accepted, there is nothing else for us to do, we can return,
