@@ -20,7 +20,7 @@ class FlowPRTTestCase(BaseTest):
 
 # ################################################################################################################################
 
-    def test_user_reset_password(self):
+    def manual_test_user_reset_password(self):
 
         # This needs to be filled in manually
         token = '7kfwbjg0c88038rcqv5g03erb0'
