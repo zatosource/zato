@@ -361,6 +361,7 @@ sso_conf_contents = '''[main]
 encrypt_email=True
 encrypt_password=True
 smtp_conn=
+site_name=
 
 [backend]
 default=sql
@@ -387,12 +388,10 @@ inform_if_locked=True
 inform_if_not_confirmed=True
 inform_if_not_approved=True
 
-[prt]
+[password_reset]
 valid_for=1440 # In minutes = 1 day
 password_change_session_duration=1800 # In seconds = 30 minutes
-inform_if_user_not_found=False
 user_search_by=username
-is_multi_access_allowed=True
 email_title_en_GB=Password reset
 email_title_en_US=Password reset
 email_from=hello@example.com
