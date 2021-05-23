@@ -19,7 +19,7 @@ from sqlalchemy import and_
 from zato.common import GENERIC, SMTPMessage
 from zato.common.api import SSO as CommonSSO
 from zato.common.json_internal import json_dumps
-from zato.common.odb.model import SSOFlowPRT as FlowPRTModel
+from zato.common.odb.model import SSOPasswordReset as FlowPRTModel
 from zato.sso import const, Default, status_code, ValidationError
 from zato.sso.odb.query import get_user_by_email, get_user_by_name, get_user_by_name_or_email, get_user_by_prt, \
      get_user_by_prt_and_reset_key
@@ -71,7 +71,7 @@ user_search_by_map = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-class FlowPRTAPI(object):
+class PasswordResetAPI(object):
     """ Message flow around password-reset tokens (PRT).
     """
     def __init__(self, server, sso_conf, odb_session_func, decrypt_func, verify_hash_func):
@@ -252,7 +252,7 @@ class FlowPRTAPI(object):
 
 # ################################################################################################################################
 
-    def access(self, ctx, _utcnow=datetime.utcnow, _timedelta=timedelta):
+    def access_token(self, ctx, _utcnow=datetime.utcnow, _timedelta=timedelta):
         # type: (SSOCtx, object, object) -> str
 
         # For later use
