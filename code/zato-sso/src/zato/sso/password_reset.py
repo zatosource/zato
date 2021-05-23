@@ -107,17 +107,14 @@ class PasswordResetAPI(object):
         # Name of the site, e.g. the environemnt the SSO servers in
         self.site_name = self.sso_conf.main.get('site_name') or 'site'
 
-        # This is constructed in self.post_configure
-        self.template_base_path = 'initial-flow-prt-api'
-
         # Convert minutes to hours as it is hours that are sent in notification emails
-        self.expiration_time_hours = int(self.sso_conf.prt.valid_for) // 60
+        self.expiration_time_hours = int(self.sso_conf.password_reset.valid_for) // 60
 
         # Name of an outgoing SMTP connections to send notifications through
         self.smtp_conn_name = sso_conf.main.smtp_conn # type: str
 
         # From who the SMTP messages will be sent
-        self.email_from = sso_conf.prt.email_from
+        self.email_from = sso_conf.password_reset.email_from
 
 # ################################################################################################################################
 
@@ -125,9 +122,6 @@ class PasswordResetAPI(object):
         # type: (Callable, bool) -> None
         self.odb_session_func = func
         self.is_sqlite = is_sqlite
-
-        # Base of the path to filesystem templates
-        self.template_base_path = os.path.join(self.server.static_config.base_dir, 'sso', 'email')
 
 # ################################################################################################################################
 
@@ -240,7 +234,7 @@ class PasswordResetAPI(object):
         msg.is_html = False
 
         # .. provide metadata ..
-        msg.subject = self.sso_conf.prt.get('email_title_' + pref_lang) or 'Password reset'
+        msg.subject = self.sso_conf.password_reset.get('email_title_' + pref_lang) or 'Password reset'
         msg.to = user_email
         msg.from_ = self.email_from
 
