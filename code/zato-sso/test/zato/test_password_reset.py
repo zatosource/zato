@@ -23,7 +23,7 @@ class FlowPRTTestCase(BaseTest):
     def manual_test_user_reset_password(self):
 
         # This needs to be filled in manually
-        token = '7kfwbjg0c88038rcqv5g03erb0'
+        token = '5rgfkm9c7z9xh8q1t7qhxw62e3'
 
         # Generated in each test
         password = CryptoManager.generate_password(to_str=True)
@@ -50,6 +50,13 @@ class FlowPRTTestCase(BaseTest):
 
         # .. confirm the status ..
         self.assertEqual(response.status, 'ok')
+
+        self.patch('/zato/sso/user/password', {
+            'ust': self.ctx.super_user_ust,
+            'user_id': user_id,
+            'old_password': password,
+            'new_password': Config.super_user_password
+        })
 
 # ################################################################################################################################
 # ################################################################################################################################
