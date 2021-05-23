@@ -136,7 +136,7 @@ class PasswordResetAPI(object):
 
         # Validate input
         if not ctx.input.credential:
-            logger.warn('SSO credential missing on input to PRT:create_token (%s)', ctx.input)
+            logger.warn('SSO credential missing on input to PasswordResetAPI.create_token (%s)', ctx.input)
             return
 
         # Look up the user in the database ..
