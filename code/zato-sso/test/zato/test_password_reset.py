@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main
 
 # Zato
-from base import BaseTest
+from base import BaseTest, Config
 from zato.common.crypto.api import CryptoManager
 
 # ################################################################################################################################
@@ -20,21 +20,21 @@ class FlowPRTTestCase(BaseTest):
 
 # ################################################################################################################################
 
-    def manual_test_user_reset_password(self):
+    def test_user_reset_password(self):
 
         # This needs to be filled in manually
-        token = '4dqs8qvars93pbhqfj4g36g3a8'
+        token = '7kfwbjg0c88038rcqv5g03erb0'
 
         # Generated in each test
         password = CryptoManager.generate_password(to_str=True)
 
         # Request a new PRT ..
-        response = self.post('/zato/sso/flow/prt', {
-            'credential': 'admin3',
+        response = self.post('/zato/sso/password/reset', {
+            'credential': Config.super_user_name,
         })
 
         # .. access the PRT received ..
-        response = self.patch('/zato/sso/flow/prt', {
+        response = self.patch('/zato/sso/password/reset', {
             'token': token,
         })
 
@@ -42,7 +42,7 @@ class FlowPRTTestCase(BaseTest):
         reset_key = response.reset_key
 
         # .. change the password now ..
-        response = self.delete('/zato/sso/flow/prt', {
+        response = self.delete('/zato/sso/password/reset', {
             'token': token,
             'reset_key': reset_key,
             'password': password
