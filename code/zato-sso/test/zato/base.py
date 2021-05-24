@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -32,6 +30,7 @@ from zato.common.util.api import get_odb_session_from_server_dir
 from zato.common.json_internal import dumps, loads
 from zato.common.crypto.totp_ import TOTPManager
 from zato.sso import const, status_code
+from zato.sso.odb.query import get_user_by_name
 
 # ################################################################################################################################
 
@@ -78,16 +77,19 @@ class BaseTest(TestCase):
     def setUp(self):
         try:
 
-            # Try to
+            # Create the test user if the account does not already exist ..
+            odb_session = self.get_odb_session()
 
-            self.odb_session = self.get_odb_session()
+            if not get_user_by_name(odb_session, Config.super_user_name, False):
 
-            # Try to create a super-user ..
-            #sh.zato('sso', 'create-super-user', Config.server_location, Config.super_user_name, '--password',
-            #  Config.super_user_password, '--verbose')
-            #sh.zato('sso', 'reset-totp-key', Config.server_location, Config.super_user_name, '--key',
-            #  Config.super_user_totp_key, '--verbose')
-            pass
+                # .. create the user ..
+                sh.zato('sso', 'create-super-user', Config.server_location, Config.super_user_name, '--password',
+                  Config.super_user_password, '--verbose')
+
+                # .. and set the TOTP ..
+                sh.zato('sso', 'reset-totp-key', Config.server_location, Config.super_user_name, '--key',
+                  Config.super_user_totp_key, '--verbose')
+
         except Exception as e:
             # .. but ignore it if such a user already exists.
             if not 'User already exists' in e.args[0]:
@@ -105,7 +107,6 @@ class BaseTest(TestCase):
 # ################################################################################################################################
 
     def tearDown(self):
-        self.odb_session.close()
         self.ctx.reset()
 
 # ################################################################################################################################
