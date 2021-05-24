@@ -22,7 +22,7 @@ class FlowPRTTestCase(BaseTest):
 # ################################################################################################################################
 
     def get_random_prt_info(self, session):
-        return session.query(
+        q = session.query(
             SSOUser.user_id,
             SSOPasswordReset.token,
             ).\
@@ -30,6 +30,8 @@ class FlowPRTTestCase(BaseTest):
             filter(SSOPasswordReset.has_been_accessed.is_(False)).\
             limit(1).\
             one()
+
+        return q
 
 # ################################################################################################################################
 
@@ -45,7 +47,8 @@ class FlowPRTTestCase(BaseTest):
 
         # .. above, we never receive the PRT so we know there will be at least one PRT
         # when we look it up along with user_id in the ODB ..
-        prt_info = self.get_random_prt_info(self.odb_session)
+        odb_session = self.get_odb_session()
+        prt_info = self.get_random_prt_info(odb_session)
 
         # .. make it easier to access the information received ..
         prt_info = prt_info._asdict() # type: dict
@@ -72,12 +75,16 @@ class FlowPRTTestCase(BaseTest):
         # .. confirm the status ..
         self.assertEqual(response.status, 'ok')
 
+        # .. change the password back to the old one ..
         self.patch('/zato/sso/user/password', {
             'ust': self.ctx.super_user_ust,
             'user_id': user_id,
             'old_password': password,
             'new_password': Config.super_user_password
         })
+
+        # .. confirm that we can log in using the old password.
+        self._login_super_user()
 
 # ################################################################################################################################
 # ################################################################################################################################
