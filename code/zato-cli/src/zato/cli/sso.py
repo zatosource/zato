@@ -428,9 +428,11 @@ class GenData(ZatoCommand):
     """
 
     opts = [
-        {'name': '--n-users', 'help': "Number of users to create"},
-        {'name': '--mu', 'help': "Maximum number of attributes"},
-        {'name': '--current-app', 'help': "Name of the application the user is signing up through"},
+        {'name': '--super_user_ust', 'help': "Super user's session token", 'required': True},
+        {'name': '--n-users', 'help': "Number of users to create", 'required': True, 'type': int},
+        {'name': '--mu', 'help': "Maximum number of attributes", 'required': True, 'type': int},
+        {'name': '--current-app', 'help': "Name of the application the user is signing up through", 'default': "CRM"},
+        {'name': '--save-to-csv', 'help': "Name of the CSV file to create with the generated information"},
     ]
 
     def _generate_entry(self, fields=0):
@@ -439,37 +441,23 @@ class GenData(ZatoCommand):
         generic = Generic()
 
         fixed_fields = [
-            'username',
-            'name',
-            'first_name',
-            'full_name',
-            'first_name',
-            'last_name',
-            'nationality',
+            'email',
             'occupation',
             'language',
             'height',
             'weight',
-            'gender',
             'academic_degree',
             'age',
             'avatar',
-            'blood_type',
-            'sexual_orientation',
             'social_media_profile',
-            'surname',
             'telephone',
-            'title',
             'university',
-            'views_on',
             'work_experience',
-            'worldview',
         ]
 
         person = {}
         person['username'] = generic.person.username()
-        person['password'] = generic.person.password()
-        person['email'] = generic.person.email()
+        person['password'] = generic.person.password(length=20)
 
         number_extra_fields = fields - len(fixed_fields)
         for _ in range(fields - number_extra_fields):
@@ -490,25 +478,57 @@ class GenData(ZatoCommand):
     def execute(self, args, show_output=True):
         # type: (Namespace)
 
-        # Zato
+        import csv
+        import random
         import numpy as np
         import pandas as pd
+        import requests
+        from zato.common.crypto.totp_ import TOTPManager
 
-        n = 20
         mu, sigma = 0, 3 # mean and standard deviation
 
         # generate sequence
-        random_nums = np.random.default_rng().normal(mu, sigma, 100)
+        random_nums = np.random.default_rng().normal(mu, sigma, args.n_users)
 
         # adjusting list's values by rule of three using the max number
-        random_ints = np.absolute(np.round(np.multiply(random_nums, n/random_nums.max())))
+        random_ints = np.absolute(np.round(np.multiply(random_nums, int(args.mu)/random_nums.max())))
 
         list_of_users = []
 
         for i in random_ints.astype(int).tolist():
             list_of_users.append(self._generate_entry(fields=i))
 
-        print(list_of_users)
+        for user in list_of_users:
+            self.logger.info('Creating user: {}'.format(user['username']))
+
+            response = requests.post('http://localhost:17010/zato/sso/user/signup', json={
+                'username': user['username'],
+                'password': user['password'],
+                'current_app': args.current_app
+            })
+
+            r = response.json()
+            user['confirm_token'] = r['confirm_token']
+            user['approved'] = False
+
+            if bool(random.getrandbits(1)):
+                # Random Approval
+                response = requests.patch('http://localhost:17010/zato/sso/user/signup', json={
+                    'confirm_token': user['confirm_token'],
+                })
+                user['approved'] = True
+                self.logger.info('User approved')
+
+            # Add attributes
+            requests.post('http://localhost:17010/zato/sso/session/attr', json={
+                'current_ust': args.super_user_ust,
+                'current_app': args.current_app,
+                'data': [{'user_id': attrib, 'value': user[attrib]} for attrib in user.keys() if attrib not in ['username', 'password', 'confirm_token', 'approved']],
+            })
+
+        if args.save_to_csv != "":
+            df = pd.DataFrame(list_of_users)
+            df.to_csv(args.save_to_csv, quoting=csv.QUOTE_NONNUMERIC)
 
         if show_output:
             if self.verbose:
