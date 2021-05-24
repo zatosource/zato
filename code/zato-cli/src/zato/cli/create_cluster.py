@@ -860,8 +860,8 @@ class Create(ZatoCommand):
             ['zato.sso.session-attr.session-attr-exists', 'zato.server.service.internal.sso.session_attr.SessionAttrExists', '/zato/sso/session/attr/exists'],
             ['zato.sso.session-attr.session-attr-names', 'zato.server.service.internal.sso.session_attr.SessionAttrNames', '/zato/sso/session/attr/names'],
 
-            # PRT flow
-            ['zato.sso.flow-prt.flow-prt', 'zato.server.service.internal.sso.flow_prt.FlowPRT', '/zato/sso/flow/prt'],
+            # Password reset
+            ['zato.sso.password-reset.password-reset', 'zato.server.service.internal.sso.password-reset.PasswordReset', '/zato/sso/password/reset'],
         ]
 
         for name, impl_name, url_path in data:

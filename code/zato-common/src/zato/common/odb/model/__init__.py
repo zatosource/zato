@@ -22,7 +22,7 @@ from zato.common.api import AMQP, CASSANDRA, CLOUD, DATA_FORMAT, HTTP_SOAP_SERIA
 from zato.common.json_internal import json_dumps
 from zato.common.odb.const import WMQ_DEFAULT_PRIORITY
 from zato.common.odb.model.base import Base, _JSON
-from zato.common.odb.model.sso import _SSOAttr, _SSOFlowPRT, _SSOGroup, _SSOLinkedAuth, _SSOSession, _SSOUser
+from zato.common.odb.model.sso import _SSOAttr, _SSOPasswordReset, _SSOGroup, _SSOLinkedAuth, _SSOSession, _SSOUser
 
 # ################################################################################################################################
 
@@ -69,7 +69,7 @@ class SSOLinkedAuth(_SSOLinkedAuth):
 
 # ################################################################################################################################
 
-class SSOFlowPRT(_SSOFlowPRT):
+class SSOPasswordReset(_SSOPasswordReset):
     pass
 
 # ################################################################################################################################
