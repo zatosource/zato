@@ -50,7 +50,14 @@ class PasswordReset(BaseRESTService):
 
         # Run asynchronously in a separate greenlet
         try:
-            spawn_greenlet(self.sso.password_reset.create_token, ctx.input.credential)
+            spawn_greenlet(
+                self.sso.password_reset.create_token,
+                self.cid,
+                ctx.input.credential,
+                ctx.input.current_app,
+                ctx.remote_addr,
+                ctx.user_agent
+            )
         except Exception:
             # Log the exception but do not return it
             self.logger.warn('Exception in FlowPRT._handle_sso_POST `%s`', format_exc())

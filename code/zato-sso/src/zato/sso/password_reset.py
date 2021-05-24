@@ -124,13 +124,16 @@ class PasswordResetAPI(object):
 
 # ################################################################################################################################
 
-    def create_token(self, credential, _utcnow=datetime.utcnow, _timedelta=timedelta):
+    def create_token(self, cid, credential, current_app, remote_addr, user_agent, _utcnow=datetime.utcnow, _timedelta=timedelta):
         # type: (str, object, object) -> None
 
         # Validate input
         if not credential:
             logger.warn('SSO credential missing on input to PasswordResetAPI.create_token (%r)', credential)
             return
+
+        # For later use
+        sso_ctx = self._build_sso_ctx(cid, remote_addr, user_agent, current_app)
 
         # Look up the user in the database ..
         with closing(self.odb_session_func()) as session:
@@ -164,6 +167,12 @@ class PasswordResetAPI(object):
                     'token': prt,
                     'type_': const.prt.token_type,
                     'reset_key': reset_key,
+                    'creation_ctx': json_dumps({
+                        'remote_addr': [elem.exploded for elem in sso_ctx.remote_addr],
+                        'user_agent': sso_ctx.user_agent,
+                        'has_remote_addr': sso_ctx.has_remote_addr,
+                        'has_user_agent': sso_ctx.has_user_agent,
+                    }),
                     GENERIC.ATTR_NAME: json_dumps(None)
             }))
 
@@ -176,90 +185,12 @@ class PasswordResetAPI(object):
 
 # ################################################################################################################################
 
-    def send_notification(self, user, prt, _template_name=CommonSSO.EmailTemplate.PasswordResetLink):
-        # type: (SSOUser, str)
-
-        if not self.smtp_conn_name:
-            msg = 'Could not notify user `%s`, SSO SMTP connection not configured in sso.conf (main.smtp_conn)'
-            logger.warn(msg, user.user_id)
-            return
-
-        # Decrypt email for later user
-        user_email = self.decrypt_func(user.email)
-
-        # Make sure an email is associated with the user
-        if not user_email:
-            logger.warn('Could not notify user `%s` (no email found)', user.user_id)
-            return
-
-        # When user preferences, including the preferred language, are added,
-        # we can look it up here.
-        pref_lang = Default.prt_locale
-
-        # All email templates for the preferred language
-        pref_lang_templates = self.server.static_config.sso.email.get(pref_lang) # type: Bunch
-
-        # Make sure we have the correct templates prepared
-        if not pref_lang_templates:
-            msg = 'Could not send a password reset notification to `%s`. Language `%s` not found among `%s``'
-            logger.warn(msg, user.user_id, pref_lang, sorted(self.server.static_config.sso.email))
-            return
-
-        # Template with the body to send
-        template = pref_lang_templates.get(_template_name)
-
-        # Make sure we have the correct templates prepared
-        if not template:
-            msg = 'Could not send a password reset notification to `%s`. Template `%s` not found among `%s`.'
-            logger.warn(msg, user.user_id, _template_name, sorted(pref_lang_templates))
-            return
-
-        # Prepare the details for the template ..
-        template_params = {
-            'username': user.username,
-            'site_name': self.site_name,
-            'token': prt,
-            'expiration_time_hours': self.expiration_time_hours
-        }
-
-        # .. fill it in ..
-        msg_body = template.format(**template_params)
-
-        # .. get a handle to an SMTP connection ..
-        smtp_conn = self.server.worker_store.email_smtp_api.get(self.smtp_conn_name).conn # type: SMTPConnection
-
-        # .. create a new message ..
-        msg = SMTPMessage()
-        msg.is_html = False
-
-        # .. provide metadata ..
-        msg.subject = self.sso_conf.password_reset.get('email_title_' + pref_lang) or 'Password reset'
-        msg.to = user_email
-        msg.from_ = self.email_from
-
-        # .. attach payload ..
-        msg.body = msg_body
-
-        # .. and send it to the user.
-        smtp_conn.send(msg)
-
-# ################################################################################################################################
-
     def access_token(self, cid, token, current_app, remote_addr, user_agent, _utcnow=datetime.utcnow, _timedelta=timedelta):
         # type: (str, str, str, str, str, object, object) -> str
 
         # For later use
         now = _utcnow()
-        sso_ctx = SSOCtx(
-            remote_addr=remote_addr,
-            user_agent=user_agent,
-            input=Bunch({
-                'token': token,
-                'current_app': current_app,
-            }),
-            sso_conf=self.sso_conf,
-            cid=cid,
-        )
+        sso_ctx = self._build_sso_ctx(cid, remote_addr, user_agent, current_app)
 
         # We need an SQL session ..
         with closing(self.odb_session_func()) as session:
@@ -290,10 +221,10 @@ class PasswordResetAPI(object):
                 'has_been_accessed': True,
                 'access_time': now,
                 'access_ctx': json_dumps({
-                'remote_addr': [elem.exploded for elem in sso_ctx.remote_addr],
-                'user_agent': user_agent,
-                'has_remote_addr': sso_ctx.has_remote_addr,
-                'has_user_agent': sso_ctx.has_user_agent,
+                    'remote_addr': [elem.exploded for elem in sso_ctx.remote_addr],
+                    'user_agent': user_agent,
+                    'has_remote_addr': sso_ctx.has_remote_addr,
+                    'has_user_agent': sso_ctx.has_user_agent,
                 })
             }))
 
@@ -312,16 +243,7 @@ class PasswordResetAPI(object):
 
         # For later use
         now = _utcnow()
-        sso_ctx = SSOCtx(
-            remote_addr=remote_addr,
-            user_agent=user_agent,
-            input=Bunch({
-                'token': token,
-                'current_app': current_app,
-            }),
-            sso_conf=self.sso_conf,
-            cid=cid,
-        )
+        sso_ctx = self._build_sso_ctx(cid, remote_addr, user_agent, current_app)
 
         # This will be encrypted on input so we need to get a clear-text version of it
         reset_key = self.server.decrypt_no_prefix(reset_key)
@@ -383,6 +305,89 @@ class PasswordResetAPI(object):
             session.commit()
 
         # This is everything, we have just updated the user's password.
+
+# ################################################################################################################################
+
+    def send_notification(self, user, token, _template_name=CommonSSO.EmailTemplate.PasswordResetLink):
+        # type: (SSOUser, str)
+
+        if not self.smtp_conn_name:
+            msg = 'Could not notify user `%s`, SSO SMTP connection not configured in sso.conf (main.smtp_conn)'
+            logger.warn(msg, user.user_id)
+            return
+
+        # Decrypt email for later user
+        user_email = self.decrypt_func(user.email)
+
+        # Make sure an email is associated with the user
+        if not user_email:
+            logger.warn('Could not notify user `%s` (no email found)', user.user_id)
+            return
+
+        # When user preferences, including the preferred language, are added,
+        # we can look it up here.
+        pref_lang = Default.prt_locale
+
+        # All email templates for the preferred language
+        pref_lang_templates = self.server.static_config.sso.email.get(pref_lang) # type: Bunch
+
+        # Make sure we have the correct templates prepared
+        if not pref_lang_templates:
+            msg = 'Could not send a password reset notification to `%s`. Language `%s` not found among `%s``'
+            logger.warn(msg, user.user_id, pref_lang, sorted(self.server.static_config.sso.email))
+            return
+
+        # Template with the body to send
+        template = pref_lang_templates.get(_template_name)
+
+        # Make sure we have the correct templates prepared
+        if not template:
+            msg = 'Could not send a password reset notification to `%s`. Template `%s` not found among `%s`.'
+            logger.warn(msg, user.user_id, _template_name, sorted(pref_lang_templates))
+            return
+
+        # Prepare the details for the template ..
+        template_params = {
+            'username': user.username,
+            'site_name': self.site_name,
+            'token': token,
+            'expiration_time_hours': self.expiration_time_hours
+        }
+
+        # .. fill it in ..
+        msg_body = template.format(**template_params)
+
+        # .. get a handle to an SMTP connection ..
+        smtp_conn = self.server.worker_store.email_smtp_api.get(self.smtp_conn_name).conn # type: SMTPConnection
+
+        # .. create a new message ..
+        msg = SMTPMessage()
+        msg.is_html = False
+
+        # .. provide metadata ..
+        msg.subject = self.sso_conf.password_reset.get('email_title_' + pref_lang) or 'Password reset'
+        msg.to = user_email
+        msg.from_ = self.email_from
+
+        # .. attach payload ..
+        msg.body = msg_body
+
+        # .. and send it to the user.
+        smtp_conn.send(msg)
+
+# ################################################################################################################################
+
+    def _build_sso_ctx(self, cid, remote_addr, user_agent, current_app):
+        # type: (str, str, str, str) -> None
+        return SSOCtx(
+            remote_addr=remote_addr,
+            user_agent=user_agent,
+            input=Bunch({
+                'current_app': current_app,
+            }),
+            sso_conf=self.sso_conf,
+            cid=cid,
+        )
 
 # ################################################################################################################################
 # ################################################################################################################################
