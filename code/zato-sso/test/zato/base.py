@@ -28,6 +28,7 @@ import requests
 import sh
 
 # Zato
+from zato.common.util.api import get_odb_session_from_server_dir
 from zato.common.json_internal import dumps, loads
 from zato.common.crypto.totp_ import TOTPManager
 from zato.sso import const, status_code
@@ -76,11 +77,16 @@ class BaseTest(TestCase):
 
     def setUp(self):
         try:
+
+            # Try to
+
+            self.odb_session = self.get_odb_session()
+
             # Try to create a super-user ..
-            sh.zato('sso', 'create-super-user', Config.server_location, Config.super_user_name, '--password',
-              Config.super_user_password, '--verbose')
-            sh.zato('sso', 'reset-totp-key', Config.server_location, Config.super_user_name, '--key',
-              Config.super_user_totp_key, '--verbose')
+            #sh.zato('sso', 'create-super-user', Config.server_location, Config.super_user_name, '--password',
+            #  Config.super_user_password, '--verbose')
+            #sh.zato('sso', 'reset-totp-key', Config.server_location, Config.super_user_name, '--key',
+            #  Config.super_user_totp_key, '--verbose')
             pass
         except Exception as e:
             # .. but ignore it if such a user already exists.
@@ -99,7 +105,13 @@ class BaseTest(TestCase):
 # ################################################################################################################################
 
     def tearDown(self):
+        self.odb_session.close()
         self.ctx.reset()
+
+# ################################################################################################################################
+
+    def get_odb_session(self):
+        return get_odb_session_from_server_dir(Config.server_location)
 
 # ################################################################################################################################
 
