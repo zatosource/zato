@@ -11,6 +11,9 @@ from contextlib import closing
 from datetime import datetime, timedelta
 from logging import getLogger
 
+# Bunch
+from bunch import Bunch
+
 # SQLAlchemy
 from sqlalchemy import and_
 
@@ -20,6 +23,7 @@ from zato.common.api import SSO as CommonSSO
 from zato.common.json_internal import json_dumps
 from zato.common.odb.model import SSOPasswordReset as FlowPRTModel
 from zato.sso import const, Default, status_code, ValidationError
+from zato.sso.common import SSOCtx
 from zato.sso.odb.query import get_user_by_email, get_user_by_name, get_user_by_name_or_email, get_user_by_prt, \
      get_user_by_prt_and_reset_key
 from zato.sso.util import new_prt, new_prt_reset_key, UserChecker
@@ -27,18 +31,14 @@ from zato.sso.util import new_prt, new_prt_reset_key, UserChecker
 # ################################################################################################################################
 
 if 0:
-    from bunch import Bunch
     from typing import Callable
     from zato.common.odb.model import SSOUser
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.email import SMTPConnection
-    from zato.sso.common import SSOCtx
 
-    Bunch = Bunch
     Callable = Callable
     ParallelServer = ParallelServer
     SMTPConnection = SMTPConnection
-    SSOCtx = SSOCtx
     SSOUser = SSOUser
 
 # ################################################################################################################################
@@ -124,21 +124,21 @@ class PasswordResetAPI(object):
 
 # ################################################################################################################################
 
-    def create_token(self, ctx, _utcnow=datetime.utcnow, _timedelta=timedelta):
-        # type: (SSOCtx, object, object) -> None
+    def create_token(self, credential, _utcnow=datetime.utcnow, _timedelta=timedelta):
+        # type: (str, object, object) -> None
 
         # Validate input
-        if not ctx.input.credential:
-            logger.warn('SSO credential missing on input to PasswordResetAPI.create_token (%s)', ctx.input)
+        if not credential:
+            logger.warn('SSO credential missing on input to PasswordResetAPI.create_token (%r)', credential)
             return
 
         # Look up the user in the database ..
         with closing(self.odb_session_func()) as session:
-            user = self.user_search_by_func(session, ctx.input.credential) # type: SSOUser
+            user = self.user_search_by_func(session, credential) # type: SSOUser
 
             # .. make sure the user exists ..
             if not user:
-                logger.warn('No such SSO user `%s` (%s)', ctx.input.credential, self.user_search_by_func)
+                logger.warn('No such SSO user `%s` (%s)', credential, self.user_search_by_func)
                 return
 
             # .. the user exists so we can now generate a new PRT ..
@@ -245,29 +245,39 @@ class PasswordResetAPI(object):
 
 # ################################################################################################################################
 
-    def access_token(self, ctx, _utcnow=datetime.utcnow, _timedelta=timedelta):
-        # type: (SSOCtx, object, object) -> str
+    def access_token(self, cid, token, current_app, remote_addr, user_agent, _utcnow=datetime.utcnow, _timedelta=timedelta):
+        # type: (str, str, str, str, str, object, object) -> str
 
         # For later use
         now = _utcnow()
+        sso_ctx = SSOCtx(
+            remote_addr=remote_addr,
+            user_agent=user_agent,
+            input=Bunch({
+                'token': token,
+                'current_app': current_app,
+            }),
+            sso_conf=self.sso_conf,
+            cid=cid,
+        )
 
         # We need an SQL session ..
         with closing(self.odb_session_func()) as session:
 
             # .. try to look up the user by the incoming PRT which must exist and not to have expired,
             # or otherwise have been invalidated (e.g. already accessed) ..
-            user_info = get_user_by_prt(session, ctx.input.token, now)
+            user_info = get_user_by_prt(session, token, now)
 
             # .. no data matching the PRT, we need to reject the request ..
             if not user_info:
                 msg = 'Token rejected. No valid PRT matched input `%s` (now: %s)'
-                logger.warn(msg, ctx.input.token, now)
+                logger.warn(msg, token, now)
                 raise ValidationError(status_code.prt.could_not_access, False)
 
             # .. now, check if the user is still allowed to access the system;
             # we make an assuption that it is true (the user is still allowed),
             # which is why we conduct this check under the same SQL session ..
-            self.user_checker.check(ctx, user_info)
+            self.user_checker.check(sso_ctx, user_info)
 
             # .. if we are here, it means that the user checks above succeeded,
             # which means that we can modify the state to indicate that the token
@@ -275,15 +285,15 @@ class PasswordResetAPI(object):
             # to the caller to let the user update the password ..
 
             session.execute(FlowPRTModelUpdate().where(
-                FlowPRTModelTable.c.token==ctx.input.token
+                FlowPRTModelTable.c.token==token
             ).values({
                 'has_been_accessed': True,
                 'access_time': now,
                 'access_ctx': json_dumps({
-                    'remote_addr': [elem.exploded for elem in ctx.remote_addr],
-                    'user_agent': ctx.user_agent,
-                    'has_remote_addr': ctx.has_remote_addr,
-                    'has_user_agent': ctx.has_user_agent,
+                'remote_addr': [elem.exploded for elem in sso_ctx.remote_addr],
+                'user_agent': user_agent,
+                'has_remote_addr': sso_ctx.has_remote_addr,
+                'has_user_agent': sso_ctx.has_user_agent,
                 })
             }))
 
@@ -296,47 +306,58 @@ class PasswordResetAPI(object):
 
 # ################################################################################################################################
 
-    def change_password(self, ctx, _utcnow=datetime.utcnow, _timedelta=timedelta):
-        # type: (SSOCtx, object, object) -> str
+    def change_password(self, cid, new_password, token, reset_key, current_app, remote_addr, user_agent,
+        _utcnow=datetime.utcnow, _timedelta=timedelta):
+        # type: (str, str, str, str, str, str, object, object) -> str
 
         # For later use
         now = _utcnow()
+        sso_ctx = SSOCtx(
+            remote_addr=remote_addr,
+            user_agent=user_agent,
+            input=Bunch({
+                'token': token,
+                'current_app': current_app,
+            }),
+            sso_conf=self.sso_conf,
+            cid=cid,
+        )
 
         # This will be encrypted on input so we need to get a clear-text version of it
-        reset_key = self.server.decrypt_no_prefix(ctx.input.reset_key)
+        reset_key = self.server.decrypt_no_prefix(reset_key)
 
         # We need an SQL session ..
         with closing(self.odb_session_func()) as session:
 
             # .. try to look up the user by the incoming PRT and reset key which must exist and not to have expired,
             # or otherwise have been invalidated (e.g. already accessed) ..
-            user_info = get_user_by_prt_and_reset_key(session, ctx.input.token, reset_key, now)
+            user_info = get_user_by_prt_and_reset_key(session, token, reset_key, now)
 
             # .. no data matching the PRT, we need to reject the request ..
             if not user_info:
                 msg = 'Token or reset key rejected. No valid PRT or reset key matched input `%s` `%s` (now: %s)'
-                logger.warn(msg, ctx.input.token, reset_key, now)
+                logger.warn(msg, token, reset_key, now)
                 raise ValidationError(status_code.prt.could_not_access, False)
 
             # .. now, check if the user is still allowed to access the system;
             # we make an assuption that it is true (the user is still allowed),
             # which is why we conduct this check under the same SQL session ..
-            self.user_checker.check(ctx, user_info)
+            self.user_checker.check(sso_ctx, user_info)
 
             # .. if we are here, it means that the user checks above succeeded
             # and we can update the user's password too ..
             self.server.sso_api.user.set_password(
-                ctx.cid,
+                cid,
                 user_info.user_id,
-                ctx.input.password,
+                new_password,
                 must_change=False,
                 password_expiry=None,
-                current_app=ctx.input.current_app,
-                remote_addr=ctx.remote_addr,
+                current_app=current_app,
+                remote_addr=remote_addr,
                 details={
-                    'user_agent': ctx.user_agent,
-                    'has_remote_addr': ctx.has_remote_addr,
-                    'has_user_agent': ctx.has_user_agent,
+                    'user_agent': user_agent,
+                    'has_remote_addr': sso_ctx.has_remote_addr,
+                    'has_user_agent': sso_ctx.has_user_agent,
             })
 
             #
@@ -345,16 +366,16 @@ class PasswordResetAPI(object):
             # and that the password is changed ..
             #
             session.execute(FlowPRTModelUpdate().where(and_(
-                FlowPRTModelTable.c.token==ctx.input.token,
+                FlowPRTModelTable.c.token==token,
                 FlowPRTModelTable.c.reset_key==reset_key,
             )).values({
                 'is_password_reset': True,
                 'password_reset_time': now,
                 'password_reset_ctx': json_dumps({
-                    'remote_addr': [elem.exploded for elem in ctx.remote_addr],
-                    'user_agent': ctx.user_agent,
-                    'has_remote_addr': ctx.has_remote_addr,
-                    'has_user_agent': ctx.has_user_agent,
+                    'remote_addr': [elem.exploded for elem in sso_ctx.remote_addr],
+                    'user_agent': sso_ctx.user_agent,
+                    'has_remote_addr': sso_ctx.has_remote_addr,
+                    'has_user_agent': sso_ctx.has_user_agent,
                 })
             }))
 
