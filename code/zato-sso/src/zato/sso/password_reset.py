@@ -7,7 +7,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 from contextlib import closing
 from datetime import datetime, timedelta
 from logging import getLogger
@@ -19,7 +18,7 @@ from sqlalchemy import and_
 from zato.common import GENERIC, SMTPMessage
 from zato.common.api import SSO as CommonSSO
 from zato.common.json_internal import json_dumps
-from zato.common.odb.model import SSOFlowPRT as FlowPRTModel
+from zato.common.odb.model import SSOPasswordReset as FlowPRTModel
 from zato.sso import const, Default, status_code, ValidationError
 from zato.sso.odb.query import get_user_by_email, get_user_by_name, get_user_by_name_or_email, get_user_by_prt, \
      get_user_by_prt_and_reset_key
@@ -71,7 +70,7 @@ user_search_by_map = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-class FlowPRTAPI(object):
+class PasswordResetAPI(object):
     """ Message flow around password-reset tokens (PRT).
     """
     def __init__(self, server, sso_conf, odb_session_func, decrypt_func, verify_hash_func):
@@ -107,17 +106,14 @@ class FlowPRTAPI(object):
         # Name of the site, e.g. the environemnt the SSO servers in
         self.site_name = self.sso_conf.main.get('site_name') or 'site'
 
-        # This is constructed in self.post_configure
-        self.template_base_path = 'initial-flow-prt-api'
-
         # Convert minutes to hours as it is hours that are sent in notification emails
-        self.expiration_time_hours = int(self.sso_conf.prt.valid_for) // 60
+        self.expiration_time_hours = int(self.sso_conf.password_reset.valid_for) // 60
 
         # Name of an outgoing SMTP connections to send notifications through
         self.smtp_conn_name = sso_conf.main.smtp_conn # type: str
 
         # From who the SMTP messages will be sent
-        self.email_from = sso_conf.prt.email_from
+        self.email_from = sso_conf.password_reset.email_from
 
 # ################################################################################################################################
 
@@ -126,9 +122,6 @@ class FlowPRTAPI(object):
         self.odb_session_func = func
         self.is_sqlite = is_sqlite
 
-        # Base of the path to filesystem templates
-        self.template_base_path = os.path.join(self.server.static_config.base_dir, 'sso', 'email')
-
 # ################################################################################################################################
 
     def create_token(self, ctx, _utcnow=datetime.utcnow, _timedelta=timedelta):
@@ -136,7 +129,7 @@ class FlowPRTAPI(object):
 
         # Validate input
         if not ctx.input.credential:
-            logger.warn('SSO credential missing on input to PRT:create_token (%s)', ctx.input)
+            logger.warn('SSO credential missing on input to PasswordResetAPI.create_token (%s)', ctx.input)
             return
 
         # Look up the user in the database ..
@@ -240,7 +233,7 @@ class FlowPRTAPI(object):
         msg.is_html = False
 
         # .. provide metadata ..
-        msg.subject = self.sso_conf.prt.get('email_title_' + pref_lang) or 'Password reset'
+        msg.subject = self.sso_conf.password_reset.get('email_title_' + pref_lang) or 'Password reset'
         msg.to = user_email
         msg.from_ = self.email_from
 
@@ -252,7 +245,7 @@ class FlowPRTAPI(object):
 
 # ################################################################################################################################
 
-    def access(self, ctx, _utcnow=datetime.utcnow, _timedelta=timedelta):
+    def access_token(self, ctx, _utcnow=datetime.utcnow, _timedelta=timedelta):
         # type: (SSOCtx, object, object) -> str
 
         # For later use

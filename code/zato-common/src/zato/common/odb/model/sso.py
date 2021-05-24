@@ -268,8 +268,8 @@ class _SSOLinkedAuth(Base):
 
 # ################################################################################################################################
 
-class _SSOFlowPRT(Base):
-    __tablename__ = 'zato_sso_flow_prt'
+class _SSOPasswordReset(Base):
+    __tablename__ = 'zato_sso_password_reset'
 
     __table_args__ = (
         Index('zato_prt_value_type', 'token', 'type_', unique=True),
