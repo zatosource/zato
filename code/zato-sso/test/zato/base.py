@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -28,9 +26,11 @@ import requests
 import sh
 
 # Zato
+from zato.common.util.api import get_odb_session_from_server_dir
 from zato.common.json_internal import dumps, loads
-from zato.common.crypto.api import TOTPManager
+from zato.common.crypto.totp_ import TOTPManager
 from zato.sso import const, status_code
+from zato.sso.odb.query import get_user_by_name
 
 # ################################################################################################################################
 
@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 class Config:
     current_app = 'CRM'
 
-    super_user_name = 'admin1'
+    super_user_name = 'zato.unit-test.admin1'
     super_user_password = 'hQ9nl93UDqGus'
     super_user_totp_key = 'KMCLCWN4YPMD2WO3'
 
@@ -76,13 +76,20 @@ class BaseTest(TestCase):
 
     def setUp(self):
         try:
-            # Try to create a super-user ..
-            # sh.zato('sso', 'create-super-user', Config.server_location, Config.super_user_name, '--password',
-            #    Config.super_user_password, '--verbose')
-            # sh.zato('sso', 'reset-totp-key', Config.server_location, Config.super_user_name, '--key',
-            #    Config.super_user_totp_key, '--verbose')
 
-            pass
+            # Create the test user if the account does not already exist ..
+            odb_session = self.get_odb_session()
+
+            if not get_user_by_name(odb_session, Config.super_user_name, False):
+
+                # .. create the user ..
+                sh.zato('sso', 'create-super-user', Config.server_location, Config.super_user_name, '--password',
+                  Config.super_user_password, '--verbose')
+
+                # .. and set the TOTP ..
+                sh.zato('sso', 'reset-totp-key', Config.server_location, Config.super_user_name, '--key',
+                  Config.super_user_totp_key, '--verbose')
+
         except Exception as e:
             # .. but ignore it if such a user already exists.
             if not 'User already exists' in e.args[0]:
@@ -101,6 +108,11 @@ class BaseTest(TestCase):
 
     def tearDown(self):
         self.ctx.reset()
+
+# ################################################################################################################################
+
+    def get_odb_session(self):
+        return get_odb_session_from_server_dir(Config.server_location)
 
 # ################################################################################################################################
 
@@ -135,8 +147,8 @@ class BaseTest(TestCase):
 
         # Most tests require status OK and CID
         if expect_ok:
-            self.assertNotEquals(data.get('cid', _not_given), _not_given)
-            self.assertEquals(data.status, status_code.ok)
+            self.assertNotEqual(data.get('cid', _not_given), _not_given)
+            self.assertEqual(data.status, status_code.ok)
 
         return data
 
@@ -171,8 +183,8 @@ class BaseTest(TestCase):
 
     def _assert_default_user_data(self, response, now, approval_status=None):
 
-        self.assertEquals(response.approval_status, approval_status or const.approval_status.before_decision)
-        self.assertEquals(response.sign_up_status, const.signup_status.final)
+        self.assertEqual(response.approval_status, approval_status or const.approval_status.before_decision)
+        self.assertEqual(response.sign_up_status, const.signup_status.final)
 
         self.assertTrue(response.is_active)
         self.assertTrue(response.password_is_set)

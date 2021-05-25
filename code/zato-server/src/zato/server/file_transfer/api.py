@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -15,6 +13,7 @@ from datetime import datetime
 from http.client import OK
 from importlib import import_module
 from mimetypes import guess_type as guess_mime_type
+from pathlib import PurePath
 from re import IGNORECASE
 from sys import maxsize
 from traceback import format_exc
@@ -29,7 +28,7 @@ import globre
 # Zato
 from zato.common.api import FILE_TRANSFER
 from zato.common.util.api import new_cid, spawn_greenlet
-from zato.common.util.platform_ import is_linux
+from zato.common.util.platform_ import is_linux, is_other_than_linux
 from zato.server.file_transfer.event import FileTransferEventHandler, singleton
 from zato.server.file_transfer.observer.base import BackgroundPathInspector, PathCreatedEvent
 from zato.server.file_transfer.observer.local_ import LocalObserver
@@ -46,10 +45,10 @@ if 0:
     from zato.server.base.worker import WorkerStore
     from zato.server.file_transfer.event import FileTransferEvent
     from zato.server.file_transfer.observer.base import BaseObserver
-    from zato.server.file_transfer.snapshot import BaseSnapshotMaker
+    from zato.server.file_transfer.snapshot import BaseRemoteSnapshotMaker
 
     BaseObserver = BaseObserver
-    BaseSnapshotMaker = BaseSnapshotMaker
+    BaseRemoteSnapshotMaker = BaseRemoteSnapshotMaker
     Bunch = Bunch
     FileTransferEvent
     ParallelServer = ParallelServer
@@ -83,8 +82,13 @@ source_type_to_snapshot_maker_class = {
     source_type_sftp:  SFTPSnapshotMaker,
 }
 
-# Under Linux, we prefer to use inotify instead of snapshots.
-prefer_inotify = is_linux
+# ################################################################################################################################
+# ################################################################################################################################
+
+suffix_ignored = (
+    '.swp',
+    '~',
+)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -110,6 +114,9 @@ class FileTransferAPI(object):
 
         # Caches parser objects by their name
         self._parser_cache = {}
+
+        # Information about what local paths should be ignored, i.e. we should not send events about them.
+        self._local_ignored = set()
 
         if is_linux:
 
@@ -149,6 +156,9 @@ class FileTransferAPI(object):
         pattern_matcher_list = [globre.compile(elem, flags) for elem in file_patterns]
         self.pattern_matcher_dict[config.name] = pattern_matcher_list
 
+        # This is optional and usually will not exist
+        config.is_recursive = config.get('is_recursive') or False
+
         # This will be a list in the case of pickup.conf and not a list if read from ODB-based file transfer channels
         if isinstance(config.pickup_from_list, list):
             pickup_from_list = config.pickup_from_list
@@ -180,7 +190,7 @@ class FileTransferAPI(object):
 
         # .. finally, set up directories and callbacks for the observer.
         event_handler = FileTransferEventHandler(self, config.name, config)
-        observer.set_up(event_handler, pickup_from_list, recursive=False)
+        observer.set_up(event_handler, pickup_from_list, recursive=config.is_recursive)
 
 # ################################################################################################################################
 
@@ -203,6 +213,9 @@ class FileTransferAPI(object):
 
         # .. paths under which the observer may be listed (used only under Linux with inotify).
         observer_path_list = []
+
+        # .. have we preferred to use inotify for this channel ..
+        prefer_inotify = self.is_notify_preferred(config)
 
         # .. stop its main loop ..
         for observer in self.observer_list: # type: LocalObserver
@@ -308,22 +321,38 @@ class FileTransferAPI(object):
 
 # ################################################################################################################################
 
-    def should_handle(self, channel_name, file_name):
+    def should_handle(self, channel_name, file_name, suffix_ignored=suffix_ignored):
+        # type: (str, str, str) -> bool
+
+        # Chech all the patterns configured ..
         for pattern in self.pattern_matcher_dict[channel_name]:
+
+            # .. we have a match against a pattern ..
             if pattern.match(file_name):
-                return True
+
+                # .. however, we may be still required to ignore this file ..
+                for elem in suffix_ignored:
+                    if file_name.endswith(elem):
+                        return False
+                else:
+                    return True
 
 # ################################################################################################################################
 
     def invoke_callbacks(self, event, service_list, topic_list, outconn_rest_list):
         # type: (FileTransferEvent, list, list, list) -> None
 
+        # Do not invoke callbacks if the path is to be ignored
+        if self.is_local_path_ignored(event.full_path):
+            return
+
         config = self.worker_store.get_channel_file_transfer_config(event.channel_name)
 
         request = {
-            'base_dir': event.base_dir,
-            'file_name': event.file_name,
             'full_path': event.full_path,
+            'file_name': event.file_name,
+            'relative_dir': event.relative_dir,
+            'base_dir': event.base_dir,
             'channel_name': event.channel_name,
             'ts_utc': datetime.utcnow().isoformat(),
             'raw_data': event.raw_data,
@@ -415,7 +444,7 @@ class FileTransferAPI(object):
     def post_handle(self, event, config, observer, snapshot_maker):
         """ Runs after callback services have been already invoked, performs clean up if configured to.
         """
-        # type: (FileTransferEvent, Bunch, BaseObserver, BaseSnapshotMaker) -> None
+        # type: (FileTransferEvent, Bunch, BaseObserver, BaseRemoteSnapshotMaker) -> None
         if config.move_processed_to:
             observer.move_file(event.full_path, config.move_processed_to, observer, snapshot_maker)
 
@@ -489,7 +518,7 @@ class FileTransferAPI(object):
                         path_observer_list.append(BackgroundPathInspector(path, observer, self.observer_start_args))
 
                 # Inotify-based observers are set up here but their main loop is in _run_linux_inotify_loop ..
-                if prefer_inotify:
+                if self.is_notify_preferred(observer.channel_config):
                     observer.start(self.observer_start_args)
 
                 # .. whereas snapshot observers are started here.
@@ -512,7 +541,7 @@ class FileTransferAPI(object):
         # Under Linux, run the inotify main loop for each watch descriptor created for paths that do exist.
         # Note that if we are not on Linux, each observer.start call above already ran a new greenlet with an observer
         # for a particular directory.
-        if prefer_inotify:
+        if self.is_notify_preferred(observer.channel_config):
             spawn_greenlet(self._run_linux_inotify_loop)
 
 # ################################################################################################################################
@@ -572,7 +601,7 @@ class FileTransferAPI(object):
         source_type = observer.channel_config.source_type   # type: str
         snapshot_maker_class = source_type_to_snapshot_maker_class[source_type]
 
-        snapshot_maker = snapshot_maker_class(self, observer.channel_config) # type: (BaseSnapshotMaker)
+        snapshot_maker = snapshot_maker_class(self, observer.channel_config) # type: (BaseRemoteSnapshotMaker)
         snapshot_maker.connect()
 
         for item in observer.path_list: # type: (str)
@@ -584,5 +613,75 @@ class FileTransferAPI(object):
         # type: (int, int) -> None
         observer = self.get_observer_by_channel_id(channel_id) # type: BaseObserver
         self._run_snapshot_observer(observer, max_iters)
+
+# ################################################################################################################################
+
+    def build_relative_dir(self, path):
+        """ Builds a path based on input relative to the server's top-level directory.
+        I.e. it extracts what is known as pickup_from in pickup.conf from the incoming path.
+        """
+        # type: (str) -> str
+
+        # By default, we have no result
+        relative_dir = None
+
+        try:
+            server_base_dir = PurePath(self.server.base_dir)
+            path = PurePath(path)
+            relative_dir = path.relative_to(server_base_dir)
+        except Exception as e:
+
+            # This is used when the .relative_do was not able to build relative_dir
+            if isinstance(e, ValueError):
+                log_func = logger.info
+            else:
+                log_func = logger.warn
+                log_func('Could not build relative_dir from `%s` and `%s` (%s)', self.server.base_dir, path, e.args[0])
+
+        else:
+            # No ValueError = relative_dir was extracted, but it still contains the file name
+            # so we need to get the directory leading to it.
+            relative_dir = os.path.dirname(relative_dir)
+
+        finally:
+            # Now, we can return the result
+            return relative_dir
+
+# ################################################################################################################################
+
+    def add_local_ignored_path(self, path):
+        # type: (str) -> None
+        self._local_ignored.add(path)
+
+# ################################################################################################################################
+
+    def remove_local_ignored_path(self, path):
+        # type: (str) -> None
+        try:
+            self._local_ignored.remove(path)
+        except KeyError:
+            logger.info('Path `%s` not among `%s`', path, sorted(self._local_ignored))
+
+# ################################################################################################################################
+
+    def is_local_path_ignored(self, path):
+        # type: (str) -> bool
+        return path in self._local_ignored
+
+# ################################################################################################################################
+
+    def is_notify_preferred(self, channel_config):
+        """ Returns True if inotify is the preferred notification method for input configuration and current OS.
+        """
+        # type: (Bunch) -> None
+
+        # We do not prefer inotify only if we need recursive scans or if we are not under Linux ..
+        if channel_config.is_recursive or is_other_than_linux:
+            return False
+
+        # .. otherwise, we prefer inotify.
+        else:
+            return True
+
 
 # ################################################################################################################################
