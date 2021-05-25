@@ -526,14 +526,15 @@ class GenData(ZatoCommand):
                     r = response.json()
 
                     if r['status'] == 'ok' and len(r['sub_status']) == 0 and len(r['result']) == 1:
-                        user_id = r['result'][0]['user_id']
+                        user['user_id'] = r['result'][0]['user_id']
+
                         # User Approval
                         if random.choice([True, False]):
                             response = requests.post('http://localhost:17010/zato/sso/user/approve', json={
                                 'ust': args.super_user_ust,
                                 'confirm_token': user['confirm_token'],
                                 'current_app': args.current_app,
-                                'user_id': user_id,
+                                'user_id': user['user_id'],
                             })
                             r = response.json()
 
@@ -561,8 +562,8 @@ class GenData(ZatoCommand):
                         requests.post('http://localhost:17010/zato/sso/session/attr', json={
                             'ust': args.super_user_ust,
                             'current_app': args.current_app,
-                            'user_id': user_id,
-                            'data': [{'user_id': attrib, 'value': user[attrib]} for attrib in user.keys() if attrib not in ['username', 'password', 'confirm_token', 'approved']],
+                            'user_id': user['user_id'],
+                            'data': [{'name': attrib, 'value': user[attrib]} for attrib in user.keys() if attrib not in ['username', 'password', 'confirm_token', 'approved']],
                         })
 
                         r = response.json()
