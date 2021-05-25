@@ -281,6 +281,9 @@ class _SSOPasswordReset(Base):
     creation_time = Column(DateTime(), nullable=False)
     expiration_time = Column(DateTime(), nullable=False)
 
+    # Creation metadata in JSON
+    creation_ctx = Column(_JSON(), nullable=False)
+
     # The actual PRT (password reset token)
     token = Column(String(191), nullable=False)
 

@@ -91,9 +91,8 @@ class status_code:
         already_exists = 'E009001'
         no_such_attr   = 'E009002'
 
-    class prt:
+    class password_reset:
         could_not_access = 'E010001'
-        user_rejected    = 'E010002'
 
 # ################################################################################################################################
 
@@ -128,7 +127,7 @@ class const:
         default    = 'default'
         jwt        = 'jwt'
 
-    class prt:
+    class password_reset:
         token_type = 'prt'
 
 # ################################################################################################################################

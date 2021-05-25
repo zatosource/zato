@@ -97,7 +97,7 @@ direct_payload = simple_types + (EtreeElement, ObjectifiedElement)
 class HTTPRequestData(object):
     """ Data regarding an HTTP request.
     """
-    __slots__ = 'method', 'GET', 'POST', 'path', 'params', '_wsgi_environ'
+    __slots__ = 'method', 'GET', 'POST', 'path', 'params', 'user_agent', '_wsgi_environ'
 
     def __init__(self, _Bunch=Bunch):
         self.method = None # type: str
@@ -105,6 +105,7 @@ class HTTPRequestData(object):
         self.POST = _Bunch()
         self.path = None # type: str
         self.params = _Bunch()
+        self.user_agent = ''
         self._wsgi_environ = None # type: dict
 
     def init(self, wsgi_environ=None):
@@ -114,6 +115,7 @@ class HTTPRequestData(object):
         self.POST.update(wsgi_environ.get('zato.http.POST', {}))
         self.path = wsgi_environ.get('PATH_INFO') # type: str
         self.params.update(wsgi_environ.get('zato.http.path_params', {}))
+        self.user_agent = wsgi_environ.get('HTTP_USER_AGENT')
 
     def get_form_data(self):
         # type: () -> FieldStorage
