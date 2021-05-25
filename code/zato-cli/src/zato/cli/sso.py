@@ -516,34 +516,6 @@ class GenData(ZatoCommand):
                     user['confirmed'] = False
                     user['approved'] = False
 
-                    # User Approval
-                    if random.choice([True, False]):
-                        response = requests.post('http://localhost:17010/zato/sso/user/approve', json={
-                            'ust': args.super_user_ust,
-                            'confirm_token': user['confirm_token'],
-                            'current_app': args.current_app,
-                        })
-                        r = response.json()
-
-                        if r['status'] == 'ok' and len(r['sub_status']) == 0:
-                            self.logger.info('User {} was approved'.format(user['username']))
-                            user['approved'] = True
-                        else:
-                            self.logger.info("Failed to approve user: {}".format(r['sub_status']))
-
-                    if random.choice([True, False]):
-                        response = requests.patch('http://localhost:17010/zato/sso/user/signup', json={
-                            'confirm_token': user['confirm_token'],
-                            'current_app': args.current_app,
-                        })
-                        r = response.json()
-
-                        if r['status'] == 'ok' and len(r['sub_status']) == 0:
-                            self.logger.info("User '{}' was confirmed".format(user['username']))
-                            user['confirmed'] = True
-                        else:
-                            self.logger.info("Failed to confirm user: {}".format(r['sub_status']))
-
                     self.logger.info("Getting user_id")
 
                     response = requests.get('http://localhost:17010/zato/sso/user/search', json={
@@ -555,6 +527,34 @@ class GenData(ZatoCommand):
 
                     if r['status'] == 'ok' and len(r['sub_status']) == 0 and len(r['result']) == 1:
                         user_id = r['result'][0]['user_id']
+                        # User Approval
+                        if random.choice([True, False]):
+                            response = requests.post('http://localhost:17010/zato/sso/user/approve', json={
+                                'ust': args.super_user_ust,
+                                'confirm_token': user['confirm_token'],
+                                'current_app': args.current_app,
+                                'user_id': user_id,
+                            })
+                            r = response.json()
+
+                            if r['status'] == 'ok' and len(r['sub_status']) == 0:
+                                self.logger.info('User {} was approved'.format(user['username']))
+                                user['approved'] = True
+                            else:
+                                self.logger.info("Failed to approve user: {}".format(r['sub_status']))
+
+                        if random.choice([True, False]):
+                            response = requests.patch('http://localhost:17010/zato/sso/user/signup', json={
+                                'confirm_token': user['confirm_token'],
+                                'current_app': args.current_app,
+                            })
+                            r = response.json()
+
+                            if r['status'] == 'ok' and len(r['sub_status']) == 0:
+                                self.logger.info("User '{}' was confirmed".format(user['username']))
+                                user['confirmed'] = True
+                            else:
+                                self.logger.info("Failed to confirm user: {}".format(r['sub_status']))
 
                         # Add attributes
                         self.logger.info('Adding attributes')
