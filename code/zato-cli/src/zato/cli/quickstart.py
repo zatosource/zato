@@ -261,6 +261,10 @@ class Create(ZatoCommand):
         # Cryptography
         from cryptography.fernet import Fernet
 
+        # These are shared by all servers
+        jwt_secret = Fernet.generate_key()
+        secret_key = Fernet.generate_key()
+
         # Zato
         from zato.cli import ca_create_ca, ca_create_lb_agent, ca_create_scheduler, ca_create_server, \
              ca_create_web_admin, create_cluster, create_lb, create_odb, create_scheduler, create_server, create_web_admin
@@ -350,6 +354,7 @@ class Create(ZatoCommand):
         create_cluster_args.lb_port = lb_port
         create_cluster_args.lb_agent_port = lb_agent_port
         create_cluster_args['admin-invoke-password'] = admin_invoke_password
+        create_cluster_args.secret_key = secret_key
         create_cluster.Create(create_cluster_args).execute(create_cluster_args, False)
 
         self.logger.info('[{}/{}] ODB initial data created'.format(next(next_step), total_steps))
@@ -359,10 +364,6 @@ class Create(ZatoCommand):
         #
         # 4) servers
         #
-
-        # Must be shared by all servers
-        jwt_secret = Fernet.generate_key()
-        secret_key = Fernet.generate_key()
 
         for idx, name in enumerate(server_names):
             server_path = os.path.join(args_path, server_names[name])
