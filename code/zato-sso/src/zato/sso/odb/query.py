@@ -18,7 +18,7 @@ from sqlalchemy import or_
 # Zato
 from zato.common.api import GENERIC
 from zato.common.json_internal import loads
-from zato.common.odb.model import SecurityBase, SSOFlowPRT, SSOLinkedAuth, SSOSession, SSOUser
+from zato.common.odb.model import SecurityBase, SSOPasswordReset, SSOLinkedAuth, SSOSession, SSOUser
 from zato.common.util.sql import elems_with_opaque
 from zato.sso import const
 
@@ -145,12 +145,12 @@ def _get_user_by_prt(session, prt, now):
         SSOUser.approval_status,
         SSOUser.password_expiry,
         SSOUser.password_must_change,
-        SSOFlowPRT.reset_key,
+        SSOPasswordReset.reset_key,
         ).\
-        filter(SSOFlowPRT.token == prt).\
-        filter(SSOUser.user_id == SSOFlowPRT.user_id).\
-        filter(SSOFlowPRT.expiration_time > now).\
-        filter(SSOFlowPRT.reset_key_exp_time > now)
+        filter(SSOPasswordReset.token == prt).\
+        filter(SSOUser.user_id == SSOPasswordReset.user_id).\
+        filter(SSOPasswordReset.expiration_time > now).\
+        filter(SSOPasswordReset.reset_key_exp_time > now)
 
 # ################################################################################################################################
 
@@ -162,8 +162,8 @@ def get_user_by_prt(session, prt, now):
     # .. at this point, the password is still not reset
     # and we need to ensure that the PRT has not been accessed either ..
     q = q.\
-        filter(SSOFlowPRT.has_been_accessed.is_(False)).\
-        filter(SSOFlowPRT.is_password_reset.is_(False))
+        filter(SSOPasswordReset.has_been_accessed.is_(False)).\
+        filter(SSOPasswordReset.is_password_reset.is_(False))
 
     # .. and return the result.
     return q.first()
@@ -176,9 +176,9 @@ def get_user_by_prt_and_reset_key(session, prt, reset_key, now):
     q = _get_user_by_prt(session, prt, now)
 
     q = q.\
-        filter(SSOFlowPRT.reset_key == reset_key).\
-        filter(SSOFlowPRT.has_been_accessed.is_(True)).\
-        filter(SSOFlowPRT.is_password_reset.is_(False))
+        filter(SSOPasswordReset.reset_key == reset_key).\
+        filter(SSOPasswordReset.has_been_accessed.is_(True)).\
+        filter(SSOPasswordReset.is_password_reset.is_(False))
 
     # .. and return the result.
     return q.first()
