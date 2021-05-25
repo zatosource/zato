@@ -70,8 +70,8 @@ class ConfigSource:
         self.current_server_name = server_name
         self.decrypt_func = decrypt_func
 
-    def get_server_ctx(self, cluster_name, server_name):
-        # type: (str, str) -> RemoteServerInvocationCtx
+    def get_server_ctx(self, parallel_server, cluster_name, server_name):
+        # type: (ParallelServer, str, str) -> RemoteServerInvocationCtx
         raise NotImplementedError('Should be overridden by subclasses')
 
     def get_server_ctx_list(self, cluster_name):
@@ -125,10 +125,10 @@ class ODBConfigSource(ConfigSource):
 
 # ################################################################################################################################
 
-    def get_server_ctx(self, cluster_name, server_name):
+    def get_server_ctx(self, _ignored_parallel_server, cluster_name, server_name):
         """ Returns a specific server defined in ODB.
         """
-        # type: (str, str) -> RemoteServerInvocationCtx
+        # type: (ParallelServer, str, str) -> RemoteServerInvocationCtx
 
         with closing(self.odb.session()) as session:
             result = server_by_name(session, None, cluster_name, server_name)
