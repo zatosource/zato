@@ -564,9 +564,9 @@ class GenData(ZatoCommand):
                             'user_id': user_id,
                             'data': [{'user_id': attrib, 'value': user[attrib]} for attrib in user.keys() if attrib not in ['username', 'password', 'confirm_token', 'approved']],
                         })
+
                         r = response.json()
-                        if self.verbose:
-                            self.logger.info(json.dumps(r, indent=2))
+
                         if r['status'] == 'ok':
                             self.logger.info("All attributes were added to user '{}'".format(user['username']))
                         else:
