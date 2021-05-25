@@ -165,7 +165,7 @@ class PasswordResetAPI(object):
                     'reset_key_exp_time': reset_key_exp_time,
                     'user_id': user.user_id,
                     'token': prt,
-                    'type_': const.prt.token_type,
+                    'type_': const.password_reset.token_type,
                     'reset_key': reset_key,
                     'creation_ctx': json_dumps({
                         'remote_addr': [elem.exploded for elem in sso_ctx.remote_addr],
@@ -203,7 +203,7 @@ class PasswordResetAPI(object):
             if not user_info:
                 msg = 'Token rejected. No valid PRT matched input `%s` (now: %s)'
                 logger.warn(msg, token, now)
-                raise ValidationError(status_code.prt.could_not_access, False)
+                raise ValidationError(status_code.password_reset.could_not_access, False)
 
             # .. now, check if the user is still allowed to access the system;
             # we make an assuption that it is true (the user is still allowed),
@@ -259,7 +259,7 @@ class PasswordResetAPI(object):
             if not user_info:
                 msg = 'Token or reset key rejected. No valid PRT or reset key matched input `%s` `%s` (now: %s)'
                 logger.warn(msg, token, reset_key, now)
-                raise ValidationError(status_code.prt.could_not_access, False)
+                raise ValidationError(status_code.password_reset.could_not_access, False)
 
             # .. now, check if the user is still allowed to access the system;
             # we make an assuption that it is true (the user is still allowed),
