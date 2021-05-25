@@ -107,7 +107,7 @@ class AdminService(Service):
 # ################################################################################################################################
 
     def handle(self, *args, **kwargs):
-        raise NotImplementedError('Should be overridden by subclasses (AdminService.handle)')
+        raise NotImplementedError('Should be overridden by subclasses (AdminService.handle -> {})'.format(self.name))
 
 # ################################################################################################################################
 
