@@ -50,7 +50,14 @@ class PasswordReset(BaseRESTService):
 
         # Run asynchronously in a separate greenlet
         try:
-            spawn_greenlet(self.sso.password_reset.create_token, ctx)
+            spawn_greenlet(
+                self.sso.password_reset.create_token,
+                self.cid,
+                ctx.input.credential,
+                ctx.input.current_app,
+                ctx.remote_addr,
+                ctx.user_agent
+            )
         except Exception:
             # Log the exception but do not return it
             self.logger.warn('Exception in FlowPRT._handle_sso_POST `%s`', format_exc())
@@ -63,7 +70,8 @@ class PasswordReset(BaseRESTService):
         # type: (SSOCtx) -> None
 
         # Try to get a reset key for the input PRT ..
-        reset_key = self.sso.password_reset.access_token(ctx)
+        reset_key = self.sso.password_reset.access_token(
+            self.cid, ctx.input.token, ctx.input.current_app, ctx.remote_addr, ctx.user_agent)
 
         # .. if we are here, it means that the PRT was accepted
         # and we can return the reset key to the client.
@@ -77,7 +85,9 @@ class PasswordReset(BaseRESTService):
         # type: (SSOCtx) -> None
 
         # Try to get a reset key for the input PRT and reset key ..
-        self.sso.password_reset.change_password(ctx)
+        self.sso.password_reset.change_password(
+            self.cid, ctx.input.password, ctx.input.token, ctx.input.reset_key,
+            ctx.input.current_app, ctx.remote_addr, ctx.user_agent)
 
         # .. if we are here, it means that the PRT and reset key
         # were accepted, there is nothing else for us to do, we can return,

@@ -47,11 +47,10 @@ class BaseRequestCtx:
         self.has_remote_addr = bool(self.input.get('remote_addr'))
         self.has_user_agent = bool(self.input.get('user_agent'))
 
-        if self.remote_addr:
+        if isinstance(self.remote_addr, str):
             remote_addr = [elem.strip() for elem in self.remote_addr.strip().split(',')]
             remote_addr = [ip_address(elem) for elem in remote_addr]
-
-        self.remote_addr = remote_addr
+            self.remote_addr = remote_addr
 
 # ################################################################################################################################
 # ################################################################################################################################
