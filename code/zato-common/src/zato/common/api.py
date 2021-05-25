@@ -1853,7 +1853,6 @@ default_internal_modules = {
     'zato.server.service.internal.sms.twilio': True,
     'zato.server.service.internal.sso': True,
     'zato.server.service.internal.sso.cleanup': True,
-    'zato.server.service.internal.sso.flow_prt': True,
     'zato.server.service.internal.sso.password_reset': True,
     'zato.server.service.internal.sso.session': True,
     'zato.server.service.internal.sso.session_attr': True,

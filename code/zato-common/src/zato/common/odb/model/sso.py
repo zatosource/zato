@@ -268,8 +268,8 @@ class _SSOLinkedAuth(Base):
 
 # ################################################################################################################################
 
-class _SSOFlowPRT(Base):
-    __tablename__ = 'zato_sso_flow_prt'
+class _SSOPasswordReset(Base):
+    __tablename__ = 'zato_sso_password_reset'
 
     __table_args__ = (
         Index('zato_prt_value_type', 'token', 'type_', unique=True),
@@ -280,6 +280,9 @@ class _SSOFlowPRT(Base):
 
     creation_time = Column(DateTime(), nullable=False)
     expiration_time = Column(DateTime(), nullable=False)
+
+    # Creation metadata in JSON
+    creation_ctx = Column(_JSON(), nullable=False)
 
     # The actual PRT (password reset token)
     token = Column(String(191), nullable=False)
