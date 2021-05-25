@@ -433,6 +433,7 @@ class GenData(ZatoCommand):
         {'name': '--mu', 'help': "Maximum number of attributes", 'required': True, 'type': int},
         {'name': '--current-app', 'help': "Name of the application the user is signing up through", 'default': "CRM"},
         {'name': '--save-to-csv', 'help': "Name of the CSV file to create with the generated information"},
+        {'name': '--debug', 'help': 'Output sent data', 'action': 'store_true'},
     ]
 
     def _generate_entry(self, fields=0):
@@ -457,7 +458,7 @@ class GenData(ZatoCommand):
 
         person = {}
         person['username'] = generic.person.username()
-        person['password'] = generic.person.password(length=20)
+        person['password'] = generic.person.password(length=20, hashed=True)
 
         number_extra_fields = fields - len(fixed_fields)
         for _ in range(fields - number_extra_fields):
@@ -479,9 +480,10 @@ class GenData(ZatoCommand):
         # type: (Namespace)
 
         import csv
-        import random
+        import json
         import numpy as np
         import pandas as pd
+        import random
         import requests
         from zato.common.crypto.totp_ import TOTPManager
 
@@ -498,33 +500,87 @@ class GenData(ZatoCommand):
         for i in random_ints.astype(int).tolist():
             list_of_users.append(self._generate_entry(fields=i))
 
-        for user in list_of_users:
-            self.logger.info('Creating user: {}'.format(user['username']))
+        try:
+            for user in list_of_users:
+                self.logger.info('Creating user: {}'.format(user['username']))
 
-            response = requests.post('http://localhost:17010/zato/sso/user/signup', json={
-                'username': user['username'],
-                'password': user['password'],
-                'current_app': args.current_app
-            })
-
-            r = response.json()
-            user['confirm_token'] = r['confirm_token']
-            user['approved'] = False
-
-            if bool(random.getrandbits(1)):
-                # Random Approval
-                response = requests.patch('http://localhost:17010/zato/sso/user/signup', json={
-                    'confirm_token': user['confirm_token'],
+                response = requests.post('http://localhost:17010/zato/sso/user/signup', json={
+                    'username': user['username'],
+                    'password': user['password'],
+                    'current_app': args.current_app,
                 })
-                user['approved'] = True
-                self.logger.info('User approved')
+                r = response.json()
 
-            # Add attributes
-            requests.post('http://localhost:17010/zato/sso/session/attr', json={
-                'current_ust': args.super_user_ust,
-                'current_app': args.current_app,
-                'data': [{'user_id': attrib, 'value': user[attrib]} for attrib in user.keys() if attrib not in ['username', 'password', 'confirm_token', 'approved']],
-            })
+                if r['status'] == 'ok' and len(r['sub_status']) == 0:
+                    user['confirm_token'] = r['confirm_token']
+                    user['confirmed'] = False
+                    user['approved'] = False
+
+                    # User Approval
+                    if random.choice([True, False]):
+                        response = requests.post('http://localhost:17010/zato/sso/user/approve', json={
+                            'ust': args.super_user_ust,
+                            'confirm_token': user['confirm_token'],
+                            'current_app': args.current_app,
+                        })
+                        r = response.json()
+
+                        if r['status'] == 'ok' and len(r['sub_status']) == 0:
+                            self.logger.info('User {} was approved'.format(user['username']))
+                            user['approved'] = True
+                        else:
+                            self.logger.info("Failed to approve user: {}".format(r['sub_status']))
+
+                    if random.choice([True, False]):
+                        response = requests.patch('http://localhost:17010/zato/sso/user/signup', json={
+                            'confirm_token': user['confirm_token'],
+                            'current_app': args.current_app,
+                        })
+                        r = response.json()
+
+                        if r['status'] == 'ok' and len(r['sub_status']) == 0:
+                            self.logger.info("User '{}' was confirmed".format(user['username']))
+                            user['confirmed'] = True
+                        else:
+                            self.logger.info("Failed to confirm user: {}".format(r['sub_status']))
+
+                    self.logger.info("Getting user_id")
+
+                    response = requests.get('http://localhost:17010/zato/sso/user/search', json={
+                        'ust': args.super_user_ust,
+                        'username': user['username'],
+                        'current_app': args.current_app,
+                    })
+                    r = response.json()
+
+                    if r['status'] == 'ok' and len(r['sub_status']) == 0 and len(r['result']) == 1:
+                        user_id = r['result'][0]['user_id']
+
+                        # Add attributes
+                        self.logger.info('Adding attributes')
+                        requests.post('http://localhost:17010/zato/sso/session/attr', json={
+                            'ust': args.super_user_ust,
+                            'current_app': args.current_app,
+                            'user_id': user_id,
+                            'data': [{'user_id': attrib, 'value': user[attrib]} for attrib in user.keys() if attrib not in ['username', 'password', 'confirm_token', 'approved']],
+                        })
+                        r = response.json()
+                        if self.verbose:
+                            self.logger.info(json.dumps(r, indent=2))
+                        if r['status'] == 'ok':
+                            self.logger.info("All attributes were added to user '{}'".format(user['username']))
+                        else:
+                            self.logger.info("Failed to add attributes to user '{}': {}".format(user['username'], r['sub_status']))
+                    else:
+                        self.logger.info("Failed to add attributes to user '{}': {}".format(user['username'], r['sub_status']))
+                else:
+                    self.logger.info("user/signup failed: {}".format(r['sub_status']))
+                    break
+
+        except Exception as e:
+            self.logger.error(e)
+            return self.SYS_ERROR.EXCEPTION_CAUGHT
+
 
         if args.save_to_csv != "":
             df = pd.DataFrame(list_of_users)
