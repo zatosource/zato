@@ -573,7 +573,7 @@ class GenData(ZatoCommand):
                         else:
                             self.logger.info("Failed to add attributes to user '{}': {}".format(user['username'], r['sub_status']))
                     else:
-                        self.logger.info("Failed to add attributes to user '{}': {}".format(user['username'], r['sub_status']))
+                        self.logger.info("Failed to get user_id for '{}': {}".format(user['username'], r['sub_status']))
                 else:
                     self.logger.info("user/signup failed: {}".format(r['sub_status']))
                     break
