@@ -433,7 +433,6 @@ class GenData(ZatoCommand):
         {'name': '--mu', 'help': "Maximum number of attributes", 'required': True, 'type': int},
         {'name': '--current-app', 'help': "Name of the application the user is signing up through", 'default': "CRM"},
         {'name': '--save-to-csv', 'help': "Name of the CSV file to create with the generated information"},
-        {'name': '--debug', 'help': 'Output sent data', 'action': 'store_true'},
     ]
 
     def _generate_entry(self, fields=0):
