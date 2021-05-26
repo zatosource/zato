@@ -157,6 +157,8 @@ class StatsContainer:
 
             print(111, f.memory_usage())
 
+            print(222, f.to_parquet('/tmp/zzz-parquet'))
+
 # ################################################################################################################################
 
     def run(self):
@@ -170,19 +172,19 @@ if __name__ == '__main__':
     container = StatsContainer()
     container.run()
 
-    event = {
-        'id': 'abc',
-        'cid': 'cid.1',
-        'source_type': 'zato.server',
-        'source_id': 'server1',
-        'timestamp': '2021-05-12T07:07:01.4841',
-        'object_type': 'zato.service',
-        'object_id': '123',
-    }
+    n = 10_000_000
 
-    n = 100_000
-
-    for x in range(n):
+    for idx in range(n):
+        elem = str(idx)
+        event = {
+            'id': elem,
+            'cid': 'cid.' + elem,
+            'source_type': 'zato.server' + elem,
+            'source_id': 'server1' + elem,
+            'timestamp': '2021-05-12T07:07:01.4841' + elem,
+            'object_type': 'zato.service' + elem,
+            'object_id': '123' + elem,
+        }
         container.push(event)
 
     container.sync_storage()
