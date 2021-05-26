@@ -478,21 +478,24 @@ class GenData(ZatoCommand):
         # type: (Namespace)
 
         import csv
+        import random
+        import uuid
+
         import numpy as np
         import pandas as pd
-        import random
         import requests
         import sh
+        from mimesis import Generic
+        from zato.common.crypto.totp_ import TOTPManager
         from zato.common.util.api import get_odb_session_from_server_dir
         from zato.sso.odb.query import get_user_by_name
-        from zato.common.crypto.totp_ import TOTPManager
 
         from mimesis import Generic
         generic = Generic()
 
-        super_user_name = 'zato.unit-test.admin1'
-        super_user_password = 'hQ9nl93UDqGus'
-        super_user_totp_key = 'KMCLCWN4YPMD2WO3'
+        super_user_name = 'zato.sso.gendata'
+        super_user_password = uuid.uuid4().hex
+        super_user_totp_key = uuid.uuid4().hex
 
         # mean and standard deviation
         mu, sigma = 0, 3
