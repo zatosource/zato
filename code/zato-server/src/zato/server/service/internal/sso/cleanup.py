@@ -15,7 +15,7 @@ from traceback import format_exc
 from gevent import sleep
 
 # Zato
-from zato.common.odb.model import SSOAttr, SSOFlowPRT, SSOSession
+from zato.common.odb.model import SSOAttr, SSOPasswordReset, SSOSession
 from zato.server.service import Service
 
 # ################################################################################################################################
@@ -74,8 +74,8 @@ class Cleanup(Service):
 # ################################################################################################################################
 
     def _cleanup_flow_prt(self, session, now):
-        return session.query(SSOFlowPRT).\
-            filter(SSOFlowPRT.expiration_time <= now).\
+        return session.query(SSOPasswordReset).\
+            filter(SSOPasswordReset.expiration_time <= now).\
             delete()
 
 # ################################################################################################################################
