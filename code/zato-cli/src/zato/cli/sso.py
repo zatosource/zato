@@ -495,7 +495,6 @@ class GenData(ZatoCommand):
 
         super_user_name = 'zato.sso.gendata'
         super_user_password = uuid.uuid4().hex
-        super_user_totp_key = uuid.uuid4().hex
 
         # mean and standard deviation
         mu, sigma = 0, 3
@@ -516,21 +515,19 @@ class GenData(ZatoCommand):
             try:
                 odb_session = get_odb_session_from_server_dir(args.path)
                 if not get_user_by_name(odb_session, super_user_name, False):
-
                     # .. create the user ..
                     sh.zato('sso', 'create-super-user', args.path, super_user_name, '--password',
                     super_user_password, '--verbose')
-
-                    # .. and set the TOTP ..
-                    sh.zato('sso', 'reset-totp-key', args.path, super_user_name, '--key',
-                    super_user_totp_key, '--verbose')
-
             except Exception as e:
                 # .. but ignore it if such a user already exists.
                 if not 'User already exists' in e.args[0]:
                     if isinstance(e, sh.ErrorReturnCode):
                         self.logger.warning('Shell exception %s', e.stderr)
                     raise
+
+            # .. get the TOTP ..
+            totp_key_reset_stdout = sh.zato('sso', 'reset-totp-key', args.path, super_user_name).stdout
+            super_user_totp_key = str(totp_key_reset_stdout).split('`')[3]
 
             response = requests.post('http://localhost:17010/zato/sso/user/login', json={
                 'username': super_user_name,
