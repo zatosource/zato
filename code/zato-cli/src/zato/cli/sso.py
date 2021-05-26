@@ -428,9 +428,8 @@ class GenData(ZatoCommand):
     """
 
     opts = [
-        {'name': '--super_user_ust', 'help': "Super user's session token", 'required': True},
         {'name': '--n-users', 'help': "Number of users to create", 'required': True, 'type': int},
-        {'name': '--mu', 'help': "Maximum number of attributes", 'required': True, 'type': int},
+        {'name': '--n-attrs', 'help': "Maximum number of attributes", 'required': True, 'type': int},
         {'name': '--current-app', 'help': "Name of the application the user is signing up through", 'default': "CRM"},
         {'name': '--save-to-csv', 'help': "Name of the CSV file to create with the generated information"},
     ]
@@ -483,17 +482,26 @@ class GenData(ZatoCommand):
         import pandas as pd
         import random
         import requests
+        import sh
+        from zato.common.util.api import get_odb_session_from_server_dir
+        from zato.sso.odb.query import get_user_by_name
         from zato.common.crypto.totp_ import TOTPManager
 
+        from mimesis import Generic
+        generic = Generic()
+
+        super_user_name = 'zato.unit-test.admin1'
+        super_user_password = 'hQ9nl93UDqGus'
+        super_user_totp_key = 'KMCLCWN4YPMD2WO3'
 
         # mean and standard deviation
         mu, sigma = 0, 3
-
+        self.logger.warning('args {}'.format(args))
         # generate sequence
         random_nums = np.random.default_rng().normal(mu, sigma, args.n_users)
 
         # adjusting list's values by rule of three using the max number
-        random_ints = np.absolute(np.round(np.multiply(random_nums, int(args.mu)/random_nums.max())))
+        random_ints = np.absolute(np.round(np.multiply(random_nums, int(args.n_attrs)/random_nums.max())))
 
         # generate list of users
         list_of_users = []
@@ -501,6 +509,35 @@ class GenData(ZatoCommand):
             list_of_users.append(self._generate_entry(fields=i))
 
         try:
+            # Checking/Adding super-user
+            try:
+                odb_session = get_odb_session_from_server_dir(args.path)
+                if not get_user_by_name(odb_session, super_user_name, False):
+
+                    # .. create the user ..
+                    sh.zato('sso', 'create-super-user', args.path, super_user_name, '--password',
+                    super_user_password, '--verbose')
+
+                    # .. and set the TOTP ..
+                    sh.zato('sso', 'reset-totp-key', args.path, super_user_name, '--key',
+                    super_user_totp_key, '--verbose')
+
+            except Exception as e:
+                # .. but ignore it if such a user already exists.
+                if not 'User already exists' in e.args[0]:
+                    if isinstance(e, sh.ErrorReturnCode):
+                        self.logger.warning('Shell exception %s', e.stderr)
+                    raise
+
+            response = requests.post('http://localhost:17010/zato/sso/user/login', json={
+                'username': super_user_name,
+                'password': super_user_password,
+                'totp_code': TOTPManager.get_current_totp_code(super_user_totp_key),
+                'current_app': args.current_app,
+            })
+            r = response.json()
+            super_user_ust = r['ust']
+
             for user in list_of_users:
                 self.logger.info('Creating user: {}'.format(user['username']))
 
@@ -531,7 +568,7 @@ class GenData(ZatoCommand):
 
                     # Getting user_id
                     response = requests.get('http://localhost:17010/zato/sso/user/search', json={
-                        'ust': args.super_user_ust,
+                        'ust': super_user_ust,
                         'username': user['username'],
                         'current_app': args.current_app,
                     })
@@ -542,7 +579,7 @@ class GenData(ZatoCommand):
                         # User Approval
                         if random.choice([True, False]):
                             response = requests.post('http://localhost:17010/zato/sso/user/approve', json={
-                                'ust': args.super_user_ust,
+                                'ust': super_user_ust,
                                 'confirm_token': user['confirm_token'],
                                 'current_app': args.current_app,
                                 'user_id': user['user_id'],
@@ -554,7 +591,7 @@ class GenData(ZatoCommand):
                                 self.logger.warning("Failed to approve user: {}".format(r['sub_status']))
 
                         requests.post('http://localhost:17010/zato/sso/user/attr', json={
-                            'ust': args.super_user_ust,
+                            'ust': super_user_ust,
                             'user_id': user['user_id'],
                             'current_app': args.current_app,
                             'data': [{'name': attrib, 'value': user[attrib]} for attrib in user.keys() if attrib not in ['username', 'password', 'confirm_token', 'confirmed', 'approved', 'user_id']],
@@ -564,7 +601,7 @@ class GenData(ZatoCommand):
                             self.logger.warning("Failed to add attributes: {}".format(r['sub_status']))
 
                     else:
-                        self.logger.warning("Failed to get user_id for: {}".format(userr['sub_status']))
+                        self.logger.warning("Failed to get user_id for: {}".format(user['sub_status']))
                 else:
                     self.logger.warning("user/signup failed: {}".format(r['sub_status']))
                     break
