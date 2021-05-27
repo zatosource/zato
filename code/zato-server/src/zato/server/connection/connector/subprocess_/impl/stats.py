@@ -6,17 +6,46 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# This needs to be first
+from gevent.monkey import patch_all
+patch_all()
+
 # stdlib
+import os
+from datetime import datetime
+from logging import basicConfig, getLogger, INFO
 from typing import Optional as optional
 
 # gevent
+from gevent import sleep, spawn_later
 from gevent.lock import RLock
+
+# Humanize
+from humanize import intcomma as int_to_comma
 
 # Pandas
 import pandas as pd
 
 # Zato
 from zato.common.ext.dataclasses import dataclass
+from zato.common.util import spawn_greenlet
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from pandas import DataFrame
+    DataFrame = DataFrame
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger('zato')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+utcnow = datetime.utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,8 +83,14 @@ class Event:
     # What triggered this event, in broad terms, e.g. a Zato service
     source_type: int
 
-    # What is the ID of the source
+    # What the ID of the source is
     source_id: str
+
+    # What the recipient of this event is, in broad terms, e.g. an external system
+    recipient_type: int
+
+    # What the ID of the recipient is
+    recipient_id: str
 
     # A further restriction of the source type
     source_sub_type: optional[int]
@@ -129,35 +164,186 @@ class Event:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class StatsContainer:
+class EventsContainer:
 
-    def __init__(self):
+    def __init__(self, fs_data_path, sync_threshold, sync_interval_ms):
+        # type: (self, int, int) -> None
+
+        # Where to keep persistent data
+        self.fs_data_path = fs_data_path
+
+        # Sync to storage once in that many events ..
+        self.sync_threshold = sync_threshold
+
+        # .. or once in that many milliseconds
+        self.sync_interval_ms = sync_interval_ms
 
         # In-RAM database of events, saved to disk periodically in background
         self.in_ram_store = [] # type: list[Event]
 
+        # Total events received since startup
+        self.total_events = 0
+
+        # How many events we have received since the last synchronisation with persistent storage
+        self.num_events_since_sync = 0
+
+        # Reset each time we synchronise in-RAM state with the persistent storage
+        self.last_sync_time = utcnow()
+
         # An update lock used while modifying the in-RAM database
         self.update_lock = RLock()
 
-        # We will save data to disk once in data many seconds
-        self.storage_sync_interval = 30
+        # This will check in background if the time-based synchronisation should start
+        # spawn_greenlet(self._run_sync_checker_loop)
 
 # ################################################################################################################################
 
     def push(self, data):
         # type: (dict) -> None
         with self.update_lock:
+
+            # Store in RAM ..
             self.in_ram_store.append(data)
+
+            # .. update counters ..
+            self.num_events_since_sync += 1
+            self.total_events += 1
+
+            # .. check if we should sync RAM with persistent storage ..
+            if self.num_events_since_sync % self.sync_threshold == 0:
+
+                # .. save in persistent storage ..
+                self.sync_storage()
+
+                # .. update metadata.
+                self.num_events_since_sync = 0
+                self.last_sync_time = utcnow()
 
 # ################################################################################################################################
 
-    def sync_storage(self):
+    def _run_sync_checker(self):
+        logger.warn('ZZZ')
+
+# ################################################################################################################################
+
+    def _run_sync_checker_loop(self):
+        while True:
+            spawn_greenlet(self._run_sync_checker)
+            sleep(0.1)
+
+# ################################################################################################################################
+
+#    def
+
+# ################################################################################################################################
+
+    def _get_data_from_storage(self):
+        """ Reads existing data from persistent storage and returns it as a DataFrame.
+        """
+        # Let's check if we already have anything in storage ..
+        if os.path.exists(self.fs_data_path):
+
+            #  Let the users know what we are doing ..
+            logger.info('Loading DF data from %s', self.fs_data_path)
+
+            # .. load existing data from storage ..
+            start = utcnow()
+            existing = pd.read_parquet(self.fs_data_path) # type: pd.DataFrame
+
+            # .. log the time it took to load the data ..
+            logger.info('DF data loaded in %s; len_existing=%s', utcnow() - start, int_to_comma(existing.size))
+        else:
+
+            # .. create a new DF instead ..
+            existing = pd.DataFrame()
+
+        # .. return the result, no matter where it came from.
+        return existing
+
+# ################################################################################################################################
+
+    def _get_data_from_ram(self):
+        """ Turns data currently stored in RAM into a DataFrame.
+        """
+        # type: () -> None
+
+        #  Let the users know what we are doing ..
+        logger.info('Building DF out of len_current=%s', int_to_comma(len(self.in_ram_store)))
+
+        # .. convert the data collected so far into a DataFrame ..
+        start = utcnow()
+        current = pd.DataFrame(self.in_ram_store)
+
+        # .. log the time it took build the DataFrame ..
+        logger.info('DF built in %s', utcnow() - start)
+
+        return current
+
+# ################################################################################################################################
+
+    def _combine_data(self, existing, current):
+        """ Combines on disk and in-RAM data.
+        """
+        # type: (DataFrame, DataFrame) -> DataFrame
+
+        # Let the user know what we are doing ..
+        logger.info('Combining existing and current data')
+
+        # .. combine the existing and current data ..
+        start = utcnow()
+        combined = pd.concat([existing, current])
+
+        # .. log the time it took to combine the DataFrames..
+        logger.info('DF combined in %s', utcnow() - start)
+
+        return combined
+
+# ################################################################################################################################
+
+    def _save_data(self, data):
+        # type: (DataFrame) -> None
+
+        # Let the user know what we are doing ..
+        logger.info('Saving DF to %s', self.fs_data_path)
+
+        # .. save the DF to persistent storage ..
+        start = utcnow()
+        data.to_parquet(self.fs_data_path)
+
+        # .. log the time it took to save to storage ..
+        logger.info('DF saved in %s', utcnow() - start)
+
+# ################################################################################################################################
+
+    def sync_storage(self, _utcnow=utcnow):
+
         with self.update_lock:
-            f = pd.DataFrame(self.in_ram_store)
 
-            print(111, f.memory_usage())
+            # For later use
+            now_total = _utcnow()
 
-            print(222, f.to_parquet('/tmp/zzz-parquet'))
+            # Begin with a header to indicate in logs when we start
+            logger.info('********************************************************************************* ')
+            logger.info('******************************** DF Sync storage ******************************** ')
+            logger.info('********************************************************************************* ')
+
+            # Get the existing data from storage
+            existing = self._get_data_from_storage()
+
+            # Get data that is currently in RAM
+            current = self._get_data_from_ram()
+
+            # Combine data from storage and RAM
+            combined = self._combine_data(existing, current)
+
+            # Save the combined result to storage
+            self._save_data(combined)
+
+            # Clear our current dataset
+            self.in_ram_store[:] = []
+
+            # Log the total processing time
+            logger.info('DF total processing time %s', utcnow() - now_total)
 
 # ################################################################################################################################
 
@@ -169,25 +355,49 @@ class StatsContainer:
 
 if __name__ == '__main__':
 
-    container = StatsContainer()
+    basicConfig(level=INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+    fs_data_path = '/tmp/zzz-parquet'
+    sync_threshold = 120_000
+    sync_interval_ms = 120_000
+
+    container = EventsContainer(fs_data_path, sync_threshold, sync_interval_ms)
     container.run()
 
-    n = 10_000_000
+    n = 1000
 
-    for idx in range(n):
-        elem = str(idx)
-        event = {
-            'id': elem,
-            'cid': 'cid.' + elem,
-            'source_type': 'zato.server' + elem,
-            'source_id': 'server1' + elem,
-            'timestamp': '2021-05-12T07:07:01.4841' + elem,
-            'object_type': 'zato.service' + elem,
-            'object_id': '123' + elem,
-        }
-        container.push(event)
+    for x in range(1000):
 
-    container.sync_storage()
+        for idx in range(n):
+            elem = str(idx)
+            event = {
+
+                'id': elem,
+                'cid': 'cid.' + elem,
+                'timestamp': '2021-05-12T07:07:01.4841' + elem,
+
+                'source_type': 'zato.server' + elem,
+                'source_id': 'server1' + elem,
+
+                'object_type': elem,
+                'object_id': elem,
+
+                'source_type': elem,
+                'source_id': elem,
+
+                'recipient_type': elem,
+                'recipient_id': elem,
+
+                'total_time_ms': x,
+
+            }
+            container.push(event)
+
+        #container.sync_storage()
+        logger.info('-----------------------------------------')
+        sleep(1)
+
+        #os.remove(fs_data_path)
 
 # ################################################################################################################################
 # ################################################################################################################################
