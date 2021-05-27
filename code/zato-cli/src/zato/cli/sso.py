@@ -485,20 +485,16 @@ class GenData(ZatoCommand):
         import pandas as pd
         import requests
         import sh
-        from mimesis import Generic
         from zato.common.crypto.totp_ import TOTPManager
         from zato.common.util.api import get_odb_session_from_server_dir
         from zato.sso.odb.query import get_user_by_name
-
-        from mimesis import Generic
-        generic = Generic()
 
         super_user_name = 'zato.sso.gendata'
         super_user_password = uuid.uuid4().hex
 
         # mean and standard deviation
         mu, sigma = 0, 3
-        self.logger.warning('args {}'.format(args))
+
         # generate sequence
         random_nums = np.random.default_rng().normal(mu, sigma, args.n_users)
 
@@ -512,15 +508,20 @@ class GenData(ZatoCommand):
 
         try:
             # Checking/Adding super-user
+            self.logger.info('Checking/Adding super-user')
             try:
                 odb_session = get_odb_session_from_server_dir(args.path)
-                if not get_user_by_name(odb_session, super_user_name, False):
+                if not get_user_by_name(odb_session, super_user_name, False):                    
                     # .. create the user ..
                     sh.zato('sso', 'create-super-user', args.path, super_user_name, '--password',
-                    super_user_password, '--verbose')
+                      super_user_password, '--verbose')
+                else:
+                    sh.zato('sso', 'change-user-password', '--password',
+                      super_user_password, args.path, super_user_name)
+
             except Exception as e:
                 # .. but ignore it if such a user already exists.
-                if not 'User already exists' in e.args[0]:
+                if not 'User already exists' in e.args[0] or not 'Changed password for user' in e.args[0]:
                     if isinstance(e, sh.ErrorReturnCode):
                         self.logger.warning('Shell exception %s', e.stderr)
                     raise
