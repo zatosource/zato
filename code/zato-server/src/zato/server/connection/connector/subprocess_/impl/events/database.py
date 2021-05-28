@@ -6,11 +6,6 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-
-# This needs to be first
-from gevent.monkey import patch_all
-patch_all()
-
 # stdlib
 import os
 from datetime import datetime
@@ -41,7 +36,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = getLogger('zato')
+basicConfig(level=INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -165,7 +161,7 @@ class Event:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class EventsContainer:
+class EventsDatabase:
 
     def __init__(self, fs_data_path, sync_threshold, sync_interval_ms):
         # type: (self, int, int) -> None
@@ -362,10 +358,11 @@ if __name__ == '__main__':
     sync_threshold = 120_000
     sync_interval_ms = 120_000
 
-    container = EventsContainer(fs_data_path, sync_threshold, sync_interval_ms)
+    container = EventsDatabase(fs_data_path, sync_threshold, sync_interval_ms)
     container.run()
 
     n = 1000
+    total = 0
 
     for x in range(1000):
 
@@ -393,10 +390,12 @@ if __name__ == '__main__':
 
             }
             container.push(event)
+            total += 1
+            print('TOTAL', total)
 
         #container.sync_storage()
         logger.info('-----------------------------------------')
-        sleep(1)
+
 
         #os.remove(fs_data_path)
 
