@@ -495,6 +495,11 @@ class SSO(Constants):
     LINK_AUTH_CREATE = ValueConstant('')
     LINK_AUTH_DELETE = ValueConstant('')
 
+class EVENT(Constants):
+    code_start = 107400
+
+    PUSH = ValueConstant('')
+
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'

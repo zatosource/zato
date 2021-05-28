@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -23,7 +21,7 @@ from traceback import format_exc
 from wsgiref.simple_server import make_server
 
 # Bunch
-from bunch import bunchify
+from bunch import Bunch, bunchify
 
 # Requests
 from requests import post as requests_post
@@ -172,13 +170,12 @@ class BaseConnectionContainer(object):
         self.server_port = None
         self.server_path = None
         self.server_address = 'http://127.0.0.1:{}{}'
-
         self.lock = RLock()
         self.logger = None
         self.parent_pid = getppid()
 
-        self.config_ipc = ConnectorConfigIPC()
-        self.config_ipc.create(self.deployment_key, self.shmem_size, False)
+        #self.config_ipc = ConnectorConfigIPC()
+        #self.config_ipc.create(self.deployment_key, self.shmem_size, False)
 
         self.connections = {}
         self.outconns = {}
@@ -193,10 +190,22 @@ class BaseConnectionContainer(object):
     def set_config(self):
         """ Sets self attributes, as configured in shmem by our parent process.
         """
+        '''
         config = self.config_ipc.get_config('zato-{}'.format(self.ipc_name))
 
         config = loads(config)
         config = bunchify(config)
+        '''
+
+        config = Bunch()
+        config.username = 'aaa'
+        config.password = 'bbb'
+        config.base_dir = os.path.expanduser('~/env/events1/server1')
+        config.port = 44011
+        config.server_port = 17010
+        config.server_path = '/api'
+        config.logging_conf_path = os.path.join(config.base_dir, 'config', 'repo', 'logging.conf')
+        config.needs_pidfile = False
 
         self.username = config.username
         self.password = config.password
@@ -220,6 +229,8 @@ class BaseConnectionContainer(object):
         # Store our process's pidfile
         if config.needs_pidfile:
             self.store_pidfile(config.pidfile_suffix)
+
+        self.logger.warn('Connector `%s` started at %s', self.ipc_name, self.server_address)
 
 # ################################################################################################################################
 
@@ -368,7 +379,7 @@ class BaseConnectionContainer(object):
     def handle_http_request(self, path, msg, ok=b'OK'):
         """ Dispatches incoming HTTP requests - either reconfigures the connector or puts messages to queues.
         """
-        self.logger.info('MSG received %s %s', path, msg)
+        #self.logger.info('MSG received %s %s', path, msg)
 
         if path == _path_ping:
             return Response()
