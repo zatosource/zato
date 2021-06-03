@@ -174,8 +174,8 @@ class BaseConnectionContainer(object):
         self.logger = None
         self.parent_pid = getppid()
 
-        #self.config_ipc = ConnectorConfigIPC()
-        #self.config_ipc.create(self.deployment_key, self.shmem_size, False)
+        self.config_ipc = ConnectorConfigIPC()
+        self.config_ipc.create(self.deployment_key, self.shmem_size, False)
 
         self.connections = {}
         self.outconns = {}
@@ -190,22 +190,9 @@ class BaseConnectionContainer(object):
     def set_config(self):
         """ Sets self attributes, as configured in shmem by our parent process.
         """
-        '''
         config = self.config_ipc.get_config('zato-{}'.format(self.ipc_name))
-
         config = loads(config)
         config = bunchify(config)
-        '''
-
-        config = Bunch()
-        config.username = 'aaa'
-        config.password = 'bbb'
-        config.base_dir = os.path.expanduser('~/env/events1/server1')
-        config.port = 44011
-        config.server_port = 17010
-        config.server_path = '/api'
-        config.logging_conf_path = os.path.join(config.base_dir, 'config', 'repo', 'logging.conf')
-        config.needs_pidfile = False
 
         self.username = config.username
         self.password = config.password
@@ -229,8 +216,6 @@ class BaseConnectionContainer(object):
         # Store our process's pidfile
         if config.needs_pidfile:
             self.store_pidfile(config.pidfile_suffix)
-
-        self.logger.warn('Connector `%s` started at %s', self.ipc_name, self.server_address)
 
 # ################################################################################################################################
 
@@ -423,13 +408,13 @@ class BaseConnectionContainer(object):
 
         try:
             content_length = environ.get('CONTENT_LENGTH')
-            if 0:#not content_length:
+            if not content_length:
                 status = _http_400
                 data = 'Missing content'
                 content_type = 'text/plain'
             else:
-                data = b'{"action":"107400"}'#environ['wsgi.input'].read(int(content_length))
-                if 1:#self.check_credentials(environ.get('HTTP_AUTHORIZATION')):
+                data = environ['wsgi.input'].read(int(content_length))
+                if self.check_credentials(environ.get('HTTP_AUTHORIZATION')):
                     response = self.handle_http_request(environ['PATH_INFO'], data)
                     status = response.status
                     data = response.data

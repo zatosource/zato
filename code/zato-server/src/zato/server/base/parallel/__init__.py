@@ -59,6 +59,7 @@ from zato.server.base.parallel.subprocess_.api import CurrentState as Subprocess
      StartConfig as SubprocessStartConfig
 from zato.server.base.parallel.subprocess_.ftp import FTPIPC
 from zato.server.base.parallel.subprocess_.ibm_mq import IBMMQIPC
+from zato.server.base.parallel.subprocess_.zato_events import ZatoEventsIPC
 from zato.server.base.parallel.subprocess_.outconn_sftp import SFTPIPC
 from zato.server.sso import SSOTool
 
@@ -213,6 +214,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.connector_ftp    = FTPIPC(self)
         self.connector_ibm_mq = IBMMQIPC(self)
         self.connector_sftp   = SFTPIPC(self)
+        self.connector_zato_events = ZatoEventsIPC(self)
 
         # HTTP methods allowed as a Python list
         self.http_methods_allowed = []
@@ -560,9 +562,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # For server-to-server RPC
         self.rpc = self.build_server_rpc()
 
-        logger.info('Preferred address of `%s@%s` (pid: %s) is `http%s://%s:%s`', self.name,
-                    self.cluster_name, self.pid, 's' if use_tls else '', self.preferred_address,
-            self.port)
+        logger.info(
+            'Preferred address of `%s@%s` (pid: %s) is `http%s://%s:%s`',
+            self.name, self.cluster_name, self.pid, 's' if use_tls else '', self.preferred_address, self.port)
 
         # Configure which HTTP methods can be invoked via REST or SOAP channels
         methods_allowed = self.fs_server_config.http.methods_allowed
@@ -796,6 +798,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if config.has_sftp and self.connector_sftp.start_sftp_connector(ipc_tcp_start_port):
             self.connector_sftp.create_initial_sftp_outconns(self.worker_store.worker_config.out_sftp)
             self.subproc_current_state.is_sftp_running = True
+
+        # Zato events are always enabled
+        self.connector_zato_events.start_zato_events_connector(ipc_tcp_start_port)
 
 # ################################################################################################################################
 
