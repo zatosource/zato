@@ -128,10 +128,7 @@ class SubprocessIPC(object):
         }))
 
         # Start connector in a sub-process
-        start_python_process('{} connector'.format(self.connector_name), False, self.connector_module, '', extra_options={
-            'deployment_key': self.server.deployment_key,
-            'shmem_size': self.server.shmem_size
-        }, stderr_path=self.server.stderr_path)
+        self._start_connector_process()
 
         # Wait up to timeout seconds for the connector to start as indicated by its responding to a PING request
         now = datetime.utcnow()
@@ -157,6 +154,14 @@ class SubprocessIPC(object):
             logger.warn('{} connector (%s) could not be started after %s'.format(self.connector_name), address, timeout)
         else:
             return is_ok
+
+# ################################################################################################################################
+
+    def _start_connector_process(self):
+        start_python_process('{} connector'.format(self.connector_name), False, self.connector_module, '', extra_options={
+            'deployment_key': self.server.deployment_key,
+            'shmem_size': self.server.shmem_size
+        }, stderr_path=self.server.stderr_path)
 
 # ################################################################################################################################
 
@@ -244,4 +249,5 @@ class SubprocessIPC(object):
         text_pattern = 'Creating {} channel `%s`'.format(self.connector_name)
         self._create_initial_objects(config_dict, self.action_channel_create, text_pattern, text_func)
 
+# ################################################################################################################################
 # ################################################################################################################################
