@@ -45,6 +45,12 @@ class ZatoEventsIPC(SubprocessIPC):
         # stdlib
         import socket
 
+        # Zato
+        from zato.common.util.tcp import wait_until_port_taken
+
+        # Wait a few seconds to ensure the connector started
+        wait_until_port_taken(self.ipc_tcp_port, timeout=5)
+
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s: # type: socket
             try:
                 s.settimeout(1)
