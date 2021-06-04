@@ -23,6 +23,8 @@ from gevent.server import StreamServer
 from zato.common.api import SFTP
 from zato.common.json_internal import dumps
 from zato.common.sftp import SFTPOutput
+from zato.common.events.common import Action
+from zato.common.util.tcp import ZatoStreamServer
 from zato.server.connection.connector.subprocess_.base import BaseConnectionContainer, Response
 from zato.server.connection.connector.subprocess_.impl.events.database import EventsDatabase
 
@@ -46,24 +48,6 @@ logger = getLogger('zato_events')
 
 # For later use
 utcnow = datetime.utcnow
-
-# All event actions possible
-class Action:
-    Ping = b'01'
-    Push = b'zz'
-
-# Maps incoming events to handler functions
-action_map = {
-    Action.Ping: '_on_event_ping',
-    Action.Push: '_on_event_push',
-}
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class _StreamServer(StreamServer):
-    def shutdown(self):
-        self.close()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -92,9 +76,10 @@ class EventsConnectionContainer(BaseConnectionContainer):
         self.keep_running = True
 
         # Remap handler names to actual handler methods
-        self._action_map = {}
-        for key, value in action_map.items():
-            self._action_map[key] = getattr(self, value)
+        self._action_map = {
+            Action.Ping: self._on_event_ping,
+            Action.Push: self._on_event_push,
+        }
 
 # ################################################################################################################################
 
@@ -185,7 +170,7 @@ class EventsConnectionContainer(BaseConnectionContainer):
 # ################################################################################################################################
 
     def make_server(self):
-        return _StreamServer((self.host, self.port), self._on_new_connection)
+        return ZatoStreamServer((self.host, self.port), self._on_new_connection)
 
 # ################################################################################################################################
 # ################################################################################################################################
