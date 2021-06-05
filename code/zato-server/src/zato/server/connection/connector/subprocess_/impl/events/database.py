@@ -190,9 +190,6 @@ class EventsDatabase:
         # An update lock used while modifying the in-RAM database
         self.update_lock = RLock()
 
-        # This will check in background if the time-based synchronisation should start
-        # spawn_greenlet(self._run_sync_checker_loop)
-
 # ################################################################################################################################
 
     def push(self, data):
@@ -215,22 +212,6 @@ class EventsDatabase:
                 # .. update metadata.
                 self.num_events_since_sync = 0
                 self.last_sync_time = utcnow()
-
-# ################################################################################################################################
-
-    def _run_sync_checker(self):
-        logger.warn('ZZZ')
-
-# ################################################################################################################################
-
-    def _run_sync_checker_loop(self):
-        while True:
-            spawn_greenlet(self._run_sync_checker)
-            sleep(0.1)
-
-# ################################################################################################################################
-
-#    def
 
 # ################################################################################################################################
 
