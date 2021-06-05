@@ -7,12 +7,19 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 import socket
-from logging import getLogger
+from logging import basicConfig, getLogger
 
 # Zato
 from zato.common.events.common import Action
-from zato.common.util.tcp import SocketReaderCtx, wait_until_port_taken
+from zato.common.util.api import new_cid
+from zato.common.util.tcp import read_from_socket, SocketReaderCtx, wait_until_port_taken
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -28,36 +35,59 @@ class Client:
         self.host = host
         self.port = port
         self.socket = socket.socket(type=socket.SOCK_STREAM)
+        self.peer_name = '<Client-peer_name-default>'
+        self.conn_id = 'zstrcl' + new_cid(bytes=4)
+        self.max_wait_time = 30
+        self.max_msg_size = 30_000_000
+        self.read_buffer_size = 30_000_000
+        self.recv_timeout = 30
+        self.should_log_messages = True
 
-        print()
-        print(111, self.socket)
-        print()
-
-        '''
-        self.conn_id =
-        socket
-        max_wait_time
-        max_msg_size
-        read_buffer_size
-        recv_timeout
-        should_log_messages
-        '''
+# ################################################################################################################################
 
     def connect(self):
         self.socket.connect((self.host, self.port))
+        self.peer_name = self.socket.getpeername()
+
+# ################################################################################################################################
+
+    def send(self, data):
+        # type: (bytes) -> None
+        self.socket.sendall(data + b'\n')
+
+# ################################################################################################################################
 
     def ping(self):
-        logger.info('PING')
+        logger.info('Pinging %s (%s)', self.peer_name)
 
         # Send the ping message ..
-        #self.socket.sendall(Action.Ping)
+        self.send(Action.Ping)
 
         # .. build a receive context ..
-        #ctx = SocketReaderCtx()
+        ctx = SocketReaderCtx(
+            self.conn_id,
+            self.socket,
+            self.max_wait_time,
+            self.max_msg_size,
+            self.read_buffer_size,
+            self.recv_timeout,
+            self.should_log_messages
+        )
 
         # .. wait for the reply ..
+        response = read_from_socket(ctx)
 
         # .. and raise an exception in case of any error.
+        print()
+        print(111, response)
+        print()
+
+# ################################################################################################################################
+
+    def close(self):
+        self.socket.close()
+
+# ################################################################################################################################
 
     def run(self):
 
@@ -83,6 +113,7 @@ if __name__ == '__main__':
 
     client = Client(host, port)
     client.run()
+    client.close()
 
     sleep(2)
 

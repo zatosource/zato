@@ -85,6 +85,7 @@ class EventsConnectionContainer(BaseConnectionContainer):
 
     def _on_event_ping(self, data, address_str):
         # type: (str, str) -> str
+        logger.info('Ping received from `%s`', address_str)
         return 'vvv'
 
 # ################################################################################################################################
