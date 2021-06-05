@@ -335,7 +335,6 @@ def new_cid(bytes=12, _random=random.getrandbits):
     for any cryptographical purposes; it is only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.
     """
-
     # Note that we need to convert bytes to bits here.
     return hex(_random(bytes * 8))[2:]
 
