@@ -19,6 +19,9 @@ from bunch import bunchify
 # gevent
 from gevent.server import StreamServer
 
+# pysimdjson
+from simdjson import Parser as SIMDJSONParser
+
 # Zato
 from zato.common.api import SFTP
 from zato.common.json_internal import dumps
@@ -66,7 +69,7 @@ class EventsConnectionContainer(BaseConnectionContainer):
         super().__init__(*args, **kwargs)
 
         fs_data_path = '/tmp/zzz-parquet'
-        sync_threshold = 1
+        sync_threshold = 10_000
         sync_interval_ms = 120_000
 
         # This is where events are kept
@@ -75,7 +78,10 @@ class EventsConnectionContainer(BaseConnectionContainer):
         # By default, keep running forever
         self.keep_running = True
 
-        # Remap handler names to actual handler methods
+        # A reusable JSON parser
+        self._json_parser = SIMDJSONParser()
+
+        # Map handler names to actual handler methods
         self._action_map = {
             Action.Ping: self._on_event_ping,
             Action.Push: self._on_event_push,
@@ -83,43 +89,22 @@ class EventsConnectionContainer(BaseConnectionContainer):
 
 # ################################################################################################################################
 
-    def _on_event_ping(self, data, address_str):
-        # type: (str, str) -> str
+    def _on_event_ping(self, ignored_data, address_str):
+        # type: (bystr, str) -> str
         logger.info('Ping received from `%s`', address_str)
-        return 'vvv'
+        return Action.PingReply
 
 # ################################################################################################################################
 
-    def _on_event_push(self, msg, is_reconnect=False, _utcnow=utcnow):
-        out = {'a':22}
-        #data = msg['data']
+    def _on_event_push(self, data, address_str):
+        # type: (str, str) -> str
 
-        elem = 'aaa' + utcnow().isoformat()
-        x = int(time() * 1_000_000)
+        # We received JSON bytes so we now need to load a Python object out of it ..
+        data = self._json_parser.parse(data)
+        data = data.as_dict() # type: dict
 
-        data = {
-            'id': elem + utcnow().isoformat(),
-            'cid': 'cid.' + elem,
-            'timestamp': '2021-05-12T07:07:01.4841' + elem,
-
-            'source_type': 'zato.server' + elem,
-            'source_id': 'server1' + elem,
-
-            'object_type': elem,
-            'object_id': elem,
-
-            'source_type': elem,
-            'source_id': elem,
-
-            'recipient_type': elem,
-            'recipient_id': elem,
-
-            'total_time_ms': x,
-        }
-
+        # .. now, we can push it to the database.
         self.events_db.push(data)
-
-        return dumps(out)
 
 # ################################################################################################################################
 
@@ -158,12 +143,15 @@ class EventsConnectionContainer(BaseConnectionContainer):
                 break
 
             # .. otherwise, handle the action ..
-            data = line[2:].decode('utf8')
+            data = line[2:]
             response = func(data, address_str) # type: str
-            response = response.encode('utf8')
 
-            # .. and send the response to the client.
-            socket.sendall(response)
+            # .. not all actions will result in a response ..
+            if response:
+                response = response.encode('utf8') if isinstance(response, str) else response
+
+                # .. now, we can send the response to the client.
+                socket.sendall(response)
 
         # If we are here, it means that the client disconnected.
         socket_file.close()
