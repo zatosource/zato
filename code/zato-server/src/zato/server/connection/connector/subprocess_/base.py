@@ -155,7 +155,7 @@ class BaseConnectionContainer(object):
 
     def __init__(self):
 
-        zato_options = 'fg=FalseZATO_ZATO_ZATOdeployment_key=2021-06-04T08:06:21.606142.2564a226a2ab48029153fe0402f7546aZATO_ZATO_ZATOshmem_size=100000'#sys.argv[1]
+        zato_options = sys.argv[1]
         zato_options = parse_cmd_line_options(zato_options)
 
         self.deployment_key = zato_options['deployment_key']
@@ -175,7 +175,7 @@ class BaseConnectionContainer(object):
         self.parent_pid = getppid()
 
         self.config_ipc = ConnectorConfigIPC()
-        #self.config_ipc.create(self.deployment_key, self.shmem_size, False)
+        self.config_ipc.create(self.deployment_key, self.shmem_size, False)
 
         self.connections = {}
         self.outconns = {}
@@ -190,22 +190,9 @@ class BaseConnectionContainer(object):
     def set_config(self):
         """ Sets self attributes, as configured in shmem by our parent process.
         """
-        #config = self.config_ipc.get_config('zato-{}'.format(self.ipc_name))
-        #config = loads(config)
-        #config = bunchify(config)
-
-        config = Bunch(
-            base_dir='/home/dsuch/env/events1/server1',
-            logging_conf_path='/home/dsuch/env/events1/server1/config/repo/logging.conf',
-            needs_pidfile=False,
-            password='<ZatoEventsIPC-no-password>',
-            pidfile_suffix='zato-events',
-            port=34567,
-            server_name='server1',
-            server_path='/zato/internal/callback/zato_events',
-            server_port='17010',
-            username='<ZatoEventsIPC-no-username>'
-        )
+        config = self.config_ipc.get_config('zato-{}'.format(self.ipc_name))
+        config = loads(config)
+        config = bunchify(config)
 
         self.username = config.username
         self.password = config.password
@@ -377,7 +364,7 @@ class BaseConnectionContainer(object):
     def handle_http_request(self, path, msg, ok=b'OK'):
         """ Dispatches incoming HTTP requests - either reconfigures the connector or puts messages to queues.
         """
-        #self.logger.info('MSG received %s %s', path, msg)
+        self.logger.info('MSG received %s %s', path, msg)
 
         if path == _path_ping:
             return Response()
