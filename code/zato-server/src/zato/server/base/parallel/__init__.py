@@ -191,6 +191,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.user_config = Bunch()
         self.stderr_path = None # type: str
         self.json_parser = SIMDJSONParser()
+        self.work_dir = 'ParallelServer-work_dir'
+        self.events_dir = 'ParallelServer-events_dir'
 
         # Audit log
         self.audit_log = AuditLog()
@@ -498,6 +500,22 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Used later on
         use_tls = asbool(self.fs_server_config.crypto.use_tls)
 
+        # This changed in 3.2 so we need to take both into account
+        self.work_dir = self.fs_server_config.main.get('work_dir') or self.fs_server_config.hot_deploy.get('work_dir')
+        self.work_dir = os.path.normpath(os.path.join(self.repo_location, self.work_dir))
+
+        # Make sure the directories for events exists
+        events_dir_v1 = os.path.join(self.work_dir, 'events', 'v1')
+        events_dir_v2 = os.path.join(self.work_dir, 'events', 'v2')
+
+        for name in 'v1', 'v2':
+            full_path = os.path.join(self.work_dir, 'events', name)
+            if not os.path.exists(full_path):
+                os.makedirs(full_path, mode=0o770, exist_ok=True)
+
+        # Set for later use - this is the version that we currently employ and we know that it exists.
+        self.events_dir = events_dir_v1
+
         # Will be None if we are not running in background.
         if not zato_deployment_key:
             zato_deployment_key = '{}.{}'.format(datetime.utcnow().isoformat(), uuid4().hex)
@@ -584,8 +602,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Normalize hot-deploy configuration
         self.hot_deploy_config = Bunch()
         self.hot_deploy_config.pickup_dir = absolutize(self.fs_server_config.hot_deploy.pickup_dir, self.repo_location)
-        self.hot_deploy_config.work_dir = os.path.normpath(os.path.join(
-            self.repo_location, self.fs_server_config.hot_deploy.work_dir))
+        self.hot_deploy_config.work_dir = self.work_dir
         self.hot_deploy_config.backup_history = int(self.fs_server_config.hot_deploy.backup_history)
         self.hot_deploy_config.backup_format = self.fs_server_config.hot_deploy.backup_format
 
@@ -690,10 +707,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             server.token, SERVER_UP_STATUS.RUNNING, True, self.host, self.port, self.preferred_address, use_tls)
 
         # These flags are needed if we are the first worker or not
-        has_ibm_mq = 0 #bool(self.worker_store.worker_config.definition_wmq.keys()) \
-        #and self.fs_server_config.component_enabled.ibm_mq
+        has_ibm_mq = 0#bool(self.worker_store.worker_config.definition_wmq.keys()) and self.fs_server_config.component_enabled.ibm_mq
 
-        has_sftp = 0 #bool(self.worker_store.worker_config.out_sftp.keys())
+        has_sftp = 0#bool(self.worker_store.worker_config.out_sftp.keys())
 
         subprocess_start_config = SubprocessStartConfig()
         subprocess_start_config.has_ibm_mq = has_ibm_mq
@@ -780,7 +796,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         ipc_tcp_start_port = int(self.fs_server_config.misc.get('ipc_tcp_start_port', 34567))
 
         # IBM MQ
-        if config.has_ibm_mq:
+        if 0:#config.has_ibm_mq:
 
             # Will block for a few seconds at most, until is_ok is returned
             # which indicates that a connector started or not.
@@ -795,12 +811,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 self.subproc_current_state.is_ibm_mq_running = True
 
         # SFTP
-        if config.has_sftp and self.connector_sftp.start_sftp_connector(ipc_tcp_start_port):
+        if 0:#config.has_sftp and self.connector_sftp.start_sftp_connector(ipc_tcp_start_port):
             self.connector_sftp.create_initial_sftp_outconns(self.worker_store.worker_config.out_sftp)
             self.subproc_current_state.is_sftp_running = True
 
         # Zato events are always enabled
-        self.connector_zato_events.start_zato_events_connector(ipc_tcp_start_port)
+        #self.connector_zato_events.start_zato_events_connector(ipc_tcp_start_port)
 
 # ################################################################################################################################
 
