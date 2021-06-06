@@ -44,6 +44,8 @@ gunicorn_proc_name=
 gunicorn_logger_class=
 gunicorn_graceful_timeout=1
 
+work_dir=../../work
+
 deployment_lock_expires=1073741824 # 2 ** 30 seconds = +/- 34 years
 deployment_lock_timeout=180
 
@@ -73,7 +75,6 @@ use_async_driver=True
 
 [hot_deploy]
 pickup_dir=../../pickup/incoming/services
-work_dir=../../work
 backup_history=100
 backup_format=bztar
 delete_after_pick_up=False
@@ -591,6 +592,9 @@ directories = (
     'pickup/processed/csv',
     'profiler',
     'work',
+    'work/events',
+    'work/events/v1',
+    'work/events/v2',
     'work/hot-deploy',
     'work/hot-deploy/current',
     'work/hot-deploy/backup',
