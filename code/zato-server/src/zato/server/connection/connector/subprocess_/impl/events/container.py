@@ -26,7 +26,7 @@ from simdjson import Parser as SIMDJSONParser
 from zato.common.api import SFTP
 from zato.common.json_internal import dumps
 from zato.common.sftp import SFTPOutput
-from zato.common.events.common import Action
+from zato.common.events.common import Action, Default
 from zato.common.util.tcp import ZatoStreamServer
 from zato.server.connection.connector.subprocess_.base import BaseConnectionContainer, Response
 from zato.server.connection.connector.subprocess_.impl.events.database import EventsDatabase
@@ -65,12 +65,13 @@ class EventsConnectionContainer(BaseConnectionContainer):
 
 # ################################################################################################################################
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, fs_data_path, sync_threshold, sync_interval_ms, *args, **kwargs):
+        # type: (str, int, int) -> None
         super().__init__(*args, **kwargs)
 
-        fs_data_path = '/tmp/zzz-parquet'
-        sync_threshold = 10_000
-        sync_interval_ms = 120_000
+        self.fs_data_path = fs_data_path
+        self.sync_threshold = sync_threshold
+        self.sync_interval_ms = sync_interval_ms
 
         # This is where events are kept
         self.events_db = EventsDatabase(fs_data_path, sync_threshold, sync_interval_ms)
@@ -165,6 +166,10 @@ class EventsConnectionContainer(BaseConnectionContainer):
 # ################################################################################################################################
 
 if __name__ == '__main__':
+
+    fs_data_path = '/tmp/zzz-parquet'
+    sync_threshold = 120_000
+    sync_interval_ms = 120_000
 
     container = EventsConnectionContainer()
     container.run()
