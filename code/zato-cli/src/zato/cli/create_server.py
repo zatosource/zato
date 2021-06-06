@@ -13,6 +13,7 @@ from copy import deepcopy
 from zato.cli import common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents, ZatoCommand
 from zato.common.api import CONTENT_TYPE, default_internal_modules, SSO as CommonSSO
 from zato.common.simpleio_ import simple_io_conf_contents
+from zato.common.events.common import Default as EventsDefault
 
 # ################################################################################################################################
 
@@ -124,6 +125,11 @@ return_json_schema_errors=False
 sftp_genkey_command=dropbearkey
 posix_ipc_skip_platform=darwin
 service_invoker_allow_internal=
+
+[events]
+fs_data_path = {{events_fs_data_path}}
+sync_threshold = {{events_sync_threshold}}
+sync_interval = {{events_sync_interval}}
 
 [http]
 methods_allowed=GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS
@@ -775,6 +781,12 @@ class Create(ZatoCommand):
             if odb_engine.startswith('postgresql'):
                 odb_engine = 'postgresql+pg8000'
 
+            '''
+fs_data_path = {{events_fs_data_path}}
+sync_threshold = {{events_sync_threshold}}
+sync_interval = {{events_sync_interval}}
+'''
+
             server_conf_loc = os.path.join(self.target_dir, 'config/repo/server.conf')
             server_conf = open(server_conf_loc, 'w')
             server_conf.write(
@@ -791,6 +803,9 @@ class Create(ZatoCommand):
                     kvdb_port=args.kvdb_port,
                     initial_cluster_name=args.cluster_name,
                     initial_server_name=args.server_name,
+                    events_fs_data_path=EventsDefault.fs_data_path,
+                    events_sync_threshold=EventsDefault.sync_threshold,
+                    events_sync_interval=EventsDefault.sync_interval,
                 ))
             server_conf.close()
 

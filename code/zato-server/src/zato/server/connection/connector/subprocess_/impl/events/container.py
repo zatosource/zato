@@ -16,16 +16,11 @@ from traceback import format_exc
 # Bunch
 from bunch import bunchify
 
-# gevent
-from gevent.server import StreamServer
-
 # pysimdjson
 from simdjson import Parser as SIMDJSONParser
 
 # Zato
-from zato.common.api import SFTP
 from zato.common.json_internal import dumps
-from zato.common.sftp import SFTPOutput
 from zato.common.events.common import Action, Default
 from zato.common.util.tcp import ZatoStreamServer
 from zato.server.connection.connector.subprocess_.base import BaseConnectionContainer, Response
@@ -65,16 +60,12 @@ class EventsConnectionContainer(BaseConnectionContainer):
 
 # ################################################################################################################################
 
-    def __init__(self, fs_data_path, sync_threshold, sync_interval_ms, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         # type: (str, int, int) -> None
         super().__init__(*args, **kwargs)
 
-        self.fs_data_path = fs_data_path
-        self.sync_threshold = sync_threshold
-        self.sync_interval_ms = sync_interval_ms
-
         # This is where events are kept
-        self.events_db = EventsDatabase(fs_data_path, sync_threshold, sync_interval_ms)
+        self.events_db = None # type: EventsDatabase
 
         # By default, keep running forever
         self.keep_running = True
@@ -87,6 +78,19 @@ class EventsConnectionContainer(BaseConnectionContainer):
             Action.Ping: self._on_event_ping,
             Action.Push: self._on_event_push,
         }
+
+# ################################################################################################################################
+
+    def post_init(self):
+
+        fs_data_path = self.cli_options['fs_data_path']
+        sync_threshold = int(self.cli_options['sync_threshold'])
+        sync_interval = int(self.cli_options['sync_interval'])
+
+        self.events_db = EventsDatabase(fs_data_path, sync_threshold, sync_interval)
+
+        logger.info('Initialised events container at %s:%s (%s; %s; %s)',
+            self.host, self.port, fs_data_path, sync_threshold, sync_interval)
 
 # ################################################################################################################################
 
@@ -166,10 +170,6 @@ class EventsConnectionContainer(BaseConnectionContainer):
 # ################################################################################################################################
 
 if __name__ == '__main__':
-
-    fs_data_path = '/tmp/zzz-parquet'
-    sync_threshold = 120_000
-    sync_interval_ms = 120_000
 
     container = EventsConnectionContainer()
     container.run()
