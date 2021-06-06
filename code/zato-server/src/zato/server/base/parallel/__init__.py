@@ -707,7 +707,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             server.token, SERVER_UP_STATUS.RUNNING, True, self.host, self.port, self.preferred_address, use_tls)
 
         # These flags are needed if we are the first worker or not
-        has_ibm_mq = 0#bool(self.worker_store.worker_config.definition_wmq.keys()) and self.fs_server_config.component_enabled.ibm_mq
+        has_ibm_mq = bool(self.worker_store.worker_config.definition_wmq.keys()) \
+            and self.fs_server_config.component_enabled.ibm_mq
 
         has_sftp = 0#bool(self.worker_store.worker_config.out_sftp.keys())
 
@@ -796,7 +797,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         ipc_tcp_start_port = int(self.fs_server_config.misc.get('ipc_tcp_start_port', 34567))
 
         # IBM MQ
-        if 0:#config.has_ibm_mq:
+        if config.has_ibm_mq:
 
             # Will block for a few seconds at most, until is_ok is returned
             # which indicates that a connector started or not.
