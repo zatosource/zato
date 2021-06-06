@@ -192,6 +192,15 @@ class EventsDatabase:
 
 # ################################################################################################################################
 
+    def should_sync(self):
+        # type: () -> bool
+        sync_by_threshold = self.num_events_since_sync % self.sync_threshold == 0
+        sync_by_time = (utcnow() - self.last_sync_time).total_seconds() * 1000 >= self.sync_interval_ms
+
+        return sync_by_threshold or sync_by_time
+
+# ################################################################################################################################
+
     def push(self, data):
         # type: (dict) -> None
         with self.update_lock:
@@ -204,7 +213,7 @@ class EventsDatabase:
             self.total_events += 1
 
             # .. check if we should sync RAM with persistent storage ..
-            if self.num_events_since_sync % self.sync_threshold == 0:
+            if self.should_sync():
 
                 # .. save in persistent storage ..
                 self.sync_storage()
