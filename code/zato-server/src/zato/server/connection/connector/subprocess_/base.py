@@ -44,8 +44,10 @@ from zato.common.util.posix_ipc_ import ConnectorConfigIPC
 
 if 0:
     from bunch import Bunch
+    from logging import Logger
 
     Bunch = Bunch
+    Logger = Logger
 
 # ################################################################################################################################
 
@@ -155,11 +157,11 @@ class BaseConnectionContainer(object):
 
     def __init__(self):
 
-        zato_options = sys.argv[1]
-        zato_options = parse_cmd_line_options(zato_options)
+        self.cli_options = sys.argv[1]
+        self.cli_options = parse_cmd_line_options(self.cli_options) # type: dict
 
-        self.deployment_key = zato_options['deployment_key']
-        self.shmem_size = int(zato_options['shmem_size'])
+        self.deployment_key = self.cli_options['deployment_key']
+        self.shmem_size = int(self.cli_options['shmem_size'])
 
         self.host = '127.0.0.1'
         self.port = None
@@ -171,7 +173,7 @@ class BaseConnectionContainer(object):
         self.server_path = None
         self.server_address = 'http://127.0.0.1:{}{}'
         self.lock = RLock()
-        self.logger = None
+        self.logger = None # type: Logger
         self.parent_pid = getppid()
 
         self.config_ipc = ConnectorConfigIPC()
@@ -186,6 +188,15 @@ class BaseConnectionContainer(object):
         self.outconn_name_to_id = {}   # Maps outgoing connection names to their IDs
 
         self.set_config()
+        self.post_init()
+
+# ################################################################################################################################
+
+    def post_init(self):
+        """ Can be implemented by subclasses to further customise the container.
+        """
+
+# ################################################################################################################################
 
     def set_config(self):
         """ Sets self attributes, as configured in shmem by our parent process.

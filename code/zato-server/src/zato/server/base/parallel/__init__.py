@@ -38,6 +38,7 @@ from zato.common.audit import audit_pii
 from zato.common.audit_log import AuditLog
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.const import SECRETS
+from zato.common.events.common import Default as EventsDefault
 from zato.common.ipc.api import IPCAPI
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.post_process import ODBPostProcess
@@ -812,12 +813,19 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 self.subproc_current_state.is_ibm_mq_running = True
 
         # SFTP
-        if 0:#config.has_sftp and self.connector_sftp.start_sftp_connector(ipc_tcp_start_port):
+        if config.has_sftp and self.connector_sftp.start_sftp_connector(ipc_tcp_start_port):
             self.connector_sftp.create_initial_sftp_outconns(self.worker_store.worker_config.out_sftp)
             self.subproc_current_state.is_sftp_running = True
 
         # Zato events are always enabled
-        #self.connector_zato_events.start_zato_events_connector(ipc_tcp_start_port)
+        events_config = self.fs_server_config.get('events') or {}
+        extra_options_kwargs = {
+            'fs_data_path': evesxsd w;sF re EventsDefault.fs_data_path,
+            'sync_threshold': EventsDefault.sync_threshold,
+            'sync_interval': EventsDefault.sync_interval,
+        }
+
+        self.connector_zato_events.start_zato_events_connector(ipc_tcp_start_port, extra_options_kwargs=extra_options_kwargs)
 
 # ################################################################################################################################
 

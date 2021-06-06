@@ -163,7 +163,7 @@ class Event:
 
 class EventsDatabase:
 
-    def __init__(self, fs_data_path, sync_threshold, sync_interval_ms):
+    def __init__(self, fs_data_path, sync_threshold, sync_interval):
         # type: (self, int, int) -> None
 
         # Where to keep persistent data
@@ -173,7 +173,7 @@ class EventsDatabase:
         self.sync_threshold = sync_threshold
 
         # .. or once in that many milliseconds
-        self.sync_interval_ms = sync_interval_ms
+        self.sync_interval = sync_interval
 
         # In-RAM database of events, saved to disk periodically in background
         self.in_ram_store = [] # type: list[Event]
@@ -195,7 +195,7 @@ class EventsDatabase:
     def should_sync(self):
         # type: () -> bool
         sync_by_threshold = self.num_events_since_sync % self.sync_threshold == 0
-        sync_by_time = (utcnow() - self.last_sync_time).total_seconds() * 1000 >= self.sync_interval_ms
+        sync_by_time = (utcnow() - self.last_sync_time).total_seconds() * 1000 >= self.sync_interval
 
         return sync_by_threshold or sync_by_time
 
@@ -346,9 +346,9 @@ if __name__ == '__main__':
 
     fs_data_path = '/tmp/zzz-parquet'
     sync_threshold = 120_000
-    sync_interval_ms = 120_000
+    sync_interval = 120_000
 
-    container = EventsDatabase(fs_data_path, sync_threshold, sync_interval_ms)
+    container = EventsDatabase(fs_data_path, sync_threshold, sync_interval)
     container.run()
 
     n = 1000

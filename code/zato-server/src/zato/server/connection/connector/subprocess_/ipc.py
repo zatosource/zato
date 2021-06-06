@@ -99,12 +99,16 @@ class SubprocessIPC(object):
 
 # ################################################################################################################################
 
-    def start_connector(self, ipc_tcp_start_port, timeout=5):
+    def start_connector(self, ipc_tcp_start_port, timeout=5, extra_options_kwargs=None):
         """ Starts an HTTP server acting as an connector process. Its port will be greater than ipc_tcp_start_port,
         which is the starting point to find a free port from.
         """
+        # Ensure we are enabled before we continue
         if self.check_enabled:
             self._check_enabled()
+
+        # Turn into a dict for later use
+        extra_options_kwargs = extra_options_kwargs or {}
 
         self.ipc_tcp_port = get_free_port(ipc_tcp_start_port)
         logger.info('Starting {} connector for server `%s` on port `%s`'.format(self.connector_name),
@@ -128,7 +132,7 @@ class SubprocessIPC(object):
         }))
 
         # Start connector in a sub-process
-        self._start_connector_process()
+        self._start_connector_process(extra_options_kwargs)
 
         # Wait up to timeout seconds for the connector to start as indicated by its responding to a PING request
         now = datetime.utcnow()
@@ -157,11 +161,27 @@ class SubprocessIPC(object):
 
 # ################################################################################################################################
 
-    def _start_connector_process(self):
-        start_python_process('{} connector'.format(self.connector_name), False, self.connector_module, '', extra_options={
+    def _start_connector_process(self, extra_options_kwargs):
+        # type: (dict) -> None
+
+        # Base extra options
+        extra_options={
             'deployment_key': self.server.deployment_key,
             'shmem_size': self.server.shmem_size
-        }, stderr_path=self.server.stderr_path)
+        }
+
+        # Merge any additional ones
+        extra_options.update(extra_options_kwargs)
+
+        # Start the process now
+        start_python_process(
+            '{} connector'.format(self.connector_name),
+            False,
+            self.connector_module,
+            '',
+            extra_options=extra_options,
+            stderr_path=self.server.stderr_path
+        )
 
 # ################################################################################################################################
 
