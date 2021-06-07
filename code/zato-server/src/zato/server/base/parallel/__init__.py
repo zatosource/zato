@@ -817,14 +817,30 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             self.connector_sftp.create_initial_sftp_outconns(self.worker_store.worker_config.out_sftp)
             self.subproc_current_state.is_sftp_running = True
 
-        # Zato events are always enabled
-        events_config = self.fs_server_config.get('events') or {}
+        # Prepare Zato events configuration
+        events_config = self.fs_server_config.get('events') or {} # type: dict
+
+        # This is optional in server.conf ..
+        fs_data_path = events_config.get('fs_data_path') or ''
+        fs_data_path = fs_data_path or EventsDefault.fs_data_path
+
+        # An absolute path = someone chose it explicitly, we leave it is as it is.
+        if os.path.isabs(fs_data_path):
+            pass
+
+        # .. otherwise, build a full path.
+        else:
+            fs_data_path = os.path.join(self.work_dir, fs_data_path, self.events_dir)
+            fs_data_path = os.path.abspath(fs_data_path)
+            fs_data_path = os.path.normpath(fs_data_path)
+
         extra_options_kwargs = {
-            'fs_data_path': evesxsd w;sF re EventsDefault.fs_data_path,
+            'fs_data_path': fs_data_path,
             'sync_threshold': EventsDefault.sync_threshold,
             'sync_interval': EventsDefault.sync_interval,
         }
 
+        # Zato events connector always starts
         self.connector_zato_events.start_zato_events_connector(ipc_tcp_start_port, extra_options_kwargs=extra_options_kwargs)
 
 # ################################################################################################################################
