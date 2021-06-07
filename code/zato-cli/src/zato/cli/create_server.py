@@ -781,12 +781,6 @@ class Create(ZatoCommand):
             if odb_engine.startswith('postgresql'):
                 odb_engine = 'postgresql+pg8000'
 
-            '''
-fs_data_path = {{events_fs_data_path}}
-sync_threshold = {{events_sync_threshold}}
-sync_interval = {{events_sync_interval}}
-'''
-
             server_conf_loc = os.path.join(self.target_dir, 'config/repo/server.conf')
             server_conf = open(server_conf_loc, 'w')
             server_conf.write(

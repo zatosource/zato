@@ -89,9 +89,6 @@ class EventsConnectionContainer(BaseConnectionContainer):
 
         self.events_db = EventsDatabase(fs_data_path, sync_threshold, sync_interval)
 
-        logger.info('Initialised events container at %s:%s (%s; %s; %s)',
-            self.host, self.port, fs_data_path, sync_threshold, sync_interval)
-
 # ################################################################################################################################
 
     def _on_event_ping(self, ignored_data, address_str):
