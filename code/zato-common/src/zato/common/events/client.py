@@ -13,6 +13,7 @@ from logging import getLogger
 
 # gevent
 from gevent import sleep
+from gevent.lock import RLock
 
 # orjson
 from orjson import dumps
@@ -60,6 +61,7 @@ class Client:
         self.recv_timeout = 30
         self.should_log_messages = True
         self.is_connected = False
+        self.lock = RLock()
 
 # ################################################################################################################################
 
@@ -85,32 +87,35 @@ class Client:
 
     def send(self, action, data=b''):
         # type: (bytes) -> None
-        try:
-            self.socket.sendall(action + data + b'\n')
-        except Exception as e:
-            self.is_connected = False
-            logger.warn('Socket send error `%s` -> %s', e.args, self.remote_addr_str)
-            self.close()
-            self.connect()
+        with self.lock:
+            try:
+                self.socket.sendall(action + data + b'\n')
+            except Exception as e:
+                self.is_connected = False
+                logger.warn('Socket send error `%s` -> %s', e.args, self.remote_addr_str)
+                self.close()
+                self.connect()
 
 # ################################################################################################################################
 
     def read(self):
         # type: () -> bytes
 
-        # .. build a receive context ..
-        ctx = SocketReaderCtx(
-            self.conn_id,
-            self.socket,
-            self.max_wait_time,
-            self.max_msg_size,
-            self.read_buffer_size,
-            self.recv_timeout,
-            self.should_log_messages
-        )
+        with self.lock:
 
-        # .. wait for the reply ..
-        return read_from_socket(ctx)
+            # Build a receive context ..
+            ctx = SocketReaderCtx(
+                self.conn_id,
+                self.socket,
+                self.max_wait_time,
+                self.max_msg_size,
+                self.read_buffer_size,
+                self.recv_timeout,
+                self.should_log_messages
+            )
+
+            # .. wait for the reply and return it.
+            return read_from_socket(ctx)
 
 # ################################################################################################################################
 
