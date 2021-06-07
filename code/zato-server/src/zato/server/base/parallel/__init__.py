@@ -507,7 +507,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Make sure the directories for events exists
         events_dir_v1 = os.path.join(self.work_dir, 'events', 'v1')
-        events_dir_v2 = os.path.join(self.work_dir, 'events', 'v2')
 
         for name in 'v1', 'v2':
             full_path = os.path.join(self.work_dir, 'events', name)
@@ -711,7 +710,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         has_ibm_mq = bool(self.worker_store.worker_config.definition_wmq.keys()) \
             and self.fs_server_config.component_enabled.ibm_mq
 
-        has_sftp = 0#bool(self.worker_store.worker_config.out_sftp.keys())
+        has_sftp = bool(self.worker_store.worker_config.out_sftp.keys())
 
         subprocess_start_config = SubprocessStartConfig()
         subprocess_start_config.has_ibm_mq = has_ibm_mq

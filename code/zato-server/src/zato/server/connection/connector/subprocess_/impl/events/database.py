@@ -13,7 +13,6 @@ from logging import basicConfig, getLogger, INFO
 from typing import Optional as optional
 
 # gevent
-from gevent import sleep, spawn_later
 from gevent.lock import RLock
 
 # Humanize
@@ -24,7 +23,6 @@ import pandas as pd
 
 # Zato
 from zato.common.ext.dataclasses import dataclass
-from zato.common.util import spawn_greenlet
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -336,58 +334,6 @@ class EventsDatabase:
 
     def run(self):
         pass
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if __name__ == '__main__':
-
-    basicConfig(level=INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-    fs_data_path = '/tmp/zzz-parquet'
-    sync_threshold = 120_000
-    sync_interval = 120_000
-
-    container = EventsDatabase(fs_data_path, sync_threshold, sync_interval)
-    container.run()
-
-    n = 1000
-    total = 0
-
-    for x in range(1000):
-
-        for idx in range(n):
-            elem = str(idx)
-            event = {
-
-                'id': elem,
-                'cid': 'cid.' + elem,
-                'timestamp': '2021-05-12T07:07:01.4841' + elem,
-
-                'source_type': 'zato.server' + elem,
-                'source_id': 'server1' + elem,
-
-                'object_type': elem,
-                'object_id': elem,
-
-                'source_type': elem,
-                'source_id': elem,
-
-                'recipient_type': elem,
-                'recipient_id': elem,
-
-                'total_time_ms': x,
-
-            }
-            container.push(event)
-            total += 1
-            print('TOTAL', total)
-
-        #container.sync_storage()
-        logger.info('-----------------------------------------')
-
-
-        #os.remove(fs_data_path)
 
 # ################################################################################################################################
 # ################################################################################################################################

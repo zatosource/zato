@@ -9,21 +9,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import datetime
 from logging import getLogger
-from tempfile import NamedTemporaryFile
-from time import time
-from traceback import format_exc
-
-# Bunch
-from bunch import bunchify
 
 # pysimdjson
 from simdjson import Parser as SIMDJSONParser
 
 # Zato
-from zato.common.json_internal import dumps
-from zato.common.events.common import Action, Default
+from zato.common.events.common import Action
 from zato.common.util.tcp import ZatoStreamServer
-from zato.server.connection.connector.subprocess_.base import BaseConnectionContainer, Response
+from zato.server.connection.connector.subprocess_.base import BaseConnectionContainer
 from zato.server.connection.connector.subprocess_.impl.events.database import EventsDatabase
 
 # ################################################################################################################################
@@ -92,7 +85,7 @@ class EventsConnectionContainer(BaseConnectionContainer):
 # ################################################################################################################################
 
     def _on_event_ping(self, ignored_data, address_str):
-        # type: (bystr, str) -> str
+        # type: (str) -> str
         logger.info('Ping received from `%s`', address_str)
         return Action.PingReply
 
