@@ -47,11 +47,13 @@ from zato.common.rate_limiting import RateLimiting
 from zato.common.util.api import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
      invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
      register_diag_handlers
+from zato.common.util.tcp import wait_until_port_taken
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC
 from zato.common.util.time_ import TimeUtil
 from zato.distlock import LockManager
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigStore
+from zato.server.connection.stats import ServiceStatsClient
 from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
 from zato.server.connection.server.rpc.config import ODBConfigSource
 from zato.server.base.parallel.config import ConfigLoader
@@ -194,6 +196,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.json_parser = SIMDJSONParser()
         self.work_dir = 'ParallelServer-work_dir'
         self.events_dir = 'ParallelServer-events_dir'
+
+        self.stats_client = None # type: ServiceStatsClient
+        self._stats_host = '<ParallelServer-_stats_host>'
+        self._stats_port = -1
 
         # Audit log
         self.audit_log = AuditLog()
@@ -757,6 +763,30 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.ipc_api.on_message_callback = self.worker_store.on_ipc_message
         spawn_greenlet(self.ipc_api.run)
 
+        events_config = self.connector_config_ipc.get_config(ZatoEventsIPC.ipc_config_name) # type: SubprocessIPC
+
+        print()
+        print(111, events_config)
+        print()
+
+        zzz
+
+        events_tcp_port = events_config.ipc_tcp_port
+
+        '''
+        if response:
+            response = loads(response)
+            connector_suffix = ipc_config_name.replace('zato-', '').replace('-', '_')
+            connector_attr = 'connector_{}'.format(connector_suffix)
+            connector = getattr(self, connector_attr) # type: SubprocessIPC
+            connector.ipc_tcp_port = response['port']
+        '''
+
+        # Statistics
+        self.stats_client = ServiceStatsClient('127.0.0.1', events_tcp_port)
+        self.stats_client.run()
+
+        # Invoke startup callables
         self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.AFTER_STARTED, kwargs={
             'server': self,
         })
@@ -773,7 +803,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         ipc_config_name_to_enabled = {
             IBMMQIPC.ipc_config_name: config.has_ibm_mq,
-            SFTPIPC.ipc_config_name: config.has_sftp
+            SFTPIPC.ipc_config_name: config.has_sftp,
+            ZatoEventsIPC.ipc_config_name: True,
         }
 
         for ipc_config_name, is_enabled in ipc_config_name_to_enabled.items():
@@ -841,6 +872,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Zato events connector always starts
         self.connector_zato_events.start_zato_events_connector(ipc_tcp_start_port, extra_options_kwargs=extra_options_kwargs)
+
+        # Wait until the events connector started - this will let other parts
+        # of the server assume that it is always available.
+        wait_until_port_taken(self.connector_zato_events.ipc_tcp_port, timeout=5)
 
 # ################################################################################################################################
 
