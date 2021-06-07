@@ -21,7 +21,7 @@ from traceback import format_exc
 from wsgiref.simple_server import make_server as wsgiref_make_server
 
 # Bunch
-from bunch import Bunch, bunchify
+from bunch import bunchify
 
 # Requests
 from requests import post as requests_post
