@@ -8,7 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
-from traceback import format_exc
 
 # Zato
 from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC

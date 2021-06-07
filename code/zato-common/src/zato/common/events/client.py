@@ -7,10 +7,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import logging
 import socket
 from datetime import datetime
-from logging import basicConfig, getLogger
+from logging import getLogger
 
 # gevent
 from gevent import sleep
@@ -19,7 +18,7 @@ from gevent import sleep
 from orjson import dumps
 
 # Zato
-from zato.common.events.common import Action, PushCtx
+from zato.common.events.common import Action
 from zato.common.typing_ import asdict
 from zato.common.util.api import new_cid
 from zato.common.util.tcp import read_from_socket, SocketReaderCtx, wait_until_port_taken
@@ -31,11 +30,6 @@ if 0:
     from zato.common.events.common import PushCtx
 
     PushCtx = PushCtx
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -157,54 +151,13 @@ class Client:
     def run(self):
 
         # Make sure that we have a port to connect to ..
-        #wait_until_port_taken(self.port, 10)
+        wait_until_port_taken(self.port, 5)
 
         # .. do connect now ..
         self.connect()
 
         # .. and ping the remote end to confirm that we have connectivity.
         self.ping()
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if __name__ == '__main__':
-
-    # stdlib
-    from time import sleep
-
-    host = '127.0.0.1'
-    port = 34567
-
-    client = Client(host, port)
-    client.run()
-
-    n_iters = 1000
-
-    for x in range(n_iters):
-
-        if x % 1 == 0:
-            logger.info('ZZZ %s', x)
-
-        ctx = PushCtx()
-        ctx.id = new_cid()
-        ctx.cid = new_cid()
-        ctx.object_id = new_cid()
-        ctx.object_type = '001'
-        ctx.recipient_id = new_cid()
-        ctx.recipient_type = 'ABC'
-        ctx.source_id = new_cid()
-        ctx.source_type = 'ZZZ'
-        ctx.timestamp = datetime.utcnow().isoformat()
-        ctx.total_time_ms = x
-
-        client.push(ctx)
-
-        sleep(0.1)
-
-    client.close()
-
-    sleep(2)
 
 # ################################################################################################################################
 # ################################################################################################################################
