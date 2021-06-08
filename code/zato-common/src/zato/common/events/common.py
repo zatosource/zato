@@ -6,6 +6,9 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from typing import Optional as optional
+
 # Zato
 from zato.common.typing_ import dataclass
 
@@ -55,19 +58,19 @@ class PushCtx:
     timestamp: str
     event_type: str
 
-    source_type: str
-    source_id: str
+    source_type: optional[str] = None
+    source_id: optional[str] = None
 
     object_type: str
     object_id: str
 
-    source_type: str
-    source_id: str
-
-    recipient_type: str
-    recipient_id: str
+    recipient_type: optional[str] = None
+    recipient_id: optional[str] = None
 
     total_time_ms: int
+
+    def __hash__(self):
+        return hash(self.id)
 
 # ################################################################################################################################
 # ################################################################################################################################

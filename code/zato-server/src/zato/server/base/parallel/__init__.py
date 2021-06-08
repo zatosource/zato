@@ -197,7 +197,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.work_dir = 'ParallelServer-work_dir'
         self.events_dir = 'ParallelServer-events_dir'
 
-        self.stats_client = None # type: ServiceStatsClient
+        self.stats_client = ServiceStatsClient()
         self._stats_host = '<ParallelServer-_stats_host>'
         self._stats_port = -1
 
@@ -763,27 +763,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.ipc_api.on_message_callback = self.worker_store.on_ipc_message
         spawn_greenlet(self.ipc_api.run)
 
-        events_config = self.connector_config_ipc.get_config(ZatoEventsIPC.ipc_config_name) # type: SubprocessIPC
-
-        print()
-        print(111, events_config)
-        print()
-
-        zzz
-
-        events_tcp_port = events_config.ipc_tcp_port
-
-        '''
-        if response:
-            response = loads(response)
-            connector_suffix = ipc_config_name.replace('zato-', '').replace('-', '_')
-            connector_attr = 'connector_{}'.format(connector_suffix)
-            connector = getattr(self, connector_attr) # type: SubprocessIPC
-            connector.ipc_tcp_port = response['port']
-        '''
+        events_config = self.connector_config_ipc.get_config(ZatoEventsIPC.ipc_config_name, as_dict=True) # type: dict
+        events_tcp_port = events_config['port']
 
         # Statistics
-        self.stats_client = ServiceStatsClient('127.0.0.1', events_tcp_port)
+        self.stats_client.init('127.0.0.1', events_tcp_port)
         self.stats_client.run()
 
         # Invoke startup callables
@@ -860,7 +844,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # .. otherwise, build a full path.
         else:
-            fs_data_path = os.path.join(self.work_dir, fs_data_path, self.events_dir)
+            fs_data_path = os.path.join(self.work_dir, fs_data_path, self.events_dir, 'zato.events')
             fs_data_path = os.path.abspath(fs_data_path)
             fs_data_path = os.path.normpath(fs_data_path)
 
