@@ -235,7 +235,7 @@ class EventsDatabase:
             existing = pd.read_parquet(self.fs_data_path) # type: pd.DataFrame
 
             # .. log the time it took to load the data ..
-            self.logger.info('DF data loaded in %s; len_existing=%s', utcnow() - start, int_to_comma(existing.size))
+            self.logger.info('DF data loaded in %s; len_existing=%s', utcnow() - start, int_to_comma(len(existing)))
         else:
 
             # .. create a new DF instead ..
@@ -308,7 +308,7 @@ class EventsDatabase:
 
             # Begin with a header to indicate in logs when we start
             self.logger.info('********************************************************************************* ')
-            self.logger.info('******************************** DF Sync storage ******************************** ')
+            self.logger.info('*********************** Dataframe (DF) Sync storage ***************************** ')
             self.logger.info('********************************************************************************* ')
 
             # Get the existing data from storage
