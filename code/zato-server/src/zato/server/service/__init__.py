@@ -712,7 +712,9 @@ class Service(object):
                         self.wsgi_environ['zato.http.remote_addr'])
 
                 if service.server.component_enabled.stats:
-                    service.usage = service.kvdb.conn.incr('{}{}'.format(KVDB.SERVICE_USAGE, service.name))
+                    #ZZZ Add service usage directly to servers instead of using Redis
+                    pass
+
                 service.invocation_time = _utcnow()
 
                 # Check if there is a JSON Schema validator attached to the service and if so,
@@ -991,31 +993,29 @@ class Service(object):
 
         if self.server.component_enabled.stats:
 
+            # Time spent in this service, with a precision of millseconds
             proc_time = self.processing_time_raw.total_seconds() * 1000.0
             proc_time = proc_time if proc_time > 1 else 0
 
+            # Round processing time to one millisecond
             self.processing_time = int(round(proc_time))
 
-            with self.kvdb.conn.pipeline() as pipe:
-
-                pipe.hset('%s%s' % (_service_time_basic, self.name), 'last', self.processing_time)
-                pipe.rpush('%s%s' % (_service_time_raw, self.name), self.processing_time)
-
-                key = '%s%s:%s' % (_service_time_raw_by_minute,
-                    self.name, self.handle_return_time.strftime('%Y:%m:%d:%H:%M'))
-                pipe.rpush(key, self.processing_time)
-
-                # .. we'll have 5 minutes (5 * 60 seconds = 300 seconds)
-                # to aggregate processing times for a given minute and then it will expire
-
-                # Note that we need Redis 2.1.3+ otherwise the key has just been overwritten
-                pipe.expire(key, 300)
-                pipe.execute()
+            # Store usage statistics
+            self.server.stats_client.push(
+                self.cid,
+                self.invocation_time.isoformat(),
+                self.name,
+                False,
+                self.processing_time
+            )
 
         #
         # Sample requests/responses
         #
 
+        #ZZZ Store sample requests/responses directly in RAM
+
+        '''
         slow_response_enabled = self.server.component_enabled.slow_response
         needs_usage = self._req_resp_freq and self.usage % self._req_resp_freq == 0
 
@@ -1036,10 +1036,14 @@ class Service(object):
                 'resp':_get_response_value(self.response), # TODO: Don't parse it here and a moment later below
             }
             self.kvdb.conn.hmset(key, data)
+        '''
 
         #
         # Slow responses
         #
+        #ZZZ Store slow responses directly in RAM
+
+        '''
         if slow_response_enabled and self.slow_threshold:
 
             if self.processing_time > self.slow_threshold:
@@ -1060,6 +1064,7 @@ class Service(object):
                     'resp':_get_response_value(self.response), # TODO: Don't parse it here and a moment earlier above
                 }
                 slow_response.store(self.kvdb, self.name, **data)
+        '''
 
     def translate(self, *args, **kwargs):
         raise NotImplementedError('An initializer should override this method')

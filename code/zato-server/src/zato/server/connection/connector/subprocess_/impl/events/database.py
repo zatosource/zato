@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from datetime import datetime
-from logging import basicConfig, getLogger, INFO
 from typing import Optional as optional
 
 # gevent
@@ -28,14 +27,11 @@ from zato.common.ext.dataclasses import dataclass
 # ################################################################################################################################
 
 if 0:
+    from logging import Logger
     from pandas import DataFrame
+
     DataFrame = DataFrame
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-basicConfig(level=INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = getLogger(__name__)
+    Logger = Logger
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -161,8 +157,11 @@ class Event:
 
 class EventsDatabase:
 
-    def __init__(self, fs_data_path, sync_threshold, sync_interval):
-        # type: (self, int, int) -> None
+    def __init__(self, logger, fs_data_path, sync_threshold, sync_interval):
+        # type: (Logger, int, int) -> None
+
+        # Our self.logger object
+        self.logger = logger
 
         # Where to keep persistent data
         self.fs_data_path = fs_data_path
@@ -229,14 +228,14 @@ class EventsDatabase:
         if os.path.exists(self.fs_data_path):
 
             #  Let the users know what we are doing ..
-            logger.info('Loading DF data from %s', self.fs_data_path)
+            self.logger.info('Loading DF data from %s', self.fs_data_path)
 
             # .. load existing data from storage ..
             start = utcnow()
             existing = pd.read_parquet(self.fs_data_path) # type: pd.DataFrame
 
             # .. log the time it took to load the data ..
-            logger.info('DF data loaded in %s; len_existing=%s', utcnow() - start, int_to_comma(existing.size))
+            self.logger.info('DF data loaded in %s; len_existing=%s', utcnow() - start, int_to_comma(existing.size))
         else:
 
             # .. create a new DF instead ..
@@ -253,14 +252,14 @@ class EventsDatabase:
         # type: () -> None
 
         #  Let the users know what we are doing ..
-        logger.info('Building DF out of len_current=%s', int_to_comma(len(self.in_ram_store)))
+        self.logger.info('Building DF out of len_current=%s', int_to_comma(len(self.in_ram_store)))
 
         # .. convert the data collected so far into a DataFrame ..
         start = utcnow()
         current = pd.DataFrame(self.in_ram_store)
 
         # .. log the time it took build the DataFrame ..
-        logger.info('DF built in %s', utcnow() - start)
+        self.logger.info('DF built in %s', utcnow() - start)
 
         return current
 
@@ -272,14 +271,14 @@ class EventsDatabase:
         # type: (DataFrame, DataFrame) -> DataFrame
 
         # Let the user know what we are doing ..
-        logger.info('Combining existing and current data')
+        self.logger.info('Combining existing and current data')
 
         # .. combine the existing and current data ..
         start = utcnow()
         combined = pd.concat([existing, current])
 
         # .. log the time it took to combine the DataFrames..
-        logger.info('DF combined in %s', utcnow() - start)
+        self.logger.info('DF combined in %s', utcnow() - start)
 
         return combined
 
@@ -289,14 +288,14 @@ class EventsDatabase:
         # type: (DataFrame) -> None
 
         # Let the user know what we are doing ..
-        logger.info('Saving DF to %s', self.fs_data_path)
+        self.logger.info('Saving DF to %s', self.fs_data_path)
 
         # .. save the DF to persistent storage ..
         start = utcnow()
         data.to_parquet(self.fs_data_path)
 
         # .. log the time it took to save to storage ..
-        logger.info('DF saved in %s', utcnow() - start)
+        self.logger.info('DF saved in %s', utcnow() - start)
 
 # ################################################################################################################################
 
@@ -308,9 +307,9 @@ class EventsDatabase:
             now_total = _utcnow()
 
             # Begin with a header to indicate in logs when we start
-            logger.info('********************************************************************************* ')
-            logger.info('******************************** DF Sync storage ******************************** ')
-            logger.info('********************************************************************************* ')
+            self.logger.info('********************************************************************************* ')
+            self.logger.info('******************************** DF Sync storage ******************************** ')
+            self.logger.info('********************************************************************************* ')
 
             # Get the existing data from storage
             existing = self._get_data_from_storage()
@@ -328,7 +327,7 @@ class EventsDatabase:
             self.in_ram_store[:] = []
 
             # Log the total processing time
-            logger.info('DF total processing time %s', utcnow() - now_total)
+            self.logger.info('DF total processing time %s', utcnow() - now_total)
 
 # ################################################################################################################################
 

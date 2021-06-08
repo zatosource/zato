@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from datetime import datetime, timedelta
@@ -22,13 +20,16 @@ import posix_ipc as ipc
 from zato.common.json_internal import dumps, loads
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 logger = getLogger('zato')
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 _shmem_pattern = '/zato-shmem-{}'
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class SharedMemoryIPC(object):
@@ -43,6 +44,8 @@ class SharedMemoryIPC(object):
         self.size = -1
         self._mmap = None
         self.running = False
+
+# ################################################################################################################################
 
     def create(self, shmem_suffix, size, needs_create):
         """ Creates all IPC structures.
@@ -67,12 +70,16 @@ class SharedMemoryIPC(object):
 
         self.running = True
 
+# ################################################################################################################################
+
     def store(self, data):
         """ Serializes input data as JSON and stores it in RAM, overwriting any previous data.
         """
         self._mmap.seek(0)
         self._mmap.write(dumps(data).encode('utf8'))
         self._mmap.flush()
+
+# ################################################################################################################################
 
     def store_initial(self):
         """ Stores initial data in shmem unless there is already data in there.
@@ -82,12 +89,16 @@ class SharedMemoryIPC(object):
         else:
             self.store({})
 
+# ################################################################################################################################
+
     def load(self, needs_loads=True):
         """ Reads in all data from RAM and, optionally, loads it as JSON.
         """
         self._mmap.seek(0)
         data = self._mmap.read(self.size).strip(b'\x00')
         return loads(data.decode('utf8')) if needs_loads else data
+
+# ################################################################################################################################
 
     def close(self):
         """ Closes all underlying in-RAM structures.
@@ -104,6 +115,8 @@ class SharedMemoryIPC(object):
         except ipc.ExistentialError:
             pass
 
+# ################################################################################################################################
+
     def get_parent(self, parent_path, needs_data=True):
         """ Returns element pointed to by parent_path, creating all elements along the way, if neccessary.
         """
@@ -118,6 +131,8 @@ class SharedMemoryIPC(object):
 
         return (data, current) if needs_data else current
 
+# ################################################################################################################################
+
     def set_key(self, parent, key, value):
         """ Set key to value under element called 'parent'.
         """
@@ -130,11 +145,15 @@ class SharedMemoryIPC(object):
         # Save it all back
         self.store(data)
 
+# ################################################################################################################################
+
     def _get_key(self, parent, key):
         """ Low-level implementation of get_key which does not handle timeouts.
         """
         parent = self.get_parent(parent, False)
         return parent[key]
+
+# ################################################################################################################################
 
     def get_key(self, parent, key, timeout=None, _sleep=sleep, _utcnow=datetime.utcnow):
         """ Returns a specific key from parent dictionary.
@@ -175,6 +194,7 @@ class SharedMemoryIPC(object):
                 raise
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class ServerStartupIPC(SharedMemoryIPC):
     """ A shared memory-backed IPC object for server startup initialization.
@@ -191,6 +211,7 @@ class ServerStartupIPC(SharedMemoryIPC):
         return self.get_key(self.key_name, 'current', timeout)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class ConnectorConfigIPC(SharedMemoryIPC):
     """ A shared memory-backed IPC object for configuration of subprocess-based containers.
@@ -205,9 +226,12 @@ class ConnectorConfigIPC(SharedMemoryIPC):
     def set_config(self, connector_key, config):
         self.set_key(self.key_name, connector_key, config)
 
-    def get_config(self, connector_key, timeout=60):
-        return self.get_key(self.key_name, connector_key, timeout)
+    def get_config(self, connector_key, timeout=60, as_dict=False):
+        response = self.get_key(self.key_name, connector_key, timeout)
+        if response:
+            return loads(response) if as_dict else response
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class CommandStoreIPC(SharedMemoryIPC):
@@ -226,4 +250,5 @@ class CommandStoreIPC(SharedMemoryIPC):
     def get_config(self, timeout=3):
         return self.get_key(self.key_name, 'parser', timeout)
 
+# ################################################################################################################################
 # ################################################################################################################################

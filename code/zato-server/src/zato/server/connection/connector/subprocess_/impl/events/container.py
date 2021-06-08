@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import datetime
 from logging import getLogger
+from traceback import format_exc
 
 # pysimdjson
 from simdjson import Parser as SIMDJSONParser
@@ -57,9 +58,6 @@ class EventsConnectionContainer(BaseConnectionContainer):
         # type: (str, int, int) -> None
         super().__init__(*args, **kwargs)
 
-        # This is where events are kept
-        self.events_db = None # type: EventsDatabase
-
         # By default, keep running forever
         self.keep_running = True
 
@@ -76,11 +74,15 @@ class EventsConnectionContainer(BaseConnectionContainer):
 
     def post_init(self):
 
-        fs_data_path = self.cli_options['fs_data_path']
-        sync_threshold = int(self.cli_options['sync_threshold'])
-        sync_interval = int(self.cli_options['sync_interval'])
+        try:
+            fs_data_path = self.cli_options['fs_data_path']
+            sync_threshold = int(self.cli_options['sync_threshold'])
+            sync_interval = int(self.cli_options['sync_interval'])
 
-        self.events_db = EventsDatabase(fs_data_path, sync_threshold, sync_interval)
+            self.events_db = EventsDatabase(logger, fs_data_path, sync_threshold, sync_interval)
+
+        except Exception:
+            logger.warn('Exception in post_init -> `%s`', format_exc())
 
 # ################################################################################################################################
 
@@ -115,41 +117,46 @@ class EventsConnectionContainer(BaseConnectionContainer):
         # Get access to the underlying file object
         socket_file = socket.makefile(mode='rb')
 
-        # Keep running until explicitly requested not to
-        while self.keep_running:
+        try:
 
-            # We work on a line-by-line basis
-            line = socket_file.readline()
+            # Keep running until explicitly requested not to
+            while self.keep_running:
 
-            # No input = client is no longer connected
-            if not line:
-                logger.info('Stream client disconnected (%s)', address_str)
-                break
+                # We work on a line-by-line basis
+                line = socket_file.readline()
 
-            # Extract the action sent ..
-            action = line[:2]
+                # No input = client is no longer connected
+                if not line:
+                    logger.info('Stream client disconnected (%s)', address_str)
+                    break
 
-            # .. find the handler function ..
-            func = self._action_map.get(action)
+                # Extract the action sent ..
+                action = line[:2]
 
-            # .. no such handler = disconnect the client ..
-            if not func:
-                logger.warn('No handler for `%r` found. Disconnecting stream client (%s)', action, address_str)
-                break
+                # .. find the handler function ..
+                func = self._action_map.get(action)
 
-            # .. otherwise, handle the action ..
-            data = line[2:]
-            response = func(data, address_str) # type: str
+                # .. no such handler = disconnect the client ..
+                if not func:
+                    logger.warn('No handler for `%r` found. Disconnecting stream client (%s)', action, address_str)
+                    break
 
-            # .. not all actions will result in a response ..
-            if response:
-                response = response.encode('utf8') if isinstance(response, str) else response
+                # .. otherwise, handle the action ..
+                data = line[2:]
+                response = func(data, address_str) # type: str
 
-                # .. now, we can send the response to the client.
-                socket.sendall(response)
+                # .. not all actions will result in a response ..
+                if response:
+                    response = response.encode('utf8') if isinstance(response, str) else response
 
-        # If we are here, it means that the client disconnected.
-        socket_file.close()
+                    # .. now, we can send the response to the client.
+                    socket.sendall(response)
+
+            # If we are here, it means that the client disconnected.
+            socket_file.close()
+
+        except Exception:
+            logger.warn('Exception in _on_new_connection (%s) -> `%s`', address_str, format_exc())
 
 # ################################################################################################################################
 
