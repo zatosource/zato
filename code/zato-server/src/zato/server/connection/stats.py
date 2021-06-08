@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
+
+# gevent
+from gevent.lock import RLock
 
 # Zato
 from zato.common.events.client import Client as EventsClient
@@ -22,9 +25,24 @@ object_type_service = EventInfo.ObjectType.service
 # ################################################################################################################################
 
 class ServiceStatsClient:
-    def __init__(self, host, port):
+    def __init__(self):
+        # type: () -> None
+        self.host = '<ServiceStatsClient-host>'
+        self.port = -1
+        self.impl = None # type: EventsClient
+        self.backlog = []
+        self.lock = RLock()
+
+# ################################################################################################################################
+
+    def init(self, host, port):
         # type: (str, int) -> None
-        self.impl = EventsClient(host, port)
+        self.host = host
+        self.port = port
+
+        with self.lock:
+            self.impl = EventsClient(self.host, self.port)
+            self.impl.connect()
 
 # ################################################################################################################################
 
@@ -33,8 +51,34 @@ class ServiceStatsClient:
 
 # ################################################################################################################################
 
+    def _push_backlog(self):
+        """ Pushes an event to the backend, assuming that we have access to the backend already.
+        """
+        # type: (str, str, str, int, str) -> None
+
+        # Make sure we are connected to the backend ..
+        if self.impl:
+
+            # .. ensure no updates to the backlog while we run ..
+            with self.lock:
+
+                # .. get all enqueued events ..
+                for item in self.backlog[:]: # type: PushCtx
+
+                    # .. push each to the backend ..
+                    self.impl.push(item)
+
+                    # .. and remove it from the queue ..
+                    self.backlog.remove(item)
+
+# ################################################################################################################################
+
     def push(self, cid, timestamp, service_name, is_request, total_time_ms=0, id=None):
-        # type: (str, str, str, int, str)
+        """ Accepts information about the service, enqueues it as a push context and tries to empty the backlog.
+        The reason we first need the backlog is that we may not be connected to the backend yet
+        when this method executes. That is we need a staging area, a backlog, first.
+        """
+        # type: (str, str, str, int, str) -> None
 
         # Fill out the details of a context object ..
         ctx = PushCtx()
@@ -46,8 +90,12 @@ class ServiceStatsClient:
         ctx.object_id = service_name
         ctx.total_time_ms = total_time_ms
 
-        # .. and push the event to the backend.
-        self.impl.push(ctx)
+        # .. push the event to the backlog queue, using a lock to ensure the backlog is not modified in between ..
+        with self.lock:
+            self.backlog.append(ctx)
+
+        # .. and try to send it to the backend now.
+        self._push_backlog()
 
 # ################################################################################################################################
 # ################################################################################################################################

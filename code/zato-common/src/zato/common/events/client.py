@@ -68,20 +68,25 @@ class Client:
     def connect(self):
         # For later use
         start = utcnow()
-        self.socket = socket.socket(type=socket.SOCK_STREAM)
 
-        while not self.is_connected:
-            logger.info('Connecting to %s', self.remote_addr_str)
-            try:
-                self.socket.connect((self.host, self.port))
-                self.peer_name = self.socket.getpeername()
-                self.peer_name_str = '{}:{}'.format(*self.peer_name)
-            except Exception as e:
-                logger.warn('Connection error `%s` (%s) -> %s', e.args, utcnow() - start, self.remote_addr_str)
-                sleep(1)
-            else:
-                logger.info('Connected to %s after %s', self.remote_addr_str, utcnow() - start)
-                self.is_connected = True
+        with self.lock:
+            if self.is_connected:
+                return
+
+            self.socket = socket.socket(type=socket.SOCK_STREAM)
+
+            while not self.is_connected:
+                logger.info('Connecting to %s', self.remote_addr_str)
+                try:
+                    self.socket.connect((self.host, self.port))
+                    self.peer_name = self.socket.getpeername()
+                    self.peer_name_str = '{}:{}'.format(*self.peer_name)
+                except Exception as e:
+                    logger.warn('Connection error `%s` (%s) -> %s', e.args, utcnow() - start, self.remote_addr_str)
+                    sleep(1)
+                else:
+                    logger.info('Connected to %s after %s', self.remote_addr_str, utcnow() - start)
+                    self.is_connected = True
 
 # ################################################################################################################################
 
