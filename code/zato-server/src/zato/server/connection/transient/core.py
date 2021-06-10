@@ -95,14 +95,17 @@ class TransientAPI:
 class TransientRepository:
     """ Stores arbitrary objects, as a list, in RAM only, without backing persistent storage.
     """
-    def __init__(self, name='<TransientRepository-name>', max_size=1000):
-        # type: (str, int) -> None
+    def __init__(self, name='<TransientRepository-name>', max_size=1000, page_size=50):
+        # type: (str, int, int) -> None
 
         # Our user-visible name
         self.name = name
 
         # How many objects we will keep at most
         self.max_size = max_size
+
+        # How many objects to return at most in list responses
+        self.page_size = page_size
 
         # In-RAM database of objects
         self.in_ram_store = [] # type: list[ObjectCtx]
