@@ -23,10 +23,10 @@ _search_attrs = 'num_pages', 'cur_page', 'prev_page', 'next_page', 'has_prev_pag
 # ################################################################################################################################
 
 class SearchResults(object):
-    def __init__(self, q, data, columns, total):
+    def __init__(self, q, result, columns, total):
         # type: (object, object, object, int) -> None
         self.q = q
-        self.data = data
+        self.result = result
         self.total = total
         self.columns = columns # type: list
         self.num_pages = 0
@@ -40,7 +40,7 @@ class SearchResults(object):
 # ################################################################################################################################
 
     def __iter__(self):
-        return iter(self.data)
+        return iter(self.result)
 
 # ################################################################################################################################
 
@@ -113,7 +113,7 @@ class SearchResults(object):
 
     def to_dict(self, _search_attrs=_search_attrs):
         out = {}
-        out['data'] = self.data
+        out['result'] = self.result
         for name in _search_attrs:
             out[name] = getattr(self, name, None)
         return out
