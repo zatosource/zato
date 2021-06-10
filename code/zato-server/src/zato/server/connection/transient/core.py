@@ -15,6 +15,7 @@ from gevent.lock import RLock
 
 # Zato
 from zato.common.ext.dataclasses import dataclass
+from zato.common.util.search import SearchResults
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,13 +37,13 @@ class ObjectCtx:
     id: str
 
     # A correlation ID assigned by Zato - multiple events may have the same CID
-    cid: str
+    cid: str = None
 
     # Timestamp of this event, as assigned by Zato
-    timestamp: str
+    timestamp: str = None
 
     # The actual business data
-    data: object
+    data: object = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -67,7 +68,7 @@ class TransientAPI:
 
 # ################################################################################################################################
 
-    def get(self, name, object_id):
+    def get_object(self, repo_name, object_id):
         # type: (str, str) -> None
         pass
 
@@ -147,8 +148,11 @@ class TransientRepository:
 
 # ################################################################################################################################
 
-    def get_list(self):
-        pass
+    def get_list(self, cur_page=1, page_size=50):
+        # type: (int, int) -> dict
+        with self.lock:
+            search_results = SearchResults.from_list(self.in_ram_store, cur_page, page_size)
+            return search_results.to_dict()
 
 # ################################################################################################################################
 
@@ -165,19 +169,6 @@ class TransientRepository:
     def clear(self):
         with self.lock:
             self.in_ram_store[:] = []
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if __name__ == '__main__':
-
-    # stdlib
-    import logging
-
-    log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
-    logging.basicConfig(level=logging.DEBUG, format=log_format)
-
-    transient = TransientStorage()
 
 # ################################################################################################################################
 # ################################################################################################################################

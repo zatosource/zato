@@ -7,7 +7,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import logging
 from unittest import main, TestCase
 
 # Zato
@@ -119,6 +118,81 @@ class TransientRepositoryTestCase(TestCase):
         repo.clear()
 
         self.assertEqual(repo.get_size(), 0)
+
+# ################################################################################################################################
+
+    def test_repo_get_list(self):
+
+        id1 = '1-' + rand_string()
+        id2 = '2-' + rand_string()
+        id3 = '3-' + rand_string()
+
+        id4 = '4-' + rand_string()
+        id5 = '5-' + rand_string()
+        id6 = '6-' + rand_string()
+
+        id7 = '7-' + rand_string()
+        id8 = '8-' + rand_string()
+        id9 = '9-' + rand_string()
+
+        id10 = '10-' + rand_string()
+        id11 = '11-' + rand_string()
+        id12 = '12-' + rand_string()
+
+        ctx1 = ObjectCtx()
+        ctx2 = ObjectCtx()
+        ctx3 = ObjectCtx()
+        ctx4 = ObjectCtx()
+        ctx5 = ObjectCtx()
+        ctx6 = ObjectCtx()
+        ctx7 = ObjectCtx()
+        ctx8 = ObjectCtx()
+        ctx9 = ObjectCtx()
+        ctx10 = ObjectCtx()
+        ctx11 = ObjectCtx()
+        ctx12 = ObjectCtx()
+
+        ctx1.id = id1
+        ctx2.id = id2
+        ctx3.id = id3
+        ctx4.id = id4
+        ctx5.id = id5
+        ctx6.id = id6
+        ctx7.id = id7
+        ctx8.id = id8
+        ctx9.id = id9
+        ctx10.id = id10
+        ctx11.id = id11
+        ctx12.id = id12
+
+        repo = TransientRepository()
+
+        repo.push(ctx1)
+        repo.push(ctx2)
+        repo.push(ctx3)
+        repo.push(ctx4)
+        repo.push(ctx5)
+        repo.push(ctx6)
+        repo.push(ctx7)
+        repo.push(ctx8)
+        repo.push(ctx9)
+        repo.push(ctx10)
+        repo.push(ctx11)
+        repo.push(ctx12)
+
+        cur_page = 2
+        page_size = 3
+
+        results = repo.get_list(cur_page, page_size)
+        result = results['result']
+
+        result0 = result[0] # type: ObjectCtx
+        result1 = result[1] # type: ObjectCtx
+        result2 = result[2] # type: ObjectCtx
+
+        self.assertEqual(result0.id, id9)
+        self.assertEqual(result1.id, id8)
+        self.assertEqual(result2.id, id7)
 
 # ################################################################################################################################
 # ################################################################################################################################

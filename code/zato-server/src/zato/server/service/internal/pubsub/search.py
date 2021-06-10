@@ -42,7 +42,7 @@ class NonGDSearchService(AdminService):
         """
         # Build the results metadata
         search_results = SearchResults.from_list(
-            msg, cur_page, _page_size, needs_sort=True, post_process_func=self._post_process_msg_list)
+            msg_list, cur_page, _page_size, needs_sort=True, post_process_func=self._post_process_msg_list)
 
         # This goes to the service's response payload object ..
         self.response.payload.response = msg_list
