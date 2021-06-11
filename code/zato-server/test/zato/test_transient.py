@@ -11,7 +11,7 @@ from unittest import main, TestCase
 
 # Zato
 from zato.common.test import rand_int, rand_string
-from zato.server.connection.transient.core import ObjectCtx, TransientAPI, TransientRepository
+from zato.server.connection.transient.core import ObjectCtx, TransientAPI, TransientListRepo
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -23,7 +23,7 @@ class TransientRepositoryTestCase(TestCase):
         name = rand_string()
         max_size = rand_int()
 
-        repo = TransientRepository(name, max_size)
+        repo = TransientListRepo(name, max_size)
 
         self.assertEqual(repo.name, name)
         self.assertEqual(repo.max_size, max_size)
@@ -35,7 +35,7 @@ class TransientRepositoryTestCase(TestCase):
         name = rand_string()
         max_size = 2
 
-        repo = TransientRepository(name, max_size)
+        repo = TransientListRepo(name, max_size)
 
         # Push more object than the max size allows ..
         for x in range(max_size + 1):
@@ -61,7 +61,7 @@ class TransientRepositoryTestCase(TestCase):
         ctx3 = ObjectCtx()
         ctx3.id = id3
 
-        repo = TransientRepository()
+        repo = TransientListRepo()
 
         repo.push(ctx1)
         repo.push(ctx2)
@@ -83,7 +83,7 @@ class TransientRepositoryTestCase(TestCase):
         ctx2 = ObjectCtx()
         ctx2.id = id2
 
-        repo = TransientRepository()
+        repo = TransientListRepo()
 
         repo.push(ctx1)
         repo.push(ctx2)
@@ -111,7 +111,7 @@ class TransientRepositoryTestCase(TestCase):
         ctx2 = ObjectCtx()
         ctx2.id = id2
 
-        repo = TransientRepository()
+        repo = TransientListRepo()
 
         repo.push(ctx1)
         repo.push(ctx2)
@@ -166,7 +166,7 @@ class TransientRepositoryTestCase(TestCase):
         ctx11.id = id11
         ctx12.id = id12
 
-        repo = TransientRepository()
+        repo = TransientListRepo()
 
         repo.push(ctx1)
         repo.push(ctx2)
@@ -207,14 +207,14 @@ class TransientAPITestCase(TestCase):
 
         transient_api = TransientAPI()
 
-        transient_api.internal_create_repo(repo_name1)
-        transient_api.internal_create_repo(repo_name2)
+        transient_api.internal_create_list_repo(repo_name1)
+        transient_api.internal_create_list_repo(repo_name2)
 
         repo1 = transient_api.get(repo_name1)
         repo2 = transient_api.get(repo_name2)
 
-        self.assertIsInstance(repo1, TransientRepository)
-        self.assertIsInstance(repo2, TransientRepository)
+        self.assertIsInstance(repo1, TransientListRepo)
+        self.assertIsInstance(repo2, TransientListRepo)
 
         self.assertIsNot(repo1, repo2)
 
@@ -225,11 +225,11 @@ class TransientAPITestCase(TestCase):
         repo_name = rand_string()
 
         transient_api = TransientAPI()
-        transient_api.internal_create_repo(repo_name)
+        transient_api.internal_create_list_repo(repo_name)
 
         repo = transient_api.get(repo_name)
 
-        self.assertIsInstance(repo, TransientRepository)
+        self.assertIsInstance(repo, TransientListRepo)
 
 # ################################################################################################################################
 
@@ -242,7 +242,7 @@ class TransientAPITestCase(TestCase):
         ctx.id = object_id
 
         transient_api = TransientAPI()
-        transient_api.internal_create_repo(repo_name)
+        transient_api.internal_create_list_repo(repo_name)
 
         transient_api.push(repo_name, ctx)
         result = transient_api.get_object(repo_name, object_id)
@@ -298,7 +298,7 @@ class TransientAPITestCase(TestCase):
 
         repo_name = rand_string()
         transient_api = TransientAPI()
-        transient_api.internal_create_repo(repo_name)
+        transient_api.internal_create_list_repo(repo_name)
 
         transient_api.push(repo_name, ctx1)
         transient_api.push(repo_name, ctx2)
@@ -342,7 +342,7 @@ class TransientAPITestCase(TestCase):
 
         repo_name = rand_string()
         transient_api = TransientAPI()
-        transient_api.internal_create_repo(repo_name)
+        transient_api.internal_create_list_repo(repo_name)
 
         transient_api.push(repo_name, ctx1)
         transient_api.push(repo_name, ctx2)
@@ -372,7 +372,7 @@ class TransientAPITestCase(TestCase):
 
         repo_name = rand_string()
         transient_api = TransientAPI()
-        transient_api.internal_create_repo(repo_name)
+        transient_api.internal_create_list_repo(repo_name)
 
         transient_api.push(repo_name, ctx1)
         transient_api.push(repo_name, ctx2)
