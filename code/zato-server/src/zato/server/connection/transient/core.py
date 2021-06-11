@@ -52,72 +52,72 @@ class TransientAPI:
     """ Manages named transient repositories.
     """
     def __init__(self):
-        self.repo = {} # str -> TransientRepository objects
+        self.repo = {} # str -> TransientListRepo objects
         self.lock = RLock()
 
 # ################################################################################################################################
 
-    def internal_create_repo(self, repo_name, max_size=1000, page_size=50):
-        # type: (str) -> TransientRepository
-        repo = TransientRepository(repo_name, max_size, page_size)
+    def internal_create_list_repo(self, repo_name, max_size=1000, page_size=50):
+        # type: (str) -> TransientListRepo
+        repo = TransientListRepo(repo_name, max_size, page_size)
         self.repo[repo_name] = repo
         return repo
 
 # ################################################################################################################################
 
     def get(self, repo_name):
-        # type: (str) -> TransientRepository
+        # type: (str) -> TransientListRepo
         return self.repo.get(repo_name)
 
 # ################################################################################################################################
 
     def push(self, repo_name, ctx):
         # type: (str, ObjectCtx) -> None
-        repo = self.repo[repo_name] # type: TransientRepository
+        repo = self.repo[repo_name] # type: TransientListRepo
         repo.push(ctx)
 
 # ################################################################################################################################
 
     def get_object(self, repo_name, object_id):
         # type: (str, str) -> ObjectCtx
-        repo = self.repo[repo_name] # type: TransientRepository
+        repo = self.repo[repo_name] # type: TransientListRepo
         return repo.get(object_id)
 
 # ################################################################################################################################
 
     def get_list(self, repo_name, cur_page=1, page_size=50):
         # type: (str, int, int) -> None
-        repo = self.repo[repo_name] # type: TransientRepository
+        repo = self.repo[repo_name] # type: TransientListRepo
         return repo.get_list(cur_page, page_size)
 
 # ################################################################################################################################
 
     def delete(self, repo_name, object_id):
         # type: (str) -> None
-        repo = self.repo[repo_name] # type: TransientRepository
+        repo = self.repo[repo_name] # type: TransientListRepo
         return repo.delete(object_id)
 
 # ################################################################################################################################
 
     def clear(self, repo_name):
         # type: (str) -> None
-        repo = self.repo[repo_name] # type: TransientRepository
+        repo = self.repo[repo_name] # type: TransientListRepo
         repo.clear()
 
 # ################################################################################################################################
 
     def get_size(self, repo_name):
         # type: (str) -> int
-        repo = self.repo[repo_name] # type: TransientRepository
+        repo = self.repo[repo_name] # type: TransientListRepo
         return repo.get_size()
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TransientRepository:
+class TransientListRepo:
     """ Stores arbitrary objects, as a list, in RAM only, without backing persistent storage.
     """
-    def __init__(self, name='<TransientRepository-name>', max_size=1000, page_size=50):
+    def __init__(self, name='<TransientListRepo-name>', max_size=1000, page_size=50):
         # type: (str, int, int) -> None
 
         # Our user-visible name
