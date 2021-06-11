@@ -57,38 +57,59 @@ class TransientAPI:
 
 # ################################################################################################################################
 
-    def get(self, name):
+    def internal_create_repo(self, repo_name, max_size=1000, page_size=50):
         # type: (str) -> TransientRepository
-        pass
+        repo = TransientRepository(repo_name, max_size, page_size)
+        self.repo[repo_name] = repo
+        return repo
 
 # ################################################################################################################################
 
-    def push(self, name):
-        pass
+    def get(self, repo_name):
+        # type: (str) -> TransientRepository
+        return self.repo.get(repo_name)
+
+# ################################################################################################################################
+
+    def push(self, repo_name, ctx):
+        # type: (str, ObjectCtx) -> None
+        repo = self.repo[repo_name] # type: TransientRepository
+        repo.push(ctx)
 
 # ################################################################################################################################
 
     def get_object(self, repo_name, object_id):
-        # type: (str, str) -> None
-        pass
+        # type: (str, str) -> ObjectCtx
+        repo = self.repo[repo_name] # type: TransientRepository
+        return repo.get(object_id)
 
 # ################################################################################################################################
 
-    def get_list(self, name):
-        # type: (str) -> None
-        pass
+    def get_list(self, repo_name, cur_page=1, page_size=50):
+        # type: (str, int, int) -> None
+        repo = self.repo[repo_name] # type: TransientRepository
+        return repo.get_list(cur_page, page_size)
 
 # ################################################################################################################################
 
-    def delete(self, name, object_id):
+    def delete(self, repo_name, object_id):
         # type: (str) -> None
-        pass
+        repo = self.repo[repo_name] # type: TransientRepository
+        return repo.delete(object_id)
 
 # ################################################################################################################################
 
-    def clear(self, name):
+    def clear(self, repo_name):
         # type: (str) -> None
-        pass
+        repo = self.repo[repo_name] # type: TransientRepository
+        repo.clear()
+
+# ################################################################################################################################
+
+    def get_size(self, repo_name):
+        # type: (str) -> int
+        repo = self.repo[repo_name] # type: TransientRepository
+        return repo.get_size()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -117,7 +138,7 @@ class TransientRepository:
 # ################################################################################################################################
 
     def push(self, ctx):
-        # type: (ObjectCtx)
+        # type: (ObjectCtx) -> None
         with self.lock:
 
             # Push new data ..
@@ -131,14 +152,8 @@ class TransientRepository:
 
 # ################################################################################################################################
 
-    def get_size(self):
-        with self.lock:
-            return len(self.in_ram_store)
-
-# ################################################################################################################################
-
     def get(self, object_id):
-        # type: (str) -> None
+        # type: (str) -> object
         with self.lock:
             for item in self.in_ram_store: # type: ObjectCtx
                 if item.id == object_id:
@@ -162,13 +177,20 @@ class TransientRepository:
             for item in self.in_ram_store: # type: ObjectCtx
                 if item.id == object_id:
                     self.in_ram_store.remove(item)
-                    break
+                    return item
 
 # ################################################################################################################################
 
     def clear(self):
+        # type: () -> None
         with self.lock:
             self.in_ram_store[:] = []
+
+# ################################################################################################################################
+
+    def get_size(self):
+        with self.lock:
+            return len(self.in_ram_store)
 
 # ################################################################################################################################
 # ################################################################################################################################
