@@ -45,6 +45,111 @@ class TransientCounterTestCase(TestCase):
 
 # ################################################################################################################################
 
+    def test_repo_incr(self):
+        repo_name = rand_string()
+        key_name = rand_string()
+
+        repo = TransientCounterRepo(repo_name)
+
+        value = repo.incr(key_name)
+
+        self.assertEqual(value, 1)
+
+        value = repo.incr(key_name)
+        value = repo.incr(key_name)
+        value = repo.incr(key_name)
+
+        self.assertEqual(value, 4)
+
+# ################################################################################################################################
+
+    def test_repo_incr_max_value(self):
+        repo_name = rand_string()
+        key_name = rand_string()
+        max_value = 2
+
+        repo = TransientCounterRepo(repo_name, max_value=max_value)
+
+        # By multiplying we ensure that max_value is reached ..
+        for x in range(max_value * 2):
+            value = repo.incr(key_name)
+
+        # .. yet, it will never be exceeded.
+        self.assertEqual(value, max_value)
+
+# ################################################################################################################################
+
+    def test_repo_decr(self):
+        repo_name = rand_string()
+        key_name = rand_string()
+
+        repo = TransientCounterRepo(repo_name)
+
+        repo.incr(key_name)
+        repo.incr(key_name)
+        repo.incr(key_name)
+        repo.incr(key_name)
+
+        repo.decr(key_name)
+        value = repo.decr(key_name)
+
+        self.assertEqual(value, 2)
+
+# ################################################################################################################################
+
+    def test_repo_decr_below_zero_allow_negative_true(self):
+
+        repo_name = rand_string()
+        key_name = rand_string()
+        allow_negative = True
+
+        len_items = 3
+
+        total_increases = len_items
+        total_decreases = len_items * 2
+        expected_value = total_increases - total_decreases
+
+        repo = TransientCounterRepo(repo_name, allow_negative=allow_negative)
+
+        # Add new items ..
+        for x in range(total_increases):
+            repo.incr(key_name)
+
+        # By multiplying we ensure that we decrement it below zero ..
+        for x in range(total_decreases):
+            value = repo.decr(key_name)
+
+        # .. and we confirm that the below-zero value is as expected (remember, allow_negative is True).
+        self.assertEqual(value, expected_value)
+
+# ################################################################################################################################
+
+    def test_repo_decr_below_zero_allow_negative_false(self):
+
+        repo_name = rand_string()
+        key_name = rand_string()
+        allow_negative = False
+
+        len_items = 3
+
+        total_increases = len_items
+        total_decreases = len_items * 2
+
+        repo = TransientCounterRepo(repo_name, allow_negative=allow_negative)
+
+        # Add new items ..
+        for x in range(total_increases):
+            repo.incr(key_name)
+
+        # By multiplying we ensure that we decrement it below zero ..
+        for x in range(total_decreases):
+            value = repo.decr(key_name)
+
+        # .. and we confirm that the value is zero (remember, allow_negative is True).
+        self.assertEqual(value, 0)
+
+# ################################################################################################################################
+
 if __name__ == '__main__':
     main()
 
