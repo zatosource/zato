@@ -7,8 +7,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from logging import getLogger
 import sys
+from logging import getLogger
+from operator import add as op_add, gt as op_gt, lt as op_lt, sub as op_sub
 
 # gevent
 from gevent.lock import RLock
@@ -44,47 +45,63 @@ class TransientCounterRepo(BaseRepo):
 
 # ################################################################################################################################
 
-    def _incr(self, key, incr_by=1):
-        # type: (str, int) -> int
+    def _change_value(self, value_op, cmp_op, value_limit, key, change_by, value_limit_condition=None):
+        # type: (object, object, int, str, int, object) -> int
 
         # Get current value or default to 0, if nothing is found ..
         current_value = self.in_ram_store.get(key, 0)
 
         # .. get the new value ..
-        new_value = current_value + incr_by
+        new_value = value_op(current_value, change_by)
 
-        # .. make sure we do not exceeded the maximum value allowed ..
-        if new_value > self.max_value:
-            new_value = self.max_value
+        # .. does the new value exceed the limit? ..
+        is_limit_exceeded = cmp_op(new_value, value_limit)
+
+        # .. we may have a condition function that tells us whether to allow the new value beyond the limit ..
+        if value_limit_condition and value_limit_condition():
+
+            # Do nothing because we already have the new value
+            # and we merely confirmed that it should not be changed
+            # due to its reaching a limit.
+            pass
+
+        # .. otherwise, without such a function, we do not allow it ..
+        else:
+            if is_limit_exceeded:
+                new_value = value_limit
 
         # .. finally, store the new value in RAM.
         self.in_ram_store[key] = new_value
 
-# ################################################################################################################################
-
-    def _get(self, object_id):
-        # type: (str) -> object
-        for item in self.in_ram_store: # type: ObjectCtx
-            if item.id == object_id:
-                return item
-        else:
-            raise KeyError('Object not found `{}`'.format(object_id))
+        return new_value
 
 # ################################################################################################################################
 
-    def _get_list(self, cur_page=1, page_size=50):
-        # type: (int, int) -> dict
-        search_results = SearchResults.from_list(self.in_ram_store, cur_page, page_size)
-        return search_results.to_dict()
+    def _is_negative_allowed(self):
+        # type: (int) -> bool
+        return self.allow_negative
 
 # ################################################################################################################################
 
-    def _delete(self, object_id):
-        # type: (str) -> object
-        for item in self.in_ram_store: # type: ObjectCtx
-            if item.id == object_id:
-                self.in_ram_store.remove(item)
-                return item
+    def _incr(self, key, change_by=1):
+        # type: (str, int) -> int
+
+        value_op = op_add
+        cmp_op   = op_gt
+        value_limit = self.max_value
+
+        return self._change_value(value_op, cmp_op, value_limit, key, change_by)
+
+# ################################################################################################################################
+
+    def _decr(self, key, change_by=1):
+        # type: (str, int) -> int
+
+        value_op = op_sub
+        cmp_op   = op_lt
+        value_limit = 0
+
+        return self._change_value(value_op, cmp_op, value_limit, key, change_by, self._is_negative_allowed)
 
 # ################################################################################################################################
 
