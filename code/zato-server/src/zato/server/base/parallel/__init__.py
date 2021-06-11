@@ -33,7 +33,7 @@ from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
 from zato.common.api import DATA_FORMAT, default_internal_modules, KVDB, RATE_LIMIT, SERVER_STARTUP, SERVER_UP_STATUS, \
-     ZATO_ODB_POOL_NAME
+     Transient, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.audit_log import AuditLog
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
@@ -56,6 +56,7 @@ from zato.server.config import ConfigStore
 from zato.server.connection.stats import ServiceStatsClient
 from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
 from zato.server.connection.server.rpc.config import ODBConfigSource
+from zato.server.connection.transient.core import TransientAPI
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
 from zato.server.base.parallel.subprocess_.api import CurrentState as SubprocessCurrentState, \
@@ -196,6 +197,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.json_parser = SIMDJSONParser()
         self.work_dir = 'ParallelServer-work_dir'
         self.events_dir = 'ParallelServer-events_dir'
+
+        # Transient API for in-RAM messages
+        self.transient_api = TransientAPI()
+
+        # Slow responses
+        self.slow_responses = self.transient_api.internal_create_list_repo(Transient.SlowResponsesName)
+        self.usage_samples = self.transient_api.internal_create_list_repo(Transient.UsageSamplesName)
 
         self.stats_client = ServiceStatsClient()
         self._stats_host = '<ParallelServer-_stats_host>'
