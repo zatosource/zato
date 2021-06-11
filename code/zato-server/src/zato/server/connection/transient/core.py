@@ -15,17 +15,19 @@ from gevent.lock import RLock
 
 # Zato
 from zato.common.ext.dataclasses import dataclass
-from zato.common.util.search import SearchResults
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.server.connection.transient.list_ import TransientListRepo
+
+    TransientListRepo = TransientListRepo
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger('zato')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-utcnow = datetime.utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -48,20 +50,128 @@ class ObjectCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class BaseRepo:
+
+    def __init__(self, name):
+        # type: (str) -> None
+
+        # Our user-visible name
+        self.name = name
+
+        # Used during modifications to the repository
+        self.lock = RLock()
+
+# ################################################################################################################################
+
+    def _append(self, *args, **kwargs):
+        # type: (object, object) -> ObjectCtx
+        raise NotImplementedError('BaseRepo._append')
+
+    def _get(self, *args, **kwargs):
+        # type: (object, object) -> ObjectCtx
+        raise NotImplementedError('BaseRepo._get')
+
+    def _get_list(self, *args, **kwargs):
+        # type: (object, object) -> list[ObjectCtx]
+        raise NotImplementedError('BaseRepo._get_list')
+
+    def _delete(self, *args, **kwargs):
+        # type: (object, object) -> list[ObjectCtx]
+        raise NotImplementedError('BaseRepo._delete')
+
+    def _remove_all(self, *args, **kwargs):
+        # type: (object, object) -> None
+        raise NotImplementedError('BaseRepo._remove_all')
+
+    def _clear(self, *args, **kwargs):
+        # type: (object, object) -> None
+        raise NotImplementedError('BaseRepo._clear')
+
+    def _get_size(self, *args, **kwargs):
+        # type: (object, object) -> int
+        raise NotImplementedError('BaseRepo._get_size')
+
+    def _incr(self, *args, **kwargs):
+        # type: (object, object) -> int
+        raise NotImplementedError('BaseRepo._incr')
+
+    def _decr(self, *args, **kwargs):
+        # type: (object, object) -> int
+        raise NotImplementedError('BaseRepo._decr')
+
+# ################################################################################################################################
+
+    def append(self, *args, **kwargs):
+        with self.lock:
+            return self._append(*args, **kwargs)
+
+# ################################################################################################################################
+
+    def get(self, *args, **kwargs):
+        with self.lock:
+            return self._get(*args, **kwargs)
+
+# ################################################################################################################################
+
+    def get_list(self, *args, **kwargs):
+        with self.lock:
+            return self._get_list(*args, **kwargs)
+
+# ################################################################################################################################
+
+    def delete(self, *args, **kwargs):
+        with self.lock:
+            return self._delete(*args, **kwargs)
+
+# ################################################################################################################################
+
+    def remove_all(self, *args, **kwargs):
+        with self.lock:
+            return self._remove_all(*args, **kwargs)
+
+# ################################################################################################################################
+
+    def clear(self, *args, **kwargs):
+        with self.lock:
+            return self._clear(*args, **kwargs)
+
+# ################################################################################################################################
+
+    def get_size(self, *args, **kwargs):
+        with self.lock:
+            return self._get_size(*args, **kwargs)
+
+# ################################################################################################################################
+
+    def incr(self, *args, **kwargs):
+        with self.lock:
+            return self._incr(*args, **kwargs)
+
+# ################################################################################################################################
+
+    def decr(self, *args, **kwargs):
+        with self.lock:
+            return self._decr(*args, **kwargs)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class TransientAPI:
     """ Manages named transient repositories.
     """
     def __init__(self):
-        self.repo = {} # str -> TransientListRepo objects
-        self.lock = RLock()
+        self.repo = {} # Maps str -> repository objects
 
 # ################################################################################################################################
 
     def internal_create_list_repo(self, repo_name, max_size=1000, page_size=50):
         # type: (str) -> TransientListRepo
+
+        # Zato
+        from zato.server.connection.transient.list_ import TransientListRepo
+
         repo = TransientListRepo(repo_name, max_size, page_size)
-        self.repo[repo_name] = repo
-        return repo
+        return self.repo.setdefault(repo_name, repo)
 
 # ################################################################################################################################
 
@@ -71,10 +181,10 @@ class TransientAPI:
 
 # ################################################################################################################################
 
-    def push(self, repo_name, ctx):
+    def append(self, repo_name, ctx):
         # type: (str, ObjectCtx) -> None
         repo = self.repo[repo_name] # type: TransientListRepo
-        repo.push(ctx)
+        repo.append(ctx)
 
 # ################################################################################################################################
 
@@ -99,10 +209,10 @@ class TransientAPI:
 
 # ################################################################################################################################
 
-    def clear(self, repo_name):
+    def remove_all(self, repo_name):
         # type: (str) -> None
         repo = self.repo[repo_name] # type: TransientListRepo
-        repo.clear()
+        repo.remove_all()
 
 # ################################################################################################################################
 
@@ -110,87 +220,6 @@ class TransientAPI:
         # type: (str) -> int
         repo = self.repo[repo_name] # type: TransientListRepo
         return repo.get_size()
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class TransientListRepo:
-    """ Stores arbitrary objects, as a list, in RAM only, without backing persistent storage.
-    """
-    def __init__(self, name='<TransientListRepo-name>', max_size=1000, page_size=50):
-        # type: (str, int, int) -> None
-
-        # Our user-visible name
-        self.name = name
-
-        # How many objects we will keep at most
-        self.max_size = max_size
-
-        # How many objects to return at most in list responses
-        self.page_size = page_size
-
-        # In-RAM database of objects
-        self.in_ram_store = [] # type: list[ObjectCtx]
-
-        # Used to synchronise updates
-        self.lock = RLock()
-
-# ################################################################################################################################
-
-    def push(self, ctx):
-        # type: (ObjectCtx) -> None
-        with self.lock:
-
-            # Push new data ..
-            self.in_ram_store.append(ctx)
-
-            # .. and ensure our max_size is not exceeded ..
-            if len(self.in_ram_store) > self.max_size:
-
-                # .. we maintain a FIFO list, deleting the oldest entriest first.
-                del self.in_ram_store[self.max_size:]
-
-# ################################################################################################################################
-
-    def get(self, object_id):
-        # type: (str) -> object
-        with self.lock:
-            for item in self.in_ram_store: # type: ObjectCtx
-                if item.id == object_id:
-                    return item
-            else:
-                raise KeyError('Object not found `{}`'.format(object_id))
-
-# ################################################################################################################################
-
-    def get_list(self, cur_page=1, page_size=50):
-        # type: (int, int) -> dict
-        with self.lock:
-            search_results = SearchResults.from_list(self.in_ram_store, cur_page, page_size)
-            return search_results.to_dict()
-
-# ################################################################################################################################
-
-    def delete(self, object_id):
-        # type: (str) -> None
-        with self.lock:
-            for item in self.in_ram_store: # type: ObjectCtx
-                if item.id == object_id:
-                    self.in_ram_store.remove(item)
-                    return item
-
-# ################################################################################################################################
-
-    def clear(self):
-        # type: () -> None
-        with self.lock:
-            self.in_ram_store[:] = []
-
-# ################################################################################################################################
-
-    def get_size(self):
-        with self.lock:
-            return len(self.in_ram_store)
 
 # ################################################################################################################################
 # ################################################################################################################################
