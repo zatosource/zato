@@ -56,7 +56,7 @@ from zato.server.config import ConfigStore
 from zato.server.connection.stats import ServiceStatsClient
 from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
 from zato.server.connection.server.rpc.config import ODBConfigSource
-from zato.server.connection.transient.core import TransientAPI
+from zato.server.connection.transient.api import TransientAPI
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
 from zato.server.base.parallel.subprocess_.api import CurrentState as SubprocessCurrentState, \
