@@ -13,9 +13,8 @@ from logging import getLogger
 from gevent.lock import RLock
 
 # Zato
-from zato.common.ext.dataclasses import dataclass
 from zato.common.util.search import SearchResults
-from zato.server.connection.kvdb.core import BaseRepo, ObjectCtx, KVDB
+from zato.server.connection.kvdb.core import BaseRepo, ObjectCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
