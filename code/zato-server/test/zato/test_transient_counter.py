@@ -17,6 +17,12 @@ from zato.server.connection.kvdb.core import KVDB
 # ################################################################################################################################
 # ################################################################################################################################
 
+sync_threshold = 1
+sync_interval  = 1
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class TransientCounterTestCase(TestCase):
 
     def test_repo_init(self):
@@ -30,8 +36,8 @@ class TransientCounterTestCase(TestCase):
         allow_negative1 = False
         allow_negative2 = True
 
-        repo1 = CounterRepo(name1, max_value1, allow_negative1)
-        repo2 = CounterRepo(name2, max_value2, allow_negative2)
+        repo1 = CounterRepo(name1, sync_threshold, sync_interval, max_value1, allow_negative1)
+        repo2 = CounterRepo(name2, sync_threshold, sync_interval, max_value2, allow_negative2)
 
         self.assertEqual(repo1.name, name1)
         self.assertEqual(repo1.max_value, max_value1)
@@ -49,7 +55,7 @@ class TransientCounterTestCase(TestCase):
         repo_name = rand_string()
         key_name = rand_string()
 
-        repo = CounterRepo(repo_name)
+        repo = CounterRepo(repo_name, sync_threshold, sync_interval)
 
         value = repo.incr(key_name)
 
@@ -68,7 +74,7 @@ class TransientCounterTestCase(TestCase):
         key_name = rand_string()
         max_value = 2
 
-        repo = CounterRepo(repo_name, max_value=max_value)
+        repo = CounterRepo(repo_name, sync_threshold, sync_interval, max_value=max_value)
 
         # By multiplying we ensure that max_value is reached ..
         for x in range(max_value * 2):
@@ -83,7 +89,7 @@ class TransientCounterTestCase(TestCase):
         repo_name = rand_string()
         key_name = rand_string()
 
-        repo = CounterRepo(repo_name)
+        repo = CounterRepo(repo_name, sync_threshold, sync_interval)
 
         repo.incr(key_name)
         repo.incr(key_name)
@@ -109,7 +115,7 @@ class TransientCounterTestCase(TestCase):
         total_decreases = len_items * 2
         expected_value = total_increases - total_decreases
 
-        repo = CounterRepo(repo_name, allow_negative=allow_negative)
+        repo = CounterRepo(repo_name, sync_threshold, sync_interval, allow_negative=allow_negative)
 
         # Add new items ..
         for x in range(total_increases):
@@ -135,7 +141,7 @@ class TransientCounterTestCase(TestCase):
         total_increases = len_items
         total_decreases = len_items * 2
 
-        repo = CounterRepo(repo_name, allow_negative=allow_negative)
+        repo = CounterRepo(repo_name, sync_threshold, sync_interval, allow_negative=allow_negative)
 
         # Add new items ..
         for x in range(total_increases):
