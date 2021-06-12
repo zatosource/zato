@@ -11,8 +11,8 @@ from unittest import main, TestCase
 
 # Zato
 from zato.common.test import rand_int, rand_string
-from zato.server.connection.transient.api import ObjectCtx, TransientListRepo
-from zato.server.connection.transient.core import TransientAPI
+from zato.server.connection.kvdb.api import ObjectCtx, ListRepo
+from zato.server.connection.kvdb.core import KVDB
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -24,7 +24,7 @@ class TransientRepositoryTestCase(TestCase):
         name = rand_string()
         max_size = rand_int()
 
-        repo = TransientListRepo(name, max_size)
+        repo = ListRepo(name, max_size)
 
         self.assertEqual(repo.name, name)
         self.assertEqual(repo.max_size, max_size)
@@ -36,7 +36,7 @@ class TransientRepositoryTestCase(TestCase):
         name = rand_string()
         max_size = 2
 
-        repo = TransientListRepo(name, max_size)
+        repo = ListRepo(name, max_size)
 
         # Push more object than the max size allows ..
         for x in range(max_size + 1):
@@ -62,7 +62,7 @@ class TransientRepositoryTestCase(TestCase):
         ctx3 = ObjectCtx()
         ctx3.id = id3
 
-        repo = TransientListRepo()
+        repo = ListRepo()
 
         repo.append(ctx1)
         repo.append(ctx2)
@@ -84,7 +84,7 @@ class TransientRepositoryTestCase(TestCase):
         ctx2 = ObjectCtx()
         ctx2.id = id2
 
-        repo = TransientListRepo()
+        repo = ListRepo()
 
         repo.append(ctx1)
         repo.append(ctx2)
@@ -112,7 +112,7 @@ class TransientRepositoryTestCase(TestCase):
         ctx2 = ObjectCtx()
         ctx2.id = id2
 
-        repo = TransientListRepo()
+        repo = ListRepo()
 
         repo.append(ctx1)
         repo.append(ctx2)
@@ -167,7 +167,7 @@ class TransientRepositoryTestCase(TestCase):
         ctx11.id = id11
         ctx12.id = id12
 
-        repo = TransientListRepo()
+        repo = ListRepo()
 
         repo.append(ctx1)
         repo.append(ctx2)

@@ -11,13 +11,8 @@ import sys
 from logging import getLogger
 from operator import add as op_add, gt as op_gt, lt as op_lt, sub as op_sub
 
-# gevent
-from gevent.lock import RLock
-
 # Zato
-from zato.common.ext.dataclasses import dataclass
-from zato.common.util.search import SearchResults
-from zato.server.connection.transient.core import BaseRepo, ObjectCtx, TransientAPI
+from zato.server.connection.kvdb.core import BaseRepo
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,7 +22,7 @@ logger = getLogger('zato')
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TransientCounterRepo(BaseRepo):
+class CounterRepo(BaseRepo):
     """ Stores integer counters for string labels.
     """
     def __init__(self, name='<CounterRepo-name>', max_value=sys.maxsize, allow_negative=True):

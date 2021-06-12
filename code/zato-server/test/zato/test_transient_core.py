@@ -11,8 +11,8 @@ from unittest import main, TestCase
 
 # Zato
 from zato.common.test import rand_int, rand_string
-from zato.server.connection.transient.api import ObjectCtx, TransientListRepo
-from zato.server.connection.transient.core import TransientAPI
+from zato.server.connection.kvdb.api import ObjectCtx, ListRepo
+from zato.server.connection.kvdb.core import KVDB
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -24,7 +24,7 @@ class TransientListAPITestCase(TestCase):
         repo_name1 = rand_string()
         repo_name2 = rand_string()
 
-        transient_api = TransientAPI()
+        transient_api = KVDB()
 
         transient_api.internal_create_list_repo(repo_name1)
         transient_api.internal_create_list_repo(repo_name2)
@@ -32,8 +32,8 @@ class TransientListAPITestCase(TestCase):
         repo1 = transient_api.get(repo_name1)
         repo2 = transient_api.get(repo_name2)
 
-        self.assertIsInstance(repo1, TransientListRepo)
-        self.assertIsInstance(repo2, TransientListRepo)
+        self.assertIsInstance(repo1, ListRepo)
+        self.assertIsInstance(repo2, ListRepo)
 
         self.assertIsNot(repo1, repo2)
 
@@ -43,12 +43,12 @@ class TransientListAPITestCase(TestCase):
 
         repo_name = rand_string()
 
-        transient_api = TransientAPI()
+        transient_api = KVDB()
         transient_api.internal_create_list_repo(repo_name)
 
         repo = transient_api.get(repo_name)
 
-        self.assertIsInstance(repo, TransientListRepo)
+        self.assertIsInstance(repo, ListRepo)
 
 # ################################################################################################################################
 
@@ -60,7 +60,7 @@ class TransientListAPITestCase(TestCase):
         ctx = ObjectCtx()
         ctx.id = object_id
 
-        transient_api = TransientAPI()
+        transient_api = KVDB()
         transient_api.internal_create_list_repo(repo_name)
 
         transient_api.append(repo_name, ctx)
@@ -116,7 +116,7 @@ class TransientListAPITestCase(TestCase):
         ctx12.id = id12
 
         repo_name = rand_string()
-        transient_api = TransientAPI()
+        transient_api = KVDB()
         transient_api.internal_create_list_repo(repo_name)
 
         transient_api.append(repo_name, ctx1)
@@ -160,7 +160,7 @@ class TransientListAPITestCase(TestCase):
         ctx2.id = id2
 
         repo_name = rand_string()
-        transient_api = TransientAPI()
+        transient_api = KVDB()
         transient_api.internal_create_list_repo(repo_name)
 
         transient_api.append(repo_name, ctx1)
@@ -190,7 +190,7 @@ class TransientListAPITestCase(TestCase):
         ctx2.id = id2
 
         repo_name = rand_string()
-        transient_api = TransientAPI()
+        transient_api = KVDB()
         transient_api.internal_create_list_repo(repo_name)
 
         transient_api.append(repo_name, ctx1)
