@@ -712,8 +712,7 @@ class Service(object):
                         self.wsgi_environ['zato.http.remote_addr'])
 
                 if service.server.component_enabled.stats:
-                    #ZZZ Add service usage directly to servers instead of using Redis
-                    pass
+                    service.server.current_usage.incr(service.name)
 
                 service.invocation_time = _utcnow()
 

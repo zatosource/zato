@@ -25,7 +25,7 @@ logger = getLogger('zato')
 class CounterRepo(BaseRepo):
     """ Stores integer counters for string labels.
     """
-    def __init__(self, name, sync_threshold, sync_interval, max_value=sys.maxsize, allow_negative=True):
+    def __init__(self, name, sync_threshold=120_000, sync_interval=120_000, max_value=sys.maxsize, allow_negative=True):
         # type: (str, int, int, int, int) -> None
         super().__init__(name)
 
@@ -97,6 +97,13 @@ class CounterRepo(BaseRepo):
         value_limit = 0
 
         return self._change_value(value_op, cmp_op, value_limit, key, change_by, self._is_negative_allowed)
+
+
+# ################################################################################################################################
+
+    def _get(self, key, default=0):
+        # type: (str, int) -> int
+        return self.in_ram_store.get(key, default)
 
 # ################################################################################################################################
 
