@@ -7,11 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from datetime import datetime
 from logging import getLogger
-
-# gevent
-from gevent.lock import RLock
 
 # orjson
 from orjson import dumps as json_dumps
@@ -106,14 +102,6 @@ class BaseRepo(InRAMStore):
     def _decr(self, *args, **kwargs):
         # type: (object, object) -> int
         raise NotImplementedError('BaseRepo._decr')
-
-    def _loads(self, *args, **kwargs):
-        # type: (object, object) -> int
-        raise NotImplementedError('BaseRepo._loads')
-
-    def _dumps(self, *args, **kwargs):
-        # type: (object, object) -> int
-        raise NotImplementedError('BaseRepo._dumps')
 
 # ################################################################################################################################
 
