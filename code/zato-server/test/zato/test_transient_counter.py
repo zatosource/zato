@@ -11,8 +11,7 @@ from unittest import main, TestCase
 
 # Zato
 from zato.common.test import rand_int, rand_string
-from zato.server.connection.kvdb.api import ObjectCtx, CounterRepo
-from zato.server.connection.kvdb.core import KVDB
+from zato.server.connection.kvdb.api import CounterRepo
 
 # ################################################################################################################################
 # ################################################################################################################################

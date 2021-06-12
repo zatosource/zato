@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main, TestCase
 
 # Zato
-from zato.common.test import rand_int, rand_string
+from zato.common.test import rand_string
 from zato.server.connection.kvdb.api import ObjectCtx, ListRepo
 from zato.server.connection.kvdb.core import KVDB
 
