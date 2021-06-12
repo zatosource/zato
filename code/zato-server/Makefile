@@ -6,9 +6,9 @@ PY_DIR=$(CURDIR)/../bin
 
 run-tests:
 	echo "Running unit-tests in zato-server"
-	$(PY_DIR)/py $(CURDIR)/test/zato/file_transfer/test_*.py
-	$(PY_DIR)/nosetests $(CURDIR)/test/zato/pattern/test_*.py -s
-	$(PY_DIR)/nosetests $(CURDIR)/test/zato/server_rpc/test_*.py -s
+	#$(PY_DIR)/py $(CURDIR)/test/zato/file_transfer/test_*.py
+	#$(PY_DIR)/nosetests $(CURDIR)/test/zato/pattern/test_*.py -s
+	#$(PY_DIR)/nosetests $(CURDIR)/test/zato/server_rpc/test_*.py -s
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/test_transient*.py -s
 
 

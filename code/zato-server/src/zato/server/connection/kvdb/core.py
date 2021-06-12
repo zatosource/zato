@@ -20,9 +20,9 @@ from zato.common.ext.dataclasses import dataclass
 # ################################################################################################################################
 
 if 0:
-    from zato.server.connection.transient.list_ import TransientListRepo
+    from zato.server.connection.kvdb.list_ import ListRepo
 
-    TransientListRepo = TransientListRepo
+    ListRepo = ListRepo
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -156,8 +156,8 @@ class BaseRepo:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TransientAPI:
-    """ Manages named transient repositories.
+class KVDB:
+    """ Manages KVDB repositories.
     """
     def __init__(self):
         self.repo = {} # Maps str -> repository objects
@@ -168,9 +168,9 @@ class TransientAPI:
         # type: (str) -> TransientListRepo
 
         # Zato
-        from zato.server.connection.transient.list_ import TransientListRepo
+        from zato.server.connection.kvdb.list_ import ListRepo
 
-        repo = TransientListRepo(repo_name, max_size, page_size)
+        repo = ListRepo(repo_name, max_size, page_size)
         return self.repo.setdefault(repo_name, repo)
 
 # ################################################################################################################################

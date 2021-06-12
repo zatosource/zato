@@ -18,7 +18,7 @@ from simdjson import Parser as SIMDJSONParser
 from zato.common.events.common import Action
 from zato.common.util.tcp import ZatoStreamServer
 from zato.server.connection.connector.subprocess_.base import BaseConnectionContainer
-from zato.server.connection.connector.subprocess_.impl.events.database import EventsDatabase
+from zato.server.connection.connector.subprocess_.impl.events.database import EventsDatabase, OpCode
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -93,15 +93,15 @@ class EventsConnectionContainer(BaseConnectionContainer):
 
 # ################################################################################################################################
 
-    def _on_event_push(self, data, address_str):
-        # type: (str, str) -> str
+    def _on_event_push(self, data, address_str, _opcode=OpCode.Push):
+        # type: (str, str, str) -> str
 
         # We received JSON bytes so we now need to load a Python object out of it ..
         data = self._json_parser.parse(data)
         data = data.as_dict() # type: dict
 
         # .. now, we can push it to the database.
-        self.events_db.push(data)
+        self.events_db.modify_state(_opcode, data)
 
 # ################################################################################################################################
 

@@ -22,6 +22,7 @@ import pandas as pd
 
 # Zato
 from zato.common.ext.dataclasses import dataclass
+from zato.common.in_ram import InRAMStore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,6 +38,12 @@ if 0:
 # ################################################################################################################################
 
 utcnow = datetime.utcnow
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class OpCode:
+    Push = 'EventsDBPush'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -155,10 +162,11 @@ class Event:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class EventsDatabase:
+class EventsDatabase(InRAMStore):
 
     def __init__(self, logger, fs_data_path, sync_threshold, sync_interval):
         # type: (Logger, int, int) -> None
+        super().__init__(sync_threshold, sync_interval)
 
         # Our self.logger object
         self.logger = logger
@@ -166,58 +174,17 @@ class EventsDatabase:
         # Where to keep persistent data
         self.fs_data_path = fs_data_path
 
-        # Sync to storage once in that many events ..
-        self.sync_threshold = sync_threshold
-
-        # .. or once in that many milliseconds
-        self.sync_interval = sync_interval
-
         # In-RAM database of events, saved to disk periodically in background
         self.in_ram_store = [] # type: list[Event]
 
-        # Total events received since startup
-        self.total_events = 0
-
-        # How many events we have received since the last synchronisation with persistent storage
-        self.num_events_since_sync = 0
-
-        # Reset each time we synchronise in-RAM state with the persistent storage
-        self.last_sync_time = utcnow()
-
-        # An update lock used while modifying the in-RAM database
-        self.update_lock = RLock()
-
-# ################################################################################################################################
-
-    def should_sync(self):
-        # type: () -> bool
-        sync_by_threshold = self.num_events_since_sync % self.sync_threshold == 0
-        sync_by_time = (utcnow() - self.last_sync_time).total_seconds() * 1000 >= self.sync_interval
-
-        return sync_by_threshold or sync_by_time
+        # Configure our opcodes (there is one)
+        self.opcode_to_func[OpCode.Push] = self.push
 
 # ################################################################################################################################
 
     def push(self, data):
         # type: (dict) -> None
-        with self.update_lock:
-
-            # Store in RAM ..
-            self.in_ram_store.append(data)
-
-            # .. update counters ..
-            self.num_events_since_sync += 1
-            self.total_events += 1
-
-            # .. check if we should sync RAM with persistent storage ..
-            if self.should_sync():
-
-                # .. save in persistent storage ..
-                self.sync_storage()
-
-                # .. update metadata.
-                self.num_events_since_sync = 0
-                self.last_sync_time = utcnow()
+        self.in_ram_store.append(data)
 
 # ################################################################################################################################
 

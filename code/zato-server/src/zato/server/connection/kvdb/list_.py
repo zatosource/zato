@@ -15,7 +15,7 @@ from gevent.lock import RLock
 # Zato
 from zato.common.ext.dataclasses import dataclass
 from zato.common.util.search import SearchResults
-from zato.server.connection.transient.core import BaseRepo, ObjectCtx, TransientAPI
+from zato.server.connection.kvdb.core import BaseRepo, ObjectCtx, KVDB
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -25,7 +25,7 @@ logger = getLogger('zato')
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TransientListRepo(BaseRepo):
+class ListRepo(BaseRepo):
     """ Stores arbitrary objects, as a list, in RAM only, without backing persistent storage.
     """
     def __init__(self, name='<TransientListRepo-name>', max_size=1000, page_size=50):
