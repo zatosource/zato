@@ -14,6 +14,7 @@ from logging import getLogger
 from gevent.lock import RLock
 
 # Zato
+from zato.common.in_ram import InRAMStore
 from zato.common.ext.dataclasses import dataclass
 
 # ################################################################################################################################
@@ -50,16 +51,15 @@ class ObjectCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class BaseRepo:
+class BaseRepo(InRAMStore):
 
     def __init__(self, name):
         # type: (str) -> None
 
+        super().__init__()
+
         # Our user-visible name
         self.name = name
-
-        # Used during modifications to the repository
-        self.lock = RLock()
 
 # ################################################################################################################################
 
@@ -102,55 +102,55 @@ class BaseRepo:
 # ################################################################################################################################
 
     def append(self, *args, **kwargs):
-        with self.lock:
+        with self.update_lock:
             return self._append(*args, **kwargs)
 
 # ################################################################################################################################
 
     def get(self, *args, **kwargs):
-        with self.lock:
+        with self.update_lock:
             return self._get(*args, **kwargs)
 
 # ################################################################################################################################
 
     def get_list(self, *args, **kwargs):
-        with self.lock:
+        with self.update_lock:
             return self._get_list(*args, **kwargs)
 
 # ################################################################################################################################
 
     def delete(self, *args, **kwargs):
-        with self.lock:
+        with self.update_lock:
             return self._delete(*args, **kwargs)
 
 # ################################################################################################################################
 
     def remove_all(self, *args, **kwargs):
-        with self.lock:
+        with self.update_lock:
             return self._remove_all(*args, **kwargs)
 
 # ################################################################################################################################
 
     def clear(self, *args, **kwargs):
-        with self.lock:
+        with self.update_lock:
             return self._clear(*args, **kwargs)
 
 # ################################################################################################################################
 
     def get_size(self, *args, **kwargs):
-        with self.lock:
+        with self.update_lock:
             return self._get_size(*args, **kwargs)
 
 # ################################################################################################################################
 
     def incr(self, *args, **kwargs):
-        with self.lock:
+        with self.update_lock:
             return self._incr(*args, **kwargs)
 
 # ################################################################################################################################
 
     def decr(self, *args, **kwargs):
-        with self.lock:
+        with self.update_lock:
             return self._decr(*args, **kwargs)
 
 # ################################################################################################################################
