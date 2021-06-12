@@ -197,13 +197,18 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.json_parser = SIMDJSONParser()
         self.work_dir = 'ParallelServer-work_dir'
         self.events_dir = 'ParallelServer-events_dir'
+        self.kvdb_dir = 'ParallelServer-kvdb_dir'
+        self.slow_responses_path = 'ParallelServer-slow_responses_path'
+        self.usage_samples_path = 'ParallelServer-usage_samples_path'
+        self.current_usage_path = 'ParallelServer-current_usage_path'
 
         # Transient API for in-RAM messages
         self.zato_kvdb = ZatoKVDB()
 
-        # Slow responses
+        # In-RAM statistics
         self.slow_responses = self.zato_kvdb.internal_create_list_repo(CommonZatoKVDB.SlowResponsesName)
         self.usage_samples = self.zato_kvdb.internal_create_list_repo(CommonZatoKVDB.UsageSamplesName)
+        self.current_usage = self.zato_kvdb.internal_create_counter_repo(CommonZatoKVDB.CurrentUsageName)
 
         self.stats_client = ServiceStatsClient()
         self._stats_host = '<ParallelServer-_stats_host>'
@@ -534,9 +539,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if not zato_deployment_key:
             zato_deployment_key = '{}.{}'.format(datetime.utcnow().isoformat(), uuid4().hex)
 
+        # Each time a server starts a new deployment key is generated to uniquely
+        # identify this particular time the server is running.
         self.deployment_key = zato_deployment_key
 
+        # This is to handle SIGURG signals.
         register_diag_handlers()
+
+        # Configure paths and load data pertaining to Zato KVDB
+        self.set_up_zato_kvdb()
 
         # Find out if we are on a platform that can handle our posix_ipc
         _skip_platform = self.fs_server_config.misc.get('posix_ipc_skip_platform')
@@ -1090,6 +1101,35 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def set_up_zato_kvdb(self):
+
+        self.kvdb_dir = os.path.join(self.work_dir, 'kvdb', 'v10')
+
+        if not os.path.exists(self.kvdb_dir):
+            os.makedirs(self.kvdb_dir, exist_ok=True)
+
+        self.slow_responses_path = os.path.join(self.kvdb_dir, CommonZatoKVDB.SlowResponsesPath)
+        self.usage_samples_path = os.path.join(self.kvdb_dir, CommonZatoKVDB.UsageSamplesPath)
+        self.current_usage_path = os.path.join(self.kvdb_dir, CommonZatoKVDB.CurrentUsagePath)
+
+        self.load_zato_kvdb_data()
+
+# ################################################################################################################################
+
+    def load_zato_kvdb_data(self):
+        self.slow_responses.load_path(self.slow_responses_path)
+        self.usage_samples.load_path(self.usage_samples_path)
+        self.current_usage.load_path(self.current_usage_path)
+
+# ################################################################################################################################
+
+    def save_zato_kvdb_data(self):
+        self.slow_responses.save_path(self.slow_responses_path)
+        self.usage_samples.save_path(self.usage_samples_path)
+        self.current_usage.save_path(self.current_usage_path)
+
+# ################################################################################################################################
+
     @staticmethod
     def post_fork(arbiter, worker):
         """ A Gunicorn hook which initializes the worker.
@@ -1136,10 +1176,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    @staticmethod
-    def cleanup_worker(worker):
-        worker.app.cleanup_on_stop()
-
     def cleanup_on_stop(self):
         """ A shutdown cleanup procedure.
         """
@@ -1161,6 +1197,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Per-worker cleanup
         else:
+
+            # Store Zato KVDB data on disk
+            self.save_zato_kvdb_data()
 
             # Set the flag to True only the first time we are called, otherwise simply return
             if self._is_process_closing:
