@@ -671,6 +671,8 @@ class Service(object):
         _pattern_call_channels=(CHANNEL.FANOUT_CALL, CHANNEL.PARALLEL_EXEC_CALL),
         *args, **kwargs):
 
+        zxC":zx' ckkz c GetServiceStats
+
         wsgi_environ = kwargs.get('wsgi_environ', {})
         payload = wsgi_environ.get('zato.request.payload')
         channel_item = wsgi_environ.get('zato.channel_item', {})
@@ -813,9 +815,20 @@ class Service(object):
             response.status_code = BAD_REQUEST
 
         if kwargs.get('skip_response_elem') and hasattr(response, 'keys'):
+
             keys = list(iterkeys(response))
             response_elem = keys[0]
-            return response[response_elem]
+
+            # This covers responses that have only one top-level element
+            # and that element's name is 'response' or, e.g. 'zato_amqp_...'
+            if len(keys) == 1 and (response_elem == 'response' or response_elem.startswith('zato')):
+                return response[response_elem]
+
+            # .. otherwise, this could be a dictionary of elements other than the above
+            # so we just return the dict as it is.
+            else:
+                return response
+
         else:
             return response
 
