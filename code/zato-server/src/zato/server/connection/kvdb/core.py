@@ -24,8 +24,8 @@ from zato.common.ext.dataclasses import dataclass
 # ################################################################################################################################
 
 if 0:
-    from zato.server.connection.kvdb.int_ import NumberRepo
     from zato.server.connection.kvdb.list_ import ListRepo
+    from zato.server.connection.kvdb.number import NumberRepo
 
     NumberRepo = NumberRepo
     ListRepo = ListRepo
