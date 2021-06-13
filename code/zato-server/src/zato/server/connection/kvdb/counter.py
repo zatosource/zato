@@ -8,16 +8,31 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import sys
+from datetime import datetime
 from logging import getLogger
 from operator import add as op_add, gt as op_gt, lt as op_lt, sub as op_sub
 
 # Zato
+from zato.common.typing_ import dataclass
 from zato.server.connection.kvdb.core import BaseRepo
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger('zato')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+utcnow = datetime.utcnow
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass
+class CounterData:
+    value: int
+    timestamp: datetime
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,13 +59,13 @@ class CounterRepo(BaseRepo):
         # type: (object, object, int, str, int, object) -> int
 
         # Get current value or default to 0, if nothing is found ..
-        current_value = self.in_ram_store.get(key, 0)
+        current_data = self.in_ram_store.get(key, CounterData(0, utcnow())) # type: CounterData
 
         # .. get the new value ..
-        new_value = value_op(current_value, change_by)
+        current_data.value = value_op(current_data.value, change_by)
 
         # .. does the new value exceed the limit? ..
-        is_limit_exceeded = cmp_op(new_value, value_limit)
+        is_limit_exceeded = cmp_op(current_data.value, value_limit)
 
         # .. we may have a condition function that tells us whether to allow the new value beyond the limit ..
         if value_limit_condition and value_limit_condition():
@@ -63,12 +78,12 @@ class CounterRepo(BaseRepo):
         # .. otherwise, without such a function, we do not allow it ..
         else:
             if is_limit_exceeded:
-                new_value = value_limit
+                current_data.value = value_limit
 
         # .. finally, store the new value in RAM.
-        self.in_ram_store[key] = new_value
+        self.in_ram_store[key] = current_data
 
-        return new_value
+        return current_data.value
 
 # ################################################################################################################################
 
