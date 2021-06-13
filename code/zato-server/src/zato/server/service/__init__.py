@@ -992,14 +992,13 @@ class Service(object):
 
         if self.server.component_enabled.stats:
 
-            # Time spent in this service, with a precision of millseconds
+            # Time spent in this service, as a float rounding to the fifth digit
             proc_time = self.processing_time_raw.total_seconds() * 1000.0
-            proc_time = proc_time if proc_time > 1 else 0
+            proc_time = round(proc_time, 5)
 
-            # Round processing time to one millisecond
-            self.processing_time = int(round(proc_time))
+            self.processing_time = proc_time
 
-            # Store usage statistics
+            # Store usage statistics in the time series database ..
             self.server.stats_client.push(
                 self.cid,
                 self.invocation_time.isoformat(),
@@ -1007,6 +1006,9 @@ class Service(object):
                 False,
                 self.processing_time
             )
+
+            # .. as well as in the in-RAM key keep track of the last duration times.
+            self.server.current_usage.set_last_duration(self.name, self.processing_time)
 
         #
         # Sample requests/responses
