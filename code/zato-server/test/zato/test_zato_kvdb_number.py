@@ -11,11 +11,7 @@ from unittest import main, TestCase
 
 # Zato
 from zato.common.test import rand_int, rand_string
-from zato.server.connection.kvdb.api import IntData, NumberRepo
-
-# ################################################################################################################################
-# ################################################################################################################################
-
+from zato.server.connection.kvdb.api import NumberRepo
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,7 +23,6 @@ sync_interval  = 1
 # ################################################################################################################################
 
 class NumberTestCase(TestCase):
-
 
     def test_repo_init(self):
 
@@ -170,7 +165,7 @@ class NumberTestCase(TestCase):
         repo.incr(key_name)
         repo.incr(key_name)
 
-        data = repo.get(key_name) # type: CounterData
+        data = repo.get(key_name) # type: dict
 
         self.assertEqual(data['value'], 3)
 

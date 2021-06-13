@@ -13,7 +13,7 @@ from logging import getLogger
 from operator import add as op_add, gt as op_gt, lt as op_lt, sub as op_sub
 
 # Zato
-from zato.common.typing_ import dataclass, from_dict
+from zato.common.typing_ import dataclass
 from zato.server.connection.kvdb.core import BaseRepo
 
 # ################################################################################################################################
