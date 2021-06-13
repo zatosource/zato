@@ -17,20 +17,20 @@ from zato.server.connection.kvdb.core import KVDB
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TransientListAPITestCase(TestCase):
+class ListRepoAPITestCase(TestCase):
 
     def test_list_internal_create_repo(self):
 
         repo_name1 = rand_string()
         repo_name2 = rand_string()
 
-        transient_api = KVDB()
+        zato_kvdb = KVDB()
 
-        transient_api.internal_create_list_repo(repo_name1)
-        transient_api.internal_create_list_repo(repo_name2)
+        zato_kvdb.internal_create_list_repo(repo_name1)
+        zato_kvdb.internal_create_list_repo(repo_name2)
 
-        repo1 = transient_api.get(repo_name1)
-        repo2 = transient_api.get(repo_name2)
+        repo1 = zato_kvdb.get(repo_name1)
+        repo2 = zato_kvdb.get(repo_name2)
 
         self.assertIsInstance(repo1, ListRepo)
         self.assertIsInstance(repo2, ListRepo)
@@ -43,10 +43,10 @@ class TransientListAPITestCase(TestCase):
 
         repo_name = rand_string()
 
-        transient_api = KVDB()
-        transient_api.internal_create_list_repo(repo_name)
+        zato_kvdb = KVDB()
+        zato_kvdb.internal_create_list_repo(repo_name)
 
-        repo = transient_api.get(repo_name)
+        repo = zato_kvdb.get(repo_name)
 
         self.assertIsInstance(repo, ListRepo)
 
@@ -60,11 +60,11 @@ class TransientListAPITestCase(TestCase):
         ctx = ObjectCtx()
         ctx.id = object_id
 
-        transient_api = KVDB()
-        transient_api.internal_create_list_repo(repo_name)
+        zato_kvdb = KVDB()
+        zato_kvdb.internal_create_list_repo(repo_name)
 
-        transient_api.append(repo_name, ctx)
-        result = transient_api.get_object(repo_name, object_id)
+        zato_kvdb.append(repo_name, ctx)
+        result = zato_kvdb.get_object(repo_name, object_id)
 
         self.assertIsInstance(result, ObjectCtx)
         self.assertEqual(result.id, object_id)
@@ -116,26 +116,26 @@ class TransientListAPITestCase(TestCase):
         ctx12.id = id12
 
         repo_name = rand_string()
-        transient_api = KVDB()
-        transient_api.internal_create_list_repo(repo_name)
+        zato_kvdb = KVDB()
+        zato_kvdb.internal_create_list_repo(repo_name)
 
-        transient_api.append(repo_name, ctx1)
-        transient_api.append(repo_name, ctx2)
-        transient_api.append(repo_name, ctx3)
-        transient_api.append(repo_name, ctx4)
-        transient_api.append(repo_name, ctx5)
-        transient_api.append(repo_name, ctx6)
-        transient_api.append(repo_name, ctx7)
-        transient_api.append(repo_name, ctx8)
-        transient_api.append(repo_name, ctx9)
-        transient_api.append(repo_name, ctx10)
-        transient_api.append(repo_name, ctx11)
-        transient_api.append(repo_name, ctx12)
+        zato_kvdb.append(repo_name, ctx1)
+        zato_kvdb.append(repo_name, ctx2)
+        zato_kvdb.append(repo_name, ctx3)
+        zato_kvdb.append(repo_name, ctx4)
+        zato_kvdb.append(repo_name, ctx5)
+        zato_kvdb.append(repo_name, ctx6)
+        zato_kvdb.append(repo_name, ctx7)
+        zato_kvdb.append(repo_name, ctx8)
+        zato_kvdb.append(repo_name, ctx9)
+        zato_kvdb.append(repo_name, ctx10)
+        zato_kvdb.append(repo_name, ctx11)
+        zato_kvdb.append(repo_name, ctx12)
 
         cur_page = 2
         page_size = 3
 
-        results = transient_api.get_list(repo_name, cur_page, page_size)
+        results = zato_kvdb.get_list(repo_name, cur_page, page_size)
         result = results['result']
 
         result0 = result[0] # type: ObjectCtx
@@ -160,17 +160,17 @@ class TransientListAPITestCase(TestCase):
         ctx2.id = id2
 
         repo_name = rand_string()
-        transient_api = KVDB()
-        transient_api.internal_create_list_repo(repo_name)
+        zato_kvdb = KVDB()
+        zato_kvdb.internal_create_list_repo(repo_name)
 
-        transient_api.append(repo_name, ctx1)
-        transient_api.append(repo_name, ctx2)
+        zato_kvdb.append(repo_name, ctx1)
+        zato_kvdb.append(repo_name, ctx2)
 
-        deleted_ctx = transient_api.delete(repo_name, id1)
+        deleted_ctx = zato_kvdb.delete(repo_name, id1)
         self.assertIs(ctx1, deleted_ctx)
 
         try:
-            transient_api.get_object(repo_name, id1)
+            zato_kvdb.get_object(repo_name, id1)
         except KeyError as e:
             self.assertEqual(e.args[0], 'Object not found `{}`'.format(id1))
         else:
@@ -190,15 +190,15 @@ class TransientListAPITestCase(TestCase):
         ctx2.id = id2
 
         repo_name = rand_string()
-        transient_api = KVDB()
-        transient_api.internal_create_list_repo(repo_name)
+        zato_kvdb = KVDB()
+        zato_kvdb.internal_create_list_repo(repo_name)
 
-        transient_api.append(repo_name, ctx1)
-        transient_api.append(repo_name, ctx2)
+        zato_kvdb.append(repo_name, ctx1)
+        zato_kvdb.append(repo_name, ctx2)
 
-        transient_api.remove_all(repo_name)
+        zato_kvdb.remove_all(repo_name)
 
-        self.assertEqual(transient_api.get_size(repo_name), 0)
+        self.assertEqual(zato_kvdb.get_size(repo_name), 0)
 
 # ################################################################################################################################
 
