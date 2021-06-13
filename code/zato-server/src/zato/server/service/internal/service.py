@@ -157,6 +157,8 @@ class _Get(AdminService):
             self.response.payload.is_internal = service.is_internal
             self.response.payload.slow_threshold = service.slow_threshold
             self.response.payload.may_be_deleted = internal_del if service.is_internal else True
+
+            '''
             self.response.payload.usage = self.server.kvdb.conn.get('{}{}'.format(KVDB.SERVICE_USAGE, service.name)) or 0
 
             time_key = '{}{}'.format(KVDB.SERVICE_TIME_BASIC, service.name)
@@ -169,6 +171,7 @@ class _Get(AdminService):
             self.response.payload.time_min_all_time = int(self.response.payload.time_min_all_time)
             self.response.payload.time_max_all_time = int(self.response.payload.time_max_all_time)
             self.response.payload.time_mean_all_time = round(self.response.payload.time_mean_all_time, 1)
+            '''
 
 # ################################################################################################################################
 
@@ -377,6 +380,7 @@ class Invoke(AdminService):
                 response = self.invoke_async(name, payload, channel, data_format, transport, expiration)
 
         else:
+
             # This branch the same as above in is_async branch, except in is_async there was no all_pids
 
             # It is possible that we were given the all_pids flag on input but we know
@@ -388,21 +392,55 @@ class Invoke(AdminService):
                 use_all_pids = False
 
             if use_all_pids:
+
                 args = (name, payload, timeout) if timeout else (name, payload)
                 response = dumps(self.server.invoke_all_pids(*args, skip_response_elem=skip_response_elem))
+
             else:
+
                 if pid and pid != self.server.pid:
+
                     response = self.server.invoke(
-                        name, payload, pid=pid, data_format=data_format, skip_response_elem=skip_response_elem)
+                        name,
+                        payload,
+                        pid=pid,
+                        data_format=data_format,
+                        skip_response_elem=skip_response_elem)
+
+                    response = {
+                        pid: {
+                          'is_ok': True,
+                          'pid': pid,
+                          'pid_data': response,
+                          'error_info': '',
+                    }}
+
                 else:
                     func, id_ = (self.invoke, name) if name else (self.invoke_by_id, id)
                     response = func(
-                        id_, payload, channel, data_format, transport, skip_response_elem=skip_response_elem, serialize=True)
+                        id_,
+                        payload,
+                        channel,
+                        data_format,
+                        transport,
+                        skip_response_elem=skip_response_elem,
+                        serialize=True)
 
-        if isinstance(response, basestring):
-            if response:
-                response = response if isinstance(response, bytes) else response.encode('utf8')
-                self.response.payload.response = b64encode(response).decode('utf8') if response else ''
+                    response = {
+                        self.server.pid: {
+                          'is_ok': True,
+                          'pid': self.server.pid,
+                          'pid_data': response,
+                          'error_info': '',
+                    }}
+
+        if response:
+
+            if not isinstance(response, basestring):
+                response = dumps(response)
+
+            response = response if isinstance(response, bytes) else response.encode('utf8')
+            self.response.payload.response = b64encode(response).decode('utf8') if response else ''
 
 # ################################################################################################################################
 
