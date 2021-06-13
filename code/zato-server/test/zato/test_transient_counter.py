@@ -11,7 +11,11 @@ from unittest import main, TestCase
 
 # Zato
 from zato.common.test import rand_int, rand_string
-from zato.server.connection.kvdb.api import CounterRepo
+from zato.server.connection.kvdb.api import CounterData, CounterRepo
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -23,6 +27,7 @@ sync_interval  = 1
 # ################################################################################################################################
 
 class TransientCounterTestCase(TestCase):
+
 
     def test_repo_init(self):
 
@@ -152,6 +157,22 @@ class TransientCounterTestCase(TestCase):
 
         # .. and we confirm that the value is zero (remember, allow_negative is True).
         self.assertEqual(value, 0)
+
+# ################################################################################################################################
+
+    def test_repo_get(self):
+        repo_name = rand_string()
+        key_name = rand_string()
+
+        repo = CounterRepo(repo_name, sync_threshold, sync_interval)
+
+        repo.incr(key_name)
+        repo.incr(key_name)
+        repo.incr(key_name)
+
+        data = repo.get(key_name) # type: CounterData
+
+        self.assertEqual(data.value, 3)
 
 # ################################################################################################################################
 
