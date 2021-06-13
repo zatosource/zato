@@ -208,7 +208,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # In-RAM statistics
         self.slow_responses = self.zato_kvdb.internal_create_list_repo(CommonZatoKVDB.SlowResponsesName)
         self.usage_samples = self.zato_kvdb.internal_create_list_repo(CommonZatoKVDB.UsageSamplesName)
-        self.current_usage = self.zato_kvdb.internal_create_counter_repo(CommonZatoKVDB.CurrentUsageName)
+        self.current_usage = self.zato_kvdb.internal_create_number_repo(CommonZatoKVDB.CurrentUsageName)
 
         self.stats_client = ServiceStatsClient()
         self._stats_host = '<ParallelServer-_stats_host>'

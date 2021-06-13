@@ -7,6 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from logging import getLogger
 
 # orjson
@@ -23,10 +24,10 @@ from zato.common.ext.dataclasses import dataclass
 # ################################################################################################################################
 
 if 0:
-    from zato.server.connection.kvdb.counter import CounterRepo
+    from zato.server.connection.kvdb.int_ import NumberRepo
     from zato.server.connection.kvdb.list_ import ListRepo
 
-    CounterRepo = CounterRepo
+    NumberRepo = NumberRepo
     ListRepo = ListRepo
 
 # ################################################################################################################################
@@ -177,9 +178,10 @@ class BaseRepo(InRAMStore):
     def load_path(self, path):
         # type: (str) -> int
         with self.update_lock:
-            with open(path, 'rb') as f:
-                data = f.read()
-                return self._loads(data)
+            if os.path.exists(path):
+                with open(path, 'rb') as f:
+                    data = f.read()
+                    return self._loads(data)
 
 # ################################################################################################################################
 
@@ -225,13 +227,13 @@ class KVDB:
 
 # ################################################################################################################################
 
-    def internal_create_counter_repo(self, repo_name, max_size=1000, page_size=50):
-        # type: (str) -> CounterRepo
+    def internal_create_number_repo(self, repo_name, max_size=1000, page_size=50):
+        # type: (str) -> NumberRepo
 
         # Zato
-        from zato.server.connection.kvdb.counter import CounterRepo
+        from zato.server.connection.kvdb.number import NumberRepo
 
-        repo = CounterRepo(repo_name, max_size, page_size)
+        repo = NumberRepo(repo_name, max_size, page_size)
         return self.repo.setdefault(repo_name, repo)
 
 # ################################################################################################################################
