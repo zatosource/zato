@@ -26,6 +26,11 @@ logger = getLogger('zato')
 
 utcnow = datetime.utcnow
 
+current_value_key = 'current_value'
+current_usage_key = 'current_usage'
+
+usage_time_format = '%Y-%m-%d %H:%M'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -43,7 +48,7 @@ class NumberRepo(BaseRepo):
     """
     def __init__(self, name, sync_threshold=120_000, sync_interval=120_000, max_value=sys.maxsize, allow_negative=True):
         # type: (str, int, int, int, int) -> None
-        super().__init__(name)
+        super().__init__(name, sync_threshold, sync_interval)
 
         # We will never allow for a value to be greater than that
         self.max_value = max_value
@@ -52,10 +57,35 @@ class NumberRepo(BaseRepo):
         self.allow_negative = allow_negative
 
         # Main in-RAM database of objects
-        self.in_ram_store = {}
+        self.in_ram_store = {
+            current_value_key: {},
+            current_usage_key: {},
+        }
 
-        # Usage statistics
-        self.usage_stats = {}
+        self.current_value = self.in_ram_store[current_value_key] # type: dict
+        self.current_usage = self.in_ram_store[current_usage_key] # type: dict
+
+# ################################################################################################################################
+
+    def sync_state(self):
+        # type: () -> None
+        with self.update_lock:
+            print()
+            print(222, self.current_usage)
+            print()
+            pass
+
+# ################################################################################################################################
+
+    def _update_key_usage(self, key):
+        # type: (str) -> None
+
+        now = utcnow()
+        now = now.strftime(usage_time_format)
+
+        by_minute = self.current_usage.setdefault(now, {}) # type: dict
+        current_key_usage = by_minute.setdefault(key, 0)
+        by_minute[key] = current_key_usage + 1
 
 # ################################################################################################################################
 
@@ -68,7 +98,7 @@ class NumberRepo(BaseRepo):
             'last_timestamp':utcnow().isoformat(),
             'last_duration':-1
         }
-        current_data = self.in_ram_store.get(key, default)
+        current_data = self.current_value.get(key, default)
 
         # .. get the new value ..
         current_data['value'] = value_op(current_data['value'], change_by)
@@ -90,7 +120,10 @@ class NumberRepo(BaseRepo):
                 current_data['value'] = value_limit
 
         # .. store the new value in RAM ..
-        self.in_ram_store[key] = current_data
+        self.current_value[key] = current_data
+
+        # .. update usage statistics ..
+        self._update_key_usage(key)
 
         # .. update metadata and possibly trim statistics ..
         self.post_modify_state()
@@ -130,13 +163,14 @@ class NumberRepo(BaseRepo):
 
     def _get(self, key, default=0):
         # type: (str, int) -> int
-        return self.in_ram_store.get(key, default)
+        return self.current_value.get(key, default)
 
 # ################################################################################################################################
 
     def _remove_all(self):
         # type: () -> None
-        self.in_ram_store.clear()
+        self.current_value.clear()
+        self.current_usage.clear()
 
 # ################################################################################################################################
 
@@ -150,7 +184,7 @@ class NumberRepo(BaseRepo):
     def set_last_duration(self, key, value):
         # type: (str, int) -> None
         with self.update_lock:
-            self.in_ram_store[key]['last_duration'] = value
+            self.current_value[key]['last_duration'] = value
 
 # ################################################################################################################################
 # ################################################################################################################################
