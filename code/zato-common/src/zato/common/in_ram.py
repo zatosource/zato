@@ -44,8 +44,24 @@ class InRAMStore:
         # Maps action opcodes to actual methods so that the latter do not have to be looked up in runtime
         self.opcode_to_func = {}
 
-        # An update lock used while modifying the in-RAM database
+        # A coarse-grained update lock used while modifying the in-RAM database or DB key locks
         self.update_lock = RLock()
+
+        # Maps DB keys to fine-grained locks
+        self.key_lock = {}
+
+# ################################################################################################################################
+
+    def get_lock(self, key):
+        # type: (str) -> RLock
+
+        with self.update_lock:
+            key_lock = self.key_lock.get(key)
+            if not key_lock:
+                key_lock = RLock()
+                self.key_lock[key] = key_lock
+
+        return key_lock
 
 # ################################################################################################################################
 
