@@ -37,6 +37,7 @@ from zato.common.rate_limiting import DefinitionParser
 from zato.common.scheduler import get_startup_job_services
 from zato.common.util.api import hot_deploy, payload_from_request
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
+from zato.common.util.stats import collect_current_usage
 from zato.server.service import Boolean, Integer, Service as ZatoService
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
@@ -125,15 +126,24 @@ class GetList(AdminService):
             self.response.payload[:] = self.get_data(session)
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+class GetServiceStats(AdminService):
+
+    def handle(self):
+        self.response.payload = self.server.current_usage.get(self.request.raw_request['name'])
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class _Get(AdminService):
 
     class SimpleIO(AdminSIO):
         input_required = 'cluster_id',
-        output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), \
-            Integer('usage'), Integer('slow_threshold'), Integer('time_last'), \
-            Integer('time_min_all_time'), Integer('time_max_all_time'), 'time_mean_all_time'
-        output_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_active', \
+        output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted')
+        output_optional = Integer('usage'), Integer('slow_threshold'), Integer('last_duration'), \
+            Integer('time_min_all_time'), Integer('time_max_all_time'), 'time_mean_all_time', \
+            'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_active', \
             'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
 
     def get_data(self, session):
@@ -148,6 +158,7 @@ class _Get(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             service = self.get_data(session)
+
             internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
 
             self.response.payload.id = service.id
@@ -158,7 +169,13 @@ class _Get(AdminService):
             self.response.payload.slow_threshold = service.slow_threshold
             self.response.payload.may_be_deleted = internal_del if service.is_internal else True
 
-            '''
+        usage_response = self.server.rpc.invoke_all(GetServiceStats.get_name(), {'name': self.request.input.name})
+        current_usage = collect_current_usage(usage_response.data)
+
+        self.response.payload.usage = current_usage['usage']
+        self.response.payload.last_duration = current_usage['last_duration']
+
+        '''
             self.response.payload.usage = self.server.kvdb.conn.get('{}{}'.format(KVDB.SERVICE_USAGE, service.name)) or 0
 
             time_key = '{}{}'.format(KVDB.SERVICE_TIME_BASIC, service.name)
@@ -426,13 +443,14 @@ class Invoke(AdminService):
                         skip_response_elem=skip_response_elem,
                         serialize=True)
 
-                    response = {
-                        self.server.pid: {
-                          'is_ok': True,
-                          'pid': self.server.pid,
-                          'pid_data': response,
-                          'error_info': '',
-                    }}
+                    if all_pids:
+                        response = {
+                            self.server.pid: {
+                              'is_ok': True,
+                              'pid': self.server.pid,
+                              'pid_data': response,
+                              'error_info': '',
+                        }}
 
         if response:
 
