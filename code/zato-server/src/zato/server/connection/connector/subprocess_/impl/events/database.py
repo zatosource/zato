@@ -263,7 +263,7 @@ class EventsDatabase(InRAMStore):
 
 # ################################################################################################################################
 
-    def sync_storage(self, _utcnow=utcnow):
+    def sync_state(self, _utcnow=utcnow):
 
         with self.update_lock:
 
