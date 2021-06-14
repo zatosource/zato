@@ -74,8 +74,26 @@ class InRAMStore:
 
 # ################################################################################################################################
 
-    def sync_storage(self):
-        raise NotImplementedError('InRAMStore.sync_storage')
+    def sync_state(self):
+        raise NotImplementedError('InRAMStore.sync_state')
+
+# ################################################################################################################################
+
+    def post_modify_state(self):
+
+        # .. update counters ..
+        self.num_events_since_sync += 1
+        self.total_events += 1
+
+        # .. check if we should sync RAM with persistent storage ..
+        if self.should_sync():
+
+            # .. save in persistent storage ..
+            self.sync_state()
+
+            # .. update metadata.
+            self.num_events_since_sync = 0
+            self.last_sync_time = utcnow()
 
 # ################################################################################################################################
 
@@ -89,19 +107,8 @@ class InRAMStore:
             # .. store in RAM ..
             func(data)
 
-            # .. update counters ..
-            self.num_events_since_sync += 1
-            self.total_events += 1
-
-            # .. check if we should sync RAM with persistent storage ..
-            if self.should_sync():
-
-                # .. save in persistent storage ..
-                self.sync_storage()
-
-                # .. update metadata.
-                self.num_events_since_sync = 0
-                self.last_sync_time = utcnow()
+            # .. update metadata and, possibly, sync state (storage).
+            self.post_modify_state()
 
 # ################################################################################################################################
 # ################################################################################################################################

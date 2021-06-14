@@ -51,8 +51,11 @@ class NumberRepo(BaseRepo):
         # If False, value will never be less than zero
         self.allow_negative = allow_negative
 
-        # In-RAM database of objects
-        self.in_ram_store = {} # type: dict[str, int]
+        # Main in-RAM database of objects
+        self.in_ram_store = {}
+
+        # Usage statistics
+        self.usage_stats = {}
 
 # ################################################################################################################################
 
@@ -86,9 +89,13 @@ class NumberRepo(BaseRepo):
             if is_limit_exceeded:
                 current_data['value'] = value_limit
 
-        # .. finally, store the new value in RAM.
+        # .. store the new value in RAM ..
         self.in_ram_store[key] = current_data
 
+        # .. update metadata and possibly trim statistics ..
+        self.post_modify_state()
+
+        # .. finally, return the value set.
         return current_data['value']
 
 # ################################################################################################################################
