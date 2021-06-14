@@ -231,10 +231,10 @@ def overview(req, service_name):
             service = Service()
 
             for name in('id', 'name', 'is_active', 'impl_name', 'is_internal',
-                  'usage', 'time_last', 'time_min_all_time', 'time_max_all_time',
+                  'usage', 'last_duration', 'time_min_all_time', 'time_max_all_time',
                   'time_mean_all_time'):
 
-                value = getattr(response.data, name)
+                value = getattr(response.data, name, None)
                 if name in('is_active', 'is_internal'):
                     value = is_boolean(value)
 

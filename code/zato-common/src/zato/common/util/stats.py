@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2020, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import math
@@ -67,6 +65,33 @@ def percentile(data, percent, key=lambda x:x):
     d1 = key(data[int(c)]) * (k-f)
 
     return d0 + d1
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def collect_current_usage(data):
+    # type: (list) -> dict
+
+    # For later use
+    usage = 0
+    last_duration = None
+    last_timestamp = ''
+
+    # Make sure we always have a list to iterate over (rather than None)
+    data = data or []
+
+    for elem in data:
+        usage += elem['value']
+
+        if elem['last_timestamp'] > last_timestamp:
+            last_timestamp = elem['last_timestamp']
+            last_duration = elem['last_duration']
+
+    return {
+        'usage': usage,
+        'last_duration': last_duration,
+        'last_timestamp': last_timestamp,
+    }
 
 # ################################################################################################################################
 # ################################################################################################################################
