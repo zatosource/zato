@@ -1,4 +1,5 @@
 {% extends "zato/index.html" %}
+{% load extras %}
 
 {% block html_title %}{{ service.name }} - Overview{% endblock %}
 
@@ -62,12 +63,13 @@
                                     </tr>
                                     <tr>
                                         <td>Last response time</td>
-                                        <td>{{ service.time_last|floatformat:0 }} ms</td>
+                                        <td>{{ service.last_duration|format_float:"3"|default:"0" }} ms</td>
                                     </tr>
                                     <tr>
                                         <td>All time usage</td>
                                         <td>{{ service.usage }}</td>
                                     </tr>
+
                                     <tr>
                                         <td>All time min/max/mean (ms)</td>
                                         <td>{{ service.time_min_all_time|floatformat:0 }}/{{ service.time_max_all_time|floatformat:0 }}/{{ service.time_mean_all_time|floatformat:0 }}</td>

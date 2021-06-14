@@ -671,8 +671,6 @@ class Service(object):
         _pattern_call_channels=(CHANNEL.FANOUT_CALL, CHANNEL.PARALLEL_EXEC_CALL),
         *args, **kwargs):
 
-        zxC":zx' ckkz c GetServiceStats
-
         wsgi_environ = kwargs.get('wsgi_environ', {})
         payload = wsgi_environ.get('zato.request.payload')
         channel_item = wsgi_environ.get('zato.channel_item', {})
