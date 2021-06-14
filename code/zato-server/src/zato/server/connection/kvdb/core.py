@@ -58,10 +58,10 @@ class ObjectCtx:
 
 class BaseRepo(InRAMStore):
 
-    def __init__(self, name):
-        # type: (str) -> None
+    def __init__(self, name, sync_threshold=120_000, sync_interval=120_000):
+        # type: (str, int, int) -> None
 
-        super().__init__()
+        super().__init__(sync_threshold, sync_interval)
 
         # Our user-visible name
         self.name = name

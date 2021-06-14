@@ -176,10 +176,6 @@ class _Get(AdminService):
         self.response.payload.last_duration = current_usage['last_duration']
 
         '''
-            self.response.payload.usage = self.server.kvdb.conn.get('{}{}'.format(KVDB.SERVICE_USAGE, service.name)) or 0
-
-            time_key = '{}{}'.format(KVDB.SERVICE_TIME_BASIC, service.name)
-            self.response.payload.time_last = self.server.kvdb.conn.hget(time_key, 'last')
 
             for name in('min_all_time', 'max_all_time', 'mean_all_time'):
                 setattr(self.response.payload, 'time_{}'.format(name), float(
