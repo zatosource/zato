@@ -173,13 +173,12 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_sync_state(self):
+    def test_update_key_usage(self):
 
         repo_name = rand_string()
         key_name = rand_string()
-        _sync_threshold = 1
 
-        repo = NumberRepo(repo_name, _sync_threshold, sync_interval)
+        repo = NumberRepo(repo_name, sync_threshold, sync_interval)
 
         n_iters = 7
 
