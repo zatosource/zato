@@ -148,15 +148,17 @@ class BaseRepo(InRAMStore):
 
 # ################################################################################################################################
 
-    def incr(self, *args, **kwargs):
-        with self.update_lock:
-            return self._incr(*args, **kwargs)
+    def incr(self, key, *args, **kwargs):
+        lock = self.get_lock(key)
+        with lock:
+            return self._incr(key, *args, **kwargs)
 
 # ################################################################################################################################
 
-    def decr(self, *args, **kwargs):
-        with self.update_lock:
-            return self._decr(*args, **kwargs)
+    def decr(self, key, *args, **kwargs):
+        lock = self.get_lock(key)
+        with lock:
+            return self._decr(key, *args, **kwargs)
 
 # ################################################################################################################################
 
