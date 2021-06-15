@@ -62,37 +62,69 @@
                                         <td class='inline_header' colspan="2">Statistics</td>
                                     </tr>
                                     <tr>
-                                        <td>Last response time</td>
-                                        <td>{{ service.last_duration|format_float:"3"|default:"0" }} ms</td>
-                                    </tr>
+
                                     <tr>
                                         <td>All time usage</td>
                                         <td>{{ service.usage }}</td>
                                     </tr>
 
+                                        <td>Last response time</td>
+                                        <td>
+                                            {% if service.usage %}
+                                                {{ service.last_duration|format_float:3 }} ms
+                                            {% else %}
+                                                <span class="form_hint">n/a</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+
                                     <tr>
                                         <td>All time min/max/mean (ms)</td>
-                                        <td>{{ service.time_min_all_time|floatformat:0 }}/{{ service.time_max_all_time|floatformat:0 }}/{{ service.time_mean_all_time|floatformat:0 }}</td>
+                                        <td>
+                                            {% if service.usage %}
+                                                {{ service.time_min_all_time|floatformat:0 }}/{{ service.time_max_all_time|floatformat:0 }}/{{ service.time_mean_all_time|floatformat:0 }}
+                                            {% else %}
+                                                <span class="form_hint">n/a</span>
+                                            {% endif %}
+                                        </td>
                                     </tr>
                                     <tr>
                                         <td>1h usage</td>
-                                        <td>{{ service.time_usage_1h|default:0 }}</td>
+                                        <td>
+                                            {% if service.usage %}
+                                                {{ service.time_usage_1h|default:0 }}
+                                            {% else %}
+                                                <span class="form_hint">n/a</span>
+                                            {% endif %}
+                                        </td>
                                     </tr>
                                     <tr>
                                         <td>1h min/max/mean (ms)</td>
-                                        <td>{{ service.time_min_resp_time_1h|floatformat:0|default:0 }}/{{ service.time_max_resp_time_1h|floatformat:0|default:0 }}/{{ service.time_mean_1h|floatformat:0|default:0 }}</td>
+                                        <td>
+                                            {% if service.usage %}
+                                                {{ service.time_min_resp_time_1h|floatformat:0|default:0 }}/{{ service.time_max_resp_time_1h|floatformat:0|default:0 }}/{{ service.time_mean_1h|floatformat:0|default:0 }}
+                                            {% else %}
+                                                <span class="form_hint">n/a</span>
+                                            {% endif %}
+                                        </td>
                                     </tr>
                                     <tr>
                                         <td>1h req/s</td>
-                                        <td>{{ service.time_rate_1h|default:"0.0" }}</td>
+                                        <td>
+                                            {% if service.usage %}
+                                                {{ service.time_rate_1h|default:"0.0" }}
+                                            {% else %}
+                                                <span class="form_hint">n/a</span>
+                                            {% endif %}
+                                        </td>
                                     </tr>
                                     <tr>
                                         <td>1h mean trend</td>
                                         <td>
                                             {% if service.time_mean_trend_1h %}
-                                            <span class="sparklines" id="trend_mean_1h"><!-- {{ service.time_mean_trend_1h }} --></span>
+                                                <span class="sparklines" id="trend_mean_1h"><!-- {{ service.time_mean_trend_1h }} --></span>
                                             {% else %}
-                                            N/A
+                                                <span class="form_hint">n/a</span>
                                             {% endif %}
                                         </td>
                                     </tr>
@@ -100,9 +132,9 @@
                                         <td>1h req trend</td>
                                         <td>
                                             {% if service.time_usage_trend_1h %}
-                                            <span class="sparklines" id="trend_rate_1h"><!-- {{ service.time_usage_trend_1h }} --></span>
+                                                <span class="sparklines" id="trend_rate_1h"><!-- {{ service.time_usage_trend_1h }} --></span>
                                             {% else %}
-                                            N/A
+                                                <span class="form_hint">n/a</span>
                                             {% endif %}
                                         </td>
                                     </tr>
