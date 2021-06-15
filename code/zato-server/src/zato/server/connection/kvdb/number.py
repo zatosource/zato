@@ -8,7 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from logging import getLogger
 from operator import add as op_add, gt as op_gt, lt as op_lt, sub as op_sub
 
@@ -29,6 +29,7 @@ utcnow = datetime.utcnow
 current_value_key = 'current_value'
 current_usage_key = 'current_usage'
 
+usage_limit  = 3670 # In seconds
 usage_time_format = '%Y-%m-%d %H:%M'
 
 # ################################################################################################################################
@@ -67,13 +68,22 @@ class NumberRepo(BaseRepo):
 
 # ################################################################################################################################
 
-    def sync_state(self):
+    def sync_state(self, usage_limit=usage_limit):
         # type: () -> None
+
+        limit = utcnow() - timedelta(hours=1)
+        limit = limit.strftime(usage_time_format)
+
         with self.update_lock:
-            print()
-            print(222, self.current_usage)
-            print()
-            pass
+
+            # Find all the keys older than the limit allowed ..
+            to_delete = list(key for key in self.current_usage if key < limit)
+
+            # .. and delete them one by one ..
+            for item in to_delete:
+
+                # .. use .pop just in case anyone modifies the dict in the meantime (however unlikely).
+                self.current_usage.pop(item, None)
 
 # ################################################################################################################################
 
