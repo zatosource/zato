@@ -60,9 +60,21 @@ def no_value_indicator(value):
 
 @register.filter
 def format_float(value, digits=5):
+
     if not value:
         return 0
-    as_int = int(value)
-    return as_int if as_int == value else round(value, digits)
+
+    value = str(value)
+    as_float = float(value)
+    as_int = int(as_float)
+
+    if as_int == as_float:
+        result = as_int
+    else:
+        result = round(as_float, digits)
+
+    result = str(result)
+
+    return result
 
 # ################################################################################################################################
