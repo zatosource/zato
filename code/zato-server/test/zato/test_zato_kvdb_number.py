@@ -18,6 +18,11 @@ from zato.server.connection.kvdb.number import usage_time_format
 # ################################################################################################################################
 # ################################################################################################################################
 
+utcnow = datetime.utcnow
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 sync_threshold = 120_000
 sync_interval  = 120_000
 
@@ -173,7 +178,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_update_key_usage(self):
+    def xtest_update_key_usage(self):
 
         repo_name = rand_string()
         key_name = rand_string()
@@ -191,13 +196,13 @@ class NumberTestCase(TestCase):
         # of the subsequent ones it is already another minute. However, because it is only
         # a handful of operations, we assume that they will never take more than one minute.
 
-        current_minute  = datetime.utcnow()
+        current_minute  = utcnow()
         previous_minute = current_minute - timedelta(minutes=1)
 
         current_minute  = current_minute.strftime(usage_time_format)
         previous_minute = previous_minute.strftime(usage_time_format)
 
-        data_current_minute  = repo.current_usage.get(current_minute, {})   # type: dict
+        data_current_minute  = repo.current_usage.get(current_minute, {})  # type: dict
         data_previous_minute = repo.current_usage.get(previous_minute, {}) # type: dict
 
         usage_current_minute  = data_current_minute.get(key_name, 0)
@@ -209,8 +214,61 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
+    def test_repo_sync_state(self):
+
+        repo_name = rand_string()
+        key_name = rand_string()
+
+        repo = NumberRepo(repo_name, sync_threshold, sync_interval)
+
+        #
+        # We will create three keys, each for:
+        #
+        # * Current minute
+        # * Previous minute
+        # * Previous hour
+        # * Previous day
+        #
+        # After we have synchronised stated, the ones for the previous day and hour
+        # should no longer exist because sync_state leaves only the last hour's
+        # worth of data.
+        #
+
+        current_minute  = utcnow()
+        previous_minute = current_minute - timedelta(minutes=1)
+        previous_hour   = current_minute - timedelta(hours=1, minutes=1)
+        previous_day    = current_minute - timedelta(days=1)
+
+        current_minute  = current_minute.strftime(usage_time_format)
+        previous_minute = previous_minute.strftime(usage_time_format)
+        previous_hour   = previous_hour.strftime(usage_time_format)
+        previous_day    = previous_day.strftime(usage_time_format)
+
+        usage_current_minute  = 111
+        usage_previous_minute = 222
+        usage_previous_hour   = 333
+        usage_previous_day    = 444
+
+        repo.current_usage[current_minute]  = {key_name: usage_current_minute}
+        repo.current_usage[previous_minute] = {key_name: usage_previous_minute}
+        repo.current_usage[previous_hour]   = {key_name: usage_previous_hour}
+        repo.current_usage[previous_day]    = {key_name: usage_previous_day}
+
+        # This should delete everything but the current and previous minutes
+        repo.sync_state()
+
+        repo_usage_current_minute  = repo.current_usage[current_minute]  # type: dict
+        repo_usage_previous_minute = repo.current_usage[previous_minute] # type: dict
+
+        key_usage_current_minute  = repo_usage_current_minute[key_name]
+        key_usage_previous_minute  = repo_usage_previous_minute[key_name]
+
+        self.assertEqual(key_usage_current_minute, usage_current_minute)
+        self.assertEqual(key_usage_previous_minute, usage_previous_minute)
+
+# ################################################################################################################################
+
 if __name__ == '__main__':
     main()
 
 # ################################################################################################################################
-
