@@ -13,6 +13,9 @@ from unittest import main, TestCase
 # dateutil
 from dateutil.rrule import MINUTELY, rrule
 
+# Pandas
+import pandas as pd
+
 # Zato
 #from zato.common.test import rand_int, rand_string
 #from zato.server.connection.kvdb.api import NumberRepo
@@ -274,7 +277,7 @@ class NumberTestCase(TestCase):
     def test_repo_get_usage_by_key(self):
 
         #ZZZ This is temporary
-        usage_time_format = '%Y-%m-%d %H:%M'
+        usage_time_format = '%Y-%m-%d %H:%M:00'
 
         # We will create usage data for that many keys
         how_many_keys = 20
@@ -291,15 +294,16 @@ class NumberTestCase(TestCase):
         # We choose the following:
         #
         # * Max minute to be taken into account (aka current minute) = 2021-06-13 11:22
-        # * Min minute to be taken into account = max minute - 1 hour
+        # * Min minute to be taken into account = max minute - 59 minutes (a total one hour because we include the current minute)
         # * Additional later data (to be ignored) = values for 11:23 or later
         # * Additional earlier data (to be ignored) = values for 10:22 or earlier
         #
 
-        max_minute_str = '2021-06-13 11:22'
-
+        max_minute_str = '2021-06-13 11:22:00'
         max_minute = datetime.strptime(max_minute_str, usage_time_format)
-        min_minute = max_minute - timedelta(hours=1)
+
+        min_minute = max_minute - timedelta(minutes=59) # type: datetime
+        min_minute_str = min_minute.strftime(usage_time_format)
 
         additional_later_limit   = max_minute + timedelta(hours=19)
         additional_earlier_limit = min_minute - timedelta(hours=27)
@@ -338,9 +342,22 @@ class NumberTestCase(TestCase):
 
                 per_minute_usage[key_name] = key_idx
 
+        pd_range = pd.date_range(start=start, end=stop, freq='min')
+        f = pd.DataFrame(current_usage).transpose()
+        f.index = pd.DatetimeIndex(f.index)
+        f = f.reindex(pd_range, fill_value=0)
+        f.index.name = 'minute_bucket'
+
         print()
-        print(111, current_usage)
+        print(f[min_minute_str:max_minute_str])
         print()
+        #print(111, f.index.min())
+        #print(222, f.index.max())
+        #print()
+
+        #pd_range = pd.date_range(start=f.index.min(), end=f.index.max(), freq='min')
+        #f2 = pd.DataFrame(f, index=pd_range)
+        #print(f)
 
 # ################################################################################################################################
 
