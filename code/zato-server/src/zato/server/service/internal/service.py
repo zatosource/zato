@@ -131,6 +131,7 @@ class GetList(AdminService):
 class GetServiceStats(AdminService):
 
     def handle(self):
+
         self.response.payload = self.server.current_usage.get(self.request.raw_request['name'])
 
 # ################################################################################################################################
@@ -424,11 +425,12 @@ class Invoke(AdminService):
                         pid: {
                           'is_ok': True,
                           'pid': pid,
-                          'pid_data': response,
+                          'pid_data': response or None,
                           'error_info': '',
                     }}
 
                 else:
+
                     func, id_ = (self.invoke, name) if name else (self.invoke_by_id, id)
                     response = func(
                         id_,
@@ -440,6 +442,7 @@ class Invoke(AdminService):
                         serialize=True)
 
                     if all_pids:
+
                         response = {
                             self.server.pid: {
                               'is_ok': True,

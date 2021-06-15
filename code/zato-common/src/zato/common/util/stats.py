@@ -81,6 +81,10 @@ def collect_current_usage(data):
     data = data or []
 
     for elem in data:
+
+        if elem is None:
+            continue
+
         usage += elem['value']
 
         if elem['last_timestamp'] > last_timestamp:
