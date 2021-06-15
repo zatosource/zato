@@ -80,10 +80,6 @@ def collect_current_usage(data):
     # Make sure we always have a list to iterate over (rather than None)
     data = data or []
 
-    print()
-    print(111, data)
-    print()
-
     for elem in data:
 
         if elem is None:
