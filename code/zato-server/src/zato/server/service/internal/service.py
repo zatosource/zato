@@ -131,7 +131,6 @@ class GetList(AdminService):
 class GetServiceStats(AdminService):
 
     def handle(self):
-
         self.response.payload = self.server.current_usage.get(self.request.raw_request['name'])
 
 # ################################################################################################################################
@@ -142,7 +141,7 @@ class _Get(AdminService):
     class SimpleIO(AdminSIO):
         input_required = 'cluster_id',
         output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted')
-        output_optional = Integer('usage'), Integer('slow_threshold'), Integer('last_duration'), \
+        output_optional = Integer('usage'), Integer('slow_threshold'), 'last_duration', \
             Integer('time_min_all_time'), Integer('time_max_all_time'), 'time_mean_all_time', \
             'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_active', \
             'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
