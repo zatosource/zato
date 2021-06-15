@@ -151,6 +151,10 @@ class RemoteServerInvoker(ServerInvoker):
         if response.ok:
             if response.has_data:
                 for pid, pid_data in response.data.items():
+
+                    if pid_data['pid_data'] == '':
+                        pid_data['pid_data'] = None
+
                     per_pid_response = from_dict(PerPIDResponse, pid_data) # type: PerPIDResponse
                     per_pid_response.pid = pid
                     out.data[pid] = per_pid_response
