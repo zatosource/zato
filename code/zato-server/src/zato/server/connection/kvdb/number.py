@@ -204,7 +204,7 @@ class NumberRepo(BaseRepo):
 
 # ################################################################################################################################
 
-    def get_usage_by_key(self):
+    def get_usage_by_key(self, max_time=None):
         # type: () -> None
         pass
 
