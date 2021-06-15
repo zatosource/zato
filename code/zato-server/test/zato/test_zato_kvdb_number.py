@@ -31,7 +31,7 @@ sync_interval  = 120_000
 
 class NumberTestCase(TestCase):
 
-    def xtest_repo_init(self):
+    def test_repo_init(self):
 
         name1 = rand_string()
         name2 = rand_string()
@@ -57,7 +57,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_repo_incr(self):
+    def test_repo_incr(self):
         repo_name = rand_string()
         key_name = rand_string()
 
@@ -75,7 +75,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_repo_incr_max_value(self):
+    def test_repo_incr_max_value(self):
         repo_name = rand_string()
         key_name = rand_string()
         max_value = 2
@@ -91,7 +91,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_repo_decr(self):
+    def test_repo_decr(self):
         repo_name = rand_string()
         key_name = rand_string()
 
@@ -109,7 +109,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_repo_decr_below_zero_allow_negative_true(self):
+    def test_repo_decr_below_zero_allow_negative_true(self):
 
         repo_name = rand_string()
         key_name = rand_string()
@@ -136,7 +136,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_repo_decr_below_zero_allow_negative_false(self):
+    def test_repo_decr_below_zero_allow_negative_false(self):
 
         repo_name = rand_string()
         key_name = rand_string()
@@ -162,7 +162,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_repo_get(self):
+    def test_repo_get(self):
         repo_name = rand_string()
         key_name = rand_string()
 
@@ -178,7 +178,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_update_key_usage(self):
+    def test_update_key_usage(self):
 
         repo_name = rand_string()
         key_name = rand_string()
