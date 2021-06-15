@@ -10,10 +10,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from datetime import datetime, timedelta
 from unittest import main, TestCase
 
+# dateutil
+from dateutil.rrule import MINUTELY, rrule
+
 # Zato
-from zato.common.test import rand_int, rand_string
-from zato.server.connection.kvdb.api import NumberRepo
-from zato.server.connection.kvdb.number import usage_time_format
+#from zato.common.test import rand_int, rand_string
+#from zato.server.connection.kvdb.api import NumberRepo
+#from zato.server.connection.kvdb.number import usage_time_format
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,7 +34,7 @@ sync_interval  = 120_000
 
 class NumberTestCase(TestCase):
 
-    def test_repo_init(self):
+    def xtest_repo_init(self):
 
         name1 = rand_string()
         name2 = rand_string()
@@ -57,7 +60,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_repo_incr(self):
+    def xtest_repo_incr(self):
         repo_name = rand_string()
         key_name = rand_string()
 
@@ -75,7 +78,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_repo_incr_max_value(self):
+    def xtest_repo_incr_max_value(self):
         repo_name = rand_string()
         key_name = rand_string()
         max_value = 2
@@ -91,7 +94,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_repo_decr(self):
+    def xtest_repo_decr(self):
         repo_name = rand_string()
         key_name = rand_string()
 
@@ -109,7 +112,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_repo_decr_below_zero_allow_negative_true(self):
+    def xtest_repo_decr_below_zero_allow_negative_true(self):
 
         repo_name = rand_string()
         key_name = rand_string()
@@ -136,7 +139,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_repo_decr_below_zero_allow_negative_false(self):
+    def xtest_repo_decr_below_zero_allow_negative_false(self):
 
         repo_name = rand_string()
         key_name = rand_string()
@@ -162,7 +165,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_repo_get(self):
+    def xtest_repo_get(self):
         repo_name = rand_string()
         key_name = rand_string()
 
@@ -178,7 +181,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_update_key_usage(self):
+    def xtest_update_key_usage(self):
 
         repo_name = rand_string()
         key_name = rand_string()
@@ -214,7 +217,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_repo_sync_state(self):
+    def xtest_repo_sync_state(self):
 
         repo_name = rand_string()
         key_name = rand_string()
@@ -265,6 +268,79 @@ class NumberTestCase(TestCase):
 
         self.assertEqual(key_usage_current_minute, usage_current_minute)
         self.assertEqual(key_usage_previous_minute, usage_previous_minute)
+
+# ################################################################################################################################
+
+    def test_repo_get_usage_by_key(self):
+
+        #ZZZ This is temporary
+        usage_time_format = '%Y-%m-%d %H:%M'
+
+        # We will create usage data for that many keys
+        how_many_keys = 20
+
+        # This is where the usage data will be kept
+        current_usage = {}
+
+        #
+        # We want to generate data for a particular hour and for some minutes later or earlier
+        # that that hour. We expect only for data for this specific hour to be taken into account.
+        #
+
+        #
+        # We choose the following:
+        #
+        # * Max minute to be taken into account (aka current minute) = 2021-06-13 11:22
+        # * Min minute to be taken into account = max minute - 1 hour
+        # * Additional later data (to be ignored) = values for 11:23 or later
+        # * Additional earlier data (to be ignored) = values for 10:22 or earlier
+        #
+
+        max_minute_str = '2021-06-13 11:22'
+
+        max_minute = datetime.strptime(max_minute_str, usage_time_format)
+        min_minute = max_minute - timedelta(hours=1)
+
+        additional_later_limit   = max_minute + timedelta(hours=19)
+        additional_earlier_limit = min_minute - timedelta(hours=27)
+
+        #
+        # Now, we need to create per-minute buckets spanning from
+        # additional_earlier_limit -> min_minute -> max_minute up to additional_later_limit.
+        #
+        start = additional_earlier_limit
+        stop  = additional_later_limit
+
+        elems = []
+        for elem in rrule(MINUTELY, dtstart=start, until=stop): # type: datetime
+
+            # Skip every other minute to simulate the fact that not all minutes will have any data
+            if elem.minute % 2 == 0:
+                continue
+
+            elems.append(elem)
+
+        #
+        # We need to assign usage data for each bucket. The usage for each key
+        # in each minute is the same as the key index.
+        #
+        # For instance, within each per-minute bucket, key1's usage will be 1,
+        # key2's usage will be 2, key3's usage will 3 etc.
+        #
+
+        for elem in elems:
+
+            elem_str = elem.strftime(usage_time_format)
+            per_minute_usage = current_usage.setdefault(elem_str, {})
+
+            for key_idx in range(1, how_many_keys+1):
+                key_name = 'key{}'.format(key_idx)
+
+                per_minute_usage[key_name] = key_idx
+
+        print()
+        print(111, current_usage)
+        print()
 
 # ################################################################################################################################
 
