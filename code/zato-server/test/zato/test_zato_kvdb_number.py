@@ -195,6 +195,21 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
+    def test_repo_incr(self):
+
+        repo_name = rand_string()
+        key_name = rand_string()
+        last_duration = rand_int()
+
+        repo = NumberRepo(repo_name, sync_threshold, sync_interval)
+        repo.incr(key_name)
+        repo.set_last_duration(key_name, last_duration)
+
+        data = repo.get(key_name) # type: dict
+        self.assertEqual(data[StatsKey.PerKeyLastDuration], last_duration)
+
+# ################################################################################################################################
+
 if __name__ == '__main__':
     main()
 
