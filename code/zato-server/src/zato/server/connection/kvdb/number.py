@@ -69,7 +69,6 @@ class NumberRepo(BaseRepo):
         self.in_ram_store = {
             _stats_key_current_value: {},
         }
-
         self.current_value = self.in_ram_store[_stats_key_current_value] # type: dict
 
 # ################################################################################################################################
@@ -156,8 +155,8 @@ class NumberRepo(BaseRepo):
 
 # ################################################################################################################################
 
-    def _get(self, key, default=0):
-        # type: (str, int) -> int
+    def _get(self, key):
+        # type: (str) -> dict
         return self.current_value.get(key)
 
 # ################################################################################################################################
@@ -192,8 +191,13 @@ class NumberRepo(BaseRepo):
                 new_max  = current_duration
                 new_mean = current_duration
 
-            per_key_dict[_stats_key_per_key_last_duration] = current_duration
+            # We need to check the exact class here instead of using isinstance(new_mean, float)
+            # because numpy.float64 is a subclass of float. It is good when the mean
+            # is used in computations but when it comes to JSON serialisation it really
+            # needs to be a float rather than np.float64. That is why here we turn float64 into a real float.
+            new_mean = new_mean if new_mean.__class__ is float else new_mean.item()
 
+            per_key_dict[_stats_key_per_key_last_duration] = current_duration
             per_key_dict[_stats_key_per_key_min]  = new_min
             per_key_dict[_stats_key_per_key_max]  = new_max
             per_key_dict[_stats_key_per_key_mean] = new_mean
