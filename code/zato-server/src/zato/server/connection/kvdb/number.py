@@ -26,8 +26,14 @@ logger = getLogger('zato')
 
 utcnow = datetime.utcnow
 
-current_value_key = 'current_value'
-current_usage_key = 'current_usage'
+class StatsKey:
+    CurrentValue = 'current_value'
+    CurrentUsage = 'current_usage'
+
+    PerKeyUsage = 'usage'
+    PerKeyMin   = 'min'
+    PerKeyMax   = 'max'
+    PerKeyMean  = 'mean'
 
 usage_limit  = 3600 # In seconds
 usage_time_format = '%Y-%m-%d %H:%M:00'
@@ -59,12 +65,12 @@ class NumberRepo(BaseRepo):
 
         # Main in-RAM database of objects
         self.in_ram_store = {
-            current_value_key: {},
-            current_usage_key: {},
+            StatsKey.CurrentValue: {},
+            StatsKey.CurrentUsage: {},
         }
 
-        self.current_value = self.in_ram_store[current_value_key] # type: dict
-        self.current_usage = self.in_ram_store[current_usage_key] # type: dict
+        self.current_value = self.in_ram_store[StatsKey.CurrentValue] # type: dict
+        self.current_usage = self.in_ram_store[StatsKey.CurrentUsage] # type: dict
 
 # ################################################################################################################################
 
