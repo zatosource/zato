@@ -85,15 +85,18 @@ class InRAMStore:
         self.num_events_since_sync += 1
         self.total_events += 1
 
-        # .. check if we should sync RAM with persistent storage ..
-        if self.should_sync():
+        # .. check if sync is needed only if our class implements the method ..
+        if self.sync_state:
 
-            # .. save in persistent storage ..
-            self.sync_state()
+            # .. check if we should sync RAM with persistent storage ..
+            if self.should_sync():
 
-            # .. update metadata.
-            self.num_events_since_sync = 0
-            self.last_sync_time = utcnow()
+                # .. save in persistent storage ..
+                self.sync_state()
+
+                # .. update metadata.
+                self.num_events_since_sync = 0
+                self.last_sync_time = utcnow()
 
 # ################################################################################################################################
 
