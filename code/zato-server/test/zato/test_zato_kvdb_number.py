@@ -17,9 +17,9 @@ from dateutil.rrule import MINUTELY, rrule
 import pandas as pd
 
 # Zato
-#from zato.common.test import rand_int, rand_string
-#from zato.server.connection.kvdb.api import NumberRepo
-#from zato.server.connection.kvdb.number import usage_time_format
+from zato.common.test import rand_int, rand_string
+from zato.server.connection.kvdb.api import NumberRepo
+from zato.server.connection.kvdb.number import usage_time_format
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,7 +37,7 @@ sync_interval  = 120_000
 
 class NumberTestCase(TestCase):
 
-    def xtest_repo_init(self):
+    def test_repo_init(self):
 
         name1 = rand_string()
         name2 = rand_string()
@@ -63,7 +63,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_repo_incr(self):
+    def test_repo_incr(self):
         repo_name = rand_string()
         key_name = rand_string()
 
@@ -81,7 +81,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_repo_incr_max_value(self):
+    def test_repo_incr_max_value(self):
         repo_name = rand_string()
         key_name = rand_string()
         max_value = 2
@@ -97,7 +97,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_repo_decr(self):
+    def test_repo_decr(self):
         repo_name = rand_string()
         key_name = rand_string()
 
@@ -115,7 +115,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_repo_decr_below_zero_allow_negative_true(self):
+    def test_repo_decr_below_zero_allow_negative_true(self):
 
         repo_name = rand_string()
         key_name = rand_string()
@@ -142,7 +142,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_repo_decr_below_zero_allow_negative_false(self):
+    def test_repo_decr_below_zero_allow_negative_false(self):
 
         repo_name = rand_string()
         key_name = rand_string()
@@ -168,7 +168,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_repo_get(self):
+    def test_repo_get(self):
         repo_name = rand_string()
         key_name = rand_string()
 
@@ -184,7 +184,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_update_key_usage(self):
+    def test_update_key_usage(self):
 
         repo_name = rand_string()
         key_name = rand_string()
@@ -220,7 +220,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_repo_sync_state(self):
+    def test_repo_sync_state(self):
 
         repo_name = rand_string()
         key_name = rand_string()
@@ -274,13 +274,13 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_repo_get_usage_by_key(self):
+    def xtest_repo_get_usage_by_key(self):
 
-        #ZZZ This is temporary
+        # ZZZ This is temporary
         usage_time_format = '%Y-%m-%d %H:%M:00'
 
         # We will create usage data for that many keys
-        how_many_keys = 20
+        how_many_keys = 3
 
         # This is where the usage data will be kept
         current_usage = {}
@@ -302,7 +302,7 @@ class NumberTestCase(TestCase):
         max_minute_str = '2021-06-13 11:22:00'
         max_minute = datetime.strptime(max_minute_str, usage_time_format)
 
-        min_minute = max_minute - timedelta(minutes=59) # type: datetime
+        min_minute = max_minute - timedelta(minutes=3) # type: datetime
         min_minute_str = min_minute.strftime(usage_time_format)
 
         additional_later_limit   = max_minute + timedelta(hours=19)
@@ -332,15 +332,20 @@ class NumberTestCase(TestCase):
         # key2's usage will be 2, key3's usage will 3 etc.
         #
 
-        for elem in elems:
+        for elem_idx, elem in enumerate(elems):
 
             elem_str = elem.strftime(usage_time_format)
             per_minute_usage = current_usage.setdefault(elem_str, {})
 
-            for key_idx in range(1, how_many_keys+1):
+            for loop_idx, key_idx in enumerate(range(1, how_many_keys+1)):
                 key_name = 'key{}'.format(key_idx)
 
-                per_minute_usage[key_name] = key_idx
+                key_values = []
+
+                for key_value in range(1, key_idx+1):
+                    key_values.append(key_value)
+
+                per_minute_usage[key_name] = key_values
 
         pd_range = pd.date_range(start=start, end=stop, freq='min')
         f = pd.DataFrame(current_usage).transpose()
@@ -348,9 +353,34 @@ class NumberTestCase(TestCase):
         f = f.reindex(pd_range, fill_value=0)
         f.index.name = 'minute_bucket'
 
+        period_data = f[min_minute_str:max_minute_str] # type: pd.DataFrame
+
+        def calc_stats(row):
+            print()
+            for key in row.keys():
+
+                values = row[key]
+                values = [values] if not isinstance(values, list) else values
+
+                #row[key] = [min(values), max(values), sum(values)]
+
+                #row['{}_min'.format(key)] = min(values)
+                #row['aaa'] = 'bbb'
+
+                print(111, row.assign)
+
+                return row
+
+            print()
+
+        #period_data.apply(calc_stats, axis=1)
+
+        #period_data['aaa'] = '111'
+
         print()
-        print(f[min_minute_str:max_minute_str])
+        print(period_data)
         print()
+
         #print(111, f.index.min())
         #print(222, f.index.max())
         #print()
