@@ -1117,15 +1117,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def load_zato_kvdb_data(self):
-        #self.slow_responses.load_path(self.slow_responses_path)
-        #self.usage_samples.load_path(self.usage_samples_path)
+        self.slow_responses.load_path(self.slow_responses_path)
+        self.usage_samples.load_path(self.usage_samples_path)
         self.current_usage.load_path(self.current_usage_path)
 
 # ################################################################################################################################
 
     def save_zato_kvdb_data(self):
-        #self.slow_responses.save_path(self.slow_responses_path)
-        #self.usage_samples.save_path(self.usage_samples_path)
+        self.slow_responses.save_path(self.slow_responses_path)
+        self.usage_samples.save_path(self.usage_samples_path)
         self.current_usage.save_path(self.current_usage_path)
 
 # ################################################################################################################################
