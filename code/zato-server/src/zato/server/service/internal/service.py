@@ -173,8 +173,6 @@ class _Get(AdminService):
         usage_response = self.server.rpc.invoke_all(GetServiceStats.get_name(), {'name': self.request.input.name})
         usage_response = collect_current_usage(usage_response.data) # type: dict
 
-        self.logger.warn('QQQ %s %s', usage_response, type(usage_response))
-
         if usage_response:
 
             self.response.payload.usage          = usage_response[StatsKey.PerKeyValue]

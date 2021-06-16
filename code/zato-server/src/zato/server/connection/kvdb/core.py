@@ -10,6 +10,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from logging import getLogger
 
+# numpy
+from numpy import float64
+
 # orjson
 from orjson import dumps as json_dumps
 
@@ -165,10 +168,11 @@ class BaseRepo(InRAMStore):
 # ################################################################################################################################
 
     def _loads(self, data):
-        # type: (bytes) -> int
-        data = json_loads(data)
-        self.in_ram_store = data
-        return len(self.in_ram_store)
+        # type: (bytes) -> None
+        data = json_loads(data) # type: dict
+        if data:
+            for key, value in data.items():
+                self.in_ram_store[key].update(value)
 
 # ################################################################################################################################
 
@@ -180,12 +184,13 @@ class BaseRepo(InRAMStore):
 # ################################################################################################################################
 
     def load_path(self, path):
-        # type: (str) -> int
+        # type: (str) -> None
         with self.update_lock:
             if os.path.exists(path):
                 with open(path, 'rb') as f:
                     data = f.read()
-                    return self._loads(data)
+                    if data:
+                        self._loads(data)
 
 # ################################################################################################################################
 
