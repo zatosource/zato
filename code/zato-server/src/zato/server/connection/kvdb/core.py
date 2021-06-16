@@ -58,6 +58,8 @@ class ObjectCtx:
 
 class BaseRepo(InRAMStore):
 
+    sync_state = None
+
     def __init__(self, name, sync_threshold=120_000, sync_interval=120_000):
         # type: (str, int, int) -> None
 
