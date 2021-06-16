@@ -175,8 +175,6 @@ class _Get(AdminService):
 
         self.logger.warn('QQQ %s %s', usage_response, type(usage_response))
 
-        return
-
         if usage_response:
 
             self.response.payload.usage          = usage_response[StatsKey.PerKeyValue]
