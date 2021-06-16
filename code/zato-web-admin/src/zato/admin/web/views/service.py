@@ -231,8 +231,8 @@ def overview(req, service_name):
             service = Service()
 
             for name in('id', 'name', 'is_active', 'impl_name', 'is_internal',
-                  'usage', 'last_duration', 'time_min_all_time', 'time_max_all_time',
-                  'time_mean_all_time'):
+                  'usage', 'last_duration', 'usage_min', 'usage_max',
+                  'usage_mean'):
 
                 value = getattr(response.data, name, None)
                 if name in('is_active', 'is_internal'):
