@@ -71,7 +71,7 @@
                                         <td>Last response time</td>
                                         <td>
                                             {% if service.usage %}
-                                                {{ service.last_duration|format_float:3 }} ms
+                                                {{ service.last_duration|format_float:1 }} ms
                                             {% else %}
                                                 <span class="form_hint">n/a</span>
                                             {% endif %}
@@ -79,10 +79,17 @@
                                     </tr>
 
                                     <tr>
-                                        <td>Min/max/mean (ms)</td>
+                                        <td>
+                                            Min/max/mean
+                                            <span class="form_hint">(ms)</span>
+                                        </td>
                                         <td>
                                             {% if service.usage %}
-                                                {{ service.time_min_all_time|floatformat:0 }}/{{ service.time_max_all_time|floatformat:0 }}/{{ service.time_mean_all_time|floatformat:0 }}
+                                                {{ service.usage_min|floatformat:1 }}
+                                                /
+                                                {{ service.usage_max|floatformat:1 }}
+                                                /
+                                                {{ service.usage_mean|floatformat:1 }}
                                             {% else %}
                                                 <span class="form_hint">n/a</span>
                                             {% endif %}
