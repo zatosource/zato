@@ -30,13 +30,29 @@ class StatsKey:
     CurrentValue = 'current_value'
     CurrentUsage = 'current_usage'
 
-    PerKeyUsage = 'usage'
     PerKeyMin   = 'min'
     PerKeyMax   = 'max'
     PerKeyMean  = 'mean'
 
+    PerKeyValue         = 'value'
+    PerKeyUsage         = 'usage'
+    PerKeyLastTimestamp = 'last_timestamp'
+    PerKeyLastDuration  = 'last_duration'
+
 usage_limit  = 3600 # In seconds
 usage_time_format = '%Y-%m-%d %H:%M:00'
+
+_stats_key_current_value = StatsKey.CurrentValue
+_stats_key_current_usage = StatsKey.CurrentUsage
+
+_stats_key_per_key_usage = StatsKey.PerKeyUsage
+_stats_key_per_key_min   = StatsKey.PerKeyMin
+_stats_key_per_key_max   = StatsKey.PerKeyMax
+_stats_key_per_key_mean  = StatsKey.PerKeyMean
+
+_stats_key_per_key_value          = StatsKey.PerKeyValue
+_stats_key_per_key_last_timestamp = StatsKey.PerKeyLastTimestamp
+_stats_key_per_key_last_duration  = StatsKey.PerKeyLastDuration
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -65,12 +81,12 @@ class NumberRepo(BaseRepo):
 
         # Main in-RAM database of objects
         self.in_ram_store = {
-            StatsKey.CurrentValue: {},
-            StatsKey.CurrentUsage: {},
+            _stats_key_current_value: {},
+            _stats_key_current_usage: {}, # This is currently unused
         }
 
-        self.current_value = self.in_ram_store[StatsKey.CurrentValue] # type: dict
-        self.current_usage = self.in_ram_store[StatsKey.CurrentUsage] # type: dict
+        self.current_value = self.in_ram_store[_stats_key_current_value] # type: dict
+        self.current_usage = self.in_ram_store[_stats_key_current_usage] # type: dict
 
 # ################################################################################################################################
 
@@ -108,19 +124,28 @@ class NumberRepo(BaseRepo):
     def _change_value(self, value_op, cmp_op, value_limit, key, change_by, value_limit_condition=None, default_value=0):
         # type: (object, object, int, str, int, object) -> int
 
-        # Get current value or default to 0, if nothing is found ..
-        default = {
-            'value':default_value,
-            'last_timestamp':utcnow().isoformat(),
-            'last_duration':-1
-        }
-        current_data = self.current_value.get(key, default)
+        # Get current value ..
+        current_data = self.current_value.get(key)
+
+        # .. or set a default to 0, if nothing is found ..
+        if not current_data:
+
+            # .. zero out all the counters ..
+            current_data = {
+                _stats_key_per_key_value: default_value,
+                _stats_key_per_key_usage: 0,
+                _stats_key_per_key_last_timestamp: utcnow().isoformat(),
+                _stats_key_per_key_last_duration: -1
+            }
+
+            # .. and assign them to our key ..
+            self.current_value[key] = current_data
 
         # .. get the new value ..
-        current_data['value'] = value_op(current_data['value'], change_by)
+        current_data[_stats_key_per_key_value] = value_op(current_data[_stats_key_per_key_value], change_by)
 
         # .. does the new value exceed the limit? ..
-        is_limit_exceeded = cmp_op(current_data['value'], value_limit)
+        is_limit_exceeded = cmp_op(current_data[_stats_key_per_key_value], value_limit)
 
         # .. we may have a condition function that tells us whether to allow the new value beyond the limit ..
         if value_limit_condition and value_limit_condition():
@@ -133,19 +158,19 @@ class NumberRepo(BaseRepo):
         # .. otherwise, without such a function, we do not allow it ..
         else:
             if is_limit_exceeded:
-                current_data['value'] = value_limit
+                current_data[_stats_key_per_key_value] = value_limit
+
+        # .. update usage statistics ..
+        current_data[_stats_key_per_key_usage] += 1
 
         # .. store the new value in RAM ..
         self.current_value[key] = current_data
-
-        # .. update usage statistics ..
-        self._update_key_usage(key)
 
         # .. update metadata and possibly trim statistics ..
         self.post_modify_state()
 
         # .. finally, return the value set.
-        return current_data['value']
+        return current_data[_stats_key_per_key_value]
 
 # ################################################################################################################################
 
@@ -200,7 +225,7 @@ class NumberRepo(BaseRepo):
     def set_last_duration(self, key, value):
         # type: (str, int) -> None
         with self.update_lock:
-            self.current_value[key]['last_duration'] = value
+            self.current_value[key][_stats_key_per_key_last_duration] = value
 
 # ################################################################################################################################
 
