@@ -10,9 +10,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from logging import getLogger
 
-# numpy
-from numpy import float64
-
 # orjson
 from orjson import dumps as json_dumps
 

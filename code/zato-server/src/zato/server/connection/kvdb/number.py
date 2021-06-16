@@ -195,7 +195,8 @@ class NumberRepo(BaseRepo):
             # because numpy.float64 is a subclass of float. It is good when the mean
             # is used in computations but when it comes to JSON serialisation it really
             # needs to be a float rather than np.float64. That is why here we turn float64 into a real float.
-            new_mean = new_mean if new_mean.__class__ is float else new_mean.item()
+            uses_numpy = new_mean.__class__ is np.float64
+            new_mean = new_mean.item() if uses_numpy else new_mean
 
             per_key_dict[_stats_key_per_key_last_duration] = current_duration
             per_key_dict[_stats_key_per_key_min]  = new_min
