@@ -28,7 +28,6 @@ utcnow = datetime.utcnow
 
 class StatsKey:
     CurrentValue = 'current_value'
-    CurrentUsage = 'current_usage'
 
     PerKeyMin   = 'min'
     PerKeyMax   = 'max'
@@ -43,7 +42,6 @@ usage_limit  = 3600 # In seconds
 usage_time_format = '%Y-%m-%d %H:%M:00'
 
 _stats_key_current_value = StatsKey.CurrentValue
-_stats_key_current_usage = StatsKey.CurrentUsage
 
 _stats_key_per_key_usage = StatsKey.PerKeyUsage
 _stats_key_per_key_min   = StatsKey.PerKeyMin
@@ -82,42 +80,9 @@ class NumberRepo(BaseRepo):
         # Main in-RAM database of objects
         self.in_ram_store = {
             _stats_key_current_value: {},
-            _stats_key_current_usage: {}, # This is currently unused
         }
 
         self.current_value = self.in_ram_store[_stats_key_current_value] # type: dict
-        self.current_usage = self.in_ram_store[_stats_key_current_usage] # type: dict
-
-# ################################################################################################################################
-
-    def sync_state(self, usage_limit=usage_limit):
-        # type: () -> None
-
-        limit = utcnow() - timedelta(hours=1)
-        limit = limit.strftime(usage_time_format)
-
-        with self.update_lock:
-
-            # Find all the keys older than the limit allowed ..
-            to_delete = list(key for key in self.current_usage if key < limit)
-
-            # .. and delete them one by one ..
-            for item in to_delete:
-
-                # .. use .pop just in case anyone modifies the dict in the meantime (however unlikely).
-                self.current_usage.pop(item, None)
-
-# ################################################################################################################################
-
-    def _update_key_usage(self, key):
-        # type: (str) -> None
-
-        now = utcnow()
-        now = now.strftime(usage_time_format)
-
-        by_minute = self.current_usage.setdefault(now, {}) # type: dict
-        current_key_usage = by_minute.setdefault(key, 0)
-        by_minute[key] = current_key_usage + 1
 
 # ################################################################################################################################
 
@@ -211,7 +176,6 @@ class NumberRepo(BaseRepo):
     def _remove_all(self):
         # type: () -> None
         self.current_value.clear()
-        self.current_usage.clear()
 
 # ################################################################################################################################
 
