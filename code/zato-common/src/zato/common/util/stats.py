@@ -9,6 +9,12 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import math
 
+# numpy
+import numpy as np
+
+# Zato
+from zato.common.api import StatsKey
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -74,8 +80,13 @@ def collect_current_usage(data):
 
     # For later use
     usage = 0
+
     last_duration = None
     last_timestamp = ''
+
+    usage_min  = None
+    usage_max  = None
+    usage_mean = None
 
     # Make sure we always have a list to iterate over (rather than None)
     data = data or []
@@ -85,16 +96,36 @@ def collect_current_usage(data):
         if elem is None:
             continue
 
-        usage += elem['value']
+        usage += elem[StatsKey.PerKeyValue]
 
-        if elem['last_timestamp'] > last_timestamp:
-            last_timestamp = elem['last_timestamp']
-            last_duration = elem['last_duration']
+        if elem[StatsKey.PerKeyLastTimestamp] > last_timestamp:
+            last_timestamp = elem[StatsKey.PerKeyLastTimestamp]
+            last_duration = elem[StatsKey.PerKeyLastDuration]
+
+        if usage_min:
+            usage_min = min([usage_min, elem[StatsKey.PerKeyMin]])
+        else:
+            usage_min = elem[StatsKey.PerKeyMin]
+
+        if usage_max:
+            usage_max  = max([usage_max, elem[StatsKey.PerKeyMax]])
+        else:
+            usage_max = elem[StatsKey.PerKeyMax]
+
+        if usage_mean:
+            usage_mean = np.mean([usage_mean, elem[StatsKey.PerKeyMean]])
+        else:
+            usage_mean = elem[StatsKey.PerKeyMean]
+
+        usage_mean = round(usage_mean, 3)
 
     return {
-        'usage': usage,
-        'last_duration': last_duration,
-        'last_timestamp': last_timestamp,
+        StatsKey.PerKeyValue: usage,
+        StatsKey.PerKeyLastDuration:  last_duration,
+        StatsKey.PerKeyLastTimestamp: last_timestamp,
+        StatsKey.PerKeyMin: usage_min,
+        StatsKey.PerKeyMax: usage_max,
+        StatsKey.PerKeyMean: usage_mean,
     }
 
 # ################################################################################################################################

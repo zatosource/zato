@@ -26,7 +26,7 @@ from future.utils import iterkeys
 from past.builtins import basestring
 
 # Zato
-from zato.common.api import BROKER, KVDB
+from zato.common.api import BROKER, KVDB, StatsKey
 from zato.common.broker_message import SERVICE
 from zato.common.exception import BadRequest, ZatoException
 from zato.common.json_internal import dumps, loads
@@ -36,8 +36,8 @@ from zato.common.odb.query import service_list
 from zato.common.rate_limiting import DefinitionParser
 from zato.common.scheduler import get_startup_job_services
 from zato.common.util.api import hot_deploy, payload_from_request
-from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.common.util.stats import collect_current_usage
+from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean, Integer, Service as ZatoService
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
@@ -144,7 +144,8 @@ class _Get(AdminService):
         output_optional = Integer('usage'), Integer('slow_threshold'), 'last_duration', \
             Integer('time_min_all_time'), Integer('time_max_all_time'), 'time_mean_all_time', \
             'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_active', \
-            'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
+            'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def'), 'last_timestamp', \
+            'usage_min', 'usage_max', 'usage_mean'
 
     def get_data(self, session):
         query = session.query(Service.id, Service.name, Service.is_active,
@@ -170,21 +171,21 @@ class _Get(AdminService):
             self.response.payload.may_be_deleted = internal_del if service.is_internal else True
 
         usage_response = self.server.rpc.invoke_all(GetServiceStats.get_name(), {'name': self.request.input.name})
-        current_usage = collect_current_usage(usage_response.data)
+        usage_response = collect_current_usage(usage_response.data) # type: dict
 
-        self.response.payload.usage = current_usage['usage']
-        self.response.payload.last_duration = current_usage['last_duration']
+        self.logger.warn('QQQ %s %s', usage_response, type(usage_response))
 
-        '''
+        return
 
-            for name in('min_all_time', 'max_all_time', 'mean_all_time'):
-                setattr(self.response.payload, 'time_{}'.format(name), float(
-                    self.server.kvdb.conn.hget(time_key, name) or 0))
+        if usage_response:
 
-            self.response.payload.time_min_all_time = int(self.response.payload.time_min_all_time)
-            self.response.payload.time_max_all_time = int(self.response.payload.time_max_all_time)
-            self.response.payload.time_mean_all_time = round(self.response.payload.time_mean_all_time, 1)
-            '''
+            self.response.payload.usage          = usage_response[StatsKey.PerKeyValue]
+            self.response.payload.last_duration  = usage_response[StatsKey.PerKeyLastDuration]
+            self.response.payload.last_timestamp = usage_response[StatsKey.PerKeyLastTimestamp]
+
+            self.response.payload.usage_min  = usage_response[StatsKey.PerKeyMin]
+            self.response.payload.usage_max  = usage_response[StatsKey.PerKeyMax]
+            self.response.payload.usage_mean = usage_response[StatsKey.PerKeyMean]
 
 # ################################################################################################################################
 

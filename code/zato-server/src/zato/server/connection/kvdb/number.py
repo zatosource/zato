@@ -12,7 +12,11 @@ from datetime import datetime, timedelta
 from logging import getLogger
 from operator import add as op_add, gt as op_gt, lt as op_lt, sub as op_sub
 
+# numpy
+import numpy as np
+
 # Zato
+from zato.common.api import StatsKey
 from zato.common.typing_ import dataclass
 from zato.server.connection.kvdb.core import BaseRepo
 
@@ -26,24 +30,11 @@ logger = getLogger('zato')
 
 utcnow = datetime.utcnow
 
-class StatsKey:
-    CurrentValue = 'current_value'
-
-    PerKeyMin   = 'min'
-    PerKeyMax   = 'max'
-    PerKeyMean  = 'mean'
-
-    PerKeyValue         = 'value'
-    PerKeyUsage         = 'usage'
-    PerKeyLastTimestamp = 'last_timestamp'
-    PerKeyLastDuration  = 'last_duration'
-
 usage_limit  = 3600 # In seconds
 usage_time_format = '%Y-%m-%d %H:%M:00'
 
 _stats_key_current_value = StatsKey.CurrentValue
 
-_stats_key_per_key_usage = StatsKey.PerKeyUsage
 _stats_key_per_key_min   = StatsKey.PerKeyMin
 _stats_key_per_key_max   = StatsKey.PerKeyMax
 _stats_key_per_key_mean  = StatsKey.PerKeyMean
@@ -97,10 +88,14 @@ class NumberRepo(BaseRepo):
 
             # .. zero out all the counters ..
             current_data = {
+
                 _stats_key_per_key_value: default_value,
-                _stats_key_per_key_usage: 0,
                 _stats_key_per_key_last_timestamp: utcnow().isoformat(),
-                _stats_key_per_key_last_duration: -1
+                _stats_key_per_key_last_duration: None,
+
+                _stats_key_per_key_min:  None,
+                _stats_key_per_key_max:  None,
+                _stats_key_per_key_mean: None,
             }
 
             # .. and assign them to our key ..
@@ -124,9 +119,6 @@ class NumberRepo(BaseRepo):
         else:
             if is_limit_exceeded:
                 current_data[_stats_key_per_key_value] = value_limit
-
-        # .. update usage statistics ..
-        current_data[_stats_key_per_key_usage] += 1
 
         # .. store the new value in RAM ..
         self.current_value[key] = current_data
@@ -186,10 +178,28 @@ class NumberRepo(BaseRepo):
 
 # ################################################################################################################################
 
-    def set_last_duration(self, key, value):
+    def set_last_duration(self, key, current_duration):
         # type: (str, int) -> None
         with self.update_lock:
-            self.current_value[key][_stats_key_per_key_last_duration] = value
+
+            per_key_dict = self.current_value[key]
+            previous_duration = per_key_dict[_stats_key_per_key_last_duration]
+
+            if previous_duration:
+                to_compare = [previous_duration, current_duration]
+                new_min  = min(to_compare)
+                new_max  = max(to_compare)
+                new_mean = np.mean(to_compare)
+            else:
+                new_min  = current_duration
+                new_max  = current_duration
+                new_mean = current_duration
+
+            per_key_dict[_stats_key_per_key_last_duration] = current_duration
+
+            per_key_dict[_stats_key_per_key_min]  = new_min
+            per_key_dict[_stats_key_per_key_max]  = new_max
+            per_key_dict[_stats_key_per_key_mean] = new_mean
 
 # ################################################################################################################################
 # ################################################################################################################################

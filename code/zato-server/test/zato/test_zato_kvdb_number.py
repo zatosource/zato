@@ -19,6 +19,7 @@ from dateutil.rrule import MINUTELY, rrule
 import pandas as pd
 
 # Zato
+from zato.common.api import StatsKey
 from zato.common.test import rand_int, rand_string
 from zato.server.connection.kvdb.api import NumberRepo
 from zato.server.connection.kvdb.number import StatsKey, usage_time_format
@@ -185,8 +186,7 @@ class NumberTestCase(TestCase):
         sleep(0.1)
 
         self.assertEqual(data[StatsKey.PerKeyValue], 3)
-        self.assertEqual(data[StatsKey.PerKeyUsage], 3)
-        self.assertEqual(data[StatsKey.PerKeyLastDuration], -1)
+        self.assertIsNone(data[StatsKey.PerKeyLastDuration])
 
         last_timestamp = data[StatsKey.PerKeyLastTimestamp]
         last_timestamp = dt_parse(last_timestamp)
