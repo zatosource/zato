@@ -7,22 +7,17 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from datetime import datetime, timedelta
+from datetime import datetime
 from time import sleep
 from unittest import main, TestCase
 
 # dateutil
 from dateutil.parser import parse as dt_parse
-from dateutil.rrule import MINUTELY, rrule
-
-# Pandas
-import pandas as pd
 
 # Zato
 from zato.common.api import StatsKey
 from zato.common.test import rand_int, rand_string
 from zato.server.connection.kvdb.api import NumberRepo
-from zato.server.connection.kvdb.number import StatsKey, usage_time_format
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -195,7 +190,7 @@ class NumberTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_repo_incr(self):
+    def test_repo_set_last_duration(self):
 
         repo_name = rand_string()
         key_name = rand_string()
@@ -206,6 +201,7 @@ class NumberTestCase(TestCase):
         repo.set_last_duration(key_name, last_duration)
 
         data = repo.get(key_name) # type: dict
+
         self.assertEqual(data[StatsKey.PerKeyLastDuration], last_duration)
 
 # ################################################################################################################################

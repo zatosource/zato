@@ -8,7 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 from logging import getLogger
 from operator import add as op_add, gt as op_gt, lt as op_lt, sub as op_sub
 
@@ -29,9 +29,6 @@ logger = getLogger('zato')
 # ################################################################################################################################
 
 utcnow = datetime.utcnow
-
-usage_limit  = 3600 # In seconds
-usage_time_format = '%Y-%m-%d %H:%M:00'
 
 _stats_key_current_value = StatsKey.CurrentValue
 
