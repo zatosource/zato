@@ -550,13 +550,13 @@ def summary(req, choice):
 @method_allowed('GET')
 def settings(req):
 
-    if req.zato.get('cluster'):
+    return_data = {
+        'zato_clusters': req.zato.clusters,
+        'cluster_id': req.zato.cluster_id,
+        'search_form':req.zato.search_form,
+    }
 
-        return_data = {
-            'zato_clusters': req.zato.clusters,
-            'cluster_id': req.zato.cluster_id,
-            'search_form':req.zato.search_form,
-        }
+    if req.zato.get('cluster'):
 
         _settings = {}
         defaults = deepcopy(DEFAULT_STATS_SETTINGS)
