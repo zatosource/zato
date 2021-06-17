@@ -760,6 +760,9 @@ class Service(Base):
         self.invokes = None # Not used by the database
         self.invoked_by = None # Not used by the database
 
+        self.last_timestamp = None # Not used by the database
+        self.last_timestamp_utc = None # Not used by the database
+
 # ################################################################################################################################
 
 class DeployedService(Base):
