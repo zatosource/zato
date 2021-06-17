@@ -116,10 +116,13 @@ class NumberRepo(BaseRepo):
             if is_limit_exceeded:
                 current_data[_stats_key_per_key_value] = value_limit
 
+        # .. update the last used time as well ..
+        current_data[_stats_key_per_key_last_timestamp] = utcnow().isoformat()
+
         # .. store the new value in RAM ..
         self.current_value[key] = current_data
 
-        # .. update metadata and possibly trim statistics ..
+        # .. update metadata  ..
         self.post_modify_state()
 
         # .. finally, return the value set.
