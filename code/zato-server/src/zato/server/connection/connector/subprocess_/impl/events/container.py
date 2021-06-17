@@ -72,12 +72,21 @@ class EventsConnectionContainer(BaseConnectionContainer):
 
 # ################################################################################################################################
 
+    def enrich_options(self):
+        # type: (dict) -> None
+        if not self.options['zato_subprocess_mode']:
+            self.options['fs_data_path'] = '/tmp/dev-events'
+            self.options['sync_threshold'] = 1
+            self.options['sync_interval'] = 1
+
+# ################################################################################################################################
+
     def post_init(self):
 
         try:
-            fs_data_path = self.cli_options['fs_data_path']
-            sync_threshold = int(self.cli_options['sync_threshold'])
-            sync_interval = int(self.cli_options['sync_interval'])
+            fs_data_path = self.options['fs_data_path']
+            sync_threshold = int(self.options['sync_threshold'])
+            sync_interval = int(self.options['sync_interval'])
 
             self.events_db = EventsDatabase(logger, fs_data_path, sync_threshold, sync_interval)
 
@@ -173,3 +182,4 @@ if __name__ == '__main__':
 
 # ################################################################################################################################
 # ################################################################################################################################
+
