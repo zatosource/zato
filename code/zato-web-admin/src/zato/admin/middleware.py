@@ -101,8 +101,11 @@ class ZatoMiddleware(object):
         try:
             resolved_kwargs = resolve(req.path).kwargs
             req.zato.id = resolved_kwargs.get('id')
-            req.zato.cluster_id = req.GET.get('cluster') or req.POST.get('cluster_id') or \
-                resolved_kwargs.get('cluster_id') or resolved_kwargs.get('cluster')
+            req.zato.cluster_id = req.GET.get('cluster') \
+                or req.POST.get('cluster_id') \
+                or resolved_kwargs.get('cluster_id') \
+                or resolved_kwargs.get('cluster') \
+                or 1 # By default, this will be the very first cluster so we can just assume it here as the last option.
 
             if req.zato.cluster_id:
                 req.zato.cluster = req.zato.odb.query(Cluster).filter_by(id=req.zato.cluster_id).one()
