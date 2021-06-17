@@ -1021,62 +1021,7 @@ class Service(object):
             # .. as well as in the in-RAM key keep track of the last duration times.
             self.server.current_usage.set_last_duration(self.name, self.processing_time)
 
-        #
-        # Sample requests/responses
-        #
-
-        #ZZZ Store sample requests/responses directly in RAM
-
-        '''
-        slow_response_enabled = self.server.component_enabled.slow_response
-        needs_usage = self._req_resp_freq and self.usage % self._req_resp_freq == 0
-
-        if slow_response_enabled or needs_usage:
-            raw_request = self.request.raw_request
-            if not raw_request:
-                req = ''
-            else:
-                req = raw_request if isinstance(raw_request, basestring) else repr(raw_request)
-
-        if needs_usage:
-
-            data = {
-                'cid': self.cid,
-                'req_ts': self.invocation_time.isoformat(),
-                'resp_ts': self.handle_return_time.isoformat(),
-                'req': req,
-                'resp':_get_response_value(self.response), # TODO: Don't parse it here and a moment later below
-            }
-            self.kvdb.conn.hmset(key, data)
-        '''
-
-        #
-        # Slow responses
-        #
-        #ZZZ Store slow responses directly in RAM
-
-        '''
-        if slow_response_enabled and self.slow_threshold:
-
-            if self.processing_time > self.slow_threshold:
-
-                raw_request = self.request.raw_request
-                if not raw_request:
-                    req = ''
-                else:
-                    req = raw_request if isinstance(raw_request, basestring) else repr(raw_request)
-
-                data = {
-                    'cid': self.cid,
-                    'proc_time': self.processing_time,
-                    'slow_threshold': self.slow_threshold,
-                    'req_ts': self.invocation_time.isoformat(),
-                    'resp_ts': self.handle_return_time.isoformat(),
-                    'req': req,
-                    'resp':_get_response_value(self.response), # TODO: Don't parse it here and a moment earlier above
-                }
-                slow_response.store(self.kvdb, self.name, **data)
-        '''
+# ################################################################################################################################
 
     def translate(self, *args, **kwargs):
         raise NotImplementedError('An initializer should override this method')
