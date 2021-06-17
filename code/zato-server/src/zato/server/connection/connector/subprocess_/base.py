@@ -157,11 +157,22 @@ class BaseConnectionContainer(object):
 
     def __init__(self):
 
-        self.cli_options = sys.argv[1]
-        self.cli_options = parse_cmd_line_options(self.cli_options) # type: dict
+        if len(sys.argv) > 1:
+            self.options = sys.argv[1]
+            self.options = parse_cmd_line_options(self.options) # type: dict
+            self.options['zato_subprocess_mode'] = True
+        else:
+            self.options = {
+                'zato_subprocess_mode': False,
+                'deployment_key': 'test',
+                'shmem_size': 100_000,
+            }
 
-        self.deployment_key = self.cli_options['deployment_key']
-        self.shmem_size = int(self.cli_options['shmem_size'])
+        # Subclasses may want to update the options here
+        self.enrich_options()
+
+        self.deployment_key = self.options['deployment_key']
+        self.shmem_size = int(self.options['shmem_size'])
 
         self.host = '127.0.0.1'
         self.port = None
@@ -177,7 +188,9 @@ class BaseConnectionContainer(object):
         self.parent_pid = getppid()
 
         self.config_ipc = ConnectorConfigIPC()
-        self.config_ipc.create(self.deployment_key, self.shmem_size, False)
+
+        if self.options['zato_subprocess_mode']:
+            self.config_ipc.create(self.deployment_key, self.shmem_size, False)
 
         self.connections = {}
         self.outconns = {}
@@ -192,6 +205,12 @@ class BaseConnectionContainer(object):
 
 # ################################################################################################################################
 
+    def enrich_options(self):
+        # type: (None) -> None
+        pass
+
+# ################################################################################################################################
+
     def post_init(self):
         """ Can be implemented by subclasses to further customise the container.
         """
@@ -201,8 +220,20 @@ class BaseConnectionContainer(object):
     def set_config(self):
         """ Sets self attributes, as configured in shmem by our parent process.
         """
-        config = self.config_ipc.get_config('zato-{}'.format(self.ipc_name))
-        config = loads(config)
+        if self.options['zato_subprocess_mode']:
+            config = self.config_ipc.get_config('zato-{}'.format(self.ipc_name))
+            config = loads(config)
+        else:
+            config = {
+                'username': 'zato.username',
+                'password': 'zato.password',
+                'port': 35035,
+                'server_port': 35036,
+                'server_path': '/zato/base-connection-container',
+                'base_dir': os.path.expanduser('~/env/qs-1'),
+                'needs_pidfile': False,
+            }
+
         config = bunchify(config)
 
         self.username = config.username
@@ -215,14 +246,21 @@ class BaseConnectionContainer(object):
         self.server_path = config.server_path
         self.server_address = self.server_address.format(self.server_port, self.server_path)
 
-        with open(config.logging_conf_path) as f:
-            logging_config = yaml.load(f, yaml.FullLoader)
+        if self.options['zato_subprocess_mode']:
+            with open(config.logging_conf_path) as f:
+                logging_config = yaml.load(f, yaml.FullLoader)
 
-        if not 'zato_{}'.format(self.conn_type) in logging_config['loggers']:
-            logging_config = get_logging_config(self.conn_type, self.logging_file_name)
+            if not 'zato_{}'.format(self.conn_type) in logging_config['loggers']:
+                logging_config = get_logging_config(self.conn_type, self.logging_file_name)
 
-        # Configure logging for this connector
-        self.set_up_logging(logging_config)
+            # Configure logging for this connector
+            self.set_up_logging(logging_config)
+
+        else:
+            log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
+            logging.basicConfig(level=logging.DEBUG, format=log_format)
+            self.logger = getLogger('zato')
+            self.logger.warn('QQQ %s', self)
 
         # Store our process's pidfile
         if config.needs_pidfile:
