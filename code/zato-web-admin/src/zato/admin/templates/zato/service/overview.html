@@ -67,7 +67,22 @@
                                         <td>Usage</td>
                                         <td>{{ service.usage }}</td>
                                     </tr>
+                                     </tr>
+                                        <td>Last used</td>
+                                        <td>
+                                            {% if service.usage %}
 
+                                                <a
+                                                    id="a_last_timestamp"
+                                                    href="javascript:$.fn.zato.toggle_time('last_timestamp', '{{ service.last_timestamp }}', '{{ service.last_timestamp_utc }}')">{{ service.last_timestamp }}
+                                                </a>
+
+                                            {% else %}
+                                                <span class="form_hint">n/a</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
                                         <td>Last response time</td>
                                         <td>
                                             {% if service.usage %}
