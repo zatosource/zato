@@ -42,32 +42,20 @@
     <form action="./save/?cluster={{ cluster_id }}" method="post" id="settings_form">
     {% csrf_token %}
 
-    <table id="data-table">
-        <tr>
-            <td class="inline_header" colspan="4">Scheduler</td>
-        </tr>
-        <tr>
-            <td style="width:15%">How often to process raw statistics</td>
-            <td style="width:30%;text-align:left">{{ form.scheduler_raw_times_interval }} <span class="form_hint">{{ defaults.scheduler_raw_times_interval_unit }} (default: {{ defaults.scheduler_raw_times_interval }})</span></td>
-            <td style="width:15%">At most, how many raw statistics to process in one batch</td>
-            <td style="width:30%;text-align:left">{{ form.scheduler_raw_times_batch }} <span class="form_hint">(default: {{ defaults.scheduler_raw_times_batch }})</span></td>
-        </tr>
-        <tr>
-            <td>How often to aggregate per-minute statistics</td>
-            <td style="width:30%;text-align:left">{{ form.scheduler_per_minute_aggr_interval }} <span class="form_hint">{{ defaults.scheduler_per_minute_aggr_interval_unit }} (default: {{ defaults.scheduler_per_minute_aggr_interval }})</span></td>
-            <td colspan="2"></td>
-        </tr>
+    <table id="data-table" style="width:60%">
         <tr>
             <td class="inline_header" colspan="4">Threshold markers</td>
         </tr>
         <tr>
-            <td style="width:15%">Slow service threshold</td>
-            <td style="width:30;text-align:left%">{{ form.atttention_slow_threshold }} <span class="form_hint">ms (default: {{ defaults.atttention_slow_threshold }})</span></td>
-            <td style="width:15%">Top service usage threshold</td>
+            <td style="width:5%">Slow service threshold</td>
+            <td style="width:30%;text-align:left%">{{ form.atttention_slow_threshold }} <span class="form_hint">ms (default: {{ defaults.atttention_slow_threshold }})</span></td>
+        </tr>
+        <tr>
+            <td style="width:5%">Top service usage threshold</td>
             <td style="width:30%;text-align:left">{{ form.atttention_top_threshold }} <span class="form_hint">% (default: {{ defaults.atttention_top_threshold }})</span></td>
         </tr>
         <tr>
-            <td colspan="4" style="text-align:right;border-top:1px solid #ddd"><button id="save_settings" name="save_settings" type="submit">Save settings</button></td>
+            <td colspan="2" style="text-align:right;border-top:1px solid #ddd"><button id="save_settings" name="save_settings" type="submit">Save settings</button></td>
         </tr>
     </table>
     </form>
