@@ -371,6 +371,7 @@ class GetNonGDDepth(AdminService):
     class SimpleIO:
         input_required = ('topic_name',)
         output_optional = (Int('depth'),)
+        response_elem = None
 
     def handle(self):
         self.response.payload.depth = self.pubsub.get_non_gd_topic_depth(self.request.input.topic_name)

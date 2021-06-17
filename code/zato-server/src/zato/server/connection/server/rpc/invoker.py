@@ -13,6 +13,9 @@ from typing import Optional as optional
 # Requests
 from requests import get as requests_get
 
+# simdjson
+from simdjson import loads
+
 # Zato
 from zato.client import AnyServiceInvoker
 from zato.common.ext.dataclasses import dataclass, field
@@ -152,8 +155,13 @@ class RemoteServerInvoker(ServerInvoker):
             if response.has_data:
                 for pid, pid_data in response.data.items():
 
-                    if pid_data['pid_data'] == '':
+                    per_pid_data = pid_data['pid_data']
+
+                    if per_pid_data == '':
                         pid_data['pid_data'] = None
+
+                    if per_pid_data and isinstance(per_pid_data, str) and per_pid_data[0] == '{':
+                        pid_data['pid_data'] = loads(per_pid_data)
 
                     per_pid_response = from_dict(PerPIDResponse, pid_data) # type: PerPIDResponse
                     per_pid_response.pid = pid
