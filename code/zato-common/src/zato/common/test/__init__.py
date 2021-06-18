@@ -140,11 +140,13 @@ def rand_float(start=1.0, stop=100.0):
 
 # ################################################################################################################################
 
-def rand_string(count=1):
+def rand_string(count=1, prefix=''):
+    prefix = ('-' + prefix + '-') if prefix else ''
+
     if count == 1:
-        return 'a' + uuid4().hex
+        return 'a' + prefix + uuid4().hex
     else:
-        return ['a' + uuid4().hex for x in range(count)]
+        return ['a' + prefix + uuid4().hex for x in range(count)]
 
 # ################################################################################################################################
 
