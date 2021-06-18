@@ -185,7 +185,7 @@ class EventsDatabase(InRAMStore):
 
 # ################################################################################################################################
 
-    def _get_data_from_storage(self):
+    def get_data_from_storage(self):
         """ Reads existing data from persistent storage and returns it as a DataFrame.
         """
         # Let's check if we already have anything in storage ..
@@ -210,7 +210,7 @@ class EventsDatabase(InRAMStore):
 
 # ################################################################################################################################
 
-    def _get_data_from_ram(self):
+    def get_data_from_ram(self):
         """ Turns data currently stored in RAM into a DataFrame.
         """
         # type: () -> None
@@ -229,7 +229,7 @@ class EventsDatabase(InRAMStore):
 
 # ################################################################################################################################
 
-    def _combine_data(self, existing, current):
+    def combine_data(self, existing, current):
         """ Combines on disk and in-RAM data.
         """
         # type: (DataFrame, DataFrame) -> DataFrame
@@ -248,7 +248,7 @@ class EventsDatabase(InRAMStore):
 
 # ################################################################################################################################
 
-    def _save_data(self, data):
+    def save_data(self, data):
         # type: (DataFrame) -> None
 
         # Let the user know what we are doing ..
@@ -276,16 +276,16 @@ class EventsDatabase(InRAMStore):
             self.logger.info('********************************************************************************* ')
 
             # Get the existing data from storage
-            existing = self._get_data_from_storage()
+            existing = self.get_data_from_storage()
 
             # Get data that is currently in RAM
-            current = self._get_data_from_ram()
+            current = self.get_data_from_ram()
 
             # Combine data from storage and RAM
-            combined = self._combine_data(existing, current)
+            combined = self.combine_data(existing, current)
 
             # Save the combined result to storage
-            self._save_data(combined)
+            self.save_data(combined)
 
             # Clear our current dataset
             self.in_ram_store[:] = []
