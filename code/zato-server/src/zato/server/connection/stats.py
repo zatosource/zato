@@ -25,11 +25,12 @@ object_type_service = EventInfo.ObjectType.service
 # ################################################################################################################################
 
 class ServiceStatsClient:
-    def __init__(self):
-        # type: () -> None
+    def __init__(self, impl_class=None):
+        # type: (object) -> None
         self.host = '<ServiceStatsClient-host>'
         self.port = -1
         self.impl = None # type: EventsClient
+        self.impl_class = impl_class or EventsClient
         self.backlog = []
         self.lock = RLock()
 
@@ -41,7 +42,7 @@ class ServiceStatsClient:
         self.port = port
 
         with self.lock:
-            self.impl = EventsClient(self.host, self.port)
+            self.impl = self.impl_class(self.host, self.port)
             self.impl.connect()
 
 # ################################################################################################################################

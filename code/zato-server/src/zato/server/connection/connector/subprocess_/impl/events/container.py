@@ -109,6 +109,10 @@ class EventsConnectionContainer(BaseConnectionContainer):
         data = self._json_parser.parse(data)
         data = data.as_dict() # type: dict
 
+        print()
+        print(111, data)
+        print()
+
         # .. now, we can push it to the database.
         self.events_db.modify_state(_opcode, data)
 
@@ -182,4 +186,3 @@ if __name__ == '__main__':
 
 # ################################################################################################################################
 # ################################################################################################################################
-
