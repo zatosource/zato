@@ -12,13 +12,10 @@ from datetime import datetime
 from time import sleep
 from unittest import main, TestCase
 
-# dacity
-from dacite import from_dict
-
 # Zato
 from zato.common.events.common import EventInfo, PushCtx
 from zato.common.test import rand_int, rand_string
-from zato.common.typing_ import asdict
+from zato.common.typing_ import asdict, from_dict
 from zato.server.connection.connector.subprocess_.impl.events.database import EventsDatabase
 
 # ################################################################################################################################
@@ -44,6 +41,15 @@ class Default:
 # ################################################################################################################################
 # ################################################################################################################################
 
+idx_str_map = {
+    1: 'a',
+    2: 'b',
+    3: 'c',
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
@@ -56,13 +62,14 @@ class EventsDatabaseTestCase(TestCase):
 
         for service_idx in range(1, len_services+1):
 
+            service_idx_str = idx_str_map[service_idx]
             service_name = 'service-{}'.format(service_idx)
 
             for event_idx in range(1, len_events+1):
                 event_idx_str = str(event_idx)
 
-                id  = 'id-{}-{}'.format(service_idx, event_idx)
-                cid = 'cid-{}-{}'.format(service_idx, event_idx)
+                id  = 'id-{}{}'.format(service_idx_str, event_idx)
+                cid = 'cid-{}{}'.format(service_idx_str, event_idx)
 
                 ctx = PushCtx()
                 ctx.id = id
@@ -137,8 +144,6 @@ class EventsDatabaseTestCase(TestCase):
             ctx = from_dict(PushCtx, item)
             ctx_list.append(ctx)
 
-        print(len(ctx_list))
-
         ctx1 = ctx_list[0]   # type: PushCtx
         ctx2 = ctx_list[1]   # type: PushCtx
         ctx3 = ctx_list[2]   # type: PushCtx
@@ -152,7 +157,120 @@ class EventsDatabaseTestCase(TestCase):
         ctx11 = ctx_list[10] # type: PushCtx
         ctx12 = ctx_list[11] # type: PushCtx
 
-        self.assertEqual(ctx1.id, 'a')
+        #
+        # ctx.id
+        #
+
+        self.assertEqual(ctx1.id,  'id-a1')
+        self.assertEqual(ctx2.id,  'id-a2')
+        self.assertEqual(ctx3.id,  'id-a3')
+        self.assertEqual(ctx4.id,  'id-a4')
+
+        self.assertEqual(ctx5.id,  'id-b1')
+        self.assertEqual(ctx6.id,  'id-b2')
+        self.assertEqual(ctx7.id,  'id-b3')
+        self.assertEqual(ctx8.id,  'id-b4')
+
+        self.assertEqual(ctx9.id,  'id-c1')
+        self.assertEqual(ctx10.id, 'id-c2')
+        self.assertEqual(ctx11.id, 'id-c3')
+        self.assertEqual(ctx12.id, 'id-c4')
+
+        #
+        # ctx.cid
+        #
+
+        self.assertEqual(ctx1.cid,  'cid-a1')
+        self.assertEqual(ctx2.cid,  'cid-a2')
+        self.assertEqual(ctx3.cid,  'cid-a3')
+        self.assertEqual(ctx4.cid,  'cid-a4')
+
+        self.assertEqual(ctx5.cid,  'cid-b1')
+        self.assertEqual(ctx6.cid,  'cid-b2')
+        self.assertEqual(ctx7.cid,  'cid-b3')
+        self.assertEqual(ctx8.cid,  'cid-b4')
+
+        self.assertEqual(ctx9.cid,  'cid-c1')
+        self.assertEqual(ctx10.cid, 'cid-c2')
+        self.assertEqual(ctx11.cid, 'cid-c3')
+        self.assertEqual(ctx12.cid, 'cid-c4')
+
+        #
+        # ctx.timestamp
+        #
+
+        self.assertGreater(ctx1.timestamp,  start)
+        self.assertGreater(ctx2.timestamp,  ctx1.timestamp)
+        self.assertGreater(ctx3.timestamp,  ctx2.timestamp)
+        self.assertGreater(ctx4.timestamp,  ctx3.timestamp)
+        self.assertGreater(ctx5.timestamp,  ctx4.timestamp)
+        self.assertGreater(ctx6.timestamp,  ctx5.timestamp)
+        self.assertGreater(ctx7.timestamp,  ctx6.timestamp)
+        self.assertGreater(ctx8.timestamp,  ctx7.timestamp)
+        self.assertGreater(ctx9.timestamp,  ctx8.timestamp)
+        self.assertGreater(ctx10.timestamp, ctx9.timestamp)
+        self.assertGreater(ctx11.timestamp, ctx10.timestamp)
+        self.assertGreater(ctx12.timestamp, ctx11.timestamp)
+
+        #
+        # ctx.event_type
+        #
+
+        self.assertEqual(ctx1.event_type,  EventInfo.EventType.service_response)
+        self.assertEqual(ctx2.event_type,  EventInfo.EventType.service_response)
+        self.assertEqual(ctx3.event_type,  EventInfo.EventType.service_response)
+        self.assertEqual(ctx4.event_type,  EventInfo.EventType.service_response)
+        self.assertEqual(ctx5.event_type,  EventInfo.EventType.service_response)
+        self.assertEqual(ctx6.event_type,  EventInfo.EventType.service_response)
+        self.assertEqual(ctx7.event_type,  EventInfo.EventType.service_response)
+        self.assertEqual(ctx8.event_type,  EventInfo.EventType.service_response)
+        self.assertEqual(ctx9.event_type,  EventInfo.EventType.service_response)
+        self.assertEqual(ctx10.event_type, EventInfo.EventType.service_response)
+        self.assertEqual(ctx11.event_type, EventInfo.EventType.service_response)
+        self.assertEqual(ctx12.event_type, EventInfo.EventType.service_response)
+
+        #
+        # ctx.object_type
+        #
+
+        self.assertEqual(ctx1.object_type,  EventInfo.ObjectType.service)
+        self.assertEqual(ctx2.object_type,  EventInfo.ObjectType.service)
+        self.assertEqual(ctx3.object_type,  EventInfo.ObjectType.service)
+        self.assertEqual(ctx4.object_type,  EventInfo.ObjectType.service)
+        self.assertEqual(ctx5.object_type,  EventInfo.ObjectType.service)
+        self.assertEqual(ctx6.object_type,  EventInfo.ObjectType.service)
+        self.assertEqual(ctx7.object_type,  EventInfo.ObjectType.service)
+        self.assertEqual(ctx8.object_type,  EventInfo.ObjectType.service)
+        self.assertEqual(ctx9.object_type,  EventInfo.ObjectType.service)
+        self.assertEqual(ctx10.object_type, EventInfo.ObjectType.service)
+        self.assertEqual(ctx11.object_type, EventInfo.ObjectType.service)
+        self.assertEqual(ctx12.object_type, EventInfo.ObjectType.service)
+
+        self.assertEqual(ctx1.object_id,  'service-1')
+        self.assertEqual(ctx2.object_id,  'service-1')
+        self.assertEqual(ctx3.object_id,  'service-1')
+        self.assertEqual(ctx4.object_id,  'service-1')
+        self.assertEqual(ctx5.object_id,  'service-2')
+        self.assertEqual(ctx6.object_id,  'service-2')
+        self.assertEqual(ctx7.object_id,  'service-2')
+        self.assertEqual(ctx8.object_id,  'service-2')
+        self.assertEqual(ctx9.object_id,  'service-3')
+        self.assertEqual(ctx10.object_id, 'service-3')
+        self.assertEqual(ctx11.object_id, 'service-3')
+        self.assertEqual(ctx12.object_id, 'service-3')
+
+        self.assertEqual(ctx1.total_time_ms, 11)
+        self.assertEqual(ctx2.total_time_ms, 22)
+        self.assertEqual(ctx3.total_time_ms, 33)
+        self.assertEqual(ctx4.total_time_ms, 44)
+        self.assertEqual(ctx5.total_time_ms, 22)
+        self.assertEqual(ctx6.total_time_ms, 44)
+        self.assertEqual(ctx7.total_time_ms, 66)
+        self.assertEqual(ctx8.total_time_ms, 88)
+        self.assertEqual(ctx9.total_time_ms, 33)
+        self.assertEqual(ctx10.total_time_ms, 66)
+        self.assertEqual(ctx11.total_time_ms, 99)
+        self.assertEqual(ctx12.total_time_ms, 132)
 
 # ################################################################################################################################
 
