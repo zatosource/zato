@@ -101,6 +101,16 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
+    def get_random_fs_data_path(self):
+
+        file_name = 'zato-test-events-db-' + rand_string()
+        temp_dir = gettempdir()
+        fs_data_path = os.path.join(temp_dir, file_name)
+
+        return fs_data_path
+
+# ################################################################################################################################
+
     def get_events_db(self, logger=None, fs_data_path=None, sync_threshold=None, sync_interval=None):
 
         logger = logger or zato_logger
@@ -112,7 +122,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_init(self):
+    def test_init(self):
 
         sync_threshold = rand_int()
         sync_interval  = rand_int()
@@ -124,7 +134,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_push(self):
+    def test_push(self):
 
         start = utcnow().isoformat()
         events_db = self.get_events_db()
@@ -456,7 +466,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_get_data_from_storage_path_does_not_exist(self):
+    def test_get_data_from_storage_path_does_not_exist(self):
 
         # Be explicit about the fact that we are using a random path, one that does not exist
         fs_data_path = rand_string()
@@ -474,13 +484,10 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_get_data_from_storage_path_exists(self):
+    def test_get_data_from_storage_path_exists(self):
 
-        # Be explicit about the fact that we are using a random path, one that does not exist
-        file_name = 'zato-test-events-db-' + rand_string()
-        temp_dir = gettempdir()
-
-        fs_data_path = os.path.join(temp_dir, file_name)
+        # This is where we keep Parquet data
+        fs_data_path = self.get_random_fs_data_path()
 
         # Obtain test data
         test_data = list(self.yield_events())
@@ -501,6 +508,47 @@ class EventsDatabaseTestCase(TestCase):
         self.assertEqual(events_db.telemetry[OpCode.Internal.GetFromRAM],  0)
         self.assertEqual(events_db.telemetry[OpCode.Internal.CreateNewDF], 0)
         self.assertEqual(events_db.telemetry[OpCode.Internal.ReadParqet],  1)
+
+# ################################################################################################################################
+
+    def test_sync_state(self):
+
+        # This is where we keep Parquet data
+        fs_data_path = self.get_random_fs_data_path()
+
+        # Obtain test data
+        test_data = list(self.yield_events())
+
+        # Turn it into a DataFrame
+        data_frame = pd.DataFrame(test_data)
+
+        # Save it as as a Parquet file
+        data_frame.to_parquet(fs_data_path)
+
+        # Create a new test DB instance ..
+        events_db = self.get_events_db(fs_data_path=fs_data_path)
+
+        # Push data to RAM ..
+        for event_data in self.yield_events():
+            events_db.push(event_data)
+
+        # At this point, we should have data on disk and in RAM
+        # and syncing should push data from RAM to disk.
+        events_db.sync_state()
+
+        # This should data from what was previously in RAM combined with what was on disk
+        data = events_db.get_data_from_storage() # type: DataFrame
+
+        # The length should be equal to twice the defaults - it is twice
+        # because we generated test data two times, once for Parquet and once when it was added to RAM
+        self.assertTrue(len(data), 2 * Default.LenEvents * Default.LenServices)
+
+        self.assertEqual(events_db.telemetry[OpCode.Internal.GetFromRAM],  1)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.CreateNewDF], 0)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.ReadParqet],  2)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.CombineData], 1)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.SaveData],    1)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.SyncState],   1)
 
 # ################################################################################################################################
 
