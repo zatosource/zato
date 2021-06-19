@@ -121,11 +121,11 @@ class EventsDatabaseTestCase(TestCase):
         sync_interval  = sync_interval  or Default.SyncInterval
         max_retention  = max_retention  or Stats.MaxRetention
 
-        return EventsDatabase(logger, fs_data_path, sync_threshold, sync_interval)
+        return EventsDatabase(logger, fs_data_path, sync_threshold, sync_interval, max_retention)
 
 # ################################################################################################################################
 
-    def xtest_init(self):
+    def test_init(self):
 
         sync_threshold = rand_int()
         sync_interval  = rand_int()
@@ -137,7 +137,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_modify_state_push(self):
+    def test_modify_state_push(self):
 
         total_events = Default.LenEvents * Default.LenServices
 
@@ -313,7 +313,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_get_data_from_ram(self):
+    def test_get_data_from_ram(self):
 
         start = utcnow().isoformat()
         events_db = self.get_events_db()
@@ -476,7 +476,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_get_data_from_storage_path_does_not_exist(self):
+    def test_get_data_from_storage_path_does_not_exist(self):
 
         # Be explicit about the fact that we are using a random path, one that does not exist
         fs_data_path = rand_string()
@@ -494,7 +494,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_get_data_from_storage_path_exists(self):
+    def test_get_data_from_storage_path_exists(self):
 
         # This is where we keep Parquet data
         fs_data_path = self.get_random_fs_data_path()
@@ -521,7 +521,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_sync_state(self):
+    def test_sync_state(self):
 
         # This is where we keep Parquet data
         fs_data_path = self.get_random_fs_data_path()
@@ -562,7 +562,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_sync_threshold(self):
+    def test_sync_threshold(self):
 
         num_iters = 3
         sync_threshold = 1
@@ -570,7 +570,7 @@ class EventsDatabaseTestCase(TestCase):
         events_db = self.get_events_db(sync_threshold=sync_threshold)
 
         for x in range(num_iters):
-            events_db.modify_state(OpCode.Push, {})
+            events_db.modify_state(OpCode.Push, {'timestamp':'unused'})
 
         # This is 0 because we were syncing state after each modification
         self.assertEqual(events_db.num_events_since_sync, 0)
@@ -584,7 +584,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_sync_interval(self):
+    def test_sync_interval(self):
 
         num_iters = 3
         sync_interval = 0.001
@@ -592,7 +592,7 @@ class EventsDatabaseTestCase(TestCase):
         events_db = self.get_events_db(sync_interval=sync_interval)
 
         for x in range(num_iters):
-            events_db.modify_state(OpCode.Push, {})
+            events_db.modify_state(OpCode.Push, {'timestamp':'unused'})
             sleep(sync_interval * 5)
 
         # This is 0 because we were syncing state after each modification
@@ -613,10 +613,16 @@ class EventsDatabaseTestCase(TestCase):
         sync_threshold=1
 
         # This is in milliseconds
-        max_retention = 5
+        max_retention = 200
+
+        max_retension_sec = max_retention / 1000.0
+        sleep_time = max_retension_sec + (max_retension_sec * 0.1)
 
         # This is where we keep Parquet data
         fs_data_path = self.get_random_fs_data_path()
+
+        # Create a new DB instance upfront
+        events_db = self.get_events_db(fs_data_path=fs_data_path, sync_threshold=sync_threshold, max_retention=max_retention)
 
         # Get events ..
         event_data_list = list(self.yield_events(len_events=3, len_services=1))
@@ -624,28 +630,49 @@ class EventsDatabaseTestCase(TestCase):
         event_data2 = event_data_list[1] # type: PushCtx
         event_data3 = event_data_list[2] # type: PushCtx
 
-        # .. make sure the timestamp are far apart, in particular the second and third one
-        # should be greater than max_retention time.
+        # First call, set its timestamp and push the event
         event_data1['timestamp'] = utcnow().isoformat()
+        events_db.modify_state(OpCode.Push, event_data1)
+
+        # Sleep longer than retention time
+        sleep(sleep_time)
+
+        # Second call, set its timestamp too and push the event
         event_data2['timestamp'] = utcnow().isoformat()
 
-        # The sleep call uses seconds, hence the division.
-        sleep(max_retention / 1000.0 * 1.1)
+        # Again, longer than retentiom time
+        sleep(sleep_time)
 
+        # The last call - there is no sleep afterwards, only push, which, given that the retention time is big enough,
+        # means that it should be the only event left around in the storage.
+        # Note that we assume that our max_retention will be enough for this push to succeed.
         event_data3['timestamp'] = utcnow().isoformat()
-
-        # Create a new DB instance.
-        events_db = self.get_events_db(fs_data_path=fs_data_path, sync_threshold=sync_threshold, max_retention=max_retention)
-
-        events_db.modify_state(OpCode.Push, event_data1)
-        events_db.modify_state(OpCode.Push, event_data2)
         events_db.modify_state(OpCode.Push, event_data3)
 
-        # Read the state from persistent storage, there should be only the last push left.
+        # Read the state from persistent storage ..
 
         data = events_db.get_data_from_storage()
 
-        print(111, data)
+        # .. only the last push should be available ..
+        self.assertEqual(len(data), 1)
+
+        # .. convert to a form that is easier to test ..
+        data = data.transpose()
+        data = data[0]
+
+        # .. run all the remaining assertions now.
+        self.assertEqual(data['id'],            event_data3['id'])
+        self.assertEqual(data['cid'],           event_data3['cid'])
+        self.assertEqual(data['timestamp'],     event_data3['timestamp'])
+        self.assertEqual(data['event_type'],    event_data3['event_type'])
+        self.assertEqual(data['object_type'],   event_data3['object_type'])
+        self.assertEqual(data['object_id'],     event_data3['object_id'])
+        self.assertEqual(data['total_time_ms'], event_data3['total_time_ms'])
+
+        self.assertIs(data['source_type'],    event_data3['source_type'])
+        self.assertIs(data['source_id'],      event_data3['source_id'])
+        self.assertIs(data['recipient_type'], event_data3['recipient_type'])
+        self.assertIs(data['recipient_id'],   event_data3['recipient_id'])
 
 # ################################################################################################################################
 
@@ -653,3 +680,4 @@ if __name__ == '__main__':
     main()
 
 # ################################################################################################################################
+
