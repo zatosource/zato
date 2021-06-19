@@ -81,7 +81,6 @@ class EventsDatabaseTestCase(TestCase):
             service_name = 'service-{}'.format(service_idx)
 
             for event_idx in range(1, len_events+1):
-                event_idx_str = str(event_idx)
 
                 id  = 'id-{}{}'.format(service_idx_str, event_idx)
                 cid = 'cid-{}{}'.format(service_idx_str, event_idx)
@@ -573,15 +572,6 @@ class EventsDatabaseTestCase(TestCase):
 
         # This is 0 because we were syncing state after each modification
         self.assertEqual(events_db.num_events_since_sync, 0)
-
-        expected = {
-            OpCode.Internal.SaveData:    3,
-            OpCode.Internal.SyncState:   3,
-            OpCode.Internal.GetFromRAM:  3,
-            OpCode.Internal.ReadParqet:  2,
-            OpCode.Internal.CreateNewDF: 1,
-            OpCode.Internal.CombineData: 3
-        }
 
         self.assertEqual(events_db.telemetry[OpCode.Internal.SaveData],    3)
         self.assertEqual(events_db.telemetry[OpCode.Internal.SyncState],   3)
