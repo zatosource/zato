@@ -50,6 +50,9 @@ class InRAMStore:
         # Maps DB keys to fine-grained locks
         self.key_lock = {}
 
+        # Interal usage counters and telemetry
+        self.telemetry = {}
+
 # ################################################################################################################################
 
     def get_lock(self, key):
