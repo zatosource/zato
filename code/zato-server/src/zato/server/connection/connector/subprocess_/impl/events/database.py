@@ -292,11 +292,14 @@ class EventsDatabase(InRAMStore):
     def trim(self, data, utcnow=utcnow, timedelta=timedelta):
         # type: (DataFrame) -> Dataframe
 
+        # Check how many of the past events to leave, i.e. events older than this will be discarded
         max_retained = utcnow() - timedelta(milliseconds=self.max_retention)
         max_retained = max_retained.isoformat()
 
+        # .. construct a new dataframe, containing only the events that are younger than max_retained ..
         data = data[data['timestamp'] > max_retained]
 
+        # .. and return it to our caller.
         return data
 
 # ################################################################################################################################
