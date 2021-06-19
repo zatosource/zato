@@ -50,6 +50,8 @@ class Default:
     LenEvents      = 4
     LenServices    = 3
     IterMultiplier = 11
+    SyncThreshold = 100_000_000
+    SyncInterval  = 100_000_000
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -114,9 +116,9 @@ class EventsDatabaseTestCase(TestCase):
     def get_events_db(self, logger=None, fs_data_path=None, sync_threshold=None, sync_interval=None):
 
         logger = logger or zato_logger
-        fs_data_path = fs_data_path or rand_string(prefix='fs_data_path')
-        sync_threshold = sync_threshold or rand_int()
-        sync_interval  = sync_interval  or rand_int()
+        fs_data_path = fs_data_path or os.path.join(gettempdir(), rand_string(prefix='fs_data_path'))
+        sync_threshold = sync_threshold or Default.SyncThreshold
+        sync_interval  = sync_interval  or Default.SyncInterval
 
         return EventsDatabase(logger, fs_data_path, sync_threshold, sync_interval)
 
@@ -134,15 +136,20 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_push(self):
+    def test_modify_state_push(self):
+
+        total_events = Default.LenEvents * Default.LenServices
 
         start = utcnow().isoformat()
         events_db = self.get_events_db()
 
         for event_data in self.yield_events():
-            events_db.push(event_data)
+            events_db.modify_state(OpCode.Push, event_data)
 
-        self.assertEqual(len(events_db.in_ram_store), Default.LenEvents * Default.LenServices)
+        self.assertEqual(len(events_db.in_ram_store), total_events)
+
+        self.assertEqual(events_db.num_events_since_sync, total_events)
+        self.assertEqual(events_db.total_events, total_events)
 
         ctx_list = []
 
@@ -150,7 +157,7 @@ class EventsDatabaseTestCase(TestCase):
             ctx = from_dict(PushCtx, item)
             ctx_list.append(ctx)
 
-        self.assertEqual(len(ctx_list), Default.LenEvents * Default.LenServices)
+        self.assertEqual(len(ctx_list), total_events)
         self.assertEqual(events_db.telemetry[OpCode.Internal.GetFromRAM],  0)
         self.assertEqual(events_db.telemetry[OpCode.Internal.CreateNewDF], 0)
         self.assertEqual(events_db.telemetry[OpCode.Internal.ReadParqet],  0)
@@ -159,10 +166,12 @@ class EventsDatabaseTestCase(TestCase):
         ctx2 = ctx_list[1]   # type: PushCtx
         ctx3 = ctx_list[2]   # type: PushCtx
         ctx4 = ctx_list[3]   # type: PushCtx
+
         ctx5 = ctx_list[4]   # type: PushCtx
         ctx6 = ctx_list[5]   # type: PushCtx
         ctx7 = ctx_list[6]   # type: PushCtx
         ctx8 = ctx_list[7]   # type: PushCtx
+
         ctx9 = ctx_list[8]   # type: PushCtx
         ctx10 = ctx_list[9]  # type: PushCtx
         ctx11 = ctx_list[10] # type: PushCtx
@@ -309,7 +318,7 @@ class EventsDatabaseTestCase(TestCase):
         events_db = self.get_events_db()
 
         for event_data in self.yield_events():
-            events_db.push(event_data)
+            events_db.modify_state(OpCode.Push, event_data)
 
         data = events_db.get_data_from_ram()
 
@@ -530,7 +539,7 @@ class EventsDatabaseTestCase(TestCase):
 
         # Push data to RAM ..
         for event_data in self.yield_events():
-            events_db.push(event_data)
+            events_db.modify_state(OpCode.Push, event_data)
 
         # At this point, we should have data on disk and in RAM
         # and syncing should push data from RAM to disk.
@@ -549,6 +558,60 @@ class EventsDatabaseTestCase(TestCase):
         self.assertEqual(events_db.telemetry[OpCode.Internal.CombineData], 1)
         self.assertEqual(events_db.telemetry[OpCode.Internal.SaveData],    1)
         self.assertEqual(events_db.telemetry[OpCode.Internal.SyncState],   1)
+
+# ################################################################################################################################
+
+    def test_sync_threshold(self):
+
+        num_iters = 3
+        sync_threshold = 1
+
+        events_db = self.get_events_db(sync_threshold=sync_threshold)
+
+        for x in range(num_iters):
+            events_db.modify_state(OpCode.Push, {})
+
+        # This is 0 because we were syncing state after each modification
+        self.assertEqual(events_db.num_events_since_sync, 0)
+
+        expected = {
+            OpCode.Internal.SaveData:    3,
+            OpCode.Internal.SyncState:   3,
+            OpCode.Internal.GetFromRAM:  3,
+            OpCode.Internal.ReadParqet:  2,
+            OpCode.Internal.CreateNewDF: 1,
+            OpCode.Internal.CombineData: 3
+        }
+
+        self.assertEqual(events_db.telemetry[OpCode.Internal.SaveData],    3)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.SyncState],   3)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.GetFromRAM],  3)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.ReadParqet],  2)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.CreateNewDF], 1)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.CombineData], 3)
+
+# ################################################################################################################################
+
+    def test_sync_interval(self):
+
+        num_iters = 3
+        sync_interval = 0.001
+
+        events_db = self.get_events_db(sync_interval=sync_interval)
+
+        for x in range(num_iters):
+            events_db.modify_state(OpCode.Push, {})
+            sleep(sync_interval * 5)
+
+        # This is 0 because we were syncing state after each modification
+        self.assertEqual(events_db.num_events_since_sync, 0)
+
+        self.assertEqual(events_db.telemetry[OpCode.Internal.SaveData],    3)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.SyncState],   3)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.GetFromRAM],  3)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.ReadParqet],  2)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.CreateNewDF], 1)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.CombineData], 3)
 
 # ################################################################################################################################
 
