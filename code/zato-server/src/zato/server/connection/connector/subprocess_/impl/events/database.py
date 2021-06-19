@@ -42,6 +42,21 @@ utcnow = datetime.utcnow
 class OpCode:
     Push = 'EventsDBPush'
 
+    class Internal:
+        SaveData    = 'InternalSaveData'
+        SyncState   = 'InternalSyncState'
+        GetFromRAM  = 'GetFromRAM'
+        ReadParqet  = 'InternalReadParqet'
+        CreateNewDF = 'CreateNewDF'
+        CombineData = 'InternalCombineData'
+
+_op_int_save_data     = OpCode.Internal.SaveData
+_op_int_sync_state    = OpCode.Internal.SyncState
+_op_int_get_from_ram  = OpCode.Internal.GetFromRAM
+_op_int_read_parqet   = OpCode.Internal.ReadParqet
+_op_int_create_new_df = OpCode.Internal.CreateNewDF
+_op_int_combine_data  = OpCode.Internal.CombineData
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -177,6 +192,14 @@ class EventsDatabase(InRAMStore):
         # Configure our opcodes (there is one)
         self.opcode_to_func[OpCode.Push] = self.push
 
+        # Configure our telemetry opcodes
+        self.telemetry[_op_int_save_data]     = 0
+        self.telemetry[_op_int_sync_state]    = 0
+        self.telemetry[_op_int_get_from_ram]  = 0
+        self.telemetry[_op_int_read_parqet]   = 0
+        self.telemetry[_op_int_create_new_df] = 0
+        self.telemetry[_op_int_combine_data]  = 0
+
 # ################################################################################################################################
 
     def push(self, data):
@@ -199,11 +222,18 @@ class EventsDatabase(InRAMStore):
             existing = pd.read_parquet(self.fs_data_path) # type: pd.DataFrame
 
             # .. log the time it took to load the data ..
-            self.logger.info('DF data loaded in %s; len_existing=%s', utcnow() - start, int_to_comma(len(existing)))
+            self.logger.info('DF data read in %s; len_existing=%s', utcnow() - start, int_to_comma(len(existing)))
+
+            # .. update counters ..
+            self.telemetry[_op_int_read_parqet] += 1
+
         else:
 
             # .. create a new DF instead ..
             existing = pd.DataFrame()
+
+            # .. update counters ..
+            self.telemetry[_op_int_create_new_df] += 1
 
         # .. return the result, no matter where it came from.
         return existing
@@ -225,6 +255,9 @@ class EventsDatabase(InRAMStore):
         # .. log the time it took build the DataFrame ..
         self.logger.info('DF built in %s', utcnow() - start)
 
+        # .. update counters ..
+        self.telemetry[_op_int_get_from_ram] += 1
+
         return current
 
 # ################################################################################################################################
@@ -244,6 +277,9 @@ class EventsDatabase(InRAMStore):
         # .. log the time it took to combine the DataFrames..
         self.logger.info('DF combined in %s', utcnow() - start)
 
+        # .. update counters ..
+        self.telemetry[_op_int_combine_data] += 1
+
         return combined
 
 # ################################################################################################################################
@@ -260,6 +296,9 @@ class EventsDatabase(InRAMStore):
 
         # .. log the time it took to save to storage ..
         self.logger.info('DF saved in %s', utcnow() - start)
+
+        # .. update counters ..
+        self.telemetry[_op_int_save_data] += 1
 
 # ################################################################################################################################
 
@@ -292,6 +331,9 @@ class EventsDatabase(InRAMStore):
 
             # Log the total processing time
             self.logger.info('DF total processing time %s', utcnow() - now_total)
+
+            # update counters
+            self.telemetry[_op_int_sync_state] += 1
 
 # ################################################################################################################################
 
