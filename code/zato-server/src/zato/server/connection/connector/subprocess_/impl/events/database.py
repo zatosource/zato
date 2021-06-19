@@ -360,6 +360,18 @@ class EventsDatabase(InRAMStore):
 
 # ################################################################################################################################
 
+    def get_events_by_response_time(self, count=10, time_label=None, min_time=None, max_time=None):
+        # type: (int, str, str, str) -> list
+        pass
+
+# ################################################################################################################################
+
+    def get_events_by_usage(self, count=10, time_label=None, min_time=None, max_time=None):
+        # type: (int, str, str, str) -> list
+        pass
+
+# ################################################################################################################################
+
     def run(self):
         pass
 

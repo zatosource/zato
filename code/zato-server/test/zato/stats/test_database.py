@@ -21,7 +21,7 @@ import pandas as pd
 from zato.common.api import Stats
 from zato.common.events.common import EventInfo, PushCtx
 from zato.common.test import rand_int, rand_string
-from zato.common.typing_ import asdict, from_dict
+from zato.common.typing_ import asdict, from_simple_dict
 from zato.server.connection.connector.subprocess_.impl.events.database import EventsDatabase, OpCode
 
 # ################################################################################################################################
@@ -155,7 +155,7 @@ class EventsDatabaseTestCase(TestCase):
         ctx_list = []
 
         for item in events_db.in_ram_store:
-            ctx = from_dict(PushCtx, item)
+            ctx = from_simple_dict(PushCtx, item)
             ctx_list.append(ctx)
 
         self.assertEqual(len(ctx_list), total_events)
@@ -673,6 +673,14 @@ class EventsDatabaseTestCase(TestCase):
         self.assertIs(data['source_id'],      event_data3['source_id'])
         self.assertIs(data['recipient_type'], event_data3['recipient_type'])
         self.assertIs(data['recipient_id'],   event_data3['recipient_id'])
+
+# ################################################################################################################################
+
+    def test_get_events_by_response_time(self):
+
+        pass
+
+        #self.fail()
 
 # ################################################################################################################################
 
