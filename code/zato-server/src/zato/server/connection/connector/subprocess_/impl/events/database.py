@@ -45,9 +45,9 @@ class OpCode:
     class Internal:
         SaveData    = 'InternalSaveData'
         SyncState   = 'InternalSyncState'
-        GetFromRAM  = 'GetFromRAM'
+        GetFromRAM  = 'InternalGetFromRAM'
         ReadParqet  = 'InternalReadParqet'
-        CreateNewDF = 'CreateNewDF'
+        CreateNewDF = 'InternalCreateNewDF'
         CombineData = 'InternalCombineData'
 
 _op_int_save_data     = OpCode.Internal.SaveData
