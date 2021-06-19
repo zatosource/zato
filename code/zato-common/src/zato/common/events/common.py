@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from typing import Optional as optional
 
 # Zato
-from zato.common.typing_ import dataclass
+from zato.common.typing_ import dataclass, field
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,12 +56,12 @@ class PushCtx:
     id: str
     cid: str
     timestamp: str
-    event_type: str
+    event_type: int
 
     source_type: optional[str] = None
     source_id: optional[str] = None
 
-    object_type: str
+    object_type: int
     object_id: str
 
     recipient_type: optional[str] = None
