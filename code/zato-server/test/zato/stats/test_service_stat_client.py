@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main, TestCase
 
 # Zato
-from zato.common.test import rand_bool, rand_int, rand_string
+from zato.common.test import rand_int, rand_string
 from zato.common.events.client import Client as EventsClient
 from zato.common.events.common import EventInfo
 from zato.server.connection.stats import ServiceStatsClient
