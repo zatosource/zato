@@ -35,7 +35,7 @@ if 0:
 # ################################################################################################################################
 
 log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
-logging.basicConfig(level=logging.DEBUG, format=log_format)
+logging.basicConfig(level=logging.WARN, format=log_format)
 zato_logger = logging.getLogger('zato')
 
 # ################################################################################################################################
@@ -112,7 +112,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_init(self):
+    def xtest_init(self):
 
         sync_threshold = rand_int()
         sync_interval  = rand_int()
@@ -124,7 +124,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_push(self):
+    def xtest_push(self):
 
         start = utcnow().isoformat()
         events_db = self.get_events_db()
@@ -204,10 +204,12 @@ class EventsDatabaseTestCase(TestCase):
         self.assertGreater(ctx2.timestamp,  ctx1.timestamp)
         self.assertGreater(ctx3.timestamp,  ctx2.timestamp)
         self.assertGreater(ctx4.timestamp,  ctx3.timestamp)
+
         self.assertGreater(ctx5.timestamp,  ctx4.timestamp)
         self.assertGreater(ctx6.timestamp,  ctx5.timestamp)
         self.assertGreater(ctx7.timestamp,  ctx6.timestamp)
         self.assertGreater(ctx8.timestamp,  ctx7.timestamp)
+
         self.assertGreater(ctx9.timestamp,  ctx8.timestamp)
         self.assertGreater(ctx10.timestamp, ctx9.timestamp)
         self.assertGreater(ctx11.timestamp, ctx10.timestamp)
@@ -221,10 +223,12 @@ class EventsDatabaseTestCase(TestCase):
         self.assertEqual(ctx2.event_type,  EventInfo.EventType.service_response)
         self.assertEqual(ctx3.event_type,  EventInfo.EventType.service_response)
         self.assertEqual(ctx4.event_type,  EventInfo.EventType.service_response)
+
         self.assertEqual(ctx5.event_type,  EventInfo.EventType.service_response)
         self.assertEqual(ctx6.event_type,  EventInfo.EventType.service_response)
         self.assertEqual(ctx7.event_type,  EventInfo.EventType.service_response)
         self.assertEqual(ctx8.event_type,  EventInfo.EventType.service_response)
+
         self.assertEqual(ctx9.event_type,  EventInfo.EventType.service_response)
         self.assertEqual(ctx10.event_type, EventInfo.EventType.service_response)
         self.assertEqual(ctx11.event_type, EventInfo.EventType.service_response)
@@ -238,36 +242,50 @@ class EventsDatabaseTestCase(TestCase):
         self.assertEqual(ctx2.object_type,  EventInfo.ObjectType.service)
         self.assertEqual(ctx3.object_type,  EventInfo.ObjectType.service)
         self.assertEqual(ctx4.object_type,  EventInfo.ObjectType.service)
+
         self.assertEqual(ctx5.object_type,  EventInfo.ObjectType.service)
         self.assertEqual(ctx6.object_type,  EventInfo.ObjectType.service)
         self.assertEqual(ctx7.object_type,  EventInfo.ObjectType.service)
         self.assertEqual(ctx8.object_type,  EventInfo.ObjectType.service)
+
         self.assertEqual(ctx9.object_type,  EventInfo.ObjectType.service)
         self.assertEqual(ctx10.object_type, EventInfo.ObjectType.service)
         self.assertEqual(ctx11.object_type, EventInfo.ObjectType.service)
         self.assertEqual(ctx12.object_type, EventInfo.ObjectType.service)
 
+        #
+        # ctx.object_id
+        #
+
         self.assertEqual(ctx1.object_id,  'service-1')
         self.assertEqual(ctx2.object_id,  'service-1')
         self.assertEqual(ctx3.object_id,  'service-1')
         self.assertEqual(ctx4.object_id,  'service-1')
+
         self.assertEqual(ctx5.object_id,  'service-2')
         self.assertEqual(ctx6.object_id,  'service-2')
         self.assertEqual(ctx7.object_id,  'service-2')
         self.assertEqual(ctx8.object_id,  'service-2')
+
         self.assertEqual(ctx9.object_id,  'service-3')
         self.assertEqual(ctx10.object_id, 'service-3')
         self.assertEqual(ctx11.object_id, 'service-3')
         self.assertEqual(ctx12.object_id, 'service-3')
 
+        #
+        # ctx.total_time_ms
+        #
+
         self.assertEqual(ctx1.total_time_ms, 11)
         self.assertEqual(ctx2.total_time_ms, 22)
         self.assertEqual(ctx3.total_time_ms, 33)
         self.assertEqual(ctx4.total_time_ms, 44)
+
         self.assertEqual(ctx5.total_time_ms, 22)
         self.assertEqual(ctx6.total_time_ms, 44)
         self.assertEqual(ctx7.total_time_ms, 66)
         self.assertEqual(ctx8.total_time_ms, 88)
+
         self.assertEqual(ctx9.total_time_ms, 33)
         self.assertEqual(ctx10.total_time_ms, 66)
         self.assertEqual(ctx11.total_time_ms, 99)
@@ -275,7 +293,170 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_get_data_from_storage_path_does_not_exist(self):
+    def test_get_data_from_ram(self):
+
+        start = utcnow().isoformat()
+        events_db = self.get_events_db()
+
+        for event_data in self.yield_events():
+            events_db.push(event_data)
+
+        data = events_db.get_data_from_ram()
+
+        self.assertEqual(events_db.telemetry[OpCode.Internal.GetFromRAM],  1)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.CreateNewDF], 0)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.ReadParqet],  0)
+
+        #
+        # data.id
+        #
+
+        data_id = data['id']
+
+        self.assertEqual(data_id[0],  'id-a1')
+        self.assertEqual(data_id[1],  'id-a2')
+        self.assertEqual(data_id[2],  'id-a3')
+        self.assertEqual(data_id[3],  'id-a4')
+
+        self.assertEqual(data_id[4],  'id-b1')
+        self.assertEqual(data_id[5],  'id-b2')
+        self.assertEqual(data_id[6],  'id-b3')
+        self.assertEqual(data_id[7],  'id-b4')
+
+        self.assertEqual(data_id[8],  'id-c1')
+        self.assertEqual(data_id[9],  'id-c2')
+        self.assertEqual(data_id[10], 'id-c3')
+        self.assertEqual(data_id[11], 'id-c4')
+
+        #
+        # data.cid
+        #
+
+        data_cid = data['cid']
+
+        self.assertEqual(data_cid[0],  'cid-a1')
+        self.assertEqual(data_cid[1],  'cid-a2')
+        self.assertEqual(data_cid[2],  'cid-a3')
+        self.assertEqual(data_cid[3],  'cid-a4')
+
+        self.assertEqual(data_cid[4],  'cid-b1')
+        self.assertEqual(data_cid[5],  'cid-b2')
+        self.assertEqual(data_cid[6],  'cid-b3')
+        self.assertEqual(data_cid[7],  'cid-b4')
+
+        self.assertEqual(data_cid[8],  'cid-c1')
+        self.assertEqual(data_cid[9],  'cid-c2')
+        self.assertEqual(data_cid[10], 'cid-c3')
+        self.assertEqual(data_cid[11], 'cid-c4')
+
+        #
+        # data.timestamp
+        #
+
+        data_timestamp = data['timestamp']
+
+        self.assertGreater(data_timestamp[0],  start)
+        self.assertGreater(data_timestamp[1],  data_timestamp[0])
+        self.assertGreater(data_timestamp[2],  data_timestamp[1])
+        self.assertGreater(data_timestamp[3],  data_timestamp[2])
+
+        self.assertGreater(data_timestamp[4],  data_timestamp[3])
+        self.assertGreater(data_timestamp[5],  data_timestamp[4])
+        self.assertGreater(data_timestamp[6],  data_timestamp[5])
+        self.assertGreater(data_timestamp[7],  data_timestamp[6])
+
+        self.assertGreater(data_timestamp[8],  data_timestamp[7])
+        self.assertGreater(data_timestamp[9],  data_timestamp[8])
+        self.assertGreater(data_timestamp[10],  data_timestamp[9])
+        self.assertGreater(data_timestamp[11],  data_timestamp[10])
+
+        #
+        # data.event_type
+        #
+
+        data_event_type = data['event_type']
+
+        self.assertEqual(data_event_type[0],  EventInfo.EventType.service_response)
+        self.assertEqual(data_event_type[1],  EventInfo.EventType.service_response)
+        self.assertEqual(data_event_type[2],  EventInfo.EventType.service_response)
+        self.assertEqual(data_event_type[3],  EventInfo.EventType.service_response)
+
+        self.assertEqual(data_event_type[4],  EventInfo.EventType.service_response)
+        self.assertEqual(data_event_type[5],  EventInfo.EventType.service_response)
+        self.assertEqual(data_event_type[6],  EventInfo.EventType.service_response)
+        self.assertEqual(data_event_type[7],  EventInfo.EventType.service_response)
+
+        self.assertEqual(data_event_type[8],  EventInfo.EventType.service_response)
+        self.assertEqual(data_event_type[9],  EventInfo.EventType.service_response)
+        self.assertEqual(data_event_type[10], EventInfo.EventType.service_response)
+        self.assertEqual(data_event_type[11], EventInfo.EventType.service_response)
+
+        #
+        # ctx.object_type
+        #
+
+        data_object_type = data['object_type']
+
+        self.assertEqual(data_object_type[0],  EventInfo.ObjectType.service)
+        self.assertEqual(data_object_type[1],  EventInfo.ObjectType.service)
+        self.assertEqual(data_object_type[2],  EventInfo.ObjectType.service)
+        self.assertEqual(data_object_type[3],  EventInfo.ObjectType.service)
+
+        self.assertEqual(data_object_type[4],  EventInfo.ObjectType.service)
+        self.assertEqual(data_object_type[5],  EventInfo.ObjectType.service)
+        self.assertEqual(data_object_type[6],  EventInfo.ObjectType.service)
+        self.assertEqual(data_object_type[7],  EventInfo.ObjectType.service)
+
+        self.assertEqual(data_object_type[8],  EventInfo.ObjectType.service)
+        self.assertEqual(data_object_type[9],  EventInfo.ObjectType.service)
+        self.assertEqual(data_object_type[10], EventInfo.ObjectType.service)
+        self.assertEqual(data_object_type[11], EventInfo.ObjectType.service)
+
+        #
+        # ctx.object_id
+        #
+
+        data_object_id = data['object_id']
+
+        self.assertEqual(data_object_id[0],  'service-1')
+        self.assertEqual(data_object_id[1],  'service-1')
+        self.assertEqual(data_object_id[2],  'service-1')
+        self.assertEqual(data_object_id[3],  'service-1')
+
+        self.assertEqual(data_object_id[4],  'service-2')
+        self.assertEqual(data_object_id[5],  'service-2')
+        self.assertEqual(data_object_id[6],  'service-2')
+        self.assertEqual(data_object_id[7],  'service-2')
+
+        self.assertEqual(data_object_id[8],  'service-3')
+        self.assertEqual(data_object_id[9],  'service-3')
+        self.assertEqual(data_object_id[10], 'service-3')
+        self.assertEqual(data_object_id[11], 'service-3')
+
+        #
+        # ctx.total_time_ms
+        #
+
+        data_total_time_ms = data['total_time_ms']
+
+        self.assertEqual(data_total_time_ms[0], 11)
+        self.assertEqual(data_total_time_ms[1], 22)
+        self.assertEqual(data_total_time_ms[2], 33)
+        self.assertEqual(data_total_time_ms[3], 44)
+
+        self.assertEqual(data_total_time_ms[4], 22)
+        self.assertEqual(data_total_time_ms[5], 44)
+        self.assertEqual(data_total_time_ms[6], 66)
+        self.assertEqual(data_total_time_ms[7], 88)
+
+        self.assertEqual(data_total_time_ms[8], 33)
+        self.assertEqual(data_total_time_ms[9], 66)
+        self.assertEqual(data_total_time_ms[10], 99)
+        self.assertEqual(data_total_time_ms[11], 132)
+
+# ################################################################################################################################
+
+    def xtest_get_data_from_storage_path_does_not_exist(self):
 
         # Be explicit about the fact that we are using a random path, one that does not exist
         fs_data_path = rand_string()
@@ -293,7 +474,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_get_data_from_storage_path_exists(self):
+    def xtest_get_data_from_storage_path_exists(self):
 
         # Be explicit about the fact that we are using a random path, one that does not exist
         file_name = 'zato-test-events-db-' + rand_string()
