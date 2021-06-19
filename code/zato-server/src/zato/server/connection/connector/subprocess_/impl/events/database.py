@@ -290,7 +290,7 @@ class EventsDatabase(InRAMStore):
 # ################################################################################################################################
 
     def trim(self, data, utcnow=utcnow, timedelta=timedelta):
-        # type: (DataFrame) -> Dataframe
+        # type: (DataFrame) -> DataFrame
 
         # Check how many of the past events to leave, i.e. events older than this will be discarded
         max_retained = utcnow() - timedelta(milliseconds=self.max_retention)
