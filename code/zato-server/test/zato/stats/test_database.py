@@ -8,15 +8,28 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+import os
 from datetime import datetime
+from tempfile import gettempdir
 from time import sleep
 from unittest import main, TestCase
+
+# Pandas
+import pandas as pd
 
 # Zato
 from zato.common.events.common import EventInfo, PushCtx
 from zato.common.test import rand_int, rand_string
 from zato.common.typing_ import asdict, from_dict
-from zato.server.connection.connector.subprocess_.impl.events.database import EventsDatabase
+from zato.server.connection.connector.subprocess_.impl.events.database import EventsDatabase, OpCode
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from pandas import DataFrame
+
+    DataFrame = DataFrame
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -88,10 +101,10 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def yield_events_db(self, logger=None, fs_data_path=None, sync_threshold=None, sync_interval=None):
+    def get_events_db(self, logger=None, fs_data_path=None, sync_threshold=None, sync_interval=None):
 
         logger = logger or zato_logger
-        fs_data_path = None or rand_string(prefix='fs_data_path')
+        fs_data_path = fs_data_path or rand_string(prefix='fs_data_path')
         sync_threshold = sync_threshold or rand_int()
         sync_interval  = sync_interval  or rand_int()
 
@@ -99,39 +112,22 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_init(self):
+    def test_init(self):
 
         sync_threshold = rand_int()
         sync_interval  = rand_int()
 
-        events_db = self.yield_events_db(sync_threshold=sync_threshold, sync_interval=sync_interval)
+        events_db = self.get_events_db(sync_threshold=sync_threshold, sync_interval=sync_interval)
 
         self.assertEqual(events_db.sync_threshold, sync_threshold)
         self.assertEqual(events_db.sync_interval, sync_interval)
 
 # ################################################################################################################################
 
-    def xtest_push(self):
-
-        data = {
-            'key1': rand_string()
-        }
-
-        events_db = self.yield_events_db()
-        events_db.push(data)
-
-        self.assertEqual(len(events_db.in_ram_store), 1)
-
-        given_data = events_db.in_ram_store[0] # type: dict
-
-        self.assertDictEqual(data, given_data)
-
-# ################################################################################################################################
-
-    def test_get_data_from_ram(self):
+    def test_push(self):
 
         start = utcnow().isoformat()
-        events_db = self.yield_events_db()
+        events_db = self.get_events_db()
 
         for event_data in self.yield_events():
             events_db.push(event_data)
@@ -143,6 +139,11 @@ class EventsDatabaseTestCase(TestCase):
         for item in events_db.in_ram_store:
             ctx = from_dict(PushCtx, item)
             ctx_list.append(ctx)
+
+        self.assertEqual(len(ctx_list), Default.LenEvents * Default.LenServices)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.GetFromRAM],  0)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.CreateNewDF], 0)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.ReadParqet],  0)
 
         ctx1 = ctx_list[0]   # type: PushCtx
         ctx2 = ctx_list[1]   # type: PushCtx
@@ -271,6 +272,54 @@ class EventsDatabaseTestCase(TestCase):
         self.assertEqual(ctx10.total_time_ms, 66)
         self.assertEqual(ctx11.total_time_ms, 99)
         self.assertEqual(ctx12.total_time_ms, 132)
+
+# ################################################################################################################################
+
+    def test_get_data_from_storage_path_does_not_exist(self):
+
+        # Be explicit about the fact that we are using a random path, one that does not exist
+        fs_data_path = rand_string()
+
+        # Create a new instance
+        events_db = self.get_events_db(fs_data_path=fs_data_path)
+
+        # This should return an empty DataFrame because the path did not exist
+        data = events_db.get_data_from_storage() # type: DataFrame
+
+        self.assertEqual(len(data), 0)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.GetFromRAM],  0)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.CreateNewDF], 1)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.ReadParqet],  0)
+
+# ################################################################################################################################
+
+    def test_get_data_from_storage_path_exists(self):
+
+        # Be explicit about the fact that we are using a random path, one that does not exist
+        file_name = 'zato-test-events-db-' + rand_string()
+        temp_dir = gettempdir()
+
+        fs_data_path = os.path.join(temp_dir, file_name)
+
+        # Obtain test data
+        test_data = list(self.yield_events())
+
+        # Turn it into a DataFrame
+        data_frame = pd.DataFrame(test_data)
+
+        # Save it as as a Parquet file
+        data_frame.to_parquet(fs_data_path)
+
+        # Create a new DB instance
+        events_db = self.get_events_db(fs_data_path=fs_data_path)
+
+        # This should return an empty DataFrame because the path did not exist
+        data = events_db.get_data_from_storage() # type: DataFrame
+
+        self.assertEqual(len(data), len(test_data))
+        self.assertEqual(events_db.telemetry[OpCode.Internal.GetFromRAM],  0)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.CreateNewDF], 0)
+        self.assertEqual(events_db.telemetry[OpCode.Internal.ReadParqet],  1)
 
 # ################################################################################################################################
 

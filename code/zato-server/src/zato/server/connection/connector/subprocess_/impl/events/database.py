@@ -211,6 +211,7 @@ class EventsDatabase(InRAMStore):
     def get_data_from_storage(self):
         """ Reads existing data from persistent storage and returns it as a DataFrame.
         """
+
         # Let's check if we already have anything in storage ..
         if os.path.exists(self.fs_data_path):
 
