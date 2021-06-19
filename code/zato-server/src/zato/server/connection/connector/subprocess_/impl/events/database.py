@@ -8,7 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional as optional
 
 # Humanize
@@ -18,6 +18,7 @@ from humanize import intcomma as int_to_comma
 import pandas as pd
 
 # Zato
+from zato.common.api import Stats
 from zato.common.ext.dataclasses import dataclass
 from zato.common.in_ram import InRAMStore
 
@@ -176,7 +177,7 @@ class Event:
 
 class EventsDatabase(InRAMStore):
 
-    def __init__(self, logger, fs_data_path, sync_threshold, sync_interval):
+    def __init__(self, logger, fs_data_path, sync_threshold, sync_interval, max_retention=Stats.MaxRetention):
         # type: (Logger, int, int) -> None
         super().__init__(sync_threshold, sync_interval)
 
@@ -188,6 +189,9 @@ class EventsDatabase(InRAMStore):
 
         # In-RAM database of events, saved to disk periodically in background
         self.in_ram_store = [] # type: list[Event]
+
+        # Fow how long to keep statistics in persistent storage
+        self.max_retention = max_retention # type: int
 
         # Configure our opcodes (there is one)
         self.opcode_to_func[OpCode.Push] = self.push
@@ -285,6 +289,18 @@ class EventsDatabase(InRAMStore):
 
 # ################################################################################################################################
 
+    def trim(self, data, utcnow=utcnow, timedelta=timedelta):
+        # type: (DataFrame) -> Dataframe
+
+        max_retained = utcnow() - timedelta(milliseconds=self.max_retention)
+        max_retained = max_retained.isoformat()
+
+        data = data[data['timestamp'] > max_retained]
+
+        return data
+
+# ################################################################################################################################
+
     def save_data(self, data):
         # type: (DataFrame) -> None
 
@@ -324,8 +340,11 @@ class EventsDatabase(InRAMStore):
             # Combine data from storage and RAM
             combined = self.combine_data(existing, current)
 
+            # Trim the data to the retention threshold
+            trimmed = self.trim(combined)
+
             # Save the combined result to storage
-            self.save_data(combined)
+            self.save_data(trimmed)
 
             # Clear our current dataset
             self.in_ram_store[:] = []

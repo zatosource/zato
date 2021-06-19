@@ -18,6 +18,7 @@ from unittest import main, TestCase
 import pandas as pd
 
 # Zato
+from zato.common.api import Stats
 from zato.common.events.common import EventInfo, PushCtx
 from zato.common.test import rand_int, rand_string
 from zato.common.typing_ import asdict, from_dict
@@ -112,18 +113,19 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def get_events_db(self, logger=None, fs_data_path=None, sync_threshold=None, sync_interval=None):
+    def get_events_db(self, logger=None, fs_data_path=None, sync_threshold=None, sync_interval=None, max_retention=None):
 
-        logger = logger or zato_logger
-        fs_data_path = fs_data_path or os.path.join(gettempdir(), rand_string(prefix='fs_data_path'))
+        logger         = logger         or zato_logger
+        fs_data_path   = fs_data_path   or os.path.join(gettempdir(), rand_string(prefix='fs_data_path'))
         sync_threshold = sync_threshold or Default.SyncThreshold
         sync_interval  = sync_interval  or Default.SyncInterval
+        max_retention  = max_retention  or Stats.MaxRetention
 
         return EventsDatabase(logger, fs_data_path, sync_threshold, sync_interval)
 
 # ################################################################################################################################
 
-    def test_init(self):
+    def xtest_init(self):
 
         sync_threshold = rand_int()
         sync_interval  = rand_int()
@@ -135,7 +137,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_modify_state_push(self):
+    def xtest_modify_state_push(self):
 
         total_events = Default.LenEvents * Default.LenServices
 
@@ -311,7 +313,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_get_data_from_ram(self):
+    def xtest_get_data_from_ram(self):
 
         start = utcnow().isoformat()
         events_db = self.get_events_db()
@@ -474,7 +476,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_get_data_from_storage_path_does_not_exist(self):
+    def xtest_get_data_from_storage_path_does_not_exist(self):
 
         # Be explicit about the fact that we are using a random path, one that does not exist
         fs_data_path = rand_string()
@@ -492,7 +494,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_get_data_from_storage_path_exists(self):
+    def xtest_get_data_from_storage_path_exists(self):
 
         # This is where we keep Parquet data
         fs_data_path = self.get_random_fs_data_path()
@@ -519,7 +521,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_sync_state(self):
+    def xtest_sync_state(self):
 
         # This is where we keep Parquet data
         fs_data_path = self.get_random_fs_data_path()
@@ -560,7 +562,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_sync_threshold(self):
+    def xtest_sync_threshold(self):
 
         num_iters = 3
         sync_threshold = 1
@@ -582,7 +584,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_sync_interval(self):
+    def xtest_sync_interval(self):
 
         num_iters = 3
         sync_interval = 0.001
@@ -602,6 +604,48 @@ class EventsDatabaseTestCase(TestCase):
         self.assertEqual(events_db.telemetry[OpCode.Internal.ReadParqet],  2)
         self.assertEqual(events_db.telemetry[OpCode.Internal.CreateNewDF], 1)
         self.assertEqual(events_db.telemetry[OpCode.Internal.CombineData], 3)
+
+# ################################################################################################################################
+
+    def test_max_retention(self):
+
+        # Synchronise after each push
+        sync_threshold=1
+
+        # This is in milliseconds
+        max_retention = 5
+
+        # This is where we keep Parquet data
+        fs_data_path = self.get_random_fs_data_path()
+
+        # Get events ..
+        event_data_list = list(self.yield_events(len_events=3, len_services=1))
+        event_data1 = event_data_list[0] # type: PushCtx
+        event_data2 = event_data_list[1] # type: PushCtx
+        event_data3 = event_data_list[2] # type: PushCtx
+
+        # .. make sure the timestamp are far apart, in particular the second and third one
+        # should be greater than max_retention time.
+        event_data1['timestamp'] = utcnow().isoformat()
+        event_data2['timestamp'] = utcnow().isoformat()
+
+        # The sleep call uses seconds, hence the division.
+        sleep(max_retention / 1000.0 * 1.1)
+
+        event_data3['timestamp'] = utcnow().isoformat()
+
+        # Create a new DB instance.
+        events_db = self.get_events_db(fs_data_path=fs_data_path, sync_threshold=sync_threshold, max_retention=max_retention)
+
+        events_db.modify_state(OpCode.Push, event_data1)
+        events_db.modify_state(OpCode.Push, event_data2)
+        events_db.modify_state(OpCode.Push, event_data3)
+
+        # Read the state from persistent storage, there should be only the last push left.
+
+        data = events_db.get_data_from_storage()
+
+        print(111, data)
 
 # ################################################################################################################################
 
