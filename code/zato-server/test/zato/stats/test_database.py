@@ -14,6 +14,9 @@ from datetime import datetime
 from time import sleep
 from unittest import main, TestCase
 
+# Numpy
+import numpy as np
+
 # Pandas
 import pandas as pd
 
@@ -75,7 +78,20 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def yield_events(self, len_events=None, len_services=None, iter_multiplier=None, events_multiplier=1):
+    def yield_scenario_events(self, len_events=None, len_services=None, iter_multiplier=None, events_multiplier=1):
+
+        # This method returns a list of events forming a scenario, with various events
+        # belonging to various time buckets. This is unlike yield_raw_events which returns events
+        # as they happen, one by one.
+        pass
+
+# ################################################################################################################################
+
+    def yield_raw_events(self, len_events=None, len_services=None, iter_multiplier=None, events_multiplier=1):
+
+        # This method returns a list of raw events, simply as if they were taking
+        # place in the system, one by one. This is unlike yield_scenario_events
+        # which returns events broken down into specific time buckets, forming a scenario.
 
         len_events      = len_events      or Default.LenEvents
         len_services    = len_services    or Default.LenServices
@@ -161,7 +177,7 @@ class EventsDatabaseTestCase(TestCase):
         start = utcnow().isoformat()
         events_db = self.get_events_db()
 
-        for event_data in self.yield_events():
+        for event_data in self.yield_raw_events():
             events_db.modify_state(OpCode.Push, event_data)
 
         self.assertEqual(len(events_db.in_ram_store), total_events)
@@ -335,7 +351,7 @@ class EventsDatabaseTestCase(TestCase):
         start = utcnow().isoformat()
         events_db = self.get_events_db()
 
-        for event_data in self.yield_events():
+        for event_data in self.yield_raw_events():
             events_db.modify_state(OpCode.Push, event_data)
 
         data = events_db.get_data_from_ram()
@@ -517,7 +533,7 @@ class EventsDatabaseTestCase(TestCase):
         fs_data_path = self.get_random_fs_data_path()
 
         # Obtain test data
-        test_data = list(self.yield_events())
+        test_data = list(self.yield_raw_events())
 
         # Turn it into a DataFrame
         data_frame = pd.DataFrame(test_data)
@@ -544,7 +560,7 @@ class EventsDatabaseTestCase(TestCase):
         fs_data_path = self.get_random_fs_data_path()
 
         # Obtain test data
-        test_data = list(self.yield_events())
+        test_data = list(self.yield_raw_events())
 
         # Turn it into a DataFrame
         data_frame = pd.DataFrame(test_data)
@@ -556,7 +572,7 @@ class EventsDatabaseTestCase(TestCase):
         events_db = self.get_events_db(fs_data_path=fs_data_path)
 
         # Push data to RAM ..
-        for event_data in self.yield_events():
+        for event_data in self.yield_raw_events():
             events_db.modify_state(OpCode.Push, event_data)
 
         # At this point, we should have data on disk and in RAM
@@ -642,7 +658,7 @@ class EventsDatabaseTestCase(TestCase):
         events_db = self.get_events_db(fs_data_path=fs_data_path, sync_threshold=sync_threshold, max_retention=max_retention)
 
         # Get events ..
-        event_data_list = list(self.yield_events(len_events=3, len_services=1))
+        event_data_list = list(self.yield_raw_events(len_events=3, len_services=1))
         event_data1 = event_data_list[0] # type: PushCtx
         event_data2 = event_data_list[1] # type: PushCtx
         event_data3 = event_data_list[2] # type: PushCtx
@@ -694,37 +710,68 @@ class EventsDatabaseTestCase(TestCase):
 # ################################################################################################################################
 
     def impl_get_events_by_response_time(self, data, count=10, time_label=None, min_time=None, max_time=None,
-        time_freq='1h'):
+        time_freq='5m'):
         # type: (DataFrame, int, str, str, str) -> list
+
+        # time_label -> e.g. today, yesterday, this_year, last_week
 
         #data = data[['object_id', 'total_time_ms']].groupby(['total_time_ms']).mean()
 
         #data = data.set_index(pd.DatetimeIndex(data['timestamp']))
         #data.index.name = 'idx_timestamp'
 
+        print(len(data))
+
         start = utcnow()
 
         print('QQQ-1', start)
+        #print()
+
+        #print('RRR-1', data['total_time_ms'].sum())
         print()
 
-        print('RRR-1', data['total_time_ms'].sum())
-        print()
-
-        print('RRR-2', data.groupby('object_id').count()['timestamp'].to_dict())
-        print()
+        #print('RRR-2', data.groupby('object_id').count()['timestamp'].to_dict())
+        #print()
 
         #by_object_id = data.groupby('object_id')
 
         aggregated = data.groupby([
             pd.Grouper(key='timestamp', freq=time_freq),
             pd.Grouper(key='object_id'),
-        ])
+        ]).agg(**{
+            'item_max':  pd.NamedAgg(column='total_time_ms', aggfunc=np.max),
+            'item_min':  pd.NamedAgg(column='total_time_ms', aggfunc=np.min),
+            'item_sum':  pd.NamedAgg(column='total_time_ms', aggfunc=np.sum),
+            'item_mean': pd.NamedAgg(column='total_time_ms', aggfunc=np.mean),
+        })
 
+        print('QQQ-2', utcnow() - start)
+
+        #print(pd.concat([aggregated] * 10))
+
+        '''
         aggr_response_time = aggregated['total_time_ms'] # type: SeriesGroupBy
 
-        #print(aggr_response_time.sum())
+        print('QQQ-3', utcnow() - start)
 
-        print()
+        pd.DataFrame(aggr_response_time.max()).to_parquet('/tmp/zzz-1')
+
+        print('QQQ-4', utcnow() - start)
+
+        pd.DataFrame(aggr_response_time.min()).to_parquet('/tmp/zzz-2')
+
+        print('QQQ-5', utcnow() - start)
+
+        pd.DataFrame(aggr_response_time.sum()).to_parquet('/tmp/zzz-3')
+
+        print('QQQ-6', utcnow() - start)
+
+        pd.DataFrame(aggr_response_time.mean()).to_parquet('/tmp/zzz-4')
+
+        print('QQQ-7', utcnow() - start)
+
+        #df = pd.DataFrame(aggr_response_time.max())
+        #print(df.to_parquet('/tmp/zzz'))
 
         #print(aggr_response_time.min())
 
@@ -732,8 +779,9 @@ class EventsDatabaseTestCase(TestCase):
 
         #all_total_time_ms_summed = all_total_time_ms.sum()
         #all_total_time_ms_mean   = all_total_time_ms.mean()
+        '''
 
-        print('QQQ-2', utcnow() - start)
+        print('QQQ-Z', utcnow() - start)
         print()
 
         #print(all_total_time_ms_summed)
@@ -744,7 +792,7 @@ class EventsDatabaseTestCase(TestCase):
 
     def test_get_events_by_response_time(self):
 
-        data = list(self.yield_events(len_events=113, len_services=14))
+        data = list(self.yield_raw_events(len_events=24 * 365, len_services=500))
         data = pd.DataFrame(data)
 
         result = self.impl_get_events_by_response_time(data)
