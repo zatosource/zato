@@ -8,9 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-#import os
+import os
 from datetime import datetime
-#from tempfile import gettempdir
+from tempfile import gettempdir
 from time import sleep
 from unittest import main, TestCase
 
@@ -18,11 +18,11 @@ from unittest import main, TestCase
 import pandas as pd
 
 # Zato
-#from zato.common.api import Stats
-#from zato.common.events.common import EventInfo, PushCtx
-#from zato.common.test import rand_int, rand_string
-#from zato.common.typing_ import asdict, instance_from_dict
-#from zato.server.connection.connector.subprocess_.impl.events.database import EventsDatabase, OpCode
+from zato.common.api import Stats
+from zato.common.events.common import EventInfo, PushCtx
+from zato.common.test import rand_int, rand_string
+from zato.common.typing_ import asdict, instance_from_dict
+from zato.server.connection.connector.subprocess_.impl.events.database import EventsDatabase, OpCode
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -61,9 +61,6 @@ idx_str_map = {
     1: 'a',
     2: 'b',
     3: 'c',
-    4: 'd',
-    5: 'e',
-    6: 'f',
 }
 
 # ################################################################################################################################
@@ -73,7 +70,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def yield_events(self, len_events=None, len_services=None, iter_multiplier=None, events_multiplier=1):
+    def yield_events(self, len_events=None, len_services=None, iter_multiplier=None):
 
         len_events      = len_events      or Default.LenEvents
         len_services    = len_services    or Default.LenServices
@@ -89,7 +86,6 @@ class EventsDatabaseTestCase(TestCase):
                 id  = 'id-{}{}'.format(service_idx_str, event_idx)
                 cid = 'cid-{}{}'.format(service_idx_str, event_idx)
 
-                '''
                 ctx = PushCtx()
                 ctx.id = id
                 ctx.cid = cid
@@ -98,23 +94,12 @@ class EventsDatabaseTestCase(TestCase):
                 ctx.object_type = EventInfo.ObjectType.service
                 ctx.object_id = service_name
                 ctx.total_time_ms = service_idx * event_idx * iter_multiplier
-                '''
-
-                ctx = {
-                    #'id': id,
-                    #'cid': cid,
-                    #'timestamp': utcnow().isoformat(),
-                    #'event_type': 1_000_001,
-                    #'object_type': 2_000_000,
-                    'object_id': service_name,
-                    'total_time_ms': service_idx * event_idx * iter_multiplier,
-                }
 
                 # We are adding a short pause to be better able to observe
                 # that each context object has a different timestamp assigned.
-                #sleep(0.005)
+                sleep(0.005)
 
-                yield ctx
+                yield asdict(ctx)
 
 # ################################################################################################################################
 
@@ -140,7 +125,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_init(self):
+    def test_init(self):
 
         sync_threshold = rand_int()
         sync_interval  = rand_int()
@@ -152,7 +137,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_modify_state_push(self):
+    def test_modify_state_push(self):
 
         total_events = Default.LenEvents * Default.LenServices
 
@@ -328,7 +313,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_get_data_from_ram(self):
+    def test_get_data_from_ram(self):
 
         start = utcnow().isoformat()
         events_db = self.get_events_db()
@@ -491,7 +476,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_get_data_from_storage_path_does_not_exist(self):
+    def test_get_data_from_storage_path_does_not_exist(self):
 
         # Be explicit about the fact that we are using a random path, one that does not exist
         fs_data_path = rand_string()
@@ -509,7 +494,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_get_data_from_storage_path_exists(self):
+    def test_get_data_from_storage_path_exists(self):
 
         # This is where we keep Parquet data
         fs_data_path = self.get_random_fs_data_path()
@@ -536,7 +521,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_sync_state(self):
+    def test_sync_state(self):
 
         # This is where we keep Parquet data
         fs_data_path = self.get_random_fs_data_path()
@@ -577,7 +562,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_sync_threshold(self):
+    def test_sync_threshold(self):
 
         num_iters = 3
         sync_threshold = 1
@@ -599,7 +584,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_sync_interval(self):
+    def test_sync_interval(self):
 
         num_iters = 3
         sync_interval = 0.001
@@ -622,7 +607,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_max_retention(self):
+    def test_max_retention(self):
 
         # Synchronise after each push
         sync_threshold=1
@@ -713,7 +698,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_get_events_by_response_time(self):
+    def xtest_get_events_by_response_time(self):
 
         data = list(self.yield_events(len_events=3_000_000, len_services=6))
         data = pd.DataFrame(data)
