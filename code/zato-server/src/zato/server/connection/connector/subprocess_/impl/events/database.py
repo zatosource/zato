@@ -14,6 +14,9 @@ from typing import Optional as optional
 # Humanize
 from humanize import intcomma as int_to_comma
 
+# Numpy
+import numpy as np
+
 # Pandas
 import pandas as pd
 
@@ -202,6 +205,17 @@ class EventsDatabase(InRAMStore):
         # Configure our opcodes (there is one)
         self.opcode_to_func[OpCode.Push] = self.push
 
+        # Reusable Panda groupers
+        self.group_by = {}
+
+        # Each aggregated result will have these columns
+        self.agg_by = {
+            'item_max':  pd.NamedAgg(column='total_time_ms', aggfunc=np.max),
+            'item_min':  pd.NamedAgg(column='total_time_ms', aggfunc=np.min),
+            'item_sum':  pd.NamedAgg(column='total_time_ms', aggfunc=np.sum),
+            'item_mean': pd.NamedAgg(column='total_time_ms', aggfunc=np.mean),
+        }
+
         # Configure our telemetry opcodes
         self.telemetry[_op_int_save_data]     = 0
         self.telemetry[_op_int_sync_state]    = 0
@@ -209,6 +223,32 @@ class EventsDatabase(InRAMStore):
         self.telemetry[_op_int_read_parqet]   = 0
         self.telemetry[_op_int_create_new_df] = 0
         self.telemetry[_op_int_combine_data]  = 0
+
+        # Configure Panda objects
+        self.set_up_group_by()
+
+# ################################################################################################################################
+
+    def set_up_group_by(self):
+        # type: () -> None
+
+        aggr_group_by = [
+            # This is used by default
+            Stats.DefaultAggrTimeFreq,
+        ]
+
+        for time_freq in aggr_group_by:
+            group_by = self.get_group_by(time_freq)
+            self.group_by[time_freq] = group_by
+
+# ################################################################################################################################
+
+    def get_group_by(self, time_freq):
+        # type: (str) -> list
+        return [
+            pd.Grouper(key='timestamp', freq=time_freq),
+            pd.Grouper(key='object_id'),
+        ]
 
 # ################################################################################################################################
 
@@ -270,6 +310,40 @@ class EventsDatabase(InRAMStore):
         self.telemetry[_op_int_get_from_ram] += 1
 
         return current
+
+# ################################################################################################################################
+
+    def aggregate(self, data, time_freq=Stats.DefaultAggrTimeFreq):
+        # type: (DataFrame) -> DataFrame
+
+        # Check if we have had this particular frequencye before ..
+        group_by = self.group_by.get(time_freq)
+
+        # .. if not, set it up now.
+        if not group_by:
+            self.group_by[time_freq] = self.get_group_by(time_freq)
+            group_by = self.group_by[time_freq]
+
+        data = data.set_index(pd.DatetimeIndex(data['timestamp']))
+        data.index.name = 'idx_timestamp'
+
+        aggregated = data.\
+            groupby(group_by).\
+            agg(**self.agg_by)
+
+        '''
+        aggregated = data.groupby([
+            pd.Grouper(key='timestamp', freq=time_freq),
+            pd.Grouper(key='object_id'),
+        ]).agg(**{
+            'item_max':  pd.NamedAgg(column='total_time_ms', aggfunc=np.max),
+            'item_min':  pd.NamedAgg(column='total_time_ms', aggfunc=np.min),
+            'item_sum':  pd.NamedAgg(column='total_time_ms', aggfunc=np.sum),
+            'item_mean': pd.NamedAgg(column='total_time_ms', aggfunc=np.mean),
+        })
+        '''
+
+        return aggregated
 
 # ################################################################################################################################
 
@@ -337,7 +411,7 @@ class EventsDatabase(InRAMStore):
 
             # Begin with a header to indicate in logs when we start
             self.logger.info('********************************************************************************* ')
-            self.logger.info('*********************** Dataframe (DF) Sync storage ***************************** ')
+            self.logger.info('*********************** DataFrame (DF) Sync storage ***************************** ')
             self.logger.info('********************************************************************************* ')
 
             # Get the existing data from storage
