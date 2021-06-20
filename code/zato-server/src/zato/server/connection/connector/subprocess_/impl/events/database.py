@@ -360,14 +360,26 @@ class EventsDatabase(InRAMStore):
 
 # ################################################################################################################################
 
-    def get_events_by_response_time(self, count=10, time_label=None, min_time=None, max_time=None):
-        # type: (int, str, str, str) -> list
+    def impl_get_events_by_response_time(self, data, count=10, time_label=None, min_time=None, max_time=None):
+        # type: (DataFrame, int, str, str, str) -> list
         pass
 
 # ################################################################################################################################
 
-    def get_events_by_usage(self, count=10, time_label=None, min_time=None, max_time=None):
-        # type: (int, str, str, str) -> list
+    def get_events_by_response_time(self, *args, **kwargs):
+        # type: (object, object) -> list
+        pass
+
+# ################################################################################################################################
+
+    def impl_get_events_by_usage(self, data, count=10, time_label=None, min_time=None, max_time=None):
+        # type: (DataFrame, int, str, str, str) -> list
+        pass
+
+# ################################################################################################################################
+
+    def get_events_by_usage(self, *args, **kwargs):
+        # type: (object, object) -> list
         pass
 
 # ################################################################################################################################
