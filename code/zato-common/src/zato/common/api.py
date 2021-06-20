@@ -1580,6 +1580,9 @@ class Stats:
     # We use milliseconds because that makes it easier to construct tests.
     MaxRetention = 1000 * 60 * 60 * 24 * 365 * 2
 
+    # By default, statistics will be aggregated into time buckets of that duration
+    DefaultAggrTimeFreq = '5min' # Five minutes
+
 # ################################################################################################################################
 # ################################################################################################################################
 
