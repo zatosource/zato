@@ -184,8 +184,14 @@ class EventsDatabase(InRAMStore):
         # Our self.logger object
         self.logger = logger
 
-        # Where to keep persistent data
+        # Top-level directory to keep persistent data in
         self.fs_data_path = fs_data_path
+
+        # Aggregated usage data is kept here
+        self.fs_usage_path = os.path.join(self.fs_data_path, 'usage')
+
+        # Aggregated response times are kept here
+        self.fs_response_time_path = os.path.join(self.fs_data_path, 'response-time')
 
         # In-RAM database of events, saved to disk periodically in background
         self.in_ram_store = [] # type: list[Event]
