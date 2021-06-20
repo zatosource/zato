@@ -8,9 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-import os
+#import os
 from datetime import datetime
-from tempfile import gettempdir
+#from tempfile import gettempdir
 from time import sleep
 from unittest import main, TestCase
 
@@ -18,19 +18,21 @@ from unittest import main, TestCase
 import pandas as pd
 
 # Zato
-from zato.common.api import Stats
-from zato.common.events.common import EventInfo, PushCtx
-from zato.common.test import rand_int, rand_string
-from zato.common.typing_ import asdict, instance_from_dict
-from zato.server.connection.connector.subprocess_.impl.events.database import EventsDatabase, OpCode
+#from zato.common.api import Stats
+#from zato.common.events.common import EventInfo, PushCtx
+#from zato.common.test import rand_int, rand_string
+#from zato.common.typing_ import asdict, instance_from_dict
+#from zato.server.connection.connector.subprocess_.impl.events.database import EventsDatabase, OpCode
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from pandas import DataFrame
+    from pandas.core.groupby.generic import SeriesGroupBy
 
     DataFrame = DataFrame
+    SeriesGroupBy = SeriesGroupBy
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -61,6 +63,9 @@ idx_str_map = {
     1: 'a',
     2: 'b',
     3: 'c',
+    4: 'd',
+    5: 'e',
+    6: 'f',
 }
 
 # ################################################################################################################################
@@ -70,7 +75,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def yield_events(self, len_events=None, len_services=None, iter_multiplier=None):
+    def yield_events(self, len_events=None, len_services=None, iter_multiplier=None, events_multiplier=1):
 
         len_events      = len_events      or Default.LenEvents
         len_services    = len_services    or Default.LenServices
@@ -78,7 +83,7 @@ class EventsDatabaseTestCase(TestCase):
 
         for service_idx in range(1, len_services+1):
 
-            service_idx_str = idx_str_map[service_idx]
+            service_idx_str = str(service_idx)#idx_str_map[service_idx]
             service_name = 'service-{}'.format(service_idx)
 
             for event_idx in range(1, len_events+1):
@@ -86,6 +91,7 @@ class EventsDatabaseTestCase(TestCase):
                 id  = 'id-{}{}'.format(service_idx_str, event_idx)
                 cid = 'cid-{}{}'.format(service_idx_str, event_idx)
 
+                '''
                 ctx = PushCtx()
                 ctx.id = id
                 ctx.cid = cid
@@ -94,12 +100,23 @@ class EventsDatabaseTestCase(TestCase):
                 ctx.object_type = EventInfo.ObjectType.service
                 ctx.object_id = service_name
                 ctx.total_time_ms = service_idx * event_idx * iter_multiplier
+                '''
+
+                ctx = {
+                    #'id': id,
+                    #'cid': cid,
+                    'timestamp': utcnow(),
+                    #'event_type': 1_000_001,
+                    #'object_type': 2_000_000,
+                    'object_id': service_name,
+                    'total_time_ms': service_idx * event_idx * iter_multiplier,
+                }
 
                 # We are adding a short pause to be better able to observe
                 # that each context object has a different timestamp assigned.
-                sleep(0.005)
+                #sleep(0.005)
 
-                yield asdict(ctx)
+                yield ctx
 
 # ################################################################################################################################
 
@@ -125,7 +142,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_init(self):
+    def xtest_init(self):
 
         sync_threshold = rand_int()
         sync_interval  = rand_int()
@@ -137,7 +154,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_modify_state_push(self):
+    def xtest_modify_state_push(self):
 
         total_events = Default.LenEvents * Default.LenServices
 
@@ -313,7 +330,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_get_data_from_ram(self):
+    def xtest_get_data_from_ram(self):
 
         start = utcnow().isoformat()
         events_db = self.get_events_db()
@@ -476,7 +493,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_get_data_from_storage_path_does_not_exist(self):
+    def xtest_get_data_from_storage_path_does_not_exist(self):
 
         # Be explicit about the fact that we are using a random path, one that does not exist
         fs_data_path = rand_string()
@@ -494,7 +511,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_get_data_from_storage_path_exists(self):
+    def xtest_get_data_from_storage_path_exists(self):
 
         # This is where we keep Parquet data
         fs_data_path = self.get_random_fs_data_path()
@@ -521,7 +538,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_sync_state(self):
+    def xtest_sync_state(self):
 
         # This is where we keep Parquet data
         fs_data_path = self.get_random_fs_data_path()
@@ -562,7 +579,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_sync_threshold(self):
+    def xtest_sync_threshold(self):
 
         num_iters = 3
         sync_threshold = 1
@@ -584,7 +601,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_sync_interval(self):
+    def xtest_sync_interval(self):
 
         num_iters = 3
         sync_interval = 0.001
@@ -607,7 +624,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_max_retention(self):
+    def xtest_max_retention(self):
 
         # Synchronise after each push
         sync_threshold=1
@@ -676,31 +693,58 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def impl_get_events_by_response_time(self, data, count=10, time_label=None, min_time=None, max_time=None):
+    def impl_get_events_by_response_time(self, data, count=10, time_label=None, min_time=None, max_time=None,
+        time_freq='1h'):
         # type: (DataFrame, int, str, str, str) -> list
 
         #data = data[['object_id', 'total_time_ms']].groupby(['total_time_ms']).mean()
 
+        #data = data.set_index(pd.DatetimeIndex(data['timestamp']))
+        #data.index.name = 'idx_timestamp'
+
         start = utcnow()
 
-        print('ZZZ', len(data))
         print('QQQ-1', start)
+        print()
 
-        all_total_time_ms = data.groupby('object_id')['total_time_ms'] # type: DataFrame
+        print('RRR-1', data['total_time_ms'].sum())
+        print()
 
-        all_total_time_ms_summed = all_total_time_ms.sum()
-        all_total_time_ms_mean   = all_total_time_ms.mean()
+        print('RRR-2', data.groupby('object_id').count()['timestamp'].to_dict())
+        print()
+
+        #by_object_id = data.groupby('object_id')
+
+        aggregated = data.groupby([
+            pd.Grouper(key='timestamp', freq=time_freq),
+            pd.Grouper(key='object_id'),
+        ])
+
+        aggr_response_time = aggregated['total_time_ms'] # type: SeriesGroupBy
+
+        #print(aggr_response_time.sum())
+
+        print()
+
+        #print(aggr_response_time.min())
+
+        #all_total_time_ms = data.groupby('object_id')['total_time_ms'] # type: DataFrame
+
+        #all_total_time_ms_summed = all_total_time_ms.sum()
+        #all_total_time_ms_mean   = all_total_time_ms.mean()
 
         print('QQQ-2', utcnow() - start)
+        print()
 
-        print(111, all_total_time_ms_summed.to_dict())
-        print(222, all_total_time_ms_mean.to_dict())
+        #print(all_total_time_ms_summed)
+
+        #print(222, all_total_time_ms_mean.to_dict())
 
 # ################################################################################################################################
 
-    def xtest_get_events_by_response_time(self):
+    def test_get_events_by_response_time(self):
 
-        data = list(self.yield_events(len_events=3_000_000, len_services=6))
+        data = list(self.yield_events(len_events=113, len_services=14))
         data = pd.DataFrame(data)
 
         result = self.impl_get_events_by_response_time(data)
