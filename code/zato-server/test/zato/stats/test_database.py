@@ -8,11 +8,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-#import os
+import os
 from datetime import datetime
-#from tempfile import gettempdir
+from tempfile import gettempdir
 from time import sleep
 from unittest import main, TestCase
+
+# dateutil
+from dateutil.rrule import SECONDLY, rrule
 
 # Numpy
 import numpy as np
@@ -21,11 +24,11 @@ import numpy as np
 import pandas as pd
 
 # Zato
-#from zato.common.api import Stats
+from zato.common.api import Stats
 #from zato.common.events.common import EventInfo, PushCtx
-#from zato.common.test import rand_int, rand_string
+from zato.common.test import rand_int, rand_string
 #from zato.common.typing_ import asdict, instance_from_dict
-#from zato.server.connection.connector.subprocess_.impl.events.database import EventsDatabase, OpCode
+from zato.server.connection.connector.subprocess_.impl.events.database import EventsDatabase, OpCode
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -74,6 +77,14 @@ idx_str_map = {
 # ################################################################################################################################
 # ################################################################################################################################
 
+class ScenarioConfig:
+    TimestampFormat = '%Y-%m-%d %H:%M:%S'
+    RawStart = '2056-01-02 03:04:00'
+    RawEnd   = '2056-01-02 03:05:59'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
@@ -83,6 +94,35 @@ class EventsDatabaseTestCase(TestCase):
         # This method returns a list of events forming a scenario, with various events
         # belonging to various time buckets. This is unlike yield_raw_events which returns events
         # as they happen, one by one.
+
+        #
+        # Our scenario covers two minutes, as configured via ScenarioConfig.
+        #
+        # For each second within that timeframe we generate len_events for each of the services.
+        # How many services there are is configured via len_services.
+        #
+
+        start = datetime.strptime(ScenarioConfig.RawStart, ScenarioConfig.TimestampFormat)
+        end   = datetime.strptime(ScenarioConfig.RawEnd,   ScenarioConfig.TimestampFormat)
+
+        len_events      = len_events      or Default.LenEvents
+        len_services    = len_services    or Default.LenServices
+        iter_multiplier = iter_multiplier or Default.IterMultiplier
+
+        for time_bucket in rrule(SECONDLY, dtstart=start, until=end):
+
+            for service_idx in range(1, len_services+1):
+                for event_idx in range(1, len_events+1):
+
+                    yield {
+                        'timestamp': time_bucket,
+                        'object_id': 'service-{}'.format(service_idx),
+                        'total_time_ms': service_idx * event_idx * iter_multiplier,
+                    }
+
+# ################################################################################################################################
+
+    def yield_scenario_aggr_data(self):
         pass
 
 # ################################################################################################################################
@@ -720,6 +760,7 @@ class EventsDatabaseTestCase(TestCase):
         #data = data.set_index(pd.DatetimeIndex(data['timestamp']))
         #data.index.name = 'idx_timestamp'
 
+
         print(len(data))
 
         start = utcnow()
@@ -781,8 +822,8 @@ class EventsDatabaseTestCase(TestCase):
         #all_total_time_ms_mean   = all_total_time_ms.mean()
         '''
 
-        print('QQQ-Z', utcnow() - start)
-        print()
+        #print('QQQ-Z', utcnow() - start)
+        #print()
 
         #print(all_total_time_ms_summed)
 
@@ -792,10 +833,35 @@ class EventsDatabaseTestCase(TestCase):
 
     def test_get_events_by_response_time(self):
 
-        data = list(self.yield_raw_events(len_events=24 * 365, len_services=500))
+        # Generate test events ..
+        data = self.yield_scenario_events()
         data = pd.DataFrame(data)
 
-        result = self.impl_get_events_by_response_time(data)
+        # .. create a new DB instance ..
+        events_db = self.get_events_db()
+
+        # .. aggregate test events ..
+        aggregated = events_db.aggregate(data)
+
+        # .. convert pd.Timestamp objects to string for easy testing ..
+        for row in aggregated:
+            #row['timestamp'] = row['timestamp'].to_pydatetime()
+            print(111, row)
+
+        # .. convert it to a dict to make it easier to construct assertions ..
+        aggregated = aggregated.to_dict()
+
+        # .. and run all the asssertions now.
+
+        print(aggregated)
+
+        #for item in events:
+        #    print(item)
+
+        #print(111, len(events))
+
+        #data = pd.DataFrame(data)
+        #result = self.impl_get_events_by_response_time(data)
 
 # ################################################################################################################################
 
