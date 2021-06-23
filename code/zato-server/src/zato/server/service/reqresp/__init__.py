@@ -12,13 +12,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 from cgi import FieldStorage
 from copy import deepcopy
+from datetime import datetime
+from decimal import Decimal
 from http.client import OK
 from itertools import chain
 from io import BytesIO
 from traceback import format_exc
 
 # anyjson
-from anyjson import dumps, loads
+from anyjson import loads
 
 # Bunch
 from bunch import Bunch, bunchify
@@ -27,6 +29,9 @@ from bunch import Bunch, bunchify
 from lxml import etree
 from lxml.etree import _Element as EtreeElement
 from lxml.objectify import deannotate, Element, ElementMaker, ObjectifiedElement
+
+# simplejson
+from simplejson import dumps
 
 # SQLAlchemy
 from sqlalchemy.util import KeyedTuple
@@ -54,6 +59,16 @@ NOT_GIVEN = 'ZATO_NOT_GIVEN'
 # ################################################################################################################################
 
 direct_payload = simple_types + (EtreeElement, ObjectifiedElement)
+
+# ################################################################################################################################
+
+def default_dumps(value):
+    if isinstance(value, datetime):
+        return value.isoformat()
+    elif isinstance(value, Decimal):
+        return str(value)
+    else:
+        raise TypeError('Cannot serialise value `{}`'.format(value))
 
 # ################################################################################################################################
 
@@ -512,7 +527,7 @@ class SimpleIOPayload(SIOConverter):
                 deannotate(top, cleanup_namespaces=True)
                 return etree.tostring(top)
             else:
-                return dumps(top)
+                return dumps(top, default=default_dumps)
         else:
             return top
 
