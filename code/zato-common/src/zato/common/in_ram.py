@@ -103,7 +103,7 @@ class InRAMStore:
 
 # ################################################################################################################################
 
-    def modify_state(self, opcode, data):
+    def access_state(self, opcode, data):
         # type: (str, object) -> None
         with self.update_lock:
 
