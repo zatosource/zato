@@ -1583,6 +1583,9 @@ class Stats:
     # By default, statistics will be aggregated into time buckets of that duration
     DefaultAggrTimeFreq = '5min' # Five minutes
 
+    # We always tabulate by object_id (e.g. service name)
+    TabulateAggr = 'object_id'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
