@@ -240,8 +240,10 @@ def overview(req, service_name):
                     value = is_boolean(value)
 
                 if name == 'last_timestamp':
-                    setattr(service, 'last_timestamp_utc', value)
-                    setattr(service, 'last_timestamp', from_utc_to_user(value+'+00:00', req.zato.user_profile))
+
+                    if value:
+                        setattr(service, 'last_timestamp_utc', value)
+                        setattr(service, 'last_timestamp', from_utc_to_user(value+'+00:00', req.zato.user_profile))
 
                     continue
 
