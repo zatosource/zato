@@ -421,9 +421,6 @@ class ServiceStore(object):
                 class_._json_pointer_store = service_store.server.worker_store.worker_config.json_pointer_store
                 class_._xpath_store = service_store.server.worker_store.worker_config.xpath_store
 
-                _req_resp_freq_key = '%s%s' % (KVDB.REQ_RESP_SAMPLE, name)
-                class_._req_resp_freq = int(service_store.server.kvdb.conn.hget(_req_resp_freq_key, 'freq') or 0)
-
                 class_.component_enabled_cassandra = service_store.server.fs_server_config.component_enabled.cassandra
                 class_.component_enabled_email = service_store.server.fs_server_config.component_enabled.email
                 class_.component_enabled_search = service_store.server.fs_server_config.component_enabled.search

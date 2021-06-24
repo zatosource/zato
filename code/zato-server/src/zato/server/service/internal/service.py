@@ -65,10 +65,10 @@ class GetList(AdminService):
         response_elem = 'zato_service_get_list_response'
         input_required = 'cluster_id'
         input_optional = 'should_include_scheduler'
-        output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), Integer('usage'), \
+        output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), \
             Integer('slow_threshold')
         output_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_active', \
-            'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
+            'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def'), Integer('usage')
         output_repeated = True
         default_value = ''
 
@@ -83,7 +83,6 @@ class GetList(AdminService):
         for item in elems_with_opaque(search_result):
 
             item.may_be_deleted = internal_del if item.is_internal else True
-            item.usage = self.server.kvdb.conn.get('{}{}'.format(KVDB.SERVICE_USAGE, item.name)) or 0
 
             # Attach JSON Schema validation configuration
             json_schema_config = get_service_config(item, self.server)
@@ -170,7 +169,9 @@ class GetStatsTable(AdminService):
 class GetServiceStats(AdminService):
 
     def handle(self):
-        self.response.payload = self.server.current_usage.get(self.request.raw_request['name'])
+        usage = self.server.current_usage.get(self.request.raw_request['name'])
+        if usage:
+            self.response.payload = usage
 
 # ################################################################################################################################
 # ################################################################################################################################
