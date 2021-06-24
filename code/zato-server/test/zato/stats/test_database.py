@@ -531,7 +531,7 @@ class EventsDatabaseTestCase(TestCase):
         events_db = self.get_events_db(fs_data_path=fs_data_path)
 
         # This should return an empty DataFrame because the path did not exist
-        data = events_db.get_data_from_storage() # type: DataFrame
+        data = events_db.load_data_from_storage() # type: DataFrame
 
         self.assertEqual(len(data), 0)
         self.assertEqual(events_db.telemetry[OpCode.Internal.GetFromRAM],  0)
@@ -558,7 +558,7 @@ class EventsDatabaseTestCase(TestCase):
         events_db = self.get_events_db(fs_data_path=fs_data_path)
 
         # This should return an empty DataFrame because the path did not exist
-        data = events_db.get_data_from_storage() # type: DataFrame
+        data = events_db.load_data_from_storage() # type: DataFrame
 
         self.assertEqual(len(data), len(test_data))
         self.assertEqual(events_db.telemetry[OpCode.Internal.GetFromRAM],  0)
@@ -593,7 +593,7 @@ class EventsDatabaseTestCase(TestCase):
         events_db.sync_state()
 
         # This should data from what was previously in RAM combined with what was on disk
-        data = events_db.get_data_from_storage() # type: DataFrame
+        data = events_db.load_data_from_storage() # type: DataFrame
 
         # The length should be equal to twice the defaults - it is twice
         # because we generated test data two times, once for Parquet and once when it was added to RAM
@@ -697,7 +697,7 @@ class EventsDatabaseTestCase(TestCase):
 
         # Read the state from persistent storage ..
 
-        data = events_db.get_data_from_storage()
+        data = events_db.load_data_from_storage()
 
         # .. only the last push should be available ..
         self.assertEqual(len(data), 1)
@@ -722,7 +722,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_get_events_by_response_time(self):
+    def test_aggregate(self):
 
         # Generate test events ..
         data = self.yield_scenario_events()
@@ -812,6 +812,50 @@ class EventsDatabaseTestCase(TestCase):
 
         self.assertEqual(object_id, 'service-3')
         self.assertEqual(value, 132)
+
+# ################################################################################################################################
+
+    def test_tabulate(self):
+
+        # .. create a new DB instance ..
+        events_db = self.get_events_db()
+
+        # .. push test events ..
+        for event_data in self.yield_scenario_events():
+            events_db.modify_state(OpCode.Push, event_data)
+
+        # .. save to the file system ..
+        events_db.sync_state()
+
+        # .. tabulate test events ..
+        tabulated = events_db.tabulate()
+
+        # .. convert it to a dict to make it easier to construct assertions ..
+        tabulated = tabulated.to_dict()
+
+        # .. create helper objects ..
+        item_max  = tabulated['item_max']
+        item_min  = tabulated['item_min']
+        item_sum  = tabulated['item_sum']
+        item_mean = tabulated['item_mean']
+
+        # .. and run the asssertions now.
+
+        self.assertEqual(item_max['service-1'], 44)
+        self.assertEqual(item_max['service-2'], 88)
+        self.assertEqual(item_max['service-3'], 132)
+
+        self.assertEqual(item_min['service-1'], 11)
+        self.assertEqual(item_min['service-2'], 22)
+        self.assertEqual(item_min['service-3'], 33)
+
+        self.assertEqual(item_sum['service-1'], 13_200)
+        self.assertEqual(item_sum['service-2'], 26_400)
+        self.assertEqual(item_sum['service-3'], 39_600)
+
+        self.assertEqual(item_mean['service-1'], 27.5)
+        self.assertEqual(item_mean['service-2'], 55.0)
+        self.assertEqual(item_mean['service-3'], 82.5)
 
 # ################################################################################################################################
 
