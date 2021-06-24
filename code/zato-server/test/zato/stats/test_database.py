@@ -171,7 +171,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_init(self):
+    def test_init(self):
 
         sync_threshold = rand_int()
         sync_interval  = rand_int()
@@ -183,7 +183,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_modify_state_push(self):
+    def test_modify_state_push(self):
 
         total_events = Default.LenEvents * Default.LenServices
 
@@ -359,7 +359,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_get_data_from_ram(self):
+    def test_get_data_from_ram(self):
 
         start = utcnow().isoformat()
         events_db = self.get_events_db()
@@ -522,7 +522,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_get_data_from_storage_path_does_not_exist(self):
+    def test_get_data_from_storage_path_does_not_exist(self):
 
         # Be explicit about the fact that we are using a random path, one that does not exist
         fs_data_path = rand_string()
@@ -540,7 +540,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_get_data_from_storage_path_exists(self):
+    def test_get_data_from_storage_path_exists(self):
 
         # This is where we keep Parquet data
         fs_data_path = self.get_random_fs_data_path()
@@ -567,7 +567,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_sync_state(self):
+    def test_sync_state(self):
 
         # This is where we keep Parquet data
         fs_data_path = self.get_random_fs_data_path()
@@ -608,7 +608,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_sync_threshold(self):
+    def test_sync_threshold(self):
 
         num_iters = 3
         sync_threshold = 1
@@ -630,7 +630,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_sync_interval(self):
+    def test_sync_interval(self):
 
         num_iters = 3
         sync_interval = 0.001
@@ -653,7 +653,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_max_retention(self):
+    def test_max_retention(self):
 
         # Synchronise after each push
         sync_threshold=1
