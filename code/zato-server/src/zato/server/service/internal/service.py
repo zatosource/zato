@@ -9,8 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from base64 import b64decode, b64encode
 from contextlib import closing
-from http.client import BAD_REQUEST, NOT_FOUND
-from mimetypes import guess_type
 from operator import attrgetter
 from tempfile import NamedTemporaryFile
 from traceback import format_exc
@@ -21,12 +19,11 @@ from validate import is_boolean
 
 # Python 2/3 compatibility
 from builtins import bytes
-from future.moves.urllib.parse import parse_qs
 from future.utils import iterkeys
 from past.builtins import basestring
 
 # Zato
-from zato.common.api import BROKER, KVDB, StatsKey
+from zato.common.api import BROKER, StatsKey
 from zato.common.broker_message import SERVICE
 from zato.common.exception import BadRequest, ZatoException
 from zato.common.json_internal import dumps, loads
@@ -587,33 +584,6 @@ class UploadPackage(AdminService):
         self.response.payload = {
             'package_id': package_id
         }
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class _SlowResponseService(AdminService):
-    def get_data(self):
-        data = []
-        cid_needed = self.request.input.cid if 'cid' in self.SimpleIO.input_required else None
-        key = '{}{}'.format(KVDB.RESP_SLOW, self.request.input.name)
-
-        for item in self.kvdb.conn.lrange(key, 0, -1):
-            item = loads(item)
-
-            if cid_needed and cid_needed != item['cid']:
-                continue
-
-            elem = {}
-            for name in('cid', 'req_ts', 'resp_ts', 'proc_time'):
-                elem[name] = item[name]
-
-            if cid_needed and cid_needed == item['cid']:
-                for name in('req', 'resp'):
-                    elem[name] = item.get(name, '')
-
-            data.append(elem)
-
-        return data
 
 # ################################################################################################################################
 # ################################################################################################################################
