@@ -13,7 +13,7 @@ from django.views.static import serve as django_static_serve
 
 # Zato
 from zato.admin import settings
-from zato.admin.web.views import account, audit_log, cluster, http_soap, kvdb, load_balancer, main, scheduler, service, stats
+from zato.admin.web.views import account, audit_log, cluster, http_soap, kvdb, load_balancer, main, scheduler, service
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
@@ -68,6 +68,7 @@ from zato.admin.web.views.security import apikey, aws, basic_auth, jwt, ntlm, oa
      wss, xpath as xpath_sec
 from zato.admin.web.views.security.tls import ca_cert as tls_ca_cert, channel as tls_channel, key_cert as tls_key_cert
 from zato.admin.web.views.security.vault import connection as vault_conn
+from zato.admin.web.views.stats import service_usage as stats_service_usage
 
 urlpatterns = [
 
@@ -1611,23 +1612,8 @@ urlpatterns += [
 urlpatterns += [
 
     # Statistics
-
-    url(r'^zato/stats/trends/data/$',
-        login_required(stats.stats_trends_data), name='stats-trends-data'),
-    url(r'^zato/stats/trends/(?P<choice>.*)/$',
-        login_required(stats.trends), name='stats-trends'),
-    url(r'^zato/stats/summary/data/$',
-        login_required(stats.stats_summary_data), name='stats-summary-data'),
-    url(r'^zato/stats/summary/(?P<choice>.*)/$',
-        login_required(stats.summary), name='stats-summary'),
-    url(r'^zato/stats/settings/$',
-        login_required(stats.settings), name='stats-settings'),
-    url(r'^zato/stats/settings/save/$',
-        login_required(stats.settings_save), name='stats-settings-save'),
-    url(r'^zato/stats/maintenance/$',
-        login_required(stats.maintenance), name='stats-maintenance'),
-    url(r'^zato/stats/maintenance/delete/$',
-        login_required(stats.maintenance_delete), name='stats-maintenance-delete'),
+    url(r'^zato/stats/service-usage/$',
+        login_required(stats_service_usage.Index()), name=stats_service_usage.Index.url_name),
     ]
 
 # ################################################################################################################################

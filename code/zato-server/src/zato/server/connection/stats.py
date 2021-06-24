@@ -6,6 +6,9 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from logging import getLogger
+
 # gevent
 from gevent.lock import RLock
 
@@ -13,6 +16,11 @@ from gevent.lock import RLock
 from zato.common.events.client import Client as EventsClient
 from zato.common.events.common import EventInfo, PushCtx
 from zato.common.util.api import new_cid
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -103,6 +111,13 @@ class ServiceStatsClient:
     def get_table(self):
         with self.lock:
             return self.impl.get_table()
+
+# ################################################################################################################################
+
+    def sync_state(self):
+
+        with self.lock:
+            self.impl.sync_state()
 
 # ################################################################################################################################
 # ################################################################################################################################

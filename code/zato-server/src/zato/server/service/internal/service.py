@@ -36,21 +36,23 @@ from zato.common.odb.query import service_list
 from zato.common.rate_limiting import DefinitionParser
 from zato.common.scheduler import get_startup_job_services
 from zato.common.util.api import hot_deploy, payload_from_request
-from zato.common.util.stats import collect_current_usage
+from zato.common.util.stats import combine_table_data, collect_current_usage
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
-from zato.server.service import Boolean, Integer, Service as ZatoService
+from zato.server.service import Boolean, Float, Integer, Service as ZatoService
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
-
+# ################################################################################################################################
 # ################################################################################################################################
 
 # For pyflakes
 ZatoService = ZatoService
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 _no_such_service_name = uuid4().hex
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class GetList(AdminService):
@@ -69,6 +71,8 @@ class GetList(AdminService):
             'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
         output_repeated = True
         default_value = ''
+
+# ################################################################################################################################
 
     def _get_data(self, session, return_internal, include_list, internal_del):
 
@@ -90,6 +94,8 @@ class GetList(AdminService):
             out.append(item)
 
         return out
+
+# ################################################################################################################################
 
     def get_data(self, session):
 
@@ -124,6 +130,39 @@ class GetList(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _GetStatsTable(AdminService):
+
+    def handle(self):
+
+        table = self.server.stats_client.get_table()
+        if table:
+            self.response.payload = table
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetStatsTable(AdminService):
+
+    class SimpleIO(AdminSIO):
+        output_optional = ('name', Float('item_max'), Float('item_min'), Float('item_mean'), Float('item_total_time'), \
+            Float('item_usage_share'), Float('item_time_share'), Integer('item_total_usage'),
+            'item_total_time_human', 'item_total_usage_human')
+        response_elem = None
+
+    def handle(self):
+
+        # Invoke all servers and all PIDs..
+        response = self.server.rpc.invoke_all(_GetStatsTable.get_name())
+
+        # .. combine responses ..
+        response = combine_table_data(response.data)
+
+        # .. and return the response.
+        self.response.payload[:] = response
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -184,6 +223,7 @@ class _Get(AdminService):
             self.response.payload.usage_mean = usage_response[StatsKey.PerKeyMean]
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class GetByName(_Get):
     """ Returns a particular service by its name.
@@ -198,6 +238,7 @@ class GetByName(_Get):
                filter(Service.name==self.request.input.name)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class GetByID(_Get):
     """ Returns a particular service by its ID.
@@ -211,6 +252,7 @@ class GetByID(_Get):
         return query.\
                filter(Service.id==self.request.input.id)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Edit(AdminService):
@@ -266,6 +308,7 @@ class Edit(AdminService):
                 raise
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Delete(AdminService):
     """ Deletes a service.
@@ -310,6 +353,7 @@ class Delete(AdminService):
                 raise
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class GetChannelList(AdminService):
     """ Returns a list of channels of a given type through which the service is exposed.
@@ -343,6 +387,7 @@ class GetChannelList(AdminService):
 
             self.response.payload[:] = q.all()
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Invoke(AdminService):
@@ -450,11 +495,13 @@ class Invoke(AdminService):
         if response:
 
             if not isinstance(response, basestring):
-                response = dumps(response)
+                if not isinstance(response, bytes):
+                    response = dumps(response)
 
             response = response if isinstance(response, bytes) else response.encode('utf8')
             self.response.payload.response = b64encode(response).decode('utf8') if response else ''
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class GetDeploymentInfoList(AdminService):
@@ -483,6 +530,7 @@ class GetDeploymentInfoList(AdminService):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class GetSourceInfo(AdminService):
@@ -516,6 +564,7 @@ class GetSourceInfo(AdminService):
             self.response.payload.source_hash = si.source_hash
             self.response.payload.source_hash_method = si.source_hash_method
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class GetWSDL(AdminService):
@@ -582,6 +631,7 @@ class GetWSDL(AdminService):
         self.response.headers['Content-Disposition'] = 'attachment; filename={}'.format(attachment_name)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class SetWSDL(AdminService):
     """ Updates the service's WSDL.
@@ -603,6 +653,7 @@ class SetWSDL(AdminService):
             session.commit()
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class HasWSDL(AdminService):
     """ Returns a boolean flag indicating whether the server has a WSDL attached.
@@ -621,6 +672,7 @@ class HasWSDL(AdminService):
             self.response.payload.service_id = result.id
             self.response.payload.has_wsdl = result.wsdl is not None
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class GetRequestResponse(AdminService):
@@ -656,6 +708,7 @@ class GetRequestResponse(AdminService):
         self.response.payload.sample_req_resp_freq = result.get('freq', 0)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class ConfigureRequestResponse(AdminService):
     """ Updates the request/response-related configuration.
@@ -669,6 +722,7 @@ class ConfigureRequestResponse(AdminService):
         key = '{}{}'.format(KVDB.REQ_RESP_SAMPLE, self.request.input.name)
         self.kvdb.conn.hset(key, 'freq', self.request.input.sample_req_resp_freq)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class UploadPackage(AdminService):
@@ -691,6 +745,7 @@ class UploadPackage(AdminService):
             'package_id': package_id
         }
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _SlowResponseService(AdminService):
@@ -718,6 +773,7 @@ class _SlowResponseService(AdminService):
         return data
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class GetSlowResponseList(_SlowResponseService):
     """ Returns a list of basic information regarding slow responses of a given service.
@@ -735,6 +791,7 @@ class GetSlowResponseList(_SlowResponseService):
     def handle(self):
         self.response.payload[:] = self.get_data()
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class GetSlowResponse(_SlowResponseService):
@@ -755,6 +812,7 @@ class GetSlowResponse(_SlowResponseService):
         if data:
             self.response.payload = data[0]
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ServiceInvoker(AdminService):
@@ -806,4 +864,5 @@ class ServiceInvoker(AdminService):
             self.response.data_format = 'text/plain'
             raise BadRequest(self.cid, 'No such service `{}`'.format(service_name))
 
+# ################################################################################################################################
 # ################################################################################################################################

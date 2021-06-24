@@ -679,6 +679,10 @@ class Arbiter(object):
         :attr pid: int, worker pid
         :attr sig: `signal.SIG*` value
          """
+
+        worker = self.WORKERS.get(pid)
+        self.cfg.before_pid_kill(self, worker)
+
         try:
             os.kill(pid, sig)
         except OSError as e:

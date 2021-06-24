@@ -297,21 +297,7 @@
 
                 <li><a href="#">Statistics &darr;</a>
                     <ul>
-
-                        <li>
-                            <span class="like-a">Summary &rarr;</span>
-                            <ul>
-                                <li class='wide'><a href="{% url "stats-summary" 'today' %}?cluster={{ cluster_id|default:'' }}">Today</a></li>
-                                <li class='wide'><a href="{% url "stats-summary" 'yesterday' %}?cluster={{ cluster_id|default:'' }}">Yesterday</a></li>
-                                <li class='wide'><a href="{% url "stats-summary" 'this_week' %}?cluster={{ cluster_id|default:'' }}">This week</a></li>
-                                <li class='wide'><a href="{% url "stats-summary" 'this_month' %}?cluster={{ cluster_id|default:'' }}">This month</a></li>
-                                <li class='wide'><a href="{% url "stats-summary" 'this_year' %}?cluster={{ cluster_id|default:'' }}">This year</a></li>
-                            </ul>
-                        </li>
-
-                        <li>
-                            <a href="{% url "stats-settings" %}?cluster={{ cluster_id|default:'' }}">Settings</a>
-                        </li>
+                        <li class='wide'><a href="{% url "stats-service-usage" %}?cluster={{ cluster_id|default:'' }}">Service usage</a></li>
                     </ul>
                 </li>
 

@@ -18,6 +18,9 @@ from gevent.lock import RLock
 # orjson
 from orjson import dumps
 
+# simdjson
+from simdjson import loads
+
 # Zato
 from zato.common.events.common import Action
 from zato.common.typing_ import asdict
@@ -155,7 +158,7 @@ class Client:
 
     def get_table(self):
 
-        # Send the tabulated data ..
+        # Request the tabulated data ..
         self.send(Action.GetTable)
 
         # .. wait for the reply ..
@@ -165,7 +168,18 @@ class Client:
         if response and (not response.startswith(Action.GetTableReply)):
             raise ValueError('Unexpected response received from `{}` -> `{}`'.format(self.peer_name, response))
 
-        return response[Action.LenAction:]
+        table = response[Action.LenAction:]
+        return loads(table) if table else None
+
+# ################################################################################################################################
+
+    def sync_state(self):
+
+        # Request that the database sync its state with persistent storage ..
+        self.send(Action.SyncState)
+
+        # .. wait for the reply
+        self.read()
 
 # ################################################################################################################################
 

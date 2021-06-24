@@ -21,10 +21,10 @@ class Default:
     fs_data_path = 'events'
 
     # Sync database to disk once in that many events ..
-    sync_threshold = 120_000
+    sync_threshold = 30_000
 
     # .. or once in that many milliseconds.
-    sync_interval = 120_000
+    sync_interval = 30_000
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,6 +49,7 @@ class Action:
     Push           = b'03'
     GetTable       = b'04'
     GetTableReply  = b'05'
+    SyncState      = b'06'
 
     LenAction = len(Ping)
 
