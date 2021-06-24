@@ -191,7 +191,7 @@ class EventsDatabaseTestCase(TestCase):
         events_db = self.get_events_db()
 
         for event_data in self.yield_raw_events():
-            events_db.modify_state(OpCode.Push, event_data)
+            events_db.access_state(OpCode.Push, event_data)
 
         self.assertEqual(len(events_db.in_ram_store), total_events)
 
@@ -365,7 +365,7 @@ class EventsDatabaseTestCase(TestCase):
         events_db = self.get_events_db()
 
         for event_data in self.yield_raw_events():
-            events_db.modify_state(OpCode.Push, event_data)
+            events_db.access_state(OpCode.Push, event_data)
 
         data = events_db.get_data_from_ram()
 
@@ -586,7 +586,7 @@ class EventsDatabaseTestCase(TestCase):
 
         # Push data to RAM ..
         for event_data in self.yield_raw_events():
-            events_db.modify_state(OpCode.Push, event_data)
+            events_db.access_state(OpCode.Push, event_data)
 
         # At this point, we should have data on disk and in RAM
         # and syncing should push data from RAM to disk.
@@ -616,7 +616,7 @@ class EventsDatabaseTestCase(TestCase):
         events_db = self.get_events_db(sync_threshold=sync_threshold)
 
         for x in range(num_iters):
-            events_db.modify_state(OpCode.Push, {'timestamp':'unused'})
+            events_db.access_state(OpCode.Push, {'timestamp':'unused'})
 
         # This is 0 because we were syncing state after each modification
         self.assertEqual(events_db.num_events_since_sync, 0)
@@ -638,7 +638,7 @@ class EventsDatabaseTestCase(TestCase):
         events_db = self.get_events_db(sync_interval=sync_interval)
 
         for x in range(num_iters):
-            events_db.modify_state(OpCode.Push, {'timestamp':'unused'})
+            events_db.access_state(OpCode.Push, {'timestamp':'unused'})
             sleep(sync_interval * 5)
 
         # This is 0 because we were syncing state after each modification
@@ -678,7 +678,7 @@ class EventsDatabaseTestCase(TestCase):
 
         # First call, set its timestamp and push the event
         event_data1['timestamp'] = utcnow().isoformat()
-        events_db.modify_state(OpCode.Push, event_data1)
+        events_db.access_state(OpCode.Push, event_data1)
 
         # Sleep longer than retention time
         sleep(sleep_time)
@@ -693,7 +693,7 @@ class EventsDatabaseTestCase(TestCase):
         # means that it should be the only event left around in the storage.
         # Note that we assume that our max_retention will be enough for this push to succeed.
         event_data3['timestamp'] = utcnow().isoformat()
-        events_db.modify_state(OpCode.Push, event_data3)
+        events_db.access_state(OpCode.Push, event_data3)
 
         # Read the state from persistent storage ..
 
@@ -822,7 +822,7 @@ class EventsDatabaseTestCase(TestCase):
 
         # .. push test events ..
         for event_data in self.yield_scenario_events():
-            events_db.modify_state(OpCode.Push, event_data)
+            events_db.access_state(OpCode.Push, event_data)
 
         # .. save to the file system ..
         events_db.sync_state()

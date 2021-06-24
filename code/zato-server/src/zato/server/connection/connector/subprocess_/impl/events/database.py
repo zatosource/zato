@@ -44,7 +44,8 @@ utcnow = datetime.utcnow
 # ################################################################################################################################
 
 class OpCode:
-    Push = 'EventsDBPush'
+    Push     = 'EventsDBPush'
+    Tabulate = 'EventsDBTabulate'
 
     class Internal:
         SaveData    = 'InternalSaveData'
@@ -202,8 +203,9 @@ class EventsDatabase(InRAMStore):
         # Fow how long to keep statistics in persistent storage
         self.max_retention = max_retention # type: int
 
-        # Configure our opcodes (there is one)
+        # Configure our opcodes
         self.opcode_to_func[OpCode.Push] = self.push
+        self.opcode_to_func[OpCode.Tabulate] = self.tabulate
 
         # Reusable Panda groupers
         self.group_by = {}
