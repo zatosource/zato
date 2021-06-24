@@ -232,12 +232,17 @@ class EventsDatabase(InRAMStore):
     def set_up_group_by(self):
         # type: () -> None
 
-        aggr_group_by = [
+        # This can be added manually
+        self.group_by[Stats.TabulateAggr] = pd.Grouper(key=Stats.TabulateAggr)
+
+        # Construct frequency aggregation configuration ..
+        time_freq_aggr_group_by = [
             # This is used by default
             Stats.DefaultAggrTimeFreq,
         ]
 
-        for time_freq in aggr_group_by:
+        # .. and add groupers.
+        for time_freq in time_freq_aggr_group_by:
             group_by = self.get_group_by(time_freq)
             self.group_by[time_freq] = group_by
 
@@ -258,7 +263,7 @@ class EventsDatabase(InRAMStore):
 
 # ################################################################################################################################
 
-    def get_data_from_storage(self):
+    def load_data_from_storage(self):
         """ Reads existing data from persistent storage and returns it as a DataFrame.
         """
 
@@ -316,7 +321,7 @@ class EventsDatabase(InRAMStore):
     def aggregate(self, data, time_freq=Stats.DefaultAggrTimeFreq):
         # type: (DataFrame) -> DataFrame
 
-        # Check if we have had this particular frequencye before ..
+        # Check if we have had this particular frequency before ..
         group_by = self.group_by.get(time_freq)
 
         # .. if not, set it up now.
@@ -360,12 +365,14 @@ class EventsDatabase(InRAMStore):
     def trim(self, data, utcnow=utcnow, timedelta=timedelta):
         # type: (DataFrame) -> DataFrame
 
-        # Check how many of the past events to leave, i.e. events older than this will be discarded
-        max_retained = utcnow() - timedelta(milliseconds=self.max_retention)
-        max_retained = max_retained.isoformat()
+        if len(data):
 
-        # .. construct a new dataframe, containing only the events that are younger than max_retained ..
-        data = data[data['timestamp'] > max_retained]
+            # Check how many of the past events to leave, i.e. events older than this will be discarded
+            max_retained = utcnow() - timedelta(milliseconds=self.max_retention)
+            max_retained = max_retained.isoformat()
+
+            # .. construct a new dataframe, containing only the events that are younger than max_retained ..
+            data = data[data['timestamp'] > max_retained]
 
         # .. and return it to our caller.
         return data
@@ -403,7 +410,7 @@ class EventsDatabase(InRAMStore):
             self.logger.info('********************************************************************************* ')
 
             # Get the existing data from storage
-            existing = self.get_data_from_storage()
+            existing = self.load_data_from_storage()
 
             # Get data that is currently in RAM
             current = self.get_data_from_ram()
@@ -425,6 +432,22 @@ class EventsDatabase(InRAMStore):
 
             # update counters
             self.telemetry[_op_int_sync_state] += 1
+
+# ################################################################################################################################
+
+    def tabulate(self):
+
+        # Prepare configuration ..
+        group_by = self.group_by[Stats.TabulateAggr]
+
+        # .. read our input data from persistent storage ..
+        data = self.load_data_from_storage()
+
+        tabulated = data.\
+            groupby(group_by).\
+            agg(**self.agg_by)
+
+        return tabulated
 
 # ################################################################################################################################
 
