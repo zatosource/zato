@@ -505,6 +505,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def _run_stats_client(self, events_tcp_port):
+        # type: (int) -> None
+        self.stats_client.init('127.0.0.1', events_tcp_port)
+        self.stats_client.run()
+
+# ################################################################################################################################
+
     @staticmethod
     def start_server(parallel_server, zato_deployment_key=None):
 
@@ -786,8 +793,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         events_tcp_port = events_config['port']
 
         # Statistics
-        self.stats_client.init('127.0.0.1', events_tcp_port)
-        self.stats_client.run()
+        self._run_stats_client(events_tcp_port)
 
         # Invoke startup callables
         self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.AFTER_STARTED, kwargs={
@@ -1123,7 +1129,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def save_zato_kvdb_data(self):
+    def save_zato_main_proc_state(self):
         self.slow_responses.save_path(self.slow_responses_path)
         self.usage_samples.save_path(self.usage_samples_path)
         self.current_usage.save_path(self.current_usage_path)
@@ -1162,7 +1168,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def worker_exit(arbiter, worker):
 
         # Invoke cleanup procedures
-        worker.app.zato_wsgi_app.cleanup_on_stop()
+        app = worker.app.zato_wsgi_app # type: ParallelServer
+        app.cleanup_on_stop()
+
+# ################################################################################################################################
+
+    @staticmethod
+    def before_pid_kill(arbiter, worker):
+        pass
 
 # ################################################################################################################################
 
@@ -1199,7 +1212,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         else:
 
             # Store Zato KVDB data on disk
-            self.save_zato_kvdb_data()
+            self.save_zato_main_proc_state()
 
             # Set the flag to True only the first time we are called, otherwise simply return
             if self._is_process_closing:

@@ -23,7 +23,7 @@ utcnow = datetime.utcnow
 class InRAMStore:
     """ Base class for stores keeping data in RAM, optionally synchronising it to persistent storage.
     """
-    def __init__(self, sync_threshold=120_000, sync_interval=120_000):
+    def __init__(self, sync_threshold=3_000, sync_interval=3):
         # type: (int, int) -> None
 
         # Sync to storage once in that many events ..
