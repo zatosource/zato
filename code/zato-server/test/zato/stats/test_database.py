@@ -828,34 +828,32 @@ class EventsDatabaseTestCase(TestCase):
         events_db.sync_state()
 
         # .. tabulate test events ..
-        tabulated = events_db.tabulate()
+        tabulated = events_db.get_table()
 
         # .. convert it to a dict to make it easier to construct assertions ..
         tabulated = tabulated.to_dict()
 
         # .. create helper objects ..
-        item_max  = tabulated['item_max']
-        item_min  = tabulated['item_min']
-        item_sum  = tabulated['item_sum']
-        item_mean = tabulated['item_mean']
+        service1  = tabulated['service-1']
+        service2  = tabulated['service-2']
+        service3  = tabulated['service-3']
 
         # .. and run the asssertions now.
 
-        self.assertEqual(item_max['service-1'], 44)
-        self.assertEqual(item_max['service-2'], 88)
-        self.assertEqual(item_max['service-3'], 132)
+        self.assertEqual(service1['item_min'],  11.0)
+        self.assertEqual(service1['item_max'],  44.0)
+        self.assertEqual(service1['item_mean'], 27.5)
+        self.assertEqual(service1['item_sum'],  13_200)
 
-        self.assertEqual(item_min['service-1'], 11)
-        self.assertEqual(item_min['service-2'], 22)
-        self.assertEqual(item_min['service-3'], 33)
+        self.assertEqual(service2['item_min'],  22.0)
+        self.assertEqual(service2['item_max'],  88.0)
+        self.assertEqual(service2['item_mean'], 55.0)
+        self.assertEqual(service2['item_sum'],  26_400)
 
-        self.assertEqual(item_sum['service-1'], 13_200)
-        self.assertEqual(item_sum['service-2'], 26_400)
-        self.assertEqual(item_sum['service-3'], 39_600)
-
-        self.assertEqual(item_mean['service-1'], 27.5)
-        self.assertEqual(item_mean['service-2'], 55.0)
-        self.assertEqual(item_mean['service-3'], 82.5)
+        self.assertEqual(service3['item_min'],  33.0)
+        self.assertEqual(service3['item_max'],  132.0)
+        self.assertEqual(service3['item_mean'], 82.5)
+        self.assertEqual(service3['item_sum'],  39_600)
 
 # ################################################################################################################################
 
