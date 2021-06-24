@@ -17,17 +17,14 @@ from unittest import main, TestCase
 # dateutil
 from dateutil.rrule import SECONDLY, rrule
 
-# Numpy
-import numpy as np
-
 # Pandas
 import pandas as pd
 
 # Zato
 from zato.common.api import Stats
-#from zato.common.events.common import EventInfo, PushCtx
+from zato.common.events.common import EventInfo, PushCtx
 from zato.common.test import rand_int, rand_string
-#from zato.common.typing_ import asdict, instance_from_dict
+from zato.common.typing_ import asdict, instance_from_dict
 from zato.server.connection.connector.subprocess_.impl.events.database import EventsDatabase, OpCode
 
 # ################################################################################################################################
@@ -61,18 +58,6 @@ class Default:
     IterMultiplier = 11
     SyncThreshold = 100_000_000
     SyncInterval  = 100_000_000
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-idx_str_map = {
-    1: 'a',
-    2: 'b',
-    3: 'c',
-    4: 'd',
-    5: 'e',
-    6: 'f',
-}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -139,7 +124,7 @@ class EventsDatabaseTestCase(TestCase):
 
         for service_idx in range(1, len_services+1):
 
-            service_idx_str = str(service_idx)#idx_str_map[service_idx]
+            service_idx_str = str(service_idx)
             service_name = 'service-{}'.format(service_idx)
 
             for event_idx in range(1, len_events+1):
@@ -147,7 +132,6 @@ class EventsDatabaseTestCase(TestCase):
                 id  = 'id-{}{}'.format(service_idx_str, event_idx)
                 cid = 'cid-{}{}'.format(service_idx_str, event_idx)
 
-                '''
                 ctx = PushCtx()
                 ctx.id = id
                 ctx.cid = cid
@@ -156,23 +140,12 @@ class EventsDatabaseTestCase(TestCase):
                 ctx.object_type = EventInfo.ObjectType.service
                 ctx.object_id = service_name
                 ctx.total_time_ms = service_idx * event_idx * iter_multiplier
-                '''
-
-                ctx = {
-                    #'id': id,
-                    #'cid': cid,
-                    'timestamp': utcnow(),
-                    #'event_type': 1_000_001,
-                    #'object_type': 2_000_000,
-                    'object_id': service_name,
-                    'total_time_ms': service_idx * event_idx * iter_multiplier,
-                }
 
                 # We are adding a short pause to be better able to observe
                 # that each context object has a different timestamp assigned.
-                #sleep(0.005)
+                sleep(0.005)
 
-                yield ctx
+                yield asdict(ctx)
 
 # ################################################################################################################################
 
@@ -198,7 +171,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_init(self):
+    def test_init(self):
 
         sync_threshold = rand_int()
         sync_interval  = rand_int()
@@ -210,7 +183,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_modify_state_push(self):
+    def test_modify_state_push(self):
 
         total_events = Default.LenEvents * Default.LenServices
 
@@ -255,39 +228,39 @@ class EventsDatabaseTestCase(TestCase):
         # ctx.id
         #
 
-        self.assertEqual(ctx1.id,  'id-a1')
-        self.assertEqual(ctx2.id,  'id-a2')
-        self.assertEqual(ctx3.id,  'id-a3')
-        self.assertEqual(ctx4.id,  'id-a4')
+        self.assertEqual(ctx1.id,  'id-11')
+        self.assertEqual(ctx2.id,  'id-12')
+        self.assertEqual(ctx3.id,  'id-13')
+        self.assertEqual(ctx4.id,  'id-14')
 
-        self.assertEqual(ctx5.id,  'id-b1')
-        self.assertEqual(ctx6.id,  'id-b2')
-        self.assertEqual(ctx7.id,  'id-b3')
-        self.assertEqual(ctx8.id,  'id-b4')
+        self.assertEqual(ctx5.id,  'id-21')
+        self.assertEqual(ctx6.id,  'id-22')
+        self.assertEqual(ctx7.id,  'id-23')
+        self.assertEqual(ctx8.id,  'id-24')
 
-        self.assertEqual(ctx9.id,  'id-c1')
-        self.assertEqual(ctx10.id, 'id-c2')
-        self.assertEqual(ctx11.id, 'id-c3')
-        self.assertEqual(ctx12.id, 'id-c4')
+        self.assertEqual(ctx9.id,  'id-31')
+        self.assertEqual(ctx10.id, 'id-32')
+        self.assertEqual(ctx11.id, 'id-33')
+        self.assertEqual(ctx12.id, 'id-34')
 
         #
         # ctx.cid
         #
 
-        self.assertEqual(ctx1.cid,  'cid-a1')
-        self.assertEqual(ctx2.cid,  'cid-a2')
-        self.assertEqual(ctx3.cid,  'cid-a3')
-        self.assertEqual(ctx4.cid,  'cid-a4')
+        self.assertEqual(ctx1.cid,  'cid-11')
+        self.assertEqual(ctx2.cid,  'cid-12')
+        self.assertEqual(ctx3.cid,  'cid-13')
+        self.assertEqual(ctx4.cid,  'cid-14')
 
-        self.assertEqual(ctx5.cid,  'cid-b1')
-        self.assertEqual(ctx6.cid,  'cid-b2')
-        self.assertEqual(ctx7.cid,  'cid-b3')
-        self.assertEqual(ctx8.cid,  'cid-b4')
+        self.assertEqual(ctx5.cid,  'cid-21')
+        self.assertEqual(ctx6.cid,  'cid-22')
+        self.assertEqual(ctx7.cid,  'cid-23')
+        self.assertEqual(ctx8.cid,  'cid-24')
 
-        self.assertEqual(ctx9.cid,  'cid-c1')
-        self.assertEqual(ctx10.cid, 'cid-c2')
-        self.assertEqual(ctx11.cid, 'cid-c3')
-        self.assertEqual(ctx12.cid, 'cid-c4')
+        self.assertEqual(ctx9.cid,  'cid-31')
+        self.assertEqual(ctx10.cid, 'cid-32')
+        self.assertEqual(ctx11.cid, 'cid-33')
+        self.assertEqual(ctx12.cid, 'cid-34')
 
         #
         # ctx.timestamp
@@ -386,7 +359,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_get_data_from_ram(self):
+    def test_get_data_from_ram(self):
 
         start = utcnow().isoformat()
         events_db = self.get_events_db()
@@ -406,20 +379,20 @@ class EventsDatabaseTestCase(TestCase):
 
         data_id = data['id']
 
-        self.assertEqual(data_id[0],  'id-a1')
-        self.assertEqual(data_id[1],  'id-a2')
-        self.assertEqual(data_id[2],  'id-a3')
-        self.assertEqual(data_id[3],  'id-a4')
+        self.assertEqual(data_id[0],  'id-11')
+        self.assertEqual(data_id[1],  'id-12')
+        self.assertEqual(data_id[2],  'id-13')
+        self.assertEqual(data_id[3],  'id-14')
 
-        self.assertEqual(data_id[4],  'id-b1')
-        self.assertEqual(data_id[5],  'id-b2')
-        self.assertEqual(data_id[6],  'id-b3')
-        self.assertEqual(data_id[7],  'id-b4')
+        self.assertEqual(data_id[4],  'id-21')
+        self.assertEqual(data_id[5],  'id-22')
+        self.assertEqual(data_id[6],  'id-23')
+        self.assertEqual(data_id[7],  'id-24')
 
-        self.assertEqual(data_id[8],  'id-c1')
-        self.assertEqual(data_id[9],  'id-c2')
-        self.assertEqual(data_id[10], 'id-c3')
-        self.assertEqual(data_id[11], 'id-c4')
+        self.assertEqual(data_id[8],  'id-31')
+        self.assertEqual(data_id[9],  'id-32')
+        self.assertEqual(data_id[10], 'id-33')
+        self.assertEqual(data_id[11], 'id-34')
 
         #
         # data.cid
@@ -427,20 +400,20 @@ class EventsDatabaseTestCase(TestCase):
 
         data_cid = data['cid']
 
-        self.assertEqual(data_cid[0],  'cid-a1')
-        self.assertEqual(data_cid[1],  'cid-a2')
-        self.assertEqual(data_cid[2],  'cid-a3')
-        self.assertEqual(data_cid[3],  'cid-a4')
+        self.assertEqual(data_cid[0],  'cid-11')
+        self.assertEqual(data_cid[1],  'cid-12')
+        self.assertEqual(data_cid[2],  'cid-13')
+        self.assertEqual(data_cid[3],  'cid-14')
 
-        self.assertEqual(data_cid[4],  'cid-b1')
-        self.assertEqual(data_cid[5],  'cid-b2')
-        self.assertEqual(data_cid[6],  'cid-b3')
-        self.assertEqual(data_cid[7],  'cid-b4')
+        self.assertEqual(data_cid[4],  'cid-21')
+        self.assertEqual(data_cid[5],  'cid-22')
+        self.assertEqual(data_cid[6],  'cid-23')
+        self.assertEqual(data_cid[7],  'cid-24')
 
-        self.assertEqual(data_cid[8],  'cid-c1')
-        self.assertEqual(data_cid[9],  'cid-c2')
-        self.assertEqual(data_cid[10], 'cid-c3')
-        self.assertEqual(data_cid[11], 'cid-c4')
+        self.assertEqual(data_cid[8],  'cid-31')
+        self.assertEqual(data_cid[9],  'cid-32')
+        self.assertEqual(data_cid[10], 'cid-33')
+        self.assertEqual(data_cid[11], 'cid-34')
 
         #
         # data.timestamp
@@ -549,7 +522,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_get_data_from_storage_path_does_not_exist(self):
+    def test_get_data_from_storage_path_does_not_exist(self):
 
         # Be explicit about the fact that we are using a random path, one that does not exist
         fs_data_path = rand_string()
@@ -567,7 +540,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_get_data_from_storage_path_exists(self):
+    def test_get_data_from_storage_path_exists(self):
 
         # This is where we keep Parquet data
         fs_data_path = self.get_random_fs_data_path()
@@ -594,7 +567,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_sync_state(self):
+    def test_sync_state(self):
 
         # This is where we keep Parquet data
         fs_data_path = self.get_random_fs_data_path()
@@ -635,7 +608,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_sync_threshold(self):
+    def test_sync_threshold(self):
 
         num_iters = 3
         sync_threshold = 1
@@ -657,7 +630,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_sync_interval(self):
+    def test_sync_interval(self):
 
         num_iters = 3
         sync_interval = 0.001
@@ -680,7 +653,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_max_retention(self):
+    def test_max_retention(self):
 
         # Synchronise after each push
         sync_threshold=1
@@ -749,88 +722,6 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def impl_get_events_by_response_time(self, data, count=10, time_label=None, min_time=None, max_time=None,
-        time_freq='5m'):
-        # type: (DataFrame, int, str, str, str) -> list
-
-        # time_label -> e.g. today, yesterday, this_year, last_week
-
-        #data = data[['object_id', 'total_time_ms']].groupby(['total_time_ms']).mean()
-
-        #data = data.set_index(pd.DatetimeIndex(data['timestamp']))
-        #data.index.name = 'idx_timestamp'
-
-
-        print(len(data))
-
-        start = utcnow()
-
-        print('QQQ-1', start)
-        #print()
-
-        #print('RRR-1', data['total_time_ms'].sum())
-        print()
-
-        #print('RRR-2', data.groupby('object_id').count()['timestamp'].to_dict())
-        #print()
-
-        #by_object_id = data.groupby('object_id')
-
-        aggregated = data.groupby([
-            pd.Grouper(key='timestamp', freq=time_freq),
-            pd.Grouper(key='object_id'),
-        ]).agg(**{
-            'item_max':  pd.NamedAgg(column='total_time_ms', aggfunc=np.max),
-            'item_min':  pd.NamedAgg(column='total_time_ms', aggfunc=np.min),
-            'item_sum':  pd.NamedAgg(column='total_time_ms', aggfunc=np.sum),
-            'item_mean': pd.NamedAgg(column='total_time_ms', aggfunc=np.mean),
-        })
-
-        print('QQQ-2', utcnow() - start)
-
-        #print(pd.concat([aggregated] * 10))
-
-        '''
-        aggr_response_time = aggregated['total_time_ms'] # type: SeriesGroupBy
-
-        print('QQQ-3', utcnow() - start)
-
-        pd.DataFrame(aggr_response_time.max()).to_parquet('/tmp/zzz-1')
-
-        print('QQQ-4', utcnow() - start)
-
-        pd.DataFrame(aggr_response_time.min()).to_parquet('/tmp/zzz-2')
-
-        print('QQQ-5', utcnow() - start)
-
-        pd.DataFrame(aggr_response_time.sum()).to_parquet('/tmp/zzz-3')
-
-        print('QQQ-6', utcnow() - start)
-
-        pd.DataFrame(aggr_response_time.mean()).to_parquet('/tmp/zzz-4')
-
-        print('QQQ-7', utcnow() - start)
-
-        #df = pd.DataFrame(aggr_response_time.max())
-        #print(df.to_parquet('/tmp/zzz'))
-
-        #print(aggr_response_time.min())
-
-        #all_total_time_ms = data.groupby('object_id')['total_time_ms'] # type: DataFrame
-
-        #all_total_time_ms_summed = all_total_time_ms.sum()
-        #all_total_time_ms_mean   = all_total_time_ms.mean()
-        '''
-
-        #print('QQQ-Z', utcnow() - start)
-        #print()
-
-        #print(all_total_time_ms_summed)
-
-        #print(222, all_total_time_ms_mean.to_dict())
-
-# ################################################################################################################################
-
     def test_get_events_by_response_time(self):
 
         # Generate test events ..
@@ -855,13 +746,6 @@ class EventsDatabaseTestCase(TestCase):
 
         print(aggregated)
 
-        #for item in events:
-        #    print(item)
-
-        #print(111, len(events))
-
-        #data = pd.DataFrame(data)
-        #result = self.impl_get_events_by_response_time(data)
 
 # ################################################################################################################################
 

@@ -36,6 +36,7 @@ except ImportError:
     from zato.common.ext.typing_extensions import TypedDict
 
 # For flake8
+from_dict = from_dict
 TypedDict = TypedDict
 
 # ################################################################################################################################
