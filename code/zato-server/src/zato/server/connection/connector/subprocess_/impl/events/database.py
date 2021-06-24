@@ -214,8 +214,9 @@ class EventsDatabase(InRAMStore):
         self.agg_by = {
             'item_max':  pd.NamedAgg(column='total_time_ms', aggfunc=np.max),
             'item_min':  pd.NamedAgg(column='total_time_ms', aggfunc=np.min),
-            'item_sum':  pd.NamedAgg(column='total_time_ms', aggfunc=np.sum),
             'item_mean': pd.NamedAgg(column='total_time_ms', aggfunc=np.mean),
+            'item_total_time':  pd.NamedAgg(column='total_time_ms', aggfunc=np.sum),
+            'item_total_usage':  pd.NamedAgg(column='total_time_ms', aggfunc=np.count_nonzero),
         }
 
         # Configure our telemetry opcodes
@@ -399,41 +400,45 @@ class EventsDatabase(InRAMStore):
 
 # ################################################################################################################################
 
-    def sync_state(self, _utcnow=utcnow):
+    def _sync_state(self, _utcnow=utcnow):
 
+        # For later use
+        now_total = _utcnow()
+
+        # Begin with a header to indicate in logs when we start
+        self.logger.info('********************************************************************************* ')
+        self.logger.info('*********************** DataFrame (DF) Sync storage ***************************** ')
+        self.logger.info('********************************************************************************* ')
+
+        # Get the existing data from storage
+        existing = self.load_data_from_storage()
+
+        # Get data that is currently in RAM
+        current = self.get_data_from_ram()
+
+        # Combine data from storage and RAM
+        combined = self.combine_data(existing, current)
+
+        # Trim the data to the retention threshold
+        trimmed = self.trim(combined)
+
+        # Save the combined result to storage
+        self.save_data(trimmed)
+
+        # Clear our current dataset
+        self.in_ram_store[:] = []
+
+        # Log the total processing time
+        self.logger.info('DF total processing time %s', utcnow() - now_total)
+
+        # update counters
+        self.telemetry[_op_int_sync_state] += 1
+
+# ################################################################################################################################
+
+    def sync_state(self):
         with self.update_lock:
-
-            # For later use
-            now_total = _utcnow()
-
-            # Begin with a header to indicate in logs when we start
-            self.logger.info('********************************************************************************* ')
-            self.logger.info('*********************** DataFrame (DF) Sync storage ***************************** ')
-            self.logger.info('********************************************************************************* ')
-
-            # Get the existing data from storage
-            existing = self.load_data_from_storage()
-
-            # Get data that is currently in RAM
-            current = self.get_data_from_ram()
-
-            # Combine data from storage and RAM
-            combined = self.combine_data(existing, current)
-
-            # Trim the data to the retention threshold
-            trimmed = self.trim(combined)
-
-            # Save the combined result to storage
-            self.save_data(trimmed)
-
-            # Clear our current dataset
-            self.in_ram_store[:] = []
-
-            # Log the total processing time
-            self.logger.info('DF total processing time %s', utcnow() - now_total)
-
-            # update counters
-            self.telemetry[_op_int_sync_state] += 1
+            self._sync_state()
 
 # ################################################################################################################################
 
@@ -442,8 +447,13 @@ class EventsDatabase(InRAMStore):
         # Prepare configuration ..
         group_by = self.group_by[Stats.TabulateAggr]
 
-        # .. read our input data from persistent storage ..
-        data = self.load_data_from_storage()
+        with self.update_lock:
+
+            # .. make sure we have access to the latest data ..
+            self._sync_state()
+
+            # .. read our input data from persistent storage ..
+            data = self.load_data_from_storage()
 
         # .. tabulate all the statistics found ..
         tabulated = data.\

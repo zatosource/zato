@@ -8,12 +8,22 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import math
+from datetime import timedelta
+from operator import itemgetter
+
+# Humanize
+from humanize import precisedelta
 
 # numpy
 import numpy as np
 
 # Zato
 from zato.common.api import StatsKey
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+float_stats = ('item_max', 'item_min', 'item_mean', 'item_total_time')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -127,6 +137,95 @@ def collect_current_usage(data):
         StatsKey.PerKeyMax: usage_max,
         StatsKey.PerKeyMean: usage_mean,
     }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def should_include_in_table_stats(service_name):
+    # type: (str) -> bool
+    if service_name.startswith('pub.zato'):
+        return False
+    elif service_name.startswith('zato'):
+        return False
+    else:
+        return True
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def combine_table_data(data, round_digits=2):
+    # type: (list, int) -> dict
+
+    # Response to return
+    out = []
+
+    # How many objects we have seen, e.g. how many individual services
+    total_object_id = 0
+
+    # Total usage across all events
+    total_usage = 0
+
+    # Total time spent in all the events (in ms)
+    total_time = 0
+
+    # Total mean time across all objects
+    total_mean = 0
+
+    # First pass, filter out objects with known unneeded names
+    # and collect total usage of each object and of objects as a whole.
+    for pid_response in data: # type: dict
+        if pid_response:
+            for object_name, stats in pid_response.items(): # type: (str, dict)
+                if should_include_in_table_stats(object_name):
+
+                    # Update per object counters
+
+                    # Total usage needs to be an integer
+                    stats['item_total_usage'] = int(stats['item_total_usage'])
+
+                    # These are always floats that we need to round up
+                    for name in float_stats:
+                        stats[name] = round(stats[name], round_digits)
+
+                    # Add to totals
+                    total_usage += stats['item_total_usage']
+                    total_mean  += stats['item_mean']
+                    total_time  += stats['item_total_time']
+                    total_object_id += 1
+
+                    # Finally, add the results so that they can be used in further steps
+                    item = dict(stats)
+                    item['name'] = object_name
+
+                    out.append(item)
+
+    # We know how many events we have so we can now compute the mean across all of them
+    if total_object_id:
+        total_mean = total_mean / total_object_id
+
+    # In this pass, we can attach additional per-object statistics
+    for item in out: # type: dict
+
+        item_usage_share = item['item_total_usage'] / total_usage * 100
+        item_usage_share = round(item_usage_share, round_digits)
+
+        item_time_share = item['item_total_time'] / total_time * 100
+        item_time_share = round(item_time_share, round_digits)
+
+        item['item_usage_share'] = item_usage_share
+        item['item_time_share'] = item_time_share
+        item['item_total_usage_human'] = item['item_total_usage'] # Currently, this is the same
+
+        total_time_delta_min_unit = 'milliseconds' if item['item_total_time'] < 1 else 'seconds'
+        total_time_delta = timedelta(milliseconds=item['item_total_time'])
+        total_time_delta = precisedelta(total_time_delta, minimum_unit=total_time_delta_min_unit)
+
+        item['item_total_time_human'] = total_time_delta
+
+    # Sort by the most interesting attribute
+    out.sort(key=itemgetter('item_time_share'), reverse=True)
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
