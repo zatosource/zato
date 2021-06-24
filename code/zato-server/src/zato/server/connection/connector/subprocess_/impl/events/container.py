@@ -68,6 +68,7 @@ class EventsConnectionContainer(BaseConnectionContainer):
         self._action_map = {
             Action.Ping: self._on_event_ping,
             Action.Push: self._on_event_push,
+            Action.GetTable: self._on_event_get_table,
         }
 
 # ################################################################################################################################
@@ -102,7 +103,7 @@ class EventsConnectionContainer(BaseConnectionContainer):
 
 # ################################################################################################################################
 
-    def _on_event_push(self, data, _opcode=OpCode.Push):
+    def _on_event_push(self, data, ignored_address_str, _opcode=OpCode.Push):
         # type: (str, str, str) -> None
 
         # We received JSON bytes so we now need to load a Python object out of it ..
@@ -110,13 +111,14 @@ class EventsConnectionContainer(BaseConnectionContainer):
         data = data.as_dict() # type: dict
 
         # .. now, we can push it to the database.
-        return self.events_db.tabulate()
+        self.events_db.access_state(_opcode, data)
 
 # ################################################################################################################################
 
-    def _on_event_tabulate(self, _opcode=OpCode.Tabulate):
-        # type: (str) -> str
-        return self.events_db.tabulate()
+    def _on_event_get_table(self, ignored_address_str, _opcode=OpCode.Tabulate):
+        # type: (str, str) -> str
+        data = self.events_db.get_table()
+        return Action.GetTableReply + data.to_json().encode('utf8')
 
 # ################################################################################################################################
 

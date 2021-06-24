@@ -59,7 +59,7 @@ class Client:
         self.max_msg_size = 30_000_000
         self.read_buffer_size = 30_000_000
         self.recv_timeout = 30
-        self.should_log_messages = True
+        self.should_log_messages = False
         self.is_connected = False
         self.lock = RLock()
 
@@ -150,6 +150,22 @@ class Client:
 
         # .. and send it across (there will be no response).
         self.send(Action.Push, data)
+
+# ################################################################################################################################
+
+    def get_table(self):
+
+        # Send the tabulated data ..
+        self.send(Action.GetTable)
+
+        # .. wait for the reply ..
+        response = self.read()
+
+        # .. and raise an exception in case of any error.
+        if response and (not response.startswith(Action.GetTableReply)):
+            raise ValueError('Unexpected response received from `{}` -> `{}`'.format(self.peer_name, response))
+
+        return response[Action.LenAction:]
 
 # ################################################################################################################################
 

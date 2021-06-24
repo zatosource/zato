@@ -205,7 +205,7 @@ class EventsDatabase(InRAMStore):
 
         # Configure our opcodes
         self.opcode_to_func[OpCode.Push] = self.push
-        self.opcode_to_func[OpCode.Tabulate] = self.tabulate
+        self.opcode_to_func[OpCode.Tabulate] = self.get_table
 
         # Reusable Panda groupers
         self.group_by = {}
@@ -437,7 +437,7 @@ class EventsDatabase(InRAMStore):
 
 # ################################################################################################################################
 
-    def tabulate(self):
+    def get_table(self):
 
         # Prepare configuration ..
         group_by = self.group_by[Stats.TabulateAggr]
@@ -445,10 +445,15 @@ class EventsDatabase(InRAMStore):
         # .. read our input data from persistent storage ..
         data = self.load_data_from_storage()
 
+        # .. tabulate all the statistics found ..
         tabulated = data.\
             groupby(group_by).\
             agg(**self.agg_by)
 
+        # .. convert rows to columns which is what our callers expect ..
+        tabulated = tabulated.transpose()
+
+        # .. finally, return the result.
         return tabulated
 
 # ################################################################################################################################
