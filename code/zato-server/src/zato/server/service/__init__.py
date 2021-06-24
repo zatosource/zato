@@ -386,7 +386,6 @@ class Service(object):
     _out_ftp = None       # type: FTPStore
     _out_plain_http = None # type: ConfigDict
 
-    _req_resp_freq = 0
     _has_before_job_hooks = None # type: bool
     _has_after_job_hooks = None  # type: bool
     _before_job_hooks = []
