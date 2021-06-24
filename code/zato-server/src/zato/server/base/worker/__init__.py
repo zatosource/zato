@@ -19,19 +19,11 @@ from os.path import abspath, join as path_join
 from shutil import rmtree
 from tempfile import gettempdir
 from threading import RLock
-from time import sleep
 from traceback import format_exc
 from uuid import uuid4
 
 # Bunch
 from bunch import bunchify
-
-# ciso8601
-from ciso8601 import parse_datetime
-
-# dateutil
-from dateutil.relativedelta import relativedelta
-from dateutil.rrule import DAILY, MINUTELY, rrule
 
 # gevent
 import gevent
@@ -50,7 +42,7 @@ from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import CHANNEL, CONNECTION, DATA_FORMAT, FILE_TRANSFER, GENERIC as COMMON_GENERIC, \
-     HotDeploy, HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, simple_types, URL_TYPE, \
+     HotDeploy, HTTP_SOAP_SERIALIZATION_TYPE, IPC, NOTIF, PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, simple_types, URL_TYPE, \
      TRACE1, WEB_SOCKET, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
@@ -62,7 +54,7 @@ from zato.common.model.wsx import WSXConnectorConfig
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.pubsub import MSG_PREFIX as PUBSUB_MSG_PREFIX
 from zato.common.util.api import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
-     import_module_from_path, new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, \
+     import_module_from_path, new_cid, parse_extra_into_dict, parse_tls_channel_security_definition, \
      start_connectors, store_tls, update_apikey_username_to_channel, update_bind_port, visit_py_source
 from zato.cy.reqresp.payload import SimpleIOPayload
 from zato.server.base.parallel.subprocess_.api import StartConfig as SubprocessStartConfig
@@ -101,7 +93,6 @@ from zato.server.pubsub import PubSub
 from zato.server.pubsub.task import PubSubTool
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
 from zato.server.rbac_ import RBAC
-from zato.server.stats import MaintenanceTool
 from zato.zmq_.channel import MDPv01 as ChannelZMQMDPv01, Simple as ChannelZMQSimple
 from zato.zmq_.outgoing import Simple as OutZMQSimple
 
@@ -237,9 +228,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def init(self):
-
-        # Statistics maintenance
-        self.stats_maint = MaintenanceTool(self.kvdb.conn)
 
         self.msg_ns_store = self.worker_config.msg_ns_store
         self.json_pointer_store = self.worker_config.json_pointer_store
@@ -1659,40 +1647,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """ Triggered by external events, such as messages sent through connectors. Creates a new service instance and invokes it.
         """
         zato_ctx = msg.get('zato_ctx') or {}
-        target = zato_ctx.get('zato.request_ctx.target', '')
         cid = msg['cid']
-
-        if target:
-
-            if not self.target_matcher.is_allowed(target):
-                # It's not an error - we just don't accept this target
-                logger.debug('Invocation target `%s` not allowed (%s), CID:%s', target, msg['service'], cid)
-                return
-
-            # We can in theory handle this request but there's still some work first. Our server can be composed
-            # of more than 1 gunicorn worker and each of them receives the messages directed to concrete targets.
-            # Hence we must first check out if another worker from our server didn't beat us to it already.
-            # Everything must be done with a distributed server-wide lock so that workers don't
-            # interrupt each other.
-            else:
-                lock = KVDB.LOCK_ASYNC_INVOKE_WITH_TARGET_PATTERN.format(self.server.fs_server_config.main.token, cid)
-                processed_key = KVDB.ASYNC_INVOKE_PROCESSED_FLAG_PATTERN.format(self.server.fs_server_config.main.token, cid)
-
-                with self.server.zato_lock_manager(lock):
-                    processed = self.server.kvdb.conn.get(processed_key)
-
-                    # Ok, already processed
-                    if processed == KVDB.ASYNC_INVOKE_PROCESSED_FLAG_PATTERN:
-                        return
-
-                    # We are first, set the processed flag. The flag expires in 5 minutes
-                    # which is an arbitrary number huge enough to make sure other workers
-                    # within our own server will be able to receive the async message
-                    # we are about to process. Note that we don't set the flag after the processing
-                    # is finished because even if there is any error along the invocation won't be repeated,
-                    # hence we do it here already.
-                    else:
-                        self.server.kvdb.conn.set(processed_key, KVDB.ASYNC_INVOKE_PROCESSED_FLAG_PATTERN, 300)
 
         # The default WSGI environment that always exists ..
         wsgi_environ = {
@@ -2043,50 +1998,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Uses .get below because the feature is new in 3.1 which is why it is optional.
         if self.server.fs_server_config.hot_deploy.get('redeploy_on_parent_change', True):
             self.server.service_store.redeploy_on_parent_changed(msg.service_name, msg.service_impl_name)
-
-# ################################################################################################################################
-
-    def on_broker_msg_STATS_DELETE(self, msg, *args):
-        start = parse_datetime(msg.start)
-        stop = parse_datetime(msg.stop)
-
-        # Looks weird but this is so we don't have to create a list instead of a generator
-        # (and Python 3 won't leak the last element anymore)
-        last_elem = None
-
-        # Are the dates are at least a day apart? If so, we'll split the interval
-        # into smaller one day-long batches.
-        if(stop-start).days:
-            for elem1, elem2 in pairwise(elem for elem in rrule(DAILY, dtstart=start, until=stop)):
-                self.broker_client.invoke_async(
-                    {'action':broker_message.STATS.DELETE_DAY.value, 'start':elem1.isoformat(), 'stop':elem2.isoformat()})
-
-                # So as not to drown the broker with a sudden surge of messages
-                sleep(0.02)
-
-                last_elem = elem2
-
-            # It's possible we still have something left over. Let's say
-            #
-            # start = '2012-07-24T02:02:53'
-            # stop = '2012-07-25T02:04:53'
-            #
-            # The call to rrule(DAILY, ...) will nicely slice the time between
-            # start and stop into one day intervals yet the last element of the slice
-            # will have the time portion equal to that of start - so in this
-            # particular case it would be that last_elem was 2012-07-25T02:02:53
-            # which would be still be 2 minutes short of stop. Hence the need for
-            # a relativedelta, to tease out the remaining time information.
-            delta = relativedelta(stop, last_elem)
-            if delta.minutes:
-                self.stats_maint.delete(last_elem, stop, MINUTELY)
-
-        # Not a full day apart so we can delete everything ourselves
-        else:
-            self.stats_maint.delete(start, stop, MINUTELY)
-
-    def on_broker_msg_STATS_DELETE_DAY(self, msg, *args):
-        self.stats_maint.delete(parse_datetime(msg.start), parse_datetime(msg.stop), MINUTELY)
 
 # ################################################################################################################################
 
