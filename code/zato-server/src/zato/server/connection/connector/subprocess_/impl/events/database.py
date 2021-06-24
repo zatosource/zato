@@ -331,18 +331,6 @@ class EventsDatabase(InRAMStore):
             groupby(group_by).\
             agg(**self.agg_by)
 
-        '''
-        aggregated = data.groupby([
-            pd.Grouper(key='timestamp', freq=time_freq),
-            pd.Grouper(key='object_id'),
-        ]).agg(**{
-            'item_max':  pd.NamedAgg(column='total_time_ms', aggfunc=np.max),
-            'item_min':  pd.NamedAgg(column='total_time_ms', aggfunc=np.min),
-            'item_sum':  pd.NamedAgg(column='total_time_ms', aggfunc=np.sum),
-            'item_mean': pd.NamedAgg(column='total_time_ms', aggfunc=np.mean),
-        })
-        '''
-
         return aggregated
 
 # ################################################################################################################################
@@ -437,30 +425,6 @@ class EventsDatabase(InRAMStore):
 
             # update counters
             self.telemetry[_op_int_sync_state] += 1
-
-# ################################################################################################################################
-
-    def impl_get_events_by_response_time(self, data, count=10, time_label=None, min_time=None, max_time=None):
-        # type: (DataFrame, int, str, str, str) -> list
-        pass
-
-# ################################################################################################################################
-
-    def get_events_by_response_time(self, *args, **kwargs):
-        # type: (object, object) -> list
-        pass
-
-# ################################################################################################################################
-
-    def impl_get_events_by_usage(self, data, count=10, time_label=None, min_time=None, max_time=None):
-        # type: (DataFrame, int, str, str, str) -> list
-        pass
-
-# ################################################################################################################################
-
-    def get_events_by_usage(self, *args, **kwargs):
-        # type: (object, object) -> list
-        pass
 
 # ################################################################################################################################
 
