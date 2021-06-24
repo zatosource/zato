@@ -171,7 +171,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_init(self):
+    def xtest_init(self):
 
         sync_threshold = rand_int()
         sync_interval  = rand_int()
@@ -183,7 +183,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_modify_state_push(self):
+    def xtest_modify_state_push(self):
 
         total_events = Default.LenEvents * Default.LenServices
 
@@ -359,7 +359,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_get_data_from_ram(self):
+    def xtest_get_data_from_ram(self):
 
         start = utcnow().isoformat()
         events_db = self.get_events_db()
@@ -522,7 +522,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_get_data_from_storage_path_does_not_exist(self):
+    def xtest_get_data_from_storage_path_does_not_exist(self):
 
         # Be explicit about the fact that we are using a random path, one that does not exist
         fs_data_path = rand_string()
@@ -540,7 +540,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_get_data_from_storage_path_exists(self):
+    def xtest_get_data_from_storage_path_exists(self):
 
         # This is where we keep Parquet data
         fs_data_path = self.get_random_fs_data_path()
@@ -567,7 +567,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_sync_state(self):
+    def xtest_sync_state(self):
 
         # This is where we keep Parquet data
         fs_data_path = self.get_random_fs_data_path()
@@ -608,7 +608,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_sync_threshold(self):
+    def xtest_sync_threshold(self):
 
         num_iters = 3
         sync_threshold = 1
@@ -630,7 +630,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_sync_interval(self):
+    def xtest_sync_interval(self):
 
         num_iters = 3
         sync_interval = 0.001
@@ -653,7 +653,7 @@ class EventsDatabaseTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_max_retention(self):
+    def xtest_max_retention(self):
 
         # Synchronise after each push
         sync_threshold=1
@@ -734,18 +734,84 @@ class EventsDatabaseTestCase(TestCase):
         # .. aggregate test events ..
         aggregated = events_db.aggregate(data)
 
-        # .. convert pd.Timestamp objects to string for easy testing ..
-        for row in aggregated:
-            #row['timestamp'] = row['timestamp'].to_pydatetime()
-            print(111, row)
-
         # .. convert it to a dict to make it easier to construct assertions ..
         aggregated = aggregated.to_dict()
 
-        # .. and run all the asssertions now.
+        # .. create helper objects ..
+        item_max  = aggregated['item_max']
+        item_min  = aggregated['item_min']
+        item_sum  = aggregated['item_sum']
+        item_mean = aggregated['item_mean']
 
-        print(aggregated)
+        item_max = sorted(item_max.items())
+        item_min = sorted(item_min.items())
+        item_sum = sorted(item_sum.items())
+        item_mean = sorted(item_mean.items())
 
+        item_max0 = item_max[0]
+        item_max1 = item_max[1]
+        item_max2 = item_max[2]
+        item_max3 = item_max[3]
+        item_max4 = item_max[4]
+        item_max5 = item_max[5]
+
+        item_min0 = item_min[0]
+        item_min1 = item_min[1]
+        item_min2 = item_min[2]
+        item_min3 = item_min[3]
+        item_min4 = item_min[4]
+        item_min5 = item_min[5]
+
+        item_sum0 = item_sum[0]
+        item_sum1 = item_sum[1]
+        item_sum2 = item_sum[2]
+        item_sum3 = item_sum[3]
+        item_sum4 = item_sum[4]
+        item_sum5 = item_sum[5]
+
+        item_mean0 = item_mean[0]
+        item_mean1 = item_mean[1]
+        item_mean2 = item_mean[2]
+        item_mean3 = item_mean[3]
+        item_mean4 = item_mean[4]
+        item_mean5 = item_mean[5]
+
+        # .. and run the asssertions now - note that currently we are only checking only item_max and only
+        #    the very first and last row ..
+
+        #
+        # item_max -> 0
+        #
+        timestamp = item_max0[0][0] # type: pd.Timestamp
+        object_id = item_max0[0][1] # type: str
+        value     = item_max0[1]    # type: int
+
+        self.assertEqual(timestamp.year,   2056)
+        self.assertEqual(timestamp.month,  1)
+        self.assertEqual(timestamp.day,    2)
+        self.assertEqual(timestamp.hour,   3)
+        self.assertEqual(timestamp.minute, 0)
+        self.assertEqual(timestamp.second, 0)
+
+        self.assertEqual(object_id, 'service-1')
+        self.assertEqual(value, 44)
+
+        #
+        # item_max -> 5
+        #
+        timestamp = item_max5[0][0] # type: pd.Timestamp
+        object_id = item_max5[0][1] # type: str
+        value     = item_max5[1]    # type: int
+
+        self.assertEqual(timestamp.year,   2056)
+        self.assertEqual(timestamp.month,  1)
+        self.assertEqual(timestamp.day,    2)
+        self.assertEqual(timestamp.hour,   3)
+        self.assertEqual(timestamp.minute, 5)
+        self.assertEqual(timestamp.second, 0)
+
+        self.assertEqual(object_id, 'service-3')
+        self.assertEqual(value, 132)
 
 # ################################################################################################################################
 
