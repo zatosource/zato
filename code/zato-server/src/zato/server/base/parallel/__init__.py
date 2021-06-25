@@ -240,7 +240,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.connector_ftp    = FTPIPC(self)
         self.connector_ibm_mq = IBMMQIPC(self)
         self.connector_sftp   = SFTPIPC(self)
-        self.connector_zato_events = ZatoEventsIPC(self)
+        self.connector_events = ZatoEventsIPC(self)
 
         # HTTP methods allowed as a Python list
         self.http_methods_allowed = []
@@ -758,6 +758,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Directories for SSH keys used by SFTP channels
         self.sftp_channel_dir = os.path.join(self.repo_location, 'sftp', 'channel')
 
+        # This is the first process
         if self.is_starting_first:
 
             logger.info('First worker of `%s` is %s', self.name, self.pid)
@@ -782,6 +783,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             if not os.path.exists(self.sftp_channel_dir):
                 os.makedirs(self.sftp_channel_dir)
 
+        # These are subsequent processes
         else:
             self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_OTHER, kwargs={
                 'server': self,
@@ -887,11 +889,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         }
 
         # Zato events connector always starts
-        self.connector_zato_events.start_zato_events_connector(ipc_tcp_start_port, extra_options_kwargs=extra_options_kwargs)
+        self.connector_events.start_zato_events_connector(ipc_tcp_start_port, extra_options_kwargs=extra_options_kwargs)
 
         # Wait until the events connector started - this will let other parts
         # of the server assume that it is always available.
-        wait_until_port_taken(self.connector_zato_events.ipc_tcp_port, timeout=5)
+        wait_until_port_taken(self.connector_events.ipc_tcp_port, timeout=5)
 
 # ################################################################################################################################
 
