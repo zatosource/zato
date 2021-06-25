@@ -122,8 +122,9 @@ rand_nested = rand_opaque
 
 # ################################################################################################################################
 
-def rand_datetime():
-    return datetime.utcnow().isoformat() # Random in the sense of not repeating
+def rand_datetime(to_string=True):
+    value = datetime.utcnow() # Current time is as random any other
+    return value.isoformat() if to_string else value
 
 # ################################################################################################################################
 
