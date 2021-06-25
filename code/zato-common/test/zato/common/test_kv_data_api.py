@@ -13,7 +13,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main
 
 # Zato
-from zato.common.kv_data import KeyCtx, KVDataAPI
+from zato.common.kv_data import default_expiry_time, KeyCtx, KVDataAPI
 from zato.common.test import ODBTestCase, rand_datetime, rand_string
 
 # ################################################################################################################################
@@ -95,7 +95,7 @@ class KVDataAPITestCase(ODBTestCase):
         self.assertEqual(result.value, ctx.value)
         self.assertEqual(result.data_type, ctx.data_type)
         self.assertEqual(result.creation_time, ctx.creation_time)
-        self.assertIsNone(result.expiry_time)
+        self.assertEqual(result.expiry_time, default_expiry_time)
 
 # ################################################################################################################################
 # ################################################################################################################################
