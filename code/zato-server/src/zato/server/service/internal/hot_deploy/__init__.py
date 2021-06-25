@@ -257,11 +257,14 @@ class Create(AdminService):
             with closing(self.odb.session()) as session:
                 try:
                     # Only one of workers will get here ..
-                    if not self.server.kvdb.conn.get(already_deployed_flag):
+                    if not self.server.kv_data_api.get(already_deployed_flag):
                         self.backup_current_work_dir()
 
-                        self.server.kvdb.conn.set(already_deployed_flag, dumps({'create_time_utc':datetime.utcnow().isoformat()}))
-                        self.server.kvdb.conn.expire(already_deployed_flag, self.server.deployment_lock_expires)
+                        self.server.kv_data_api.set(
+                            already_deployed_flag,
+                            dumps({'create_time_utc':datetime.utcnow().isoformat()}),
+                            self.server.deployment_lock_expires,
+                        )
 
                     # .. all workers get here.
                     services_deployed = self.deploy_package(self.request.input.package_id, session) or []

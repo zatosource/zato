@@ -32,8 +32,8 @@ default_expiry_time = datetime(year=2345, month=12, day=31)
 class KeyCtx:
     key: str
     value: optional[str] = None
-    data_type: str
-    creation_time: datetime
+    data_type: str = 'string'
+    creation_time: datetime = None
     expiry_time: optional[datetime] = None
 
 # ################################################################################################################################
@@ -87,7 +87,18 @@ class KVDataAPI:
 
 # ################################################################################################################################
 
-    def set(self, ctx, data_type='string'):
+    def set(self, key, value, expiry_sec=None, expiry_time=None):
+        # type: (str, str, int, datetime)
+        ctx = KeyCtx()
+        ctx.key = key
+        ctx.value = value
+        ctx.expiry_time = expiry_time if expiry_time else utcnow() + timedelta(seconds=expiry_sec)
+
+        self.set_with_ctx(ctx)
+
+# ################################################################################################################################
+
+    def set_with_ctx(self, ctx, data_type='string'):
         # type: (KeyCtx, str) -> None
 
         key = ctx.key.encode('utf8') if isinstance(ctx.key, str) else ctx.key
@@ -97,7 +108,6 @@ class KVDataAPI:
         item.cluster_id = self.cluster_id
         item.key = key
         item.value = value
-        item.data_type = ctx.data_type or data_type
         item.creation_time = ctx.creation_time or utcnow()
         item.expiry_time = ctx.expiry_time or default_expiry_time
 
