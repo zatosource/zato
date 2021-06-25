@@ -166,7 +166,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.broker_client = None # type: BrokerClient
         self.return_tracebacks = None # type: bool
         self.default_error_message = None # type: unicode
-        self.time_util = None # type: TimeUtil
+        self.time_util = TimeUtil()
         self.preferred_address = None # type: unicode
         self.crypto_use_tls = None # type: bool
         self.rpc = None # type: ServerRPC
@@ -458,9 +458,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Lua programs, both internal and user defined ones.
         for name, program in self.get_lua_programs():
             self.kvdb.lua_container.add_lua_program(name, program)
-
-        # TimeUtil needs self.kvdb so it can be set now
-        self.time_util = TimeUtil(self.kvdb)
 
         # Service sources
         self.service_sources = []
