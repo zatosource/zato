@@ -12,37 +12,33 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Delete(AdminService):
+class _Abstract:
     def handle(self):
         pass
 
-class ProcessRawTimes(AdminService):
-    def handle(self):
-        pass
+class Delete(_Abstract, AdminService):
+    pass
 
-class AggregateByMinute(AdminService):
-    def handle(self):
-        pass
+class ProcessRawTimes(_Abstract, AdminService):
+    pass
 
-class AggregateByHour(AdminService):
-    def handle(self):
-        pass
+class AggregateByMinute(_Abstract, AdminService):
+    pass
 
-class AggregateByDay(AdminService):
-    def handle(self):
-        pass
+class AggregateByHour(_Abstract, AdminService):
+    pass
 
-class AggregateByMonth(AdminService):
-    def handle(self):
-        pass
+class AggregateByDay(_Abstract, AdminService):
+    pass
 
-class StatsReturningService(AdminService):
-    def handle(self):
-        pass
+class AggregateByMonth(_Abstract, AdminService):
+    pass
 
-class GetByService(AdminService):
-    def handle(self):
-        pass
+class StatsReturningService(_Abstract, AdminService):
+    pass
+
+class GetByService(_Abstract, AdminService):
+    pass
 
 # ################################################################################################################################
 # ################################################################################################################################

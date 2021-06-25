@@ -12,37 +12,41 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 # ################################################################################################################################
 
-class BaseSummarizingService(AdminService):
+class _Abstract:
+    def handle(self):
+        pass
+
+class BaseSummarizingService(_Abstract, AdminService):
     pass
 
-class CreateSummaryByDay(AdminService):
+class CreateSummaryByDay(_Abstract, AdminService):
     pass
 
-class CreateSummaryByWeek(AdminService):
+class CreateSummaryByWeek(_Abstract, AdminService):
     pass
 
-class CreateSummaryByMonth(AdminService):
+class CreateSummaryByMonth(_Abstract, AdminService):
     pass
 
-class CreateSummaryByYear(AdminService):
+class CreateSummaryByYear(_Abstract, AdminService):
     pass
 
-class GetSummaryBase(AdminService):
+class GetSummaryBase(_Abstract, AdminService):
     pass
 
-class GetSummaryByDay(AdminService):
+class GetSummaryByDay(_Abstract, AdminService):
     pass
 
-class GetSummaryByWeek(AdminService):
+class GetSummaryByWeek(_Abstract, AdminService):
     pass
 
-class GetSummaryByMonth(AdminService):
+class GetSummaryByMonth(_Abstract, AdminService):
     pass
 
-class GetSummaryByYear(AdminService):
+class GetSummaryByYear(_Abstract, AdminService):
     pass
 
-class GetSummaryByRange(AdminService):
+class GetSummaryByRange(_Abstract, AdminService):
     pass
 
 # ################################################################################################################################
