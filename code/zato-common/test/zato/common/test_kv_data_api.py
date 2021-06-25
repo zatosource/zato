@@ -69,7 +69,7 @@ class KVDataAPITestCase(ODBTestCase):
 
 # ################################################################################################################################
 
-    def test_set(self):
+    def test_set_with_ctx(self):
 
         key = rand_string()
         value = rand_string()
@@ -85,7 +85,7 @@ class KVDataAPITestCase(ODBTestCase):
         kv_data_api = KVDataAPI(cluster_id, self.session_wrapper)
 
         # Set the key ..
-        kv_data_api.set(ctx)
+        kv_data_api.set_with_ctx(ctx)
 
         # .. let's get it back ..
         result = kv_data_api.get(key)

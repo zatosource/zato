@@ -10,4 +10,5 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from zato.server.service.internal import AdminService
 
 class GetTrends(AdminService):
-    pass
+    def handle(self):
+        pass
