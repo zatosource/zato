@@ -41,6 +41,7 @@ from zato.common.const import SECRETS
 from zato.common.events.common import Default as EventsDefault
 from zato.common.ipc.api import IPCAPI
 from zato.common.json_internal import dumps, loads
+from zato.common.kv_data import KVDataAPI
 from zato.common.odb.post_process import ODBPostProcess
 from zato.common.pubsub import SkipDelivery
 from zato.common.rate_limiting import RateLimiting
@@ -201,6 +202,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.slow_responses_path = 'ParallelServer-slow_responses_path'
         self.usage_samples_path = 'ParallelServer-usage_samples_path'
         self.current_usage_path = 'ParallelServer-current_usage_path'
+
+        # SQL-based key/value data
+        self.kv_data_api = None # type: KVDataAPI
 
         # Transient API for in-RAM messages
         self.zato_kvdb = ZatoKVDB()
@@ -605,6 +609,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # SQL post-processing
         ODBPostProcess(self.odb.session(), None, self.cluster_id).run()
+
+        # Set up SQL-based key/value API
+        self.kv_data_api = KVDataAPI(self.cluster_id, self.odb)
 
         # Looked up upfront here and assigned to services in their store
         self.enforce_service_invokes = asbool(self.fs_server_config.misc.enforce_service_invokes)
