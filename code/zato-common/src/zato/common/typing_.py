@@ -9,7 +9,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 # ################################################################################################################################
 
-# This will always succeed
+# stdlib
+from typing import Optional as optional
+
+# dacite
 from dacite import from_dict
 
 # Be explicit about which import error we want to catch
@@ -35,8 +38,12 @@ try:
 except ImportError:
     from zato.common.ext.typing_extensions import TypedDict
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 # For flake8
 from_dict = from_dict
+optional = optional
 TypedDict = TypedDict
 
 # ################################################################################################################################
