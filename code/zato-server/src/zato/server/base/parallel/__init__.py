@@ -325,7 +325,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def maybe_on_first_worker(self, server, redis_conn):
+    def maybe_on_first_worker(self, server):
         """ This method will execute code with a distibuted lock held. We need a lock because we can have multiple worker
         processes fighting over the right to redeploy services. The first worker to obtain the lock will actually perform
         the redeployment and set a flag meaning that for this particular deployment key (and remember that each server restart
@@ -379,7 +379,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         logger.debug('Will use the lock_name: `%s`', lock_name)
 
         with self.zato_lock_manager(lock_name, ttl=self.deployment_lock_expires, block=self.deployment_lock_timeout):
-            if redis_conn.get(already_deployed_flag):
+            if self.kv_data_api.get(already_deployed_flag):
                 # There has been already the first worker who's done everything there is to be done so we may just return.
                 self.is_starting_first = False
                 logger.debug('Not attempting to obtain the lock_name:`%s`', lock_name)
@@ -406,8 +406,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 # time is more than a century in the future. It will be cleared out
                 # next time the server will be started.
 
-                redis_conn.set(already_deployed_flag, dumps({'create_time_utc':datetime.utcnow().isoformat()}))
-                redis_conn.expire(already_deployed_flag, self.deployment_lock_expires)
+                self.kv_data_api.set(
+                    already_deployed_flag,
+                    dumps({'create_time_utc':datetime.utcnow().isoformat()}),
+                    self.deployment_lock_expires,
+                )
 
                 return locally_deployed
 
@@ -480,7 +483,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Convert size of FIFO response buffers to megabytes
         self.fifo_response_buffer_size = int(float(self.fs_server_config.misc.fifo_response_buffer_size) * megabyte)
 
-        locally_deployed = self.maybe_on_first_worker(server, self.kvdb.conn)
+        locally_deployed = self.maybe_on_first_worker(server)
 
         return locally_deployed
 
