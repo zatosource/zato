@@ -7,7 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from datetime import datetime
+from datetime import datetime, timedelta
 from zato.common.odb.model import KVData as KVDataModel
 from zato.common.typing_ import dataclass, optional
 
@@ -23,6 +23,7 @@ if 0:
 # ################################################################################################################################
 
 utcnow = datetime.utcnow
+default_expiry_time = datetime(year=2345, month=12, day=31)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -64,7 +65,8 @@ class KVDataAPI:
         # .. prepare the query ..
         query = session.query(KVDataModel).\
             filter(KVDataModel.cluster_id==self.cluster_id).\
-            filter(KVDataModel.key==key)
+            filter(KVDataModel.key==key).\
+            filter(KVDataModel.expiry_time > utcnow())
 
         # .. run it ..
         result = query.first() # type: KVDataModel
@@ -97,7 +99,7 @@ class KVDataAPI:
         item.value = value
         item.data_type = ctx.data_type or data_type
         item.creation_time = ctx.creation_time or utcnow()
-        item.expiry_time = ctx.expiry_time
+        item.expiry_time = ctx.expiry_time or default_expiry_time
 
         session = self._get_session()
         session.add(item)
