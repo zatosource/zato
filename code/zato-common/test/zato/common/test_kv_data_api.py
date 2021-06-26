@@ -73,7 +73,7 @@ class KVDataAPITestCase(ODBTestCase):
 
         key = rand_string()
         value = rand_string()
-        data_type = 'string'
+        data_type = 'text'
         creation_time = rand_datetime(to_string=False) # type: datetime
 
         ctx = KeyCtx()
