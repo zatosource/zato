@@ -19,6 +19,9 @@ class SECRETS:
     # Zato secret (Fernet)
     PREFIX = 'zato.secf.'
 
+    # Encrypted data has this prefix
+    EncryptedMarker = 'gAAA'
+
     # Zato secret (configuration)
     URL_PREFIX = 'zato+secret://'
 
