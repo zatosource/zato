@@ -26,7 +26,7 @@ then
     [[ "$INSTALL_PYTHON" == "y" ]] && sudo ${INSTALL_CMD} install -y python3
     sudo ${INSTALL_CMD} -y groupinstall development
     sudo ${INSTALL_CMD} install -y 'dnf-command(config-manager)'
-    sudo ${INSTALL_CMD} config-manager --set-enabled PowerTools
+    sudo ${INSTALL_CMD} config-manager --set-enabled "$(sudo dnf repolist all|grep PowerTools|awk '{print $1}')"
 fi
 
 
