@@ -9,17 +9,17 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+import bz2
 from base64 import b64decode
 
-# anyjson
-from anyjson import loads
-
 # Python 2/3 compatibility
-from future.utils import iteritems
+from future.utils import iteritems, iterkeys
+from past.builtins import unicode
 
 # Zato
-from zato.common import KVDB
-from zato.common.util import dict_item_name, translation_name
+from zato.common.api import KVDB
+from zato.common.json_internal import loads
+from zato.common.util.api import dict_item_name, translation_name
 from zato.server.service.internal import AdminSIO
 from zato.server.service.internal.kvdb.data_dict import DataDictService
 
@@ -33,9 +33,14 @@ class Import(DataDictService):
 
     def handle(self):
         data = self.request.input.data
+
         data = b64decode(data)
-        data = data.decode('bz2')
+        if isinstance(data, unicode):
+            data = data.encode('utf8')
+
+        data = bz2.decompress(data)
         data = loads(data)
+
         with self.server.kvdb.conn.pipeline() as p:
             p.delete(KVDB.DICTIONARY_ITEM_ID)
             p.delete(KVDB.DICTIONARY_ITEM)
@@ -57,7 +62,7 @@ class Import(DataDictService):
                 p.hset(KVDB.DICTIONARY_ITEM, item['id'], dict_item_name(item['system'], item['key'], item['value']))
 
             for item in data['translation_list']:
-                key = item.keys()[0]
+                key = list(iterkeys(item))[0]
                 for value_key, value in iteritems(item[key]):
                     p.hset(key, value_key, value)
 

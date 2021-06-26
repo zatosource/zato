@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -13,9 +13,10 @@ from django import forms
 
 # Python 2/3 compatibility
 from future.utils import iteritems
+from past.builtins import basestring
 
 # Zato
-from zato.common import DELEGATED_TO_RBAC, RATE_LIMIT, SIMPLE_IO, TLS, ZATO_NONE, ZATO_SEC_USE_RBAC
+from zato.common.api import AuditLog, DELEGATED_TO_RBAC, RATE_LIMIT, SIMPLE_IO, TLS, ZATO_NONE, ZATO_SEC_USE_RBAC
 
 # ################################################################################################################################
 
@@ -25,14 +26,22 @@ INITIAL_CHOICES = list(iteritems(INITIAL_CHOICES_DICT))[0]
 # ################################################################################################################################
 
 SELECT_SERVICE_FIELDS = [
-    'service_name',
-    'service_id',
-    'service',
     'hook_service_id',
     'hook_service_name',
+    'on_close_service_name',
     'on_connect_service_name',
     'on_message_service_name',
-    'on_close_service_name',
+    'service',
+    'service_id',
+    'service_list',
+    'service_name',
+]
+
+# ################################################################################################################################
+
+SELECT_TOPICS_FIELDS = [
+    'topic_list',
+    'topic_name',
 ]
 
 # ################################################################################################################################
@@ -54,10 +63,17 @@ def add_select(form, field_name, elems, needs_initial_select=True, skip=None):
         form.fields[field_name].choices = []
 
     for elem in elems:
-        id = getattr(elem, 'id', None) or elem['id']
+
+        if isinstance(elem, basestring):
+            id = elem
+            name = elem
+        else:
+            id = getattr(elem, 'id', None) or elem['id']
+            name = getattr(elem, 'name', None) or elem['name']
+
         if id in skip:
             continue
-        name = getattr(elem, 'name', None) or elem['name']
+
         form.fields[field_name].choices.append([id, name])
 
 # ################################################################################################################################
@@ -103,7 +119,9 @@ def add_http_soap_select(form, field_name, req, connection, transport, needs_ini
 
 # ################################################################################################################################
 
-def add_services(form, req, by_id=False, initial_service=None, api_name='zato.service.get-list', has_name_filter=True):
+def add_services(form, req, by_id=False, initial_service=None, api_name='zato.service.get-list', has_name_filter=True,
+    should_include_scheduler=False):
+
     if req.zato.cluster_id:
 
         fields = {}
@@ -122,11 +140,19 @@ def add_services(form, req, by_id=False, initial_service=None, api_name='zato.se
             field.choices = []
             field.choices.append(INITIAL_CHOICES)
 
-            request = {'cluster_id': req.zato.cluster_id, 'name_filter':'*'}
+            request = {
+                'cluster_id': req.zato.cluster_id,
+                'name_filter':'*',
+                'should_include_scheduler': should_include_scheduler,
+            }
+
             if has_name_filter:
                 request['name_filter'] = '*'
 
-            for service in req.zato.client.invoke(api_name, request).data:
+            response = req.zato.client.invoke(api_name, request)
+            data = response.data
+
+            for service in data:
 
                 # Older parts of web-admin use service names only but newer ones prefer service ID
                 id_attr = service.id if by_id else service.name
@@ -142,7 +168,12 @@ def add_pubsub_services(form, req, by_id=False, initial_service=None):
 
 # ################################################################################################################################
 
-def add_select_from_service(form, req, service_name, field_names, by_id=True):
+def add_topics(form, req, by_id=True):
+    return add_select_from_service(form, req, 'zato.pubsub.topic.get-list', SELECT_TOPICS_FIELDS, by_id=by_id)
+
+# ################################################################################################################################
+
+def add_select_from_service(form, req, service_name, field_names, by_id=True, service_extra=None):
     if req.zato.cluster_id:
 
         field_names = field_names if isinstance(field_names, list) else [field_names]
@@ -156,7 +187,13 @@ def add_select_from_service(form, req, service_name, field_names, by_id=True):
         field.choices = []
         field.choices.append(INITIAL_CHOICES)
 
-        for item in req.zato.client.invoke(service_name, {'cluster_id': req.zato.cluster_id, }).data:
+        service_request = {'cluster_id': req.zato.cluster_id}
+        service_request.update(service_extra or {})
+
+        response = req.zato.client.invoke(service_name, service_request)
+        response = response.data if isinstance(response.data, list) else response.data.response
+
+        for item in response:
             id_attr = item.id if by_id else item.name
             field.choices.append([id_attr, item.name])
 
@@ -268,6 +305,25 @@ class WithRateLimiting(forms.Form):
         super(WithRateLimiting, self).__init__(*args, **kwargs)
 
         add_select(self, 'rate_limit_type', RATE_LIMIT.TYPE(), needs_initial_select=False)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class WithAuditLog(forms.Form):
+    is_audit_log_sent_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_audit_log_received_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+
+    max_len_messages_sent = forms.CharField(
+        initial=AuditLog.Default.max_len_messages, widget=forms.TextInput(attrs={'style':'width:10%'}))
+
+    max_len_messages_received = forms.CharField(
+        initial=AuditLog.Default.max_len_messages, widget=forms.TextInput(attrs={'style':'width:10%'}))
+
+    max_bytes_per_message_sent = forms.CharField(
+        initial=AuditLog.Default.max_data_stored_per_message, widget=forms.TextInput(attrs={'style':'width:13%'}))
+
+    max_bytes_per_message_received = forms.CharField(
+        initial=AuditLog.Default.max_data_stored_per_message, widget=forms.TextInput(attrs={'style':'width:13%'}))
 
 # ################################################################################################################################
 # ################################################################################################################################

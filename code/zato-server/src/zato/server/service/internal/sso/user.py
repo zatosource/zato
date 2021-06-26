@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from traceback import format_exc
@@ -22,18 +20,25 @@ from past.builtins import unicode
 from zato.common import NotGiven
 from zato.common.broker_message import SSO as BROKER_MSG_SSO
 from zato.common.util import asbool
-from zato.server.service import AsIs, Bool, Int, List, Opaque
+from zato.server.service import AsIs, Bool, Int, List, Opaque, SIOElem
 from zato.server.service.internal.sso import BaseService, BaseRESTService, BaseSIO
 from zato.sso import status_code, SearchCtx, SignupCtx, ValidationError
-from zato.sso.user import update
+from zato.sso.user import super_user_attrs, update
 
 # ################################################################################################################################
 
-_create_user_attrs = ('username', 'password', 'password_must_change', 'display_name', 'first_name', 'middle_name', 'last_name', \
-    'email', 'is_locked', 'sign_up_status', 'is_rate_limit_active', 'rate_limit_def', 'is_totp_enabled', 'totp_label',
-    'totp_key')
-_date_time_attrs = ('approv_rej_time', 'locked_time', 'password_expiry', 'password_last_set', 'sign_up_time',
-    'approval_status_mod_time')
+if 0:
+    from zato.sso import User as UserEntity
+
+    UserEntity = UserEntity
+
+# ################################################################################################################################
+
+_create_user_attrs = sorted(('username', 'password', Bool('password_must_change'), 'display_name', 'first_name', 'middle_name',
+    'last_name', 'email', 'is_locked', 'sign_up_status', 'is_rate_limit_active', 'rate_limit_def', 'is_totp_enabled',
+    'totp_label', 'totp_key'))
+_date_time_attrs = sorted(('approv_rej_time', 'locked_time', 'password_expiry', 'password_last_set', 'sign_up_time',
+    'approval_status_mod_time'))
 
 # ################################################################################################################################
 
@@ -125,8 +130,8 @@ class User(BaseRESTService):
         output_optional = BaseSIO.output_optional + (AsIs('user_id'), 'username', 'email', 'display_name', 'first_name',
             'middle_name', 'last_name', 'is_active', 'is_internal', 'is_super_user', 'is_approval_needed',
             'approval_status', 'approval_status_mod_time', 'approval_status_mod_by', 'is_locked', 'locked_time',
-            'creation_ctx', 'locked_by', 'approv_rej_time', 'approv_rej_by', 'password_expiry', 'password_is_set',
-            'password_must_change', 'password_last_set', 'sign_up_status','sign_up_time', 'is_totp_enabled',
+            'creation_ctx', 'locked_by', 'approv_rej_time', 'approv_rej_by', 'password_expiry', Bool('password_is_set'),
+            Bool('password_must_change'), 'password_last_set', 'sign_up_status','sign_up_time', 'is_totp_enabled',
             'totp_label')
 
         default_value = _invalid
@@ -148,8 +153,17 @@ class User(BaseRESTService):
         # These will be always needed, no matter which function is used
         attrs += [ctx.input.ust, ctx.input.current_app, ctx.remote_addr]
 
+        # Get the dict describing this user
+        user_entity = func(self.cid, *attrs) # type: UserEntity
+        out = user_entity.to_dict()
+
+        # Make sure regular users do not receive super-user specific details
+        if not user_entity.is_current_super_user:
+            for name in super_user_attrs:
+                out.pop(name, None)
+
         # Func will return a dictionary describing the required user, already taking permissions into account
-        self.response.payload = func(self.cid, *attrs).to_dict()
+        self.response.payload = out
 
 # ################################################################################################################################
 
@@ -160,6 +174,7 @@ class User(BaseRESTService):
         # to create a new user.
         data = {}
         for name in _create_user_attrs:
+            name = name.name if isinstance(name, SIOElem) else name
             value = ctx.input.get(name)
             if value != self.SimpleIO.default_value:
                 data[name] = value
@@ -214,10 +229,15 @@ class User(BaseRESTService):
 
         # Explicitly provide only what we know is allowed
         data = {}
-        for name in update.all_attrs:
-            value = ctx.input.get(name, _not_given)
+        for name in sorted(update.all_attrs):
 
             # No such key on input, we can ignore it
+            if name not in self.request.payload:
+                continue
+
+            value = ctx.input.get(name, _not_given)
+
+            # Just to be doubly sure, check the value too
             if value is _not_given:
                 continue
 
@@ -276,7 +296,33 @@ class TOTP(BaseRESTService):
             self.cid, ctx.input.ust, ctx.input.user_id,
             ctx.input.totp_key,
             ctx.input.totp_label,
-            ctx.input.current_app, ctx.remote_addr)
+            ctx.input.current_app,
+            ctx.remote_addr)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Lock(BaseRESTService):
+    """ Locks or unlocks a user account.
+    """
+    name = 'zato.server.service.internal.sso.user.lock'
+
+    class SimpleIO(BaseSIO):
+        input_required = 'ust', 'current_app', AsIs('user_id')
+
+# ################################################################################################################################
+
+    def _handle_sso_POST(self, ctx):
+        """ Locks a user account.
+        """
+        self.sso.user.lock_user(self.cid, ctx.input.user_id, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
+
+# ################################################################################################################################
+
+    def _handle_sso_DELETE(self, ctx):
+        """ Unlocks a user account.
+        """
+        self.sso.user.unlock_user(self.cid, ctx.input.user_id, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -315,8 +361,8 @@ class Password(BaseRESTService):
                 password_expiry = self.sso.password.expiry
             data['password_expiry'] = password_expiry
 
-        must_change = ctx.input.get('must_change')
-        if must_change != '':
+        if 'must_change' in self.request.payload:
+            must_change = ctx.input.get('must_change')
             must_change = asbool(must_change)
             data['must_change'] = must_change
 

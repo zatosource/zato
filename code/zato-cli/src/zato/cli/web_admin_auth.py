@@ -8,30 +8,25 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-import json
-import os
-import sys
-from traceback import format_exc
-
-# Python 2/3 compatibility
-from past.builtins import unicode
-
 # Zato
-from zato.admin.web.util import set_user_profile_totp_key
-from zato.admin.zato_settings import update_globals
 from zato.cli import common_totp_opts, ManageCommand
-from zato.cli.util import get_totp_info_from_args
-from zato.common.crypto import WebAdminCryptoManager
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class _WebAdminAuthCommand(ManageCommand):
     def _prepare(self, args):
+
+        # stdlib
+        import os
+
+        # Zato
+        from zato.admin.zato_settings import update_globals
+        from zato.common.json_internal import loads
+
         os.chdir(os.path.abspath(args.path))
         base_dir = os.path.join(self.original_dir, args.path)
-        config = json.loads(open(os.path.join(base_dir, '.', 'config/repo/web-admin.conf')).read())
+        config = loads(open(os.path.join(base_dir, '.', 'config/repo/web-admin.conf')).read())
         config['config_dir'] = os.path.abspath(args.path)
         update_globals(config, base_dir)
 
@@ -77,6 +72,10 @@ class CreateUser(_WebAdminAuthCommand):
         return not self.is_interactive
 
     def before_execute(self, args):
+
+        # stdlib
+        import sys
+
         super(CreateUser, self).before_execute(args)
         self._prepare(args)
 
@@ -102,6 +101,11 @@ class CreateUser(_WebAdminAuthCommand):
 
     def execute(self, args):
 
+        # stdlib
+        import sys
+        from traceback import format_exc
+
+        # Django
         from django.contrib.auth.management.commands.createsuperuser import Command
         self.reset_logger(args, True)
 
@@ -136,6 +140,7 @@ class UpdatePassword(_WebAdminAuthCommand):
         self._prepare(args)
 
     def execute(self, args, called_from_wrapper=False):
+
         if not called_from_wrapper:
             self._prepare(args)
 
@@ -171,12 +176,16 @@ class ResetTOTPKey(_WebAdminAuthCommand):
 
     def execute(self, args):
 
-        # Extract or generate a new TOTP key and label
-        key, key_label = get_totp_info_from_args(args)
-
+        # Zato
+        from zato.admin.web.util import set_user_profile_totp_key
         from zato.admin.web.models import User
         from zato.admin.web.util import get_user_profile
         from zato.admin.zato_settings import zato_secret_key
+        from zato.cli.util import get_totp_info_from_args
+        from zato.common.json_internal import dumps
+
+        # Extract or generate a new TOTP key and label
+        key, key_label = get_totp_info_from_args(args)
         self.reset_logger(args, True)
 
         try:
@@ -192,7 +201,7 @@ class ResetTOTPKey(_WebAdminAuthCommand):
         opaque_attrs = set_user_profile_totp_key(user_profile, zato_secret_key, key, key_label)
 
         # .. and save the modified profile.
-        user_profile.opaque1 = json.dumps(opaque_attrs)
+        user_profile.opaque1 = dumps(opaque_attrs)
         user_profile.save()
 
         # Log the key only if it was not given on input. Otherwise the user is expected to know it already
@@ -214,6 +223,15 @@ class SetAdminInvokePassword(_WebAdminAuthCommand):
     ]
 
     def execute(self, args):
+
+        # stdlib
+        import os
+
+        # Zato
+        from zato.common.crypto.api import WebAdminCryptoManager
+
+        # Python 2/3 compatibility
+        from past.builtins import unicode
 
         # Find directories for config data
         os.chdir(os.path.abspath(args.path))

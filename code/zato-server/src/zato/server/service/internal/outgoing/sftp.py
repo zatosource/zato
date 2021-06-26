@@ -15,6 +15,7 @@ from contextlib import closing
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.util.sql import get_instance_by_id
+from zato.server.service import Int
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
@@ -24,7 +25,7 @@ class Execute(AdminService):
     """ Executes SFTP command(s) using a relevant connector.
     """
     class SimpleIO(AdminSIO):
-        input_required = 'id', 'data', 'log_level'
+        input_required = 'id', 'data', Int('log_level')
         output_optional = 'response_time', 'stdout', 'stderr', 'command_no'
         response_elem = None
 

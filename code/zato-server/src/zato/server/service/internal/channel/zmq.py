@@ -16,7 +16,8 @@ from traceback import format_exc
 from zato.common.broker_message import CHANNEL
 from zato.common.odb.model import ChannelZMQ, Cluster, Service as ServiceModel
 from zato.common.odb.query import channel_zmq_list
-from zato.common.util import is_port_taken, require_tcp_port
+from zato.common.util.api import is_port_taken, require_tcp_port
+from zato.common.simpleio_ import drop_sio_elems
 from zato.server.service import Int, Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
@@ -246,7 +247,7 @@ class Start(Service):
     """
     class SimpleIO(_UpdateSIO):
         input_required = _UpdateSIO.input_required + ('id', 'config_cid')
-        input_optional = _UpdateSIO.input_optional + (Int('bind_port'), 'service_name')
+        input_optional = tuple(drop_sio_elems(_UpdateSIO.input_optional, 'id')) + (Int('bind_port'), 'service_name')
         request_elem = 'zato_channel_zmq_start_request'
         response_elem = 'zato_channel_zmq_start_response'
 

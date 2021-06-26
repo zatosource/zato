@@ -24,8 +24,8 @@ from cryptography.fernet import Fernet
 import jwt
 
 # Zato
-from zato.common.odb.model import JWT as JWT_
-from zato.server.cache import RobustCache
+from zato.common.odb.model import JWT as JWTModel
+from zato.server.jwt_cache import JWTCache
 
 # ################################################################################################################################
 
@@ -51,9 +51,9 @@ class JWT(object):
 
 # ################################################################################################################################
 
-    def __init__(self, kvdb, odb, decrypt_func, secret):
+    def __init__(self, odb, decrypt_func, secret):
         self.odb = odb
-        self.cache = RobustCache(kvdb, odb)
+        self.cache = JWTCache(odb)
         self.decrypt_func = decrypt_func
 
         self.secret = secret
@@ -62,10 +62,10 @@ class JWT(object):
 # ################################################################################################################################
 
     def _lookup_jwt(self, username, password):
-        # type: (str, str) -> JWT_
+        # type: (str, str) -> JWTModel
         with closing(self.odb.session()) as session:
-            item = session.query(JWT_).\
-                filter(JWT_.username==username).\
+            item = session.query(JWTModel).\
+                filter(JWTModel.username==username).\
                 first()
 
             if item:
@@ -99,7 +99,7 @@ class JWT(object):
         item = self._lookup_jwt(username, password)
         if item:
             token = self._create_token(username=username, ttl=item.ttl)
-            self.cache.put(token, token, item.ttl, async=False)
+            self.cache.put(token, token, item.ttl, is_async=False)
             suffix = 's' if item.ttl > 1 else ''
             logger.info('New token generated for user `%s` with a TTL of `%i` second{}'.format(suffix), username, item.ttl)
 
@@ -125,7 +125,7 @@ class JWT(object):
             if token_data.username == expected_username:
 
                 # Renew the token expiration
-                self.cache.put(token, token, token_data.ttl, async=True)
+                self.cache.put(token, token, token_data.ttl, is_async=True)
                 return Bunch(valid=True, token=token_data, raw_token=token)
 
             else:
@@ -137,7 +137,7 @@ class JWT(object):
 # ################################################################################################################################
 
     def delete(self, token):
-        """ Deletes a token in both KVDB and ODB.
+        """ Deletes a token in ODB.
         """
         self.cache.delete(token)
 

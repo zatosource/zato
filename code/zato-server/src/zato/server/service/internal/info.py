@@ -11,15 +11,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from base64 import b64decode
 from contextlib import closing
-from json import loads
 
 # Zato
 from zato.client import AnyServiceInvoker
-from zato.common import INFO_FORMAT, SERVER_JOIN_STATUS, SERVER_UP_STATUS
+from zato.common.api import INFO_FORMAT, SERVER_JOIN_STATUS, SERVER_UP_STATUS
 from zato.common.broker_message import SERVER_STATUS
-from zato.common.odb.query import server_list
 from zato.common.component_info import format_info, get_info, get_worker_pids
-from zato.common.util.json_ import dumps
+from zato.common.json_internal import dumps, loads
+from zato.common.odb.query import server_list
 from zato.server.service import List, Service
 
 # ################################################################################################################################
@@ -30,8 +29,8 @@ class GetInfo(Service):
     def handle(self):
 
         # Let's prepare as much as we can upfront.
-        sec_def = self.worker_store.basic_auth_get('admin.invoke').config
-        channel = self.worker_store.get_channel_plain_http('admin.invoke.json')
+        sec_def = self.server.worker_store.basic_auth_get('admin.invoke').config
+        channel = self.server.worker_store.get_channel_rest('admin.invoke.json')
         out = {}
 
         with closing(self.odb.session()) as session:

@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from json import dumps, loads
 
 # Django
 from django.contrib import messages
@@ -31,7 +30,8 @@ from zato.admin.web.forms.account import BasicSettingsForm
 from zato.admin.web.models import ClusterColorMarker
 from zato.admin.web.util import set_user_profile_totp_key
 from zato.admin.web.views import method_allowed
-from zato.common.crypto import CryptoManager
+from zato.common.crypto.api import CryptoManager
+from zato.common.json_internal import dumps, loads
 
 # ################################################################################################################################
 
@@ -72,7 +72,7 @@ def set_initial_opaque_attrs(username, initial, opaque_attrs):
         initial['totp_key_label'] = cm.decrypt(initial['totp_key_label'])
 
     # Build the actual TOTP object for later use
-    totp =  pyotp.totp.TOTP(totp_key)
+    totp = pyotp.totp.TOTP(totp_key)
 
     # Update template data with TOTP information
     initial['totp_key'] = totp.secret

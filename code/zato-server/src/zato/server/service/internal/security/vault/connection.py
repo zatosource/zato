@@ -46,11 +46,12 @@ def instance_hook(self, input, instance, attrs):
 
 def broker_message_hook(self, input, instance, attrs, service_type):
 
-    with closing(self.odb.session()) as session:
-        try:
-            input.service_name = service(session, input.cluster_id, input.service_id).name
-        except NoResultFound:
-            input.service_name = '' # That is fine, service is optional for Vault connections
+    if input.service_id:
+        with closing(self.odb.session()) as session:
+            try:
+                input.service_name = service(session, input.cluster_id, input.service_id).name
+            except NoResultFound:
+                input.service_name = '' # That is fine, service is optional for Vault connections
 
 # ################################################################################################################################
 

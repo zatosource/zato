@@ -1,22 +1,20 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Python 2/3 compatibility
 from six import add_metaclass
 
 # Zato
-from zato.common import SEC_DEF_TYPE
+from zato.common.api import SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import TLSChannelSecurity
 from zato.common.odb.query import tls_channel_sec_list
-from zato.common.util import parse_tls_channel_security_definition
+from zato.common.util.api import parse_tls_channel_security_definition
 from zato.server.service.internal import AdminService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
@@ -34,12 +32,15 @@ skip_input_params = ['sec_type']
 
 def instance_hook(self, input, instance, attrs):
 
-    # Parsing returns a generator which we exhaust be converting it into a list.
-    # An exception is raised on any parsing error.
-    list(parse_tls_channel_security_definition(self.request.input.value))
+    if attrs.is_create_edit:
 
-    # So that username, an artificial and inherited field, is not an empty string.
-    instance.username = input.username = input.name
+        # Parsing returns a generator which we exhaust be converting it into a list.
+        # An exception is raised on any parsing error.
+        list(parse_tls_channel_security_definition(self.request.input.value))
+
+        # So that username, an artificial and inherited field, is not an empty string.
+        instance.username = input.username = input.name
+        instance.value = (input.get('value') or '').encode('utf8')
 
 # ################################################################################################################################
 

@@ -19,7 +19,7 @@ from bunch import Bunch
 from sqlalchemy import and_, exists
 
 # Zato
-from zato.common import DATA_FORMAT
+from zato.common.api import DATA_FORMAT
 from zato.common.exception import NotFound
 from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage
 from zato.common.odb.query import pubsub_message, pubsub_queue_message
@@ -118,7 +118,7 @@ class GetFromTopicNonGD(AdminService):
         input_required = _GetSIO.input_required + ('server_name', 'server_pid')
 
     def handle(self):
-        server = self.servers[self.request.input.server_name]
+        server = self.server.rpc[self.request.input.server_name]
         response = server.invoke(GetFromServerTopicNonGD.get_name(), {
             'msg_id': self.request.input.msg_id,
         }, pid=self.request.input.server_pid)
@@ -187,7 +187,7 @@ class TopicDeleteNonGD(AdminService):
         input_required = ('cluster_id', 'server_name', 'server_pid', AsIs('msg_id'))
 
     def handle(self):
-        server = self.servers[self.request.input.server_name]
+        server = self.server.rpc[self.request.input.server_name]
         server.invoke(DeleteTopicNonGDMessage.get_name(), {
             'msg_id': self.request.input.msg_id,
         }, pid=self.request.input.server_pid)
@@ -219,7 +219,7 @@ class QueueDeleteNonGD(AdminService):
         sk_server = self.pubsub.get_delivery_server_by_sub_key(self.request.input.sub_key)
 
         if sk_server:
-            response = self.servers[sk_server.server_name].invoke(
+            response = self.server.rpc[sk_server.server_name].invoke(
                 QueueDeleteServerNonGD.get_name(), {
                     'sub_key': sk_server.sub_key,
                     'msg_id': self.request.input.msg_id
@@ -257,7 +257,7 @@ class QueueDeleteGD(AdminService):
             # It's possible that there is no such server in case of WSX clients that connected,
             # had their subscription created but then they disconnected and there is no delivery server for them.
             if sub_key_server:
-                server = self.servers[sub_key_server.server_name]
+                server = self.server.rpc[sub_key_server.server_name]
                 server.invoke(DeleteDeliveryTaskMessage.get_name(), {
                     'msg_id': self.request.input.msg_id,
                     'sub_key': self.request.input.sub_key,
@@ -375,7 +375,7 @@ class UpdateNonGD(_Update):
         return Bunch()
 
     def _save_item(self, item, input, _ignored):
-        server = self.servers[self.request.input.server_name]
+        server = self.server.rpc[self.request.input.server_name]
         response = server.invoke(UpdateServerNonGD.get_name(), item, pid=self.request.input.server_pid)
         self.response.payload = response['response']
         return True
@@ -453,7 +453,7 @@ class GetFromQueueNonGD(AdminService):
         sk_server = self.pubsub.get_delivery_server_by_sub_key(self.request.input.sub_key)
 
         if sk_server:
-            response = self.servers[sk_server.server_name].invoke(
+            response = self.server.rpc[sk_server.server_name].invoke(
                 GetFromQueueServerNonGD.get_name(), {
                     'sub_key': sk_server.sub_key,
                     'msg_id': self.request.input.msg_id
@@ -463,4 +463,3 @@ class GetFromQueueNonGD(AdminService):
                 self.response.payload = response['response']
 
 # ################################################################################################################################
-

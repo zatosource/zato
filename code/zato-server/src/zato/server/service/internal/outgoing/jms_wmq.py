@@ -25,12 +25,11 @@ _base_required = ('id', Integer('delivery_mode'), Integer('priority'))
 _get_required = _base_required + ('name', 'is_active', 'def_id', 'def_name')
 _optional = (Integer('expiration'),)
 
-
 # ################################################################################################################################
 
 class _GetSIO(AdminSIO):
     output_required = _get_required
-    output_optional = _optional + ('def_id', 'def_name_full_text')
+    output_optional = _optional + ('def_name_full_text',)
 
 # ################################################################################################################################
 
@@ -149,7 +148,7 @@ class Edit(AdminService):
                 first()
 
             if existing_one:
-                raise Exception('An outgoing IBM MQ connection `{`}` already exists on this cluster'.format(input.name))
+                raise Exception('An outgoing IBM MQ connection `{}` already exists on this cluster'.format(input.name))
 
             try:
                 item = session.query(OutgoingWMQ).filter_by(id=input.id).one()

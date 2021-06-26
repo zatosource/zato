@@ -17,13 +17,13 @@ from traceback import format_exc
 from past.builtins import basestring
 
 # Zato
-from zato.common import SECRET_SHADOW, zato_namespace, ZATO_NONE
+from zato.common.api import SECRET_SHADOW, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE
 from zato.common.odb.model import Cluster
-from zato.common.util import get_response_value, replace_private_key
+from zato.common.util.api import get_response_value, replace_private_key
 from zato.common.util.sql import search as sql_search
-from zato.server.service import Bool, Int, Service
-from zato.server.service.reqresp.sio import convert_sio
+from zato.common.xml_ import zato_namespace
+from zato.server.service import AsIs, Bool, Int, Service
 
 # ################################################################################################################################
 
@@ -87,12 +87,6 @@ class AdminService(Service):
 
 # ################################################################################################################################
 
-    def _convert_sio_elem(self, param_name, value):
-        return convert_sio(self.cid, param_name, param_name, value, True, False, self.request.bool_parameter_prefixes,
-            self.request.int_parameters, self.request.int_parameter_suffixes, False, self.server.encrypt, True)
-
-# ################################################################################################################################
-
     def before_handle(self):
 
         # Do not log BASE64-encoded messages
@@ -113,7 +107,7 @@ class AdminService(Service):
 # ################################################################################################################################
 
     def handle(self, *args, **kwargs):
-        raise NotImplementedError('Should be overridden by subclasses (AdminService.handle)')
+        raise NotImplementedError('Should be overridden by subclasses (AdminService.handle -> {})'.format(self.name))
 
 # ################################################################################################################################
 
@@ -134,17 +128,16 @@ class AdminService(Service):
             return
 
         if self.server.is_admin_enabled_for_info:
-
-            payload = self.response.payload
-            is_text = isinstance(payload, basestring)
-            needs_meta = self.request.input.get('needs_meta', True)
-
-            if needs_meta and hasattr(self, '_search_tool'):
-                if not is_text:
-                    payload.zato_meta = self._search_tool.output_meta
-
             logger.info('Response; service:`%s`, data:`%s` cid:`%s`, ',
                 self.name, replace_private_key(get_response_value(self.response)), self.cid)
+
+        payload = self.response.payload
+        is_text = isinstance(payload, basestring)
+        needs_meta = self.request.input.get('needs_meta', True)
+
+        if needs_meta and hasattr(self, '_search_tool'):
+            if not is_text:
+                payload.zato_meta = self._search_tool.output_meta
 
 # ################################################################################################################################
 
@@ -212,9 +205,14 @@ class ChangePasswordBase(AdminService):
     password_required = True
 
     class SimpleIO(AdminSIO):
-        input_required = (Int('id'), 'password1', 'password2')
+        input_required = 'password1', 'password2'
+        input_optional = Int('id'), 'name', 'type_'
+        output_required = AsIs('id')
 
-    def _handle(self, class_, auth_func, action, name_func=None, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL, *args, **kwargs):
+    def _handle(self, class_, auth_func, action, name_func=None, instance_id=None, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL,
+        *args, **kwargs):
+
+        instance_id = instance_id or self.request.input.id
 
         with closing(self.odb.session()) as session:
             password1 = self.request.input.get('password1', '')
@@ -235,7 +233,7 @@ class ChangePasswordBase(AdminService):
                     raise Exception('Passwords need to be the same')
 
                 instance = session.query(class_).\
-                    filter(class_.id==self.request.input.id).\
+                    filter(class_.id==instance_id).\
                     one()
 
                 auth_func(instance, password1)
@@ -246,10 +244,14 @@ class ChangePasswordBase(AdminService):
                 if msg_type:
                     name = name_func(instance) if name_func else instance.name
 
+                    self.request.input.id = instance_id
                     self.request.input.action = action
                     self.request.input.name = name
                     self.request.input.password = password1_decrypted
                     self.request.input.salt = kwargs.get('salt')
+
+                    # Always return ID of the object whose password we changed
+                    self.response.payload.id = instance_id
 
                     for attr in kwargs.get('publish_instance_attrs', []):
                         self.request.input[attr] = getattr(instance, attr, ZATO_NONE)

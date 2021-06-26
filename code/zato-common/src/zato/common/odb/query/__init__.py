@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from functools import wraps
-from json import loads
 
 # Bunch
 from bunch import bunchify
@@ -22,13 +21,14 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import case
 
 # Zato
-from zato.common import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, \
+from zato.common.api import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, \
      PARAMS_PRIORITY, PUBSUB, URL_PARAMS_PRIORITY
+from zato.common.json_internal import loads
 from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, CacheBuiltin, CacheMemcached, CassandraConn, \
-     CassandraQuery, ChannelAMQP, ChannelSTOMP, ChannelWebSocket, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, \
+     CassandraQuery, ChannelAMQP, ChannelWebSocket, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, \
      CronStyleJob, ElasticSearch, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, JSONPointer, JWT, \
-     MsgNamespace, NotificationOpenStackSwift as NotifOSS, NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, \
-     OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubEndpoint, \
+     MsgNamespace, NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, \
+     OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, PubSubEndpoint, \
      PubSubEndpointTopic, PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, PubSubTopic, RBACClientRole, \
      RBACPermission, RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMSTwilio, SMTP, Solr, SQLConnectionPool, \
      TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, WebSocketClientPubSubKeys, WebSocketSubscription, \
@@ -50,6 +50,18 @@ _gen_attr = GENERIC.ATTR_NAME
 def count(session, q):
     _q = q.statement.with_only_columns([func.count()]).order_by(None)
     return session.execute(_q).scalar()
+
+# ################################################################################################################################
+
+class _QueryConfig:
+
+    @staticmethod
+    def supports_kwargs(query_func):
+        """ Returns True if the given query func supports kwargs, False otherwise.
+        """
+        return query_func in (
+            http_soap_list,
+        )
 
 # ################################################################################################################################
 
@@ -102,7 +114,12 @@ def query_wrapper(func):
         # depending on whether columns are needed or not.
         needs_columns = args[-1]
 
-        tool = _SearchWrapper(func(*args), **kwargs)
+        if _QueryConfig.supports_kwargs(func):
+            result = func(*args, **kwargs)
+        else:
+            result = func(*args)
+
+        tool = _SearchWrapper(result, **kwargs)
         result = _SearchResults(tool.q, tool.q.all(), tool.q.statement.columns, tool.total)
 
         if needs_columns:
@@ -143,32 +160,53 @@ def internal_channel_list(session, cluster_id):
         filter(HTTPSOAP.service_id==Service.id).\
         filter(Service.is_internal==True).\
         filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==HTTPSOAP.cluster_id)
+        filter(Cluster.id==HTTPSOAP.cluster_id) # noqa: E712
 
 # ################################################################################################################################
 
 def _job(session, cluster_id):
     return session.query(
-        Job.id, Job.name, Job.is_active,
-        Job.job_type, Job.start_date, Job.extra,
-        Service.name.label('service_name'), Service.impl_name.label('service_impl_name'),
+        Job.id,
+        Job.name,
+        Job.is_active,
+        Job.job_type,
+        Job.start_date,
+        Job.extra,
+        Service.name.label('service_name'),
+        Service.impl_name.label('service_impl_name'),
         Service.id.label('service_id'),
-        IntervalBasedJob.weeks, IntervalBasedJob.days,
-        IntervalBasedJob.hours, IntervalBasedJob.minutes,
-        IntervalBasedJob.seconds, IntervalBasedJob.repeats,
-        CronStyleJob.cron_definition).\
+        IntervalBasedJob.weeks,
+        IntervalBasedJob.days,
+        IntervalBasedJob.hours,
+        IntervalBasedJob.minutes,
+        IntervalBasedJob.seconds,
+        IntervalBasedJob.repeats,
+        CronStyleJob.cron_definition
+        ).\
         outerjoin(IntervalBasedJob, Job.id==IntervalBasedJob.job_id).\
         outerjoin(CronStyleJob, Job.id==CronStyleJob.job_id).\
         filter(Job.cluster_id==Cluster.id).\
         filter(Job.service_id==Service.id).\
-        filter(Cluster.id==cluster_id).\
-        order_by(Job.name)
+        filter(Cluster.id==cluster_id)
 
 @query_wrapper
-def job_list(session, cluster_id, needs_columns=False):
+def job_list(session, cluster_id, service_name=None, needs_columns=False):
     """ All the scheduler's jobs defined in the ODB.
     """
-    return _job(session, cluster_id)
+    q = _job(session, cluster_id)
+
+    if service_name:
+        q = q.filter(Service.name==service_name)
+
+    return q.\
+        order_by(Job.name)
+
+def job_by_id(session, cluster_id, job_id):
+    """ A scheduler's job fetched by its ID.
+    """
+    return _job(session, cluster_id).\
+        filter(Job.id==job_id).\
+        one()
 
 def job_by_name(session, cluster_id, name):
     """ A scheduler's job fetched by its name.
@@ -178,6 +216,21 @@ def job_by_name(session, cluster_id, name):
         one()
 
 # ################################################################################################################################
+
+def _sec_base(session, cluster_id):
+    return session.query(
+        SecurityBase.id,
+        SecurityBase.is_active,
+        SecurityBase.sec_type,
+        SecurityBase.name,
+        SecurityBase.username).\
+        filter(SecurityBase.cluster_id==Cluster.id).\
+        filter(Cluster.id==cluster_id)
+
+def sec_base(session, cluster_id, sec_base_id):
+    return _sec_base(session, cluster_id).\
+        filter(SecurityBase.id==sec_base_id).\
+        one()
 
 @query_wrapper
 def apikey_security_list(session, cluster_id, needs_columns=False):
@@ -304,18 +357,6 @@ def oauth_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==OAuth.cluster_id).\
         filter(SecurityBase.id==OAuth.id).\
-        order_by(SecurityBase.name)
-
-@query_wrapper
-def openstack_security_list(session, cluster_id, needs_columns=False):
-    """ All the OpenStackSecurity definitions.
-    """
-    return session.query(
-        OpenStackSecurity.id, OpenStackSecurity.name, OpenStackSecurity.is_active,
-        OpenStackSecurity.username, OpenStackSecurity.sec_type).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==OpenStackSecurity.cluster_id).\
-        filter(SecurityBase.id==OpenStackSecurity.id).\
         order_by(SecurityBase.name)
 
 @query_wrapper
@@ -523,32 +564,6 @@ def channel_amqp_list(session, cluster_id, needs_columns=False):
 
 # ################################################################################################################################
 
-def _channel_stomp(session, cluster_id):
-    return session.query(
-        ChannelSTOMP.id, ChannelSTOMP.name, ChannelSTOMP.is_active, ChannelSTOMP.username,
-        ChannelSTOMP.password, ChannelSTOMP.address, ChannelSTOMP.proto_version,
-        ChannelSTOMP.timeout, ChannelSTOMP.sub_to, ChannelSTOMP.service_id,
-        Service.name.label('service_name')).\
-        filter(Service.id==ChannelSTOMP.service_id).\
-        filter(Cluster.id==ChannelSTOMP.cluster_id).\
-        filter(Cluster.id==cluster_id).\
-        order_by(ChannelSTOMP.name)
-
-def channel_stomp(session, cluster_id, id):
-    """ A STOMP channel.
-    """
-    return _channel_stomp(session, cluster_id).\
-        filter(ChannelSTOMP.id==id).\
-        one()
-
-@query_wrapper
-def channel_stomp_list(session, cluster_id, needs_columns=False):
-    """ A list of STOMP channels.
-    """
-    return _channel_stomp(session, cluster_id)
-
-# ################################################################################################################################
-
 def _channel_wmq(session, cluster_id):
     return session.query(
         ChannelWMQ.id, ChannelWMQ.name, ChannelWMQ.is_active,
@@ -573,27 +588,6 @@ def channel_wmq_list(session, cluster_id, needs_columns=False):
     """ IBM MQ channels.
     """
     return _channel_wmq(session, cluster_id)
-
-# ################################################################################################################################
-
-def _out_stomp(session, cluster_id):
-    return session.query(OutgoingSTOMP).\
-        filter(Cluster.id==OutgoingSTOMP.cluster_id).\
-        filter(Cluster.id==cluster_id).\
-        order_by(OutgoingSTOMP.name)
-
-def out_stomp(session, cluster_id, id):
-    """ An outgoing STOMP connection.
-    """
-    return _out_zmq(session, cluster_id).\
-        filter(OutgoingSTOMP.id==id).\
-        one()
-
-@query_wrapper
-def out_stomp_list(session, cluster_id, needs_columns=False):
-    """ Outgoing STOMP connections.
-    """
-    return _out_stomp(session, cluster_id)
 
 # ################################################################################################################################
 
@@ -722,7 +716,8 @@ def http_soap(session, cluster_id, item_id=None, name=None):
     return q.one()
 
 @query_wrapper
-def http_soap_list(session, cluster_id, connection=None, transport=None, return_internal=True, needs_columns=False, **kwargs):
+def http_soap_list(session, cluster_id, connection=None, transport=None, return_internal=True, data_format=None,
+    needs_columns=False, *args, **kwargs):
     """ HTTP/SOAP connections, both channels and outgoing ones.
     """
     q = _http_soap(session, cluster_id)
@@ -735,6 +730,9 @@ def http_soap_list(session, cluster_id, connection=None, transport=None, return_
 
     if not return_internal:
         q = q.filter(not_(HTTPSOAP.name.startswith('zato')))
+
+    if data_format:
+        q = q.filter(HTTPSOAP.data_format.startswith(data_format))
 
     return q
 
@@ -763,9 +761,18 @@ def out_sql_list(session, cluster_id, needs_columns=False):
 
 def _out_ftp(session, cluster_id):
     return session.query(
-        OutgoingFTP.id, OutgoingFTP.name, OutgoingFTP.is_active,
-        OutgoingFTP.host, OutgoingFTP.port, OutgoingFTP.user, OutgoingFTP.password,
-        OutgoingFTP.acct, OutgoingFTP.timeout, OutgoingFTP.dircache).\
+        OutgoingFTP.id,
+        OutgoingFTP.name,
+        OutgoingFTP.is_active,
+        OutgoingFTP.host,
+        OutgoingFTP.port,
+        OutgoingFTP.user,
+        OutgoingFTP.password,
+        OutgoingFTP.acct,
+        OutgoingFTP.timeout,
+        OutgoingFTP.dircache,
+        OutgoingFTP.opaque1,
+        ).\
         filter(Cluster.id==OutgoingFTP.cluster_id).\
         filter(Cluster.id==cluster_id).\
         order_by(OutgoingFTP.name)
@@ -799,20 +806,29 @@ def _service(session, cluster_id):
         filter(Cluster.id==cluster_id).\
         order_by(Service.name)
 
-def service(session, cluster_id, id):
+def service(session, cluster_id, id=None, name=None):
     """ A service.
     """
-    return _service(session, cluster_id).\
-        filter(Service.id==id).\
-        one()
+    q = _service(session, cluster_id)
+
+    if name:
+        q = q.filter(Service.name==name)
+    elif id:
+        q = q.filter(Service.id==id)
+
+    return q.one()
 
 @query_wrapper
-def service_list(session, cluster_id, return_internal=True, needs_columns=False):
+def service_list(session, cluster_id, return_internal=True, include_list=None, needs_columns=False):
     """ All services.
     """
     q = _service(session, cluster_id)
-    if not return_internal:
-        q = q.filter(not_(Service.name.startswith('zato')))
+
+    if include_list:
+        q = q.filter(or_(Service.name.in_(include_list)))
+    else:
+        if not return_internal:
+            q = q.filter(not_(Service.name.startswith('zato')))
 
     return q
 
@@ -858,27 +874,6 @@ def json_pointer_list(session, cluster_id, needs_columns=False):
     """ All the JSON Pointers.
     """
     return _msg_list(JSONPointer, JSONPointer.name, session, cluster_id, query_wrapper)
-
-# ################################################################################################################################
-
-def _cloud_openstack_swift(session, cluster_id):
-    return session.query(OpenStackSwift).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==OpenStackSwift.cluster_id).\
-        order_by(OpenStackSwift.name)
-
-def cloud_openstack_swift(session, cluster_id, id):
-    """ An OpenStack Swift connection.
-    """
-    return _cloud_openstack_swift(session, cluster_id).\
-        filter(OpenStackSwift.id==id).\
-        one()
-
-@query_wrapper
-def cloud_openstack_swift_list(session, cluster_id, needs_columns=False):
-    """ OpenStack Swift connections.
-    """
-    return _cloud_openstack_swift(session, cluster_id)
 
 # ################################################################################################################################
 
@@ -1173,36 +1168,6 @@ def pubsub_hook_service(session, cluster_id, endpoint_id, model_class):
 
 # ################################################################################################################################
 
-def _notif_cloud_openstack_swift(session, cluster_id, needs_password):
-    """ OpenStack Swift notifications.
-    """
-
-    columns = [NotifOSS.id, NotifOSS.name, NotifOSS.is_active, NotifOSS.notif_type, NotifOSS.def_id, NotifOSS.containers,
-        NotifOSS.interval, NotifOSS.name_pattern, NotifOSS.name_pattern_neg, NotifOSS.get_data, NotifOSS.get_data_patt,
-        NotifOSS.get_data_patt_neg, OpenStackSwift.name.label('def_name'), Service.name.label('service_name')]
-
-    return session.query(*columns).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==NotifOSS.cluster_id).\
-        filter(NotifOSS.def_id==OpenStackSwift.id).\
-        filter(NotifOSS.service_id==Service.id).\
-        order_by(NotifOSS.name)
-
-def notif_cloud_openstack_swift(session, cluster_id, id, needs_password=False):
-    """ An OpenStack Swift notification definition.
-    """
-    return _notif_cloud_openstack_swift(session, cluster_id, needs_password).\
-        filter(NotifOSS.id==id).\
-        one()
-
-@query_wrapper
-def notif_cloud_openstack_swift_list(session, cluster_id, needs_password=False, needs_columns=False):
-    """ OpenStack Swift connection definitions.
-    """
-    return _notif_cloud_openstack_swift(session, cluster_id, needs_password)
-
-# ################################################################################################################################
-
 def _notif_sql(session, cluster_id, needs_password):
     """ SQL notifications.
     """
@@ -1393,12 +1358,17 @@ def _rbac_permission(session, cluster_id):
         filter(Cluster.id==RBACPermission.cluster_id).\
         order_by(RBACPermission.name)
 
-def rbac_permission(session, cluster_id, id):
+def rbac_permission(session, cluster_id, id=None, name=None):
     """ An RBAC permission.
     """
-    return _rbac_permission(session, cluster_id).\
-        filter(RBACPermission.id==id).\
-        one()
+    q = _rbac_permission(session, cluster_id)
+
+    if name:
+        q = q.filter(RBACPermission.name==name)
+    elif id:
+        q = q.filter(RBACPermission.id==id)
+
+    return q.one()
 
 @query_wrapper
 def rbac_permission_list(session, cluster_id, needs_columns=False):
@@ -1416,12 +1386,17 @@ def _rbac_role(session, cluster_id):
         outerjoin(rbac_parent, rbac_parent.id==RBACRole.parent_id).\
         order_by(RBACRole.name)
 
-def rbac_role(session, cluster_id, id):
+def rbac_role(session, cluster_id, id=None, name=None):
     """ An RBAC role.
     """
-    return _rbac_role(session, cluster_id).\
-        filter(RBACRole.id==id).\
-        one()
+    q = _rbac_role(session, cluster_id)
+
+    if name:
+        q = q.filter(RBACRole.name==name)
+    elif id:
+        q = q.filter(RBACRole.id==id)
+
+    return q.one()
 
 @query_wrapper
 def rbac_role_list(session, cluster_id, needs_columns=False):
@@ -1578,11 +1553,19 @@ def _channel_web_socket(session, cluster_id):
     """ WebSocket channels
     """
     return session.query(
-        ChannelWebSocket.id, ChannelWebSocket.name, ChannelWebSocket.is_active,
-        ChannelWebSocket.is_internal, ChannelWebSocket.address,
-        ChannelWebSocket.data_format, ChannelWebSocket.service_id, ChannelWebSocket.security_id,
-        ChannelWebSocket.new_token_wait_time, ChannelWebSocket.token_ttl,
-        ChannelWebSocket.is_out, SecurityBase.sec_type,
+        ChannelWebSocket.id,
+        ChannelWebSocket.name,
+        ChannelWebSocket.is_active,
+        ChannelWebSocket.is_internal,
+        ChannelWebSocket.address,
+        ChannelWebSocket.data_format,
+        ChannelWebSocket.service_id,
+        ChannelWebSocket.security_id,
+        ChannelWebSocket.new_token_wait_time,
+        ChannelWebSocket.token_ttl,
+        ChannelWebSocket.is_out,
+        ChannelWebSocket.opaque1,
+        SecurityBase.sec_type,
         VaultConnection.default_auth_method.label('vault_conn_default_auth_method'),
         SecurityBase.name.label('sec_name'),
         Service.name.label('service_name'),
@@ -1660,10 +1643,19 @@ def _web_socket_client(session, cluster_id, channel_id):
 
 # ################################################################################################################################
 
-def web_socket_client(session, cluster_id, channel_id, pub_client_id):
-    return _web_socket_client(session, cluster_id, channel_id).\
-           filter(WebSocketClient.pub_client_id==pub_client_id).\
-           first()
+def web_socket_client(session, cluster_id, channel_id, pub_client_id=None, ext_client_id=None, use_first=True):
+    query = _web_socket_client(session, cluster_id, channel_id)
+
+    if pub_client_id:
+        query = query.filter(WebSocketClient.pub_client_id==pub_client_id)
+
+    elif ext_client_id:
+        query = query.filter(WebSocketClient.ext_client_id==ext_client_id)
+
+    else:
+        raise ValueError('Either pub_client_id or ext_client_id is required on input')
+
+    return query.first() if use_first else query.all()
 
 # ################################################################################################################################
 

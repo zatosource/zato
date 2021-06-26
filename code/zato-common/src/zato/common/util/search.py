@@ -19,14 +19,14 @@ class SearchResults(object):
         self.q = q
         self.result = result
         self.total = total
-        self.columns = columns
+        self.columns = columns # type: list
         self.num_pages = 0
         self.cur_page = 0
         self.prev_page = 0
         self.next_page = 0
         self.has_prev_page = False
         self.has_next_page = False
-        self.page_size = None
+        self.page_size = None # type: int
 
 # ################################################################################################################################
 
@@ -37,7 +37,7 @@ class SearchResults(object):
 
     def __repr__(self):
         # To avoice circular imports - this is OK because we very rarely repr(self) anyway
-        from zato.common.util import make_repr
+        from zato.common.util.api import make_repr
         return make_repr(self)
 
 # ################################################################################################################################

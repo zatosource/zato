@@ -16,14 +16,13 @@ from datetime import datetime
 from io import StringIO
 from traceback import format_exc
 
-# anyjson
-from anyjson import dumps
-
 # Bunch
 from bunch import Bunch
 
+# ciso8601
+from ciso8601 import parse_datetime
+
 # dateutil
-from dateutil.parser import parse
 from dateutil.relativedelta import MO, relativedelta
 
 # Django
@@ -41,8 +40,9 @@ from pytz import timezone, utc
 from zato.admin.web import from_user_to_utc, from_utc_to_user
 from zato.admin.web.forms.stats import MaintenanceForm, NForm, SettingsForm
 from zato.admin.web.views import get_js_dt_format, get_sample_dt, method_allowed
-from zato.common import DEFAULT_STATS_SETTINGS, StatsElem
-from zato.common.util import from_local_to_utc, make_repr, now, utcnow
+from zato.common.api import DEFAULT_STATS_SETTINGS, StatsElem
+from zato.common.json_internal import dumps
+from zato.common.util.api import from_local_to_utc, make_repr, now, utcnow
 
 logger = logging.getLogger(__name__)
 
@@ -472,7 +472,7 @@ def stats_data(req, stats_type):
         duration = skip_by_duration[req_input.shift]
         format = user_format[duration]
 
-        shift_info = shift(parse(req_input.utc_start), req_input.user_start, req.zato.user_profile, req_input.shift, duration, format)
+        shift_info = shift(parse_datetime(req_input.utc_start), req_input.user_start, req.zato.user_profile, req_input.shift, duration, format)
 
         for date_type in('utc', 'user'):
             for direction in('start', 'stop'):

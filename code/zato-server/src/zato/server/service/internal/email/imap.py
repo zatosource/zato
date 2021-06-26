@@ -6,8 +6,6 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 from contextlib import closing
 from time import time
@@ -87,8 +85,8 @@ class Ping(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_email_imap_ping_request'
         response_elem = 'zato_email_imap_ping_response'
-        input_required = ('id',)
-        output_required = ('info',)
+        input_required = 'id'
+        output_optional = 'info'
 
     def handle(self):
 
@@ -96,10 +94,14 @@ class Ping(AdminService):
             item = session.query(IMAP).filter_by(id=self.request.input.id).one()
 
         start_time = time()
-        self.email.imap.get(item.name, True).conn.ping()
-        response_time = time() - start_time
 
-        self.response.payload.info = 'Ping NOOP submitted, took:`{0:03.4f} s`, check server logs for details.'.format(
-            response_time)
+        if not self.email:
+            self.response.payload.info = 'Could not ping connection; is component_enabled.email set to True in server.conf?'
+        else:
+            self.email.imap.get(item.name, True).conn.ping()
+            response_time = time() - start_time
+
+            self.response.payload.info = 'Ping NOOP submitted, took:`{0:03.4f} s`, check server logs for details.'.format(
+                response_time)
 
 # ################################################################################################################################

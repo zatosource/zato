@@ -10,14 +10,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-import json as stdlib_json
 from base64 import b64decode
 from collections import namedtuple
 from datetime import datetime
 from traceback import format_exc
-
-# anyjson
-from anyjson import dumps, loads
 
 # dateutil
 from dateutil.relativedelta import relativedelta
@@ -46,7 +42,8 @@ from validate import is_boolean
 from zato.admin.web import from_utc_to_user, last_hour_start_stop
 from zato.admin.web.forms.service import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, upload_to_server
-from zato.common import DATA_FORMAT, SourceCodeInfo, ZATO_NONE
+from zato.common.api import DATA_FORMAT, SourceCodeInfo, ZATO_NONE
+from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import Service
 
 # ################################################################################################################################
@@ -161,7 +158,7 @@ def get_pretty_print(value, data_format):
         return etree.tostring(tree, pretty_print=True, xml_declaration=True, encoding='UTF-8')
     else:
         value = loads(value)
-        return stdlib_json.dumps(value, sort_keys=True, indent=2)
+        return dumps(value, sort_keys=True, indent=2)
 
 # ################################################################################################################################
 
@@ -249,7 +246,7 @@ def overview(req, service_name):
             response = req.zato.client.invoke('zato.stats.get-by-service', {'service_id':service.id, 'start':start, 'stop':now})
             if response.has_data:
                 for name in('mean_trend', 'usage_trend', 'min_resp_time', 'max_resp_time', 'mean', 'usage', 'rate'):
-                    value = getattr(response.data, name)
+                    value = getattr(response.data, name, ZATO_NONE)
                     if not value or value == ZATO_NONE:
                         value = ''
 

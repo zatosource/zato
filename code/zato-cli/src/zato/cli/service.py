@@ -11,8 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Zato
 from zato.cli import ZatoCommand
 from zato.client import CID_NO_CLIP, DEFAULT_MAX_CID_REPR, DEFAULT_MAX_RESPONSE_REPR
-from zato.common import BROKER, DATA_FORMAT, ZATO_INFO_FILE
-from zato.common.util import get_client_from_server_conf
+from zato.common.api import BROKER, ZATO_INFO_FILE
 
 # ################################################################################################################################
 
@@ -36,7 +35,7 @@ class Invoke(ZatoCommand):
             DEFAULT_MAX_CID_REPR, CID_NO_CLIP), 'default':DEFAULT_MAX_CID_REPR},
         {'name':'--max-response-repr', 'help':'How many characters of a response to print out in verbose mode, defaults to {}'.format(
             DEFAULT_MAX_RESPONSE_REPR), 'default':DEFAULT_MAX_RESPONSE_REPR},
-        {'name':'--async', 'help':'If given, the service will be invoked asynchronously', 'action':'store_true'},
+        {'name':'--is-async', 'help':'If given, the service will be invoked asynchronously', 'action':'store_true'},
         {'name':'--expiration', 'help':'In async mode, after how many seconds the message should expire, defaults to {} seconds'.format(
             BROKER.DEFAULT_EXPIRATION), 'default':BROKER.DEFAULT_EXPIRATION},
     ]
@@ -44,6 +43,10 @@ class Invoke(ZatoCommand):
 # ################################################################################################################################
 
     def execute(self, args):
+
+        # Zato
+        from zato.common.api import DATA_FORMAT
+        from zato.common.util.api import get_client_from_server_conf
 
         client = get_client_from_server_conf(args.path)
 
@@ -56,7 +59,7 @@ class Invoke(ZatoCommand):
         # Prevents attempts to convert/escape XML into JSON
         to_json = True if args.data_format == DATA_FORMAT.JSON else False
 
-        func = client.invoke_async if args.async else client.invoke
+        func = client.invoke_async if args.is_async else client.invoke
         response = func(args.name, args.payload, headers, args.channel, args.data_format, args.transport, to_json=to_json)
 
         if response.ok:

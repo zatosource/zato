@@ -1,9 +1,11 @@
 
+![Zato](https://zato.io/img/gh-banner.png)
+
+
 Zato /zɑːtəʊ/
 -------------
 
-_The next generation ESB and application server written in Python and
-released under a commercial-friendly LGPL license_. Think:
+_The next generation ESB and application server written in Python and released under a commercial-friendly LGPL license_. Think:
 
 * Increased productivity
 * Painless rollouts with less downtime

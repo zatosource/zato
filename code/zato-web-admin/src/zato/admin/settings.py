@@ -19,16 +19,26 @@ from sqlalchemy import create_engine
 # YAML
 import yaml
 
+# These are needed for pyflakes
+log_config = None
+config_dir = None
+DATABASES = None
+db_type = None
+django_sqlalchemy_engine = None
+SSL_CA_CERTS = None
+SSL_CERT_FILE = None
+SSL_KEY_FILE = None
+
 # Zato
-from zato.common import TRACE1
+from zato.common.api import TRACE1
 from zato.common.settings_db import SettingsDB
-from zato.common.util import get_engine_url
+from zato.common.util.api import get_engine_url
 from zato.admin.zato_settings import *  # NOQA
 
 logging.addLevelName('TRACE1', TRACE1)
-if 'log_config' in globals():
+if log_config:
     with open(log_config) as f:
-        logging.config.dictConfig(yaml.load(f))
+        logging.config.dictConfig(yaml.load(f, yaml.FullLoader))
 else:
     logging.basicConfig(level=logging.DEBUG)
 

@@ -20,6 +20,15 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 # ################################################################################################################################
 
+if 0:
+    from bunch import Bunch
+    from zato.server.service import Service
+
+    Bunch = Bunch
+    Service = Service
+
+# ################################################################################################################################
+
 elem = 'security_rbac_permission'
 model = RBACPermission
 label = 'an RBAC permission'
@@ -31,6 +40,8 @@ list_func = rbac_permission_list
 # ################################################################################################################################
 
 def broker_message_hook(service, input, instance, attrs, service_type):
+    # type: (Service, Bunch, RBACPermission, Bunch, str)
+
     if service_type == 'create_edit':
         input.id = instance.id
 

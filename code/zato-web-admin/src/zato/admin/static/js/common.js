@@ -49,12 +49,17 @@ if ({}.__proto__){
 $.namespace('zato');
 $.namespace('zato.account');
 $.namespace('zato.account.basic_settings');
+$.namespace('zato.audit_log');
 $.namespace('zato.cache');
 $.namespace('zato.cache.builtin');
 $.namespace('zato.cache.builtin.entries');
 $.namespace('zato.cache.memcached');
 $.namespace('zato.channel');
 $.namespace('zato.channel.amqp');
+$.namespace('zato.channel.file_transfer');
+$.namespace('zato.channel.hl7');
+$.namespace('zato.channel.hl7.mllp');
+$.namespace('zato.channel.hl7.rest');
 $.namespace('zato.channel.jms_wmq');
 $.namespace('zato.channel.json_rpc');
 $.namespace('zato.channel.kafka');
@@ -65,11 +70,11 @@ $.namespace('zato.channel.zmq');
 $.namespace('zato.cloud');
 $.namespace('zato.cloud.aws');
 $.namespace('zato.cloud.aws.s3');
-$.namespace('zato.cloud.openstack');
-$.namespace('zato.cloud.openstack.swift');
+$.namespace('zato.cloud.dropbox');
 $.namespace('zato.cluster');
 $.namespace('zato.cluster.servers');
 $.namespace('zato.data_table');
+$.namespace('zato.data_table.multirow');
 $.namespace('zato.definition');
 $.namespace('zato.definition.amqp');
 $.namespace('zato.definition.cassandra');
@@ -94,13 +99,12 @@ $.namespace('zato.message.live_browser');
 $.namespace('zato.message.namespace');
 $.namespace('zato.message.xpath');
 $.namespace('zato.notif');
-$.namespace('zato.notif.cloud');
-$.namespace('zato.notif.cloud.openstack');
-$.namespace('zato.notif.cloud.openstack.swift');
 $.namespace('zato.notif.sql');
 $.namespace('zato.outgoing');
 $.namespace('zato.outgoing.amqp');
 $.namespace('zato.outgoing.ftp');
+$.namespace('zato.outgoing.hl7');
+$.namespace('zato.outgoing.hl7.mllp');
 $.namespace('zato.outgoing.im');
 $.namespace('zato.outgoing.im.slack');
 $.namespace('zato.outgoing.im.telegram');
@@ -137,7 +141,6 @@ $.namespace('zato.security.basic_auth');
 $.namespace('zato.security.jwt');
 $.namespace('zato.security.ntlm');
 $.namespace('zato.security.oauth');
-$.namespace('zato.security.openstack');
 $.namespace('zato.security.rbac');
 $.namespace('zato.security.rbac.client_role');
 $.namespace('zato.security.rbac.permission');
@@ -266,8 +269,8 @@ $.fn.zato.form.serialize = function(form) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /* Takes a form (ID or a jQuery object), a business object and populates the
-form with values read off the object. The 'name' and 'id' attributes of the
-form's fields may use custom prefixes that will be taken into account accordingly.
+   form with values read from the object. The 'name' and 'id' attributes of the
+   form's fields may use custom prefixes that will be taken into account accordingly.
 */
 $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
 
@@ -288,15 +291,25 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
     var fields = $.fn.zato.form.serialize(form);
     var skip_boolean = ['in_lb']; // A list of boolean fields that should be treated as though they were regular text
 
+    /*
+    for(item_attr in instance) {
+        console.log('Item attr -> `'+ item_attr +'`');
+    }
+
     for(field_name in fields) {
-        //console.log('Field -> `'+ field_name +'`');
+        console.log('Field -> `'+ field_name +'`');
+    }
+    */
+
+    for(field_name in fields) {
+        // console.log('Field -> `'+ field_name +'`');
         if(field_name.indexOf(name_prefix) === 0 || field_name == 'id') {
             field_name = field_name.replace(name_prefix, '');
             for(item_attr in instance) {
-                //console.log('Item attr -> `'+ item_attr +'`');
+                // console.log('Item attr -> `'+ item_attr +'`');
                 if(item_attr == field_name) {
                     value = instance[item_attr];
-                    console.log('Field/value: `'+ item_attr + '` `'+ value +'`');
+                    // console.log('Field/value: `'+ item_attr + '` `'+ value +'`');
                     form_elem_name = id_prefix + field_name;
                     form_elem = $(form_elem_name);
                     if($.fn.zato.like_bool(value)) {
@@ -365,14 +378,14 @@ $.fn.zato.data_table.parse = function() {
         var instance = new $.fn.zato.data_table.class_()
         var tds = $(row).find('td');
 
-        console.info('columns = ' + columns);
+        // console.info('columns = ' + columns);
 
         $.each(tds, function(td_idx, td) {
 
             var attr_name = columns[td_idx];
             var attr_value = $(td).text().trim();
 
-            console.log('td_idx:`'+ td_idx +'`, attr_name:`'+ attr_name +'`, attr_value:`'+ attr_value + '`');
+            // console.log('td_idx:`'+ td_idx +'`, attr_name:`'+ attr_name +'`, attr_value:`'+ attr_value + '`');
 
             // Don't bother with ignored attributes.
             if(attr_name[0] != '_') {
@@ -635,7 +648,15 @@ $.fn.zato.data_table.setup_change_password = function() {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.data_table._create_edit = function(action, title, id) {
+$.fn.zato.data_table._create_edit = function(action, title, id, remove_multirow) {
+
+    let _remove_multirow = remove_multirow === undefined ? true : remove_multirow;
+
+    // Clean up all the multirow elements that were possibly
+    // automatically generated for that form.
+    if(_remove_multirow) {
+        $.fn.zato.data_table.multirow.remove_multirow_added();
+    }
 
     if(action == 'edit') {
 
@@ -643,6 +664,7 @@ $.fn.zato.data_table._create_edit = function(action, title, id) {
         var name_prefix = action + '-';
         var id_prefix = String.format('#id_{0}', name_prefix);
         var instance = $.fn.zato.data_table.data[id];
+
         $.fn.zato.form.populate(form, instance, name_prefix, id_prefix);
     }
 
@@ -651,14 +673,18 @@ $.fn.zato.data_table._create_edit = function(action, title, id) {
     div.dialog('open');
 }
 
+$.fn.zato.data_table.edit = function(action, title, id, remove_multirow) {
+    $.fn.zato.data_table._create_edit(action, title, id, remove_multirow);
+}
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) {
 
-    var instance = new $.fn.zato.data_table.class_();
-    var form = $(String.format('#{0}-form', action));
+    let instance = new $.fn.zato.data_table.class_();
+    let form = $(String.format('#{0}-form', action));
 
-    var prefix;
+    let prefix;
     if(action == 'edit') {
         prefix = action + '-';
     }
@@ -666,11 +692,12 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
         prefix = '';
     }
 
-    var name = '';
-    var id = '';
-    var tag_name = '';
-    var html_elem;
-    var value = '';
+    let name = '';
+    let id = '';
+    let tag_name = '';
+    let html_elem;
+    let value = '';
+    let multirow_visited = new Map();
 
     $.each(form.serializeArray(), function(idx, elem) {
         name = elem.name.replace(prefix, '');
@@ -679,6 +706,27 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
 
         if(tag_name && html_elem.prop('type') == 'checkbox') {
             value = html_elem.is(':checked');
+        }
+
+        else if(html_elem.attr('class') == 'multirow') {
+            let _name_prefixed = prefix+name;
+
+            if(!multirow_visited.get(_name_prefixed)) {
+
+                let _rows = form.find('[name="'+ _name_prefixed +'"]');
+                let _value = [];
+
+                for(var idx=0; idx<_rows.length; idx++) {
+                    let _row = _rows[idx];
+                    let _row_value = $(_row).val()
+                    if(!_value.includes(_row_value)) {
+                        _value.push(_row_value);
+                    }
+                }
+                value = _value;
+            }
+            multirow_visited.set(_name_prefixed, true);
+
         }
 
         else {
@@ -763,7 +811,7 @@ $.fn.zato.data_table.setup_forms = function(attrs) {
 
         });
 
-        // Doh, not exactly the cleanest approach.
+        // Hm, not exactly the cleanest approach.
         if(action) {
             form_id = '#edit-form';
         }
@@ -789,6 +837,164 @@ $.fn.zato.data_table.setup_forms = function(attrs) {
             return false;
         });
     });
+
+    /* Find all multi-row elements and make it possible to add or remove new ones.
+    */
+    let multirow_elems = $('[class~="multirow"]');
+
+    for(let row_idx=0; row_idx < multirow_elems.length; row_idx++) {
+
+        let elem = $(multirow_elems[row_idx]);
+        let parent = elem.parent()
+
+        let elem_id = elem.attr('id')
+        let row_id = elem_id + '_0';
+        let div_id = 'div_' + row_id;
+
+        console.log('Multirow elem found: '+ elem_id + ' ' + div_id);
+
+        // Create a new div and reattach the element found to it,
+        // attaching the div to the parent afterwards.
+
+        // Create the div first ..
+        let div = $('<div/>');
+        div.attr('id', div_id);
+
+        // .. detach the element ..
+        elem.detach();
+
+        // .. attach the element to the new div ..
+        elem.appendTo(div)
+
+        // .. and now append the new div to the elem's previous parent.
+        div.appendTo(parent);
+
+        // Now, create add / remove buttons
+        // (note that we use $.insertAfter which is why the order of addition of buttons is reversed)
+
+        let button_remove = $.fn.zato.data_table.multirow.get_button(row_id, elem_id, '-', false);
+        button_remove.insertAfter(elem);
+
+        let button_add = $.fn.zato.data_table.multirow.get_button(row_id, elem_id, '+', true);
+        button_add.insertAfter(elem);
+    }
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.data_table.multirow.get_button = function(row_id, elem_id, text, is_add) {
+    let button = $('<button/>');
+    let action = is_add ? 'add' : 'remove';
+
+    let button_id = 'button_' + action + '_' + row_id;
+    let on_click = `javascript:$.fn.zato.data_table.multirow.add_row("${row_id}", "${elem_id}", ${is_add})`;
+
+    button.attr('id', button_id);
+    button.prop('type', 'button');
+    button.attr('class', 'multirow-button');
+    button.attr('onclick', on_click);
+    button.text(text);
+
+    return button
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.data_table.multirow.add_row = function(row_id, elem_id, is_add) {
+
+    //console.log(`row_id=${row_id}, elem_id=${elem_id}, is_add=${is_add}`)
+
+    // Find all divs for such an element ID along with the last one in the list
+    let existing = $(`div[id^="div_${elem_id}"]`);
+    let existing_size = existing.size();
+    let last = existing[existing_size-1];
+
+    if(is_add) {
+
+        // Generate a random ID for the new row
+        let new_row_id = elem_id + '_' + $.fn.zato.get_random_string();
+
+        // Find the element to be cloned, e.g. a form select element ..
+        let div = $('#div_' + row_id);
+        let child_selector = `[id=${elem_id}]`;
+
+        // console.log('CHILD '+ child_selector);
+
+        let child = div.children(child_selector)
+
+        // .. clone it ..
+        let cloned = $(child).clone(true, true);
+
+        // .. create a new div for the newly cloned element ..
+        let new_div = $('<div/>');
+        let new_div_id = 'div_' + new_row_id;
+        new_div.attr('id', new_div_id);
+        new_div.attr('class', 'multirow-added');
+
+        new_div.insertAfter(last);
+        cloned.appendTo(new_div);
+
+        // Remove the selected option because there may be some already
+        // picked for the first select option.
+        cloned.find('option:selected').removeAttr('selected');
+
+        return cloned;
+
+    }
+    else {
+
+        // If there is only one such element, it will be the first one, so we cannot remove it,
+        // instead, we need to clear it out.
+        if(existing_size == 1) {
+            let first = $(existing[0]);
+            first.find('option:selected').removeAttr('selected');
+            return;
+        }
+
+        // .. otherwise, remove the last element found.
+        last.remove();
+    }
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.data_table.multirow.remove_multirow_added = function() {
+    $('div[class="multirow-added"]').remove();
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.data_table.multirow.populate_field = function(field_name, source) {
+
+    let _source = null;
+
+    if(typeof(source) === "object") {
+        _source = source;
+    }
+    else {
+        _source = JSON.parse(source);
+    }
+
+    // console.log('SOURCE 1 '+ source);
+    // console.log('SOURCE 2 '+ _source);
+
+    let row_id = 'id_edit-'+ field_name +'_0';
+    let elem_id = 'id_edit-'+ field_name;
+    let elem = $('#' + elem_id);
+
+    // The very first element needs no cloning ..
+    if(_source[0]) {
+        elem.val(_source[0]);
+    };
+
+    // .. but the rest requires new rows (clones), hence iterating from idx=1;
+    for(var idx=1; idx<_source.length; idx++) {
+        let item = _source[idx];
+        if(item) {
+            let cloned = $.fn.zato.data_table.multirow.add_row(row_id, elem_id, true);
+            cloned.val(item);
+        }
+    };
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -796,8 +1002,7 @@ $.fn.zato.data_table.setup_forms = function(attrs) {
 $.fn.zato.data_table.on_submit = function(action) {
     var form = $('#' + action +'-form');
     var callback = function(data, status) {
-            return $.fn.zato.data_table.on_submit_complete(data,
-                status, action);
+            return $.fn.zato.data_table.on_submit_complete(data, status, action);
         }
 
     if($.fn.zato.data_table.before_submit_hook) {
@@ -814,6 +1019,9 @@ $.fn.zato.data_table.on_submit = function(action) {
 $.fn.zato.data_table.on_submit_complete = function(data, status, action) {
 
     if(status == 'success') {
+
+        console.log('CCC '+ data.responseText);
+
         var json = $.parseJSON(data.responseText);
         var include_tr = true ? action == 'create' : false;
         var row = $.fn.zato.data_table.add_row(json, action, $.fn.zato.data_table.new_row_func, include_tr);
@@ -855,6 +1063,10 @@ $.fn.zato.data_table.on_submit_complete = function(data, status, action) {
 
 $.fn.zato.data_table.service_text = function(service, cluster_id) {
     return String.format('<a href="/zato/service/overview/{0}/?cluster={1}">{0}</a>', service, cluster_id);
+}
+
+$.fn.zato.data_table.topic_text = function(topic, cluster_id) {
+    return String.format('<a href="/zato/pubsub/topic/?cluster={1}&amp;query={0}">{0}</a>', topic, cluster_id);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -907,7 +1119,6 @@ $.fn.zato.to_bool = function(item) {
 
 $.fn.zato.like_bool = function(item) {
     var s = new String(item).toLowerCase();
-
     return(s == "false" || s == "true" || s == "on" || _.isBoolean(item));
 }
 
@@ -999,6 +1210,10 @@ $.fn.zato.toggle_time = function(link_name, current_value, new_value) {
     elem.attr('href', href_value);
     elem.html(new_value);
 
+}
+
+$.fn.zato.slugify = function(text) {
+    return text.toLowerCase().replace(/ /g,'-').replace(/[^\w-]+/g,'');
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

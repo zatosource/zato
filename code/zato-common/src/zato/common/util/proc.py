@@ -22,7 +22,7 @@ from sarge import run as sarge_run, shell_format
 from six import PY2
 
 # Zato
-from zato.common import CLI_ARG_SEP
+from zato.common.api import CLI_ARG_SEP
 
 # ################################################################################################################################
 
@@ -36,7 +36,7 @@ stderr_sleep_bg = 1.2
 # ################################################################################################################################
 
 # This is for convenience of switching to a newer version of sarge in the future. Newer versions use async_ instead of async.
-async_keyword = 'async' if PY2 else 'async'
+async_keyword = 'async_' if PY2 else 'async_'
 
 # ################################################################################################################################
 
@@ -84,7 +84,7 @@ class _StdErr(object):
 # ################################################################################################################################
 
 def start_process(component_name, executable, run_in_fg, cli_options, extra_cli_options='', on_keyboard_interrupt=None,
-    failed_to_start_err=-100, extra_options=None, stderr_path=None, stdin_data=None, async_keyword=async_keyword):
+        failed_to_start_err=-100, extra_options=None, stderr_path=None, stdin_data=None, async_keyword=async_keyword):
     """ Starts a new process from a given Python path, either in background or foreground (run_in_fg).
     """
     stderr_path = stderr_path or mkstemp('-zato-start-{}.txt'.format(component_name.replace(' ','')))[1]
@@ -121,7 +121,7 @@ def start_process(component_name, executable, run_in_fg, cli_options, extra_cli_
 # ################################################################################################################################
 
 def start_python_process(component_name, run_in_fg, py_path, program_dir, on_keyboard_interrupt=None, failed_to_start_err=-100,
-    extra_options=None, stderr_path=None, stdin_data=None):
+        extra_options=None, stderr_path=None, stdin_data=None):
     """ Starts a new process from a given Python path, either in background or foreground (run_in_fg).
     """
     options = {

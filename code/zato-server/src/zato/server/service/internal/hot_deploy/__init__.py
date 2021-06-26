@@ -16,17 +16,17 @@ from errno import ENOENT
 from time import sleep
 from traceback import format_exc
 
-# anyjson
-from anyjson import dumps
-
 # Python 2/3 compatibility
+from future.utils import PY3
 from builtins import bytes
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, KVDB
+from zato.common.api import DEPLOYMENT_STATUS, KVDB
 from zato.common.broker_message import HOT_DEPLOY
+from zato.common.json_internal import dumps
 from zato.common.odb.model import DeploymentPackage, DeploymentStatus
-from zato.common.util import fs_safe_now, is_python_file, is_archive_file, new_cid
+from zato.common.util.api import is_python_file, is_archive_file, new_cid
+from zato.common.util.file_system import fs_safe_now
 from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO
 
@@ -151,7 +151,11 @@ class Create(AdminService):
 
     def _deploy_file(self, current_work_dir, payload, file_name):
 
-        f = open(file_name, 'w')
+        if PY3:
+            f = open(file_name, 'w', encoding='utf-8')
+        else:
+            f = open(file_name, 'w')
+
         f.write(payload.decode('utf8') if isinstance(payload, bytes) else payload)
         f.close()
 
@@ -260,7 +264,7 @@ class Create(AdminService):
                         self.server.kvdb.conn.expire(already_deployed_flag, self.server.deployment_lock_expires)
 
                     # .. all workers get here.
-                    services_deployed = self.deploy_package(self.request.input.package_id, session)
+                    services_deployed = self.deploy_package(self.request.input.package_id, session) or []
 
                     # Go through all services deployed, check if any needs post-processing
                     # and if does, call the relevant function and clear the flag.

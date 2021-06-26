@@ -27,7 +27,6 @@ from pytz import UTC
 
 # Python 2/3 compatibility
 from future.utils import iterkeys
-from past.builtins import basestring
 
 # Zato
 try:
@@ -37,9 +36,10 @@ except ImportError:
 
 from zato.admin.settings import ssl_key_file, ssl_cert_file, ssl_ca_certs, LB_AGENT_CONNECT_TIMEOUT
 from zato.admin.web import from_utc_to_user
-from zato.common import SEC_DEF_TYPE_NAME, ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
-from zato.common.util import get_lb_client as _get_lb_client
-from zato.common.util.json_ import dumps
+from zato.common.api import CONNECTION, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE, ZATO_SEC_USE_RBAC
+from zato.common.exception import ZatoException
+from zato.common.json_internal import dumps
+from zato.common.util.api import get_lb_client as _get_lb_client
 
 # ################################################################################################################################
 
@@ -57,6 +57,10 @@ slugify = slugify
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+
+SKIP_VALUE = 'zato.skip.value'
 
 # ################################################################################################################################
 
@@ -84,6 +88,31 @@ def get_definition_list(client, cluster, def_type):
     """ Returns all definitions of a given type existing on a given cluster.
     """
     return _get_list(client, cluster, 'zato.definition.{}.get-list'.format(def_type))
+
+# ################################################################################################################################
+
+def get_outconn_rest_list(req, name_to_id=False):
+    """ Returns a list of all outgoing REST connections.
+    """
+    out = {}
+    response = req.zato.client.invoke('zato.http-soap.get-list', {
+        'cluster_id': req.zato.cluster_id,
+        'connection': CONNECTION.OUTGOING,
+        'transport': URL_TYPE.PLAIN_HTTP,
+    })
+
+    for item in response:
+
+        if name_to_id:
+            key   = item.name
+            value = item.id
+        else:
+            key   = item.id
+            value = item.name
+
+        out[key] = value
+
+    return out
 
 # ################################################################################################################################
 
@@ -146,8 +175,7 @@ def method_allowed(*methods_allowed):
 # ################################################################################################################################
 
 def set_servers_state(cluster, client):
-    """ Assignes 3 flags to the cluster indicating whether load-balancer
-    believes the servers are UP, DOWN or in the MAINT mode.
+    """ Assignes 3 flags to the cluster indicating whether load-balancer believes the servers are UP, DOWN or in the MAINT mode.
     """
     servers_state = client.get_servers_state()
 
@@ -211,11 +239,59 @@ def get_security_id_from_select(params, prefix, field_name='security'):
 
 # ################################################################################################################################
 
+def build_sec_def_link(cluster_id, sec_type, sec_name):
+
+    sec_type_name = SEC_DEF_TYPE_NAME[sec_type]
+    sec_type = sec_type.replace('_', '-')
+    url_path = django_url_reverse('security-{}'.format(sec_type))
+
+    link = """
+    {sec_type_name}
+    <br/>
+    <a href="{url_path}?cluster={cluster_id}&amp;query={sec_name}">{sec_name}</a>
+    """.format(**{
+           'cluster_id': cluster_id,
+           'sec_type_name': sec_type_name,
+           'sec_name': sec_name,
+           'url_path': url_path,
+        }).strip()
+
+    return link
+
+# ################################################################################################################################
+
+def build_sec_def_link_by_input(req, cluster_id, input_data):
+    # type: (dict) -> str
+
+    security_id = input_data.get('security_id')
+    if security_id and security_id != ZATO_NONE:
+
+        security_id = extract_security_id(input_data)
+        sec_response = id_only_service(req, 'zato.security.get-by-id', security_id).data
+
+        return build_sec_def_link(cluster_id, sec_response.sec_type, sec_response.name)
+
+# ################################################################################################################################
+
 class _BaseView(object):
     method_allowed = 'method_allowed-must-be-defined-in-a-subclass'
     service_name = None
     async_invoke = False
     form_prefix = ''
+
+    def __init__(self):
+        self.req = None
+        self.cluster_id = None
+
+    def __call__(self, req, *args, **kwargs):
+        self.req = req
+        for k, v in kwargs.items():
+            self.req.zato.args[k] = v
+        self.cluster_id = None
+        self.fetch_cluster_id()
+
+    def build_sec_def_link_by_input(self, input_data):
+        return build_sec_def_link_by_input(self.req, self.cluster_id, input_data)
 
     def on_before_append_item(self, item):
         return item
@@ -245,23 +321,15 @@ class _BaseView(object):
         if cluster_id:
             self.cluster_id = cluster_id
 
-    def __init__(self):
-        self.req = None
-        self.cluster_id = None
-
-    def __call__(self, req, *args, **kwargs):
-        self.req = req
-        for k, v in kwargs.items():
-            self.req.zato.args[k] = v
-        self.cluster_id = None
-        self.fetch_cluster_id()
-
     def populate_initial_input_dict(self, initial_input_dict):
         """ May be overridden by subclasses if needed.
         """
 
     def get_sec_def_list(self, sec_type):
-        return SecurityList.from_service(self.req.zato.client, self.req.zato.cluster.id, sec_type)
+        if self.req.zato.get('client'):
+            return SecurityList.from_service(self.req.zato.client, self.req.zato.cluster.id, sec_type)
+        else:
+            return []
 
     def set_input(self, req=None, default_attrs=('cur_page', 'query')):
         req = req or self.req
@@ -276,11 +344,19 @@ class _BaseView(object):
 
         for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional, default_attrs):
             if name != 'cluster_id':
-                value = \
-                    req.GET.get(name) or \
-                    req.GET.get(self.form_prefix + name) or \
-                    req.POST.get(self.form_prefix + name) or \
-                    req.zato.args.get(self.form_prefix + name)
+
+                value = req.GET.getlist(name)
+                if value:
+                    value = value if len(value) > 1 else value[0]
+
+                if not value:
+                    value = req.POST.getlist(self.form_prefix + name)
+                    if value:
+                        value = value if len(value) > 1 else value[0]
+
+                if not value:
+                    value = req.zato.args.get(self.form_prefix + name)
+
                 self.input[name] = value
 
         self.on_after_set_input()
@@ -310,17 +386,20 @@ class Index(_BaseView):
         input_elems = list(iterkeys(self.req.GET)) + list(iterkeys(self.req.zato.args))
 
         if not self.cluster_id:
+            logger.info('Value missing; self.cluster_id `%s`', self.cluster_id)
             return False
 
         for elem in self.SimpleIO.input_required:
             if elem == 'cluster_id':
                 continue
             if not elem in input_elems:
+                logger.info('Elem `%s` not in input_elems `%s`', elem, input_elems)
                 return False
             value = self.req.GET.get(elem)
             if not value:
                 value = self.req.zato.args.get(elem)
                 if not value:
+                    logger.info('Elem `%s` not in self.req.zato.args `%s`', elem, self.req.zato.args)
                     return False
         return True
 
@@ -337,13 +416,15 @@ class Index(_BaseView):
         """ May be overridden by subclasses to dynamically decide which template to use,
         otherwise self.template will be employed.
         """
-
     def invoke_admin_service(self):
         if self.req.zato.get('cluster'):
             func = self.req.zato.client.invoke_async if self.async_invoke else self.req.zato.client.invoke
             service_name = self.service_name if self.service_name else self.get_service_name()
             request = self.get_initial_input()
             request.update(self.input)
+
+            logger.info('Invoking `%s` with `%s`', service_name, request)
+
             return func(service_name, request)
 
     def _handle_item_list(self, item_list):
@@ -353,13 +434,15 @@ class Index(_BaseView):
         names = tuple(chain(self.SimpleIO.output_required, self.SimpleIO.output_optional))
 
         for msg_item in item_list:
+
             item = self.output_class()
-            for name in names:
+            for name in sorted(names):
                 value = getattr(msg_item, name, None)
                 if value is not None:
                     value = getattr(value, 'text', '') or value
                 if value or value == 0:
                     setattr(item, name, value)
+
             item = self.on_before_append_item(item)
 
             if isinstance(item, (list, tuple)):
@@ -395,6 +478,9 @@ class Index(_BaseView):
             if self.can_invoke_admin_service():
                 self.before_invoke_admin_service()
                 response = self.invoke_admin_service()
+
+                logger.info('Response from service: `%s`', response.data)
+
                 if response.ok:
                     return_data['response_inner'] = response.inner_service_response
                     if output_repeated:
@@ -412,6 +498,8 @@ class Index(_BaseView):
             else:
                 logger.info('can_invoke_admin_service returned False, not invoking an admin service:[%s]', self.service_name)
 
+            template_name = self.get_template_name() or self.template
+
             return_data['req'] = self.req
             return_data['items'] = self.items
             return_data['item'] = self.item
@@ -422,6 +510,7 @@ class Index(_BaseView):
             return_data['search_form'] = req.zato.search_form
             return_data['meta'] = response.meta if response else {}
             return_data['paginate'] = getattr(self, 'paginate', False)
+            return_data['zato_template_name'] = template_name
 
             view_specific = self.handle()
             if view_specific:
@@ -429,9 +518,10 @@ class Index(_BaseView):
 
             return_data = self.handle_return_data(return_data)
 
-            logger.info('Index data for frontend `%s`', return_data)
+            for k, v in sorted(return_data.items()):
+                logger.info('Index key/value `%s` -> `%r`', k, v)
 
-            return TemplateResponse(req, self.get_template_name() or self.template, return_data)
+            return TemplateResponse(req, template_name, return_data)
 
         except Exception:
             return HttpResponseServerError(format_exc())
@@ -472,9 +562,13 @@ class CreateEdit(_BaseView):
 
             for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
                 if name not in input_dict and name not in self.input_dict:
-                    input_dict[name] = self.input.get(name)
+                    value = self.input.get(name)
+                    value = self.pre_process_item(name, value)
+                    if value != SKIP_VALUE:
+                        input_dict[name] = value
 
             self.input_dict.update(input_dict)
+            self.pre_process_input_dict(self.input_dict)
 
             logger.info('Request self.input_dict %s', self.input_dict)
             logger.info('Request self.SimpleIO.input_required %s', self.SimpleIO.input_required)
@@ -498,10 +592,7 @@ class CreateEdit(_BaseView):
                     if name not in initial_return_data:
                         value = getattr(response.data, name, None)
                         if value:
-                            if isinstance(value, basestring):
-                                value = value.encode('utf-8')
-                            else:
-                                value = str(value)
+                            value = str(value)
                         return_data[name] = value
 
                 self.post_process_return_data(return_data)
@@ -516,6 +607,12 @@ class CreateEdit(_BaseView):
 
         except Exception:
             return HttpResponseServerError(format_exc())
+
+    def pre_process_input_dict(self, input_dict):
+        pass
+
+    def pre_process_item(self, name, value):
+        return value
 
     def success_message(self, item):
         raise NotImplementedError('Must be implemented by a subclass')
@@ -557,6 +654,7 @@ class Delete(BaseCallView):
     """ Our subclasses will delete objects such as connections and others.
     """
     id_elem = 'id'
+
     def get_input_dict(self):
         return {
             self.id_elem: self.req.zato.id,
@@ -592,7 +690,9 @@ class SecurityList(object):
 
 def id_only_service(req, service, id, error_template='{}', initial=None):
     try:
-        request = {}
+        request = {
+            'cluster_id': req.zato.cluster_id,
+        }
 
         if id:
             request['id'] = id
@@ -655,10 +755,26 @@ def upload_to_server(req, cluster_id, service, error_msg_template):
 
 # ################################################################################################################################
 
+def extract_security_id(item):
+    # type: (dict) -> int
+    security_id = item.get('security_id') # type: str
+
+    if not security_id:
+        return
+    else:
+        if security_id == ZATO_NONE:
+            return security_id
+        else:
+            security_id = security_id.split('/')
+            security_id = security_id[1]
+            return int(security_id)
+
+# ################################################################################################################################
+
 def get_http_channel_security_id(item):
     _security_id = item.security_id
     if _security_id:
-        security_id = '{0}/{1}'.format(item.sec_type, _security_id)
+        security_id = '{}/{}'.format(item.sec_type, _security_id)
     else:
         if item.sec_use_rbac:
             security_id = ZATO_SEC_USE_RBAC
@@ -666,5 +782,34 @@ def get_http_channel_security_id(item):
             security_id = ZATO_NONE
 
     return security_id
+
+# ################################################################################################################################
+
+def invoke_action_handler(req, service_name, send_attrs):
+    # type: (str, tuple) -> object
+
+    try:
+        request = {
+            'cluster_id': req.zato.cluster_id
+        }
+
+        for name in send_attrs:
+            request[name] = req.POST.get(name, '')
+
+        logger.info('Invoking `%s` with `%s`', service_name, request)
+        response = req.zato.client.invoke(service_name, request)
+
+        if response.ok:
+            response_data = response.data['response_data']
+            if isinstance(response_data, dict):
+                response_data = dict(response_data)
+                logger.info('Returning `%s` from `%s`', response_data, service_name)
+            return HttpResponse(dumps(response_data), content_type='application/javascript')
+        else:
+            raise Exception(response.details)
+    except Exception:
+        msg = 'Caught an exception, e:`{}`'.format(format_exc())
+        logger.error(msg)
+        return HttpResponseServerError(msg)
 
 # ################################################################################################################################

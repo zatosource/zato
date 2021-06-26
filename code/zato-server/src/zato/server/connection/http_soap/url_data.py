@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -22,10 +22,11 @@ from six import PY2
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import CONNECTION, DATA_FORMAT, MISC, RATE_LIMIT, SEC_DEF_TYPE, URL_TYPE, VAULT, ZATO_NONE
+from zato.common.api import CHANNEL, CONNECTION, DATA_FORMAT, MISC, RATE_LIMIT, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
+from zato.common.vault_ import VAULT
 from zato.common.broker_message import code_to_name, SECURITY, VAULT as VAULT_BROKER_MSG
 from zato.common.dispatch import dispatcher
-from zato.common.util import parse_tls_channel_security_definition, update_apikey_username_to_channel
+from zato.common.util.api import parse_tls_channel_security_definition, update_apikey_username_to_channel
 from zato.common.util.auth import on_basic_auth, on_wsse_pwd, WSSE
 from zato.common.util.url_dispatcher import get_match_target
 from zato.server.connection.http_soap import Forbidden, Unauthorized
@@ -84,10 +85,11 @@ class URLData(CyURLData, OAuthDataStore):
     """
     def __init__(self, worker, channel_data=None, url_sec=None, basic_auth_config=None, jwt_config=None, ntlm_config=None, \
                  oauth_config=None, wss_config=None, apikey_config=None, aws_config=None, \
-                 openstack_config=None, xpath_sec_config=None, tls_channel_sec_config=None, tls_key_cert_config=None, \
+                 xpath_sec_config=None, tls_channel_sec_config=None, tls_key_cert_config=None, \
                  vault_conn_sec_config=None, kvdb=None, broker_client=None, odb=None, json_pointer_store=None, xpath_store=None,
                  jwt_secret=None, vault_conn_api=None):
         super(URLData, self).__init__(channel_data)
+
         self.worker = worker # type: WorkerStore
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config # type: dict
@@ -97,7 +99,6 @@ class URLData(CyURLData, OAuthDataStore):
         self.wss_config = wss_config # type: dict
         self.apikey_config = apikey_config # type: dict
         self.aws_config = aws_config # type: dict
-        self.openstack_config = openstack_config # type: dict
         self.xpath_sec_config = xpath_sec_config # type: dict
         self.tls_channel_sec_config = tls_channel_sec_config # type: dict
         self.tls_key_cert_config = tls_key_cert_config # type: dict
@@ -131,6 +132,10 @@ class URLData(CyURLData, OAuthDataStore):
 
         # Needs always to be sorted by name in case of conflicts in paths resolution
         self.sort_channel_data()
+
+        # Set up audit log
+        for channel_item in channel_data:
+            self._set_up_audit_log(channel_item, False)
 
 # ################################################################################################################################
 
@@ -273,10 +278,11 @@ class URLData(CyURLData, OAuthDataStore):
 
         if not result:
             if enforce_auth:
-                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`, sec-wall code:`{}`, description:`{}`\n'.format(
+                msg_log = 'Unauthorized; path_info:`{}`, cid:`{}`, sec-wall code:`{}`, description:`{}`\n'.format(
                     path_info, cid, result.code, result.description)
-                logger.error(msg)
-                raise Unauthorized(cid, msg, 'Basic realm="{}"'.format(sec_def.realm))
+                msg_exc = 'Unauthorized; cid={}'.format(cid)
+                logger.error(msg_log)
+                raise Unauthorized(cid, msg_exc, 'Basic realm="{}"'.format(sec_def.realm))
             else:
                 return False
 
@@ -305,7 +311,7 @@ class URLData(CyURLData, OAuthDataStore):
                 return False
 
         token = authorization.split('Bearer ', 1)[1]
-        result = JWT(self.kvdb, self.odb, self.worker.server.decrypt, self.jwt_secret).validate(
+        result = JWT(self.odb, self.worker.server.decrypt, self.jwt_secret).validate(
             sec_def.username, token.encode('utf8'))
 
         if not result.valid:
@@ -458,7 +464,7 @@ class URLData(CyURLData, OAuthDataStore):
 
     def _handle_security_tls_channel_sec(self, cid, sec_def, ignored_path_info, ignored_body, wsgi_environ,
         ignored_post_data=None, enforce_auth=True):
-        user_msg = 'Failed to satisfy TLS conditions'
+        user_msg = 'You are not allowed to access this resource'
 
         for header, expected_value in sec_def.value.items():
             given_value = wsgi_environ.get(header)
@@ -529,7 +535,7 @@ class URLData(CyURLData, OAuthDataStore):
             #
             # 1.
             #
-            if sec_def_config['service_name']:
+            if sec_def_config.get('service_name'):
                 response = self.worker.invoke(sec_def_config['service_name'], {
                     'sec_def': sec_def,
                     'body': body,
@@ -570,9 +576,9 @@ class URLData(CyURLData, OAuthDataStore):
 # ################################################################################################################################
 
     def check_rbac_delegated_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store,
-            sep=MISC.SEPARATOR, plain_http=URL_TYPE.PLAIN_HTTP):
+            sep=MISC.SEPARATOR, plain_http=URL_TYPE.PLAIN_HTTP, _empty_client_def=tuple()):
 
-        is_allowed = False
+        auth_result = False
 
         http_method = wsgi_environ.get('REQUEST_METHOD')
         http_method_permission_id = worker_store.rbac.http_permissions.get(http_method)
@@ -583,11 +589,11 @@ class URLData(CyURLData, OAuthDataStore):
 
         for role_id, perm_id, resource_id in iterkeys(worker_store.rbac.registry._allowed):
 
-            if is_allowed:
-                break
+            if auth_result:
+                return auth_result
 
             if perm_id == http_method_permission_id and resource_id == channel_item['service_id']:
-                for client_def in worker_store.rbac.role_id_to_client_def[role_id]:
+                for client_def in worker_store.rbac.role_id_to_client_def.get(role_id, _empty_client_def):
 
                     _, sec_type, sec_name = client_def.split(sep)
 
@@ -597,10 +603,10 @@ class URLData(CyURLData, OAuthDataStore):
                     _sec.sec_use_rbac = False
                     _sec.sec_def = self.sec_config_getter[sec_type](sec_name)['config']
 
-                    is_allowed = self.check_security(
+                    auth_result = self.check_security(
                         _sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store, False)
 
-                    if is_allowed:
+                    if auth_result:
 
                         # If input sec object is a dict/Bunch-like one, it means that we have just confirmed
                         # credentials of the underlying security definition behind an RBAC one,
@@ -612,7 +618,9 @@ class URLData(CyURLData, OAuthDataStore):
                         self.enrich_with_sec_data(wsgi_environ, _sec.sec_def, sec_type)
                         break
 
-        if not is_allowed:
+        if auth_result:
+            return auth_result
+        else:
             logger.warn('None of RBAC definitions allowed request in, cid:`%s`', cid)
 
             # We need to return 401 Unauthorized but we need to send a challenge, i.e. authentication type
@@ -777,44 +785,6 @@ class URLData(CyURLData, OAuthDataStore):
 
 # ################################################################################################################################
 
-    def _update_openstack(self, name, config):
-        self.openstack_config[name] = Bunch()
-        self.openstack_config[name].config = config
-
-    def openstack_get(self, name):
-        """ Returns the configuration of the OpenStack security definition of the given name.
-        """
-        with self.url_sec_lock:
-            return self.openstack_config.get(name)
-
-    def on_broker_msg_SECURITY_OPENSTACK_CREATE(self, msg, *args):
-        """ Creates a new OpenStack security definition.
-        """
-        with self.url_sec_lock:
-            self._update_openstack(msg.name, msg)
-
-    def on_broker_msg_SECURITY_OPENSTACK_EDIT(self, msg, *args):
-        """ Updates an existing OpenStack security definition.
-        """
-        with self.url_sec_lock:
-            del self.openstack_config[msg.old_name]
-            self._update_openstack(msg.name, msg)
-
-    def on_broker_msg_SECURITY_OPENSTACK_DELETE(self, msg, *args):
-        """ Deletes an OpenStack security definition.
-        """
-        with self.url_sec_lock:
-            self._delete_channel_data('openstack', msg.name)
-            del self.openstack_config[msg.name]
-
-    def on_broker_msg_SECURITY_OPENSTACK_CHANGE_PASSWORD(self, msg, *args):
-        """ Changes password of an OpenStack security definition.
-        """
-        with self.url_sec_lock:
-            self.openstack_config[msg.name]['config']['password'] = msg.password
-
-# ################################################################################################################################
-
     def _get_sec_def_by_id(self, def_type, def_id):
         with self.url_sec_lock:
             for item in def_type.values():
@@ -863,10 +833,10 @@ class URLData(CyURLData, OAuthDataStore):
             del self.basic_auth_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH, True)
 
-            # If this account was linked to an SSO user, delete that link,
+            # This will delete a link from this account an SSO user,
             # assuming that SSO is enabled (in which case it is not None).
             if self.worker.server.sso_api:
-                self.worker.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE(msg.id)
+                self.worker.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE(SEC_DEF_TYPE.BASIC_AUTH, msg.id)
 
     def on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an HTTP Basic Auth security definition.
@@ -949,8 +919,10 @@ class URLData(CyURLData, OAuthDataStore):
             del self.jwt_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.JWT, True)
 
-            # If this account was linked to an SSO user, delete that link
-            self.worker.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE(msg.id)
+            # This will delete a link from this account an SSO user,
+            # assuming that SSO is enabled (in which case it is not None).
+            if self.worker.server.sso_api:
+                self.worker.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE(SEC_DEF_TYPE.JWT, msg.id)
 
     def on_broker_msg_SECURITY_JWT_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of a JWT security definition.
@@ -1242,9 +1214,12 @@ class URLData(CyURLData, OAuthDataStore):
         for name in('connection', 'content_type', 'data_format', 'host', 'id', 'has_rbac', 'impl_name', 'is_active',
             'is_internal', 'merge_url_params_req', 'method', 'name', 'params_pri', 'ping_method', 'pool_size', 'service_id',
             'service_name', 'soap_action', 'soap_version', 'transport', 'url_params_pri', 'url_path', 'sec_use_rbac',
-            'cache_type', 'cache_id', 'cache_name', 'cache_expiry', 'content_encoding', 'match_slash'):
+            'cache_type', 'cache_id', 'cache_name', 'cache_expiry', 'content_encoding', 'match_slash', 'hl7_version',
+            'json_path', 'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding',
+            'is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', 'max_len_messages_received',
+            'max_bytes_per_message_sent', 'max_bytes_per_message_received'):
 
-            channel_item[name] = msg[name]
+            channel_item[name] = msg.get(name)
 
         if msg.get('security_id'):
             channel_item['sec_type'] = msg['sec_type']
@@ -1290,10 +1265,24 @@ class URLData(CyURLData, OAuthDataStore):
 
 # ################################################################################################################################
 
+    def _set_up_audit_log(self, channel_item, is_edit):
+        # type: (dict, bool)
+
+        # Set up audit log if it is enabled
+        if channel_item.get('is_audit_log_sent_active') or channel_item.get('is_audit_log_received_active'):
+            self.worker.server.set_up_object_audit_log(
+                CHANNEL.HTTP_SOAP, channel_item['id'], channel_item, is_edit)
+
+# ################################################################################################################################
+
     def _create_channel(self, msg, old_data):
         """ Creates a new channel, both its core data and the related security definition.
         Clears out URL cache for that entry, if it existed at all.
         """
+
+        # If we are editing an object, old_data will be populated, otherwise, it is an empty dict
+        is_edit = bool(old_data)
+
         match_target = get_match_target(msg, http_methods_allowed_re=self.worker.server.http_methods_allowed_re)
         channel_item = self._channel_item_from_msg(msg, match_target, old_data)
         self.channel_data.append(channel_item)
@@ -1302,9 +1291,13 @@ class URLData(CyURLData, OAuthDataStore):
         self._remove_from_cache(match_target)
         self.sort_channel_data()
 
-        # Set up rate limiting
-        self.worker.server.set_up_object_rate_limiting(
-            RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP, channel_item['name'], config=channel_item)
+        # Set up rate limiting, if it is enabled
+        if channel_item.get('is_rate_limit_active'):
+            self.worker.server.set_up_object_rate_limiting(
+                RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP, channel_item['name'], config=channel_item)
+
+        # Set up audit log
+        self._set_up_audit_log(channel_item, is_edit)
 
 # ################################################################################################################################
 
@@ -1343,6 +1336,9 @@ class URLData(CyURLData, OAuthDataStore):
         # Delete rate limiting configuration
         self.worker.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP, msg.name)
 
+        # Delete audit log configuration
+        self.worker.server.audit_log.delete_container(CHANNEL.HTTP_SOAP, msg.id)
+
         return old_data
 
 # ################################################################################################################################
@@ -1352,8 +1348,7 @@ class URLData(CyURLData, OAuthDataStore):
         """
         with self.url_sec_lock:
             # Only edits have 'old_name', creates don't. So for edits we delete
-            # the channel and later recreate it while creates, obviously,
-            # get to creation only.
+            # the channel and later recreate it while create actions do not have anything to delete.
             if msg.get('old_name'):
                 old_data = self._delete_channel(msg)
             else:

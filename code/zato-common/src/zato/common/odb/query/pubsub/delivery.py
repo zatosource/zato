@@ -15,7 +15,7 @@ from logging import getLogger
 from sqlalchemy import update
 
 # Zato
-from zato.common import PUBSUB
+from zato.common.api import PUBSUB
 from zato.common.odb.model import PubSubEndpoint, PubSubMessage, PubSubEndpointEnqueuedMessage, PubSubSubscription, Server, \
      WebSocketClient, WebSocketClientPubSubKeys
 
@@ -33,6 +33,7 @@ sql_messages_columns = (
     PubSubMessage.pub_msg_id,
     PubSubMessage.pub_correl_id,
     PubSubMessage.in_reply_to,
+    PubSubMessage.published_by_id,
     PubSubMessage.ext_client_id,
     PubSubMessage.group_id,
     PubSubMessage.position_in_group,

@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 
 # Zato
-from zato.common import WEB_SOCKET
+from zato.common.api import WEB_SOCKET
 from zato.common.odb.model import WebSocketSubscription
 from zato.server.service import AsIs, Bool
 from zato.server.service.internal import AdminService, AdminSIO

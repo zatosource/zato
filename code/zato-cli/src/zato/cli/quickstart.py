@@ -9,31 +9,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import os, random, stat
-from collections import OrderedDict
-from contextlib import closing
+import os
 from copy import deepcopy
-from itertools import count
-from uuid import uuid4
-
-# Bunch
-from bunch import Bunch
-
-# Cryptography
-from cryptography.fernet import Fernet
 
 # Zato
-from zato.cli import common_odb_opts, kvdb_opts, ca_create_ca, ca_create_lb_agent, ca_create_scheduler, ca_create_server, \
-     ca_create_web_admin, create_cluster, create_lb, create_odb, create_scheduler, create_server, create_web_admin, \
-     ZatoCommand
-from zato.common.crypto import CryptoManager
-from zato.common.defaults import http_plain_server_port
-from zato.common.odb.model import Cluster, PubSubSubscription, PubSubTopic
-from zato.common.util import get_engine, get_session, make_repr
+from zato.cli import common_odb_opts, kvdb_opts, ZatoCommand
 
-random.seed()
-
-DEFAULT_NO_SERVERS=2
+DEFAULT_NO_SERVERS=1
 
 # Taken from http://stackoverflow.com/a/246128
 script_dir = """SOURCE="${BASH_SOURCE[0]}"
@@ -185,9 +167,6 @@ class CryptoMaterialLocation(object):
         self.priv_path = None
         self.locate()
 
-    def __repr__(self):
-        return make_repr(self)
-
     def locate(self):
         for crypto_name in('cert', 'priv', 'pub'):
             path = os.path.join(self.ca_dir, 'out-{}'.format(crypto_name))
@@ -208,6 +187,10 @@ class Create(ZatoCommand):
     opts.append({'name':'--servers', 'help':'How many servers to create'})
 
     def _bunch_from_args(self, args, cluster_name):
+
+        # Bunch
+        from bunch import Bunch
+
         bunch = Bunch()
         bunch.path = args.path
         bunch.verbose = args.verbose
@@ -232,6 +215,10 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
     def _set_pubsub_server(self, args, server_id, cluster_name, topic_name):
+
+        # Zato
+        from zato.common.odb.model import Cluster, PubSubSubscription, PubSubTopic
+
         engine = self._get_engine(args)
         session = self._get_session(engine)
         sub = session.query(PubSubSubscription).\
@@ -260,6 +247,33 @@ class Create(ZatoCommand):
         7) Scheduler
         8) Scripts
         """
+
+        # stdlib
+        import os
+        import random
+        import stat
+        from collections import OrderedDict
+        from contextlib import closing
+        from copy import deepcopy
+        from itertools import count
+        from uuid import uuid4
+
+        # Cryptography
+        from cryptography.fernet import Fernet
+
+        # These are shared by all servers
+        jwt_secret = Fernet.generate_key()
+        secret_key = Fernet.generate_key()
+
+        # Zato
+        from zato.cli import ca_create_ca, ca_create_lb_agent, ca_create_scheduler, ca_create_server, \
+             ca_create_web_admin, create_cluster, create_lb, create_odb, create_scheduler, create_server, create_web_admin
+        from zato.common.crypto.api import CryptoManager
+        from zato.common.defaults import http_plain_server_port
+        from zato.common.odb.model import Cluster
+        from zato.common.util.api import get_engine, get_session
+
+        random.seed()
 
         if args.odb_type == 'sqlite':
             args.sqlite_path = os.path.abspath(os.path.join(args.path, 'zato.db'))
@@ -340,6 +354,7 @@ class Create(ZatoCommand):
         create_cluster_args.lb_port = lb_port
         create_cluster_args.lb_agent_port = lb_agent_port
         create_cluster_args['admin-invoke-password'] = admin_invoke_password
+        create_cluster_args.secret_key = secret_key
         create_cluster.Create(create_cluster_args).execute(create_cluster_args, False)
 
         self.logger.info('[{}/{}] ODB initial data created'.format(next(next_step), total_steps))
@@ -349,10 +364,6 @@ class Create(ZatoCommand):
         #
         # 4) servers
         #
-
-        # Must be shared by all servers
-        jwt_secret = Fernet.generate_key()
-        secret_key = Fernet.generate_key()
 
         for idx, name in enumerate(server_names):
             server_path = os.path.join(args_path, server_names[name])
@@ -421,7 +432,7 @@ class Create(ZatoCommand):
         # Need to reset the logger here because executing the create_web_admin command
         # loads the web admin's logger which doesn't like that of ours.
         self.reset_logger(args, True)
-        self.logger.info('[{}/{}] Web admin created'.format(next(next_step), total_steps))
+        self.logger.info('[{}/{}] Dashboard created'.format(next(next_step), total_steps))
 
 # ################################################################################################################################
 

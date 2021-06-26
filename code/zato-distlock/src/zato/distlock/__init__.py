@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -17,6 +15,7 @@ from hashlib import sha256
 from pwd import getpwuid
 from tempfile import gettempdir
 from threading import current_thread
+from traceback import format_exc
 
 # gevent
 from gevent import sleep, spawn
@@ -28,7 +27,7 @@ from portalocker import lock, LockException, LOCK_NB, LOCK_EX, unlock
 from sqlalchemy import func
 
 # Zato
-from zato.common.util import make_repr
+from zato.common.util.api import make_repr
 
 # ################################################################################################################################
 
@@ -330,18 +329,41 @@ class LockManager(object):
     def __call__(self, name, namespace='', ttl=DEFAULT.TTL, block=DEFAULT.BLOCK, block_interval=DEFAULT.BLOCK_INTERVAL,
             max_len_ns=MAX.LEN_NS, max_len_name=MAX.LEN_NAME):
 
-        if len(namespace) > max_len_ns:
-            msg = 'Namespace `{}` exceeds the limit of {} characters'.format(namespace, max_len_ns)
-            logger.warn(msg)
-            raise ValueError(msg)
+        try:
+            if len(namespace) > max_len_ns:
+                msg = 'Lock operation rejected. Namespace `{}` exceeds the limit of {} characters.'.format(namespace, max_len_ns)
+                logger.warn(msg)
+                raise ValueError(msg)
 
-        if len(name) > max_len_name:
-            msg = 'Name `{}` exceeds the limit of {} characters'.format(name, max_len_name)
-            logger.warn(msg)
-            raise ValueError(msg)
+            if len(name) > max_len_name:
 
-        return self._lock_class(
-            self.user_name, self.session, namespace or self.default_namespace, name, ttl, block, block_interval)
+                # At times, we will have long lock names, e.g. when we want to lock access
+                # to a file system path and the path is longer then MAX.LEN_NAME.
+                # In such cases, the lock will contain the last N characters followed
+                # by a hash of the whole name. This will fit in the MAX.LEN_NAME limit.
+
+                if isinstance(name, str):
+                    name = name.encode('utf8')
+                    hash_digest = sha256(name).hexdigest()
+                    name = name.decode('utf8')
+
+                name_prefix = name[:31]
+                name_suffix = name[-31:]
+                name = '{}-{}-{}'.format(name_prefix, name_suffix, hash_digest)
+
+            # To be on the safe side, check again if the limit is not exceeded
+            if len(name) > max_len_name:
+
+                msg = 'Lock operation rejected. Name `{}` exceeds the limit of {} characters.'.format(name, max_len_name)
+                logger.warn(msg)
+                raise ValueError(msg)
+
+        except Exception:
+            logger.warn('Lock could not be acquired, e:`%s`', format_exc())
+
+        else:
+            return self._lock_class(
+                self.user_name, self.session, namespace or self.default_namespace, name, ttl, block, block_interval)
 
     def acquire(self, *args, **kwargs):
         return self(*args, **kwargs).acquire()

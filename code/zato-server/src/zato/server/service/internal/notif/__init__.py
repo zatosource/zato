@@ -17,8 +17,8 @@ from logging import getLogger
 from gevent import sleep, spawn
 
 # Zato
-from zato.common import SECRET_SHADOW
-from zato.common.util import spawn_greenlet
+from zato.common.api import SECRET_SHADOW
+from zato.common.util.api import spawn_greenlet
 from zato.server.service import Service
 from zato.server.service.internal import AdminService
 
@@ -33,7 +33,6 @@ class InvokeRunNotifier(Service):
 
         # Maps notification type to a service handling it
         notif_type_service = {
-            'openstack_swift': 'zato.notif.cloud.openstack.swift.run-notifier',
             'sql': 'zato.notif.sql.run-notifier',
         }
 
@@ -47,7 +46,6 @@ class InitNotifiers(Service):
 
         # One entry for each notification type
         config_dicts = [
-            self.server.worker_store.worker_config.notif_cloud_openstack_swift,
             self.server.worker_store.worker_config.notif_sql,
         ]
 

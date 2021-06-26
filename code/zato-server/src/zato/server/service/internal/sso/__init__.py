@@ -12,26 +12,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from http.client import FORBIDDEN
 from traceback import format_exc
 
-# ipaddress
-from ipaddress import ip_address
-
 # Zato
-from zato.common import NO_REMOTE_ADDRESS
+from zato.common.api import NO_REMOTE_ADDRESS
 from zato.server.service import List, Service
 from zato.sso import status_code, ValidationError
-
-# ################################################################################################################################
-
-class SSOCtx(object):
-    """ A set of attributes describing current SSO request.
-    """
-    __slots__ = ('input', 'sso_conf', 'remote_addr', 'user_agent')
-
-    def __init__(self, input, sso_conf, remote_addr, user_agent):
-        self.input = input
-        self.sso_conf = sso_conf
-        self.remote_addr = remote_addr
-        self.user_agent = user_agent
+from zato.sso.common import SSOCtx
 
 # ################################################################################################################################
 
@@ -106,13 +91,10 @@ class BaseService(Service):
         remote_addr = self.wsgi_environ['zato.http.remote_addr']
         if remote_addr == NO_REMOTE_ADDRESS:
             remote_addr = None
-        else:
-            remote_addr = [elem.strip() for elem in remote_addr.strip().split(',')]
-            remote_addr =  [ip_address(elem) for elem in remote_addr]
 
         # OK, we can proceed to the actual call now
         self._call_sso_api(self._handle_sso, 'Could not call service',
-            ctx=SSOCtx(self.request.input, sso_conf, remote_addr, self.wsgi_environ.get('HTTP_USER_AGENT')))
+            ctx=SSOCtx(remote_addr, self.wsgi_environ.get('HTTP_USER_AGENT'), self.request.input, sso_conf, self.cid))
 
 # ################################################################################################################################
 

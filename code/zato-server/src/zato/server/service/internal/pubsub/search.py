@@ -12,14 +12,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from operator import itemgetter
 
 # Zato
-from zato.common import SEARCH
+from zato.common.api import SEARCH
 from zato.common.util.search import SearchResults
 from zato.common.util.time_ import datetime_from_ms
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 
-_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value
+_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE
 
 # ################################################################################################################################
 

@@ -18,7 +18,7 @@ from traceback import format_exc
 from gevent import sleep
 
 # Zato
-from zato.common import PUBSUB
+from zato.common.api import PUBSUB
 from zato.common.exception import Forbidden
 from zato.common.odb.model import PubSubSubscription, PubSubTopic
 from zato.common.odb.query.pubsub.cleanup import delete_msg_delivered, delete_msg_expired, delete_enq_delivered, \
@@ -26,6 +26,13 @@ from zato.common.odb.query.pubsub.cleanup import delete_msg_delivered, delete_ms
 from zato.common.util.time_ import utcnow_as_ms
 from zato.server.service import AsIs, Bool, DateTime, Int, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
+
+# ################################################################################################################################
+
+if 0:
+    from zato.server.pubsub.task import PubSubTool
+
+    PubSubTool = PubSubTool
 
 # ################################################################################################################################
 
@@ -69,7 +76,7 @@ class CommonSubData:
     common = ('is_internal', 'topic_name', 'active_status', 'endpoint_type', 'endpoint_id', 'endpoint_name', 'delivery_method',
         'delivery_data_format', 'delivery_batch_size', Bool('wrap_one_msg_in_list'), 'delivery_max_retry',
         Bool('delivery_err_should_block'), 'wait_sock_err', 'wait_non_sock_err', 'server_id', 'out_http_method',
-        'out_http_method', 'creation_time', DateTime('last_interaction_time'), 'last_interaction_type',
+        'out_http_method', DateTime('creation_time'), DateTime('last_interaction_time'), 'last_interaction_type',
         'last_interaction_details', Int('total_depth'), Int('current_depth_gd'),
         Int('current_depth_non_gd'), 'sub_key', 'has_gd', 'is_staging_enabled', 'sub_id', 'name', AsIs('ws_ext_client_id'),
         AsIs('ext_client_id'), 'topic_id')
@@ -207,7 +214,7 @@ class AfterPublish(AdminService):
             }
 
             try:
-                self.server.servers[server_name].invoke(service_name, full_request, pid=server_pid)
+                self.server.rpc[server_name].invoke(service_name, full_request, pid=server_pid)
             except Exception:
 
                 for logger in (self.logger, logger_pubsub):
@@ -246,7 +253,7 @@ class ResumeWSXSubscription(AdminService):
 
         # We now have environ in one way or another
         wsx = environ['web_socket']
-        pubsub_tool = wsx.pubsub_tool
+        pubsub_tool = wsx.pubsub_tool # type: PubSubTool
 
         # Need to confirm that our WebSocket previously created all the input sub_keys
         wsx_channel_id = environ['ws_channel_config'].id
@@ -276,11 +283,13 @@ class ResumeWSXSubscription(AdminService):
                 with pubsub_tool.lock:
 
                     get_in_ram_service = 'zato.pubsub.topic.get-in-ram-message-list'
-                    _, non_gd_messages = self.servers.invoke_all(get_in_ram_service, {'sub_key_list':sub_key_list}, timeout=120)
+                    reply = self.server.rpc.invoke_all(get_in_ram_service, {
+                        'sub_key_list':sub_key_list
+                    }, timeout=120)
 
                     # Parse non-GD messages on output from all servers, if any at all, into per-sub_key lists ..
-                    if non_gd_messages:
-                        non_gd_messages = self._parse_non_gd_messages(sub_key_list, non_gd_messages)
+                    if reply.data:
+                        non_gd_messages = self._parse_non_gd_messages(sub_key_list, reply.data)
 
                         # If there are any non-GD messages, add them to this WebSocket's pubsub tool.
                         if non_gd_messages:
@@ -320,25 +329,14 @@ class ResumeWSXSubscription(AdminService):
 
 # ################################################################################################################################
 
-    def _parse_non_gd_messages(self, sub_key_list, server_response):
+    def _parse_non_gd_messages(self, sub_key_list, messages_list):
+        # type: (list, list)
         out = dict.fromkeys(sub_key_list, [])
 
-        for server_name, server_data_dict in server_response.items():
-            if server_data_dict['is_ok']:
-                server_data = server_data_dict['server_data']
-
-                for server_pid, pid_data_dict in server_data.items():
-                    if not pid_data_dict['is_ok']:
-                        self.logger.warn('Could not retrieve non-GD in-RAM messages from PID %s of %s (%s), details:`%s`',
-                            server_pid, server_name, server_data_dict['meta']['address'], pid_data_dict)
-                    else:
-                        messages = pid_data_dict['pid_data']['response']['messages']
-                        for sub_key, sub_key_data in messages.items():
-                            for msg in sub_key_data.values():
-                                out[sub_key].append(msg)
-            else:
-                self.logger.warn('Could not retrieve non-GD in-RAM messages from %s (%s), details:`%s`',
-                    server_name, server_data_dict['meta']['address'], server_data_dict)
+        for messages in messages_list: # type: dict
+            for sub_key, sub_key_data in messages.items():
+                for msg in sub_key_data.values():
+                    out[sub_key].append(msg)
 
         # Do not return empty lists unnecessarily - note that it may happen that all sub_keys
         # will be deleted in which cases only an empty dictionary remains.
@@ -368,7 +366,7 @@ class _BaseCleanup(AdminService):
                 # Log what was done
                 suffix = 's' if total > 1 else ''
                 if total:
-                    self.logger.info('GD. Deleted %s %s pub/sub message%s' % (total, kind, suffix))
+                    self.logger.info('GD. Deleted %s pub/sub message%s (%s)' % (total, suffix, kind))
 
                 # Actually commit on SQL level
                 session.commit()

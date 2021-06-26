@@ -1,35 +1,23 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
-import os, uuid
 from copy import deepcopy
-from datetime import datetime
-from traceback import format_exc
-
-# Cryptography
-from cryptography.fernet import Fernet
-
-# SQLAlchemy
-from sqlalchemy.exc import IntegrityError
-
-# Python 2/3 compatibility
-from six import PY3
 
 # Zato
-from zato.cli import ZatoCommand, common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents
-from zato.cli._apispec_default import apispec_files
-from zato.common import CONTENT_TYPE, default_internal_modules, SERVER_JOIN_STATUS
-from zato.common.crypto import well_known_data
-from zato.common.defaults import http_plain_server_port
-from zato.common.odb.model import Cluster, Server
+from zato.cli import common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents, ZatoCommand
+from zato.common.api import CONTENT_TYPE, default_internal_modules, SSO as CommonSSO
+from zato.common.simpleio_ import simple_io_conf_contents
+
+# ################################################################################################################################
+
+# For pyflakes
+simple_io_conf_contents = simple_io_conf_contents
 
 # ################################################################################################################################
 
@@ -42,6 +30,8 @@ for key, value in default_internal_modules.items():
     deploy_internal.append('{}={}'.format(key, value))
 
 server_conf_dict.deploy_internal = '\n'.join(deploy_internal)
+
+# ################################################################################################################################
 
 server_conf_template = """[main]
 gunicorn_bind=0.0.0.0:{{port}}
@@ -130,12 +120,12 @@ return_tracebacks=True
 default_error_message="An error has occurred"
 startup_callable=
 return_json_schema_errors=False
+sftp_genkey_command=dropbearkey
+posix_ipc_skip_platform=darwin
+service_invoker_allow_internal=
 
 [http]
 methods_allowed=GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS
-
-[ibm_mq]
-ipc_tcp_start_port=34567
 
 [stats]
 expire_after=168 # In hours, 168 = 7 days = 1 week
@@ -203,11 +193,11 @@ stats=True
 slow_response=True
 cassandra=True
 email=True
+hl7=True
 search=True
 msg_path=True
 ibm_mq=False
 odoo=True
-stomp=True
 zeromq=True
 patterns=True
 target_matcher=False
@@ -241,6 +231,9 @@ data_len=0
 
 [wsx]
 hook_service=
+json_library=stdlib
+pings_missed_threshold=2
+ping_interval=30
 
 [content_type]
 json = {JSON}
@@ -273,6 +266,9 @@ size=0.1 # In MB
 [logging]
 http_access_log_ignore=
 
+[greenify]
+#/path/to/oracle/instantclient_19_3/libclntsh.so.19.1=True
+
 [os_environ]
 sample_key=sample_value
 
@@ -281,6 +277,7 @@ sample_key=sample_value
 
 """.format(**server_conf_dict)
 
+# ################################################################################################################################
 
 pickup_conf = """[json]
 pickup_from=./pickup/incoming/json
@@ -323,7 +320,19 @@ parse_on_pickup=False
 delete_after_pickup=False
 services=zato.pickup.update-static
 topics=
+
+[_user_conf_backward_compatibility]
+# This is needed only for compatibility with pre-3.2 environments.
+# Do not use it in new environments. Instead, use the [user_conf] entry.
+pickup_from=./config/repo/user-conf
+patterns=*.conf
+parse_on_pickup=False
+delete_after_pickup=False
+services=zato.pickup.update-user-conf
+topics=
 """
+
+# ################################################################################################################################
 
 service_sources_contents = """# Visit https://zato.io/docs for more information.
 
@@ -339,15 +348,20 @@ service_sources_contents = """# Visit https://zato.io/docs for more information.
 
 # Visit https://zato.io/docs for more information."""
 
+# ################################################################################################################################
+
 user_conf_contents = """[sample_section]
 string_key=sample_string
 list_key=sample,list
 """
 
+# ################################################################################################################################
+
 sso_conf_contents = '''[main]
 encrypt_email=True
 encrypt_password=True
 smtp_conn=
+site_name=
 
 [backend]
 default=sql
@@ -374,6 +388,14 @@ inform_if_locked=True
 inform_if_not_confirmed=True
 inform_if_not_approved=True
 
+[password_reset]
+valid_for=1440 # In minutes = 1 day
+password_change_session_duration=1800 # In seconds = 30 minutes
+user_search_by=username
+email_title_en_GB=Password reset
+email_title_en_US=Password reset
+email_from=hello@example.com
+
 [user_address_list]
 
 [session]
@@ -389,6 +411,8 @@ about_to_expire_threshold=30 # In days
 log_in_if_about_to_expire=True
 min_length=8
 max_length=256
+min_complexity=4
+min_complexity_algorithm=zxcvbn
 reject_list = """
   111111
   123123
@@ -452,33 +476,61 @@ default_page_size=50
 max_page_size=100
 '''
 
+# ################################################################################################################################
+
 sso_confirm_template = """
-Hello {data.display_name},
+Hello {username},
 
 your account is almost ready - all we need to do is make sure that this is your email.
 
-Use this URL to confirm your address:
+Use this link to confirm your address:
 
-https://example.com/zato/sso/confirm?token={data.token}
+https://example.com/signup-confirm/{token}
 
-If you didn't want to create the account, just delete this email and everything will go back to the way it was.
+If you did not want to create the account, just delete this email and everything will go back to the way it was.
 
---
+ZATO_FOOTER_MARKER
 Your Zato SSO team.
 """.strip()
 
-sso_welcome_template = """
-Hello {data.display_name}!
+# ################################################################################################################################
 
-Thanks for joining us. Here are a couple great ways to get started:
+sso_welcome_template = """
+Hello {username},
+
+thanks for joining us. Here are a couple great ways to get started:
 
 * https://example.com/link/1
 * https://example.com/link/2
 * https://example.com/link/3
 
---
+ZATO_FOOTER_MARKER
 Your Zato SSO team.
 """.strip()
+
+sso_password_reset_template = """
+Hello {username},
+
+a password reset was recently requested on your {site_name} account. If this was you, please click the link below to update your password.
+
+https://example.com/reset-password/{token}
+
+This link will expire in {expiration_time_hours} hours.
+
+If you do not want to reset your password, please ignore this message and the password will not be changed.
+
+ZATO_FOOTER_MARKER
+Your Zato SSO team.
+""".strip()
+
+# ################################################################################################################################
+
+# We need to do it because otherwise IDEs may replace '-- ' with '--' (stripping the whitespace)
+sso_confirm_template = sso_confirm_template.replace('ZATO_FOOTER_MARKER', '-- ')
+sso_welcome_template = sso_welcome_template.replace('ZATO_FOOTER_MARKER', '-- ')
+sso_password_reset_template = sso_password_reset_template.replace('ZATO_FOOTER_MARKER', '-- ')
+
+# ################################################################################################################################
 
 secrets_conf_template = """
 [secret_keys]
@@ -492,20 +544,7 @@ server_conf.misc.jwt_secret={zato_misc_jwt_secret}
 server_conf.odb.password={zato_odb_password}
 """
 
-simple_io_conf_contents = """
-[int]
-exact=id
-suffix=_count, _id, _size, _size_min, _size_max, _timeout
-
-[bool]
-prefix=by_, has_, is_, may_, needs_, should_
-
-[secret]
-exact=auth_data, auth_token, password, password1, password2, secret, secret_key, tls_pem_passphrase, token
-
-[bytes_to_str]
-encoding={bytes_to_str_encoding}
-""".lstrip()
+# ################################################################################################################################
 
 lua_zato_rename_if_exists = """
 -- Checks whether a from_key exists and if it does renames it to to_key.
@@ -526,7 +565,11 @@ else
 end
 """
 
+# ################################################################################################################################
+
 default_odb_pool_size = 15
+
+# ################################################################################################################################
 
 directories = (
     'config',
@@ -557,24 +600,42 @@ directories = (
     'config/repo/lua/user',
     'config/repo/schema',
     'config/repo/schema/json',
+    'config/repo/sftp',
+    'config/repo/sftp/channel',
     'config/repo/static',
-    'config/repo/static/email',
+    'config/repo/static/sso',
+    'config/repo/static/sso/email',
+    'config/repo/static/sso/email/en_GB',
+    'config/repo/static/sso/email/en_US',
     'config/repo/tls',
     'config/repo/tls/keys-certs',
     'config/repo/tls/ca-certs',
 )
+
+# ################################################################################################################################
 
 files = {
     'config/repo/logging.conf': common_logging_conf_contents.format(log_path='./logs/server.log'),
     'config/repo/service-sources.txt': service_sources_contents,
     'config/repo/lua/internal/zato.rename_if_exists.lua': lua_zato_rename_if_exists,
     'config/repo/sql.conf': sql_conf_contents,
-    'config/repo/static/email/sso-confirm.txt': sso_confirm_template,
-    'config/repo/static/email/sso-welcome.txt': sso_welcome_template,
+
+    'config/repo/static/sso/email/en_GB/signup-confirm.txt': CommonSSO.EmailTemplate.SignupConfirm,
+    'config/repo/static/sso/email/en_GB/signup-welcome.txt': CommonSSO.EmailTemplate.SignupWelcome,
+    'config/repo/static/sso/email/en_GB/password-reset-link.txt': CommonSSO.EmailTemplate.PasswordResetLink,
+
+    'config/repo/static/sso/email/en_US/signup-confirm.txt': CommonSSO.EmailTemplate.SignupConfirm,
+    'config/repo/static/sso/email/en_US/signup-welcome.txt': CommonSSO.EmailTemplate.SignupWelcome,
+    'config/repo/static/sso/email/en_US/password-reset-link.txt': CommonSSO.EmailTemplate.PasswordResetLink,
 }
+
+# ################################################################################################################################
 
 priv_key_location = './config/repo/config-priv.pem'
 priv_key_location = './config/repo/config-pub.pem'
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class Create(ZatoCommand):
     """ Creates a new Zato server
@@ -595,13 +656,26 @@ class Create(ZatoCommand):
     opts.append({'name':'--jwt_secret', 'help':"Server's JWT secret (must be the same for all servers)"})
     opts.append({'name':'--http_port', 'help':"Server's HTTP port"})
 
+# ################################################################################################################################
+
     def __init__(self, args):
+
+        # stdlib
+        import os
+        import uuid
+
         super(Create, self).__init__(args)
         self.target_dir = os.path.abspath(args.path)
         self.dirs_prepared = False
         self.token = uuid.uuid4().hex.encode('utf8')
 
+# ################################################################################################################################
+
     def prepare_directories(self, show_output):
+
+        # stdlib
+        import os
+
         if show_output:
             self.logger.debug('Creating directories..')
 
@@ -613,7 +687,32 @@ class Create(ZatoCommand):
 
         self.dirs_prepared = True
 
-    def execute(self, args, default_http_port=http_plain_server_port, show_output=True, return_server_id=False):
+# ################################################################################################################################
+
+    def execute(self, args, default_http_port=None, show_output=True, return_server_id=False):
+
+        # stdlib
+        import os
+        from datetime import datetime
+        from traceback import format_exc
+
+        # Cryptography
+        from cryptography.fernet import Fernet
+
+        # SQLAlchemy
+        from sqlalchemy.exc import IntegrityError
+
+        # Python 2/3 compatibility
+        from six import PY3
+
+        # Zato
+        from zato.cli._apispec_default import apispec_files
+        from zato.common.api import SERVER_JOIN_STATUS
+        from zato.common.crypto.const import well_known_data
+        from zato.common.defaults import http_plain_server_port
+        from zato.common.odb.model import Cluster, Server
+
+        default_http_port = default_http_port or http_plain_server_port
 
         engine = self._get_engine(args)
         session = self._get_session(engine)
@@ -813,3 +912,6 @@ You can now start it with the 'zato start {}' command.""".format(self.target_dir
         # otherwise it would be construed as a non-0 return code from this process.
         if return_server_id:
             return server.id
+
+# ################################################################################################################################
+# ################################################################################################################################

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -15,8 +15,10 @@ from logging import getLogger
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import RATE_LIMIT, SECRETS
-from zato.common.util import asbool
+from zato.common.api import AuditLog, RATE_LIMIT
+from zato.common.audit_log import LogContainerConfig
+from zato.common.const import SECRETS
+from zato.common.util.api import asbool
 from zato.common.util.sql import elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
 from zato.server.config import ConfigDict
@@ -24,8 +26,22 @@ from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.url_dispatcher import Matcher
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.model.wsx import WSXConnectorConfig
+
+    WSXConnectorConfig = WSXConnectorConfig
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_audit_max_len_messages = AuditLog.Default.max_len_messages
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -85,10 +101,7 @@ class ConfigLoader(object):
         # Cloud - start
         #
 
-        # OpenStack - Swift
-
-        query = self.odb.get_cloud_openstack_swift_list(server.cluster.id, True)
-        self.config.cloud_openstack_swift = ConfigDict.from_query('cloud_openstack_swift', query, decrypt_func=self.decrypt)
+        # AWS S3
 
         query = self.odb.get_cloud_aws_s3_list(server.cluster.id, True)
         self.config.cloud_aws_s3 = ConfigDict.from_query('cloud_aws_s3', query, decrypt_func=self.decrypt)
@@ -126,10 +139,6 @@ class ConfigLoader(object):
         # AMQP
         query = self.odb.get_channel_amqp_list(server.cluster.id, True)
         self.config.channel_amqp = ConfigDict.from_query('channel_amqp', query, decrypt_func=self.decrypt)
-
-        # STOMP
-        query = self.odb.get_channel_stomp_list(server.cluster.id, True)
-        self.config.channel_stomp = ConfigDict.from_query('channel_stomp', query, decrypt_func=self.decrypt)
 
         # IBM MQ
         query = self.odb.get_channel_wmq_list(server.cluster.id, True)
@@ -186,10 +195,6 @@ class ConfigLoader(object):
         query = self.odb.get_out_sql_list(server.cluster.id, True)
         self.config.out_sql = ConfigDict.from_query('out_sql', query, decrypt_func=self.decrypt)
 
-        # STOMP
-        query = self.odb.get_out_stomp_list(server.cluster.id, True)
-        self.config.out_stomp = ConfigDict.from_query('out_stomp', query, decrypt_func=self.decrypt)
-
         # ZMQ channels
         query = self.odb.get_channel_zmq_list(server.cluster.id, True)
         self.config.channel_zmq = ConfigDict.from_query('channel_zmq', query, decrypt_func=self.decrypt)
@@ -228,11 +233,6 @@ class ConfigLoader(object):
         # Notifications - start
         #
 
-        # OpenStack Swift
-        query = self.odb.get_notif_cloud_openstack_swift_list(server.cluster.id, True)
-        self.config.notif_cloud_openstack_swift = ConfigDict.from_query('notif_cloud_openstack_swift',
-            query, decrypt_func=self.decrypt)
-
         # SQL
         query = self.odb.get_notif_sql_list(server.cluster.id, True)
         self.config.notif_sql = ConfigDict.from_query('notif_sql', query, decrypt_func=self.decrypt)
@@ -270,10 +270,6 @@ class ConfigLoader(object):
         # OAuth
         query = self.odb.get_oauth_list(server.cluster.id, True)
         self.config.oauth = ConfigDict.from_query('oauth', query, decrypt_func=self.decrypt)
-
-        # OpenStack
-        query = self.odb.get_openstack_security_list(server.cluster.id, True)
-        self.config.openstack_security = ConfigDict.from_query('openstack_security', query, decrypt_func=self.decrypt)
 
         # RBAC - permissions
         query = self.odb.get_rbac_permission_list(server.cluster.id, True)
@@ -357,20 +353,16 @@ class ConfigLoader(object):
         # but actual code paths require the pre-3.0 format so let's prepare it here.
         self.config.simple_io = ConfigDict('simple_io', Bunch())
 
-        int_exact = self.sio_config.int.exact
-        int_suffix = self.sio_config.int.suffix
-        bool_prefix = self.sio_config.bool.prefix
+        int_exact = self.sio_config.int_config.exact
+        int_suffixes = self.sio_config.int_config.suffixes
+        bool_prefixes = self.sio_config.bool_config.prefixes
 
-        self.config.simple_io['int_parameters'] = int_exact if isinstance(int_exact, list) else [int_exact]
-        self.config.simple_io['int_parameter_suffixes'] = int_suffix if isinstance(int_suffix, list) else [int_suffix]
-        self.config.simple_io['bool_parameter_prefixes'] = bool_prefix if isinstance(bool_prefix, list) else [bool_prefix]
+        self.config.simple_io['int_parameters'] = int_exact
+        self.config.simple_io['int_parameter_suffixes'] = int_suffixes
+        self.config.simple_io['bool_parameter_prefixes'] = bool_prefixes
 
         # Maintain backward-compatibility with pre-3.1 versions that did not specify any particular encoding
-        bytes_to_str = self.sio_config.get('bytes_to_str')
-        if not bytes_to_str:
-            bytes_to_str = {'encoding': None}
-
-        self.config.simple_io['bytes_to_str'] = bytes_to_str
+        self.config.simple_io['bytes_to_str'] = {'encoding': self.sio_config.bytes_to_str_encoding or None}
 
         # Pub/sub
         self.config.pubsub = Bunch()
@@ -423,11 +415,11 @@ class ConfigLoader(object):
 
         for config_store_name in _config_store:
             config_dict = self.config[config_store_name] # type: ConfigDict
-            for object_name in config_dict: # type: unicode
+            for object_name in config_dict: # type: str
                 self.set_up_object_rate_limiting(_sec_def, object_name, config_store_name)
 
         for item in self.config['http_soap']: # type: dict
-            # Do not try to set up rate limiting if we know there is no configuration for it available
+            # Set up rate limiting only if we know there is configuration for it available
             if 'is_rate_limit_active' in item:
                 self.set_up_object_rate_limiting(_http_soap, item['name'], config=item)
 
@@ -435,7 +427,7 @@ class ConfigLoader(object):
 
     def set_up_object_rate_limiting(self, object_type, object_name, config_store_name=None, config=None,
         _exact=RATE_LIMIT.TYPE.EXACT.id):
-        # type: (unicode, unicode, unicode, dict) -> bool
+        # type: (str, str, str, dict) -> bool
 
         if not config:
             config = self.config[config_store_name].get(object_name) # type: ConfigDict
@@ -483,6 +475,51 @@ class ConfigLoader(object):
                 self.rate_limiting.delete(object_info.type_, object_info.name)
 
         return is_rate_limit_active
+
+# ################################################################################################################################
+
+    def set_up_object_audit_log(self, object_type, object_id, config, is_edit):
+        # type: (str, str, WSXConnectorConfig, bool)
+
+        # For type completion
+        audit_log = self.audit_log # type: AuditLog
+
+        # Prepare a new configuration object for that log ..
+        log_config = LogContainerConfig()
+
+        log_config.type_ = object_type
+        log_config.object_id = object_id
+
+        if isinstance(config, dict):
+            config_max_len_messages_sent = config['max_len_messages_sent']
+            config_max_len_messages_received = config['max_len_messages_received']
+        else:
+            config_max_len_messages_sent = config.max_len_messages_sent
+            config_max_len_messages_received = config.max_len_messages_received
+
+        log_config.max_len_messages_sent     = config_max_len_messages_sent
+        log_config.max_len_messages_received = config_max_len_messages_received
+
+        # .. convert both from kilobytes to bytes (we use kB = 1,000 bytes rather than KB = 1,024 bytes) ..
+        log_config.max_bytes_per_message_sent     = int(config_max_len_messages_sent) * 1000
+        log_config.max_bytes_per_message_received = int(config_max_len_messages_received) * 1000
+
+        # .. and now we can create our audit log container
+        func = audit_log.edit_container if is_edit else audit_log.create_container
+        func(log_config)
+
+# ################################################################################################################################
+
+    def set_up_object_audit_log_by_config(self, object_type, object_id, config, is_edit):
+        # type: (str, str, WSXConnectorConfig, bool)
+
+        if getattr(config, 'is_audit_log_sent_active', False) or getattr(config, 'is_audit_log_received_active', False):
+
+            # These may be string objects
+            config.max_len_messages_sent     = int(config.max_len_messages_sent or _audit_max_len_messages)
+            config.max_len_messages_received = int(config.max_len_messages_received or _audit_max_len_messages)
+
+            self.set_up_object_audit_log(object_type, object_id, config, is_edit)
 
 # ################################################################################################################################
 
@@ -550,7 +587,7 @@ class ConfigLoader(object):
         """ All passwords are always encrypted so we need to look up any that are not,
         for instance, because it is a cluster newly migrated from 2.0 to 3.0, and encrypt them now in ODB.
         """
-        sec_config_dict_types = ('apikey', 'aws', 'basic_auth', 'jwt', 'ntlm', 'oauth', 'openstack_security',
+        sec_config_dict_types = ('apikey', 'aws', 'basic_auth', 'jwt', 'ntlm', 'oauth',
             'tls_key_cert', 'wss', 'vault_conn_sec', 'xpath_sec')
 
         # Global lock to make sure only one server attempts to do it at a time
