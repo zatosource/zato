@@ -1435,7 +1435,9 @@ def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted):
 
             if security:
                 password = security.password.replace(SECRETS.PREFIX, '')
-                return (security.username, cm.decrypt(password))
+                if password.startswith(SECRETS.EncryptedMarker):
+                    password = cm.decrypt(password)
+                return (security.username, password)
 
 # ################################################################################################################################
 
