@@ -1,5 +1,6 @@
 
 .PHONY: build
+MAKEFLAGS += --silent
 
 default: build
 PY_DIR=$(CURDIR)/../bin
@@ -14,15 +15,24 @@ clean:
 	find $(CURDIR) -type f -name '*.so' -delete
 	find $(CURDIR) -name '*.egg-info' -exec rm -rf {} +
 
-simpleio:
-	$(MAKE) build
-
-simpleio-test:
-	$(MAKE) build
-	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/simpleio_/*.py -s
-
 rate-limit:
 	$(MAKE) build
 
-rate-limit-test:
-	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/rate_limit/*.py -s
+simpleio:
+	$(MAKE) build
+
+reqresp-tests:
+	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/reqresp/test_*.py -s
+
+simpleio-tests:
+	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/simpleio_/test_*.py -s
+
+run-tests:
+	echo "Running unit-tests in zato-cy"
+	$(MAKE) reqresp-tests
+	$(MAKE) simpleio-tests
+	echo
+
+static-check:
+	echo "Running static checks in zato-cy"
+	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/

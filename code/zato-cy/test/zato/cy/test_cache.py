@@ -102,7 +102,6 @@ class CacheTestCace(TestCase):
         self.assertLess(returned1.prev_read, now)
         self.assertLess(returned1.prev_write, now)
 
-
         returned2 = c.get(key2, None, True)
         self.assertEquals(returned2.value, expected2)
         self.assertEquals(returned2.position, 2)
@@ -280,11 +279,9 @@ class CacheTestCace(TestCase):
         c.set(key2, expected2, 5.0, None)
         c.set(key3, expected3, 5.0, None)
 
-
         self.assertEquals(len(c.hits_per_position), 2)
         self.assertEquals(c.hits_per_position[0], 0)
         self.assertEquals(c.hits_per_position[1], 0)
-
 
         # Right now index0 is key3, so when we look up this key 3 times, we always find it at index0
 
@@ -293,12 +290,10 @@ class CacheTestCace(TestCase):
         c.get('key3', None, False)
         self.assertEquals(c.hits_per_position[0], 3)
 
-
         # Now get key2 which will be found at index1 and getting it will move it to index0
 
         c.get('key2', None, False)
         self.assertEquals(c.hits_per_position[1], 1)
-
 
         # Now key2 is at index0 so getting this key will increase index0's counter
 
@@ -459,7 +454,6 @@ class CacheTestCace(TestCase):
 
         returned4 = c.get(key4, None, False)
         self.assertEquals(returned4, expected4)
-
 
 # ################################################################################################################################
 

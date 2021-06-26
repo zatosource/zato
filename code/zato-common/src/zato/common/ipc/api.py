@@ -30,10 +30,11 @@ from rapidjson import loads
 from builtins import bytes
 
 # Zato
-from zato.common import IPC
+from zato.common.api import IPC
 from zato.common.ipc.publisher import Publisher
 from zato.common.ipc.subscriber import Subscriber
-from zato.common.util import fs_safe_name, spawn_greenlet
+from zato.common.util.api import spawn_greenlet
+from zato.common.util.file_system import fs_safe_name
 
 # ################################################################################################################################
 
@@ -139,7 +140,7 @@ class IPCAPI(object):
 # ################################################################################################################################
 
     def invoke_by_pid(self, service, payload, cluster_name, server_name, target_pid,
-        fifo_response_buffer_size, timeout=90, is_async=False):
+        fifo_response_buffer_size, timeout=90, is_async=False, skip_response_elem=False):
         """ Invokes a service through IPC, synchronously or in background. If target_pid is an exact PID then this one worker
         process will be invoked if it exists at all.
         """
@@ -160,7 +161,7 @@ class IPCAPI(object):
             try:
 
                 # Open the pipe for reading ..
-                fifo_fd = os.open(fifo_path, os.O_RDONLY|os.O_NONBLOCK)
+                fifo_fd = os.open(fifo_path, os.O_RDONLY | os.O_NONBLOCK)
                 fcntl(fifo_fd, _F_SETPIPE_SZ, 1000000)
 
                 # .. and wait for response ..

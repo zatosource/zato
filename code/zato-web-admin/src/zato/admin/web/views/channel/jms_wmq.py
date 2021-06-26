@@ -15,12 +15,10 @@ from traceback import format_exc
 # Django
 from django.http import HttpResponse, HttpResponseServerError
 
-# anyjson
-from anyjson import dumps
-
 # Zato
 from zato.admin.web.forms.channel.jms_wmq import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, get_definition_list, Index as _Index, method_allowed
+from zato.common.json_internal import dumps
 from zato.common.odb.model import ChannelWMQ
 
 # ################################################################################################################################
@@ -97,8 +95,8 @@ def create(req):
         return _edit_create_response(
             req.zato.client, 'created', response.data.id, req.POST['name'], req.POST['cluster_id'], req.POST['def_id'])
     except Exception:
-        msg = 'Could not create an IBM MQ MQ channel, e:`%s`'
-        logger.error(msg, format_exc())
+        msg = 'Could not create an IBM MQ channel, e:`{}`'.format(format_exc)
+        logger.error(msg)
         return HttpResponseServerError(msg)
 
 
@@ -111,8 +109,7 @@ def edit(req):
         return _edit_create_response(
             req.zato.client, 'updated', req.POST['id'], req.POST['edit-name'], req.POST['cluster_id'], req.POST['edit-def_id'])
     except Exception:
-        msg = 'Could not update IBM MQ channel, e:`%s`'
-        logger.error(msg, format_exc())
+        msg = 'Could not update IBM MQ channel, e:`{}`'.format(format_exc())
         return HttpResponseServerError(msg)
 
 # ################################################################################################################################

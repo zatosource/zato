@@ -1,45 +1,39 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
 from datetime import datetime, timedelta
 from hashlib import sha256
-from json import dumps
 from logging import getLogger
 from traceback import format_exc
 from uuid import uuid4
-
-# ipaddress
-from ipaddress import ip_address
 
 # Python 2/3 compatibility
 from past.builtins import unicode
 
 # Zato
-from zato.common import GENERIC, SEC_DEF_TYPE
+from zato.common.api import GENERIC, SEC_DEF_TYPE
 from zato.common.audit import audit_pii
+from zato.common.json_internal import dumps
 from zato.common.odb.model import SSOSession as SessionModel
-from zato.common.crypto import CryptoManager
-from zato.sso import const, status_code, Session as SessionEntity, ValidationError
+from zato.common.crypto.totp_ import TOTPManager
+from zato.sso import status_code, Session as SessionEntity, ValidationError
 from zato.sso.attr import AttrAPI
 from zato.sso.odb.query import get_session_by_ext_id, get_session_by_ust, get_session_list_by_user_id, get_user_by_id, \
-     get_user_by_username
-from zato.sso.util import check_credentials, check_remote_app_exists, new_user_session_token, set_password, validate_password
+     get_user_by_name
+from zato.sso.common import insert_sso_session, LoginCtx, SessionInsertCtx, \
+     update_session_state_change_list as _update_session_state_change_list, VerifyCtx
+from zato.sso.util import new_user_session_token, set_password, UserChecker, validate_password
 
 # ################################################################################################################################
 
-# Type checking
-import typing
-
-if typing.TYPE_CHECKING:
+if 0:
 
     # stdlib
     from typing import Callable
@@ -49,11 +43,13 @@ if typing.TYPE_CHECKING:
 
     # Zato
     from zato.common.odb.model import SSOUser
+    from zato.sso.user import User
 
     # For pyflakes
     Bunch = Bunch
     Callable = Callable
     SSOUser = SSOUser
+    User = User
 
 # ################################################################################################################################
 
@@ -62,7 +58,6 @@ logger = getLogger('zato')
 # ################################################################################################################################
 
 SessionModelTable = SessionModel.__table__
-SessionModelInsert = SessionModelTable.insert
 SessionModelUpdate = SessionModelTable.update
 SessionModelDelete = SessionModelTable.delete
 
@@ -70,39 +65,6 @@ SessionModelDelete = SessionModelTable.delete
 
 _dummy_password='dummy.{}'.format(uuid4().hex)
 _ext_sec_type_supported = SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.JWT
-
-# ################################################################################################################################
-
-class LoginCtx(object):
-    """ A set of data about a login request.
-    """
-    __slots__ = ('remote_addr', 'user_agent', 'has_remote_addr', 'has_user_agent', 'input', 'ext_session_id')
-
-    def __init__(self, remote_addr, user_agent, has_remote_addr, has_user_agent, input, ext_session_id=None):
-        # type: (unicode, unicode, bool, bool, dict)
-        self.remote_addr = [ip_address(remote_addr)]
-        self.user_agent = user_agent
-        self.has_remote_addr = has_remote_addr
-        self.has_user_agent = has_user_agent
-        self.input = input
-        self.ext_session_id = ext_session_id
-
-# ################################################################################################################################
-
-class VerifyCtx(object):
-    """ Wraps information about a verification request.
-    """
-    __slots__ = ('ust', 'remote_addr', 'input', 'has_remote_addr', 'has_user_agent')
-
-    def __init__(self, ust, remote_addr, current_app, has_remote_addr=None, has_user_agent=None):
-        # type: (unicode, unicode, unicode, bool, bool)
-        self.ust = ust
-        self.remote_addr = remote_addr
-        self.has_remote_addr = has_remote_addr
-        self.has_user_agent = has_user_agent
-        self.input = {
-            'current_app': current_app
-        }
 
 # ################################################################################################################################
 
@@ -146,6 +108,7 @@ class SessionAPI(object):
         self.odb_session_func = None
         self.is_sqlite = None
         self.interaction_max_len = 100
+        self.user_checker = UserChecker(self.decrypt_func, self.verify_hash_func, self.sso_conf)
 
 # ################################################################################################################################
 
@@ -153,202 +116,6 @@ class SessionAPI(object):
         # type: (Callable, bool)
         self.odb_session_func = func
         self.is_sqlite = is_sqlite
-
-# ################################################################################################################################
-
-    def _check_credentials(self, ctx, user_password):
-        # type: (LoginCtx) -> bool
-        return check_credentials(self.decrypt_func, self.verify_hash_func, user_password, ctx.input['password'])
-
-# ################################################################################################################################
-
-    def _check_remote_app_exists(self, ctx):
-        # type: (LoginCtx) -> bool
-        return check_remote_app_exists(ctx.input['current_app'], self.sso_conf.apps.all, logger)
-
-# ################################################################################################################################
-
-    def _check_login_to_app_allowed(self, ctx):
-        # type: (LoginCtx) -> bool
-        if ctx.input['current_app'] not in self.sso_conf.apps.login_allowed:
-            if self.sso_conf.apps.inform_if_app_invalid:
-                raise ValidationError(status_code.app_list.invalid, True)
-            else:
-                raise ValidationError(status_code.auth.not_allowed, True)
-        else:
-            return True
-
-# ################################################################################################################################
-
-    def _check_remote_ip_allowed(self, ctx, user, _invalid=object()):
-        # type: (LoginCtx, SSOUser) -> bool
-
-        ip_allowed = self.sso_conf.user_address_list.get(user.username, _invalid)
-
-        # Shortcut in the simplest case
-        if ip_allowed == '*':
-            return True
-
-        # Do not continue if user is not whitelisted but is required to
-        if ip_allowed is _invalid:
-            if self.sso_conf.login.reject_if_not_listed:
-                return
-            else:
-                # We are not to reject users if they are not listed, in other words,
-                # we are to accept them even if they are not so we return a success flag.
-                return True
-
-        # User was found in configuration so now we need to check IPs allowed ..
-        else:
-
-            # .. but if there are no IPs configured for user, it means the person may not log in
-            # regardless of reject_if_not_whitelisted, which is why it is checked separately.
-            if not ip_allowed:
-                return
-
-            # There is at least one address or pattern to check again ..
-            else:
-                # .. but if no remote address was sent, we cannot continue.
-                if not ctx.remote_addr:
-                    return False
-                else:
-                    for _remote_addr in ctx.remote_addr:
-                        for _ip_allowed in ip_allowed:
-                            if _remote_addr in _ip_allowed:
-                                return True # OK, there was at least that one match so we report success
-
-                    # If we get here, it means that none of remote addresses from input matched
-                    # so we can return False to be explicit.
-                    return False
-
-# ################################################################################################################################
-
-    def _check_user_not_locked(self, user):
-        # type: (SSOUser) -> bool
-
-        if user.is_locked:
-            if self.sso_conf.login.inform_if_locked:
-                raise ValidationError(status_code.auth.locked, True)
-        else:
-            return True
-
-# ################################################################################################################################
-
-    def _check_signup_status(self, user):
-        # type: (SSOUser) -> bool
-
-        if user.sign_up_status != const.signup_status.final:
-            if self.sso_conf.login.inform_if_not_confirmed:
-                raise ValidationError(status_code.auth.invalid_signup_status, True)
-        else:
-            return True
-
-# ################################################################################################################################
-
-    def _check_is_approved(self, user):
-        # type: (SSOUser) -> bool
-
-        if not user.approval_status == const.approval_status.approved:
-            if self.sso_conf.login.inform_if_not_approved:
-                raise ValidationError(status_code.auth.invalid_signup_status, True)
-        else:
-            return True
-
-# ################################################################################################################################
-
-    def _check_password_expired(self, user, _now=datetime.utcnow):
-        # type: (SSOUser, datetime) -> bool
-
-        if _now() > user.password_expiry:
-            if self.sso_conf.password.inform_if_expired:
-                raise ValidationError(status_code.password.expired, True)
-        else:
-            return True
-
-# ################################################################################################################################
-
-    def _check_password_about_to_expire(self, user, _now=datetime.utcnow, _timedelta=timedelta):
-        # type: (SSOUser, datetime, timedelta) -> object
-
-        # Find time after which the password is considered to be about to expire
-        threshold_time = user.password_expiry - _timedelta(days=self.sso_conf.password.about_to_expire_threshold)
-
-        # .. check if current time is already past that threshold ..
-        if _now() > threshold_time:
-
-            # .. if it is, we may either return a warning and continue ..
-            if self.sso_conf.password.inform_if_about_to_expire:
-                return status_code.warning
-
-            # .. or it can considered an error, which rejects the request.
-            else:
-                return status_code.error
-
-        # No approaching expiry, we may continue
-        else:
-            return True
-
-# ################################################################################################################################
-
-    def _check_must_send_new_password(self, ctx, user):
-        # type: (LoginCtx, SSOUser) -> bool
-
-        if user.password_must_change and not ctx.input.get('new_password'):
-            if self.sso_conf.password.inform_if_must_be_changed:
-                raise ValidationError(status_code.password.must_send_new, True)
-        else:
-            return True
-
-# ################################################################################################################################
-
-    def _check_login_metadata_allowed(self, ctx):
-        # type: (LoginCtx) -> bool
-
-        if ctx.has_remote_addr or ctx.has_user_agent:
-            if ctx.input['current_app'] not in self.sso_conf.apps.login_metadata_allowed:
-                raise ValidationError(status_code.metadata.not_allowed, False)
-
-        return True
-
-# ################################################################################################################################
-
-    def _run_user_checks(self, ctx, user, check_if_password_expired=True):
-        """ Runs a series of checks for incoming request and user.
-        """
-        # type: (LoginCtx, SSOUser, bool)
-
-        # Input application must have been previously defined
-        if not self._check_remote_app_exists(ctx):
-            raise ValidationError(status_code.auth.not_allowed, True)
-
-        # If applicable, requests must originate in a white-listed IP address
-        if not self._check_remote_ip_allowed(ctx, user):
-            raise ValidationError(status_code.auth.not_allowed, True)
-
-        # User must not have been locked out of the auth system
-        if not self._check_user_not_locked(user):
-            raise ValidationError(status_code.auth.not_allowed, True)
-
-        # If applicable, user must be fully signed up, including account creation's confirmation
-        if not self._check_signup_status(user):
-            raise ValidationError(status_code.auth.not_allowed, True)
-
-        # If applicable, user must be approved by a super-user
-        if not self._check_is_approved(user):
-            raise ValidationError(status_code.auth.not_allowed, True)
-
-        # Password must not have expired, but only if input flag tells us to,
-        # it may be possible that a user's password has already expired
-        # and that person wants to change it in this very call, in which case
-        # we cannot reject it on the basis that it is expired - no one would be able
-        # to change expired passwords then.
-        if check_if_password_expired:
-            if not self._check_password_expired(user):
-                raise ValidationError(status_code.auth.not_allowed, True)
-
-        # Current application must be allowed to send login metadata
-        if not self._check_login_metadata_allowed(ctx):
-            raise ValidationError(status_code.auth.not_allowed, True)
 
 # ################################################################################################################################
 
@@ -418,7 +185,7 @@ class SessionAPI(object):
 
         # .. otherwise, create a new one. Note that we get here only if
         else:
-            ctx = LoginCtx(remote_addr, user_agent, False, False, {
+            ctx = LoginCtx(remote_addr, user_agent, {
                 'user_id': user_id,
                 'current_app': current_app,
                 'totp_code': totp_code,
@@ -444,7 +211,7 @@ class SessionAPI(object):
 # ################################################################################################################################
 
     def login(self, ctx, _ok=status_code.ok, _now=datetime.utcnow, _timedelta=timedelta, _dummy_password=_dummy_password,
-        is_logged_in_ext=False):
+        is_logged_in_ext=False, skip_sec=False):
         """ Logs a user in, returning session info on success or raising ValidationError on any error.
         """
         # type: (LoginCtx, unicode, datetime, timedelta, unicode, bool) -> SessionInfo
@@ -453,20 +220,22 @@ class SessionAPI(object):
         with closing(self.odb_session_func()) as session:
 
             if ctx.input.get('username'):
-                user = get_user_by_username(session, ctx.input['username']) # type: SSOUser
+                user = get_user_by_name(session, ctx.input['username']) # type: SSOUser
             else:
                 user = get_user_by_id(session, ctx.input['user_id']) # type: SSOUser
 
-            # If the user is already logged in externally, this flag will be True,
-            # in which case we do not check the credentials - we already know they are valid
-            # because they were checked externally and user_id is the SSO user linked to the
-            # already validated external credentials.
-            if not is_logged_in_ext:
+            if not skip_sec:
 
-                # Check credentials first to make sure that attackers do not learn about any sort
-                # of metadata (e.g. is the account locked) if they do not know username and password.
-                if not self._check_credentials(ctx, user.password if user else _dummy_password):
-                    raise ValidationError(status_code.auth.not_allowed, False)
+                # If the user is already logged in externally, this flag will be True,
+                # in which case we do not check the credentials - we already know they are valid
+                # because they were checked externally and user_id is the SSO user linked to the
+                # already validated external credentials.
+                if not is_logged_in_ext:
+
+                    # Check credentials first to make sure that attackers do not learn about any sort
+                    # of metadata (e.g. is the account locked) if they do not know username and password.
+                    if not self.user_checker.check_credentials(ctx, user.password if user else _dummy_password):
+                        raise ValidationError(status_code.auth.not_allowed, False)
 
             # Check input TOTP key if two-factor authentication is enabled ..
             if self._needs_totp_login_check(user, is_logged_in_ext, ctx.input.get('sec_type')):
@@ -476,72 +245,71 @@ class SessionAPI(object):
                     raise ValidationError(status_code.auth.not_allowed, False)
                 else:
                     user_totp_key = self.decrypt_func(user.totp_key)
-                    if not CryptoManager.verify_totp_code(user_totp_key, input_totp_code):
+                    if not TOTPManager.verify_totp_code(user_totp_key, input_totp_code):
                         logger.warn('Invalid TOTP code; user `%s`', user.username)
                         raise ValidationError(status_code.auth.not_allowed, False)
-
-            # It must be possible to log into the application requested (CRM above)
-            self._check_login_to_app_allowed(ctx)
-
-            # Common auth checks
-            self._run_user_checks(ctx, user)
 
             # We assume that we will not have to warn about an approaching password expiry
             has_w_about_to_exp = False
 
-            # If applicable, password may be about to expire (this must be after checking that it has not already).
-            # Note that it may return a specific status to return (warning or error)
-            _about_status = self._check_password_about_to_expire(user)
-            if _about_status is not True:
-                if _about_status == status_code.warning:
-                    has_w_about_to_exp = True
-                else:
-                    raise ValidationError(status_code.password.e_about_to_exp, False, _about_status)
+            if not skip_sec:
 
-            # If password is marked as requiring a change upon next login but a new one was not sent, reject the request.
-            self._check_must_send_new_password(ctx, user)
+                # It must be possible to log into the application requested (CRM above)
+                self.user_checker.check_login_to_app_allowed(ctx)
+
+                # Common auth checks
+                self.user_checker.check(ctx, user)
+
+                # If applicable, password may be about to expire (this must be after checking that it has not already).
+                # Note that it may return a specific status to return (warning or error)
+                _about_status = self.user_checker.check_password_about_to_expire(user)
+                if _about_status is not True:
+                    if _about_status == status_code.warning:
+                        has_w_about_to_exp = True
+                    else:
+                        raise ValidationError(status_code.password.e_about_to_exp, False, _about_status)
+
+                # If password is marked as requiring a change upon next login but a new one was not sent, reject the request.
+                self.user_checker.check_must_send_new_password(ctx, user)
 
             # If new password is required, we need to validate and save it before session can be created.
             # Note that at this point we already know that the old password was correct so it is safe to set the new one
             # if it is confirmed to be valid. We also know that there is some new password on input because otherwise
             # the check above would have raised a ValidationError.
-            if user.password_must_change:
-                try:
-                    validate_password(self.sso_conf, ctx.input.get('new_password'))
-                except ValidationError as e:
-                    if e.return_status:
-                        raise ValidationError(e.sub_status, e.return_status, e.status)
-                else:
-                    set_password(self.odb_session_func, self.encrypt_func, self.hash_func, self.sso_conf, user.user_id,
-                            ctx.input['new_password'], False)
+            if not skip_sec:
+                if user.password_must_change:
+                    try:
+                        validate_password(self.sso_conf, ctx.input.get('new_password'))
+                    except ValidationError as e:
+                        if e.return_status:
+                            raise ValidationError(e.sub_status, e.return_status, e.status)
+                    else:
+                        set_password(self.odb_session_func, self.encrypt_func, self.hash_func, self.sso_conf, user.user_id,
+                                ctx.input['new_password'], False)
 
             # All validated, we can create a session object now
             creation_time = _now()
             expiration_time = creation_time + timedelta(minutes=self.sso_conf.session.expiry)
             ust = new_user_session_token()
 
-            # Create current interaction details for this session
-            session_state_change_list = []
-            self.update_session_state_change_list(
-                session_state_change_list, ctx.remote_addr, ctx.user_agent, 'login', creation_time)
-            opaque = {
-                'session_state_change_list': session_state_change_list
-            }
+            # All the data needed to insert a new session into the database ..
+            insert_ctx = SessionInsertCtx()
+            insert_ctx.ust = ust
+            insert_ctx.interaction_max_len = self.interaction_max_len
 
-            session.execute(
-                SessionModelInsert().values({
-                    'ust': ust,
-                    'creation_time': creation_time,
-                    'expiration_time': expiration_time,
-                    'user_id': user.id,
-                    'auth_type': ctx.input.get('sec_type') or const.auth_type.default,
-                    'auth_principal': user.username,
-                    'remote_addr': ', '.join(str(elem) for elem in ctx.remote_addr),
-                    'user_agent': ctx.user_agent,
-                    'ext_session_id': ctx.ext_session_id,
-                    GENERIC.ATTR_NAME: dumps(opaque)
-            }))
-            session.commit()
+            insert_ctx.remote_addr = ctx.remote_addr
+            insert_ctx.user_agent = ctx.user_agent
+            insert_ctx.ctx_source = 'login'
+            insert_ctx.creation_time = creation_time
+            insert_ctx.expiration_time = expiration_time
+
+            insert_ctx.user_id = user.id
+            insert_ctx.auth_type = ctx.input.get('sec_type') # or const.auth_type.default
+            insert_ctx.auth_principal = user.username
+            insert_ctx.ext_session_id = ctx.ext_session_id
+
+            # .. insert the session into the SQL database now.
+            insert_sso_session(session, insert_ctx)
 
             info = SessionInfo()
             info.username = user.username
@@ -608,34 +376,20 @@ class SessionAPI(object):
         """ Adds information about a user interaction with SSO, keeping the history
         of such interactions to up to max_len entries.
         """
-        # type: (list, unicode, unicode, datetime, int)
-        if current_state:
-            idx = current_state[-1]['idx']
-        else:
-            idx = 0
-
-        remote_addr = remote_addr if isinstance(remote_addr, list) else [remote_addr]
-
-        if len(remote_addr) == 1:
-            remote_addr = str(remote_addr[0])
-        else:
-            remote_addr = [str(elem) for elem in remote_addr]
-
-        current_state.append({
-            'remote_addr': remote_addr,
-            'user_agent': user_agent,
-            'timestamp_utc': now.isoformat(),
-            'ctx_source': ctx_source,
-            'idx': idx + 1
-        })
-
-        if len(current_state) > self.interaction_max_len:
-            current_state.pop(0)
+        # type: (list, str, str, str, datetime)
+        return _update_session_state_change_list(
+            current_state,
+            self.interaction_max_len,
+            remote_addr,
+            user_agent,
+            ctx_source,
+            now
+        )
 
 # ################################################################################################################################
 
     def _get(self, session, ust, current_app, remote_addr, ctx_source, needs_decrypt=True, renew=False, needs_attrs=False,
-        user_agent=None, check_if_password_expired=True, _now=datetime.utcnow, _opaque=GENERIC.ATTR_NAME):
+        user_agent=None, check_if_password_expired=True, _now=datetime.utcnow, _opaque=GENERIC.ATTR_NAME, skip_sec=False):
         """ Verifies if input user session token is valid and if the user is allowed to access current_app.
         On success, if renew is True, renews the session. Returns all session attributes or True,
         depending on needs_attrs's value.
@@ -653,32 +407,36 @@ class SessionAPI(object):
         if not sso_info:
             raise ValidationError(status_code.session.no_such_session, False)
 
-        # Common auth checks
-        self._run_user_checks(ctx, sso_info, check_if_password_expired)
-
-        # Everything is validated, we can renew the session, if told to.
-        if renew:
-
-            # Update current interaction details for this session
-            opaque = getattr(sso_info, _opaque) or {}
-            session_state_change_list = self._extract_session_state_change_list(sso_info)
-            self.update_session_state_change_list(session_state_change_list, remote_addr, user_agent, ctx_source, now)
-            opaque['session_state_change_list'] = session_state_change_list
-
-            # Set a new expiration time
-            expiration_time = now + timedelta(minutes=self.sso_conf.session.expiry)
-
-            session.execute(
-                SessionModelUpdate().values({
-                    'expiration_time': expiration_time,
-                    GENERIC.ATTR_NAME: dumps(opaque),
-            }).where(
-                SessionModelTable.c.ust==ctx.ust
-            ))
-            return expiration_time
-        else:
-            # Indicate success
+        if skip_sec:
             return sso_info if needs_attrs else True
+        else:
+
+            # Common auth checks
+            self.user_checker.check(ctx, sso_info, check_if_password_expired)
+
+            # Everything is validated, we can renew the session, if told to.
+            if renew:
+
+                # Update current interaction details for this session
+                opaque = getattr(sso_info, _opaque) or {}
+                session_state_change_list = self._extract_session_state_change_list(sso_info)
+                self.update_session_state_change_list(session_state_change_list, remote_addr, user_agent, ctx_source, now)
+                opaque['session_state_change_list'] = session_state_change_list
+
+                # Set a new expiration time
+                expiration_time = now + timedelta(minutes=self.sso_conf.session.expiry)
+
+                session.execute(
+                    SessionModelUpdate().values({
+                        'expiration_time': expiration_time,
+                        GENERIC.ATTR_NAME: dumps(opaque),
+                }).where(
+                    SessionModelTable.c.ust==ctx.ust
+                ))
+                return expiration_time
+            else:
+                # Indicate success
+                return sso_info if needs_attrs else True
 
 # ################################################################################################################################
 
@@ -838,7 +596,7 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def logout(self, ust, current_app, remote_addr):
+    def logout(self, ust, current_app, remote_addr, skip_sec=False):
         """ Logs a user out of an SSO session.
         """
         ust = self.decrypt_func(ust)
@@ -846,7 +604,7 @@ class SessionAPI(object):
         with closing(self.odb_session_func()) as session:
 
             # Check that the session and user exist ..
-            if self._get(session, ust, current_app, remote_addr, 'logout', needs_decrypt=False, renew=False):
+            if self._get(session, ust, current_app, remote_addr, 'logout', needs_decrypt=False, renew=False, skip_sec=skip_sec):
 
                 # .. and if so, delete the session now.
                 session.execute(

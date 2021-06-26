@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Django
 from django import forms
@@ -24,7 +22,7 @@ class _Base(forms.Form):
 
     def __init__(self, prefix, req):
         super(_Base, self).__init__(prefix=prefix)
-        add_services(self, req)
+        add_services(self, req, should_include_scheduler=True)
 
 class OneTimeSchedulerJobForm(_Base):
     pass

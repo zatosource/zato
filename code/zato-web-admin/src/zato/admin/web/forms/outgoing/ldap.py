@@ -13,7 +13,7 @@ from django import forms
 
 # Zato
 from zato.admin.web.forms import add_select, WithTLSForm
-from zato.common import LDAP
+from zato.common.api import LDAP
 
 class CreateForm(WithTLSForm):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))

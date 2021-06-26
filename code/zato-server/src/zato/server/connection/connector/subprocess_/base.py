@@ -13,8 +13,8 @@ import logging
 import os
 import signal
 import sys
+from functools import wraps
 from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_ACCEPTABLE, OK, responses, SERVICE_UNAVAILABLE
-from json import loads
 from logging import Formatter, getLogger, StreamHandler
 from logging.handlers import RotatingFileHandler
 from os import getppid, path
@@ -33,15 +33,21 @@ import yaml
 
 # Python 2/3 compatibility
 from builtins import bytes
-from six import PY2
 
 # Zato
-from zato.common import MISC
+from zato.common.api import MISC
 from zato.common.broker_message import code_to_name
-from zato.common.util import parse_cmd_line_options
+from zato.common.json_internal import dumps, loads
+from zato.common.util.api import parse_cmd_line_options
 from zato.common.util.auth import parse_basic_auth
-from zato.common.util.json_ import dumps
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC
+
+# ################################################################################################################################
+
+if 0:
+    from bunch import Bunch
+
+    Bunch = Bunch
 
 # ################################################################################################################################
 
@@ -87,6 +93,41 @@ _paths = (_path_api, _path_ping)
 # ################################################################################################################################
 # ################################################################################################################################
 
+def ensure_id_exists(container_name):
+    def ensure_id_exists_impl(func):
+        @wraps(func)
+        def inner(self, msg, _not_given=object()):
+            # type: (BaseConnectionContainer, Bunch)
+
+            # Make sure we have a config container of that name
+            container = getattr(self, container_name, _not_given) # type: dict
+
+            if container is _not_given:
+                raise Exception('No such attribute `{}` in `{}`'.format(container_name, self))
+
+            if not msg.id in container:
+                raise Exception('No such ID `{}` among `{}` ({})'.format(
+                    msg.id, sorted(container.items()), container_name))
+
+            return func(self, msg)
+        return inner
+    return ensure_id_exists_impl
+
+# ################################################################################################################################
+
+def ensure_prereqs_ready(func):
+    @wraps(func)
+    def inner(self, *args, **kwargs):
+        # type: (BaseConnectionContainer)
+        if self.has_prereqs:
+            if not self.check_prereqs_ready():
+                raise Exception(self.get_prereqs_not_ready_message())
+        return func(self, *args, **kwargs)
+    return inner
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Response(object):
     def __init__(self, status=_http_200, data=b'', content_type='text/json'):
         self.status = status
@@ -97,6 +138,11 @@ class Response(object):
 # ################################################################################################################################
 
 class BaseConnectionContainer(object):
+
+    # Subclasses may indicate that they have their specific prerequisites
+    # that need to be fulfilled before connections can be used,
+    # e.g. IBM MQ requires installation of PyMQI.
+    has_prereqs = False
 
     # Set by our subclasses that actually create connections
     connection_class = None
@@ -163,7 +209,7 @@ class BaseConnectionContainer(object):
         self.server_address = self.server_address.format(self.server_port, self.server_path)
 
         with open(config.logging_conf_path) as f:
-            logging_config = yaml.load(f)
+            logging_config = yaml.load(f, yaml.FullLoader)
 
         if not 'zato_{}'.format(self.conn_type) in logging_config['loggers']:
             logging_config = get_logging_config(self.conn_type, self.logging_file_name)
@@ -177,12 +223,22 @@ class BaseConnectionContainer(object):
 
 # ################################################################################################################################
 
+    def check_prereqs_ready(self):
+        return True
+
+# ################################################################################################################################
+
+    def get_prereqs_not_ready_message(self):
+        return '<default-not-set-prereqs-not-ready-message>'
+
+# ################################################################################################################################
+
     def set_up_logging(self, config):
 
         logger_conf = config['loggers']['zato_{}'.format(self.conn_type)]
-        wmq_handler_conf = config['handlers'][self.conn_type]
-        del wmq_handler_conf['formatter']
-        wmq_handler_conf.pop('class', False)
+        handler_conf = config['handlers'][self.conn_type]
+        del handler_conf['formatter']
+        handler_conf.pop('class', False)
         formatter_conf = config['formatters']['default']['format']
 
         self.logger = getLogger(logger_conf['qualname'])
@@ -190,14 +246,14 @@ class BaseConnectionContainer(object):
 
         formatter = Formatter(formatter_conf)
 
-        wmq_handler_conf['filename'] = path.abspath(path.join(self.base_dir, wmq_handler_conf['filename']))
-        wmq_handler = RotatingFileHandler(**wmq_handler_conf)
-        wmq_handler.setFormatter(formatter)
+        handler_conf['filename'] = path.abspath(path.join(self.base_dir, handler_conf['filename']))
+        handler = RotatingFileHandler(**handler_conf)
+        handler.setFormatter(formatter)
 
         stdout_handler = StreamHandler(sys.stdout)
         stdout_handler.setFormatter(formatter)
 
-        self.logger.addHandler(wmq_handler)
+        self.logger.addHandler(handler)
         self.logger.addHandler(stdout_handler)
 
 # ################################################################################################################################
@@ -211,7 +267,15 @@ class BaseConnectionContainer(object):
 
     def _post(self, msg, _post=requests_post):
         self.logger.info('POST to `%s` (%s), msg:`%s`', self.server_address, self.username, msg)
-        _post(self.server_address, data=dumps(msg), auth=self.server_auth)
+
+        for k, v in msg.items():
+            if isinstance(v, bytes):
+                msg[k] = v.decode('utf8')
+
+        try:
+            _post(self.server_address, data=dumps(msg), auth=self.server_auth)
+        except Exception as e:
+            self.logger.warn('Exception in BaseConnectionContainer._post: `%s`', e.args[0])
 
 # ################################################################################################################################
 
@@ -282,6 +346,8 @@ class BaseConnectionContainer(object):
 
 # ################################################################################################################################
 
+    @ensure_id_exists('outconns')
+    @ensure_prereqs_ready
     def _delete_outconn(self, msg, outconn_name=None):
         """ A low-level implementation of outconn deletion. Must be called with self.lock held.
         """
@@ -293,7 +359,7 @@ class BaseConnectionContainer(object):
 # ################################################################################################################################
 
     def _on_send_exception(self):
-        msg = 'Exception in _on_OUTGOING_WMQ_SEND (2) `{}`'.format(format_exc())
+        msg = 'Exception in _on_OUTGOING_SEND (2) `{}`'.format(format_exc())
         self.logger.warn(msg)
         return Response(_http_503, msg)
 
@@ -341,7 +407,7 @@ class BaseConnectionContainer(object):
     def on_wsgi_request(self, environ, start_response):
 
         # Default values to use in case of any internal errors
-        status = _http_503
+        status = _http_406
         content_type = 'text/plain'
 
         try:
@@ -362,19 +428,15 @@ class BaseConnectionContainer(object):
                     data = 'You are not allowed to access this resource'
                     content_type = 'text/plain'
 
-        except Exception as e:
+        except Exception:
             self.logger.warn(format_exc())
             content_type = 'text/plain'
-            status = _http_503
-            data = repr(e.args)
+            status = _http_400
+            data = format_exc()
         finally:
 
             try:
-                if PY2:
-                    status = status.encode('utf8')
-                    headers = [(b'Content-type', content_type.encode('utf8'))]
-                else:
-                    headers = [('Content-type', content_type)]
+                headers = [('Content-type', content_type)]
 
                 if not isinstance(data, bytes):
                     data = data.encode('utf8')
@@ -386,9 +448,10 @@ class BaseConnectionContainer(object):
                 exc_formatted = format_exc()
                 self.logger.warn('Exception in finally block `%s`', exc_formatted)
 
-
 # ################################################################################################################################
 
+    @ensure_id_exists('channels')
+    @ensure_prereqs_ready
     def on_channel_delete(self, msg):
         """ Stops and deletes an existing channel.
         """
@@ -401,6 +464,7 @@ class BaseConnectionContainer(object):
 
 # ################################################################################################################################
 
+    @ensure_prereqs_ready
     def on_channel_create(self, msg):
         """ Creates a new channel listening for messages from a given endpoint.
         """
@@ -414,6 +478,7 @@ class BaseConnectionContainer(object):
 
 # ################################################################################################################################
 
+    @ensure_prereqs_ready
     def on_outgoing_edit(self, msg):
         """ Updates and existing outconn by deleting and creating it again with latest configuration.
         """
@@ -423,6 +488,7 @@ class BaseConnectionContainer(object):
 
 # ################################################################################################################################
 
+    @ensure_prereqs_ready
     def on_outgoing_create(self, msg):
         """ Creates a new outgoing connection using an already existing definition.
         """
@@ -431,6 +497,7 @@ class BaseConnectionContainer(object):
 
 # ################################################################################################################################
 
+    @ensure_prereqs_ready
     def on_outgoing_delete(self, msg):
         """ Deletes an existing outgoing connection.
         """
@@ -440,18 +507,22 @@ class BaseConnectionContainer(object):
 
 # ################################################################################################################################
 
+    @ensure_prereqs_ready
+    @ensure_id_exists('connections')
     def on_definition_ping(self, msg):
         """ Pings a remote endpoint.
         """
         try:
             self.connections[msg.id].ping()
         except Exception as e:
-            return Response(_http_503, str(e.message), 'text/plain')
+            return Response(_http_503, str(e.args[0]), 'text/plain')
         else:
             return Response()
 
 # ################################################################################################################################
 
+    @ensure_id_exists('connections')
+    @ensure_prereqs_ready
     def on_definition_change_password(self, msg):
         """ Changes the password of an existing definition and reconnects to the remote end.
         """
@@ -463,12 +534,14 @@ class BaseConnectionContainer(object):
                 conn.connect()
             except Exception as e:
                 self.logger.warn(format_exc())
-                return Response(_http_503, str(e.message), 'text/plain')
+                return Response(_http_503, str(e.args[0]), 'text/plain')
             else:
                 return Response()
 
 # ################################################################################################################################
 
+    @ensure_id_exists('connections')
+    @ensure_prereqs_ready
     def on_definition_delete(self, msg):
         """ Deletes a definition along with its associated outconns and channels.
         """
@@ -510,6 +583,8 @@ class BaseConnectionContainer(object):
 
 # ################################################################################################################################
 
+    @ensure_id_exists('connections')
+    @ensure_prereqs_ready
     def on_definition_edit(self, msg):
         """ Updates an existing definition - close the current one, including channels and outconns,
         and creates a new one in its place.
@@ -541,6 +616,7 @@ class BaseConnectionContainer(object):
 
 # ################################################################################################################################
 
+    @ensure_prereqs_ready
     def on_definition_create(self, msg):
         """ Creates a new definition from the input message.
         """
@@ -549,7 +625,7 @@ class BaseConnectionContainer(object):
                 self._create_definition(msg)
             except Exception as e:
                 self.logger.warn(format_exc())
-                return Response(_http_503, str(e.message))
+                return Response(_http_503, str(e.args[0]))
             else:
                 return Response()
 

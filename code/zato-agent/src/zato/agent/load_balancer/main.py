@@ -17,7 +17,7 @@ cloghandler = cloghandler # For pyflakes
 
 # Zato
 from zato.agent.load_balancer.server import LoadBalancerAgent, TLSLoadBalancerAgent
-from zato.common.util import get_lb_agent_json_config, parse_cmd_line_options, store_pidfile
+from zato.common.util.api import get_lb_agent_json_config, parse_cmd_line_options, store_pidfile
 
 if __name__ == '__main__':
     repo_dir = sys.argv[1]

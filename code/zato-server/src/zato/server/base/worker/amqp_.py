@@ -13,7 +13,8 @@ from logging import getLogger
 from traceback import format_exc
 
 # Zato
-from zato.common.util import spawn_greenlet, start_connectors
+from zato.common.model.amqp_ import AMQPConnectorConfig
+from zato.common.util.api import spawn_greenlet, start_connectors
 from zato.server.base.worker.common import WorkerImpl
 
 # Python 2/3 compatibility
@@ -42,6 +43,11 @@ class AMQP(WorkerImpl):
 # ################################################################################################################################
 
     def on_broker_msg_DEFINITION_AMQP_EDIT(self, msg):
+
+        # Convert to a dataclass first
+        msg = AMQPConnectorConfig.from_dict(msg)
+
+        # Definitions are always active
         msg.is_active = True
 
         # Make sure connection passwords are always in clear text
@@ -61,9 +67,13 @@ class AMQP(WorkerImpl):
 
     def on_broker_msg_DEFINITION_AMQP_DELETE(self, msg):
         with self.update_lock:
+            to_del = []
             for out_name, def_name in iteritems(self.amqp_out_name_to_def):
                 if def_name == msg.name:
-                    del self.amqp_out_name_to_def[out_name]
+                    to_del.append(out_name)
+
+            for out_name in to_del:
+                del self.amqp_out_name_to_def[out_name]
 
             self.amqp_api.delete(msg.name)
 

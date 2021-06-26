@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-import os
 from base64 import b64decode, b64encode
 from datetime import datetime
 from http.client import OK
@@ -34,9 +33,10 @@ from builtins import str as text
 from six import PY3
 
 # Zato
-from zato.common import BROKER, soap_data_path, soap_data_xpath, soap_fault_xpath, \
-     ZatoException, zato_data_path, zato_data_xpath, zato_details_xpath, \
-     ZATO_NOT_GIVEN, ZATO_OK, zato_result_xpath
+from zato.common.api import BROKER, ZATO_NOT_GIVEN, ZATO_OK
+from zato.common.exception import ZatoException
+from zato.common.xml_ import soap_data_path, soap_data_xpath, soap_fault_xpath, zato_data_path, \
+     zato_data_xpath, zato_details_xpath, zato_result_xpath
 from zato.common.log_message import CID_LENGTH
 from zato.common.odb.model import Server
 
@@ -53,7 +53,7 @@ mod_logger = logging.getLogger(__name__)
 # Version
 # ################################################################################################################################
 
-version = '3.1'
+version = '3.2.1'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -264,6 +264,8 @@ class JSONSIOResponse(_Response):
             self.ok = self.inner.ok
 
         if self.ok:
+            value = None
+
             if has_zato_env:
                 # There will be two keys, zato_env and the actual payload
                 for key, _value in json.items():
@@ -273,10 +275,11 @@ class JSONSIOResponse(_Response):
             else:
                 value = json
 
-            if self.set_data(value, has_zato_env):
-                self.has_data = True
-                if self.to_bunch:
-                    self.data = bunchify(self.data)
+            if value:
+                if self.set_data(value, has_zato_env):
+                    self.has_data = True
+                    if self.to_bunch:
+                        self.data = bunchify(self.data)
 
     def set_data(self, payload, _ignored):
         self.data = payload
@@ -315,43 +318,46 @@ class ServiceInvokeResponse(JSONSIOResponse):
         self.inner_service_response = None
         super(ServiceInvokeResponse, self).__init__(*args, **kwargs)
 
-    def set_data(self, payload, has_zato_env):
-        response = payload.get('response')
-        if response:
-            if has_zato_env:
-                payload_response = payload['response']
-                payload_response = b64decode(payload_response)
-                payload_response = payload_response.decode('utf8') if isinstance(payload_response, bytes) else payload_response
-                self.inner_service_response = payload_response
-                try:
-                    data = loads(self.inner_service_response)
-                except ValueError:
-                    # Not a JSON response
-                    self.data = self.inner_service_response
-                else:
-                    if isinstance(data, dict):
-                        self.meta = data.get('_meta')
-                        data_keys = list(data.keys())
-                        if len(data_keys) == 1:
-                            data_key = data_keys[0]
-                            if isinstance(data_key, text) and data_key.startswith('zato'):
-                                self.data = data[data_key]
-                            else:
-                                self.data = data
-                        else:
-                            self.data = data
-                    else:
-                        self.data = data
-            else:
-                try:
-                    data = loads(response)
-                except ValueError:
-                    # Not a JSON response
-                    self.data = response
+    def _handle_response_with_meta(self, data):
+
+        if isinstance(data, dict):
+            self.meta = data.get('_meta')
+            data_keys = list(data.keys())
+            if len(data_keys) == 1:
+                data_key = data_keys[0]
+                if isinstance(data_key, text) and data_key.startswith('zato'):
+                    self.data = data[data_key]
                 else:
                     self.data = data
+            else:
+                self.data = data
+        else:
+            self.data = data
 
-            return True
+    def set_data(self, payload, has_zato_env):
+
+        if has_zato_env:
+            payload = b64decode(payload)
+            payload = payload.decode('utf8') if isinstance(payload, bytes) else payload
+            self.inner_service_response = payload
+
+            try:
+                data = loads(self.inner_service_response)
+            except ValueError:
+                # Not a JSON response
+                self.data = self.inner_service_response
+            else:
+                self._handle_response_with_meta(data)
+        else:
+            try:
+                data = loads(payload)
+            except ValueError:
+                # Not a JSON response
+                self.data = payload
+            else:
+                self._handle_response_with_meta(data)
+
+        return True
 
 # ################################################################################################################################
 
@@ -397,7 +403,7 @@ class _Client(object):
         if not self.session.auth:
             self.session.auth = auth
 
-    def inner_invoke(self, request, response_class, async, headers, output_repeated=False):
+    def inner_invoke(self, request, response_class, is_async, headers, output_repeated=False):
         """ Actually invokes a service through HTTP and returns its response.
         """
         raw_response = self.session.post(self.service_address, request, headers=headers, verify=self.tls_verify)
@@ -409,16 +415,16 @@ class _Client(object):
             request = request.decode('utf-8')
 
         if self.logger.isEnabledFor(logging.DEBUG):
-            msg = 'request:[%s]\nresponse_class:[%s]\nasync:[%s]\nheaders:[%s]\n text:[%s]\ndata:[%s]'
-            self.logger.debug(msg, request, response_class, async, headers, raw_response.text, response.data)
+            msg = 'request:[%s]\nresponse_class:[%s]\nis_async:[%s]\nheaders:[%s]\n text:[%s]\ndata:[%s]'
+            self.logger.debug(msg, request, response_class, is_async, headers, raw_response.text, response.data)
 
         return response
 
-    def invoke(self, request, response_class, async=False, headers=None, output_repeated=False):
+    def invoke(self, request, response_class, is_async=False, headers=None, output_repeated=False):
         """ Input parameters are like when invoking a service directly.
         """
         headers = headers or {}
-        return self.inner_invoke(request, response_class, async, headers)
+        return self.inner_invoke(request, response_class, is_async, headers)
 
 # ################################################################################################################################
 
@@ -458,8 +464,9 @@ class AnyServiceInvoker(_Client):
     to be exposed over HTTP.
     """
     def _invoke(self, name=None, payload='', headers=None, channel='invoke', data_format='json',
-                transport=None, async=False, expiration=BROKER.DEFAULT_EXPIRATION, id=None,
-                to_json=True, output_repeated=ZATO_NOT_GIVEN, pid=None, all_pids=False, timeout=None):
+                transport=None, is_async=False, expiration=BROKER.DEFAULT_EXPIRATION, id=None,
+                to_json=True, output_repeated=ZATO_NOT_GIVEN, pid=None, all_pids=False, timeout=None,
+                skip_response_elem=True):
 
         if not(name or id):
             raise ZatoException(msg='Either name or id must be provided')
@@ -478,21 +485,22 @@ class AnyServiceInvoker(_Client):
             'channel': channel,
             'data_format': data_format,
             'transport': transport,
-            'async': async,
+            'is_async': is_async,
             'expiration':expiration,
             'pid':pid,
             'all_pids': all_pids,
             'timeout': timeout,
+            'skip_response_elem': skip_response_elem,
         }
 
         return super(AnyServiceInvoker, self).invoke(dumps(request, default=default_json_handler),
-            ServiceInvokeResponse, async, headers, output_repeated)
+            ServiceInvokeResponse, is_async, headers, output_repeated)
 
     def invoke(self, *args, **kwargs):
-        return self._invoke(async=False, *args, **kwargs)
+        return self._invoke(is_async=False, *args, **kwargs)
 
     def invoke_async(self, *args, **kwargs):
-        return self._invoke(async=True, *args, **kwargs)
+        return self._invoke(is_async=True, *args, **kwargs)
 
 # ################################################################################################################################
 
@@ -522,8 +530,8 @@ def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, s
     """
 
     # To avoid circular references
-    from zato.common.crypto import ServerCryptoManager
-    from zato.common.util import get_odb_session_from_server_config
+    from zato.common.crypto.api import ServerCryptoManager
+    from zato.common.util.api import get_odb_session_from_server_config, get_repo_dir_from_component_dir
 
     class ZatoClient(AnyServiceInvoker):
         def __init__(self, *args, **kwargs):
@@ -531,7 +539,7 @@ def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, s
             self.cluster_id = None
             self.odb_session = None
 
-    repo_dir = os.path.join(os.path.abspath(os.path.join(server_dir)), 'config', 'repo')
+    repo_dir = get_repo_dir_from_component_dir(server_dir)
     cm = ServerCryptoManager.from_repo_dir(None, repo_dir, None)
 
     secrets_conf = get_config_func(repo_dir, 'secrets.conf', needs_user_config=False)

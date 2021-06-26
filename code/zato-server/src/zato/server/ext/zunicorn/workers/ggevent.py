@@ -34,6 +34,8 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 """
 
+# flake8: noqa
+
 import errno
 import os
 import sys
@@ -60,6 +62,7 @@ from zato.server.ext.zunicorn import SERVER_SOFTWARE
 from zato.server.ext.zunicorn.http.wsgi import base_environ
 from zato.server.ext.zunicorn.workers.base_async import AsyncWorker
 from zato.server.ext.zunicorn.http.wsgi import sendfile as o_sendfile
+from zato.server.ext.zunicorn.util import is_forking
 
 def _gevent_sendfile(fdout, fdin, offset, nbytes):
     while True:
@@ -110,7 +113,8 @@ class GeventWorker(AsyncWorker):
     def notify(self):
         super(GeventWorker, self).notify()
         if self.ppid != os.getppid():
-            self.log.info("Parent changed, shutting down: %s", self)
+            if is_forking:
+                self.log.info("Parent changed, shutting down: %s", self)
             sys.exit(0)
 
     def timeout_ctx(self):
@@ -202,34 +206,16 @@ class GeventWorker(AsyncWorker):
         # by deferring to a new greenlet. See #1645
         gevent.spawn(super(GeventWorker, self).handle_usr1, sig, frame)
 
-    if gevent.version_info[0] == 0:
+    def init_process(self):
+        # monkey patch here
+        self.patch()
 
-        def init_process(self):
-            # monkey patch here
-            self.patch()
+        # reinit the hub
+        from gevent import hub
+        hub.reinit()
 
-            # reinit the hub
-            import gevent.core
-            gevent.core.reinit()
-
-            #gevent 0.13 and older doesn't reinitialize dns for us after forking
-            #here's the workaround
-            gevent.core.dns_shutdown(fail_requests=1)
-            gevent.core.dns_init()
-            super(GeventWorker, self).init_process()
-
-    else:
-
-        def init_process(self):
-            # monkey patch here
-            self.patch()
-
-            # reinit the hub
-            from gevent import hub
-            hub.reinit()
-
-            # then initialize the process
-            super(GeventWorker, self).init_process()
+        # then initialize the process
+        super(GeventWorker, self).init_process()
 
 
 class GeventResponse(object):

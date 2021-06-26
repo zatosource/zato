@@ -17,4 +17,3 @@ class AuthenticationForm(forms.Form):
     username = forms.CharField(max_length=254)
     password = forms.CharField(strip=False, widget=forms.PasswordInput)
     totp_code = forms.CharField(widget=forms.TextInput())
-

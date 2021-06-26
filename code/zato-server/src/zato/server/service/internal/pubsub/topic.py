@@ -1,26 +1,23 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
 
 # Python 2/3 compatibility
 from six import add_metaclass
-from future.utils import iteritems
 
 # Zato
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubTopic
 from zato.common.odb.query import pubsub_messages_for_topic, pubsub_publishers_for_topic, pubsub_topic, pubsub_topic_list
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic, get_topics_by_sub_keys
-from zato.common.util import ensure_pubsub_hook_is_valid
+from zato.common.util.api import ensure_pubsub_hook_is_valid
 from zato.common.util.pubsub import get_last_pub_data
 from zato.common.util.time_ import datetime_from_ms
 from zato.server.service import AsIs, Bool, Dict, Int, List, Opaque
@@ -82,8 +79,8 @@ def response_hook(self, input, instance, attrs, service_type):
 
     if service_type == 'get_list':
 
-        # Details are needed when topics are in their own main screen but if only basic information
-        # is needed, like a list of topic IDs and names, we don't need to look up additional details.
+        # Details are needed when the main list of topics is requested but if only basic information
+        # is needed, like a list of topic IDs and their names, we don't need to look up additional details.
         # The latter is the case of the message publication screen which simply needs a list of topic IDs/names.
         if input.get('needs_details', True):
 
@@ -114,8 +111,9 @@ def pre_opaque_attrs_hook(self, input, instance, attrs):
     # type: (Service, Bunch, PubSubTopic, Bunch)
 
     if not input.get('hook_service_name'):
-        hook_service_name = self.server.service_store.get_service_name_by_id(input.hook_service_id)
-        input.hook_service_name = hook_service_name
+        if input.get('hook_service_id'):
+            hook_service_name = self.server.service_store.get_service_name_by_id(input.hook_service_id)
+            input.hook_service_name = hook_service_name
 
 # ################################################################################################################################
 
@@ -230,7 +228,7 @@ class Clear(AdminService):
             session.commit()
 
         # Delete non-GD messages for that topic on all servers
-        self.servers.invoke_all(ClearTopicNonGD.get_name(), {
+        self.server.rpc.invoke_all(ClearTopicNonGD.get_name(), {
             'topic_id': topic_id,
         }, timeout=90)
 
@@ -288,7 +286,7 @@ class GetGDMessageList(AdminService):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_gd_data(session)
 
-        for item in self.response.payload.zato_output:
+        for item in self.response.payload:
             item.pub_time = datetime_from_ms(item.pub_time * 1000.0)
             item.ext_pub_time = datetime_from_ms(item.ext_pub_time * 1000.0) if item.ext_pub_time else ''
 
@@ -311,33 +309,14 @@ class GetNonGDMessageList(NonGDSearchService):
         # Local aliases
         topic_id = self.request.input.topic_id
 
-        # Response to produce
-        msg_list = []
-
         # Collects responses from all server processes
-        is_all_ok, all_data = self.servers.invoke_all('zato.pubsub.topic.get-server-message-list', {
+        reply = self.server.rpc.invoke_all('zato.pubsub.topic.get-server-message-list', {
             'topic_id': topic_id,
             'query': self.request.input.query,
         }, timeout=30)
 
-        # Check if everything is OK on each level - overall, per server and then per process
-        if is_all_ok:
-            for server_name, server_data in iteritems(all_data):
-                if server_data['is_ok']:
-                    for server_pid, server_pid_data in iteritems(server_data['server_data']):
-                        if server_pid_data['is_ok']:
-                            pid_data = server_pid_data['pid_data']['response']['data']
-                            msg_list.extend(pid_data)
-                        else:
-                            self.logger.warn('Caught an error (server_pid_data) %s', server_pid_data['error_info'])
-                else:
-                    self.logger.warn('Caught an error (server_data) %s', server_data['error_info'])
-
-        else:
-            self.logger.warn('Caught an error (all_data) %s', all_data)
-
         # Use a util function to produce a paginated response
-        self.set_non_gd_msg_list_response(msg_list, self.request.input.cur_page)
+        self.set_non_gd_msg_list_response(reply.data, self.request.input.cur_page)
 
 # ################################################################################################################################
 
@@ -407,20 +386,14 @@ class CollectNonGDDepth(AdminService):
 
     def handle(self):
 
-        all_depth = self.servers.invoke_all('zato.pubsub.topic.get-non-gd-depth', {
+        reply = self.server.rpc.invoke_all('zato.pubsub.topic.get-non-gd-depth', {
             'topic_name':self.request.input.topic_name
             }, timeout=10)
 
         total = 0
 
-        data = all_depth[1]
-        for server_name in data:
-            if data[server_name]['is_ok']:
-                server_data = data[server_name]['server_data']
-                for pid in server_data:
-                    if server_data[pid]['is_ok']:
-                        pid_data = server_data[pid]['pid_data']
-                        total += pid_data['response']['depth']
+        for response in reply.data:
+            total += response['depth']
 
         self.response.payload.current_depth_non_gd = total
 

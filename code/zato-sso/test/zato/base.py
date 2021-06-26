@@ -1,36 +1,36 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
 import os
 from datetime import datetime
 from itertools import count
-from json import dumps, loads
 from unittest import TestCase
 
 # Bunch
 from bunch import bunchify
 
-# dateutil
-from dateutil.parser import parse as dt_parse
-
-# sh
-import sh
+# ciso8601
+from ciso8601 import parse_datetime
 
 # requests
 import requests
 
+# sh
+import sh
+
 # Zato
-from zato.common.crypto import CryptoManager
+from zato.common.util.api import get_odb_session_from_server_dir
+from zato.common.json_internal import dumps, loads
+from zato.common.crypto.totp_ import TOTPManager
 from zato.sso import const, status_code
+from zato.sso.odb.query import get_user_by_name
 
 # ################################################################################################################################
 
@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 class Config:
     current_app = 'CRM'
 
-    super_user_name = 'admin1'
+    super_user_name = 'zato.unit-test.admin1'
     super_user_password = 'hQ9nl93UDqGus'
     super_user_totp_key = 'KMCLCWN4YPMD2WO3'
 
@@ -63,8 +63,8 @@ class TestCtx(object):
         self.reset()
 
     def reset(self):
-        self.super_user_ust = None # type: unicode
-        self.super_user_id = None # type: unicode
+        self.super_user_ust = None # type: str
+        self.super_user_id = None # type: str
         self.config = Config
 
 # ################################################################################################################################
@@ -76,13 +76,20 @@ class BaseTest(TestCase):
 
     def setUp(self):
         try:
-            # Try to create a super-user ..
-            #sh.zato('sso', 'create-super-user', Config.server_location, Config.super_user_name, '--password',
-            #    Config.super_user_password, '--verbose')
-            #sh.zato('sso', 'reset-totp-key', Config.server_location, Config.super_user_name, '--key',
-            #    Config.super_user_totp_key, '--verbose')
 
-            pass
+            # Create the test user if the account does not already exist ..
+            odb_session = self.get_odb_session()
+
+            if not get_user_by_name(odb_session, Config.super_user_name, False):
+
+                # .. create the user ..
+                sh.zato('sso', 'create-super-user', Config.server_location, Config.super_user_name, '--password',
+                  Config.super_user_password, '--verbose')
+
+                # .. and set the TOTP ..
+                sh.zato('sso', 'reset-totp-key', Config.server_location, Config.super_user_name, '--key',
+                  Config.super_user_totp_key, '--verbose')
+
         except Exception as e:
             # .. but ignore it if such a user already exists.
             if not 'User already exists' in e.args[0]:
@@ -101,6 +108,11 @@ class BaseTest(TestCase):
 
     def tearDown(self):
         self.ctx.reset()
+
+# ################################################################################################################################
+
+    def get_odb_session(self):
+        return get_odb_session_from_server_dir(Config.server_location)
 
 # ################################################################################################################################
 
@@ -133,12 +145,10 @@ class BaseTest(TestCase):
         data = loads(response.text)
         data = bunchify(data)
 
-        return data
-
         # Most tests require status OK and CID
         if expect_ok:
-            self.assertNotEquals(data.get('cid', _not_given), _not_given)
-            self.assertEquals(data.status, status_code.ok)
+            self.assertNotEqual(data.get('cid', _not_given), _not_given)
+            self.assertEqual(data.status, status_code.ok)
 
         return data
 
@@ -160,7 +170,7 @@ class BaseTest(TestCase):
         response = self.post('/zato/sso/user/login', {
             'username': Config.super_user_name,
             'password': Config.super_user_password,
-            'totp_code': CryptoManager.get_current_totp_code(Config.super_user_totp_key),
+            'totp_code': TOTPManager.get_current_totp_code(Config.super_user_totp_key),
         })
         self.ctx.super_user_ust = response.ust
 
@@ -173,8 +183,8 @@ class BaseTest(TestCase):
 
     def _assert_default_user_data(self, response, now, approval_status=None):
 
-        self.assertEquals(response.approval_status, approval_status or const.approval_status.before_decision)
-        self.assertEquals(response.sign_up_status, const.signup_status.final)
+        self.assertEqual(response.approval_status, approval_status or const.approval_status.before_decision)
+        self.assertEqual(response.sign_up_status, const.signup_status.final)
 
         self.assertTrue(response.is_active)
         self.assertTrue(response.password_is_set)
@@ -195,10 +205,10 @@ class BaseTest(TestCase):
         now = now.isoformat()
 
         func = self.assertGreater if is_default_user else self.assertLess
-        func(now, dt_parse(response.approval_status_mod_time).isoformat() + '.999999')
-        func(now, dt_parse(response.password_last_set).isoformat() + '.999999')
-        func(now, dt_parse(response.sign_up_time).isoformat() + '.999999')
-        self.assertLess(now, dt_parse(response.password_expiry).isoformat() + '.999999')
+        func(now, parse_datetime(response.approval_status_mod_time).isoformat() + '.999999')
+        func(now, parse_datetime(response.password_last_set).isoformat() + '.999999')
+        func(now, parse_datetime(response.sign_up_time).isoformat() + '.999999')
+        self.assertLess(now, parse_datetime(response.password_expiry).isoformat() + '.999999')
 
 # ################################################################################################################################
 

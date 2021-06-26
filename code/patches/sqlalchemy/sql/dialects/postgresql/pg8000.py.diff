@@ -1,0 +1,14 @@
+--- sqlalchemy/dialects/postgresql/pg8000.py.orig	2020-01-11 17:31:25.960274262 +0100
++++ sqlalchemy/dialects/postgresql/pg8000.py	2020-01-06 17:41:00.088848784 +0100
+@@ -214,7 +214,10 @@
+         return ([], opts)
+
+     def is_disconnect(self, e, connection, cursor):
+-        return "connection is closed" in str(e)
++        str_e = str(e)
++        return 'connection is closed' in str_e or \
++               'unpack_from requires a buffer of at least 5 bytes' in str_e or \
++               '[Errno 32] Broken pipe' in str_e
+
+     def set_isolation_level(self, connection, level):
+         level = level.replace('_', ' ')

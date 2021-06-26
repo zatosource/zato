@@ -18,7 +18,8 @@ from traceback import format_exc
 from bunch import Bunch
 
 # Zato
-from zato.common import Inactive, SECRET_SHADOW
+from zato.common.api import SECRET_SHADOW
+from zato.common.exception import Inactive
 
 logger = getLogger(__name__)
 

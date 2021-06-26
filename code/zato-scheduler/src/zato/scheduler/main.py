@@ -29,7 +29,7 @@ import yaml
 from future.utils import iteritems
 
 # Zato
-from zato.common.util import absjoin, get_config, store_pidfile
+from zato.common.util.api import absjoin, get_config, store_pidfile
 from zato.scheduler.server import Config, SchedulerServer
 
 # ################################################################################################################################
@@ -47,7 +47,7 @@ def main():
 
     # Logging configuration
     with open(os.path.join(repo_location, 'logging.conf')) as f:
-        dictConfig(yaml.load(f))
+        dictConfig(yaml.load(f, yaml.FullLoader))
 
     # Read config in and extend it with ODB-specific information
     config.main = get_config(repo_location, 'scheduler.conf')

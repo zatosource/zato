@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from logging import getLogger
@@ -15,8 +13,8 @@ from logging import getLogger
 from past.builtins import unicode
 
 # Zato
-from zato.common import GENERIC
-from zato.common.util import new_cid
+from zato.common.api import GENERIC
+from zato.common.util.api import new_cid
 from zato.common.util.time_ import utcnow_as_ms
 
 # ################################################################################################################################
@@ -30,7 +28,7 @@ sk_lists = ('reply_to_sk', 'deliver_to_sk')
 
 skip_to_external=('delivery_status', 'topic_id', 'cluster_id', 'pub_pattern_matched', 'sub_pattern_matched',
     'published_by_id', 'data_prefix', 'data_prefix_short', 'pub_time', 'expiration_time', 'recv_time',
-    'pub_msg_id', 'pub_correl_id') + sk_lists
+    'pub_msg_id', 'pub_correl_id', 'zato_ctx') + sk_lists
 
 _data_keys=('data', 'data_prefix', 'data_prefix_short')
 
@@ -45,6 +43,7 @@ class MSG_PREFIX:
     GROUP_ID = 'zpsg'
     MSG_ID = 'zpsm'
     SUB_KEY = 'zpsk'
+    SERVICE_SK = 'zpsk.srv'
 
 # ################################################################################################################################
 
@@ -53,8 +52,9 @@ def new_msg_id(_new_cid=new_cid, _prefix=MSG_PREFIX.MSG_ID):
 
 # ################################################################################################################################
 
-def new_sub_key(endpoint_type, ext_client_id='zeci', _new_cid=new_cid, _prefix=MSG_PREFIX.SUB_KEY):
-    return '%s.%s.%s.%s' % (_prefix, endpoint_type, ext_client_id, _new_cid(3))
+def new_sub_key(endpoint_type, ext_client_id='', _new_cid=new_cid, _prefix=MSG_PREFIX.SUB_KEY):
+    _ext_client_id = '.%s' % (ext_client_id,) if ext_client_id else (ext_client_id or '')
+    return '%s.%s%s.%s' % (_prefix, endpoint_type, _ext_client_id, _new_cid(3))
 
 # ################################################################################################################################
 
@@ -112,7 +112,7 @@ class PubSubMessage(object):
         self.serialized = None # May be set by hooks to provide an explicitly serialized output for this message
         setattr(self, GENERIC.ATTR_NAME, None) # To make this class look more like an SQLAlchemy one
 
-    def to_dict(self, skip=None, needs_utf8_encode=True, add_id_attrs=False, _data_keys=_data_keys):
+    def to_dict(self, skip=None, needs_utf8_encode=False, add_id_attrs=False, _data_keys=_data_keys):
         """ Returns a dict representation of self.
         """
         skip = skip or []

@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from logging import getLogger
 
 # Zato
-from zato.common import RATE_LIMIT, SEC_DEF_TYPE
+from zato.common.api import RATE_LIMIT, SEC_DEF_TYPE
 
 # ################################################################################################################################
 

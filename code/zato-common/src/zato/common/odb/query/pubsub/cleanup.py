@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from sqlalchemy import true as sa_true
 
 # Zato
-from zato.common import PUBSUB
+from zato.common.api import PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage
 
 # ################################################################################################################################

@@ -52,14 +52,14 @@ $.fn.zato.service.data_table.new_row = function(item, data, include_tr) {
     var instance = $.fn.zato.data_table.data[item.id];
     instance.name = data.name;
 
-    var is_active = $.fn.zato.like_bool(item.is_active) == true;
-    var is_internal = $.fn.zato.like_bool(data.is_internal) == true;
+    var is_active = $.fn.zato.to_bool(item.is_active);
+    var is_internal = $.fn.zato.to_bool(data.is_internal);
 
-    var is_json_schema_enabled = $.fn.zato.like_bool(data.is_json_schema_enabled) == true;
-    var needs_json_schema_err_details  = $.fn.zato.like_bool(data.needs_json_schema_err_details ) == true;
+    var is_json_schema_enabled = $.fn.zato.to_bool(data.is_json_schema_enabled);
+    var needs_json_schema_err_details  = $.fn.zato.to_bool(data.needs_json_schema_err_details );
 
-    var is_rate_limit_active = $.fn.zato.like_bool(data.is_rate_limit_active) == true;
-    var rate_limit_check_parent_def = $.fn.zato.like_bool(data.rate_limit_check_parent_def) == true;
+    var is_rate_limit_active = $.fn.zato.to_bool(data.is_rate_limit_active);
+    var rate_limit_check_parent_def = $.fn.zato.to_bool(data.rate_limit_check_parent_def);
 
     var cluster_id = $(document).getUrlParam('cluster');
 

@@ -12,8 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os
 
 # Zato
-from zato.common import SCHEDULER
-from zato.common.crypto import resolve_secret_key, WebAdminCryptoManager
+from zato.common.api import SCHEDULER
+from zato.common.crypto.api import WebAdminCryptoManager
+from zato.common.crypto.secret_key import resolve_secret_key
 from zato.common.util.cli import read_stdin_data
 
 # ################################################################################################################################
@@ -78,8 +79,8 @@ job_type_friendly_names = {
 
 # Maps AMQP delivery modes to UI-friendly names
 delivery_friendly_name = {
-    1:'Non-persistent',
-    2:'Persistent',
+    '1': 'Non-persistent',
+    '2': 'Persistent',
 }
 
 # ################################################################################################################################

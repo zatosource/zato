@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import os
-from anyjson import dumps as json_dumps, loads as json_loads
 from datetime import datetime
 from itertools import groupby
 from io import StringIO
@@ -30,8 +29,9 @@ from pytz import UTC
 from texttable import Texttable
 
 # Zato
-from zato.common import INFO_FORMAT, MISC, ZATO_INFO_FILE
-from zato.common.util import current_host
+from zato.common.api import INFO_FORMAT, MISC, ZATO_INFO_FILE
+from zato.common.json_internal import dumps as json_dumps, loads as json_loads
+from zato.common.util.api import current_host
 
 def format_connections(conns, format):
     """ Formats a list of connections according to the output format.

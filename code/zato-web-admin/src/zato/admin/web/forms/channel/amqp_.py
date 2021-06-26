@@ -19,7 +19,7 @@ from future.utils import iteritems
 
 # Zato
 from zato.admin.web.forms import add_services, DataFormatForm
-from zato.common import AMQP
+from zato.common.api import AMQP
 
 class CreateForm(DataFormatForm):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))

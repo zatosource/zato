@@ -8,9 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from json import loads
-
 # Arrow
 from arrow import utcnow
 
@@ -21,6 +18,7 @@ from bunch import Bunch
 from gevent import spawn, spawn_later
 
 # Zato
+from zato.common.json_internal import loads
 from zato.server.service import Service
 from zato.server.pattern.invoke_retry import RetryFailed, retry_failed_msg, retry_limit_reached_msg
 

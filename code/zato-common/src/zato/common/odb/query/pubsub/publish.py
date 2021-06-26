@@ -14,7 +14,7 @@ from traceback import format_exc
 from sqlalchemy.exc import IntegrityError
 
 # Zato
-from zato.common import PUBSUB
+from zato.common.api import PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage, PubSubTopic
 from zato.common.util.sql import sql_op_with_deadlock_retry
@@ -129,8 +129,10 @@ def insert_topic_messages(session, cid, msg_list):
         if has_debug:
             logger_zato.info('Caught IntegrityError (insert_topic_messages) `%s` `%s`', cid, format_exc())
 
-        if 'pubsb_msg_pubmsg_id_idx' in e.message:
-            raise BadRequest(cid, 'Duplicate msg_id:`{}`'.format(e.message))
+        str_e = str(e)
+
+        if 'pubsb_msg_pubmsg_id_idx' in str_e:
+            raise BadRequest(cid, 'Duplicate msg_id:`{}`'.format(str_e))
         else:
             raise
 

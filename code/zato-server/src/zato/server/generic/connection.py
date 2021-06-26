@@ -6,15 +6,12 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from json import loads
-
 # Bunch
 from bunch import bunchify
 
 # Zato
-from zato.common import GENERIC
-from zato.common.util.json_ import dumps
+from zato.common.api import GENERIC
+from zato.common.json_internal import dumps, loads
 from zato.server.generic import attrs_gen_conn
 
 # ################################################################################################################################
@@ -60,7 +57,7 @@ class GenericConnection(object):
     def from_dict(data, skip=None):
         conn = GenericConnection()
         skip = skip or []
-        for key, value in data.items():
+        for key, value in sorted(data.items()):
             if key in skip:
                 continue
             try:
@@ -92,7 +89,7 @@ class GenericConnection(object):
 
         for name in instance.__slots__:
             if name != 'opaque':
-                value = getattr(data, name)
+                value = getattr(data, name, '<no-value-given-{}>'.format(name))
                 setattr(instance, name, value)
         return instance
 

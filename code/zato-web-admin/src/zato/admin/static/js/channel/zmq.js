@@ -3,7 +3,7 @@
 
 $.fn.zato.data_table.ChannelZMQ = new Class({
     toString: function() {
-        var s = '<ChannelZMQ id:{0} name:{1} is_active:{2}';
+        var s = '<ChannelZMQ id:{0} name:{1} is_active:{2}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)',
                                 this.is_active ? this.is_active : '(none)');

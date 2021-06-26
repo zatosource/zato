@@ -21,9 +21,10 @@ from bunch import bunchify
 
 # SQLAlchemy
 from sqlalchemy import Boolean, Integer
+from sqlalchemy.exc import IntegrityError
 
 # Zato
-from zato.common import ZATO_NOT_GIVEN
+from zato.common.api import ZATO_NOT_GIVEN
 from zato.common.odb.model import Base, Cluster
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import AsIs, Bool as BoolSIO, Int as IntSIO
@@ -101,7 +102,7 @@ def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_
     elems = attrs.get(elems_name) or []
     columns = []
 
-    # Generate elems out of SQLAlchemy tables, including calls to ForceType's subclasses, such as Bool or Int.
+    # Generate elems out of SQLAlchemy tables, including calls to SIOElem's subclasses, such as Bool or Int.
 
     if elems and isclass(elems) and issubclass(elems, Base):
 
@@ -114,7 +115,7 @@ def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_
             if column.name == 'cluster_id' and is_output:
                 continue
 
-            # We already have cluster_id and don't need a ForceType'd one.
+            # We already have cluster_id and don't need a SIOElem'd one.
             if column.name == 'cluster_id' and has_cluster_id:
                 continue
 
@@ -173,12 +174,16 @@ def update_attrs(cls, name, attrs):
     attrs.input_required_extra = getattr(mod, 'input_required_extra', [])
     attrs.input_optional_extra = getattr(mod, 'input_optional_extra', [])
     attrs.create_edit_input_required_extra = getattr(mod, 'create_edit_input_required_extra', [])
+    attrs.create_edit_input_optional_extra = getattr(mod, 'create_edit_input_optional_extra', [])
     attrs.create_edit_rewrite = getattr(mod, 'create_edit_rewrite', [])
     attrs.check_existing_one = getattr(mod, 'check_existing_one', True)
     attrs.request_as_is = getattr(mod, 'request_as_is', [])
     attrs.sio_default_value = getattr(mod, 'sio_default_value', None)
     attrs.get_list_docs = getattr(mod, 'get_list_docs', None)
     attrs.delete_require_instance = getattr(mod, 'delete_require_instance', True)
+    attrs.skip_create_integrity_error = getattr(mod, 'skip_create_integrity_error', False)
+    attrs.skip_if_exists = getattr(mod, 'skip_if_exists', False)
+    attrs.skip_if_missing = getattr(mod, 'skip_if_missing', False)
     attrs._meta_session = None
 
     attrs.is_create = False
@@ -214,7 +219,7 @@ def update_attrs(cls, name, attrs):
 class AdminServiceMeta(type):
 
     @staticmethod
-    def get_sio(attrs, name, input_required=None, output_required=None, is_list=True):
+    def get_sio(attrs, name, input_required=None, output_required=None, is_list=True, class_=None):
 
         _BaseClass = GetListAdminSIO if is_list else AdminSIO
 
@@ -248,11 +253,15 @@ class AdminServiceMeta(type):
 
                 sio_elem = getattr(SimpleIO, _name)
                 has_cluster_id = 'cluster_id' in sio_elem
-                sio_to_add = get_io(attrs, _name, attrs.get('is_edit'), is_required, is_output, is_get_list, has_cluster_id)
+                sio_to_add = get_io(
+                    attrs, _name, attrs.get('is_edit'), is_required, is_output, is_get_list, has_cluster_id)
                 sio_elem.extend(sio_to_add)
 
                 if attrs.is_create_edit and is_required:
                     sio_elem.extend(attrs.create_edit_input_required_extra)
+
+                if attrs.is_create_edit and (not is_required):
+                    sio_elem.extend(attrs.create_edit_input_optional_extra)
 
                 # Sorts and removes duplicates
                 setattr(SimpleIO, _name, list(set(sio_elem)))
@@ -314,7 +323,7 @@ class CreateEditMeta(AdminServiceMeta):
         attrs = update_attrs(cls, name, attrs)
         verb = 'Creates' if attrs.is_create else 'Updates'
         cls.__doc__ = '{} {}.'.format(verb, attrs.label)
-        cls.SimpleIO = CreateEditMeta.get_sio(attrs, name)
+        cls.SimpleIO = CreateEditMeta.get_sio(attrs, name, is_list=False, class_=cls)
         cls.handle = CreateEditMeta.handle(attrs)
         return super(CreateEditMeta, cls).__init__(cls)
 
@@ -327,6 +336,7 @@ class CreateEditMeta(AdminServiceMeta):
             input.update(attrs.initial_input)
             verb = 'edit' if attrs.is_edit else 'create'
             old_name = None
+            has_integrity_error = False
 
             with closing(self.odb.session()) as session:
                 try:
@@ -347,9 +357,19 @@ class CreateEditMeta(AdminServiceMeta):
 
                         existing_one = existing_one.first()
 
-                        if existing_one and not attrs.is_edit:
-                            raise Exception('{} `{}` already exists in this cluster'.format(
-                                attrs.label[0].upper() + attrs.label[1:], input.name))
+                        if existing_one:
+                            if attrs.is_create:
+                                if attrs.skip_if_exists:
+                                    pass # Ignore it explicitly
+                                else:
+                                    raise Exception('{} `{}` already exists in this cluster'.format(
+                                        attrs.label[0].upper() + attrs.label[1:], input.name))
+                            else:
+                                if attrs.skip_if_missing:
+                                    pass # Ignore it explicitly
+                                else:
+                                    raise Exception('No such {} `{}` in this cluster'.format(
+                                        attrs.label[0].upper() + attrs.label[1:], input.name))
 
                     if attrs.is_edit:
                         instance = session.query(attrs.model).filter_by(id=input.id).one()
@@ -378,7 +398,14 @@ class CreateEditMeta(AdminServiceMeta):
                         attrs.instance_hook(self, input, instance, attrs)
 
                     session.add(instance)
-                    session.commit()
+
+                    try:
+                        session.commit()
+                    except IntegrityError:
+                        if not attrs.skip_create_integrity_error:
+                            raise
+                        else:
+                            has_integrity_error = True
 
                 except Exception:
                     msg = 'Could not {} the object, e:`%s`'.format(verb)
@@ -399,7 +426,8 @@ class CreateEditMeta(AdminServiceMeta):
                     if attrs.broker_message_hook:
                         attrs.broker_message_hook(self, input, instance, attrs, 'create_edit')
 
-                    self.broker_client.publish(input)
+                    if not has_integrity_error:
+                        self.broker_client.publish(input)
 
                     for name in chain(attrs.create_edit_rewrite, self.SimpleIO.output_required):
                         value = getattr(instance, name, singleton)
@@ -484,7 +512,7 @@ class DeleteMeta(AdminServiceMeta):
 class PingMeta(AdminServiceMeta):
     def __init__(cls, name, bases, attrs):
         attrs = update_attrs(cls, name, attrs)
-        cls.SimpleIO = PingMeta.get_sio(attrs, name, ['id'], ['info'])
+        cls.SimpleIO = PingMeta.get_sio(attrs, name, ['id'], ['info', 'id'])
         cls.handle = PingMeta.handle(attrs)
         return super(PingMeta, cls).__init__(cls)
 
@@ -502,6 +530,10 @@ class PingMeta(AdminServiceMeta):
                 self.ping(config)
                 response_time = time() - start_time
 
+                # Always return ID of the object we pinged
+                self.response.payload.id = self.request.input.id
+
+                # Return ping details
                 self.response.payload.info = 'Ping issued in {0:03.4f} s, check server logs for details, if any.'.format(
                     response_time)
 

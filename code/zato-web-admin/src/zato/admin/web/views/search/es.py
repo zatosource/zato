@@ -14,7 +14,7 @@ import logging
 # Zato
 from zato.admin.web.forms.search.es import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
-from zato.common import SEARCH
+from zato.common.api import SEARCH
 from zato.common.odb.model import ElasticSearch
 
 logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ class Index(_Index):
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
             'default_timeout': 90,
-            'default_body_as': SEARCH.ES.DEFAULTS.BODY_AS.value
+            'default_body_as': SEARCH.ES.DEFAULTS.BODY_AS
         }
 
 class _CreateEdit(CreateEdit):

@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from zato.admin.web.forms.cache.builtin import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, invoke_service_with_json_response, \
      method_allowed
-from zato.common import CACHE
+from zato.common.api import CACHE
 from zato.common.odb.model import CacheBuiltin
 
 # ################################################################################################################################

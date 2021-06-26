@@ -78,7 +78,7 @@ $.fn.zato.kvdb.CommandInfo = new Class({
         ['ZRANGE', 'ZRANGE key start stop [WITHSCORES]', 'Return a range of members in a sorted set, by index'],
         ['ZREM', 'ZREM key member [member ...]', 'Remove one or more members from a sorted set'],
     ];
-    
+
     _.each(ci_list, function(elem) {
         var ci = new $.fn.zato.kvdb.CommandInfo();
         ci.name = elem[0];
@@ -90,12 +90,19 @@ $.fn.zato.kvdb.CommandInfo = new Class({
 // /////////////////////////////////////////////////////////////////////////////
 
 
-$(document).ready(function() { 
+$(document).ready(function() {
+
+    var command_form = $('#command-form');
+
+    $("#id_command").attr('data-bvalidator', 'required');
+    $("#id_command").attr('data-bvalidator-msg', 'This is a required field');
+
+    command_form.bValidator();
 
     var _callback = function(data, status, xhr){
         var success = status == 'success';
         $("#id_result").text('');
-        
+
         if(success) {
             var div = $('#user-message-div');
             div.fadeOut(100);
@@ -104,21 +111,21 @@ $(document).ready(function() {
         else {
             $.fn.zato.user_message(false, data.responseText);
         }
-    }    
+    }
 
-    var options = { 
+    var options = {
         success: _callback,
         error:  _callback,
         resetForm: false,
         dataType: 'json',
-    }; 
+    };
 
-    $('#command-form').submit(function() { 
-        $(this).ajaxSubmit(options); 
-        return false; 
+    command_form.submit(function() {
+        $(this).ajaxSubmit(options);
+        return false;
     });
 
-}); 
+});
 
 
 $.fn.zato.kvdb.command_help = function(command) {

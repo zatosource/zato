@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from logging import getLogger
@@ -17,11 +15,17 @@ from boto.s3.connection import NoHostProvided, S3Connection
 from boto.s3.key import Key
 
 # Zato
-from zato.common import ZATO_NONE
-from zato.common.util import parse_extra_into_dict
+from zato.common.api import ZATO_NONE
+from zato.common.util.api import parse_extra_into_dict
 from zato.server.connection.queue import Wrapper
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class _S3Connection(object):
     def __init__(self, **kwargs):
@@ -35,7 +39,7 @@ class _S3Connection(object):
         self.zato_storage_class = kwargs.pop('storage_class')
         self.impl = S3Connection(**kwargs)
 
-    def sanity_check(self):
+    def check_connection(self):
         self.impl.get_canonical_user_id()
 
     def set(self, key, value, bucket=ZATO_NONE, content_type=ZATO_NONE, metadata=ZATO_NONE,
@@ -49,6 +53,9 @@ class _S3Connection(object):
         _key.storage_class = storage_class if storage_class != ZATO_NONE else self.zato_storage_class
         _key.set_contents_from_string(
             value, encrypt_key=(encrypt_at_rest if encrypt_at_rest != ZATO_NONE else self.zato_encrypt_at_rest))
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class S3Wrapper(Wrapper):
     """ Wraps a queue of connections to AWS S3.
@@ -65,6 +72,9 @@ class S3Wrapper(Wrapper):
             storage_class=self.config.storage_class, host=self.server.fs_server_config.misc.aws_host or NoHostProvided)
 
         # Sanity check - no exception here means the config is correct.
-        conn.sanity_check()
+        conn.check_connection()
 
         self.client.put_client(conn)
+
+# ################################################################################################################################
+# ################################################################################################################################

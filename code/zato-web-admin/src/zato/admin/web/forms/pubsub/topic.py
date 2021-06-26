@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.common import PUBSUB
+from zato.common.api import PUBSUB
 from zato.admin.web.forms import add_select, add_pubsub_services
 
 class CreateForm(forms.Form):
@@ -32,8 +32,7 @@ class CreateForm(forms.Form):
     depth_check_freq = forms.CharField(widget=forms.TextInput(
         attrs={'class':'required', 'style':'width:15%'}), initial=PUBSUB.DEFAULT.DEPTH_CHECK_FREQ)
 
-    pub_buffer_size_gd = forms.CharField(widget=forms.TextInput(
-        attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.PUB_BUFFER_SIZE_GD)
+    pub_buffer_size_gd = forms.CharField(widget=forms.HiddenInput(), initial=PUBSUB.DEFAULT.PUB_BUFFER_SIZE_GD)
 
     task_sync_interval = forms.CharField(widget=forms.TextInput(
         attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.TASK_SYNC_INTERVAL)

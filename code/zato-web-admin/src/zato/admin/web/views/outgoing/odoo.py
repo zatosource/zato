@@ -19,7 +19,7 @@ from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.odoo import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, id_only_service, \
      Index as _Index, method_allowed
-from zato.common import ODOO
+from zato.common.api import ODOO
 from zato.common.odb.model import OutgoingOdoo
 
 logger = logging.getLogger(__name__)

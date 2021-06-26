@@ -13,7 +13,7 @@ from django import forms
 
 # Zato
 from zato.admin.web.forms import add_security_select, add_select
-from zato.common import PUBSUB
+from zato.common.api import PUBSUB
 
 # ################################################################################################################################
 

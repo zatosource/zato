@@ -8,22 +8,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-import os
-
-# yaml
-import yaml
-
 # Zato
 from zato.cli import ManageCommand
-from zato.common import INFO_FORMAT
-from zato.common.component_info import format_info, get_info
+from zato.common.api import INFO_FORMAT
 
 DEFAULT_COLS_WIDTH = '30,90'
-
-class _Dumper(yaml.SafeDumper):
-    def represent_none(self, data):
-        return self.represent_scalar('tag:yaml.org,2002:null', '')
 
 class Info(ManageCommand):
     """ Shows detailed information regarding a chosen Zato component
@@ -36,6 +25,20 @@ class Info(ManageCommand):
     ]
 
     def _on_server(self, args):
+
+        # stdlib
+        import os
+
+        # yaml
+        import yaml
+
+        # Zato
+        from zato.common.component_info import format_info, get_info
+
+        class _Dumper(yaml.SafeDumper):
+            def represent_none(self, data):
+                return self.represent_scalar('tag:yaml.org,2002:null', '')
+
         os.chdir(self.original_dir)
         info = get_info(os.path.abspath(args.path), args.format)
         self.logger.info(format_info(info, args.format, args.cols_width if args.cols_width else DEFAULT_COLS_WIDTH, _Dumper))

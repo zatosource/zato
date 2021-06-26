@@ -13,7 +13,7 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
-from zato.common import MSG_PATTERN_TYPE
+from zato.common.api import MSG_PATTERN_TYPE
 from zato.common.broker_message import MSG_XPATH
 from zato.common.odb.model import Cluster, XPath
 from zato.common.odb.query import xpath_list

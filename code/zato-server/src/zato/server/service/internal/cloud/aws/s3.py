@@ -16,7 +16,7 @@ from traceback import format_exc
 from zato.common.broker_message import CLOUD
 from zato.common.odb.model import AWSS3
 from zato.common.odb.query import cloud_aws_s3_list
-from zato.server.service import Bool, ForceType, Int
+from zato.server.service import Bool, SIOElem, Int
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 class GetList(AdminService):
@@ -64,7 +64,7 @@ class Create(AdminService):
             try:
                 item = AWSS3()
                 for name in self.SimpleIO.input_required + self.SimpleIO.input_optional:
-                    if isinstance(name, ForceType):
+                    if isinstance(name, SIOElem):
                         name = name.name
                     setattr(item, name, self.request.input.get(name))
 
@@ -112,7 +112,7 @@ class Edit(AdminService):
                 old_name = item.name
 
                 for name in self.SimpleIO.input_required + self.SimpleIO.input_optional:
-                    if isinstance(name, ForceType):
+                    if isinstance(name, SIOElem):
                         name = name.name
                     setattr(item, name, self.request.input.get(name))
 

@@ -32,7 +32,7 @@ class OutconnIMSlackWrapper(Wrapper):
 
     def __init__(self, *args, **kwargs):
         super(OutconnIMSlackWrapper, self).__init__(*args, **kwargs)
-        self._client = None  # type: SlackClient
+        self._impl = None  # type: SlackClient
 
 # ################################################################################################################################
 
@@ -47,7 +47,7 @@ class OutconnIMSlackWrapper(Wrapper):
             }
 
             # Create the actual connection object
-            self._client = SlackClient(**client_config)
+            self._impl = SlackClient(**client_config)
 
             # Confirm the connection was established
             self.ping()
@@ -58,13 +58,13 @@ class OutconnIMSlackWrapper(Wrapper):
 # ################################################################################################################################
 
     def _delete(self):
-        if self._client.server.websocket:
-            self._client.server.websocket.close()
+        if self._impl.server.websocket:
+            self._impl.server.websocket.close()
 
 # ################################################################################################################################
 
     def _ping(self):
-        out = self._client.api_call('api.test')
+        out = self._impl.api_call('api.test')
         if not out['ok']:
             raise Exception(out['error'])
 

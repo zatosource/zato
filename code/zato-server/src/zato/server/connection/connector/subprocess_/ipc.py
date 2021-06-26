@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime, timedelta
-from json import loads
+from http.client import NOT_ACCEPTABLE, SERVICE_UNAVAILABLE
 from logging import getLogger
 from traceback import format_exc
 
@@ -21,22 +21,24 @@ from gevent import sleep
 from requests import get, post
 
 # Zato
-from zato.common.util import get_free_port
-from zato.common.util.json_ import dumps
+from zato.common.exception import ConnectorClosedException
+from zato.common.json_internal import dumps, loads
+from zato.common.util.api import get_free_port
 from zato.common.util.proc import start_python_process
 
 # ################################################################################################################################
 
-# Type checking
-import typing
+if 0:
 
-if typing.TYPE_CHECKING:
+    # requests
+    from requests import Response
 
     # Zato
     from zato.server.base.parallel import ParallelServer
 
     # For pyflakes
     ParallelServer = ParallelServer
+    Response = Response
 
 # ################################################################################################################################
 
@@ -47,6 +49,10 @@ logger = getLogger(__name__)
 address_pattern='http://127.0.0.1:{}/{}'
 not_enabled_pattern = '{connector_name} component is not enabled - install PyMQI and set component_enabled.{check_enabled} ' \
      'to True in server.conf and restart all servers before {connector_name} connections can be used.'
+
+# ################################################################################################################################
+
+_closed_status_code = (NOT_ACCEPTABLE, SERVICE_UNAVAILABLE)
 
 # ################################################################################################################################
 
@@ -72,6 +78,7 @@ class SubprocessIPC(object):
     def __init__(self, server):
         # type: (ParallelServer)
         self.server = server
+        self.ipc_tcp_port = None
 
 # ################################################################################################################################
 
@@ -100,7 +107,7 @@ class SubprocessIPC(object):
             self._check_enabled()
 
         self.ipc_tcp_port = get_free_port(ipc_tcp_start_port)
-        logger.info('Starting {} connector for server `%s` on `%s`'.format(self.connector_name),
+        logger.info('Starting {} connector for server `%s` on port `%s`'.format(self.connector_name),
             self.server.name, self.ipc_tcp_port)
 
         # Credentials for both servers and connectors
@@ -124,7 +131,7 @@ class SubprocessIPC(object):
         start_python_process('{} connector'.format(self.connector_name), False, self.connector_module, '', extra_options={
             'deployment_key': self.server.deployment_key,
             'shmem_size': self.server.shmem_size
-        })
+        }, stderr_path=self.server.stderr_path)
 
         # Wait up to timeout seconds for the connector to start as indicated by its responding to a PING request
         now = datetime.utcnow()
@@ -173,8 +180,13 @@ class SubprocessIPC(object):
 # ################################################################################################################################
 
     def send_message(self, msg):
+        # type: (dict) -> None
         if self.check_enabled:
             self._check_enabled()
+
+        for k, v in msg.items():
+            if isinstance(v, bytes):
+                msg[k] = v.decode('utf8')
 
         msg['action'] = self.action_send.value
         response = self.invoke_connector(msg)
@@ -192,11 +204,14 @@ class SubprocessIPC(object):
             self._check_enabled()
 
         address = address_pattern.format(self.ipc_tcp_port, 'api')
-        response = post(address, data=dumps(msg), auth=self.get_credentials())
+        response = post(address, data=dumps(msg), auth=self.get_credentials()) # type: Response
 
         if not response.ok:
             if raise_on_error:
-                raise Exception(response.text)
+                if response.status_code in _closed_status_code:
+                    raise ConnectorClosedException(None, response.text)
+                else:
+                    raise Exception(response.text)
             else:
                 logger.warn('Error message from {} connector `{}`'.format(self.connector_name, response.text))
         else:

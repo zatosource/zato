@@ -1,0 +1,15 @@
+--- django/db/models/base.py.orig	2020-08-18 23:16:55.977742076 +0200
++++ django/db/models/base.py	2020-08-18 23:16:46.601483328 +0200
+@@ -79,7 +79,11 @@
+ 
+         # Create the class.
+         module = attrs.pop('__module__')
+-        new_class = super_new(cls, name, bases, {'__module__': module})
++
++        new_attrs = {'__module__': module}
++        if '__classcell__' in attrs:
++            new_attrs['__classcell__'] = attrs['__classcell__']
++        new_class = super_new(cls, name, bases, new_attrs)
+         attr_meta = attrs.pop('Meta', None)
+         abstract = getattr(attr_meta, 'abstract', False)
+         if not attr_meta:

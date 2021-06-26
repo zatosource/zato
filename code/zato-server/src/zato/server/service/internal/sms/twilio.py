@@ -23,6 +23,15 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 # ################################################################################################################################
 
+if 0:
+    from bunch import Bunch
+    from zato.server.service import Service
+
+    Bunch = Bunch
+    Service = Service
+
+# ################################################################################################################################
+
 elem = 'sms_twilio'
 model = SMSTwilio
 label = 'a Twilio connection'
@@ -31,6 +40,16 @@ broker_message = SMS
 broker_message_prefix = 'TWILIO_'
 list_func = sms_twilio_list
 skip_input_params = ['is_internal']
+
+# ################################################################################################################################
+
+def response_hook(self, input, instance, attrs, service_type):
+    # type: (Service, Bunch, SMSTwilio, Bunch, str)
+
+    if service_type == 'get_list':
+
+        for item in self.response.payload: # type: SMSTwilio
+            item.auth_token = self.server.decrypt(item.auth_token)
 
 # ################################################################################################################################
 

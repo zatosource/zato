@@ -9,9 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from base64 import b64decode
 from binascii import unhexlify
 from contextlib import closing
-from json import loads
 from traceback import format_exc
 
 # Arrow
@@ -21,12 +21,15 @@ from arrow import get as arrow_get
 from zato.common.py23_ import pickle_loads
 
 # Zato
-from zato.common import CHANNEL
+from zato.common.api import CHANNEL
 from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL
-from zato.common.odb.model import ChannelWMQ, Cluster, ConnDefWMQ, Service
+from zato.common.ccsid_ import CCSIDConfig
+from zato.common.json_internal import loads
+from zato.common.odb.model import ChannelWMQ, Cluster, ConnDefWMQ, Service as ModelService
 from zato.common.odb.query import channel_wmq_list
-from zato.common.util import payload_from_request
+from zato.common.util.api import payload_from_request
 from zato.common.util.time_ import datetime_from_ms
+from zato.server.service import Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
@@ -78,10 +81,10 @@ class Create(AdminService):
                 raise Exception('A IBM MQ channel `{}` already exists on this cluster'.format(input.name))
 
             # Is the service's name correct?
-            service = session.query(Service).\
+            service = session.query(ModelService).\
                 filter(Cluster.id==input.cluster_id).\
-                filter(Service.cluster_id==Cluster.id).\
-                filter(Service.name==input.service).first()
+                filter(ModelService.cluster_id==Cluster.id).\
+                filter(ModelService.name==input.service).first()
 
             if not service:
                 msg = 'Service `{}` does not exist on this cluster'.format(input.service)
@@ -125,7 +128,7 @@ class Edit(AdminService):
         response_elem = 'zato_channel_jms_wmq_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 'service')
         input_optional = ('data_format',)
-        output_required = ('id', 'name')
+        output_optional = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -144,10 +147,10 @@ class Edit(AdminService):
                 raise Exception('A IBM MQ channel `{}` already exists on this cluster'.format(input.name))
 
             # Is the service's name correct?
-            service = session.query(Service).\
+            service = session.query(ModelService).\
                 filter(Cluster.id==input.cluster_id).\
-                filter(Service.cluster_id==Cluster.id).\
-                filter(Service.name==input.service).first()
+                filter(ModelService.cluster_id==Cluster.id).\
+                filter(ModelService.name==input.service).first()
 
             if not service:
                 msg = 'Service `{}` does not exist on this cluster'.format(input.service)
@@ -211,14 +214,10 @@ class Delete(AdminService):
 
 # ################################################################################################################################
 
-class OnMessageReceived(AdminService):
+class OnMessageReceived(Service):
     """ A callback service invoked by WebSphere connectors for each taken off a queue.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_channel_jms_wmq_on_message_received_request'
-        response_elem = 'zato_channel_jms_wmq_on_message_received_response'
-
-    def handle(self, _channel=CHANNEL.WEBSPHERE_MQ, ts_format='YYYYMMDDHHmmssSS'):
+    def handle(self, _channel=CHANNEL.IBM_MQ, ts_format='YYYYMMDDHHmmssSS'):
         request = loads(self.request.raw_request)
         msg = request['msg']
         service_name = request['service_name']
@@ -230,8 +229,28 @@ class OnMessageReceived(AdminService):
         timestamp = '{}{}'.format(msg['put_date'], msg['put_time'])
         timestamp = arrow_get(timestamp, ts_format).replace(tzinfo='UTC').datetime
 
-        data = payload_from_request(self.cid, msg['text'], request['data_format'], None)
+        # Extract MQMD
+        mqmd = msg['mqmd']
+        mqmd = b64decode(mqmd)
+        mqmd = pickle_loads(mqmd)
 
+        # Find the message's CCSID
+        request_ccsid = mqmd.CodedCharSetId
+
+        # Try to find an encoding matching the CCSID,
+        # if not found, use the default one.
+        try:
+            encoding = CCSIDConfig.encoding_map[request_ccsid]
+        except KeyError:
+            encoding = CCSIDConfig.default_encoding
+
+        # Encode the input Unicode data into bytes
+        msg['text'] = msg['text'].encode(encoding)
+
+        # Extract the business payload
+        data = payload_from_request(self.server.json_parser, self.cid, msg['text'], request['data_format'], None)
+
+        # Invoke the target service
         self.invoke(service_name, data, _channel, wmq_ctx={
             'msg_id': unhexlify(msg['msg_id']),
             'correlation_id': correlation_id,
@@ -241,7 +260,7 @@ class OnMessageReceived(AdminService):
             'expiration': expiration,
             'reply_to': msg['reply_to'],
             'data': data,
-            'mqmd': pickle_loads(msg['mqmd'].encode('utf8'))
+            'mqmd': mqmd
         })
 
 # ################################################################################################################################

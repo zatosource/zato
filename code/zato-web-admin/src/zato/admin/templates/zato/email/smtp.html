@@ -124,44 +124,62 @@
                 <form action="{% url "email-smtp-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:23%">Name</td>
+                            <td style="vertical-align:middle; width:18%">
+                            <label for="id_name">Name</label>
+                            </td>
                             <td>{{ create_form.name }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Active</td>
+                            <td style="vertical-align:middle">
+                            <label for="id_is_active">Active</label>
+                            </td>
                             <td>{{ create_form.is_active }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Host</td>
+                            <td style="vertical-align:middle">
+                            <label for="id_host">Host</label>
+                            </td>
                             <td>{{ create_form.host }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Port</td>
+                            <td style="vertical-align:middle">
+                            <label for="id_port">Port</label>
+                            </td>
                             <td>{{ create_form.port }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Timeout
+                            <td style="vertical-align:middle">
+                            <label for="id_timeout">Timeout
                             <br/>
                             <span class="form_hint">(In seconds)</span>
+                            </label>
                             </td>
                             <td>{{ create_form.timeout }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Username</td>
+                            <td style="vertical-align:middle">
+                            <label for="id_username">Username</label>
+                            </td>
                             <td>{{ create_form.username }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Mode</td>
+                            <td style="vertical-align:middle">
+                            <label for="id_mode">Mode</label>
+                            </td>
                             <td>{{ create_form.mode }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Debug mode</td>
+                            <td style="vertical-align:middle">
+                            <label for="id_is_debug">Debug mode</label>
+                            </td>
                             <td>{{ create_form.is_debug }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Ping address
+                            <td style="vertical-align:middle">
+                            <label for="id_ping_address">Ping address
                             <br/>
                             <span class="form_hint">(Default: {{ default_ping_address }})</span>
+                            </label>
                             </td>
                             <td>{{ create_form.ping_address }} </td>
                         </tr>
@@ -172,7 +190,6 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" name="is_active" value="on" />
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>
@@ -183,44 +200,62 @@
                 <form action="{% url "email-smtp-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
+                            <td style="vertical-align:middle; width:18%">
+                            <label for="id_edit-name">Name</label>
+                            </td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Active</td>
+                            <td style="vertical-align:middle">
+                            <label for="id_edit-is_active">Active</label>
+                            </td>
                             <td>{{ edit_form.is_active }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Host</td>
+                            <td style="vertical-align:middle">
+                            <label for="id_edit-host">Host</label>
+                            </td>
                             <td>{{ edit_form.host }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Port</td>
+                            <td style="vertical-align:middle">
+                            <label for="id_edit-port">Port</label>
+                            </td>
                             <td>{{ edit_form.port }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Timeout
+                            <td style="vertical-align:middle">
+                            <label for="id_edit-timeout">Timeout
                             <br/>
                             <span class="form_hint">(In seconds)</span>
+                            </label>
                             </td>
                             <td>{{ edit_form.timeout }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Username</td>
+                            <td style="vertical-align:middle">
+                            <label for="id_edit-username">Username</label>
+                            </td>
                             <td>{{ edit_form.username }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Mode</td>
+                            <td style="vertical-align:middle">
+                            <label for="id_edit-mode">Mode</label>
+                            </td>
                             <td>{{ edit_form.mode }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Debug mode</td>
+                            <td style="vertical-align:middle">
+                            <label for="id_edit-is_debug">Debug mode</label>
+                            </td>
                             <td>{{ edit_form.is_debug }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Ping address
+                            <td style="vertical-align:middle">
+                            <label for="id_edit-ping_address">Ping address
                             <br/>
                             <span class="form_hint">(Default: {{ default_ping_address }})</span>
+                            </label>
                             </td>
                             <td>{{ edit_form.ping_address }} </td>
                         </tr>
@@ -231,7 +266,6 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" name="is_active" value="on" />
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                 </form>

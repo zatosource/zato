@@ -1,16 +1,20 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
+# Django
 from django import template
+from django.utils.safestring import mark_safe
+
+# ################################################################################################################################
 
 register = template.Library()
+
+# ################################################################################################################################
 
 # Taken from https://djangosnippets.org/snippets/38/ and slightly updated
 
@@ -35,6 +39,8 @@ def bunchget(obj, args):
 
     return default
 
+# ################################################################################################################################
+
 # Taken from https://stackoverflow.com/a/16609498
 
 @register.simple_tag
@@ -43,3 +49,11 @@ def url_replace(request, field, value):
     dict_[field] = value
 
     return dict_.urlencode()
+
+# ################################################################################################################################
+
+@register.filter
+def no_value_indicator(value):
+    return value or mark_safe('<span class="form_hint">---</span>')
+
+# ################################################################################################################################

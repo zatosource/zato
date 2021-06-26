@@ -182,7 +182,7 @@ class WebSphereMQConnection(object):
                 except Exception:
                     try:
                         logger.error('Could not clear caches, e:`%s`' % format_exc())
-                    except:
+                    except Exception:
                         pass
                 try:
                     logger.info('Disconnecting from queue manager `%s`' % self.queue_manager)
@@ -342,7 +342,11 @@ class WebSphereMQConnection(object):
             if self.has_debug:
                 logger.debug('send -> _is_connected2 %s' % self.is_connected)
 
+        if not isinstance(destination, unicode):
+            destination = destination.decode('utf8')
+
         destination = self._strip_prefixes_from_destination(destination)
+        destination = destination.encode('utf8')
 
         # Will consist of an MQRFH2 header and the actual business payload.
         buff = BytesIO()
@@ -505,8 +509,12 @@ class WebSphereMQConnection(object):
     def _get_jms_timestamp_from_md(self, put_date, put_time):
         pattern = '%Y%m%d%H%M%S'
         centi = int(put_time[6:]) / 100.0
+        put_date_time = put_date + put_time[:6]
 
-        strp = strptime(put_date + put_time[:6], pattern)
+        if not isinstance(put_date_time, unicode):
+            put_date_time = put_date_time.decode('utf8')
+
+        strp = strptime(put_date_time, pattern)
         mk = mktime(strp)
 
         return long((mk - altzone + centi) * 1000.0)
@@ -559,10 +567,25 @@ class WebSphereMQConnection(object):
             exc = WebSphereMQException(text)
             raise exc
 
-        if md.ReplyToQ.strip():
+        # Reply-to will have at least a queue name
+        md_reply_to_queue = md.ReplyToQ.strip()
+
+        # Are replies to be sent anywhere?
+        if md_reply_to_queue:
+
+            # We will have a reply-to-qm potentially as well
+            md_reply_to_qm = md.ReplyToQMgr.strip()
+
+            # Convert everything to string
+            if isinstance(md_reply_to_queue, bytes):
+                md_reply_to_queue = md_reply_to_queue.decode('utf8')
+
+            if isinstance(md_reply_to_qm, bytes):
+                md_reply_to_qm = md_reply_to_qm.decode('utf8')
+
             if self.has_debug:
-                logger.debug('Found md.ReplyToQ:`%r`' % md.ReplyToQ)
-            text_message.jms_reply_to = 'queue://' + md.ReplyToQMgr.strip() + '/' + md.ReplyToQ.strip()
+                logger.debug('Found md.ReplyToQ:`%r`' % md_reply_to_queue)
+            text_message.jms_reply_to = 'queue://' + md_reply_to_qm + '/' + md_reply_to_queue
 
         text_message.jms_priority = md.Priority
         text_message.jms_message_id = md.MsgId
@@ -618,12 +641,15 @@ class WebSphereMQConnection(object):
 # ################################################################################################################################
 
     def _strip_prefixes_from_destination(self, destination):
+
         if destination.startswith('queue:///'):
             return destination.replace('queue:///', '', 1)
+
         elif destination.startswith('queue://'):
             no_qm_dest = destination.replace('queue://', '', 1)
             no_qm_dest = no_qm_dest.split('/')[1:]
             return '/'.join(no_qm_dest)
+
         else:
             return destination
 
@@ -644,7 +670,7 @@ class WebSphereMQConnection(object):
             md.MsgId = message.jms_message_id
 
         if message.jms_correlation_id:
-            if message.jms_correlation_id.startswith(_WMQ_ID_PREFIX):
+            if message.jms_correlation_id.startswith(_WMQ_ID_PREFIX.encode('utf-8')):
                 md.CorrelId = unhexlify_wmq_id(message.jms_correlation_id)
             else:
                 md.CorrelId = message.jms_correlation_id.ljust(24)[:24]
@@ -680,7 +706,7 @@ class WebSphereMQConnection(object):
             if message.jms_expiration / 1000 > _WMQ_MAX_EXPIRY_TIME:
                 md.Expiry = self.CMQC.MQEI_UNLIMITED
             else:
-                md.Expiry = message.jms_expiration / 10
+                md.Expiry = int(message.jms_expiration / 10)
 
         # IBM MQ provider-specific JMS headers
 

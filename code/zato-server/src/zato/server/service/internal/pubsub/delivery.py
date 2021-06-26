@@ -1,25 +1,33 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-# Python 2/3 compatibility
-from future.utils import itervalues
-
 # Zato
-from zato.common import HTTP_SOAP_SERIALIZATION_TYPE, PUBSUB, URL_TYPE
+from zato.common.api import HTTP_SOAP_SERIALIZATION_TYPE, PUBSUB, URL_TYPE
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.pubsub import HandleNewMessageCtx
 from zato.server.pubsub.task import PubSubTool
-from zato.common.util.json_ import dumps
+from zato.common.json_internal import dumps
 from zato.server.service import Int, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
+
+# Python 2/3 compatibility
+from future.utils import itervalues
+
+# ################################################################################################################################
+
+if 0:
+    from zato.common.pubsub import PubSubMessage
+    from zato.server.pubsub.model import Subscription
+
+    # For pyflakes
+    PubSubMessage = PubSubMessage
+    Subscription = Subscription
 
 # ################################################################################################################################
 
@@ -146,8 +154,30 @@ class DeliverMessage(AdminService):
 
 # ################################################################################################################################
 
-    def _deliver_wsx(self, msg, subscription, _ignored):
+    def _deliver_wsx(self, msg, subscription, _ignored_impl_getter):
         raise NotImplementedError('WSX deliveries should be handled by each socket\'s deliver_pubsub_msg')
+
+# ################################################################################################################################
+
+    def _deliver_srv(self, msg, subscription, _ignored_impl_getter):
+        # type: (object, Subscription, object)
+
+        # Reusable
+        is_list = isinstance(msg, list)
+
+        # Each message will be destinated for the same service so we can extract the target service's name
+        # from the first message in list, assuming it is in a list at all.
+        zato_ctx = msg[0].zato_ctx if is_list else msg.zato_ctx
+        target_service_name = zato_ctx['target_service_name']
+
+        # Invoke the target service, giving it on input everything that we had,
+        # do it either for each message from the list ..
+        if is_list:
+            for item in msg: # type: PubSubMessage
+                self.invoke(target_service_name, item)
+        else:
+            # .. or directly, if input is not a list
+            self.invoke(target_service_name, msg)
 
 # ################################################################################################################################
 
@@ -157,6 +187,7 @@ deliver_func = {
     PUBSUB.ENDPOINT_TYPE.REST.id: DeliverMessage._deliver_rest_soap,
     PUBSUB.ENDPOINT_TYPE.SOAP.id: DeliverMessage._deliver_rest_soap,
     PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id: DeliverMessage._deliver_wsx,
+    PUBSUB.ENDPOINT_TYPE.SERVICE.id: DeliverMessage._deliver_srv,
 }
 
 # ################################################################################################################################

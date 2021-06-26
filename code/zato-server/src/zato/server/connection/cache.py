@@ -25,9 +25,9 @@ from paste.util.converters import asbool
 
 # Zato
 from zato.cache import Cache as _CyCache
-from zato.common import CACHE, ZATO_NOT_GIVEN
+from zato.common.api import CACHE, ZATO_NOT_GIVEN
 from zato.common.broker_message import CACHE as CACHE_BROKER_MSG
-from zato.common.util import parse_extra_into_dict
+from zato.common.util.api import parse_extra_into_dict
 
 # Python 2/3 compatibility
 from future.utils import iteritems, itervalues
@@ -70,6 +70,9 @@ for builtin_op in builtin_ops:
 # ################################################################################################################################
 
 default_get = ZATO_NOT_GIVEN # A singleton to indicate that no default for Cache.get was given on input
+
+_no_key = 'zato-no-key'
+_no_value = 'zato-no-value'
 
 # ################################################################################################################################
 
@@ -841,8 +844,8 @@ class CacheAPI(object):
             data['cache_name'] = cache_name
             data['source_worker_id'] = self.server.worker_id
 
-            key = data.get('key')
-            value = data.get('value')
+            key = data.get('key', _no_key)
+            value = data.get('value', _no_value)
 
             if isinstance(key, basestring):
                 data['is_key_pickled'] = False

@@ -12,8 +12,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from traceback import format_exc
 
-# dateutil
-from dateutil.parser import parse
+# ciso8601
+from ciso8601 import parse_datetime
 
 # Zato
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
@@ -35,8 +35,9 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         input_required = (AsIs('pub_client_id'), AsIs('ext_client_id'), 'is_internal', 'local_address', 'peer_address',
             'peer_fqdn', 'connection_time', 'last_seen', 'channel_name')
-        input_optional = ('ext_client_name', 'peer_forwarded_for', 'peer_forwarded_for_fqdn')
-        output_optional = ('ws_client_id',)
+        input_optional = 'ext_client_name', 'peer_forwarded_for', 'peer_forwarded_for_fqdn'
+        output_optional = 'ws_client_id'
+        response_elem = None
 
     def handle(self):
         req = self.request.input
@@ -57,8 +58,8 @@ class Create(AdminService):
             client.local_address = req.local_address
             client.peer_address = req.peer_address
             client.peer_fqdn = req.peer_fqdn
-            client.connection_time = parse(req.connection_time)
-            client.last_seen = parse(req.last_seen)
+            client.connection_time = parse_datetime(req.connection_time)
+            client.last_seen = parse_datetime(req.last_seen)
             client.server_proc_pid = self.server.pid
             client.channel_id = channel.id
             client.server_id = self.server.id
@@ -100,12 +101,12 @@ class UnregisterWSSubKey(AdminService):
         # If configured to, delete the WebSocket's persistent subscription
         for sub_key in self.request.input.sub_key_list:
             sub = self.pubsub.get_subscription_by_sub_key(sub_key)
-
-            if self.request.input.needs_wsx_close or (sub and sub.unsub_on_wsx_close):
-                self.invoke('zato.pubsub.pubapi.unsubscribe',{
-                    'sub_key': sub.sub_key,
-                    'topic_name': sub.topic_name,
-                })
+            if sub:
+                if self.request.input.needs_wsx_close or (sub and sub.unsub_on_wsx_close):
+                    self.invoke('zato.pubsub.pubapi.unsubscribe', {
+                        'sub_key': sub.sub_key,
+                        'topic_name': sub.topic_name,
+                    })
 
         # Update in-RAM state of workers
         self.broker_client.publish({
@@ -122,9 +123,8 @@ class DeleteByServer(AdminService):
         input_required = 'needs_pid',
 
     def handle(self):
-
         with closing(self.odb.session()) as session:
-            server_pid = self.server.pid if self.request.input.needs_pid else None
+            server_pid = self.server.pid if self.request.input.get('needs_pid') else None
             clients = web_socket_clients_by_server_id(session, self.server.id, server_pid)
             clients.delete()
             session.commit()
@@ -136,7 +136,7 @@ class NotifyPubSubMessage(AdminService):
     """
     class SimpleIO(AdminSIO):
         input_required = (AsIs('pub_client_id'), 'channel_name', AsIs('request'))
-        output_required = (AsIs('r'),)
+        output_optional = (AsIs('r'),)
         response_elem = 'r'
 
     def handle(self):

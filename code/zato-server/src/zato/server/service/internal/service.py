@@ -1,19 +1,17 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from base64 import b64decode, b64encode
 from contextlib import closing
 from http.client import BAD_REQUEST, NOT_FOUND
-from json import loads
 from mimetypes import guess_type
+from operator import attrgetter
 from tempfile import NamedTemporaryFile
 from traceback import format_exc
 from uuid import uuid4
@@ -28,15 +26,16 @@ from future.utils import iterkeys
 from past.builtins import basestring
 
 # Zato
-from zato.common import BROKER, KVDB, ZatoException
+from zato.common.api import BROKER, KVDB
 from zato.common.broker_message import SERVICE
-from zato.common.exception import BadRequest
+from zato.common.exception import BadRequest, ZatoException
+from zato.common.json_internal import dumps, loads
 from zato.common.json_schema import get_service_config
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, Service
 from zato.common.odb.query import service_list
 from zato.common.rate_limiting import DefinitionParser
-from zato.common.util import hot_deploy, payload_from_request
-from zato.common.util.json_ import dumps
+from zato.common.scheduler import get_startup_job_services
+from zato.common.util.api import hot_deploy, payload_from_request
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean, Integer, Service as ZatoService
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -61,8 +60,8 @@ class GetList(AdminService):
     class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_service_get_list_request'
         response_elem = 'zato_service_get_list_response'
-        input_required = 'cluster_id', 'query'
-        input_optional = Integer('cur_page'), Boolean('paginate')
+        input_required = 'cluster_id'
+        input_optional = 'should_include_scheduler'
         output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), Integer('usage'), \
             Integer('slow_threshold')
         output_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_active', \
@@ -70,14 +69,14 @@ class GetList(AdminService):
         output_repeated = True
         default_value = ''
 
-    def get_data(self, session):
-
-        return_internal = is_boolean(self.server.fs_server_config.misc.return_internal_objects)
-        internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
+    def _get_data(self, session, return_internal, include_list, internal_del):
 
         out = []
-        search_result = self._search(service_list, session, self.request.input.cluster_id, return_internal, False)
+        search_result = self._search(
+            service_list, session, self.request.input.cluster_id, return_internal, include_list, False)
+
         for item in elems_with_opaque(search_result):
+
             item.may_be_deleted = internal_del if item.is_internal else True
             item.usage = self.server.kvdb.conn.get('{}{}'.format(KVDB.SERVICE_USAGE, item.name)) or 0
 
@@ -89,6 +88,36 @@ class GetList(AdminService):
 
             out.append(item)
 
+        return out
+
+    def get_data(self, session):
+
+        # Reusable
+        return_internal = is_boolean(self.server.fs_server_config.misc.return_internal_objects)
+        internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
+
+        # We issue one or two queries to populate this list - the latter case only if we are to return scheduler's jobs.
+        out = []
+
+        # Confirm if we are to return services for the scheduler
+        if self.request.input.should_include_scheduler:
+            scheduler_service_list = get_startup_job_services()
+        else:
+            scheduler_service_list = []
+
+        # This query runs only if there are scheduler services to return ..
+        if scheduler_service_list:
+            result = self._get_data(session, return_internal, scheduler_service_list, internal_del)
+            out.extend(result)
+
+        # .. while this query runs always (note the empty include_list).
+        result = self._get_data(session, return_internal, [], internal_del)
+        out.extend(result)
+
+        # .. sort the result before returning ..
+        out.sort(key=attrgetter('name'))
+
+        # .. finally, return all that we found.
         return out
 
     def handle(self):
@@ -202,6 +231,9 @@ class Edit(AdminService):
                 if class_.schema:
                     self.server.service_store.set_up_class_json_schema(class_, input)
 
+                # Set up rate-limiting each time an object was edited
+                self.server.service_store.set_up_rate_limiting(service.name)
+
                 session.add(service)
                 session.commit()
 
@@ -306,15 +338,15 @@ class Invoke(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_invoke_request'
         response_elem = 'zato_service_invoke_response'
-        input_optional = ('id', 'name', 'payload', 'channel', 'data_format', 'transport', Boolean('async'),
-            Integer('expiration'), Integer('pid'), Boolean('all_pids'), Integer('timeout'))
+        input_optional = ('id', 'name', 'payload', 'channel', 'data_format', 'transport', Boolean('is_async'),
+            Integer('expiration'), Integer('pid'), Boolean('all_pids'), Integer('timeout'), Boolean('skip_response_elem'))
         output_optional = ('response',)
 
     def handle(self):
         payload = self.request.input.get('payload')
         if payload:
             payload = b64decode(payload)
-            payload = payload_from_request(self.cid, payload,
+            payload = payload_from_request(self.server.json_parser, self.cid, payload,
                 self.request.input.data_format, self.request.input.transport)
 
         id = self.request.input.get('id')
@@ -322,6 +354,7 @@ class Invoke(AdminService):
         pid = self.request.input.get('pid') or 0
         all_pids = self.request.input.get('all_pids')
         timeout = self.request.input.get('timeout') or None
+        skip_response_elem = self.request.input.get('skip_response_elem') or False
 
         channel = self.request.input.get('channel')
         data_format = self.request.input.get('data_format')
@@ -331,7 +364,7 @@ class Invoke(AdminService):
         if name and id:
             raise ZatoException('Cannot accept both id:`{}` and name:`{}`'.format(id, name))
 
-        if self.request.input.get('async'):
+        if self.request.input.get('is_async'):
 
             if id:
                 impl_name = self.server.service_store.id_to_impl_name[id]
@@ -344,7 +377,7 @@ class Invoke(AdminService):
                 response = self.invoke_async(name, payload, channel, data_format, transport, expiration)
 
         else:
-            # This branch the same as above in async branch, except in async there was no all_pids
+            # This branch the same as above in is_async branch, except in is_async there was no all_pids
 
             # It is possible that we were given the all_pids flag on input but we know
             # ourselves that there is only one process, the current one, so we can just
@@ -356,18 +389,20 @@ class Invoke(AdminService):
 
             if use_all_pids:
                 args = (name, payload, timeout) if timeout else (name, payload)
-                response = dumps(self.server.invoke_all_pids(*args))
+                response = dumps(self.server.invoke_all_pids(*args, skip_response_elem=skip_response_elem))
             else:
                 if pid and pid != self.server.pid:
-                    response = self.server.invoke(name, payload, pid=pid, data_format=data_format)
+                    response = self.server.invoke(
+                        name, payload, pid=pid, data_format=data_format, skip_response_elem=skip_response_elem)
                 else:
                     func, id_ = (self.invoke, name) if name else (self.invoke_by_id, id)
-                    response = func(id_, payload, channel, data_format, transport, serialize=True)
+                    response = func(
+                        id_, payload, channel, data_format, transport, skip_response_elem=skip_response_elem, serialize=True)
 
         if isinstance(response, basestring):
             if response:
                 response = response if isinstance(response, bytes) else response.encode('utf8')
-                self.response.payload.response = b64encode(response) if response else ''
+                self.response.payload.response = b64encode(response).decode('utf8') if response else ''
 
 # ################################################################################################################################
 
@@ -681,6 +716,18 @@ class ServiceInvoker(AdminService):
         # Service name is given in URL path
         service_name = self.request.http.params.service_name
 
+        # Are we invoking a Zato built-in service or a user-defined one?
+        is_internal = service_name.startswith(_internal) # type: bool
+
+        # Before invoking a service that is potentially internal we need to confirm
+        # that our channel can be used for such invocations.
+        if is_internal:
+            if self.channel.name not in self.server.fs_server_config.misc.service_invoker_allow_internal:
+                self.logger.warn('Service `%s` could not be invoked; channel `%s` not among `%s` (service_invoker_allow_internal)',
+                    service_name, self.channel.name, self.server.fs_server_config.misc.service_invoker_allow_internal)
+                self.response.data_format = 'text/plain'
+                raise BadRequest(self.cid, 'No such service `{}`'.format(service_name))
+
         # Make sure the service exists
         if self.server.service_store.has_service(service_name):
 
@@ -694,11 +741,10 @@ class ServiceInvoker(AdminService):
             # Invoke the service now
             response = self.invoke(service_name, payload, wsgi_environ={'HTTP_METHOD':self.request.http.method})
 
-            # All internal services wrap their responses in top-level elements that we need to shed here.
-            if service_name.startswith(_internal):
-                if response:
-                    top_level = list(iterkeys(response))[0]
-                    response = response[top_level]
+            # All internal services wrap their responses in top-level elements that we need to shed here ..
+            if is_internal and response:
+                top_level = list(iterkeys(response))[0]
+                response = response[top_level]
 
             # Assign response to outgoing payload
             self.response.payload = dumps(response)

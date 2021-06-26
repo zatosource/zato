@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -24,11 +24,11 @@ from gevent import lock, sleep
 from paodate import Delta
 
 # Python 2/3 compatibility
-from future.utils import itervalues
+from future.utils import iterkeys, itervalues
 
 # Zato
-from zato.common import SCHEDULER
-from zato.common.util import add_scheduler_jobs, add_startup_jobs, asbool, make_repr, new_cid, spawn_greenlet
+from zato.common.api import FILE_TRANSFER, SCHEDULER
+from zato.common.util.api import add_scheduler_jobs, add_startup_jobs, asbool, make_repr, new_cid, spawn_greenlet
 
 # ################################################################################################################################
 
@@ -36,7 +36,7 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
-initial_sleep = 30
+initial_sleep = 0.1
 
 # ################################################################################################################################
 
@@ -60,7 +60,8 @@ class Interval(object):
 
 class Job(object):
     def __init__(self, id, name, type, interval, start_time=None, callback=None, cb_kwargs=None, max_repeats=None,
-            on_max_repeats_reached_cb=None, is_active=True, clone_start_time=False, cron_definition=None, old_name=None):
+            on_max_repeats_reached_cb=None, is_active=True, clone_start_time=False, cron_definition=None, service=None,
+            extra=None, old_name=None):
         self.id = id
         self.name = name
         self.type = type
@@ -71,6 +72,8 @@ class Job(object):
         self.on_max_repeats_reached_cb = on_max_repeats_reached_cb
         self.is_active = is_active
         self.cron_definition = cron_definition
+        self.service = service
+        self.extra = extra
 
         # This is used by the edit action to be able to discern if an edit did not include a rename
         self.old_name = old_name
@@ -114,7 +117,8 @@ class Job(object):
         is_active = is_active if is_active is not None else self.is_active
 
         return Job(self.id, self.name, self.type, self.interval, self.start_time, self.callback, self.cb_kwargs,
-            self.max_repeats, self.on_max_repeats_reached_cb, is_active, True, self.cron_definition)
+            self.max_repeats, self.on_max_repeats_reached_cb, is_active, True, self.cron_definition, self.service,
+            self.extra)
 
     def get_start_time(self, start_time):
         """ Converts initial start time to the time the job should be invoked next.
@@ -264,6 +268,12 @@ class Job(object):
         # OK, we're ready
         try:
 
+            # If we are a job that triggers file transfer channels we do not start
+            # unless our extra data is filled in. Otherwise, we would not trigger any transfer anyway.
+            if self.service == FILE_TRANSFER.SCHEDULER_SERVICE and (not self.extra):
+                logger.warn('Skipped file transfer job `%s` without extra set `%s` (%s)', self.name, self.extra, self.service)
+                return
+
             if not self.start_time:
                 logger.warn('Job `%s` cannot start without start_time set', self.name)
                 return
@@ -323,9 +333,8 @@ class Scheduler(object):
                 if spawn:
                     self.spawn_job(job)
                     self.job_log('Job scheduled `%s` (%s, start: %s UTC)', job.name, job.type, job.start_time)
-
             else:
-                logger.debug('Skipping inactive job `%s`', job)
+                logger.info('Skipping inactive job `%s`', job)
         except Exception:
             logger.warn(format_exc())
 
@@ -349,11 +358,11 @@ class Scheduler(object):
         found = False
         job.keep_running = False
 
-        if name in self.jobs.iterkeys():
+        if name in iterkeys(self.jobs):
             del self.jobs[name]
             found = True
 
-        if name in self.job_greenlets.keys():
+        if name in iterkeys(self.job_greenlets):
             self.job_greenlets[name].kill(block=False, timeout=2.0)
             del self.job_greenlets[name]
             found = True
@@ -367,7 +376,7 @@ class Scheduler(object):
             name = job.old_name if job.old_name else job.name
             logger.info('Unscheduled %s job %s `%s`', job.type, name, message)
         else:
-            logger.debug('Job not found `%s`', job)
+            logger.info('Job not found `%s`', job)
 
     def unschedule(self, job):
         """ Deletes a job.
@@ -421,7 +430,7 @@ class Scheduler(object):
                 logger.warn('No such job `%s` in `%s`', name, [elem.get_context() for elem in itervalues(self.jobs)])
 
     def on_job_executed(self, ctx, unschedule_one_time=True):
-        logger.debug('Executing `%s`, `%s`', ctx['name'], ctx)
+        logger.info('Executing `%s`, `%s`', ctx['name'], ctx)
         self.on_job_executed_cb(ctx)
         self.job_log('Job executed `%s`, `%s`', ctx['name'], ctx)
 

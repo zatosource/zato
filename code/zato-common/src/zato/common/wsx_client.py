@@ -12,7 +12,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import subprocess
 from datetime import datetime, timedelta
-from json import loads
 from traceback import format_exc
 from uuid import uuid4
 
@@ -27,7 +26,8 @@ from six.moves.http_client import OK
 from ws4py.client.geventclient import WebSocketClient
 
 # Zato
-from zato.common.util.json_ import dumps
+from zato.common.json_ import dumps
+from zato.common.json_internal import loads
 
 # ################################################################################################################################
 
@@ -346,7 +346,7 @@ class Client(object):
 
 # ################################################################################################################################
 
-    def _run(self, max_wait=10):
+    def _run(self, max_wait=10, _sleep_time=2):
 
         needs_connect = True
         start = now = datetime.utcnow()
@@ -359,9 +359,12 @@ class Client(object):
         # Wait for max_wait seconds until we have the connection
         until = now + timedelta(seconds=max_wait)
 
-        while needs_connect and now < until:
+        while self.keep_running and needs_connect and now < until:
             try:
-                self.conn.connect()
+                if self.conn.sock:
+                    self.conn.connect()
+                else:
+                    raise ValueError('No WSX connection to {} after {}'.format(self.config.address, now - start))
             except Exception as e:
 
                 if use_warn:
@@ -374,7 +377,7 @@ class Client(object):
                         log_func = logger.debug
 
                 log_func('Exception caught `%s` while connecting to WSX `%s (%s)`', e, self.config.address, format_exc())
-                sleep(2)
+                sleep(_sleep_time)
                 now = datetime.utcnow()
             else:
                 needs_connect = False
@@ -403,14 +406,14 @@ class Client(object):
 
 # ################################################################################################################################
 
-    def invoke(self, request):
+    def invoke(self, request, timeout=5):
         if self.needs_auth and (not self.is_authenticated):
             raise Exception('Client is not authenticated')
 
         request_id = MSG_PREFIX.INVOKE_SERVICE.format(uuid4().hex)
         spawn(self.send, request_id, ServiceInvokeRequest(request_id, request, self.config, self.auth_token))
 
-        response = self._wait_for_response(request_id)
+        response = self._wait_for_response(request_id, wait_time=timeout)
 
         if not response:
             logger.warn('No response to invocation request `%s`', request_id)

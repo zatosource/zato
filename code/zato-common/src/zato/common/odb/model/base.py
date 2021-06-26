@@ -8,15 +8,15 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from json import dumps as json_dumps, loads as json_loads
-
 # dictalchemy
 from dictalchemy import make_class_dictable
 
 # SQLAlchemy
 from sqlalchemy import Text, TypeDecorator
 from sqlalchemy.ext.declarative import declarative_base
+
+# Zato
+from zato.common.json_internal import json_dumps, json_loads
 
 # ################################################################################################################################
 

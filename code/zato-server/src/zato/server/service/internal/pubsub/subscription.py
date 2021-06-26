@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
@@ -19,7 +17,7 @@ from bunch import Bunch
 from sqlalchemy import update
 
 # Zato
-from zato.common import PUBSUB
+from zato.common.api import PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest, NotFound, Forbidden, PubSubSubscriptionExists
 from zato.common.odb.model import PubSubSubscription
@@ -28,13 +26,25 @@ from zato.common.odb.query.pubsub.subscribe import add_subscription, add_wsx_sub
      move_messages_to_sub_queue
 from zato.common.odb.query.pubsub.subscription import pubsub_subscription_list_by_endpoint_id_no_search
 from zato.common.pubsub import new_sub_key
-from zato.common.util import get_sa_model_columns, make_repr
+from zato.common.util.api import get_sa_model_columns, make_repr
+from zato.common.simpleio_ import drop_sio_elems
 from zato.common.util.time_ import datetime_to_ms, utcnow_as_ms
 from zato.server.connection.web_socket import WebSocket
 from zato.server.pubsub import PubSub, Topic
 from zato.server.service import Bool, Int, List, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.internal.pubsub import common_sub_data
+
+# ################################################################################################################################
+
+if 0:
+    from zato.common.model.wsx import WSXConnectorConfig
+
+    WSXConnectorConfig = WSXConnectorConfig
+
+# ################################################################################################################################
+
+logger_pubsub = getLogger('zato_pubsub.srv')
 
 # ################################################################################################################################
 
@@ -45,11 +55,11 @@ WebSocket = WebSocket
 
 # ################################################################################################################################
 
-logger_pubsub = getLogger('zato_pubsub.srv')
-
-# ################################################################################################################################
-
 sub_broker_attrs = get_sa_model_columns(PubSubSubscription)
+
+sub_impl_input_optional = list(common_sub_data)
+sub_impl_input_optional.remove('is_internal')
+sub_impl_input_optional.remove('topic_name')
 
 # ################################################################################################################################
 
@@ -266,10 +276,11 @@ class SubscribeServiceImpl(_Subscribe):
     endpoint_type = None
 
     class SimpleIO(AdminSIO):
-        input_required = ('topic_name', 'is_internal')
-        input_optional = common_sub_data
-        output_optional = ('sub_key', 'queue_depth')
+        input_required = 'topic_name', 'is_internal'
+        input_optional = drop_sio_elems(common_sub_data, 'is_internal', 'topic_name')
+        output_optional = 'sub_key', 'queue_depth'
         default_value = None
+        force_empty_keys = True
 
 # ################################################################################################################################
 
@@ -326,35 +337,8 @@ class SubscribeServiceImpl(_Subscribe):
         """
         with self.lock('zato.pubsub.subscribe.%s' % (ctx.topic_name)):
 
-            # Emit events about an upcoming subscription
-            self.pubsub.emit_about_to_subscribe({
-                'stage':'sub.sk.1',
-                'sub_key':ctx.sub_key
-            })
-
-            self.pubsub.emit_about_to_subscribe({
-                'stage':'init.ctx',
-                'data':ctx
-            })
-
-            self.pubsub.emit_about_to_subscribe({
-                'stage':'sub.sk.2',
-                'sub_key':ctx.sub_key
-            })
-
             # Endpoint on whose behalf the subscription will be made
             endpoint = self.pubsub.get_endpoint_by_id(ctx.endpoint_id)
-
-            # Event log
-            self.pubsub.emit_in_subscribe_impl({
-                'stage':'endpoint',
-                'data':endpoint,
-            })
-
-            self.pubsub.emit_about_to_subscribe({
-                'stage':'sub.sk.3',
-                'sub_key':ctx.sub_key
-            })
 
             with closing(self.odb.session()) as session:
 
@@ -363,63 +347,20 @@ class SubscribeServiceImpl(_Subscribe):
                     # Non-WebSocket clients cannot subscribe to the same topic multiple times
                     if not ctx.ws_channel_id:
 
-                        # Event log
-                        self.pubsub.emit_in_subscribe_impl({
-                            'stage':'no_ctx_ws_channel_id',
-                            'data':ctx.ws_channel_id
-                        })
-
-                        self.pubsub.emit_about_to_subscribe({
-                            'stage':'sub.sk.4',
-                            'sub_key':ctx.sub_key
-                        })
-
                         if has_subscription(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id):
-
-                            # Event log
-                            self.pubsub.emit_in_subscribe_impl({'stage':'has_subscription', 'data':{
-                                'ctx.cluster_id': ctx.cluster_id,
-                                'ctx.topic_id': ctx.topic.id,
-                                'ctx.topic_id': ctx.endpoint_id,
-                            }})
-
                             raise PubSubSubscriptionExists(self.cid, 'Endpoint `{}` is already subscribed to topic `{}`'.format(
                                 endpoint.name, ctx.topic.name))
 
                     # Is it a WebSockets client?
                     is_wsx = bool(ctx.ws_channel_id)
 
-                    self.pubsub.emit_about_to_subscribe({
-                        'stage':'sub.sk.5',
-                        'sub_key':ctx.sub_key
-                    })
-
                     ctx.creation_time = now = utcnow_as_ms()
                     sub_key = new_sub_key(self.endpoint_type, ctx.ext_client_id)
-
-                    self.pubsub.emit_in_subscribe_impl({'stage':'new_sk_generated', 'data':{
-                        'sub_key': sub_key,
-                    }})
-
-                    # Event log
-                    self.pubsub.emit_in_subscribe_impl({'stage':'before_add_subscription', 'data':{
-                        'is_wsx': is_wsx,
-                        'ctx.creation_time': ctx.creation_time,
-                        'sub_key': sub_key,
-                        'sub_sk': sorted(self.pubsub.subscriptions_by_sub_key),
-                    }})
 
                     # Create a new subscription object and flush the session because the subscription's ID
                     # may be needed for the WSX subscription
                     ps_sub = add_subscription(session, ctx.cluster_id, sub_key, ctx)
                     session.flush()
-
-                    # Event log
-                    self.pubsub.emit_in_subscribe_impl({'stage':'after_add_subscription', 'data':{
-                        'ctx.cluster_id': ctx.cluster_id,
-                        'ps_sub': ps_sub.asdict(),
-                        'sub_sk': sorted(self.pubsub.subscriptions_by_sub_key),
-                    }})
 
                     # Common configuration for WSX and broker messages
                     sub_config = Bunch()
@@ -458,21 +399,9 @@ class SubscribeServiceImpl(_Subscribe):
 
                     if is_wsx:
 
-                        # Event log
-                        self.pubsub.emit_in_subscribe_impl({'stage':'before_wsx_sub', 'data':{
-                            'is_wsx': is_wsx,
-                            'sub_sk': sorted(self.pubsub.subscriptions_by_sub_key),
-                        }})
-
                         # This object persists across multiple WSX connections
-                        wsx_sub = add_wsx_subscription(session, ctx.cluster_id, ctx.is_internal, sub_key,
+                        add_wsx_subscription(session, ctx.cluster_id, ctx.is_internal, sub_key,
                             ctx.ext_client_id, ctx.ws_channel_id, ps_sub.id)
-
-                        # Event log
-                        self.pubsub.emit_in_subscribe_impl({'stage':'after_wsx_sub', 'data':{
-                            'wsx_sub': wsx_sub.asdict(),
-                            'sub_sk': sorted(self.pubsub.subscriptions_by_sub_key),
-                        }})
 
                         # This object will be transient - dropped each time a WSX client disconnects
                         self.pubsub.add_wsx_client_pubsub_keys(session, ctx.sql_ws_client_id, sub_key, ctx.ws_channel_name,
@@ -513,7 +442,8 @@ class SubscribeServiceImpl(_Subscribe):
                 sub_config.server_receiving_subscription_pid = self.server.pid
                 sub_config.is_api_call = True
 
-                logger_pubsub.info('Subscription created `%s`', sub_config)
+                logger_pubsub.info('Subscription created id=`%s`; t=`%s`; sk=`%s`; patt=`%s`',
+                    sub_config['id'], sub_config['topic_name'], sub_config['sub_key'], sub_config['sub_pattern_matched'])
 
                 self.broker_client.publish(sub_config)
 
@@ -555,6 +485,16 @@ class SubscribeAMQP(SubscribeServiceImpl):
     """ Handles pub/sub subscriptions for AMQP endpoints.
     """
     endpoint_type = PUBSUB.ENDPOINT_TYPE.AMQP.id
+
+    def _handle_subscription(self, ctx):
+        self._subscribe_impl(ctx)
+
+# ################################################################################################################################
+
+class SubscribeService(SubscribeServiceImpl):
+    """ Handles pub/sub subscriptions for Zato services.
+    """
+    endpoint_type = PUBSUB.ENDPOINT_TYPE.SERVICE.id
 
     def _handle_subscription(self, ctx):
         self._subscribe_impl(ctx)
@@ -658,7 +598,7 @@ class CreateWSXSubscription(AdminService):
         input_optional = 'topic_name', List('topic_name_list'), Bool('wrap_one_msg_in_list'), Int('delivery_batch_size')
         output_optional = 'sub_key', 'current_depth', 'sub_data'
         response_elem = None
-        skip_empty_keys = True
+        force_empty_keys = True
 
     def handle(self):
 
@@ -702,12 +642,15 @@ class CreateWSXSubscription(AdminService):
 
         for item in subscribe_to:
 
+            ws_channel_config = environ['ws_channel_config'] # type: WSXConnectorConfig
+
             request = {
+                'is_internal': False,
                 'topic_name': item,
                 'ws_channel_id': ws_channel_id,
                 'ext_client_id': environ['ext_client_id'],
                 'ws_pub_client_id': environ['pub_client_id'],
-                'ws_channel_name': environ['ws_channel_config']['name'],
+                'ws_channel_name': ws_channel_config.name,
                 'sql_ws_client_id': environ['sql_ws_client_id'],
                 'unsub_on_wsx_close': unsub_on_wsx_close,
                 'web_socket': environ['web_socket'],

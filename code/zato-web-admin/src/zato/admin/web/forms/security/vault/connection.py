@@ -13,7 +13,7 @@ from django import forms
 
 # Zato
 from zato.admin.web.forms import add_initial_select, add_select_from_service, add_services
-from zato.common import VAULT
+from zato.common.vault_ import VAULT
 
 _auth_method = VAULT.AUTH_METHOD
 vault_methods = [_auth_method.GITHUB, _auth_method.TOKEN, _auth_method.USERNAME_PASSWORD]

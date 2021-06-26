@@ -1,0 +1,57 @@
+<tr>
+    <td style="vertical-align:middle">
+    Message log
+    </td>
+    <td>
+    <a href="javascript:$.fn.zato.toggle_visibility('.audit-log-block')">Toggle options</a>
+    </td>
+</tr>
+
+<tr class="audit-log-block hidden">
+    <td></td>
+    <td>
+        <label>
+        Sent enabled
+        {{ edit_form.is_audit_log_sent_active }}
+        </label>
+        |
+        <label>
+        Received enabled
+        {{ edit_form.is_audit_log_received_active }}
+        </label>
+    </td>
+</tr>
+
+<tr class="audit-log-block hidden">
+    <td>
+        Sent
+    </td>
+    <td>
+        <label>
+        Queue size
+        {{ edit_form.max_len_messages_sent }}
+        </label>
+        |
+        <label>
+        Max. stored per msg. <span class="form_hint">(kB)</span>
+        {{ edit_form.max_bytes_per_message_sent }}
+        </label>
+    </td>
+</tr>
+
+<tr class="audit-log-block hidden">
+    <td>
+        Received
+    </td>
+    <td>
+        <label>
+        Queue size
+        {{ edit_form.max_len_messages_received }}
+        </label>
+        |
+        <label>
+        Max. stored per msg. <span class="form_hint">(kB)</span>
+        {{ edit_form.max_bytes_per_message_received }}
+        </label>
+    </td>
+</tr>

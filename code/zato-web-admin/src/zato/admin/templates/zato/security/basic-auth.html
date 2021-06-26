@@ -177,7 +177,7 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" name="is_active" value="on" />
+                    <input type="hidden" name="edit-is_active" value="on" />
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                 </form>
@@ -189,7 +189,7 @@
                 <form action="{% url "security-basic-auth-change-password" %}" method="post" id="change_password-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
+                            <td style="vertical-align:middle; width:15%">Name</td>
                             <td id="change-password-name"></td>
                         </tr>
                         <tr>

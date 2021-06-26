@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,14 +10,15 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from contextlib import closing
 from copy import deepcopy
 from datetime import datetime
-from json import loads
+from traceback import format_exc
 
 # Zato
-from zato.common import GENERIC as COMMON_GENERIC
+from zato.common.api import GENERIC as COMMON_GENERIC, generic_attrs
 from zato.common.broker_message import GENERIC
+from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.odb.query.generic import connection_list
-from zato.common.util.json_ import dumps
+from zato.common.util.api import parse_simple_type
 from zato.server.generic.connection import GenericConnection
 from zato.server.service import Bool, Int
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
@@ -30,6 +31,15 @@ from six import add_metaclass
 
 # ################################################################################################################################
 
+if 0:
+    from bunch import Bunch
+    from zato.server.service import Service
+
+    Bunch = Bunch
+    Service = Service
+
+# ################################################################################################################################
+
 elem = 'generic_connection'
 model = ModelGenericConn
 label = 'a generic connection'
@@ -39,13 +49,34 @@ list_func = None
 extra_delete_attrs = ['type_']
 
 # ################################################################################################################################
+
+hook = {}
+
+# ################################################################################################################################
+
+config_dict_id_name_outconnn = {
+    'ftp_source': 'out_ftp',
+    'sftp_source': 'out_sftp',
+}
+
+# ################################################################################################################################
+
+extra_secret_keys = (
+
+    #
+    # Dropbox
+    #
+    'oauth2_access_token',
+)
+
 # ################################################################################################################################
 
 class _CreateEditSIO(AdminSIO):
     input_required = ('name', 'type_', 'is_active', 'is_internal', 'is_channel', 'is_outconn', Int('pool_size'),
         Bool('sec_use_rbac'), 'cluster_id')
     input_optional = ('id', Int('cache_expiry'), 'address', Int('port'), Int('timeout'), 'data_format', 'version',
-        'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id')
+        'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id') + \
+        extra_secret_keys + generic_attrs
     force_empty_keys = True
 
 # ################################################################################################################################
@@ -54,6 +85,8 @@ class _CreateEditSIO(AdminSIO):
 class _CreateEdit(_BaseService):
     """ Creates a new or updates an existing generic connection in ODB.
     """
+    is_edit = None
+
     class SimpleIO(_CreateEditSIO):
         output_required = ('id', 'name')
         default_value = None
@@ -62,6 +95,7 @@ class _CreateEdit(_BaseService):
 # ################################################################################################################################
 
     def handle(self):
+
         data = deepcopy(self.request.input)
 
         raw_request = self.request.raw_request
@@ -70,7 +104,11 @@ class _CreateEdit(_BaseService):
 
         for key, value in raw_request.items():
             if key not in data:
-                data[key] = self._convert_sio_elem(key, value)
+
+                value = parse_simple_type(value)
+                value = self._sio.eval_(key, value, self.server.encrypt)
+
+                data[key] = value
 
         conn = GenericConnection.from_dict(data)
 
@@ -93,6 +131,10 @@ class _CreateEdit(_BaseService):
                 if key == 'secret':
                     continue
                 setattr(model, key, value)
+
+            hook_func = hook.get(data.type_)
+            if hook_func:
+                hook_func(self, data, model, old_name)
 
             session.add(model)
             session.commit()
@@ -137,7 +179,7 @@ class Delete(AdminService):
 class GetList(AdminService):
     """ Returns a list of generic connections by their type; includes pagination.
     """
-    _filter_by = GenericConnection.name,
+    _filter_by = ModelGenericConn.name,
 
     class SimpleIO(GetListAdminSIO):
         input_required = ('cluster_id',)
@@ -151,20 +193,38 @@ class GetList(AdminService):
 # ################################################################################################################################
 
     def _enrich_conn_dict(self, conn_dict):
-        for key, service_id in conn_dict.items():
-            if service_id:
+        # type: (dict)
+
+        # New items that will be potentially added to conn_dict
+        to_add = {}
+
+        for key, value in conn_dict.items():
+
+            if value:
+
                 if key.endswith('_service_id'):
                     prefix = key.split('_service_id')[0]
                     service_attr = prefix + '_service_name'
                     try:
                         service_name = self.invoke('zato.service.get-by-id', {
                             'cluster_id': self.request.input.cluster_id,
-                            'id': service_id,
+                            'id': value,
                         })['zato_service_get_by_name_response']['name']
                     except Exception:
                         pass
                     else:
                         conn_dict[service_attr] = service_name
+
+                else:
+                    for id_name_base, out_name in config_dict_id_name_outconnn.items():
+                        item_id = '{}_id'.format(id_name_base)
+                        if key == item_id:
+                            config_dict = self.server.config.get_config_by_item_id(out_name, value)
+                            item_name = '{}_name'.format(id_name_base)
+                            to_add[item_name] = config_dict['name']
+
+        if to_add:
+            conn_dict.update(to_add)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -197,9 +257,23 @@ class ChangePassword(ChangePasswordBase):
         response_elem = None
 
     def handle(self):
+
         def _auth(instance, secret):
-            instance.secret = secret
-        return self._handle(ModelGenericConn, _auth, GENERIC.CONNECTION_CHANGE_PASSWORD.value,
+            if secret:
+
+                # Always encrypt the secret given on input
+                instance.secret = self.server.encrypt(secret)
+
+        if self.request.input.id:
+            instance_id = self.request.input.id
+        else:
+            with closing(self.odb.session()) as session:
+                instance_id = session.query(ModelGenericConn).\
+                    filter(ModelGenericConn.name==self.request.input.name).\
+                    filter(ModelGenericConn.type_==self.request.input.type_).\
+                    one().id
+
+        return self._handle(ModelGenericConn, _auth, GENERIC.CONNECTION_CHANGE_PASSWORD.value, instance_id=instance_id,
             publish_instance_attrs=['type_'])
 
 # ################################################################################################################################
@@ -228,10 +302,52 @@ class Ping(_BaseService):
             ping_func = custom_ping_func_dict.get(instance.type_, self.server.worker_store.ping_generic_connection)
 
             start_time = datetime.utcnow()
-            ping_func(self.request.input.id)
-            response_time = datetime.utcnow() - start_time
 
-            self.response.payload.info = 'Connection pinged; response time: {}'.format(response_time)
+            try:
+                ping_func(self.request.input.id)
+            except Exception:
+                exc = format_exc()
+                self.logger.warn(exc)
+                self.response.payload.info = exc
+            else:
+                response_time = datetime.utcnow() - start_time
+                info = 'Connection pinged; response time: {}'.format(response_time)
+                self.logger.info(info)
+                self.response.payload.info = info
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Invoke(AdminService):
+    """ Invokes a generic connection by its name.
+    """
+    class SimpleIO:
+        input_required = 'conn_type', 'conn_name'
+        input_optional = 'request_data'
+        output_optional = 'response_data'
+        response_elem = None
+
+    def handle(self):
+
+        # Maps all known connection types to their implementation ..
+        conn_type_to_container = {
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: self.out.hl7.mllp
+        }
+
+        # .. get the actual implementation ..
+        container = conn_type_to_container[self.request.input.conn_type]
+
+        # .. and invoke it.
+        with container[self.request.input.conn_name].conn.client() as client:
+
+            try:
+                response = client.invoke(self.request.input.request_data)
+            except Exception:
+                exc = format_exc()
+                response = exc
+                self.logger.warn(exc)
+            finally:
+                self.response.payload.response_data = response
 
 # ################################################################################################################################
 # ################################################################################################################################

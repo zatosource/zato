@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,18 +12,19 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from traceback import format_exc
 
+# ciso8601
+from ciso8601 import parse_datetime
+
 # crontab
 from crontab import CronTab
 
-# dateutil
-from dateutil.parser import parse
-
 # Zato
-from zato.common import scheduler_date_time_format, SCHEDULER, ZatoException, ZATO_NONE
+from zato.common.api import scheduler_date_time_format, SCHEDULER, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER as SCHEDULER_MSG
+from zato.common.exception import ZatoException
 from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob,\
      Service
-from zato.common.odb.query import job_by_name, job_list
+from zato.common.odb.query import job_by_id, job_by_name, job_list
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
@@ -57,10 +58,13 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
         filter(Job.name==name)
 
     if action == 'create':
-        existing_one = existing_one_base.first()
+        existing_one = existing_one_base.\
+            first()
     else:
         job_id = input.id
-        existing_one = existing_one_base.filter(Job.id != job_id).first()
+        existing_one = existing_one_base.\
+            filter(Job.id != job_id).\
+            first()
 
     if existing_one:
         raise ZatoException(cid, 'Job `{}` already exists on this cluster'.format(name))
@@ -69,7 +73,8 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
     service = session.query(Service).\
         filter(Cluster.id==cluster_id).\
         filter(Service.cluster_id==Cluster.id).\
-        filter(Service.name==service_name).first()
+        filter(Service.name==service_name).\
+        first()
 
     if not service:
         msg = 'Service `{}` does not exist on this cluster'.format(service_name)
@@ -82,7 +87,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
 
     extra = (input.extra or u'').encode('utf-8')
     is_active = input.is_active
-    start_date = parse(input.start_date)
+    start_date = parse_datetime(input.start_date)
 
     if action == 'create':
         job = Job(None, name, is_active, job_type, start_date, extra, cluster=cluster, service=service)
@@ -126,7 +131,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
             cron_definition = input.cron_definition.strip()
 
             # Just to make sure it's syntactically correct
-            CronTab(cron_definition).next()
+            CronTab(cron_definition).next(default_utc=False)
 
             if action == 'create':
                 cs_job = CronStyleJob(None, job)
@@ -144,7 +149,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
         msg_action = SCHEDULER_MSG.CREATE.value if action == 'create' else SCHEDULER_MSG.EDIT.value
         msg = {'action': msg_action, 'job_type': job_type,
                'is_active':is_active, 'start_date':start_date.isoformat(),
-               'extra':extra, 'service': service.name,
+               'extra':extra.decode('utf8'), 'service': service.name,
                'id':job.id, 'name': name
                }
 
@@ -175,6 +180,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
             response.payload.cron_definition = cs_job.cron_definition
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class _CreateEdit(AdminService):
     """ A base class for both creating and editing scheduler jobs.
@@ -192,16 +198,18 @@ class _CreateEdit(AdminService):
                     self.logger, session, self.broker_client, self.response)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class _Get(AdminService):
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'job_type', 'start_date', 'service_id', 'service_name')
-        output_optional = ('extra', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats', 'cron_definition')
+        output_required = 'id', 'name', 'is_active', 'job_type', 'start_date', 'service_id', 'service_name'
+        output_optional = 'extra', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats', 'cron_definition'
         output_repeated = True
         default_value = ''
         date_time_format = scheduler_date_time_format
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class GetList(_Get):
@@ -213,18 +221,43 @@ class GetList(_Get):
     class SimpleIO(_Get.SimpleIO):
         request_elem = 'zato_scheduler_job_get_list_request'
         response_elem = 'zato_scheduler_job_get_list_response'
-        input_optional = GetListAdminSIO.input_optional
+        input_optional = GetListAdminSIO.input_optional + ('service_name',)
 
     def get_data(self, session):
-        return self._search(job_list, session, self.request.input.cluster_id, False)
+        input = self.request.input
+        return self._search(job_list, session, input.cluster_id, input.get('service_name'), False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = self.get_data(session)
+            data = self.get_data(session)
+            self.response.payload[:] = data
 
-        for item in self.response.payload.zato_output:
+        for item in self.response.payload:
             item.start_date = item.start_date.isoformat()
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetByID(_Get):
+    """ Returns a job by its ID.
+    """
+    name = _service_name_prefix + 'get-by-id'
+
+    class SimpleIO(_Get.SimpleIO):
+        request_elem = 'zato_scheduler_job_get_by_id_request'
+        response_elem = None
+        input_required = _Get.SimpleIO.input_required + ('id',)
+        output_repeated = False
+
+    def get_data(self, session):
+        return job_by_id(session, self.server.cluster_id, self.request.input.id)
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            self.response.payload = self.get_data(session)
+            self.response.payload.start_date = self.response.payload.start_date.isoformat()
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class GetByName(_Get):
@@ -234,7 +267,7 @@ class GetByName(_Get):
 
     class SimpleIO(_Get.SimpleIO):
         request_elem = 'zato_scheduler_job_get_by_name_request'
-        response_elem = 'zato_scheduler_job_get_by_name_response'
+        response_elem = None
         input_required = _Get.SimpleIO.input_required + ('name',)
         output_repeated = False
 
@@ -247,6 +280,7 @@ class GetByName(_Get):
             self.response.payload.start_date = self.response.payload.start_date.isoformat()
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Create(_CreateEdit):
     """ Creates a new scheduler's job.
@@ -258,6 +292,7 @@ class Create(_CreateEdit):
         response_elem = 'zato_scheduler_job_create_response'
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Edit(_CreateEdit):
     """ Updates a scheduler's job.
@@ -268,6 +303,7 @@ class Edit(_CreateEdit):
         request_elem = 'zato_scheduler_job_edit_request'
         response_elem = 'zato_scheduler_job_edit_response'
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Delete(AdminService):
@@ -300,6 +336,7 @@ class Delete(AdminService):
                 raise
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Execute(AdminService):
     """ Executes a scheduler's job.
@@ -328,6 +365,7 @@ class Execute(AdminService):
                 raise
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class SetActiveStatus(AdminService):
     """ Actives or deactivates a job.
@@ -353,4 +391,5 @@ class SetActiveStatus(AdminService):
 
                 raise
 
+# ################################################################################################################################
 # ################################################################################################################################

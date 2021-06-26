@@ -16,10 +16,11 @@ from traceback import format_exc
 import pytds
 
 # SQLAlchemy
-from sqlalchemy.pool import _DBProxy, QueuePool as SAQueuePool
+from sqlalchemy.pool import QueuePool as SAQueuePool
+from sqlalchemy.pool.dbapi_proxy import _DBProxy
 
 # Zato
-from zato.common import MS_SQL
+from zato.common.api import MS_SQL
 
 # ################################################################################################################################
 
@@ -116,6 +117,9 @@ class MSSQLDirectAPI(object):
         # This is optional in case getting a new cursor will fail
         cursor = None
 
+        # Will be set to True in the exception block
+        has_exception = False
+
         try:
 
             # Obtain a connection from pool
@@ -133,6 +137,7 @@ class MSSQLDirectAPI(object):
                     break
 
         except Exception:
+            has_exception = True
             logger.warn(format_exc())
             raise
 
@@ -141,7 +146,10 @@ class MSSQLDirectAPI(object):
                 cursor.close()
             conn.commit()
             conn.close()
-            return result
+
+            # Return the result only if there was no exception along the way
+            if not has_exception:
+                return result
 
 # ################################################################################################################################
 

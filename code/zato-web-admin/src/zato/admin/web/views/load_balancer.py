@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import json, logging
+import logging
 from traceback import format_exc
 from xmlrpc.client import Fault
 
@@ -32,6 +32,7 @@ from zato.admin.web.forms.load_balancer import ManageLoadBalancerForm, RemoteCom
      ManageLoadBalancerSourceCodeForm
 from zato.admin.web.views import get_lb_client, method_allowed
 from zato.common.haproxy import haproxy_stats, Config
+from zato.common.json_internal import dumps
 from zato.common.odb.model import Cluster
 
 logger = logging.getLogger(__name__)
@@ -296,4 +297,4 @@ def get_addresses(req, cluster_id):
 
     addresses['cluster']['lb_config'] = lb_config
 
-    return HttpResponse(json.dumps(addresses))
+    return HttpResponse(dumps(addresses))

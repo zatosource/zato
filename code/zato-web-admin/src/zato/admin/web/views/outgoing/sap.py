@@ -19,7 +19,7 @@ from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.sap import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, id_only_service, \
      Index as _Index, method_allowed
-from zato.common import SAP
+from zato.common.api import SAP
 from zato.common.odb.model import OutgoingSAP
 
 logger = logging.getLogger(__name__)

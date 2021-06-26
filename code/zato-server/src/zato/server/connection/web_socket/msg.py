@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,20 +10,21 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime
-from http.client import FORBIDDEN, NOT_FOUND, OK
+from http.client import BAD_REQUEST, FORBIDDEN, NOT_FOUND, OK
+from json import dumps
 from logging import getLogger
 from traceback import format_exc
 
 # Bunch
 from bunch import Bunch
 
-# pyrapidjson
-from rapidjson import dumps
-
 # Zato
-from zato.common import DATA_FORMAT
-from zato.common.util import make_repr, new_cid
-from zato.server.service.reqresp import SimpleIOPayload
+from zato.common.api import DATA_FORMAT
+from zato.common.util.api import make_repr, new_cid
+from zato.cy.reqresp.payload import SimpleIOPayload
+
+# Past builtins
+from past.builtins import basestring
 
 # ################################################################################################################################
 
@@ -33,16 +34,23 @@ logger = getLogger('zato')
 
 xml_error_template = '<?xml version="1.0" encoding="utf-8"?><error>{}</error>'
 
-copy_forbidden = b'You are not authorized to access this resource'
-copy_not_found = b'Not found'
+copy_bad_request = 'Bad request'
+copy_forbidden = 'You are not authorized to access this resource'
+copy_not_found = 'Not found'
 
 error_response = {
-
+    BAD_REQUEST: {
+        DATA_FORMAT.JSON: dumps({'error': copy_bad_request}).encode('latin1'),
+        DATA_FORMAT.XML: xml_error_template.format(copy_bad_request).encode('latin1')
+    },
+    FORBIDDEN: {
+        DATA_FORMAT.JSON: dumps({'error': copy_forbidden}).encode('latin1'),
+        DATA_FORMAT.XML: xml_error_template.format(copy_forbidden).encode('latin1')
+    },
     NOT_FOUND: {
-        DATA_FORMAT.JSON: dumps({'error': copy_not_found}),
-        DATA_FORMAT.XML: xml_error_template.format(copy_not_found)
-    }
-
+        DATA_FORMAT.JSON: dumps({'error': copy_not_found}).encode('latin1'),
+        DATA_FORMAT.XML: xml_error_template.format(copy_not_found).encode('latin1')
+    },
 }
 
 # ################################################################################################################################
@@ -122,7 +130,7 @@ class ServerMessage(object):
         if error_message:
             self.meta.error_message = error_message
 
-    def serialize(self):
+    def serialize(self, _dumps_func):
         """ Serialize server message to client. Note that we make it as small as possible because control messages
         in WebSockets (opcode >= 0x07) must have at most 125 bytes.
         """
@@ -140,8 +148,13 @@ class ServerMessage(object):
                         data = data[response_key]
                 else:
                     data = self.data
+
+                if isinstance(data, basestring):
+                    data = data if isinstance(data, str) else data.decode('utf8')
+
                 msg['data'] = data
-            return dumps(msg)
+
+            return _dumps_func(msg)
         except Exception:
             logger.warn('Exception while serializing message `%r`, e:`%s`', msg, format_exc())
             raise

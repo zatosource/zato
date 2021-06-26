@@ -40,14 +40,14 @@ class MigrateDeliveryServer(AdminService):
 
         # First, let other servers know that this sub_key is no longer being handled,
         # we do it synchronously to make sure that they do not send anything to us anymore.
-        is_ok, response = self.servers.invoke_all('zato.pubsub.migrate.notify-delivery-task-stopping', {
+        reply = self.server.rpc.invoke_all('zato.pubsub.migrate.notify-delivery-task-stopping', {
             'sub_key': sub_key,
             'endpoint_type': endpoint_type,
             'new_delivery_server_name': new_delivery_server_name,
         })
 
-        if not is_ok:
-            self.logger.warn('Could not notify other servers of a stopping delivery task, e:`%s`', response)
+        if reply.is_ok:
+            self.logger.warn('Could not notify other servers of a stopping delivery task, e:`%s`', reply)
             return
 
         # Stop the task before proceeding to make sure this task will handle no new messages
@@ -64,7 +64,7 @@ class MigrateDeliveryServer(AdminService):
         self.logger.info('Notifying server `%s` to start delivery task for `%s` (%s)', new_delivery_server_name,
                 sub_key, endpoint_type)
 
-        self.servers[new_delivery_server_name].invoke('zato.pubsub.delivery.create-delivery-task', {
+        self.server.rpc[new_delivery_server_name].invoke('zato.pubsub.delivery.create-delivery-task', {
             'sub_key': sub_key,
             'endpoint_type': endpoint_type,
             'task_delivery_interval': self.pubsub.get_subscription_by_sub_key(sub_key).task_delivery_interval

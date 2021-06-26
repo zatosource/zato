@@ -1,0 +1,152 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block html_title %}Message log: {{ object_name }}{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/cache/builtin/index.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            {% comment %} 1 {% endcomment %}
+            '_numbering',
+            '_selection',
+
+            {% comment %} 2 {% endcomment %}
+            'timestamp',
+            'direction',
+            'msg_id',
+
+            {% comment %} 3 {% endcomment %}
+            'in_reply_to',
+            '_server',
+            '_data',
+
+            {% comment %} 4 {% endcomment %}
+            '_delete',
+            'id',
+            'server_name',
+
+            {% comment %} 5 {% endcomment %}
+            'server_pid',
+            'event_id',
+            'data',
+
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Message log: {{ object_name }} <span class="form_hint">({{ object_type_label }})</span></h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+    {% if cluster_id %}
+
+        {% comment %}
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.cache.audit_log.create()">Clear audit log</a>
+        </div>
+        {% endcomment %}
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+
+                        {% comment %} 1 {% endcomment %}
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        {% comment %} 2 {% endcomment %}
+                        <th><a href="#">Timestamp</a></th>
+                        <th><a href="#">Direction</a></th>
+                        <th><a href="#">Msg ID</a></th>
+
+                        {% comment %} 3 {% endcomment %}
+                        <th><a href="#">In reply to</a></th>
+                        <th><a href="#">Server</a></th>
+                        <th>Data</th>
+
+                        {% comment %} 4 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 5 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.cache_id }}'>
+
+                        {% comment %} 1 {% endcomment %}
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        {% comment %} 2 {% endcomment %}
+                        <td style="width:10%">
+                            <a
+                                id="a_timestamp_{{ item.event_id }}"
+                                href="javascript:$.fn.zato.toggle_time('timestamp_{{ item.event_id }}', '{{ item.timestamp }}', '{{ item.timestamp_utc }}')">{{ item.timestamp }}
+                            </a>
+                        </td>
+
+                        <td>{{ item.direction }}</td>
+                        <td>{{ item.msg_id|no_value_indicator }}</td>
+
+                        {% comment %} 3 {% endcomment %}
+                        <td>{{ item.in_reply_to|no_value_indicator }}</td>
+                        <td>{{ item.server_name }}:{{ item.server_pid }}</td>
+                        <td style="width:50%">
+                            <textarea style="width:100%; height:130px">{{ item.data }}</textarea>
+                        </td>
+
+                        {% comment %} 4 {% endcomment %}
+                        <td class='ignore'></td>
+                        <td class='ignore item_id_{{ item.event_id }}'>{{ item.event_id }}</td>
+                        <td class='ignore'>{{ item.server_name }}</td>
+
+                        {% comment %} 5 {% endcomment %}
+                        <td class='ignore'>{{ item.server_pid }}</td>
+                        <td class='ignore'>{{ item.event_id }}</td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='12'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}
