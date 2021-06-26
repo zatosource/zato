@@ -1,17 +1,15 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from logging import DEBUG, INFO, WARN
 from platform import system as platform_system
 from random import seed as random_seed
@@ -36,7 +34,7 @@ from zato.common.api import DATA_FORMAT, default_internal_modules, KVDB, RATE_LI
      ZatoKVDB as CommonZatoKVDB, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.audit_log import AuditLog
-from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
+from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE
 from zato.common.const import SECRETS
 from zato.common.events.common import Default as EventsDefault
 from zato.common.ipc.api import IPCAPI

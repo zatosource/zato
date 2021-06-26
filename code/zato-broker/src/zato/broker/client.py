@@ -10,15 +10,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-import time
-from json import dumps, loads
 from traceback import format_exc
 
 # Bunch
 from bunch import Bunch
 
 # gevent
-from gevent import sleep, spawn
+from gevent import spawn
 
 # orjson
 from orjson import dumps

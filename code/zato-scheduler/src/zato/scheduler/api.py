@@ -23,9 +23,8 @@ from gevent import sleep
 from past.builtins import basestring
 
 # Zato
-from zato.common.api import CHANNEL, DATA_FORMAT, SCHEDULER, ZATO_NONE
-from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER as SCHEDULER_MSG, SERVICE, TOPICS
-from zato.common.kvdb.api import KVDB
+from zato.common.api import SCHEDULER, ZATO_NONE
+from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.scheduler.backend import Interval, Job, Scheduler as _Scheduler
 

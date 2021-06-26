@@ -89,7 +89,7 @@ if 0:
     from typing import Callable
 
     # Zato
-    from zato.broker.client import BrokerClient
+    from zato.broker.client import BrokerClientAPI
     from zato.common.audit import AuditPII
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.json_schema import Validator as JSONSchemaValidator
@@ -108,7 +108,7 @@ if 0:
 
     # For pyflakes
     AuditPII = AuditPII
-    BrokerClient = BrokerClient
+    BrokerClientAPI = BrokerClientAPI
     Callable = Callable
     CassandraAPI = CassandraAPI
     CassandraQueryAPI = CassandraQueryAPI
@@ -656,7 +656,7 @@ class Service(object):
         data_format,   # type: str
         transport,     # type: str
         server,        # type: ParallelServer
-        broker_client, # type: BrokerClient
+        broker_client, # type: BrokerClientAPI
         worker_store,  # type: WorkerStore
         cid,           # type: str
         simple_io_config, # type: dict
@@ -1214,7 +1214,7 @@ class Service(object):
         """ Takes a service instance and updates it with the current request's context data.
         """
         service.server = server
-        service.broker_client = broker_client # type: BrokerClient
+        service.broker_client = broker_client # type: BrokerClientAPI
         service.cid = cid
         service.request.payload = payload
         service.request.raw_request = raw_request
