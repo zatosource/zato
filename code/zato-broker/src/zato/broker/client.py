@@ -33,7 +33,10 @@ from zato.common.broker_message import code_to_name, SCHEDULER
 # ################################################################################################################################
 
 if 0:
+    from zato.client import AnyServiceInvoker
     from zato.server.connection.server.rpc.api import ServerRPC
+
+    AnyServiceInvoker = AnyServiceInvoker
     ServerRPC = ServerRPC
 
 # ################################################################################################################################
@@ -63,18 +66,25 @@ from_scheduler_actions = set([
 class BrokerClient(object):
     """ Simulates previous Redis-based RPC.
     """
-    def __init__(self, server_rpc, scheduler_config, is_server=True):
+    def __init__(self, server_rpc=None, scheduler_config=None, zato_client=None):
         # type: (ServerRPC, Bunch) -> None
 
         # This is used to invoke services
         self.server_rpc = server_rpc
 
-        # We are a server so we need to set up the scheduler's details ..
-        # This is used to invoke the scheduler
-        self.scheduler_url = 'https://{}:{}/'.format(
-            scheduler_config.scheduler_host,
-            scheduler_config.scheduler_port,
-        )
+        self.zato_client = None # type: AnyServiceInvoker
+        self.scheduler_url = ''
+
+        # We are a server so we will have configuration needed to set up the scheduler's details ..
+        if scheduler_config:
+            self.scheduler_url = 'https://{}:{}/'.format(
+                scheduler_config.scheduler_host,
+                scheduler_config.scheduler_port,
+            )
+
+        # .. otherwise, we are a scheduler so we have a client to invoke servers with.
+        else:
+            self.zato_client = zato_client
 
 # ################################################################################################################################
 
@@ -91,11 +101,7 @@ class BrokerClient(object):
 # ################################################################################################################################
 
     def _invoke_server_from_scheduler(self, msg):
-        msg = dumps(msg)
-
-        print()
-        print(111, msg)
-        print()
+        self.zato_client.invoke_async(msg['service'], msg['payload'])
 
 # ################################################################################################################################
 
@@ -113,7 +119,7 @@ class BrokerClient(object):
 
             # .. special-case messages from the scheduler to servers ..
             elif action in from_scheduler_actions:
-                self._invoke_scheduler_from_server(msg)
+                self._invoke_server_from_scheduler(msg)
                 return
 
             # .. otherwise, we invoke servers.
