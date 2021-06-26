@@ -491,6 +491,14 @@ class ZatoCommand(object):
 
 # ################################################################################################################################
 
+    def get_arg(self, name, default=''):
+        if hasattr(self.args, 'get'):
+            return self.args.get(name, default)
+        else:
+            return getattr(self.args, name, default)
+
+# ################################################################################################################################
+
     def _encrypt(self, CryptoManagerClass, args, to_encrypt=None, needs_log_info=True):
 
         # stdlib

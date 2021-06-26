@@ -784,6 +784,30 @@ def dotted_getattr(o, path):
 
 # ################################################################################################################################
 
+def wait_for_odb_service(session, cluster_id, service_name):
+    # type: (object, int, str) -> Service
+
+    # Assume we do not have it
+    service = None
+
+    while not service:
+
+        # Try to look it up ..
+        service = session.query(Service).\
+            filter(Service.name==service_name).\
+            filter(Cluster.id==cluster_id).\
+            first()
+
+        # .. if not found, sleep for a moment.
+        if not service:
+            sleep(1)
+            logger.info('Waiting for ODB service `%s`', service_name)
+
+    # If we are here, it means that the service was found so we can return it
+    return service
+
+# ################################################################################################################################
+
 def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
     """ Adds internal jobs to the ODB. Note that it isn't being added
     directly to the scheduler because we want users to be able to fine-tune the job's
@@ -810,10 +834,12 @@ def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
                     if not isinstance(extra, bytes):
                         extra = extra.encode('utf8')
 
-                service = session.query(Service).\
-                    filter(Service.name==item['service']).\
-                    filter(Cluster.id==cluster_id).\
-                    one()
+                #
+                # This will block as long as this service is not available in the ODB.
+                # It is required to do it because the scheduler may start before servers
+                # in which case services will not be in the ODB yet and we need to wait for them.
+                #
+                service = wait_for_odb_service(session, cluster_id, item['service'])
 
                 cluster = session.query(Cluster).\
                     filter(Cluster.id==cluster_id).\
