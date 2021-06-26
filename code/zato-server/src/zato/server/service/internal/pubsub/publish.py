@@ -522,7 +522,7 @@ class Publish(AdminService):
                     self._publish(ctx)
 
         # Update topic and endpoint metadata in background if configured to - we have a series of if's to confirm
-        # if it's needed because it is not a given that each publication will required the update and we also
+        # if it's needed because it is not a given that each publication will require the update and we also
         # want to ensure that if there are two thigns to be updated at a time, it is only one greenlet spawned
         # which will in turn use a single Redis pipeline to cut down on the number of Redis calls needed.
         if ctx.pubsub.has_meta_topic or ctx.pubsub.has_meta_endpoint:
@@ -568,7 +568,7 @@ class Publish(AdminService):
         try:
 
             # If we have two updates to issue then we want to use a Redis pipeline,
-            # otherwise, the regular connection will do.
+            # otherwise, a regular connection will do.
             if has_topic and has_endpoint:
                 use_pipeline = True
                 conn = self.kvdb.conn.pipeline()
