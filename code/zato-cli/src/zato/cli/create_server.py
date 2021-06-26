@@ -11,7 +11,7 @@ from copy import deepcopy
 
 # Zato
 from zato.cli import common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents, ZatoCommand
-from zato.common.api import CONTENT_TYPE, default_internal_modules, SSO as CommonSSO
+from zato.common.api import CONTENT_TYPE, default_internal_modules, SCHEDULER, SSO as CommonSSO
 from zato.common.simpleio_ import simple_io_conf_contents
 from zato.common.events.common import Default as EventsDefault
 
@@ -73,6 +73,10 @@ password=zato+secret://zato.server_conf.odb.password
 pool_size={{odb_pool_size}}
 username={{odb_user}}
 use_async_driver=True
+
+[scheduler]
+scheduler_host={{scheduler_host}}
+scheduler_port={{scheduler_port}}
 
 [hot_deploy]
 pickup_dir=../../pickup/incoming/services
@@ -800,6 +804,8 @@ class Create(ZatoCommand):
                     events_fs_data_path=EventsDefault.fs_data_path,
                     events_sync_threshold=EventsDefault.sync_threshold,
                     events_sync_interval=EventsDefault.sync_interval,
+                    scheduler_host=self.get_arg('scheduler_host', SCHEDULER.DefaultHost),
+                    scheduler_port=self.get_arg('scheduler_port', SCHEDULER.DefaultPort),
                 ))
             server_conf.close()
 
