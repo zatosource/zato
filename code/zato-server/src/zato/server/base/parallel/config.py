@@ -543,19 +543,6 @@ class ConfigLoader(object):
 
 # ################################################################################################################################
 
-    def get_lua_programs(self):
-        for item in 'internal', 'user':
-            dir_name = os.path.join(self.repo_location, 'lua', item)
-            for file_name in os.listdir(dir_name):
-
-                lua_idx = file_name.find('.lua')
-                name = file_name[0:lua_idx] if lua_idx else file_name
-                program = open(os.path.join(dir_name, file_name)).read()
-
-                yield [name, program]
-
-# ################################################################################################################################
-
     def get_config_odb_data(self, parallel_server):
         """ Returns configuration with regards to ODB data.
         """

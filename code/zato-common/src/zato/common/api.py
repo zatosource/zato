@@ -520,6 +520,8 @@ class KVDB(Attrs):
 class SCHEDULER:
 
     InitialSleepTime = 5
+    DefaultHost = '127.0.0.1'
+    DefaultPort = 31530
 
     class JOB_TYPE(Attrs):
         ONE_TIME = 'one_time'
