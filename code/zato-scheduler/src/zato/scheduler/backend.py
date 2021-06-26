@@ -476,6 +476,11 @@ class Scheduler(object):
 
             with self.lock:
                 for job in sorted(itervalues(self.jobs)):
+
+                    # Ignore pre-3.2 Redis-based jobs
+                    if job.name.startswith('zato.stats'):
+                        continue
+
                     if job.max_repeats_reached:
                         logger.info('Job `%s` already reached max runs count (%s UTC)', job.name, job.max_repeats_reached_at)
                     else:

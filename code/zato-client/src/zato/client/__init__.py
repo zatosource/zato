@@ -399,6 +399,7 @@ class _Client(object):
         self.max_cid_repr = max_cid_repr
         self.logger = logger or mod_logger
         self.tls_verify = tls_verify
+        self.has_debug = self.logger.isEnabledFor(logging.DEBUG)
 
         if not self.session.auth:
             self.session.auth = auth
@@ -414,7 +415,7 @@ class _Client(object):
         if isinstance(request, (bytes, bytearray)):
             request = request.decode('utf-8')
 
-        if self.logger.isEnabledFor(logging.DEBUG):
+        if self.has_debug:
             msg = 'request:[%s]\nresponse_class:[%s]\nis_async:[%s]\nheaders:[%s]\n text:[%s]\ndata:[%s]'
             self.logger.debug(msg, request, response_class, is_async, headers, raw_response.text, response.data)
 

@@ -20,6 +20,7 @@ from gevent.pywsgi import WSGIServer
 from simdjson import loads
 
 # Zato
+from zato.broker.client import BrokerClient
 from zato.common.api import ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name
 from zato.common.crypto.api import SchedulerCryptoManager
@@ -102,6 +103,7 @@ class SchedulerServer(object):
 
         # SchedulerAPI
         self.scheduler_api = SchedulerAPI(self.config)
+        self.scheduler_api.broker_client = BrokerClient(zato_client=self.zato_client)
 
 # ################################################################################################################################
 

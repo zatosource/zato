@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import base64
@@ -200,11 +198,19 @@ class CryptoManager(object):
 
 # ################################################################################################################################
 
-    def decrypt(self, encrypted):
+    def decrypt(self, encrypted, secret_prefix=b'gAAA'):
         """ Returns input data in a clear-text, decrypted, form.
         """
         if not isinstance(encrypted, bytes):
             encrypted = encrypted.encode('utf8')
+
+        # This is in clear text, we do not need to decrypt it.
+        if encrypted.startswith(b'admin.invoke.'):
+            print()
+            print(111, repr(encrypted))
+            print()
+            z
+
         return self.secret_key.decrypt(encrypted).decode('utf8')
 
 # ################################################################################################################################
