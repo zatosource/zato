@@ -365,6 +365,9 @@ class Create(ZatoCommand):
         # 4) servers
         #
 
+        # This is populated lower in order for the scheduler to use it.
+        first_server_path = ''
+
         for idx, name in enumerate(server_names):
             server_path = os.path.join(args_path, server_names[name])
             os.mkdir(server_path)
@@ -381,9 +384,14 @@ class Create(ZatoCommand):
 
             server_id = create_server.Create(create_server_args).execute(create_server_args, next(next_port), False, True)
 
-            # We make the first server a delivery server for sample pub/sub topics.
+            # We special case the first server ..
             if idx == 0:
+
+                # .. make it a delivery server for sample pub/sub topics ..
                 self._set_pubsub_server(args, server_id, cluster_name, '/zato/demo/sample')
+
+                # .. make the scheduler use it.
+                first_server_path = server_path
 
             self.logger.info('[{}/{}] server{} created'.format(next(next_step), total_steps, name))
 
@@ -456,6 +464,7 @@ class Create(ZatoCommand):
         create_scheduler_args.priv_key_path = scheduler_crypto_loc.priv_path
         create_scheduler_args.ca_certs_path = scheduler_crypto_loc.ca_certs_path
         create_scheduler_args.cluster_id = cluster_id
+        create_scheduler_args.server_path = first_server_path
 
         create_scheduler.Create(create_scheduler_args).execute(create_scheduler_args, False, True)
         self.logger.info('[{}/{}] Scheduler created'.format(next(next_step), total_steps))

@@ -25,8 +25,6 @@ from gevent import sleep
 from past.builtins import basestring
 
 # Zato
-from zato.broker import BrokerMessageReceiver
-from zato.broker.client import BrokerClient
 from zato.common.api import CHANNEL, DATA_FORMAT, SCHEDULER, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER as SCHEDULER_MSG, SERVICE, TOPICS
 from zato.common.kvdb.api import KVDB
@@ -47,8 +45,8 @@ def _start_date(job_data):
 
 # ################################################################################################################################
 
-class Scheduler(BrokerMessageReceiver):
-    """ The Zato's job scheduler. All of the operations assume the data was already validated and sanitized
+class Scheduler:
+    """ The job scheduler server. All of the operations assume the data was already validated
     by relevant Zato public API services.
     """
     def __init__(self, config=None, run=False):
@@ -57,6 +55,7 @@ class Scheduler(BrokerMessageReceiver):
         self.config.on_job_executed_cb = self.on_job_executed
         self.sched = _Scheduler(self.config, self)
 
+        '''
         # Broker connection
         self.broker_conn = KVDB(config=self.config.main.broker, decrypt_func=self.config.crypto_manager.decrypt)
         self.broker_conn.init()
@@ -67,6 +66,7 @@ class Scheduler(BrokerMessageReceiver):
         }
 
         self.broker_client = BrokerClient(self.broker_conn, 'scheduler', self.broker_callbacks, [])
+        '''
 
         if run:
             self.serve_forever()

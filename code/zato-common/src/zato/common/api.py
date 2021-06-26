@@ -519,6 +519,8 @@ class KVDB(Attrs):
 
 class SCHEDULER:
 
+    InitialSleepTime = 5
+
     class JOB_TYPE(Attrs):
         ONE_TIME = 'one_time'
         INTERVAL_BASED = 'interval_based'

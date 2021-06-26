@@ -319,6 +319,7 @@ class Scheduler(object):
         self._add_startup_jobs = config._add_startup_jobs
         self._add_scheduler_jobs = config._add_scheduler_jobs
         self.job_log = getattr(logger, config.job_log_level)
+        self.initial_sleep_time = self.config.main.get('misc', {}).get('initial_sleep_time', SCHEDULER.InitialSleepTime)
 
     def on_max_repeats_reached(self, job):
         with self.lock:
@@ -450,7 +451,10 @@ class Scheduler(object):
         self.job_greenlets[job.name] = self._spawn(job.run)
 
     def init_jobs(self):
-        sleep(initial_sleep) # To make sure that at least one server is running if the environment was started from quickstart scripts
+
+        # Sleep to make sure that at least one server is running if the environment was started from quickstart scripts
+        sleep(self.initial_sleep_time)
+
         cluster_conf = self.config.main.cluster
         add_startup_jobs(cluster_conf.id, self.odb, self.startup_jobs, asbool(cluster_conf.stats_enabled))
 
@@ -462,7 +466,7 @@ class Scheduler(object):
 
         try:
 
-            logger.info('Scheduler will start to execute jobs in %d seconds', initial_sleep)
+            logger.info('Scheduler will start to execute jobs in %d seconds', self.initial_sleep_time)
 
             # Add default jobs to the ODB and start all of them, the default and user-defined ones
             self.init_jobs()
