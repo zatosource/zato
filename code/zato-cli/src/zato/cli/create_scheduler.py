@@ -29,11 +29,11 @@ name={cluster_name}
 stats_enabled=True
 
 [server]
-path={server_path}
-host={server_host}
-port={server_port}
-username={server_username}
-password={server_password}
+server_path={server_path}
+server_host={server_host}
+server_port={server_port}
+server_username={server_username}
+server_password={server_password}
 
 [misc]
 initial_sleep_time={initial_sleep_time}

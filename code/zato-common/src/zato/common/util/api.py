@@ -491,7 +491,10 @@ def payload_from_request(json_parser, cid, request, data_format, transport, chan
             if isinstance(request, basestring) and data_format == _data_format_json:
                 try:
                     request_bytes = request if isinstance(request, bytes) else request.encode('utf8')
-                    payload = json_parser.parse(request_bytes)
+                    try:
+                        payload = json_parser.parse(request_bytes)
+                    except ValueError:
+                        payload = request_bytes
                     if hasattr(payload, 'as_dict'):
                         payload = payload.as_dict()
                 except ValueError:
@@ -817,7 +820,7 @@ def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
         now = datetime.utcnow()
         for item in jobs:
 
-            if not stats_enabled and item['name'].startswith('zato.stats'):
+            if item['name'].startswith('zato.stats'):
                 continue
 
             try:
