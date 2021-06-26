@@ -85,7 +85,7 @@ class Client:
                     self.peer_name = self.socket.getpeername()
                     self.peer_name_str = '{}:{}'.format(*self.peer_name)
                 except Exception as e:
-                    logger.warn('Connection error `%s` (%s) -> %s', e.args, utcnow() - start, self.remote_addr_str)
+                    logger.info('Connection error `%s` (%s) -> %s', e.args, utcnow() - start, self.remote_addr_str)
                     sleep(1)
                 else:
                     logger.info('Connected to %s after %s', self.remote_addr_str, utcnow() - start)

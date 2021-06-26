@@ -455,10 +455,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         allow_internal = allow_internal if isinstance(allow_internal, list) else [allow_internal]
         self.fs_server_config.misc.service_invoker_allow_internal = allow_internal
 
-        # Lua programs, both internal and user defined ones.
-        for name, program in self.get_lua_programs():
-            self.kvdb.lua_container.add_lua_program(name, program)
-
         # Service sources
         self.service_sources = []
         for name in open(os.path.join(self.repo_location, self.fs_server_config.main.service_sources)):
@@ -713,33 +709,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 self.hot_deploy_config[name] = os.path.normpath(os.path.join(
                     self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
 
-        broker_callbacks = {
-            TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]: self.worker_store.on_broker_msg,
-            TOPICS[MESSAGE_TYPE.TO_PARALLEL_ALL]: self.worker_store.on_broker_msg,
-        }
-
-        self.broker_client = BrokerClient(self.kvdb, 'parallel', broker_callbacks, self.get_lua_programs())
+        self.broker_client = BrokerClient(self.rpc, self.fs_server_config.scheduler)
         self.worker_store.set_broker_client(self.broker_client)
-
-        # Make sure that broker client's connection is ready before continuing
-        # to rule out edge cases where, for instance, hot deployment would
-        # try to publish a locally found package (one of extra packages found)
-        # before the client's thread connected to KVDB.
-        if not self.broker_client.ready:
-            start = now = datetime.utcnow()
-            max_seconds = 120
-            until = now + timedelta(seconds=max_seconds)
-
-            while not self.broker_client.ready:
-                now = datetime.utcnow()
-                delta = (now - start).total_seconds()
-                if now < until:
-                    # Do not log too early so as not to clutter logs
-                    if delta > 2:
-                        logger.info('Waiting for broker client to become ready (%s, max:%s)', delta, max_seconds)
-                    gevent.sleep(0.5)
-                else:
-                    raise Exception('Broker client did not become ready within {} seconds'.format(max_seconds))
 
         self._after_init_accepted(locally_deployed)
         self.odb.server_up_down(

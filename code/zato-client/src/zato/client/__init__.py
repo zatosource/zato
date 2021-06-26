@@ -466,7 +466,7 @@ class AnyServiceInvoker(_Client):
     def _invoke(self, name=None, payload='', headers=None, channel='invoke', data_format='json',
                 transport=None, is_async=False, expiration=BROKER.DEFAULT_EXPIRATION, id=None,
                 to_json=True, output_repeated=ZATO_NOT_GIVEN, pid=None, all_pids=False, timeout=None,
-                skip_response_elem=True):
+                skip_response_elem=True, **kwargs):
 
         if not(name or id):
             raise ZatoException(msg='Either name or id must be provided')

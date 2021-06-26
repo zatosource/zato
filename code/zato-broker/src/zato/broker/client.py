@@ -18,68 +18,137 @@ from traceback import format_exc
 from bunch import Bunch
 
 # gevent
-from gevent import sleep
+from gevent import sleep, spawn
 
-# Redis
-import redis
+# orjson
+from orjson import dumps
 
-# Python 2/3 compatibility
-from builtins import bytes
+# Requests
+from requests import post as requests_post
 
 # Zato
-from zato.common.api import BROKER, ZATO_NONE
-from zato.common.broker_message import KEYS, MESSAGE_TYPE, TOPICS
-from zato.common.kvdb.api import LuaContainer
-from zato.common.util.api import new_cid, spawn_greenlet
+from zato.common.broker_message import code_to_name, SCHEDULER
 
-logger = logging.getLogger(__name__)
-has_debug = logger.isEnabledFor(logging.DEBUG)
-
-REMOTE_END_CLOSED_SOCKET = 'Socket closed on remote end'
-FILE_DESCR_CLOSED_IN_ANOTHER_GREENLET = "Error while reading from socket: (9, 'File descriptor was closed in another greenlet')"
-
-# We use textual messages because some error may have codes whereas different won't.
-EXPECTED_CONNECTION_ERRORS = [REMOTE_END_CLOSED_SOCKET, FILE_DESCR_CLOSED_IN_ANOTHER_GREENLET]
-
-NEEDS_TMP_KEY = [v for k,v in TOPICS.items() if k in(
-    MESSAGE_TYPE.TO_PARALLEL_ANY,
-)]
-
-CODE_RENAMED = 10
-CODE_NO_SUCH_FROM_KEY = 11
-
+# ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.kvdb.api import KVDB
+    from zato.server.connection.server.rpc.api import ServerRPC
+    ServerRPC = ServerRPC
 
-    KVDB = KVDB
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = logging.getLogger(__name__)
+has_debug = True
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+to_scheduler_actions = set([
+    SCHEDULER.CREATE.value,
+    SCHEDULER.EDIT.value,
+    SCHEDULER.DELETE.value,
+    SCHEDULER.EXECUTE.value,
+])
+
+from_scheduler_actions = set([
+    SCHEDULER.JOB_EXECUTED.value,
+    SCHEDULER.SET_JOB_INACTIVE,
+])
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class BrokerClient(object):
+    """ Simulates previous Redis-based RPC.
+    """
+    def __init__(self, server_rpc, scheduler_config, is_server=True):
+        # type: (ServerRPC, Bunch) -> None
+
+        # This is used to invoke services
+        self.server_rpc = server_rpc
+
+        # We are a server so we need to set up the scheduler's details ..
+        # This is used to invoke the scheduler
+        self.scheduler_url = 'https://{}:{}/'.format(
+            scheduler_config.scheduler_host,
+            scheduler_config.scheduler_port,
+        )
 
 # ################################################################################################################################
 
-class BrokerClientAPI(object):
-    """ BrokerClient is a function which cannot be used for type completion,
-    hence this no-op class that can be used in type hints.
-    """
-    def __init__(self, kvdb, client_type, topic_callbacks, initial_lua_programs):
-        # type: (KVDB, str, dict, dict)
-        raise NotImplementedError()
-
     def run(self):
+        # type: () -> None
         raise NotImplementedError()
 
-    def publish(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL, *ignored_args, **ignored_kwargs):
-        # type: (dict, str, object, object)
-        raise NotImplementedError()
+# ################################################################################################################################
 
-    def invoke_async(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ANY, expiration=BROKER.DEFAULT_EXPIRATION):
-        # type: (dict, str, object, object)
-        raise NotImplementedError()
+    def _invoke_scheduler_from_server(self, msg):
+        msg = dumps(msg)
+        requests_post(self.scheduler_url, msg, verify=False)
+
+# ################################################################################################################################
+
+    def _invoke_server_from_scheduler(self, msg):
+        msg = dumps(msg)
+
+        print()
+        print(111, msg)
+        print()
+
+# ################################################################################################################################
+
+    def _rpc_invoke(self, msg):
+
+        # Local aliases ..
+        action = msg['action']
+
+        try:
+
+            # Special cases messages that are actually destined to the scheduler, not to servers ..
+            if action in to_scheduler_actions:
+                self._invoke_scheduler_from_server(msg)
+                return
+
+            # .. special-case messages from the scheduler to servers ..
+            elif action in from_scheduler_actions:
+                self._invoke_scheduler_from_server(msg)
+                return
+
+            # .. otherwise, we invoke servers.
+            code_name = code_to_name[action]
+            if has_debug:
+                logger.info('Invoking %s %s', code_name, msg)
+
+            self.server_rpc.invoke_all('zato.service.rpc-service-invoker', msg, ping_timeout=10)
+
+        except Exception:
+            logger.warn(format_exc())
+
+# ################################################################################################################################
+
+    def publish(self, msg, *ignored_args, **ignored_kwargs):
+        # type: (dict, str, object, object) -> None
+        spawn(self._rpc_invoke, msg)
+
+# ################################################################################################################################
+
+    def invoke_async(self, msg, *ignored_args, **ignored_kwargs):
+        # type: (dict, object, object) -> None
+        spawn(self._rpc_invoke, msg)
+
+# ################################################################################################################################
 
     def on_message(self, msg):
+        # type: (object) -> None
         raise NotImplementedError()
+
+# ################################################################################################################################
 
     def close(self):
+        # type: () -> None
         raise NotImplementedError()
 
+# ################################################################################################################################
 # ################################################################################################################################

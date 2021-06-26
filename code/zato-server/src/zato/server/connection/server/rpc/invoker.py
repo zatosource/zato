@@ -139,7 +139,8 @@ class RemoteServerInvoker(ServerInvoker):
 
         # Optionally, ping the remote server to quickly find out if it is still available ..
         if self.invocation_ctx.needs_ping:
-            requests_get(self.ping_address, timeout=self.ping_timeout)
+            ping_timeout = kwargs.get('ping_timeout') or self.ping_timeout
+            requests_get(self.ping_address, timeout=ping_timeout)
 
         # .. actually invoke the server now ..
         response = invoke_func(service, request, skip_response_elem=True, *args, **kwargs) # type: ServiceInvokeResponse

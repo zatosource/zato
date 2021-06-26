@@ -169,7 +169,7 @@ _base_type = _base_type if PY3 else _base_type.encode('utf8')
 # Dynamically adds as base classes everything found in current directory that subclasses WorkerImpl
 _WorkerStoreBase = type(_base_type, _get_base_classes(), {})
 
-class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
+class WorkerStore(_WorkerStoreBase):
     """ Dispatches work between different pieces of configuration of an individual gunicorn worker.
     """
     def __init__(self, worker_config=None, server=None):

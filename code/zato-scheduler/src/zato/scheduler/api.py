@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -45,7 +43,7 @@ def _start_date(job_data):
 
 # ################################################################################################################################
 
-class Scheduler:
+class SchedulerAPI:
     """ The job scheduler server. All of the operations assume the data was already validated
     by relevant Zato public API services.
     """
@@ -54,19 +52,6 @@ class Scheduler:
         self.broker_client = None
         self.config.on_job_executed_cb = self.on_job_executed
         self.sched = _Scheduler(self.config, self)
-
-        '''
-        # Broker connection
-        self.broker_conn = KVDB(config=self.config.main.broker, decrypt_func=self.config.crypto_manager.decrypt)
-        self.broker_conn.init()
-
-        # Broker client
-        self.broker_callbacks = {
-            TOPICS[MESSAGE_TYPE.TO_SCHEDULER]: self.on_broker_msg,
-        }
-
-        self.broker_client = BrokerClient(self.broker_conn, 'scheduler', self.broker_callbacks, [])
-        '''
 
         if run:
             self.serve_forever()
@@ -120,12 +105,11 @@ class Scheduler:
         # Now, if it was a one-time job, it needs to be deactivated.
         if ctx['type'] == SCHEDULER.JOB_TYPE.ONE_TIME:
             msg = {
-                'action': SERVICE.PUBLISH.value,
-                'service': 'zato.scheduler.job.set-active-status',
-                'payload': {'id':ctx['id'], 'is_active':False},
+                'action': SCHEDULER_MSG.SET_JOB_INACTIVE.value,
+                'payload': {
+                    'id':ctx['id'],
+                },
                 'cid': new_cid(),
-                'channel': CHANNEL.SCHEDULER_AFTER_ONE_TIME,
-                'data_format': DATA_FORMAT.JSON,
             }
             self.broker_client.publish(msg)
 
@@ -278,9 +262,4 @@ class Scheduler:
         self.execute(msg)
 
 # ################################################################################################################################
-
-    def on_broker_msg_SCHEDULER_CLOSE(self, msg, *ignored_args):
-        self.broker_client.close()
-        self.stop()
-
 # ################################################################################################################################

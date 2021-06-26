@@ -89,7 +89,7 @@ if 0:
     from typing import Callable
 
     # Zato
-    from zato.broker.client import BrokerClient, BrokerClientAPI
+    from zato.broker.client import BrokerClient
     from zato.common.audit import AuditPII
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.json_schema import Validator as JSONSchemaValidator
@@ -109,7 +109,6 @@ if 0:
     # For pyflakes
     AuditPII = AuditPII
     BrokerClient = BrokerClient
-    BrokerClientAPI = BrokerClientAPI
     Callable = Callable
     CassandraAPI = CassandraAPI
     CassandraQueryAPI = CassandraQueryAPI
