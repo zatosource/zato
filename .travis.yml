@@ -24,8 +24,6 @@ env:
     - MODE=packaging IMAGE=centos:7
     - MODE=packaging IMAGE=centos:8
 
-sudo: required
-
 os:
   - linux
 # Use Ubuntu Xenial
