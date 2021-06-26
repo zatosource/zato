@@ -358,10 +358,7 @@ class CheckConfig(ManageCommand):
         server_conf = ConfigObj(server_conf_path, zato_secrets_conf=secrets_conf_path, zato_crypto_manager=cm, use_zato=True)
 
         fs_sql_config = self.get_sql_ini('sql.conf')
-
         self.check_sql_odb_server_scheduler(cm, server_conf, fs_sql_config)
-        self.on_server_check_kvdb(cm, server_conf, 'broker')
-
         self.ensure_no_pidfile('scheduler')
 
 # ################################################################################################################################

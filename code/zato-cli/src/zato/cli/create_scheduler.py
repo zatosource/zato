@@ -11,6 +11,7 @@ import os
 from copy import deepcopy
 
 from zato.cli import common_logging_conf_contents, common_odb_opts, is_arg_given, kvdb_opts, sql_conf_contents, ZatoCommand
+from zato.common.api import SCHEDULER
 from zato.common.crypto.api import SchedulerCryptoManager
 from zato.common.crypto.const import well_known_data
 from zato.common.odb.model import Cluster
@@ -27,6 +28,16 @@ id={cluster_id}
 name={cluster_name}
 stats_enabled=True
 
+[server]
+path={server_path}
+host={server_host}
+port={server_port}
+username={server_username}
+password={server_password}
+
+[misc]
+initial_sleep_time={initial_sleep_time}
+
 [odb]
 engine={odb_engine}
 db_name={odb_db_name}
@@ -38,20 +49,6 @@ pool_size=1
 extra=
 use_async_driver=True
 is_active=True
-
-[broker]
-host={broker_host}
-port={broker_port}
-password={broker_password}
-db=0
-socket_timeout=
-charset=
-errors=
-use_redis_sentinels=False
-redis_sentinels=
-redis_sentinels_master=
-shadow_password_in_logs=True
-log_connection_info_sleep_time=5 # In seconds
 
 [secret_keys]
 key1={secret_key1}
@@ -88,6 +85,14 @@ class Create(ZatoCommand):
     opts.append({'name':'cluster_name', 'help':"Name of the cluster this scheduler will belong to"})
     opts.append({'name':'--cluster_id', 'help':"ID of the cluster this scheduler will belong to"})
     opts.append({'name':'--secret_key', 'help':"Scheduler's secret crypto key"})
+
+    opts.append({'name':'--server_path', 'help':"Local path to a Zato server"})
+    opts.append({'name':'--server_host', 'help':"Remote host of a Zato server"})
+    opts.append({'name':'--server_port', 'help':"Remote TCP port of a Zato server"})
+    opts.append({'name':'--server_username', 'help':"Username to connect to a remote server with"})
+    opts.append({'name':'--server_password', 'help':"Password to connect to a remote server with"})
+
+    opts.append({'name':'--initial_sleep_time', 'help':"How many seconds to sleep initially when the scheduler starts"})
 
 # ################################################################################################################################
 
@@ -162,6 +167,18 @@ class Create(ZatoCommand):
         zato_well_known_data = cm.encrypt(zato_well_known_data)
         zato_well_known_data = zato_well_known_data.decode('utf8')
 
+        server_path     = self.get_arg('server_path')
+        server_host     = self.get_arg('server_host', '127.0.0.1')
+        server_port     = self.get_arg('server_port', 17010)
+        server_username = self.get_arg('server_username', '')
+
+        server_password = self.get_arg('server_password')
+        server_password = server_password.encode('utf8')
+        server_password = cm.encrypt(server_password)
+        server_password = server_password.decode('utf8')
+
+        initial_sleep_time = self.get_arg('initial_sleep_time', SCHEDULER.InitialSleepTime)
+
         if isinstance(secret_key, (bytes, bytearray)):
             secret_key = secret_key.decode('utf8')
 
@@ -183,7 +200,13 @@ class Create(ZatoCommand):
             'cluster_name': args.cluster_name,
             'secret_key1': secret_key,
             'well_known_data': zato_well_known_data,
-            'use_tls': 'true' if use_tls else 'false'
+            'use_tls': 'true' if use_tls else 'false',
+            'server_path': server_path,
+            'server_host': server_host,
+            'server_port': server_port,
+            'server_username': server_username,
+            'server_password': server_password,
+            'initial_sleep_time': initial_sleep_time,
         }
 
         open(os.path.join(repo_dir, 'logging.conf'), 'w').write(
