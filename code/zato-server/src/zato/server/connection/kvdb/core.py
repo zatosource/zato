@@ -28,8 +28,9 @@ if 0:
     from zato.server.connection.kvdb.number import NumberRepo
     from zato.server.connection.kvdb.object_ import ObjectRepo
 
-    NumberRepo = NumberRepo
     ListRepo = ListRepo
+    NumberRepo = NumberRepo
+    ObjectRepo = ObjectRepo
 
 # ################################################################################################################################
 # ################################################################################################################################

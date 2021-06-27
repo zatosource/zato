@@ -21,7 +21,7 @@ from gevent import spawn
 # Zato
 from zato.common.api import DATA_FORMAT, PUBSUB, ZATO_NONE
 from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
-from zato.common.json_internal import json_dumps, json_loads
+from zato.common.json_internal import json_dumps
 from zato.common.odb.query.pubsub.cleanup import delete_enq_delivered, delete_enq_marked_deleted, delete_msg_delivered, \
      delete_msg_expired
 from zato.common.odb.query.pubsub.publish import sql_publish_with_retry
