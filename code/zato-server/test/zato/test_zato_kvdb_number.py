@@ -38,23 +38,27 @@ class NumberTestCase(TestCase):
     def test_repo_init(self):
 
         name1 = rand_string()
+        data_path1 = rand_string()
         name2 = rand_string()
 
         max_value1 = rand_int()
+        data_path2 = rand_string()
         max_value2 = rand_int()
 
         allow_negative1 = False
         allow_negative2 = True
 
-        repo1 = NumberRepo(name1, sync_threshold, sync_interval, max_value1, allow_negative1)
-        repo2 = NumberRepo(name2, sync_threshold, sync_interval, max_value2, allow_negative2)
+        repo1 = NumberRepo(name1, data_path1, sync_threshold, sync_interval, max_value1, allow_negative1)
+        repo2 = NumberRepo(name2, data_path2, sync_threshold, sync_interval, max_value2, allow_negative2)
 
         self.assertEqual(repo1.name, name1)
+        self.assertEqual(repo1.data_path, data_path1)
         self.assertEqual(repo1.max_value, max_value1)
         self.assertEqual(repo1.name, name1)
         self.assertFalse(repo1.allow_negative)
 
         self.assertEqual(repo2.name, name2)
+        self.assertEqual(repo2.data_path, data_path2)
         self.assertEqual(repo2.max_value, max_value2)
         self.assertEqual(repo2.name, name2)
         self.assertTrue(repo2.allow_negative)

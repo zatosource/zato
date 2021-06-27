@@ -27,11 +27,13 @@ class TransientRepositoryTestCase(TestCase):
     def test_repo_init(self):
 
         name = rand_string()
+        data_path = rand_string()
         max_size = rand_int()
 
-        repo = ListRepo(name, max_size)
+        repo = ListRepo(name, data_path, max_size)
 
         self.assertEqual(repo.name, name)
+        self.assertEqual(repo.data_path, data_path)
         self.assertEqual(repo.max_size, max_size)
 
 # ################################################################################################################################
@@ -39,9 +41,10 @@ class TransientRepositoryTestCase(TestCase):
     def test_repo_push_max_size(self):
 
         name = rand_string()
+        data_path = rand_string()
         max_size = 2
 
-        repo = ListRepo(name, max_size)
+        repo = ListRepo(name, data_path, max_size)
 
         # Push more object than the max size allows ..
         for x in range(max_size + 1):

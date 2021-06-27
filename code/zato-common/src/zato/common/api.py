@@ -1566,6 +1566,7 @@ class HotDeploy:
 # ################################################################################################################################
 
 class ZatoKVDB:
+
     SlowResponsesName  = 'zato.service.slow_responses'
     UsageSamplesName   = 'zato.service.usage_samples'
     CurrentUsageName   = 'zato.service.current_usage'
@@ -1575,6 +1576,9 @@ class ZatoKVDB:
     UsageSamplesPath   = UsageSamplesName   + '.json'
     CurrentUsagePath   = CurrentUsageName   + '.json'
     PubSubMetadataPath = PubSubMetadataName + '.json'
+
+    DefaultSyncThreshold = 3_000
+    DefaultSyncInterval  = 3
 
 # ################################################################################################################################
 # ################################################################################################################################
