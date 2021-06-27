@@ -24,65 +24,41 @@ logger = getLogger('zato')
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ListRepo(BaseRepo):
-    """ Stores arbitrary objects, as a list, in RAM only, without backing persistent storage.
+class ObjectRepo(BaseRepo):
+    """ Stores arbitrary objects as key/value pairs, in RAM only, without backing persistent storage.
     """
-    def __init__(self, name='<ListRepo-name>', max_size=1000, page_size=50):
+    def __init__(self, name='<ObjectRepo-name>'):
         # type: (str, int, int) -> None
         super().__init__(name)
 
-        # How many objects we will keep at most
-        self.max_size = max_size
-
-        # How many objects to return at most in list responses
-        self.page_size = page_size
-
         # In-RAM database of objects
-        self.in_ram_store = [] # type: list[ObjectCtx]
+        self.in_ram_store = {}
 
         # Used to synchronise updates
         self.lock = RLock()
 
 # ################################################################################################################################
 
-    def _append(self, ctx):
-        # type: (ObjectCtx) -> ObjectCtx
-        # Push new data ..
-        self.in_ram_store.append(ctx)
-
-        # .. and ensure our max_size is not exceeded ..
-        if len(self.in_ram_store) > self.max_size:
-
-            # .. we maintain a FIFO list, deleting the oldest entriest first.
-            del self.in_ram_store[self.max_size:]
-
-        return ctx
-
-# ################################################################################################################################
-
-    def _get(self, object_id):
+    def _get(self, object_id, default=None, raise_if_not_found=False):
         # type: (str) -> object
-        for item in self.in_ram_store: # type: ObjectCtx
-            if item.id == object_id:
-                return item
+        value = self.in_ram_store.get(object_id)
+        if value:
+            return value
         else:
-            raise KeyError('Object not found `{}`'.format(object_id))
+            if raise_if_not_found:
+                raise KeyError('Object not found `{}`'.format(object_id))
 
 # ################################################################################################################################
 
-    def _get_list(self, cur_page=1, page_size=50):
-        # type: (int, int) -> dict
-        search_results = SearchResults.from_list(self.in_ram_store, cur_page, page_size)
-        return search_results.to_dict()
+    def _set(self, object_id, value):
+        # type: (object, object) -> None
+        self.in_ram_store[object_id] = value
 
 # ################################################################################################################################
 
     def _delete(self, object_id):
-        # type: (str) -> object
-        for item in self.in_ram_store: # type: ObjectCtx
-            if item.id == object_id:
-                self.in_ram_store.remove(item)
-                return item
+        # type: (str) -> None
+        self.in_ram_store.pop(object_id, None)
 
 # ################################################################################################################################
 
@@ -95,6 +71,17 @@ class ListRepo(BaseRepo):
     def _get_size(self):
         # type: () -> int
         return len(self.in_ram_store)
+
+# ################################################################################################################################
+
+    def get_by_suffix(self, suffix):
+        # type: (str) -> list
+        out = []
+        for key, value in self.in_ram_store.items(): # type: str
+            if key.endswith(suffix):
+                out.append(value)
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -26,6 +26,7 @@ from zato.common.ext.dataclasses import dataclass
 if 0:
     from zato.server.connection.kvdb.list_ import ListRepo
     from zato.server.connection.kvdb.number import NumberRepo
+    from zato.server.connection.kvdb.object_ import ObjectRepo
 
     NumberRepo = NumberRepo
     ListRepo = ListRepo
@@ -78,6 +79,10 @@ class BaseRepo(InRAMStore):
         # type: (object, object) -> ObjectCtx
         raise NotImplementedError('BaseRepo._get')
 
+    def _set(self, *args, **kwargs):
+        # type: (object, object) -> None
+        raise NotImplementedError('BaseRepo._set')
+
     def _get_list(self, *args, **kwargs):
         # type: (object, object) -> list[ObjectCtx]
         raise NotImplementedError('BaseRepo._get_list')
@@ -117,6 +122,12 @@ class BaseRepo(InRAMStore):
     def get(self, *args, **kwargs):
         with self.update_lock:
             return self._get(*args, **kwargs)
+
+# ################################################################################################################################
+
+    def set(self, *args, **kwargs):
+        with self.update_lock:
+            return self._set(*args, **kwargs)
 
 # ################################################################################################################################
 
@@ -240,6 +251,17 @@ class KVDB:
         from zato.server.connection.kvdb.number import NumberRepo
 
         repo = NumberRepo(repo_name, max_size, page_size)
+        return self.repo.setdefault(repo_name, repo)
+
+# ################################################################################################################################
+
+    def internal_create_object_repo(self, repo_name):
+        # type: (str) -> ObjectRepo
+
+        # Zato
+        from zato.server.connection.kvdb.object_ import ObjectRepo
+
+        repo = ObjectRepo(repo_name)
         return self.repo.setdefault(repo_name, repo)
 
 # ################################################################################################################################
