@@ -74,12 +74,15 @@ class ObjectRepo(BaseRepo):
 
 # ################################################################################################################################
 
-    def get_by_suffix(self, suffix):
-        # type: (str) -> list
-        out = []
-        for key, value in self.in_ram_store.items(): # type: str
-            if key.endswith(suffix):
-                out.append(value)
+    def _get_many(self, object_id_list, add_object_id_key=True):
+        # type: (list) -> list
+        out = {}
+
+        for object_id in object_id_list: # type: str
+            value = self.in_ram_store.get(object_id)
+            if value:
+                value['object_id'] = object_id
+                out[object_id] = value
 
         return out
 
