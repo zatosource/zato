@@ -62,13 +62,16 @@ class BaseRepo(InRAMStore):
 
     sync_state = None
 
-    def __init__(self, name, sync_threshold=120_000, sync_interval=120_000):
-        # type: (str, int, int) -> None
+    def __init__(self, name, data_path, sync_threshold=120_000, sync_interval=120_000):
+        # type: (str, str, int, int) -> None
 
         super().__init__(sync_threshold, sync_interval)
 
         # Our user-visible name
         self.name = name
+
+        # Where we persist data on disk
+        self.data_path = data_path
 
 # ################################################################################################################################
 
@@ -187,8 +190,14 @@ class BaseRepo(InRAMStore):
         # type: (bytes) -> None
         data = json_loads(data) # type: dict
         if data:
-            for key, value in data.items():
-                self.in_ram_store[key].update(value)
+
+            # We may have already some pre-defined keys in RAM that we only need to update ..
+            if self.in_ram_store:
+                for key, value in data.items():
+                    self.in_ram_store[key].update(value)
+
+            # .. otherwise, we load all the data as is because we assume know there are no keys in RAM yet.
+            self.in_ram_store.update(data)
 
 # ################################################################################################################################
 
@@ -199,14 +208,16 @@ class BaseRepo(InRAMStore):
 
 # ################################################################################################################################
 
-    def load_path(self, path):
+    def load_data(self):
         # type: (str) -> None
         with self.update_lock:
-            if os.path.exists(path):
-                with open(path, 'rb') as f:
+            if os.path.exists(self.data_path):
+                with open(self.data_path, 'rb') as f:
                     data = f.read()
                     if data:
                         self._loads(data)
+            else:
+                logger.info('Skipping repo data path `%s` (%s)', self.data_path, self.name)
 
 # ################################################################################################################################
 
@@ -223,12 +234,18 @@ class BaseRepo(InRAMStore):
 
 # ################################################################################################################################
 
-    def save_path(self, path):
+    def save_data(self):
         # type: () -> bytes
         with self.update_lock:
-            with open(path, 'wb') as f:
+            with open(self.data_path, 'wb') as f:
                 data = self._dumps()
                 f.write(data)
+
+# ################################################################################################################################
+
+    def set_data_path(self, data_path):
+        # type: (str) -> None
+        self.data_path = data_path
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -241,35 +258,35 @@ class KVDB:
 
 # ################################################################################################################################
 
-    def internal_create_list_repo(self, repo_name, max_size=1000, page_size=50):
+    def internal_create_list_repo(self, repo_name, data_path=None, max_size=1000, page_size=50):
         # type: (str) -> ListRepo
 
         # Zato
         from zato.server.connection.kvdb.list_ import ListRepo
 
-        repo = ListRepo(repo_name, max_size, page_size)
+        repo = ListRepo(repo_name, data_path, max_size, page_size)
         return self.repo.setdefault(repo_name, repo)
 
 # ################################################################################################################################
 
-    def internal_create_number_repo(self, repo_name, max_size=1000, page_size=50):
+    def internal_create_number_repo(self, repo_name, data_path=None, max_size=1000, page_size=50):
         # type: (str) -> NumberRepo
 
         # Zato
         from zato.server.connection.kvdb.number import NumberRepo
 
-        repo = NumberRepo(repo_name, max_size, page_size)
+        repo = NumberRepo(repo_name, data_path, max_size, page_size)
         return self.repo.setdefault(repo_name, repo)
 
 # ################################################################################################################################
 
-    def internal_create_object_repo(self, repo_name):
-        # type: (str) -> ObjectRepo
+    def internal_create_object_repo(self, repo_name, data_path=None):
+        # type: (str, str) -> ObjectRepo
 
         # Zato
         from zato.server.connection.kvdb.object_ import ObjectRepo
 
-        repo = ObjectRepo(repo_name)
+        repo = ObjectRepo(repo_name, data_path)
         return self.repo.setdefault(repo_name, repo)
 
 # ################################################################################################################################
