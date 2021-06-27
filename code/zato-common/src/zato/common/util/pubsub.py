@@ -15,9 +15,11 @@ from zato.common.odb.query import pubsub_endpoint_queue_list_by_sub_keys
 # ################################################################################################################################
 
 if 0:
+    from typing import Union as union
     from zato.server.base.parallel import ParallelServer
 
     ParallelServer = ParallelServer
+    union = union
 
 # ################################################################################################################################
 
