@@ -197,11 +197,15 @@ class Get(AdminService):
         output_optional = ('last_pub_time', 'on_no_subs_pub')
 
     def handle(self):
-        with closing(self.odb.session()) as session:
-            topic = pubsub_topic(session, self.request.input.cluster_id, self.request.input.id)
-            topic['current_depth_gd'] = get_gd_depth_topic(session, self.request.input.cluster_id, self.request.input.id)
 
-        last_data = get_last_pub_data(self.kvdb.conn, self.server.cluster_id, self.request.input.id)
+        # Local aliases
+        topic_id = self.request.input.id
+
+        with closing(self.odb.session()) as session:
+            topic = pubsub_topic(session, self.request.input.cluster_id, topic_id)
+            topic['current_depth_gd'] = get_gd_depth_topic(session, self.request.input.cluster_id, topic_id)
+
+        last_data = get_last_pub_metadata(self.server, topic_id)
         if last_data:
             topic['last_pub_time'] = last_data['pub_time']
 

@@ -7,9 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.api import PUBSUB as COMMON_PUBSUB
 from zato.common.odb.query import pubsub_endpoint_queue_list_by_sub_keys
-from zato.common.util.time_ import datetime_from_ms
 
 # ################################################################################################################################
 
@@ -75,6 +73,18 @@ def make_short_msg_copy_from_msg(msg, data_prefix_len, data_prefix_short_len):
 def get_last_pub_metadata(server, topic_id_list):
     # type: (ParallelServer, list) -> dict
 
+    # Make sure we have a list on input
+    if isinstance(topic_id_list, list):
+        input_topic_id = None
+        is_single_topic = False
+    else:
+        input_topic_id = int(topic_id_list)
+        is_single_topic = True
+        topic_id_list = [topic_id_list]
+
+    # Always use integers for topic IDs
+    topic_id_list = [int(elem) for elem in topic_id_list]
+
     # Response to produce
     out = {}
 
@@ -99,7 +109,10 @@ def get_last_pub_metadata(server, topic_id_list):
         else:
             out[topic_id] = item
 
-    return out
+    if is_single_topic:
+        return out.get(input_topic_id) or {}
+    else:
+        return out
 
 # ################################################################################################################################
 
