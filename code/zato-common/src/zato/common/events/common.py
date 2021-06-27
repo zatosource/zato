@@ -23,8 +23,8 @@ class Default:
     # Sync database to disk once in that many events ..
     sync_threshold = 30_000
 
-    # .. or once in that many milliseconds.
-    sync_interval = 30_000
+    # .. or once in that many seconds.
+    sync_interval = 30
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -23,13 +23,13 @@ utcnow = datetime.utcnow
 class InRAMStore:
     """ Base class for stores keeping data in RAM, optionally synchronising it to persistent storage.
     """
-    def __init__(self, sync_threshold=3_000, sync_interval=3):
+    def __init__(self, sync_threshold, sync_interval):
         # type: (int, int) -> None
 
         # Sync to storage once in that many events ..
         self.sync_threshold = sync_threshold
 
-        # .. or once in that many milliseconds.
+        # .. or once in that many seconds.
         self.sync_interval = sync_interval
 
         # Total events received since startup
@@ -71,7 +71,7 @@ class InRAMStore:
     def should_sync(self):
         # type: () -> bool
         sync_by_threshold = self.num_events_since_sync % self.sync_threshold == 0
-        sync_by_time = (utcnow() - self.last_sync_time).total_seconds() * 1000 >= self.sync_interval
+        sync_by_time = (utcnow() - self.last_sync_time).total_seconds() >= self.sync_interval
 
         return sync_by_threshold or sync_by_time
 
