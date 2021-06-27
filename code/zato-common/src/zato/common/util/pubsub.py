@@ -6,6 +6,9 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from operator import itemgetter
+
 # Zato
 from zato.common.odb.query import pubsub_endpoint_queue_list_by_sub_keys
 
@@ -70,29 +73,13 @@ def make_short_msg_copy_from_msg(msg, data_prefix_len, data_prefix_short_len):
 
 # ################################################################################################################################
 
-def get_last_pub_metadata(server, topic_id_list):
-    # type: (ParallelServer, list) -> dict
-
-    # Make sure we have a list on input
-    if isinstance(topic_id_list, list):
-        input_topic_id = None
-        is_single_topic = False
-    else:
-        input_topic_id = int(topic_id_list)
-        is_single_topic = True
-        topic_id_list = [topic_id_list]
-
-    # Always use integers for topic IDs
-    topic_id_list = [int(elem) for elem in topic_id_list]
+def get_last_topics(topic_list, as_list=True):
+    # type: (list, bool) -> union[dict, list]
 
     # Response to produce
     out = {}
 
-    # Look up topic metadata in all the servers ..
-    response = server.rpc.invoke_all('zato.pubsub.topic.get-topic-metadata', {'topic_id_list':topic_id_list})
-
-    # .. find the newest metadata among all the responses ..
-    for item in response.data: # type: (dict)
+    for item in topic_list: # type: (dict)
 
         # Local alias
         topic_id = item['topic_id'] # type: int
@@ -109,10 +96,56 @@ def get_last_pub_metadata(server, topic_id_list):
         else:
             out[topic_id] = item
 
+    if as_list:
+        out = sorted(out.values(), key=itemgetter('pub_time'), reverse=True)
+        return out
+    else:
+        return out
+
+# ################################################################################################################################
+
+def get_last_pub_metadata(server, topic_id_list):
+    # type: (ParallelServer, list) -> dict
+
+    # Make sure we have a list on input
+    if isinstance(topic_id_list, list):
+        input_topic_id = None
+        is_single_topic = False
+    else:
+        input_topic_id = int(topic_id_list)
+        is_single_topic = True
+        topic_id_list = [topic_id_list]
+
+    # Always use integers for topic IDs
+    topic_id_list = [int(elem) for elem in topic_id_list]
+
+    # Look up topic metadata in all the servers ..
+    response = server.rpc.invoke_all('zato.pubsub.topic.get-topic-metadata', {'topic_id_list':topic_id_list})
+
+    # Produce our response
+    out = get_last_topics(response.data, as_list=False)
+
     if is_single_topic:
         return out.get(input_topic_id) or {}
     else:
         return out
+
+# ################################################################################################################################
+
+def get_endpoint_metadata(server, endpoint_id):
+    # type: (ParallelServer, int) -> dict
+
+    # All topics from all PIDs
+    topic_list = []
+
+    response = server.rpc.invoke_all('zato.pubsub.endpoint.get-endpoint-metadata', {'endpoint_id':endpoint_id})
+
+    for pid_response in response.data: # type: dict
+        for pid_topic_list in pid_response.values(): # type: list
+            for topic_data in pid_topic_list: # type: dict
+                topic_list.append(topic_data)
+
+    return get_last_topics(topic_list, as_list=True)
 
 # ################################################################################################################################
 
