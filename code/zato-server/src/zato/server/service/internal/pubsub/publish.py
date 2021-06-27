@@ -574,6 +574,11 @@ class Publish(AdminService):
             # For later use
             dt_now = datetime_from_ms(ctx.now * 1000)
 
+            # This is optional
+            ext_pub_time = ctx.last_msg.get('ext_pub_time')
+            if ext_pub_time:
+                ext_pub_time = datetime_from_ms(ext_pub_time* 1000)
+
             # Prepare a document to update the topic's metadata with
             if has_topic:
                 topic_key = _topic_key % (ctx.cluster_id, ctx.topic.id)
@@ -621,7 +626,7 @@ class Publish(AdminService):
                     'pub_correl_id': ctx.last_msg.get('pub_correl_id'),
                     'in_reply_to': ctx.last_msg.get('in_reply_to'),
                     'ext_client_id': ctx.last_msg.get('ext_client_id'),
-                    'ext_pub_time': ctx.last_msg.get('ext_pub_time'),
+                    'ext_pub_time': ext_pub_time,
                     'pub_pattern_matched': ctx.pub_pattern_matched,
                     'topic_id': ctx.topic.id,
                     'topic_name': ctx.topic.name,
