@@ -17,6 +17,7 @@ from orjson import dumps as json_dumps
 from simdjson import loads as json_loads
 
 # Zato
+from zato.common.api import ZatoKVDB
 from zato.common.in_ram import InRAMStore
 from zato.common.ext.dataclasses import dataclass
 
@@ -62,7 +63,7 @@ class BaseRepo(InRAMStore):
 
     sync_state = None
 
-    def __init__(self, name, data_path, sync_threshold=120_000, sync_interval=120_000):
+    def __init__(self, name, data_path, sync_threshold=ZatoKVDB.DefaultSyncThreshold, sync_interval=ZatoKVDB.DefaultSyncInterval):
         # type: (str, str, int, int) -> None
 
         super().__init__(sync_threshold, sync_interval)
