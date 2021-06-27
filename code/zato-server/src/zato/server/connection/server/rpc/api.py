@@ -129,7 +129,8 @@ class ServerRPC:
 
                     # .. append the response if everything went fine ..
                     if per_pid_response.is_ok:
-                        out.data.append(per_pid_response.pid_data)
+                        if per_pid_response.pid_data is not None:
+                            out.data.append(per_pid_response.pid_data)
 
                     # .. otherwise, just set the overall response's success flag to false ..
                     else:

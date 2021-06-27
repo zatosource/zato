@@ -1,17 +1,22 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
 from zato.common.api import PUBSUB as COMMON_PUBSUB
 from zato.common.odb.query import pubsub_endpoint_queue_list_by_sub_keys
 from zato.common.util.time_ import datetime_from_ms
+
+# ################################################################################################################################
+
+if 0:
+    from zato.server.base.parallel import ParallelServer
+
+    ParallelServer = ParallelServer
 
 # ################################################################################################################################
 
@@ -67,11 +72,34 @@ def make_short_msg_copy_from_msg(msg, data_prefix_len, data_prefix_short_len):
 
 # ################################################################################################################################
 
-def get_last_pub_data(conn, cluster_id, topic_id, _topic_key=COMMON_PUBSUB.REDIS.META_TOPIC_LAST_KEY):
-    last_data = conn.hgetall(_topic_key % (cluster_id, topic_id))
-    if last_data:
-        last_data['pub_time'] = datetime_from_ms(float(last_data['pub_time']) * 1000)
-        return last_data
+def get_last_pub_metadata(server, topic_id_list):
+    # type: (ParallelServer, list) -> dict
+
+    # Response to produce
+    out = {}
+
+    # Look up topic metadata in all the servers ..
+    response = server.rpc.invoke_all('zato.pubsub.topic.get-topic-metadata', {'topic_id_list':topic_id_list})
+
+    # .. find the newest metadata among all the responses ..
+    for item in response.data: # type: (dict)
+
+        # Local alias
+        topic_id = item['topic_id'] # type: int
+
+        # .. we may have visited this topic already ..
+        previous = out.get(topic_id, {}) # type: dict
+
+        # .. if we have ..
+        if previous:
+            if item['pub_time'] > previous['pub_time']:
+                out[topic_id] = item
+
+        # .. otherwise, we can just set the current one ..
+        else:
+            out[topic_id] = item
+
+    return out
 
 # ################################################################################################################################
 

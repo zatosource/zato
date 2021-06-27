@@ -125,6 +125,13 @@ class BaseRepo(InRAMStore):
 
 # ################################################################################################################################
 
+    def get_many(self, *args, **kwargs):
+        # type: (object, object) -> dict
+        with self.update_lock:
+            return self._get_many(*args, **kwargs)
+
+# ################################################################################################################################
+
     def set(self, *args, **kwargs):
         with self.update_lock:
             return self._set(*args, **kwargs)
