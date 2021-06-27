@@ -27,9 +27,9 @@ logger = getLogger('zato')
 class ListRepo(BaseRepo):
     """ Stores arbitrary objects, as a list, in RAM only, without backing persistent storage.
     """
-    def __init__(self, name='<ListRepo-name>', max_size=1000, page_size=50):
+    def __init__(self, name='<ListRepo-name>', data_path='<ListRepo-data_path>', max_size=1000, page_size=50):
         # type: (str, int, int) -> None
-        super().__init__(name)
+        super().__init__(name, data_path)
 
         # How many objects we will keep at most
         self.max_size = max_size

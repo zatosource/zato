@@ -40,6 +40,8 @@ _stats_key_per_key_value          = StatsKey.PerKeyValue
 _stats_key_per_key_last_timestamp = StatsKey.PerKeyLastTimestamp
 _stats_key_per_key_last_duration  = StatsKey.PerKeyLastDuration
 
+max_value = sys.maxsize
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -55,9 +57,9 @@ class IntData:
 class NumberRepo(BaseRepo):
     """ Stores integer counters for string labels.
     """
-    def __init__(self, name, sync_threshold=120_000, sync_interval=120_000, max_value=sys.maxsize, allow_negative=True):
+    def __init__(self, name, data_path, sync_threshold=120_000, sync_interval=120_000, max_value=max_value, allow_negative=True):
         # type: (str, int, int, int, int) -> None
-        super().__init__(name, sync_threshold, sync_interval)
+        super().__init__(name, data_path, sync_threshold, sync_interval)
 
         # We will never allow for a value to be greater than that
         self.max_value = max_value
