@@ -26,9 +26,9 @@ logger = getLogger('zato')
 class ObjectRepo(BaseRepo):
     """ Stores arbitrary objects as key/value pairs, in RAM only, without backing persistent storage.
     """
-    def __init__(self, name='<ObjectRepo-name>'):
-        # type: (str, int, int) -> None
-        super().__init__(name)
+    def __init__(self, name='<ObjectRepo-name>', data_path='<ObjectRepo-data_path>'):
+        # type: (str, str) -> None
+        super().__init__(name, data_path)
 
         # In-RAM database of objects
         self.in_ram_store = {}

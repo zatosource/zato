@@ -197,9 +197,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.work_dir = 'ParallelServer-work_dir'
         self.events_dir = 'ParallelServer-events_dir'
         self.kvdb_dir = 'ParallelServer-kvdb_dir'
-        self.slow_responses_path = 'ParallelServer-slow_responses_path'
-        self.usage_samples_path = 'ParallelServer-usage_samples_path'
-        self.current_usage_path = 'ParallelServer-current_usage_path'
 
         # SQL-based key/value data
         self.kv_data_api = None # type: KVDataAPI
@@ -208,10 +205,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.zato_kvdb = ZatoKVDB()
 
         # In-RAM statistics
-        self.slow_responses   = self.zato_kvdb.internal_create_list_repo(CommonZatoKVDB.SlowResponsesName)
-        self.usage_samples    = self.zato_kvdb.internal_create_list_repo(CommonZatoKVDB.UsageSamplesName)
-        self.current_usage    = self.zato_kvdb.internal_create_number_repo(CommonZatoKVDB.CurrentUsageName)
-        self.pub_sub_metadata = self.zato_kvdb.internal_create_object_repo(CommonZatoKVDB.PubSubMetadata)
+        self.slow_responses = self.zato_kvdb.internal_create_list_repo(CommonZatoKVDB.SlowResponsesName)
+        self.usage_samples = self.zato_kvdb.internal_create_list_repo(CommonZatoKVDB.UsageSamplesName)
+        self.current_usage = self.zato_kvdb.internal_create_number_repo(CommonZatoKVDB.CurrentUsageName)
+        self.pub_sub_metadata = self.zato_kvdb.internal_create_object_repo(CommonZatoKVDB.PubSubMetadataName)
 
         self.stats_client = ServiceStatsClient()
         self._stats_host = '<ParallelServer-_stats_host>'
@@ -1093,25 +1090,48 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if not os.path.exists(self.kvdb_dir):
             os.makedirs(self.kvdb_dir, exist_ok=True)
 
-        self.slow_responses_path = os.path.join(self.kvdb_dir, CommonZatoKVDB.SlowResponsesPath)
-        self.usage_samples_path = os.path.join(self.kvdb_dir, CommonZatoKVDB.UsageSamplesPath)
-        self.current_usage_path = os.path.join(self.kvdb_dir, CommonZatoKVDB.CurrentUsagePath)
-
         self.load_zato_kvdb_data()
 
 # ################################################################################################################################
 
     def load_zato_kvdb_data(self):
-        self.slow_responses.load_path(self.slow_responses_path)
-        self.usage_samples.load_path(self.usage_samples_path)
-        self.current_usage.load_path(self.current_usage_path)
+
+        #
+        # Only now do we know what the full paths for KVDB data are so we can set them accordingly here ..
+        #
+
+        self.slow_responses.set_data_path(
+            os.path.join(self.kvdb_dir, CommonZatoKVDB.SlowResponsesPath),
+        )
+
+        self.usage_samples.set_data_path(
+            os.path.join(self.kvdb_dir, CommonZatoKVDB.UsageSamplesPath),
+        )
+
+        self.current_usage.set_data_path(
+            os.path.join(self.kvdb_dir, CommonZatoKVDB.CurrentUsagePath),
+        )
+
+        self.pub_sub_metadata.set_data_path(
+            os.path.join(self.kvdb_dir, CommonZatoKVDB.PubSubMetadataPath),
+        )
+
+        #
+        # .. and now we can load all the data.
+        #
+
+        self.slow_responses.load_data()
+        self.usage_samples.load_data()
+        self.current_usage.load_data()
+        self.pub_sub_metadata.load_data()
 
 # ################################################################################################################################
 
     def save_zato_main_proc_state(self):
-        self.slow_responses.save_path(self.slow_responses_path)
-        self.usage_samples.save_path(self.usage_samples_path)
-        self.current_usage.save_path(self.current_usage_path)
+        self.slow_responses.save_data()
+        self.usage_samples.save_data()
+        self.current_usage.save_data()
+        self.pub_sub_metadata.save_data()
 
 # ################################################################################################################################
 

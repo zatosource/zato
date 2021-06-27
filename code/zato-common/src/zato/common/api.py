@@ -1566,15 +1566,15 @@ class HotDeploy:
 # ################################################################################################################################
 
 class ZatoKVDB:
-    SlowResponsesName = 'zato.service.slow_responses'
-    UsageSamplesName  = 'zato.service.usage_samples'
-    CurrentUsageName  = 'zato.service.current_usage'
-    PubSubMetadata    = 'zato.pubsub.metadata'
+    SlowResponsesName  = 'zato.service.slow_responses'
+    UsageSamplesName   = 'zato.service.usage_samples'
+    CurrentUsageName   = 'zato.service.current_usage'
+    PubSubMetadataName = 'zato.pubsub.metadata'
 
-    SlowResponsesPath  = SlowResponsesName + '.json'
-    UsageSamplesPath   = UsageSamplesName  + '.json'
-    CurrentUsagePath   = CurrentUsageName  + '.json'
-    PubSubMetadataPath = PubSubMetadata    + '.json'
+    SlowResponsesPath  = SlowResponsesName  + '.json'
+    UsageSamplesPath   = UsageSamplesName   + '.json'
+    CurrentUsagePath   = CurrentUsageName   + '.json'
+    PubSubMetadataPath = PubSubMetadataName + '.json'
 
 # ################################################################################################################################
 # ################################################################################################################################
