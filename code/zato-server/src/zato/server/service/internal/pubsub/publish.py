@@ -29,7 +29,7 @@ from zato.common.odb.query.pubsub.topic import get_gd_depth_topic
 from zato.common.pubsub import PubSubMessage
 from zato.common.pubsub import new_msg_id
 from zato.common.util.sql import set_instance_opaque_attrs
-from zato.common.util.time_ import datetime_to_ms, utcnow_as_ms
+from zato.common.util.time_ import datetime_from_ms, datetime_to_ms, utcnow_as_ms
 from zato.server.pubsub import get_expiration, get_priority, PubSub, Topic
 from zato.server.service import AsIs, Int, List
 from zato.server.service.internal import AdminService
@@ -542,7 +542,6 @@ class Publish(AdminService):
                 has_endpoint = False
 
             if has_topic or has_endpoint:
-                self.logger.warn('ZZZ-1 %s %s %s', ctx.is_re_run, has_topic, has_endpoint)
                 spawn(self._update_pub_metadata, ctx, has_topic, has_endpoint,
                     ctx.pubsub.endpoint_meta_data_len, ctx.pubsub.endpoint_meta_max_history)
 
@@ -572,11 +571,15 @@ class Publish(AdminService):
         """
         try:
 
+            # For later use
+            dt_now = datetime_from_ms(ctx.now * 1000)
+
             # Prepare a document to update the topic's metadata with
             if has_topic:
                 topic_key = _topic_key % (ctx.cluster_id, ctx.topic.id)
                 topic_data = {
-                    'pub_time': ctx.now,
+                    'pub_time': dt_now,
+                    'topic_id': ctx.topic.id,
                     'endpoint_id': ctx.endpoint_id,
                     'endpoint_name': ctx.endpoint_name,
                     'pub_msg_id': ctx.last_msg['pub_msg_id'],
@@ -613,7 +616,7 @@ class Publish(AdminService):
 
                 # Newest information about this endpoint's publication to this topic
                 endpoint_data = {
-                    'pub_time': ctx.now,
+                    'pub_time': dt_now,
                     'pub_msg_id': ctx.last_msg['pub_msg_id'],
                     'pub_correl_id': ctx.last_msg.get('pub_correl_id'),
                     'in_reply_to': ctx.last_msg.get('in_reply_to'),
