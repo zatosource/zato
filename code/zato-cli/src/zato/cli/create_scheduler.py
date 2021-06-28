@@ -76,6 +76,7 @@ class Create(ZatoCommand):
     needs_empty_dir = True
     allow_empty_secrets = True
 
+    # Redis options are no longer used by they are kept here for pre-3.2 backward compatibility
     opts = deepcopy(common_odb_opts) + deepcopy(kvdb_opts)
 
     opts.append({'name':'--pub_key_path', 'help':"Path to scheduler's public key in PEM"})

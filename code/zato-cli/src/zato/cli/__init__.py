@@ -74,8 +74,8 @@ common_totp_opts = [
 ]
 
 kvdb_opts = [
-    {'name':'kvdb_host', 'help':_opts_kvdb_host},
-    {'name':'kvdb_port', 'help':_opts_kvdb_port},
+    {'name':'--kvdb_host', 'help':_opts_kvdb_host},
+    {'name':'--kvdb_port', 'help':_opts_kvdb_port},
     {'name':'--kvdb_password', 'help':'Key/value database password'},
 ]
 
@@ -493,7 +493,7 @@ class ZatoCommand(object):
 
     def get_arg(self, name, default=''):
         if hasattr(self.args, 'get'):
-            return self.args.get(name, default)
+            return self.args.get(name) or default
         else:
             return getattr(self.args, name, default)
 
