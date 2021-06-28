@@ -110,14 +110,16 @@ class CheckConfig(ManageCommand):
         # Zato
         from zato.common.kvdb.api import KVDB
 
-        # Python 2/3 compatibility
-        from future.utils import iteritems
-
-        kvdb_config = Bunch(dict(iteritems((conf[conf_key]))))
+        # Redis is not configured = we can return
+        kvdb_config = conf.get(conf_key) or {}
+        if not kvdb_config:
+            return
 
         # Redis is not enabled = we can return
         if not KVDB.is_config_enabled(kvdb_config):
             return
+
+        kvdb_config = Bunch(kvdb_config)
 
         kvdb = KVDB(kvdb_config, cm.decrypt)
         kvdb.init()

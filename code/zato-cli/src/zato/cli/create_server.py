@@ -797,8 +797,8 @@ class Create(ZatoCommand):
                     odb_port=args.odb_port or '',
                     odb_pool_size=default_odb_pool_size,
                     odb_user=args.odb_user or '',
-                    kvdb_host=args.kvdb_host,
-                    kvdb_port=args.kvdb_port,
+                    kvdb_host=self.get_arg('kvdb_host'),
+                    kvdb_port=self.get_arg('kvdb_port'),
                     initial_cluster_name=args.cluster_name,
                     initial_server_name=args.server_name,
                     events_fs_data_path=EventsDefault.fs_data_path,
@@ -831,12 +831,12 @@ class Create(ZatoCommand):
             secrets_conf_loc = os.path.join(self.target_dir, 'config/repo/secrets.conf')
             secrets_conf = open(secrets_conf_loc, 'w')
 
-            kvdb_password = args.kvdb_password or ''
+            kvdb_password = self.get_arg('kvdb_password')
             kvdb_password = kvdb_password.encode('utf8')
             kvdb_password = fernet1.encrypt(kvdb_password)
             kvdb_password = kvdb_password.decode('utf8')
 
-            odb_password = args.odb_password or ''
+            odb_password = self.get_arg('odb_password') or ''
             odb_password = odb_password.encode('utf8')
             odb_password = fernet1.encrypt(odb_password)
             odb_password = odb_password.decode('utf8')

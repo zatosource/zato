@@ -12,7 +12,6 @@ run-tests:
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/stats/test_*.py -s
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/test_zato_kvdb_*.py -s
 
-
 static-check:
 	echo "Running static checks in zato-server"
 	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
