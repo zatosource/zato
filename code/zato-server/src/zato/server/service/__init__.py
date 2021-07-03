@@ -1064,6 +1064,11 @@ class Service(object):
 
 # ################################################################################################################################
 
+    def spawn(self, *args, **kwargs):
+        return spawn(*args, **kwargs)
+
+# ################################################################################################################################
+
     @classmethod
     def before_add_to_store(cls, logger):
         """ Invoked right before the class is added to the service store.
