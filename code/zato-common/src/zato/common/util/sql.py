@@ -74,7 +74,6 @@ def search(search_func, config, filter_by, session=None, cluster_id=None, *args,
         'filter_by': filter_by,
         'where': kwargs.get('where'),
         'filter_op': kwargs.get('filter_op'),
-
         'data_filter': kwargs.get('data_filter'),
     }
 
