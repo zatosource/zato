@@ -184,7 +184,7 @@ class Create(ZatoCommand):
     allow_empty_secrets = True
     opts = deepcopy(common_odb_opts) + deepcopy(kvdb_opts)
     opts.append({'name':'--cluster_name', 'help':'Name to be given to the new cluster'})
-    opts.append({'name':'--servers', 'help':'How many servers to create'})
+    opts.append({'name':'--servers', 'help':'How many servers to create', 'default':1})
 
     def _bunch_from_args(self, args, cluster_name):
 
