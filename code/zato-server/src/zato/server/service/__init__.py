@@ -813,6 +813,12 @@ class Service(object):
 
         if kwargs.get('skip_response_elem') and hasattr(response, 'keys'):
             keys = list(iterkeys(response))
+            try:
+                keys.remove('_meta')
+            except ValueError:
+                # This is fine, there was only the actual response element here,
+                # without the '_meta' pagination
+                pass
             response_elem = keys[0]
             return response[response_elem]
         else:
