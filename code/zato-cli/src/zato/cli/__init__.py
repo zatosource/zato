@@ -50,7 +50,7 @@ default_common_name = 'localhost'
 # ################################################################################################################################
 
 common_odb_opts = [
-    {'name':'odb_type', 'help':_opts_odb_type, 'choices':SUPPORTED_DB_TYPES}, # noqa
+    {'name':'--odb_type', 'help':_opts_odb_type, 'choices':SUPPORTED_DB_TYPES, 'default':'sqlite'}, # noqa
     {'name':'--odb_host', 'help':_opts_odb_host},
     {'name':'--odb_port', 'help':_opts_odb_port},
     {'name':'--odb_user', 'help':_opts_odb_user},
@@ -730,15 +730,18 @@ class ZatoCommand(object):
             # Do we need to have a clean directory to work in?
             if self.needs_empty_dir:
                 work_dir = os.path.abspath(args.path)
+
+                if not os.path.exists(work_dir):
+                    self.logger.info('Creating directory `%s`', work_dir)
+                    os.makedirs(work_dir)
+
                 for elem in os.listdir(work_dir):
                     if elem.startswith('zato') and elem.endswith('config'):
                         # This is a zato.{}.config file. The had been written there
                         # before we got to this point and it's OK to skip it.
                         continue
                     else:
-                        msg = ('Directory {} is not empty, please re-run the command ' + # noqa
-                              'in an empty directory').format(work_dir) # noqa
-                        self.logger.info(msg)
+                        self.logger.info('Directory `%s` is not empty, please choose a different one or empty it out', work_dir)
                         sys.exit(self.SYS_ERROR.DIR_NOT_EMPTY) # noqa
 
             # Do we need the directory to contain any specific files?
