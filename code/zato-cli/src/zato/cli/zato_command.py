@@ -2,12 +2,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
 import cloghandler
@@ -528,6 +526,90 @@ command_store = CommandStore()
 
 # ################################################################################################################################
 
+def pre_process_sys_argv(sys_argv):
+    # type: (list) -> None
+
+    # stdlib
+    import sys
+
+    opts_idx = sys.maxsize
+
+    #
+    # We need to find out where flags begin because they are constant
+    # and did not change between versions. Only what is before flags was changed.
+    #
+    # zato command --flag1 --flag2
+    #
+
+    for idx, elem in enumerate(sys_argv): # type: str
+        if elem.startswith('--'):
+            opts_idx = idx
+            break
+
+    #
+    # Quickstart commands
+    #
+
+    #
+    # Turn a) into b)
+    # a) zato quickstart /path [--flags]
+    # b) zato quickstart create /path [--flags]
+    #
+
+    try:
+        qs_idx = sys_argv.index('quickstart', 0, opts_idx)
+    except ValueError:
+        qs_idx = 0
+
+    if qs_idx:
+
+        # This is 3.2
+        if 'create' not in sys_argv:
+            sys_argv.insert(qs_idx+1, 'create')
+            return
+
+        # An earlier version so we need to turn Redis options into what 3.2 expects
+        else:
+            # We know that it exists so we can skip the try/except ValueError: block
+            create_idx = sys_argv.index('create')
+
+            # We are looking for the idx of the path element but it is still possible
+            # that we have an incomplete command 'zato quickstart create' alone on input.
+            # In such a case, 'create' will be our last element among args and we can return immediately.
+            if len(sys_argv) == create_idx:
+                return
+
+            # If we are here, we have 'zato quickstart create' followed by a path, ODB and Redis options.
+            path_idx = create_idx + 1
+
+            # ODB + Redis options start here .
+            original_odb_type_idx   = path_idx + 1
+            opts = sys_argv[path_idx+1:opts_idx]
+
+            # Extract the options ..
+            odb_type   = opts[0]
+            redis_host = opts[1]
+            redis_port = opts[2]
+
+            # .. remove them from their pre-3.2 non-optional positions,
+            # .. note that we need to do it once for each of odb_type, redis_host and redis_port
+            # .. using the same index because .pop will modify the list in place ..
+            sys_argv.pop(original_odb_type_idx)
+            sys_argv.pop(original_odb_type_idx)
+            sys_argv.pop(original_odb_type_idx)
+
+            # .. now, add the options back as '--' ones.
+            sys_argv.append('--odb_type')
+            sys_argv.append(odb_type)
+
+            sys_argv.append('--kvdb_host')
+            sys_argv.append(redis_host)
+
+            sys_argv.append('--kvdb_port')
+            sys_argv.append(redis_port)
+
+# ################################################################################################################################
+
 def main():
 
     # stdlib
@@ -551,6 +633,9 @@ def main():
 
     # All the other commands
     else:
+
+        # Take into account changes introduced between versions
+        pre_process_sys_argv(sys.argv)
         parser = command_store.load_full_parser()
 
     # Parse the arguments
@@ -560,8 +645,34 @@ def main():
     if not hasattr(args, 'command'):
         parser.print_help()
 
-    # .. otherwise, run the command now.
+    # .. otherwise, try to run the command now ..
     else:
+
+        # Now that we are here, we also need to check if non-SQLite databases
+        # have all their required options on input. We do it here rather than in create_odb.py
+        # because we want to report it as soon as possible, before actual commands execute.
+        if args.odb_type != 'sqlite':
+            missing = []
+            for name in 'odb_db_name', 'odb_host', 'odb_password', 'odb_port', 'odb_user':
+                if not getattr(args, name, None):
+                    missing.append(name)
+
+            if missing:
+                missing_noun = 'Option ' if len(missing) == 1 else 'Options '
+                missing_verb = ' is ' if len(missing) == 1 else ' are '
+                missing.sort()
+
+                sys.stdout.write(
+                    missing_noun                  + \
+                    '`'                           + \
+                    ', '.join(missing)            + \
+                    '`'                           + \
+                    missing_verb                  + \
+                    'requiered if odb_type is '   + \
+                    '`{}`.'.format(args.odb_type) + \
+                    '\n'
+                )
+                sys.exit(1)
 
         # Zato
         from zato.cli import run_command
