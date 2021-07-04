@@ -1036,10 +1036,11 @@ class ObjectManager(object):
             raise Exception('Unexpected response; e:{}'.format(response))
 
         if response.has_data:
-            self.services = {
-                service['name']: Bunch(service)
-                for service in response.data
-            }
+
+            # Make sure we access the correct part of the response,
+            # because it may be wrapped in a pagination structure.
+            data = self.get_data_from_response_data(response.data)
+            self.services = {service['name']: Bunch(service) for service in data}
 
 # ################################################################################################################################
 
@@ -1157,6 +1158,21 @@ class ObjectManager(object):
 
 # ################################################################################################################################
 
+    def get_data_from_response_data(self, response_data):
+
+        # Generic connections' GetList includes metadata in responses so we need to dig into actual data
+        if '_meta' in response_data:
+            keys = list(response_data)
+            keys.remove('_meta')
+            response_key = keys[0]
+            data = response_data[response_key]
+        else:
+            data = response_data
+
+        return data
+
+# ################################################################################################################################
+
     def get_objects_by_type(self, item_type):
 
         # Bunch
@@ -1189,11 +1205,7 @@ class ObjectManager(object):
 
         self.objects[service_info.name] = []
 
-        # Generic connections' GetList includes metadata in responses so we need to dig into actual data
-        if '_meta' in response.data:
-            data = response.data['response']
-        else:
-            data = response.data
+        data = self.get_data_from_response_data(response.data)
 
         # A flag indicating if this service is related to security definitions
         is_sec_def = 'zato.security' in service_name
