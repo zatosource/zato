@@ -63,8 +63,20 @@ def response_hook(self, input, _ignored, attrs, service_type):
         self.response.payload.cache_id = self.response.payload.id
 
     elif service_type == 'get_list':
+
         for item in self.response.payload:
-            item.current_size = self.cache.get_size(_COMMON_CACHE.TYPE.BUILTIN, item.name)
+
+            # Note that below we are catching a KeyError in get_size.
+            # This is because we know that item.name exists in the database,
+            # otherwise we would not have found it during the iteration,
+            # but it may not exist yet in RAM. This will happen when enmasse
+            # runs with a fresh cluster - the database may be updated but our in-RAM
+            # storage not yet.
+
+            try:
+                item.current_size = self.cache.get_size(_COMMON_CACHE.TYPE.BUILTIN, item.name)
+            except KeyError:
+                item.current_size = 0
 
 # ################################################################################################################################
 
