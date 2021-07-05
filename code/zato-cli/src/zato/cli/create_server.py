@@ -830,7 +830,7 @@ class Create(ZatoCommand):
             secrets_conf_loc = os.path.join(self.target_dir, 'config/repo/secrets.conf')
             secrets_conf = open(secrets_conf_loc, 'w')
 
-            kvdb_password = self.get_arg('kvdb_password')
+            kvdb_password = self.get_arg('kvdb_password') or ''
             kvdb_password = kvdb_password.encode('utf8')
             kvdb_password = fernet1.encrypt(kvdb_password)
             kvdb_password = kvdb_password.decode('utf8')

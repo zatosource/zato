@@ -573,6 +573,60 @@ def pre_process_quickstart(sys_argv, opts_idx):
 
 # ################################################################################################################################
 
+def pre_process_server(sys_argv, opts_idx):
+    # type: (list, int) -> None
+
+    # stdlib
+    import sys
+
+    # We want to find the last non-optional element and if opts_idx is the max size, it means that we do not have any such.
+    if opts_idx == sys.maxsize:
+        opts_idx = len(sys_argv)
+
+    # This is for later use, when we construct a new sys_argv
+    opts = sys_argv[opts_idx:]
+
+    #
+    # This is pre-3.2
+    # 'zato0', 'create1', 'server2', '/path/to/server3', 'sqlite4', 'kvdb_host5', 'kvdb_port6', 'cluster_name7', 'server_name8'
+    #
+    len_pre_32 = 9
+
+    #
+    # This is 3.2
+    # 'zato0', 'create1', 'server2', '/path/to/server3', 'cluster_name7', 'server_name8'
+    #
+
+    # We are turning pre-3.2 options into 3.2 ones.
+    if len(sys_argv[:opts_idx]) == len_pre_32:
+
+        # New optio
+        new_argv = []
+
+        new_argv.append(sys_argv[0]) # zato0
+        new_argv.append(sys_argv[1]) # create1
+        new_argv.append(sys_argv[2]) # server2
+        new_argv.append(sys_argv[3]) # /path/to/server3
+
+        new_argv.append(sys_argv[7]) # cluster_name7
+        new_argv.append(sys_argv[8]) # server_name8
+
+        new_argv.append('--odb_type') # sqlite4
+        new_argv.append(sys_argv[4])
+
+        new_argv.append('--kvdb_host') # kvdb_host5
+        new_argv.append(sys_argv[5])
+
+        new_argv.append('--kvdb_port') # kvdb_port6
+        new_argv.append(sys_argv[6])
+
+        new_argv.extend(opts)
+
+        # We are ready to replace sys.argv now
+        sys_argv[:] = new_argv
+
+# ################################################################################################################################
+
 def pre_process_sys_argv(sys_argv):
     # type: (list) -> None
 
@@ -623,10 +677,17 @@ def pre_process_sys_argv(sys_argv):
             pre_process_quickstart(sys_argv, opts_idx)
             return
 
-    # Otherwise, it could be a 'zato <command> create' command
+    # Otherwise, it could be a 'zato create <component>' command
     else:
-        pass
+        if 'create' in sys_argv:
 
+            if 'cluster' in sys_argv:
+                pre_process_cluster(sys_argv, opts_idx)
+                return
+
+            elif 'server' in sys_argv:
+                pre_process_server(sys_argv, opts_idx)
+                return
 
 # ################################################################################################################################
 
@@ -689,7 +750,7 @@ def main():
                     ', '.join(missing)            + \
                     '`'                           + \
                     missing_verb                  + \
-                    'requiered if odb_type is '   + \
+                    'required if odb_type is '   + \
                     '`{}`.'.format(args.odb_type) + \
                     '\n'
                 )
