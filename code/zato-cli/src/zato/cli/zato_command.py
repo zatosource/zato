@@ -526,13 +526,62 @@ command_store = CommandStore()
 
 # ################################################################################################################################
 
+def pre_process_quickstart(sys_argv, opts_idx):
+    # type: (list, int) -> None
+
+    # We know that it exists so we can skip the try/except ValueError: block
+    create_idx = sys_argv.index('create')
+
+    # We are looking for the idx of the path element but it is still possible
+    # that we have an incomplete command 'zato quickstart create' alone on input.
+    # In such a case, 'create' will be our last element among args and we can return immediately.
+    if len(sys_argv) == create_idx:
+        return
+
+    # If we are here, we have 'zato quickstart create' followed by a path, ODB and Redis options.
+    path_idx = create_idx + 1
+
+    # ODB + Redis options start here .
+    original_odb_type_idx   = path_idx + 1
+    opts = sys_argv[path_idx+1:opts_idx]
+
+    # No options = we can return
+    if not opts:
+        return
+
+    # Extract the options ..
+    odb_type   = opts[0]
+    redis_host = opts[1]
+    redis_port = opts[2]
+
+    # .. remove them from their pre-3.2 non-optional positions,
+    # .. note that we need to do it once for each of odb_type, redis_host and redis_port
+    # .. using the same index because .pop will modify the list in place ..
+    sys_argv.pop(original_odb_type_idx)
+    sys_argv.pop(original_odb_type_idx)
+    sys_argv.pop(original_odb_type_idx)
+
+    # .. now, add the options back as '--' ones.
+    sys_argv.append('--odb_type')
+    sys_argv.append(odb_type)
+
+    sys_argv.append('--kvdb_host')
+    sys_argv.append(redis_host)
+
+    sys_argv.append('--kvdb_port')
+    sys_argv.append(redis_port)
+
+# ################################################################################################################################
+
 def pre_process_sys_argv(sys_argv):
     # type: (list) -> None
 
     # stdlib
     import sys
 
+    # Local aliases
     opts_idx = sys.maxsize
+    component_type = None
 
     #
     # We need to find out where flags begin because they are constant
@@ -546,22 +595,23 @@ def pre_process_sys_argv(sys_argv):
             opts_idx = idx
             break
 
-    #
-    # Quickstart commands
-    #
-
-    #
-    # Turn a) into b)
-    # a) zato quickstart /path [--flags]
-    # b) zato quickstart create /path [--flags]
-    #
-
     try:
         qs_idx = sys_argv.index('quickstart', 0, opts_idx)
     except ValueError:
         qs_idx = 0
 
+    # We enter here if it is a quickstart command
     if qs_idx:
+
+        #
+        # Quickstart commands
+        #
+
+        #
+        # Turn a) into b)
+        # a) zato quickstart /path [--flags]
+        # b) zato quickstart create /path [--flags]
+        #
 
         # This is 3.2
         if 'create' not in sys_argv:
@@ -570,43 +620,13 @@ def pre_process_sys_argv(sys_argv):
 
         # An earlier version so we need to turn Redis options into what 3.2 expects
         else:
-            # We know that it exists so we can skip the try/except ValueError: block
-            create_idx = sys_argv.index('create')
+            pre_process_quickstart(sys_argv, opts_idx)
+            return
 
-            # We are looking for the idx of the path element but it is still possible
-            # that we have an incomplete command 'zato quickstart create' alone on input.
-            # In such a case, 'create' will be our last element among args and we can return immediately.
-            if len(sys_argv) == create_idx:
-                return
+    # Otherwise, it could be a 'zato <command> create' command
+    else:
+        pass
 
-            # If we are here, we have 'zato quickstart create' followed by a path, ODB and Redis options.
-            path_idx = create_idx + 1
-
-            # ODB + Redis options start here .
-            original_odb_type_idx   = path_idx + 1
-            opts = sys_argv[path_idx+1:opts_idx]
-
-            # Extract the options ..
-            odb_type   = opts[0]
-            redis_host = opts[1]
-            redis_port = opts[2]
-
-            # .. remove them from their pre-3.2 non-optional positions,
-            # .. note that we need to do it once for each of odb_type, redis_host and redis_port
-            # .. using the same index because .pop will modify the list in place ..
-            sys_argv.pop(original_odb_type_idx)
-            sys_argv.pop(original_odb_type_idx)
-            sys_argv.pop(original_odb_type_idx)
-
-            # .. now, add the options back as '--' ones.
-            sys_argv.append('--odb_type')
-            sys_argv.append(odb_type)
-
-            sys_argv.append('--kvdb_host')
-            sys_argv.append(redis_host)
-
-            sys_argv.append('--kvdb_port')
-            sys_argv.append(redis_port)
 
 # ################################################################################################################################
 
