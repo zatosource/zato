@@ -151,7 +151,7 @@ class AdminService(Service):
         """
 
         # Should we break the results into individual pages
-        needs_pagination = 'paginate' in self.request.input
+        needs_pagination = self.request.input.get('paginate')
 
         if needs_pagination:
             result = sql_search(search_func, self.request.input, self._filter_by, session, cluster_id, *args, **kwargs)
