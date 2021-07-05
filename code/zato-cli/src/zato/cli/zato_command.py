@@ -651,7 +651,8 @@ def main():
         # Now that we are here, we also need to check if non-SQLite databases
         # have all their required options on input. We do it here rather than in create_odb.py
         # because we want to report it as soon as possible, before actual commands execute.
-        if args.odb_type != 'sqlite':
+        odb_type = getattr(args, 'odb_type', None)
+        if odb_type and odb_type != 'sqlite':
             missing = []
             for name in 'odb_db_name', 'odb_host', 'odb_password', 'odb_port', 'odb_user':
                 if not getattr(args, name, None):
