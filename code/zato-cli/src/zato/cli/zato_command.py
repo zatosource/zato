@@ -792,7 +792,7 @@ def main():
         odb_type = getattr(args, 'odb_type', None)
         if odb_type and odb_type != 'sqlite':
             missing = []
-            for name in 'odb_db_name', 'odb_host', 'odb_password', 'odb_port', 'odb_user':
+            for name in 'odb_db_name', 'odb_host', 'odb_port', 'odb_user':
                 if not getattr(args, name, None):
                     missing.append(name)
 
