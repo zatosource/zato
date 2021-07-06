@@ -181,7 +181,6 @@ class Create(ZatoCommand):
     """ Quickly creates a working cluster
     """
     needs_empty_dir = True
-    allow_empty_secrets = True
     opts = deepcopy(common_odb_opts) + deepcopy(kvdb_opts)
     opts.append({'name':'--cluster_name', 'help':'Name to be given to the new cluster'})
     opts.append({'name':'--servers', 'help':'How many servers to create', 'default':1})
@@ -211,6 +210,11 @@ class Create(ZatoCommand):
         bunch.scheduler_name = 'scheduler1'
 
         return bunch
+
+# ################################################################################################################################
+
+    def allow_empty_secrets(self):
+        return True
 
 # ################################################################################################################################
 

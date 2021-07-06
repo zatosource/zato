@@ -407,7 +407,6 @@ class ZatoCommand(object):
     needs_empty_dir = False
     file_needed = None
     needs_secrets_confirm = True
-    allow_empty_secrets = False
     add_config_file = True
     target_dir = None
     show_output = True
@@ -491,6 +490,11 @@ class ZatoCommand(object):
 
 # ################################################################################################################################
 
+    def allow_empty_secrets(self):
+        return False
+
+# ################################################################################################################################
+
     def get_arg(self, name, default=''):
         if hasattr(self.args, 'get'):
             return self.args.get(name) or default
@@ -558,10 +562,9 @@ class ZatoCommand(object):
         # stdlib
         from getpass import getpass
 
-        keep_running = True
         self.logger.info('')
 
-        while keep_running:
+        while True:
             secret1 = getpass(template + ' (will not echo): ')
             if not needs_confirm:
                 return secret1.strip('\n')
@@ -701,10 +704,12 @@ class ZatoCommand(object):
 
             # It is OK if password is an empty string and empty secrets are allowed
             if not password_arg:
-                if self.allow_empty_secrets:
+                allow_empty = self.allow_empty_secrets()
+
+                if allow_empty:
                     continue
 
-                password = self._get_secret(opt_help, self.needs_secrets_confirm, self.allow_empty_secrets, opt_name)
+                password = self._get_secret(opt_help, self.needs_secrets_confirm, allow_empty, opt_name)
                 setattr(args, opt_name, password)
 
         return args

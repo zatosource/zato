@@ -654,7 +654,6 @@ class Create(ZatoCommand):
     """ Creates a new Zato server
     """
     needs_empty_dir = True
-    allow_empty_secrets = True
 
     opts = deepcopy(common_odb_opts)
     opts.extend(kvdb_opts)
@@ -681,6 +680,11 @@ class Create(ZatoCommand):
         self.target_dir = os.path.abspath(args.path)
         self.dirs_prepared = False
         self.token = uuid.uuid4().hex.encode('utf8')
+
+# ################################################################################################################################
+
+    def allow_empty_secrets(self):
+        return True
 
 # ################################################################################################################################
 
