@@ -105,12 +105,16 @@ class Decrypt(ManageCommand):
 class GetHashRounds(ZatoCommand):
     """ Encrypts secrets using a public key.
     """
-    allow_empty_secrets = True
     opts = [
         {'name':'--json', 'help':'Output full info in JSON', 'action':'store_true'},
         {'name':'--rounds-only', 'help':'Output only rounds in plain text', 'action':'store_true'},
         {'name':'goal',   'help':'How long a single hash should take in seconds (e.g. 0.2)'},
     ]
+
+# ################################################################################################################################
+
+    def allow_empty_secrets(self):
+        return True
 
 # ################################################################################################################################
 

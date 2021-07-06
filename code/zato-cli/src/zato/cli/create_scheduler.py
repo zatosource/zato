@@ -74,7 +74,6 @@ class Create(ZatoCommand):
     """ Creates a new scheduler instance.
     """
     needs_empty_dir = True
-    allow_empty_secrets = True
 
     # Redis options are no longer used by they are kept here for pre-3.2 backward compatibility
     opts = deepcopy(common_odb_opts) + deepcopy(kvdb_opts)
@@ -100,6 +99,11 @@ class Create(ZatoCommand):
     def __init__(self, args):
         self.target_dir = os.path.abspath(args.path)
         super(Create, self).__init__(args)
+
+# ################################################################################################################################
+
+    def allow_empty_secrets(self):
+        return True
 
 # ################################################################################################################################
 

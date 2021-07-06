@@ -23,12 +23,22 @@ from zato.common.odb.model import AlembicRevision, Base, ZatoInstallState
 LATEST_ALEMBIC_REVISION = '0028_ae3419a9'
 VERSION = 1
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Create(ZatoCommand):
     """ Creates a new Zato ODB (Operational Database)
     """
     opts = common_odb_opts
     opts.append({'name':'--skip-if-exists',
         'help':'Return without raising an error if ODB already exists', 'action':'store_true'})
+
+# ################################################################################################################################
+
+    def allow_empty_secrets(self):
+        return True
+
+# ################################################################################################################################
 
     def execute(self, args, show_output=True):
 
@@ -103,3 +113,6 @@ class Create(ZatoCommand):
                     self.logger.debug('ODB created successfully')
                 else:
                     self.logger.info('OK')
+
+# ################################################################################################################################
+# ################################################################################################################################
