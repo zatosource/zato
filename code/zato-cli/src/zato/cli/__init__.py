@@ -26,10 +26,10 @@ _opts_odb_port = 'Operational database port'
 _opts_odb_user = 'Operational database user'
 _opts_odb_schema = 'Operational database schema'
 _opts_odb_db_name = 'Operational database name'
-_opts_broker_host = 'Broker host'
-_opts_broker_port = 'Broker port'
-_opts_kvdb_host = 'Key/value DB host'
-_opts_kvdb_port = 'Key/value DB port'
+_opts_broker_host = 'Broker host (unused)'
+_opts_broker_port = 'Broker port (unused)'
+_opts_kvdb_host = 'Key/value DB host (unused)'
+_opts_kvdb_port = 'Key/value DB port (unused)'
 
 # ################################################################################################################################
 
