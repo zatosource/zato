@@ -37,5 +37,5 @@ run-tests:
 	$(MAKE) common-tests
 	$(MAKE) cy-tests
 	$(MAKE) server-tests
-	# $(MAKE) sso-tests
+	$(MAKE) sso-tests
 	$(MAKE) static-check
