@@ -122,7 +122,7 @@ class ServerRPC:
             response = invoker.invoke_all_pids(service, request, *args, **kwargs)
 
             # .. continue if we know we can find something ..
-            if response.has_data:
+            if response and response.has_data:
 
                 # .. check all per-PID responses ..
                 for pid, per_pid_response in response.data.items(): # type: (int, PerPIDResponse)
