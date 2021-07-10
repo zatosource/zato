@@ -317,12 +317,33 @@ class GetGDMessageList(AdminService):
 # ################################################################################################################################
 
     def handle(self):
-        with closing(self.odb.session()) as session:
-            self.response.payload[:] = self.get_gd_data(session)
 
-        for item in self.response.payload:
-            item.pub_time = datetime_from_ms(item.pub_time * 1000.0)
-            item.ext_pub_time = datetime_from_ms(item.ext_pub_time * 1000.0) if item.ext_pub_time else ''
+        # Response to produce ..
+        out = []
+
+        # .. collect the data ..
+        with closing(self.odb.session()) as session:
+            data = self.get_gd_data(session)
+
+        # .. use ISO timestamps ..
+        for item in data:
+
+            # .. work with dicts ..
+            item = item._asdict()
+
+            # .. convert to ISO ..
+            pub_time = datetime_from_ms(item['pub_time'] * 1000.0)
+            ext_pub_time = datetime_from_ms(item['ext_pub_time'] * 1000.0) if item['ext_pub_time'] else ''
+
+            # .. assign it back ..
+            item['pub_time'] = pub_time
+            item['ext_pub_time'] = ext_pub_time
+
+            # .. and add it to our response ..
+            out.append(item)
+
+        # .. which we can return now.
+        self.response.payload[:] = out
 
 # ################################################################################################################################
 # ################################################################################################################################
