@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from hashlib import sha1, sha256
@@ -26,6 +24,10 @@ class _DeletingService(DataDictService):
     """ Subclasses of this class know how to delete a translation.
     """
     def delete(self, id):
+
+        if not self.server.kvdb.conn:
+            return
+
         for item in self._get_translations():
             if int(item['id']) == id:
                 delete_key = KVDB.SEPARATOR.join((KVDB.TRANSLATION, item['system1'], item['key1'], item['value1'], item['system2'], item['key2']))
@@ -51,6 +53,9 @@ class _CreateEdit(DataDictService):
     def _validate_name(self, name, system1, key1, value1, system2, key2, id):
         """ Makes sure the translation doesn't already exist.
         """
+        if not self.server.kvdb.conn:
+            return
+
         def _exception():
             msg = 'A mapping between system1:[{}], key1:[{}], value1:[{}] and system2:[{}], key2:[{}] already exists'.format(
                 system1, key1, value1, system2, key2)
@@ -109,6 +114,10 @@ class _CreateEdit(DataDictService):
         raise NotImplementedError('Must be implemented by a subclass')
 
     def _set_hash_fields(self, hash_name, item_ids):
+
+        if not self.server.kvdb.conn:
+            return
+
         self.server.kvdb.conn.hset(hash_name, 'id1', item_ids['id1'])
         self.server.kvdb.conn.hset(hash_name, 'id2', item_ids['id2'])
         self.server.kvdb.conn.hset(hash_name, 'value2', self.request.input.value2)
@@ -123,6 +132,10 @@ class Create(_CreateEdit):
         output_required = ('id',)
 
     def _handle(self, hash_name, item_ids):
+
+        if not self.server.kvdb.conn:
+            return
+
         id = self.server.kvdb.conn.incr(KVDB.TRANSLATION_ID)
         self.server.kvdb.conn.hset(hash_name, 'id', id)
         self._set_hash_fields(hash_name, item_ids)
@@ -138,6 +151,10 @@ class Edit(_CreateEdit):
         output_required = ('id',)
 
     def _handle(self, hash_name, item_ids):
+
+        if not self.server.kvdb.conn:
+            return
+
         for item in self._get_translations():
             if item['id'] == str(self.request.input.id):
                 existing_name = self._name(item['system1'], item['key1'], item['value1'], item['system2'], item['key2'])
@@ -190,4 +207,7 @@ class GetLastID(AdminService):
         output_optional = (Int('value'),)
 
     def handle(self):
+        if not self.server.kvdb.conn:
+            return
+
         self.response.payload.value = self.server.kvdb.conn.get(KVDB.TRANSLATION_ID)
