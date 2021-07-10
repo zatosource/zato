@@ -438,9 +438,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.kvdb.config = self.fs_server_config.kvdb
         self.kvdb.server = self
         self.kvdb.decrypt_func = self.crypto_manager.decrypt
-        self.kvdb.init()
 
         kvdb_logger.info('Worker config `%s`', kvdb_config)
+
+        if self.fs_server_config.kvdb.host:
+            self.kvdb.init()
 
         # New in 3.1, it may be missing in the config file
         if not self.fs_server_config.misc.get('sftp_genkey_command'):
