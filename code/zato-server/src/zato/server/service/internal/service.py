@@ -62,7 +62,7 @@ class GetList(AdminService):
         response_elem = 'zato_service_get_list_response'
         input_required = 'cluster_id'
         input_optional = ('should_include_scheduler',) + GetListAdminSIO.input_optional
-        output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), \
+        output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), Integer('usage'), \
             Integer('slow_threshold')
         output_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_active', \
             'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def'), Integer('usage')
