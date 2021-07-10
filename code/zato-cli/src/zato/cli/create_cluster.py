@@ -44,9 +44,9 @@ class Create(ZatoCommand):
     opts = deepcopy(common_odb_opts)
 
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to create'})
-    opts.append({'name':'--lb_host', 'help':"Load-balancer host"})
-    opts.append({'name':'--lb_port', 'help':'Load-balancer port'})
-    opts.append({'name':'--lb_agent_port', 'help':'Load-balancer agent host'})
+    opts.append({'name':'--lb_host', 'help':'Load-balancer host', 'default':'127.0.0.1'})
+    opts.append({'name':'--lb_port', 'help':'Load-balancer port', 'default':'11223'})
+    opts.append({'name':'--lb_agent_port', 'help':'Load-balancer agent host', 'default':'20151'})
     opts.append({'name':'--broker_host', 'help':'Redis host (unused, kept for backward compatibility)'})
     opts.append({'name':'--broker_port', 'help':'Redis port (unused, kept for backward compatibility)'})
     opts.append({'name':'--secret-key', 'help':'Secret key that servers will use for decryption and decryption'})
