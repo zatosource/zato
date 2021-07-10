@@ -60,7 +60,7 @@ def export(req, cluster_id):
 
     def _get_last_id(service):
         response = req.zato.client.invoke(service, {})
-        if response.has_data:
+        if response.data:
             return response.data.value
 
     def _get_last_dict_id():
