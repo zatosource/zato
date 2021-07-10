@@ -137,6 +137,14 @@ class RemoteServerInvoker(ServerInvoker):
     def _invoke(self, invoke_func, service, request=None, *args, **kwargs):
         # type: (Callable, str, object) -> ServerInvocationResult
 
+        if not self.invocation_ctx.address:
+            logger.info('RPC address not found for %s:%s -> `%r` (%s)',
+                self.invocation_ctx.cluster_name,
+                self.invocation_ctx.server_name,
+                self.address,
+                service)
+            return
+
         # Optionally, ping the remote server to quickly find out if it is still available ..
         if self.invocation_ctx.needs_ping:
             ping_timeout = kwargs.get('ping_timeout') or self.ping_timeout
