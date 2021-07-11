@@ -372,6 +372,8 @@ class UserAPI(object):
         # .. while emails are only encrypted, and it is optional.
         if self.encrypt_email:
             email = self._get_encrypted_email(ctx.data.get('email'))
+        else:
+            email = None
 
         user_model.username = ctx.data['username']
         user_model.email = email
