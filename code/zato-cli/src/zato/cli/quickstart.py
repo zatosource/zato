@@ -184,6 +184,8 @@ class Create(ZatoCommand):
     opts = deepcopy(common_odb_opts) + deepcopy(kvdb_opts)
     opts.append({'name':'--cluster_name', 'help':'Name to be given to the new cluster'})
     opts.append({'name':'--servers', 'help':'How many servers to create', 'default':1})
+    opts.append({'name':'--secret_key', 'help':'Main secret key the server(s) will use'})
+    opts.append({'name':'--jwt_secret_key', 'help':'Secret key for JWT (JSON Web Tokens)'})
 
     def _bunch_from_args(self, args, cluster_name):
 
@@ -266,8 +268,8 @@ class Create(ZatoCommand):
         from cryptography.fernet import Fernet
 
         # These are shared by all servers
-        jwt_secret = Fernet.generate_key()
-        secret_key = Fernet.generate_key()
+        secret_key = getattr(args, 'secret_key', None) or Fernet.generate_key()
+        jwt_secret = getattr(args, 'jwt_secret_key', None) or Fernet.generate_key()
 
         # Zato
         from zato.cli import ca_create_ca, ca_create_lb_agent, ca_create_scheduler, ca_create_server, \
