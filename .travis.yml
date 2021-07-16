@@ -1,41 +1,40 @@
 language: python
-cache:
-  directories:
-    - /tmp/travis-cache
-
-# List of environment variable combinations to test against (first dimension)
-# https://zato.io/docs/admin/guide/install/index.html#operating-system-considerations
-env:
-  # For later use with matrix.include later and OS X.
-  #- MODE=packaging IMAGE=
-  - MODE=packaging IMAGE=centos:7
-  - MODE=packaging IMAGE=centos:7 PY_VERSION=python3
-  - MODE=packaging IMAGE=ubuntu:16.04
-  - MODE=packaging IMAGE=ubuntu:16.04 PY_VERSION=python3
-  - MODE=packaging IMAGE=ubuntu:18.04
-  - MODE=packaging IMAGE=ubuntu:18.04 PY_VERSION=python3
-  - MODE=packaging IMAGE=debian:8
-  - MODE=packaging IMAGE=debian:8 PY_VERSION=python3
-  - MODE=packaging IMAGE=debian:9
-  - MODE=packaging IMAGE=debian:9 PY_VERSION=python3
-  - MODE=packaging IMAGE=alpine:3.11
-  - MODE=packaging IMAGE=alpine:3.11 PY_VERSION=python3
-
-# List of operating systems to test under (second dimension)
-# https://docs.travis-ci.com/user/reference/overview/
-sudo: required
-os:
-  - linux
-  #- osx
 
 services:
   - docker
 
-# List of matrix exclusions
+cache:
+  directories:
+    - /tmp/travis-cache
+
+before_cache:
+  - sudo rm -rf /tmp/travis-cache/root/.cache/pip/http
+
+# https://zato.io/docs/admin/guide/install/index.html#operating-system-considerations
+env:
+  global:
+  - ZATO_BRANCH: support/3.2
+  - ZATO_VERSION: 3.2.0
+  - PY_BINARY: python3
+  - ZATO_UPLOAD_PACKAGES: "y"
+  jobs:
+    - MODE=packaging IMAGE=debian:10
+    - MODE=packaging IMAGE=ubuntu:18.04
+    - MODE=packaging IMAGE=ubuntu:20.04
+    - MODE=packaging IMAGE=centos:7
+    - MODE=packaging IMAGE=centos:8
+
+os:
+  - linux
+# Use Ubuntu Xenial
+dist: xenial
+
+before_install:
+  - sudo apt-get update
+
 matrix:
   allow_failures:
-    # Don't fail the build for a problem with OS X
-    - osx
+    os: osx
 
 notifications:
   email: false
