@@ -22,7 +22,7 @@ class CreateSecretKey(ZatoCommand):
         # Zato
         from zato.common.crypto.api import CryptoManager
 
-        self.logger.info(CryptoManager.generate_key())
+        self.logger.info(CryptoManager.generate_key().decode('utf8'))
 
 # ################################################################################################################################
 # ################################################################################################################################
