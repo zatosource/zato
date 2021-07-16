@@ -64,6 +64,7 @@ if [ "$IMAGE" ]; then
     then
         run apt-get update
         run apt-get -y install sudo
+        run /bin/bash -c "export TZ=GMT && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tzdata && ln -fs /usr/share/zoneinfo/\$TZ /etc/localtime && dpkg-reconfigure --frontend noninteractive tzdata"
     fi
 
     # chown everything to Travis UID so caching succeeds.

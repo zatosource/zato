@@ -5,8 +5,10 @@
 #
 
 set -ex
+ZATO_ROOT_DIR=/opt/zato
+ZATO_TARGET_DIR=$ZATO_ROOT_DIR/$ZATO_VERSION
 source $TRAVIS_BUILD_DIR/.travis/setup.sh
-run bash -ec "cd /tmp/zato/code && bash -ex ./install.sh -p ${PY_VERSION:-python}"
+run bash -ec "cd /tmp/zato/code && bash -ex ./install.sh -p ${PY_VERSION:-python3} && ./bin/zato --version && cd /tmp/zato && source ./code/bin/activate && echo 'Running tests' && make || exit 1"
 
 
 #
