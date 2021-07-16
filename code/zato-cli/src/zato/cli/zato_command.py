@@ -276,7 +276,6 @@ class CommandStore(object):
         # decrypt
         #
         decrypt = subs.add_parser('decrypt', description=crypto_mod.Decrypt.__doc__, parents=[base_parser])
-        decrypt.add_argument('path', help='Path to the private key in PEM')
         decrypt.set_defaults(command='decrypt')
         self.add_opts(decrypt, crypto_mod.Decrypt.opts)
 
@@ -292,8 +291,8 @@ class CommandStore(object):
         #
         # encrypt
         #
+
         encrypt = subs.add_parser('encrypt', description=crypto_mod.Encrypt.__doc__, parents=[base_parser])
-        encrypt.add_argument('path', help='Path to the public key in PEM')
         encrypt.set_defaults(command='encrypt')
         self.add_opts(encrypt, crypto_mod.Encrypt.opts)
 
