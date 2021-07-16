@@ -512,10 +512,10 @@ class ZatoCommand(object):
         repo_dir = os.path.abspath(os.path.join(args.path, 'config', 'repo'))
         cm = CryptoManagerClass(repo_dir=repo_dir)
 
-        encrypted = cm.encrypt(to_encrypt or args.secret)
+        encrypted = cm.encrypt(to_encrypt or args.data)
 
         if needs_log_info:
-            self.logger.info('Encrypted value: `%s`' % encrypted)
+            self.logger.info(encrypted.decode('utf8'))
 
         return encrypted
 
