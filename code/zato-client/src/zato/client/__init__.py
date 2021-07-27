@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -530,9 +528,16 @@ def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, s
     """ Returns a Zato client built out of data found in a given server's config files.
     """
 
+    # stdlib
+    import os
+
+    # ConfigObj
+    from configobj import ConfigObj
+
     # To avoid circular references
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.util.api import get_odb_session_from_server_config, get_repo_dir_from_component_dir
+    from zato.common.util.cli import read_stdin_data
 
     class ZatoClient(AnyServiceInvoker):
         def __init__(self, *args, **kwargs):
@@ -540,13 +545,17 @@ def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, s
             self.cluster_id = None
             self.odb_session = None
 
-    repo_dir = get_repo_dir_from_component_dir(server_dir)
-    cm = ServerCryptoManager.from_repo_dir(None, repo_dir, None)
+    repo_location = get_repo_dir_from_component_dir(server_dir)
+    crypto_manager = ServerCryptoManager.from_repo_dir(None, repo_location, stdin_data=read_stdin_data())
 
-    secrets_conf = get_config_func(repo_dir, 'secrets.conf', needs_user_config=False)
-    config = get_config_func(repo_dir, 'server.conf', crypto_manager=cm, secrets_conf=secrets_conf)
+    secrets_config = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
+    secrets_conf = get_config_func(
+        repo_location, 'secrets.conf', needs_user_config=False,
+        crypto_manager=crypto_manager, secrets_conf=secrets_config)
+
+    config = get_config_func(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_conf)
     server_url = server_url if server_url else config.main.gunicorn_bind
-    client_auth = client_auth_func(config, repo_dir, cm, False)
+    client_auth = client_auth_func(config, repo_location, crypto_manager, False)
     client = ZatoClient('http://{}'.format(server_url), '/zato/admin/invoke', client_auth, max_response_repr=15000)
     session = get_odb_session_from_server_config(config, None, False)
 
