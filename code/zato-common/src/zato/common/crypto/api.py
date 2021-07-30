@@ -18,9 +18,6 @@ from math import ceil
 # Bunch
 from bunch import bunchify
 
-# configobj
-from configobj import ConfigObj
-
 # cryptography
 from cryptography.fernet import Fernet, InvalidToken
 
@@ -28,8 +25,9 @@ from cryptography.fernet import Fernet, InvalidToken
 from builtins import bytes
 
 # Zato
-from zato.common.json_internal import loads
 from zato.common.crypto.const import well_known_data, zato_stdin_prefix
+from zato.common.ext.configobj_ import ConfigObj
+from zato.common.json_internal import loads
 
 # ################################################################################################################################
 
