@@ -530,11 +530,9 @@ def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, s
     # stdlib
     import os
 
-    # ConfigObj
-    from configobj import ConfigObj
-
     # To avoid circular references
     from zato.common.crypto.api import ServerCryptoManager
+    from zato.common.ext.configobj_ import ConfigObj
     from zato.common.util.api import get_odb_session_from_server_config, get_repo_dir_from_component_dir
     from zato.common.util.cli import read_stdin_data
 
