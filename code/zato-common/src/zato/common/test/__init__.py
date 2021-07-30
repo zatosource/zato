@@ -18,9 +18,6 @@ from uuid import uuid4
 # Bunch
 from bunch import Bunch, bunchify
 
-# ConfigObj
-from configobj import ConfigObj
-
 # mock
 from mock import MagicMock, Mock
 
@@ -35,6 +32,7 @@ from sqlalchemy import create_engine
 
 # Zato
 from zato.common.api import CHANNEL, DATA_FORMAT, SIMPLE_IO
+from zato.common.ext.configobj_ import ConfigObj
 from zato.common.json_internal import loads
 from zato.common.log_message import CID_LENGTH
 from zato.common.odb import model
