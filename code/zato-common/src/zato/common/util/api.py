@@ -49,9 +49,6 @@ from traceback import format_exc
 # Bunch
 from bunch import Bunch, bunchify
 
-# ConfigObj
-from configobj import ConfigObj
-
 from dateutil.parser import parse as dt_parse
 
 # gevent
@@ -84,9 +81,6 @@ from sqlalchemy import orm
 # Texttable
 from texttable import Texttable
 
-# validate
-from validate import is_boolean, is_integer, VdtTypeError
-
 # Python 2/3 compatibility
 from builtins import bytes
 from future.moves.itertools import zip_longest
@@ -107,6 +101,8 @@ from zato.common.broker_message import SERVICE
 from zato.common.const import SECRETS
 from zato.common.crypto.api import CryptoManager
 from zato.common.exception import ZatoException
+from zato.common.ext.configobj_ import ConfigObj
+from zato.common.ext.validate_ import is_boolean, is_integer, VdtTypeError
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
 from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_ping, wait_until_port_free, wait_until_port_taken
