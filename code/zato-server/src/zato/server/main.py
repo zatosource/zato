@@ -43,9 +43,6 @@ from zato.common.microopt import logging_Logger_log
 from logging import Logger
 Logger._log = logging_Logger_log
 
-# ConfigObj
-from configobj import ConfigObj
-
 # YAML
 import yaml
 
@@ -62,6 +59,7 @@ from zato.common.util.cli import read_stdin_data
 from zato.common.simpleio_ import get_sio_server_config
 from zato.server.base.parallel import ParallelServer
 from zato.server.ext import zunicorn
+from zato.common.ext.configobj_ import ConfigObj
 from zato.server.ext.zunicorn.app.base import Application
 from zato.server.service.store import ServiceStore
 from zato.server.startup_callable import StartupCallableTool
