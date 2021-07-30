@@ -14,9 +14,6 @@ from tempfile import NamedTemporaryFile
 from traceback import format_exc
 from uuid import uuid4
 
-# validate
-from validate import is_boolean
-
 # Python 2/3 compatibility
 from builtins import bytes
 from future.utils import iterkeys
@@ -26,6 +23,7 @@ from past.builtins import basestring
 from zato.common.api import BROKER, StatsKey
 from zato.common.broker_message import SERVICE
 from zato.common.exception import BadRequest, ZatoException
+from zato.common.ext.validate_ import is_boolean
 from zato.common.json_internal import dumps, loads
 from zato.common.json_schema import get_service_config
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, Service
@@ -38,7 +36,6 @@ from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean, Float, Integer, Service as ZatoService
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
-# ################################################################################################################################
 # ################################################################################################################################
 
 # For pyflakes

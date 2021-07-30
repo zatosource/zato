@@ -13,7 +13,6 @@ function apply_patches() {
 
     # Apply patches.
     patch --forward -p0 -d $localpath/eggs < $localpath/patches/butler/__init__.py.diff
-    patch --forward -p0 -d $localpath/eggs < $localpath/patches/configobj.py.diff
     patch --forward -p0 -d $localpath/eggs < $localpath/patches/django/db/models/base.py.diff
     patch --forward -p0 --binary -d $localpath/eggs < $localpath/patches/ntlm/HTTPNtlmAuthHandler.py.diff
     patch --forward -p0 -d $localpath/eggs < $localpath/patches/pykafka/topic.py.diff
