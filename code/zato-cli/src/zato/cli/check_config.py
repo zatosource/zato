@@ -240,8 +240,8 @@ class CheckConfig(ManageCommand):
         # stdlib
         from os.path import join
 
-        # ConfigObj
-        from configobj import ConfigObj
+        # Zato
+        from zato.common.ext.configobj_ import ConfigObj
 
         repo_dir = repo_dir or join(self.config_dir, 'repo')
         return ConfigObj(join(repo_dir, conf_file))
@@ -253,8 +253,8 @@ class CheckConfig(ManageCommand):
         # stdlib
         from os.path import join
 
-        # ConfigObj
-        from configobj import ConfigObj
+        # Zato
+        from zato.common.ext.configobj_ import ConfigObj
 
         # Zato
         from zato.common.crypto.api import ServerCryptoManager
@@ -343,11 +343,9 @@ class CheckConfig(ManageCommand):
         # stdlib
         from os.path import join
 
-        # ConfigObj
-        from configobj import ConfigObj
-
         # Zato
         from zato.common.crypto.api import SchedulerCryptoManager
+        from zato.common.ext.configobj_ import ConfigObj
 
         repo_dir = join(self.component_dir, 'config', 'repo')
         server_conf_path = join(repo_dir, 'scheduler.conf')
