@@ -1409,13 +1409,13 @@ def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted):
 
 # ################################################################################################################################
 
-def get_client_from_server_conf(server_dir, require_server=True):
+def get_client_from_server_conf(server_dir, require_server=True, stdin_data=None):
 
     # Imports go here to avoid circular dependencies
     from zato.client import get_client_from_server_conf as client_get_client_from_server_conf
 
     # Get the client object ..
-    client = client_get_client_from_server_conf(server_dir, get_server_client_auth, get_config)
+    client = client_get_client_from_server_conf(server_dir, get_server_client_auth, get_config, stdin_data=stdin_data)
 
     # .. make sure the server is available ..
     if require_server:
