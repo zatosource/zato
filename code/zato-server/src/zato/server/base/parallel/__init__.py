@@ -825,7 +825,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             if stanza_config.case_insensitive:
                 flags |= IGNORECASE
 
-            orig_patterns = stanza_config.pop('patterns')
+            orig_patterns = stanza_config.pop('patterns', [])
             stanza_config.orig_patterns = orig_patterns
             stanza_config.patterns = [orig_patterns] if not isinstance(orig_patterns, list) else orig_patterns
             stanza_config.patterns = [globre.compile(elem, flags) for elem in stanza_config.patterns]
@@ -1037,7 +1037,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def decrypt(self, data, _prefix=SECRETS.PREFIX):
         """ Returns data decrypted using server's CryptoManager.
         """
-        if data.startswith(_prefix):
+        if data and data.startswith(_prefix):
             return self.crypto_manager.decrypt(data.replace(_prefix, '', 1))
         else:
             return data # Already decrypted, return as is

@@ -186,6 +186,9 @@ class WebSocket(_WebSocket):
         elif json_library == 'bson':
             from bson.json_util import dumps as dumps_func
 
+        else:
+            from json import dumps as dumps_func
+
         logger.info('Setting JSON dumps function based on `%s`', json_library)
 
         return dumps_func
