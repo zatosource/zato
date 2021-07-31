@@ -523,7 +523,7 @@ class RawDataClient(_Client):
 
 # ################################################################################################################################
 
-def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, server_url=None):
+def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, server_url=None, stdin_data=None):
     """ Returns a Zato client built out of data found in a given server's config files.
     """
 
@@ -543,7 +543,9 @@ def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, s
             self.odb_session = None
 
     repo_location = get_repo_dir_from_component_dir(server_dir)
-    crypto_manager = ServerCryptoManager.from_repo_dir(None, repo_location, stdin_data=read_stdin_data())
+    stdin_data = stdin_data or read_stdin_data()
+
+    crypto_manager = ServerCryptoManager.from_repo_dir(None, repo_location, stdin_data=stdin_data)
 
     secrets_config = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
     secrets_conf = get_config_func(
