@@ -46,4 +46,5 @@ run-tests:
 	$(MAKE) static-check
 
 black:
+	$(CURDIR)/code/bin/pip install black
 	$(BLACK_CMD) $(CURDIR)/code/zato-agent
