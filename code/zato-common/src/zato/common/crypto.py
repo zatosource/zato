@@ -228,6 +228,9 @@ class CryptoManager(object):
         if not isinstance(encrypted, bytes):
             encrypted = encrypted.encode('utf8')
 
+        if encrypted.startswith(SECRETS.PREFIX_BYTES):
+            encrypted = encrypted.replace(SECRETS.PREFIX_BYTES, b'')
+
         if encrypted.startswith(SECRETS.ENCRYPTED_PREFIX_BYTES):
             out = self.secret_key.decrypt(encrypted)
         else:

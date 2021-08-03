@@ -1532,6 +1532,7 @@ class SECRETS:
 
     # Zato secret (Fernet)
     PREFIX = 'zato.secf.'
+    PREFIX_BYTES = b'zato.secf.'
 
     # Indicates that the value is encrypted
     ENCRYPTED_PREFIX_STR   = 'gAAAA'
