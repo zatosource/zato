@@ -1406,6 +1406,8 @@ urlpatterns += [
 
 urlpatterns += [
 
+    url(r'^zato/kvdb/$',
+        login_required(kvdb.index), name='kvdb-conn'),
     url(r'^zato/kvdb/remote-command/$',
         login_required(kvdb.remote_command), name='kvdb-remote-command'),
     url(r'^zato/kvdb/remote-command/execute/$',

@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
@@ -18,6 +16,24 @@ from zato.admin.web.forms.kvdb import RemoteCommandForm
 from zato.admin.web.views import method_allowed
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def index(req):
+
+    return_data = {'form':RemoteCommandForm(),
+                   'cluster':req.zato.get('cluster'),
+                   'search_form':SearchForm(req.zato.clusters, req.GET),
+                   'zato_clusters':req.zato.clusters,
+                   'cluster_id':req.zato.cluster_id,
+                   }
+
+    return TemplateResponse(req, 'zato/kvdb/index.html', return_data)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 @method_allowed('GET')
 def remote_command(req):
@@ -31,6 +47,9 @@ def remote_command(req):
 
     return TemplateResponse(req, 'zato/kvdb/remote-command.html', return_data)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 @method_allowed('POST')
 def remote_command_execute(req):
     """ Executes a command against the key/value DB.
@@ -43,3 +62,6 @@ def remote_command_execute(req):
             raise ZatoException(msg=response.details)
     except Exception as e:
         return HttpResponseServerError(e.args[0])
+
+# ################################################################################################################################
+# ################################################################################################################################
