@@ -82,6 +82,7 @@
                     </ul>
                 </li>
 
+                <!--
                 <li><span class="like-a">Messages &darr;</span>
                     <ul>
                         <li>
@@ -97,13 +98,14 @@
                                 <li><a href="{% url "message-xpath" %}?cluster={{ cluster_id|default:'' }}">XPath</a></li>
                             </ul>
                         </li>
-                        <!--
+
                         <li>
                             <a href="{% url "message-live-browser-index" %}?cluster={{ cluster_id|default:'' }}">Live browser</a>
                         </li>
-                        -->
+
                     </ul>
                 </li>
+                -->
 
                 <li><span class="like-a">Security &darr;</span>
                     <ul>
@@ -199,6 +201,16 @@
                                 <li><a href="{% url "out-ldap" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-ldap">LDAP</a></li>
                                 <li><a href="{% url "out-mongodb" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-mongodb">MongoDB</a></li>
                                 <li><a href="{% url "out-odoo" %}?cluster={{ cluster_id|default:'' }}">Odoo</a></li>
+
+                                <li>
+                                    <span class="like-a">Redis &rarr;</span>
+                                    <ul>
+                                        <li><a href="{% url "kvdb-conn" %}?cluster={{ cluster_id|default:'' }}">Connections</a></li>
+                                        <li><a href="{% url "kvdb-data-dict-dictionary" %}?cluster={{ cluster_id|default:'' }}">Data dictionaries</a></li>
+                                        <li><a href="{% url "kvdb-remote-command" %}?cluster={{ cluster_id|default:'' }}">Remote commands</a></li>
+                                    </ul>
+                                </li>
+
                                 <li><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=plain_http">REST</a></li>
                                 <li><a href="{% url "out-sap" %}?cluster={{ cluster_id|default:'' }}">SAP RFC</a></li>
                                 <li><a href="{% url "out-sftp" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-sftp">SFTP</a></li>
@@ -266,13 +278,6 @@
                             </ul>
                         </li>
                         <li><a href="{% url "cloud-dropbox" %}?cluster={{ cluster_id|default:'' }}&amp;type_=cloud-dropbox">Dropbox</a></li>
-                    </ul>
-                </li>
-
-                <li><span class="like-a">Key/value DB &darr;</span>
-                    <ul>
-                        <li><a href="{% url "kvdb-data-dict-dictionary" %}?cluster={{ cluster_id|default:'' }}">Data dictionaries</a></li>
-                        <li><a href="{% url "kvdb-remote-command" %}?cluster={{ cluster_id|default:'' }}">Remote commands</a></li>
                     </ul>
                 </li>
 
