@@ -32,9 +32,9 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id',
-        output_required = 'server_name', 'server_pid', 'type_', 'object_id', 'conn_id', 'direction', 'data', 'timestamp', \
-            'timestamp_utc', 'msg_id', 'in_reply_to', 'event_id'
-        output_optional = 'data',
+        output_required = 'is_active', 'name', 'host', 'port', 'db', 'use_redis_sentinels', 'redis_sentinels', \
+            'redis_sentinels_master'
+        output_optional = 'id',
         output_repeated = True
 
     def handle(self):

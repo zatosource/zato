@@ -33,30 +33,27 @@
             {% comment %} 1 {% endcomment %}
             'name',
             '_is_active',
-            'address',
+            'host',
 
             {% comment %} 2 {% endcomment %}
-            'pool_size',
-            '_audit_log',
-            '_invoke',
+            'port',
+            'db',
+            '_use_redis_sentinels',
 
             {% comment %} 3 {% endcomment %}
-            '_edit',
-            '_delete',
-            'id',
+            'redis_sentinels',
+            '_data_dicts',
+            '_remote_commands',
 
             {% comment %} 4 {% endcomment %}
-            'is_active',
+            'redis_sentinels_master',
+            '_edit',
+            '_delete',
 
             {% comment %} 5 {% endcomment %}
-            'is_audit_log_sent_active',
-            'is_audit_log_received_active',
-            'max_len_messages_sent',
-
-            {% comment %} 6 {% endcomment %}
-            'max_len_messages_received',
-            'max_bytes_per_message_sent',
-            'max_bytes_per_message_received',
+            'use_redis_sentinels',
+            'id',
+            'is_active',
         ]
     }
     </script>
@@ -86,27 +83,24 @@
                         {% comment %} 1 {% endcomment %}
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
-                        <th><a href="#">Address</a></th>
+                        <th><a href="#">Host</a></th>
 
                         {% comment %} 2 {% endcomment %}
-                        <th><a href="#">Pool size</a></th>
-                        <th>Message log</th>
-                        <th></th>
+                        <th><a href="#">Port</a></th>
+                        <th><a href="#">DB</a></th>
+                        <th><a href="#">Sentinels enabled</a></th>
 
                         {% comment %} 3 {% endcomment %}
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th></th>
+                        <th></th>
 
                         {% comment %} 4 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
 
                         {% comment %} 5 {% endcomment %}
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
-                        {% comment %} 6 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -123,34 +117,27 @@
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.address }}</td>
+                        <td>{{ item.host|no_value_indicator }}</td>
 
                         {% comment %} 2 {% endcomment %}
-                        <td>{{ item.pool_size }}</td>
-                        <td>
-                            <a href="{% url "audit-log" "outconn-hl7-mllp" item.id %}?cluster={{ cluster_id }}&amp;object_name={{ item.name }}&amp;object_type_label=HL7&nbsp;MLLP&nbsp;outgoing&nbsp;connection">View</a>
-                        </td>
-                        <td>
-                            <a href="{% url "outgoing-hl7-mllp-invoke" item.id item.max_wait_time item.name item.name|slugify %}?cluster={{ cluster_id }}">Invoke</a>
-                        </td>
+                        <td>{{ item.port|no_value_indicator }}</td>
+                        <td>{{ item.db|no_value_indicator }}</td>
+                        <td>{{ item.use_redis_sentinels|no_value_indicator }}</td>
 
                         {% comment %} 3 {% endcomment %}
-                        <td><a href="javascript:$.fn.zato.outgoing.hl7.mllp.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.outgoing.hl7.mllp.delete_('{{ item.id }}')">Delete</a></td>
-                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.redis_sentinels }}</td>
+                        <td><a href="{% url "kvdb-data-dict-dictionary" %}?cluster={{ cluster_id|default:'' }}">Data dictionaries</a></td>
+                        <td><a href="{% url "kvdb-remote-command" %}?cluster={{ cluster_id|default:'' }}">Remote commands</a></td>
 
                         {% comment %} 4 {% endcomment %}
-                        <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.redis_sentinels_master }}</td>
+                        <td><a href="javascript:$.fn.zato.kvdb.redis.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.kvdb.redis.delete('{{ item.id }}')">Delete</a></td>
 
                         {% comment %} 5 {% endcomment %}
-                        <td class='ignore'>{{ item.is_audit_log_sent_active }}</td>
-                        <td class='ignore'>{{ item.is_audit_log_received_active }}</td>
-                        <td class='ignore'>{{ item.max_len_messages_sent|default:"" }}</td>
-
-                        {% comment %} 6 {% endcomment %}
-                        <td class='ignore'>{{ item.max_len_messages_received|default:"" }}</td>
-                        <td class='ignore'>{{ item.max_bytes_per_message_sent|default:"" }}</td>
-                        <td class='ignore'>{{ item.max_bytes_per_message_received|default:"" }}</td>
+                        <td class='ignore'>{{ item.use_redis_sentinels }}</td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
 
                     </tr>
                 {% endfor %}
