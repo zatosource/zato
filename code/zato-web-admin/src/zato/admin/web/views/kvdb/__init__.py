@@ -31,7 +31,7 @@ class Index(_Index):
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
-        input_required = 'cluster_id', 'type_', 'object_id', 'object_name', 'object_type_label'
+        input_required = 'cluster_id',
         output_required = 'server_name', 'server_pid', 'type_', 'object_id', 'conn_id', 'direction', 'data', 'timestamp', \
             'timestamp_utc', 'msg_id', 'in_reply_to', 'event_id'
         output_optional = 'data',
