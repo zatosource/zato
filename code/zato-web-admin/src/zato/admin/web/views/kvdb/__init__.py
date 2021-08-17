@@ -12,25 +12,36 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.forms import SearchForm
+from zato.admin.web.forms.cache.builtin import EditForm
 from zato.admin.web.forms.kvdb import RemoteCommandForm
-from zato.admin.web.views import method_allowed
+from zato.admin.web.views import Index as _Index, method_allowed
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
+from zato.common.model.kvdb import KVDB as KVDBModel
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-@method_allowed('GET')
-def index(req):
+class Index(_Index):
+    method_allowed = 'GET'
+    url_name = 'kvdb'
+    template = 'zato/kvdb/index.html'
+    service_name = 'kvdb1.get-list'
+    output_class = KVDBModel
+    paginate = True
 
-    return_data = {'form':RemoteCommandForm(),
-                   'cluster':req.zato.get('cluster'),
-                   'search_form':SearchForm(req.zato.clusters, req.GET),
-                   'zato_clusters':req.zato.clusters,
-                   'cluster_id':req.zato.cluster_id,
-                   }
+    class SimpleIO(_Index.SimpleIO):
+        input_required = 'cluster_id', 'type_', 'object_id', 'object_name', 'object_type_label'
+        output_required = 'server_name', 'server_pid', 'type_', 'object_id', 'conn_id', 'direction', 'data', 'timestamp', \
+            'timestamp_utc', 'msg_id', 'in_reply_to', 'event_id'
+        output_optional = 'data',
+        output_repeated = True
 
-    return TemplateResponse(req, 'zato/kvdb/index.html', return_data)
+    def handle(self):
+        return {
+            'edit_form': EditForm(prefix='edit'),
+            'cluster_id': self.input.cluster_id,
+        }
 
 # ################################################################################################################################
 # ################################################################################################################################
