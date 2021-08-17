@@ -205,7 +205,7 @@
                                 <li>
                                     <span class="like-a">Redis &rarr;</span>
                                     <ul>
-                                        <li><a href="{% url "kvdb-conn" %}?cluster={{ cluster_id|default:'' }}">Connections</a></li>
+                                        <li><a href="{% url "kvdb" %}?cluster={{ cluster_id|default:'' }}">Connections</a></li>
                                         <li><a href="{% url "kvdb-data-dict-dictionary" %}?cluster={{ cluster_id|default:'' }}">Data dictionaries</a></li>
                                         <li><a href="{% url "kvdb-remote-command" %}?cluster={{ cluster_id|default:'' }}">Remote commands</a></li>
                                     </ul>
