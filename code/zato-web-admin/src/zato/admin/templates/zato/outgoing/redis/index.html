@@ -6,11 +6,7 @@
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     {% if items %}
-    <style type="text/css">
-        .ui-dialog-titlebar {
-            margin-bottom:-4px !important;
-        }
-    </style>
+        {% include "zato/css-titlebar-padding.html" %}
     {% endif %}
 {% endblock %}
 
@@ -22,7 +18,7 @@
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/javascript" src="/static/js/outgoing/redis.js"></script>
+    <script type="text/javascript" src="/static/js/outgoing/redis/index.js"></script>
 
     <script>
     $.fn.zato.data_table.get_columns = function() {
@@ -42,6 +38,7 @@
 
             {% comment %} 3 {% endcomment %}
             'redis_sentinels',
+            '_change_password',
             '_data_dicts',
             '_remote_commands',
 
@@ -94,6 +91,7 @@
                         <th class='ignore'>&nbsp;</th>
                         <th></th>
                         <th></th>
+                        <th></th>
 
                         {% comment %} 4 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
@@ -122,7 +120,7 @@
                         {% comment %} 2 {% endcomment %}
                         <td>{{ item.port|no_value_indicator }}</td>
                         <td>{{ item.db|no_value_indicator }}</td>
-                        <td>{{ item.use_redis_sentinels|no_value_indicator }}</td>
+                        <td>{{ item.use_redis_sentinels|yesno:'Yes,No' }}</td>
 
                         {% comment %} 3 {% endcomment %}
                         <td class='ignore'>{{ item.redis_sentinels }}</td>
@@ -131,6 +129,7 @@
 
                         {% comment %} 4 {% endcomment %}
                         <td class='ignore'>{{ item.redis_sentinels_master }}</td>
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.redis.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.redis.delete('{{ item.id }}')">Delete</a></td>
 
@@ -155,7 +154,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "outgoing-hl7-mllp-create" %}" method="post" id="create-form">
+                <form action="{% url "out-redis-create" %}" method="post" id="create-form">
 
                     <table class="form-data">
 
@@ -267,7 +266,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "outgoing-hl7-mllp-edit" %}" method="post" id="edit-form">
+                <form action="{% url "out-redis-edit" %}" method="post" id="edit-form">
 
                     <table class="form-data">
 
@@ -277,91 +276,70 @@
                                 Name
                                 </label>
                             </td>
-                            <td>{{ edit_form.name }}</td>
-                        </tr>
-
-                        <tr>
-                            <td></td>
                             <td>
+                                {{ edit_form.name }}
+
+                                |
 
                                 <label>
                                 Active
                                 {{ edit_form.is_active }}
                                 </label>
 
-                                |
+                            </td>
+                        </tr>
 
-                                <label>
-                                Pool size
-                                {{ edit_form.pool_size }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Log I/O
-                                {{ edit_form.should_log_messages }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Timeout
-                                <span class="form_hint">(s)</span>
-                                {{ edit_form.max_wait_time }}
-                                </label>
-
-                            </tr>
                         <tr>
                             <td>
                                 <label for="id_address">
-                                Address
+                                Host
                                 </label>
                             </td>
                             <td>
-                                {{ edit_form.address }}
-                            </td>
-                        </tr>
+                                {{ edit_form.host }}
 
-                        <tr>
-                            <td>Max. size</td>
-                            <td>
+                                |
 
                                 <label>
-                                Message
-                                {{ edit_form.max_msg_size }}
+                                Port
+                                {{ edit_form.port }}
                                 </label>
 
                                 |
 
                                 <label>
-                                Read buffer
-                                {{ edit_form.read_buffer_size }}
+                                DB
+                                {{ edit_form.db }}
                                 </label>
 
                             </td>
                         </tr>
 
                         <tr>
-                            <td>Separator</td>
+                            <td>Sentinels</td>
                             <td>
 
                                 <label>
-                                Start
-                                {{ edit_form.start_seq }}
+                                Enabled
+                                {{ edit_form.use_redis_sentinels }}
                                 </label>
 
                                 |
 
                                 <label>
-                                End
-                                {{ edit_form.end_seq }}
+                                Master
+                                {{ edit_form.redis_sentinels_master }}
+                                </label>
+
+                                <br/>
+                                Nodes
+                                <br/>
+                                <label>
+                                {{ edit_form.redis_sentinels }}
                                 </label>
 
                             </td>
                         </tr>
-
-                        {% include "zato/include/audit-log/edit.html" %}
 
                         <tr>
                             <td colspan="2" style="text-align:right">
