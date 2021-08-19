@@ -12,9 +12,8 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.forms import SearchForm
-from zato.admin.web.forms.cache.builtin import EditForm
-from zato.admin.web.forms.kvdb import RemoteCommandForm
-from zato.admin.web.views import Index as _Index, method_allowed
+from zato.admin.web.forms.kvdb import CreateForm, EditForm, RemoteCommandForm
+from zato.admin.web.views import CreateEdit, Index as _Index, method_allowed
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
 from zato.common.model.kvdb import KVDB as KVDBModel
@@ -32,16 +31,47 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id',
-        output_required = 'is_active', 'name', 'host', 'port', 'db', 'use_redis_sentinels', 'redis_sentinels', \
+        output_required = 'name', 'is_active', 'host', 'port', 'db', 'use_redis_sentinels', 'redis_sentinels', \
             'redis_sentinels_master'
         output_optional = 'id',
         output_repeated = True
 
     def handle(self):
         return {
+            'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
             'cluster_id': self.input.cluster_id,
         }
+
+# ################################################################################################################################
+
+class _CreateEdit(CreateEdit):
+    method_allowed = 'POST'
+
+    class SimpleIO(CreateEdit.SimpleIO):
+        input_required = ('name', 'get_info', 'ip_mode', 'connect_timeout', 'auto_bind', 'server_list', 'pool_size',
+            'pool_exhaust_timeout', 'pool_keep_alive', 'pool_max_cycles', 'pool_lifetime', 'pool_ha_strategy', 'username',
+            'auth_type')
+        input_optional = ('is_active', 'use_tls', 'pool_name', 'use_sasl_external', 'is_read_only', 'is_stats_enabled',
+            'should_check_names', 'use_auto_range', 'should_return_empty_attrs', 'is_tls_enabled', 'tls_private_key_file',
+            'tls_cert_file', 'tls_ca_certs_file', 'tls_version', 'tls_ciphers', 'tls_validate', 'sasl_mechanism')
+        output_required = ('id', 'name')
+
+    def success_message(self, item):
+        return 'Successfully {} outgoing Redis connection `{}`'.format(self.verb, item.name)
+
+# ################################################################################################################################
+
+class Create(_CreateEdit):
+    url_name = 'out-redis-create'
+    service_name = 'kvdb1.create'
+
+# ################################################################################################################################
+
+class Edit(_CreateEdit):
+    url_name = 'out-redis-edit'
+    form_prefix = 'edit-'
+    service_name = 'kvdb1.edit'
 
 # ################################################################################################################################
 # ################################################################################################################################
