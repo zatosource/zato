@@ -22,7 +22,7 @@
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/javascript" src="/static/js/outgoing/hl7/mllp.js"></script>
+    <script type="text/javascript" src="/static/js/outgoing/redis.js"></script>
 
     <script>
     $.fn.zato.data_table.get_columns = function() {
@@ -131,8 +131,8 @@
 
                         {% comment %} 4 {% endcomment %}
                         <td class='ignore'>{{ item.redis_sentinels_master }}</td>
-                        <td><a href="javascript:$.fn.zato.kvdb.redis.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.kvdb.redis.delete('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.redis.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.redis.delete('{{ item.id }}')">Delete</a></td>
 
                         {% comment %} 5 {% endcomment %}
                         <td class='ignore'>{{ item.use_redis_sentinels }}</td>

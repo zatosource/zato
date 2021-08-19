@@ -25,7 +25,7 @@ from zato.common.model.kvdb import KVDB as KVDBModel
 class Index(_Index):
     method_allowed = 'GET'
     url_name = 'kvdb'
-    template = 'zato/kvdb/index.html'
+    template = 'zato/outgoing/redis/index.html'
     service_name = 'kvdb1.get-list'
     output_class = KVDBModel
     paginate = True
