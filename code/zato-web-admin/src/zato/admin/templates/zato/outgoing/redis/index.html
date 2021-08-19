@@ -124,12 +124,12 @@
 
                         {% comment %} 3 {% endcomment %}
                         <td class='ignore'>{{ item.redis_sentinels }}</td>
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
                         <td><a href="{% url "kvdb-data-dict-dictionary" %}?cluster={{ cluster_id|default:'' }}">Data dictionaries</a></td>
                         <td><a href="{% url "kvdb-remote-command" %}?cluster={{ cluster_id|default:'' }}">Remote commands</a></td>
 
                         {% comment %} 4 {% endcomment %}
                         <td class='ignore'>{{ item.redis_sentinels_master }}</td>
-                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.redis.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.redis.delete('{{ item.id }}')">Delete</a></td>
 
@@ -164,91 +164,68 @@
                                 Name
                                 </label>
                             </td>
-                            <td>{{ create_form.name }}</td>
-                        </tr>
-
-                        <tr>
-                            <td></td>
                             <td>
+                                {{ create_form.name }}
+
+                                |
 
                                 <label>
                                 Active
                                 {{ create_form.is_active }}
                                 </label>
 
-                                |
-
-                                <label>
-                                Pool size
-                                {{ create_form.pool_size }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Log I/O
-                                {{ create_form.should_log_messages }}
-                                </label>
-
-                                |
-
-                                <label>
-                                Timeout
-                                <span class="form_hint">(s)</span>
-                                {{ create_form.max_wait_time }}
-                                </label>
-
-                            </tr>
+                            </td>
+                        </tr>
                         <tr>
                             <td>
                                 <label for="id_address">
-                                Address
+                                Host
                                 </label>
                             </td>
                             <td>
-                                {{ create_form.address }}
-                            </td>
-                        </tr>
+                                {{ create_form.host }}
 
-                        <tr>
-                            <td>Max. size</td>
-                            <td>
+                                |
 
                                 <label>
-                                Message
-                                {{ create_form.max_msg_size }}
+                                Port
+                                {{ create_form.port }}
                                 </label>
 
                                 |
 
                                 <label>
-                                Read buffer
-                                {{ create_form.read_buffer_size }}
+                                DB
+                                {{ create_form.db }}
                                 </label>
 
                             </td>
                         </tr>
-
                         <tr>
-                            <td>Separator</td>
+                            <td>Sentinels</td>
                             <td>
 
                                 <label>
-                                Start
-                                {{ create_form.start_seq }}
+                                Enabled
+                                {{ create_form.use_redis_sentinels }}
                                 </label>
 
                                 |
 
                                 <label>
-                                End
-                                {{ create_form.end_seq }}
+                                Master
+                                {{ create_form.redis_sentinels_master }}
+                                </label>
+
+                                <br/>
+                                Nodes
+                                <br/>
+                                <label>
+                                {{ create_form.redis_sentinels }}
                                 </label>
 
                             </td>
                         </tr>
-
-                        {% include "zato/include/audit-log/create.html" %}
 
                         <tr>
                             <td colspan="2" style="text-align:right">
@@ -288,7 +265,6 @@
 
                             </td>
                         </tr>
-
                         <tr>
                             <td>
                                 <label for="id_address">
@@ -314,7 +290,6 @@
 
                             </td>
                         </tr>
-
                         <tr>
                             <td>Sentinels</td>
                             <td>
