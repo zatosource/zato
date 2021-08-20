@@ -43,6 +43,8 @@ class KVDB(object):
         self.conn_class = None # Introduced so it's easier to test the class
         self.has_sentinel = False
 
+# ################################################################################################################################
+
     def _get_connection_class(self):
         """ Returns a concrete class to create Redis connections off basing on whether we use Redis sentinels or not.
         Abstracted out to a separate method so it's easier to test the whole class in separation.
@@ -54,6 +56,8 @@ class KVDB(object):
             from redis import StrictRedis
             return StrictRedis
 
+# ################################################################################################################################
+
     def _parse_sentinels(self, item):
         if item:
             if isinstance(item, basestring):
@@ -63,6 +67,8 @@ class KVDB(object):
                 elem = elem.split(':')
                 out.append((elem[0], int(elem[1])))
             return out
+
+# ################################################################################################################################
 
     def init(self):
 
@@ -133,19 +139,41 @@ class KVDB(object):
         else:
             self.conn = self.conn_class(charset='utf-8', decode_responses=True, **config)
 
+        try:
+            self.ping()
+        except Exception as e:
+            logger.warn('Could not ping %s due to `%s`', self.conn, e.args[0])
+
+# ################################################################################################################################
+
     def pubsub(self):
         return self.conn.pubsub()
+
+# ################################################################################################################################
 
     def publish(self, *args, **kwargs):
         return self.conn.publish(*args, **kwargs)
 
+# ################################################################################################################################
+
     def subscribe(self, *args, **kwargs):
         return self.conn.subscribe(*args, **kwargs)
+
+# ################################################################################################################################
 
     def translate(self, system1, key1, value1, system2, key2, default=''):
         return self.conn.hget(
             _KVDB.SEPARATOR.join(
                 (_KVDB.TRANSLATION, system1, key1, value1, system2, key2)), 'value2') or default
+
+# ################################################################################################################################
+
+    def reconfigure(self, config):
+        # type: (dict) -> None
+        self.config = config
+        self.init()
+
+# ################################################################################################################################
 
     def copy(self):
         """ Returns an KVDB with the configuration copied over from self. Note that
@@ -158,8 +186,17 @@ class KVDB(object):
 
         return kvdb
 
+# ################################################################################################################################
+
     def close(self):
         self.conn.connection_pool.disconnect()
+
+# ################################################################################################################################
+
+    def ping(self):
+        self.conn.ping()
+
+# ################################################################################################################################
 
     @staticmethod
     def is_config_enabled(config):
@@ -191,3 +228,112 @@ class KVDB(object):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+'''
+# -*- coding: utf-8 -*-
+
+# Zato
+from zato.common.util import get_config
+from zato.server.service import AsIs, Bool, Int, Service, SIOElem
+from zato.server.service.internal import AdminService
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from typing import Union as union
+    from zato.server.base.parallel import ParallelServer
+
+    ParallelServer = ParallelServer
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MyService(AdminService):
+    name = 'kvdb1.get-list'
+
+    class SimpleIO:
+        input_optional = 'id', 'name'
+        output_optional = AsIs('id'), 'is_active', 'name', 'host', Int('port'), 'db', Bool('use_redis_sentinels'), \
+            'redis_sentinels', 'redis_sentinels_master'
+        default_value = None
+
+# ################################################################################################################################
+
+    def get_data(self):
+
+        # Response to produce
+        out = []
+
+        # For now, we only return one item containing data read from server.conf
+        item = {
+            'id': 'default',
+            'name': 'default',
+            'is_active': True,
+        }
+
+        repo_location = self.server.repo_location
+        config_name   = 'server.conf'
+
+        config = get_config(repo_location, config_name, bunchified=False)
+        config = config['kvdb']
+
+        for elem in self.SimpleIO.output_optional:
+
+            # Extract the embedded name or use it as is
+            name = elem.name if isinstance(elem, SIOElem) else elem
+
+            # These will not exist in server.conf
+            if name in ('id', 'is_active', 'name'):
+                continue
+
+            # Add it to output
+            item[name] = config[name]
+
+        # Add our only item to response
+        out.append(item)
+
+        return out
+
+# ################################################################################################################################
+
+    def handle(self):
+
+        self.response.payload[:] = self.get_data()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Edit(AdminService):
+    name = 'kvdb1.edit'
+
+    class SimpleIO:
+        input_optional = AsIs('id'), 'name', Bool('use_redis_sentinels')
+        input_required = 'host', 'port', 'db', 'redis_sentinels', 'redis_sentinels_master'
+        output_optional = 'name'
+
+    def handle(self):
+
+        # Local alias
+        input = self.request.input
+
+        # If provided, turn sentinels configuration into a format expected by the underlying KVDB object
+        redis_sentinels = input.redis_sentinels or '' # type: str
+        if redis_sentinels:
+            redis_sentinels = redis_sentinels.splitlines()
+            redis_sentinels = ', '.join(redis_sentinels)
+
+        # Assign new server-wide configuration ..
+        self.server.fs_server_config.kvdb.host = input.host
+        self.server.fs_server_config.kvdb.port = int(input.port)
+        self.server.fs_server_config.kvdb.redis_sentinels = redis_sentinels
+        self.server.fs_server_config.kvdb.redis_sentinels_master = input.redis_sentinels_master or ''
+
+        # .. and rebuild the Redis connection object.
+        self.server.kvdb.reconfigure(self.server.fs_server_config.kvdb)
+
+        self.response.payload.name = self.request.input.name
+
+# ################################################################################################################################
+# ################################################################################################################################
+'''
