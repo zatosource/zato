@@ -65,7 +65,20 @@ class KVDB(object):
             out = []
             for elem in item:
                 elem = elem.split(':')
-                out.append((elem[0], int(elem[1])))
+
+                # This will always exist ..
+                host = elem[0]
+
+                # .. which is why we can always use it ..
+                to_append = [host]
+
+                # .. but port can be optional ..
+                if len(elem) > 1:
+                    port = elem[1]
+                    port = int(port)
+                    to_append.append(port)
+
+                out.append(tuple(to_append))
             return out
 
 # ################################################################################################################################

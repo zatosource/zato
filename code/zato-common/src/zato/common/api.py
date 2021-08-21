@@ -1861,6 +1861,7 @@ default_internal_modules = {
     'zato.server.service.internal.outgoing.ftp': True,
     'zato.server.service.internal.outgoing.jms_wmq': True,
     'zato.server.service.internal.outgoing.odoo': True,
+    'zato.server.service.internal.outgoing.redis': True,
     'zato.server.service.internal.outgoing.sql': True,
     'zato.server.service.internal.outgoing.sap': True,
     'zato.server.service.internal.outgoing.sftp': True,

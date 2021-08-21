@@ -25,7 +25,7 @@ class Index(_Index):
     method_allowed = 'GET'
     url_name = 'kvdb'
     template = 'zato/outgoing/redis/index.html'
-    service_name = 'kvdb1.get-list'
+    service_name = 'zato.outgoing.redis.get-list'
     output_class = KVDBModel
     paginate = True
 
@@ -53,7 +53,7 @@ class _CreateEdit(CreateEdit):
             'redis_sentinels_master'
 
     def success_message(self, item):
-        return 'Outgoing Redis connection successfully {}'.format(self.verb)
+        return 'Outgoing Redis connection {} successfully'.format(self.verb)
 
 # ################################################################################################################################
 
@@ -66,7 +66,7 @@ class Create(_CreateEdit):
 class Edit(_CreateEdit):
     url_name = 'out-redis-edit'
     form_prefix = 'edit-'
-    service_name = 'kvdb1.edit'
+    service_name = 'zato.outgoing.redis.edit'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -101,96 +101,3 @@ def remote_command_execute(req):
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-'''
-# -*- coding: utf-8 -*-
-
-# Zato
-from zato.common.util import get_config
-from zato.server.service import AsIs, Bool, Int, Service, SIOElem
-from zato.server.service.internal import AdminService
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from typing import Union as union
-    from zato.server.base.parallel import ParallelServer
-
-    ParallelServer = ParallelServer
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class MyService(AdminService):
-    name = 'kvdb1.get-list'
-
-    class SimpleIO:
-        input_optional = 'id', 'name'
-        output_optional = AsIs('id'), 'is_active', 'name', 'host', Int('port'), 'db', Bool('use_redis_sentinels'), \
-            'redis_sentinels', 'redis_sentinels_master'
-        default_value = None
-
-# ################################################################################################################################
-
-    def get_data(self):
-
-        # Response to produce
-        out = []
-
-        # For now, we only return one item containing data read from server.conf
-        item = {
-            'id': 'default',
-            'name': 'default',
-            'is_active': True,
-        }
-
-        repo_location = self.server.repo_location
-        config_name   = 'server.conf'
-
-        config = get_config(repo_location, config_name, bunchified=False)
-        config = config['kvdb']
-
-        for elem in self.SimpleIO.output_optional:
-
-            # Extract the embedded name or use it as is
-            name = elem.name if isinstance(elem, SIOElem) else elem
-
-            # These will not exist in server.conf
-            if name in ('id', 'is_active', 'name'):
-                continue
-
-            # Add it to output
-            item[name] = config[name]
-
-        # Add our only item to response
-        out.append(item)
-
-        return out
-
-# ################################################################################################################################
-
-    def handle(self):
-
-        self.response.payload[:] = self.get_data()
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class Edit(AdminService):
-    name = 'kvdb1.edit'
-
-    class SimpleIO:
-        input_optional = AsIs('id'), 'name', Bool('use_redis_sentinels')
-        input_required = 'host', 'port', 'db', 'redis_sentinels', 'redis_sentinels_master'
-        output_optional = 'name'
-        default_value = ''
-
-    def handle(self):
-        self.logger.warn('QQQ %s', self.request.input)
-
-        self.response.payload.name = self.request.input.name
-
-# ################################################################################################################################
-# ################################################################################################################################
-'''
