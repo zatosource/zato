@@ -18,7 +18,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.Redis;
     $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.redis.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['host', 'port', 'user', 'database', 'protocol', 'pool_size']);
+    $.fn.zato.data_table.setup_forms([]);
 })
 
 $.fn.zato.outgoing.redis.create = function() {
@@ -48,26 +48,31 @@ $.fn.zato.outgoing.redis.data_table.new_row = function(item, data, include_tr) {
     // 1
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', item.host);
+    row += String.format('<td>{0}</td>', item.host || $.fn.zato.empty_value);
 
     // 2
-    row += String.format('<td>{0}</td>', item.port);
-    row += String.format('<td>{0}</td>', item.db);
+    row += String.format('<td>{0}</td>', item.port || $.fn.zato.empty_value);
+    row += String.format('<td>{0}</td>', item.db || $.fn.zato.empty_value);
     row += String.format('<td>{0}</td>', use_redis_sentinels);
 
     // 3
     row += String.format('<td>{0}</td>', item.redis_sentinels);
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password({0})'>Change password</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password(\"{0}\")'>Change password</a>", item.id));
 
     // 4
     row += String.format('<td>{0}</td>', item.redis_sentinels_master);
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.outgoing.redis.edit({0});'>Edit</a>", item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.outgoing.redis.delete_({0});'>Delete</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.outgoing.redis.edit(\"{0}\");'>Edit</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.outgoing.redis.delete_(\"{0}\");'>Delete</a>", item.id));
 
     // 5
     row += String.format("<td class='ignore'>{0}</td>", item.use_redis_sentinels);
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", item.is_active);
+
+    // 6
+    row += String.format('<td>{0}</td>', item.host);
+    row += String.format('<td>{0}</td>', item.port);
+    row += String.format('<td>{0}</td>', item.db);
 
     if(include_tr) {
         row += '</tr>';

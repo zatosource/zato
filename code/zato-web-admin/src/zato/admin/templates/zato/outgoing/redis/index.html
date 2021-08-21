@@ -29,11 +29,11 @@
             {% comment %} 1 {% endcomment %}
             'name',
             '_is_active',
-            'host',
+            '_host',
 
             {% comment %} 2 {% endcomment %}
-            'port',
-            'db',
+            '_port',
+            '_db',
             '_use_redis_sentinels',
 
             {% comment %} 3 {% endcomment %}
@@ -49,6 +49,11 @@
             'use_redis_sentinels',
             'id',
             'is_active',
+
+            {% comment %} 6 {% endcomment %}
+            'host',
+            'port',
+            'db',
         ]
     }
     </script>
@@ -99,6 +104,11 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        {% comment %} 6 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
                 </thead>
 
                 <tbody>
@@ -135,6 +145,11 @@
                         <td class='ignore'>{{ item.use_redis_sentinels }}</td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
+
+                        {% comment %} 6 {% endcomment %}
+                        <td class='ignore'>{{ item.host|default:'' }}</td>
+                        <td class='ignore'>{{ item.port|default:'' }}</td>
+                        <td class='ignore'>{{ item.db|default:'' }}</td>
 
                     </tr>
                 {% endfor %}
