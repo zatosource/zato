@@ -33,9 +33,9 @@ def get_server_conf(repo_location):
 def set_kvdb_config(server_config, input_data, redis_sentinels):
     # type: (dict, Bunch, str) -> None
 
-    server_config['kvdb']['host'] = input_data.host
-    server_config['kvdb']['port'] = int(input_data.port)
-    server_config['kvdb']['db'] = int(input_data.db)
+    server_config['kvdb']['host'] = input_data.host or ''
+    server_config['kvdb']['port'] = int(input_data.port) if input_data.port else ''
+    server_config['kvdb']['db'] = int(input_data.db) if input_data.db else ''
     server_config['kvdb']['use_redis_sentinels'] = input_data.use_redis_sentinels
     server_config['kvdb']['redis_sentinels'] = redis_sentinels
     server_config['kvdb']['redis_sentinels_master'] = input_data.redis_sentinels_master or ''
