@@ -52,6 +52,10 @@ class _CreateEdit(CreateEdit):
         input_optional = 'id', 'name', 'is_active', 'host', 'port', 'db', 'use_redis_sentinels', 'redis_sentinels', \
             'redis_sentinels_master'
 
+    def post_process_return_data(self, return_data):
+        return_data['id'] = self.input_dict['id']
+        return return_data
+
     def success_message(self, item):
         return 'Outgoing Redis connection {} successfully'.format(self.verb)
 
