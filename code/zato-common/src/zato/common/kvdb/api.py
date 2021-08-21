@@ -22,6 +22,7 @@ from past.builtins import basestring
 
 # Zato
 from zato.common.api import KVDB as _KVDB, NONCE_STORE
+from zato.common.util import spawn_greenlet
 from zato.common.util.kvdb import has_redis_sentinels
 
 # ################################################################################################################################
@@ -207,7 +208,7 @@ class KVDB(object):
 # ################################################################################################################################
 
     def ping(self):
-        self.conn.ping()
+        spawn_greenlet(self.conn.ping)
 
 # ################################################################################################################################
 
