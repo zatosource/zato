@@ -39,8 +39,6 @@
             {% comment %} 3 {% endcomment %}
             'redis_sentinels',
             '_change_password',
-            '_data_dicts',
-            '_remote_commands',
 
             {% comment %} 4 {% endcomment %}
             'redis_sentinels_master',
@@ -90,8 +88,6 @@
                         {% comment %} 3 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th></th>
-                        <th></th>
-                        <th></th>
 
                         {% comment %} 4 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
@@ -125,13 +121,15 @@
                         {% comment %} 3 {% endcomment %}
                         <td class='ignore'>{{ item.redis_sentinels }}</td>
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
-                        <td><a href="{% url "kvdb-data-dict-dictionary" %}?cluster={{ cluster_id|default:'' }}">Data dictionaries</a></td>
-                        <td><a href="{% url "kvdb-remote-command" %}?cluster={{ cluster_id|default:'' }}">Remote commands</a></td>
 
                         {% comment %} 4 {% endcomment %}
                         <td class='ignore'>{{ item.redis_sentinels_master }}</td>
                         <td><a href="javascript:$.fn.zato.outgoing.redis.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.outgoing.redis.delete('{{ item.id }}')">Delete</a></td>
+                        <td>
+                            {% if item.name != "default" %}
+                                <a href="javascript:$.fn.zato.outgoing.redis.delete('{{ item.id }}')">Delete</a>
+                            {% endif %}
+                        </td>
 
                         {% comment %} 5 {% endcomment %}
                         <td class='ignore'>{{ item.use_redis_sentinels }}</td>
@@ -158,6 +156,7 @@
 
                     <table class="form-data">
 
+                        <!--
                         <tr>
                             <td style="vertical-align:middle;width:17%">
                                 <label for="id_name">
@@ -176,6 +175,8 @@
 
                             </td>
                         </tr>
+                        -->
+
                         <tr>
                             <td>
                                 <label for="id_address">
@@ -247,6 +248,7 @@
 
                     <table class="form-data">
 
+                        <!--
                         <tr>
                             <td style="vertical-align:middle;width:17%">
                                 <label for="id_name">
@@ -265,6 +267,8 @@
 
                             </td>
                         </tr>
+                        -->
+
                         <tr>
                             <td>
                                 <label for="id_address">

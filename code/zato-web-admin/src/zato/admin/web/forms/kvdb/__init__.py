@@ -16,8 +16,8 @@ from zato.common.api import REDIS
 # ################################################################################################################################
 
 class CreateForm(forms.Form):
-    name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:30%', 'disabled': True}))
-    is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked', 'disabled': True}))
+    name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:30%'}))
+    is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     host = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
     port = forms.CharField(initial=REDIS.DEFAULT.PORT, widget=forms.TextInput(attrs={'style':'width:15%'}))
     db = forms.CharField(initial=REDIS.DEFAULT.DB, widget=forms.TextInput(attrs={'style':'width:8%'}))
@@ -32,7 +32,7 @@ class CreateForm(forms.Form):
 # ################################################################################################################################
 
 class EditForm(CreateForm):
-    is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked', 'disabled': True}))
+    is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     use_redis_sentinels = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
 # ################################################################################################################################
