@@ -38,6 +38,7 @@
 
             {% comment %} 3 {% endcomment %}
             'redis_sentinels',
+            '_remote_commands',
             '_change_password',
 
             {% comment %} 4 {% endcomment %}
@@ -93,6 +94,7 @@
                         {% comment %} 3 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th></th>
+                        <th></th>
 
                         {% comment %} 4 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
@@ -130,6 +132,7 @@
 
                         {% comment %} 3 {% endcomment %}
                         <td class='ignore'>{{ item.redis_sentinels }}</td>
+                        <td><a href="{% url "kvdb-remote-command" %}?cluster={{ cluster_id|default:'' }}">Remote commands</a></td>
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
 
                         {% comment %} 4 {% endcomment %}

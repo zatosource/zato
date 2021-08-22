@@ -86,12 +86,13 @@ def change_password(req):
 @method_allowed('GET')
 def remote_command(req):
 
-    return_data = {'form':RemoteCommandForm(),
-                   'cluster':req.zato.get('cluster'),
-                   'search_form':SearchForm(req.zato.clusters, req.GET),
-                   'zato_clusters':req.zato.clusters,
-                   'cluster_id':req.zato.cluster_id,
-                   }
+    return_data = {
+        'form':RemoteCommandForm(),
+        'cluster':req.zato.get('cluster'),
+        'search_form':SearchForm(req.zato.clusters, req.GET),
+        'zato_clusters':req.zato.clusters,
+        'cluster_id':req.zato.cluster_id,
+    }
 
     return TemplateResponse(req, 'zato/kvdb/remote-command.html', return_data)
 
