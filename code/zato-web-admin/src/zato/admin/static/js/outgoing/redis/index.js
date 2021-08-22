@@ -57,6 +57,7 @@ $.fn.zato.outgoing.redis.data_table.new_row = function(item, data, include_tr) {
 
     // 3
     row += String.format('<td class="ignore">{0}</td>', item.redis_sentinels);
+    row += String.format('<td>{0}</td>', String.format("<a href=\"{0}\">Remote commands</a>", remote_commands_link));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password(\"{0}\")'>Change password</a>", item.id));
 
     // 4
