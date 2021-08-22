@@ -12,21 +12,23 @@ import os
 # Zato
 from zato.common.util import get_config
 from zato.server.service import AsIs, Bool, Int, SIOElem
-from zato.server.service.internal import AdminService
+from zato.server.service.internal import AdminService, ChangePasswordBase
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from bunch import Bunch
+    from zato.common.ext.configobj_ import ConfigObj
 
     Bunch = Bunch
+    ConfigObj = ConfigObj
 
 # ################################################################################################################################
 
-def get_server_conf(repo_location):
+def get_config_object(repo_location, conf_file):
     # type: (str) -> dict
-    return get_config(repo_location, 'server.conf', bunchified=False)
+    return get_config(repo_location, conf_file, bunchified=False)
 
 # ################################################################################################################################
 
@@ -39,6 +41,15 @@ def set_kvdb_config(server_config, input_data, redis_sentinels):
     server_config['kvdb']['use_redis_sentinels'] = input_data.use_redis_sentinels
     server_config['kvdb']['redis_sentinels'] = redis_sentinels
     server_config['kvdb']['redis_sentinels_master'] = input_data.redis_sentinels_master or ''
+
+# ################################################################################################################################
+
+def update_config_file(config, repo_location, conf_file):
+    # type: (ConfigObj, str, str) -> None
+
+    conf_path = os.path.join(repo_location, conf_file)
+    with open(conf_path, 'wb') as f:
+        config.write(f)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,12 +71,12 @@ class GetList(AdminService):
 
         # For now, we only return one item containing data read from server.conf
         item = {
-            'id': 'default',
+            'id': 123456,
             'name': 'default',
             'is_active': True,
         }
 
-        config = get_server_conf(self.server.repo_location)
+        config = get_config_object(self.server.repo_location, 'server.conf')
         config = config['kvdb']
 
         for elem in self.SimpleIO.output_optional:
@@ -119,7 +130,7 @@ class Edit(AdminService):
             redis_sentinels = [str(elem).strip() for elem in redis_sentinels]
 
         # First, update the persistent configuration on disk ..
-        config = get_server_conf(self.server.repo_location)
+        config = get_config_object(self.server.repo_location, 'server.conf')
         set_kvdb_config(config, input, redis_sentinels)
 
         server_conf_path = os.path.join(self.server.repo_location, 'server.conf')
@@ -134,6 +145,45 @@ class Edit(AdminService):
 
         # Our callers expect it
         self.response.payload.name = self.request.input.name
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ChangePassword(ChangePasswordBase):
+    """ Changes the password of a Redis connection
+    """
+    password_required = False
+
+    class SimpleIO(ChangePasswordBase.SimpleIO):
+        pass
+
+    def handle(self):
+
+        # Local alias
+        input = self.request.input
+
+        # Encryption requires bytes
+        password = input.password1.encode('utf8')
+
+        # Now, encrypt the input password
+        password = self.crypto.encrypt(password)
+
+        # Decode it back for later use
+        password = password.decode('utf8')
+
+        # Find our secrets config
+        config = get_config_object(self.server.repo_location, 'secrets.conf')
+
+        # Set the new secret
+        config['zato']['server_conf.kvdb.password'] = password
+
+        # Update the on-disk configuration
+        update_config_file(config, self.server.repo_location, 'secrets.conf')
+
+        # Change in-RAM password
+        self.server.kvdb.set_password(password)
+
+        self.response.payload.id = self.request.input.id
 
 # ################################################################################################################################
 # ################################################################################################################################
