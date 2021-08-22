@@ -14,7 +14,7 @@ $.fn.zato.data_table.Redis = new Class({
 
 $(document).ready(function() {
     $('#data-table').tablesorter();
-    $.fn.zato.data_table.password_required = true;
+    $.fn.zato.data_table.password_required = false;
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.Redis;
     $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.redis.data_table.new_row;
     $.fn.zato.data_table.parse();

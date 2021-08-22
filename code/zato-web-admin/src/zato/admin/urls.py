@@ -1415,6 +1415,8 @@ urlpatterns += [
         login_required(out_redis.Create()), name=out_redis.Create.url_name),
     url(r'^zato/outgoing/redis/edit/$',
         login_required(out_redis.Edit()), name=out_redis.Edit.url_name),
+    url(r'^zato/outgoing/redis/change-password/$',
+        login_required(out_redis.change_password), name='out-redis-change-password'),
     url(r'^zato/outgoing/redis/remote-command/$',
         login_required(out_redis.remote_command), name='kvdb-remote-command'),
     url(r'^zato/outgoing/redis/remote-command/execute/$',
