@@ -157,6 +157,8 @@ class KVDB(object):
             self.ping()
         except Exception as e:
             logger.warn('Could not ping %s due to `%s`', self.conn, e.args[0])
+        else:
+            logger.info('Redis ping OK -> %s', self.conn)
 
 # ################################################################################################################################
 
@@ -185,6 +187,13 @@ class KVDB(object):
     def reconfigure(self, config):
         # type: (dict) -> None
         self.config = config
+        self.init()
+
+# ################################################################################################################################
+
+    def set_password(self, password):
+        # type: (dict) -> None
+        self.config['password'] = password
         self.init()
 
 # ################################################################################################################################

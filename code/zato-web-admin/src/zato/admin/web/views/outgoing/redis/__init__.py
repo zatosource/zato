@@ -11,9 +11,9 @@ from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 
 # Zato
-from zato.admin.web.forms import SearchForm
+from zato.admin.web.forms import ChangePasswordForm, SearchForm
 from zato.admin.web.forms.kvdb import CreateForm, EditForm, RemoteCommandForm
-from zato.admin.web.views import CreateEdit, Index as _Index, method_allowed
+from zato.admin.web.views import change_password as _change_password, CreateEdit, Index as _Index, method_allowed
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
 from zato.common.model.kvdb import KVDB as KVDBModel
@@ -40,6 +40,7 @@ class Index(_Index):
         return {
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
+            'change_password_form': ChangePasswordForm(),
             'cluster_id': self.input.cluster_id,
         }
 
@@ -71,6 +72,13 @@ class Edit(_CreateEdit):
     url_name = 'out-redis-edit'
     form_prefix = 'edit-'
     service_name = 'zato.outgoing.redis.edit'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def change_password(req):
+    return _change_password(req, 'zato.outgoing.redis.change-password')
 
 # ################################################################################################################################
 # ################################################################################################################################
