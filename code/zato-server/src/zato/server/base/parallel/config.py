@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import os
 from contextlib import closing
 from logging import getLogger
 
@@ -540,19 +539,6 @@ class ConfigLoader(object):
         self.plain_xml_content_type = self.fs_server_config.content_type.plain_xml
         self.soap11_content_type = self.fs_server_config.content_type.soap11
         self.soap12_content_type = self.fs_server_config.content_type.soap12
-
-# ################################################################################################################################
-
-    def get_lua_programs(self):
-        for item in 'internal', 'user':
-            dir_name = os.path.join(self.repo_location, 'lua', item)
-            for file_name in os.listdir(dir_name):
-
-                lua_idx = file_name.find('.lua')
-                name = file_name[0:lua_idx] if lua_idx else file_name
-                program = open(os.path.join(dir_name, file_name)).read()
-
-                yield [name, program]
 
 # ################################################################################################################################
 

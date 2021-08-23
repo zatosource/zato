@@ -519,6 +519,10 @@ class KVDB(Attrs):
 
 class SCHEDULER:
 
+    InitialSleepTime = 5
+    DefaultHost = '127.0.0.1'
+    DefaultPort = 31530
+
     class JOB_TYPE(Attrs):
         ONE_TIME = 'one_time'
         INTERVAL_BASED = 'interval_based'
@@ -1184,6 +1188,14 @@ class AMQP:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class REDIS:
+    class DEFAULT:
+        PORT = 6379
+        DB = 0
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class SERVER_STARTUP:
     class PHASE:
         FS_CONFIG_ONLY = 'fs-config-only'
@@ -1561,6 +1573,54 @@ class HotDeploy:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class ZatoKVDB:
+
+    SlowResponsesName  = 'zato.service.slow_responses'
+    UsageSamplesName   = 'zato.service.usage_samples'
+    CurrentUsageName   = 'zato.service.current_usage'
+    PubSubMetadataName = 'zato.pubsub.metadata'
+
+    SlowResponsesPath  = SlowResponsesName  + '.json'
+    UsageSamplesPath   = UsageSamplesName   + '.json'
+    CurrentUsagePath   = CurrentUsageName   + '.json'
+    PubSubMetadataPath = PubSubMetadataName + '.json'
+
+    DefaultSyncThreshold = 3_000
+    DefaultSyncInterval  = 3
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Stats:
+
+    # This is in milliseconds, for how long do we keep old statistics in persistent storage. Defaults to two years.
+    # 1k ms * 60 s * 60 min * 24 hours * 365 days * 2 years = 94_608_000_000 milliseconds (or two years).
+    # We use milliseconds because that makes it easier to construct tests.
+    MaxRetention = 1000 * 60 * 60 * 24 * 365 * 2
+
+    # By default, statistics will be aggregated into time buckets of that duration
+    DefaultAggrTimeFreq = '5min' # Five minutes
+
+    # We always tabulate by object_id (e.g. service name)
+    TabulateAggr = 'object_id'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class StatsKey:
+    CurrentValue = 'current_value'
+
+    PerKeyMin   = 'min'
+    PerKeyMax   = 'max'
+    PerKeyMean  = 'mean'
+
+    PerKeyValue         = 'value'
+    PerKeyLastTimestamp = 'last_timestamp'
+    PerKeyLastDuration  = 'last_duration'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class SSO:
     class EmailTemplate:
         SignupConfirm = 'signup-confirm.txt'
@@ -1801,6 +1861,7 @@ default_internal_modules = {
     'zato.server.service.internal.outgoing.ftp': True,
     'zato.server.service.internal.outgoing.jms_wmq': True,
     'zato.server.service.internal.outgoing.odoo': True,
+    'zato.server.service.internal.outgoing.redis': True,
     'zato.server.service.internal.outgoing.sql': True,
     'zato.server.service.internal.outgoing.sap': True,
     'zato.server.service.internal.outgoing.sftp': True,
@@ -1864,3 +1925,6 @@ default_internal_modules = {
     'zato.server.service.internal.stats.trends': True,
     'zato.server.service.internal.updates': True,
 }
+
+# ################################################################################################################################
+# ################################################################################################################################

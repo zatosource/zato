@@ -1,7 +1,7 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.kvdb.CommandInfo = new Class({
+$.fn.zato.outgoing.redis.CommandInfo = new Class({
     toString: function() {
         var s = '<CommandInfo name:[{0}], template:[{1}], desc:[{2}]>';
         return String.format(s, this.name ? this.name : '(none)',
@@ -13,7 +13,7 @@ $.fn.zato.kvdb.CommandInfo = new Class({
 
 // /////////////////////////////////////////////////////////////////////////////
 
-    $.fn.zato.kvdb.command_info = new Object();
+    $.fn.zato.outgoing.redis.command_info = new Object();
     var ci_list = [
         ['CONFIG GET', 'CONFIG GET parameter', 'Get the value of a configuration parameter'],
         ['CONFIG SET', 'CONFIG SET parameter value', 'Set a configuration parameter to the given value'],
@@ -80,11 +80,11 @@ $.fn.zato.kvdb.CommandInfo = new Class({
     ];
 
     _.each(ci_list, function(elem) {
-        var ci = new $.fn.zato.kvdb.CommandInfo();
+        var ci = new $.fn.zato.outgoing.redis.CommandInfo();
         ci.name = elem[0];
         ci.template = elem[1];
         ci.desc = elem[2];
-        $.fn.zato.kvdb.command_info[ci.name] = ci;
+        $.fn.zato.outgoing.redis.command_info[ci.name] = ci;
     });
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -128,12 +128,12 @@ $(document).ready(function() {
 });
 
 
-$.fn.zato.kvdb.command_help = function(command) {
-    var ci = $.fn.zato.kvdb.command_info[command];
+$.fn.zato.outgoing.redis.command_help = function(command) {
+    var ci = $.fn.zato.outgoing.redis.command_info[command];
     $('#command-help').html('<span style="text-shadow:1px 1px 0px #eee">' + ci.template + '<br/>' + '<span style="color:#444">' + ci.desc + '</span>' + '</span>');
 }
 
-$.fn.zato.kvdb.command_template = function(command) {
-    var ci = $.fn.zato.kvdb.command_info[command];
+$.fn.zato.outgoing.redis.command_template = function(command) {
+    var ci = $.fn.zato.outgoing.redis.command_info[command];
     $('#id_command').val(ci.template);
 }

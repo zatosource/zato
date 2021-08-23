@@ -49,6 +49,7 @@ import sys
 
 from ast import literal_eval
 from codecs import BOM_UTF8, BOM_UTF16, BOM_UTF16_BE, BOM_UTF16_LE
+from collections import OrderedDict
 
 import six
 __version__ = '5.0.6'
@@ -486,7 +487,7 @@ def __newobj__(cls, *args):
     # Hack for pickle
     return cls.__new__(cls, *args)
 
-class Section(dict):
+class Section(OrderedDict):
     """
     A dictionary-like object that represents a section in a config file.
 
@@ -506,11 +507,11 @@ class Section(dict):
 
 
     def __setstate__(self, state):
-        dict.update(self, state[0])
+        OrderedDict.update(self, state[0])
         self.__dict__.update(state[1])
 
     def __reduce__(self):
-        state = (dict(self), self.__dict__)
+        state = (OrderedDict(self), self.__dict__)
         return (__newobj__, (self.__class__,), state)
 
 
@@ -523,7 +524,7 @@ class Section(dict):
         """
         if indict is None:
             indict = {}
-        dict.__init__(self)
+        OrderedDict.__init__(self)
         # used for nesting level *and* interpolation
         self.parent = parent
         # used for the interpolation attribute
@@ -535,7 +536,7 @@ class Section(dict):
         #
         self._initialise()
         # we do this explicitly so that __setitem__ is used properly
-        # (rather than just passing to ``dict.__init__``)
+        # (rather than just passing to ``OrderedDict.__init__``)
         for entry, value in indict.items():
             self[entry] = value
 
@@ -582,7 +583,7 @@ class Section(dict):
 
     def __getitem__(self, key):
         """Fetch the item and do string interpolation."""
-        val = dict.__getitem__(self, key)
+        val = OrderedDict.__getitem__(self, key)
         if self.main.interpolation:
             if isinstance(val, six.string_types):
                 return self._interpolate(key, val)
@@ -625,14 +626,14 @@ class Section(dict):
         if isinstance(value, Section):
             if key not in self:
                 self.sections.append(key)
-            dict.__setitem__(self, key, value)
+            OrderedDict.__setitem__(self, key, value)
         elif isinstance(value, dict) and not unrepr:
             # First create the new depth level,
             # then create the section
             if key not in self:
                 self.sections.append(key)
             new_depth = self.depth + 1
-            dict.__setitem__(
+            OrderedDict.__setitem__(
                 self,
                 key,
                 Section(
@@ -653,12 +654,12 @@ class Section(dict):
                             raise TypeError('Value is not a string "%s".' % entry)
                 else:
                     raise TypeError('Value is not a string "%s".' % value)
-            dict.__setitem__(self, key, value)
+            OrderedDict.__setitem__(self, key, value)
 
 
     def __delitem__(self, key):
         """Remove items from the sequence when deleting."""
-        dict. __delitem__(self, key)
+        OrderedDict. __delitem__(self, key)
         if key in self.scalars:
             self.scalars.remove(key)
         else:
@@ -718,7 +719,7 @@ class Section(dict):
         Leaves other attributes alone :
             depth/main/parent are not affected
         """
-        dict.clear(self)
+        OrderedDict.clear(self)
         self.scalars = []
         self.sections = []
         self.comments = {}
@@ -775,7 +776,7 @@ class Section(dict):
             try:
                 return self[key]
             except MissingInterpolationOption:
-                return dict.__getitem__(self, key)
+                return OrderedDict.__getitem__(self, key)
         return '{%s}' % ', '.join([('%s: %s' % (repr(key), repr(_getval(key))))
             for key in (self.scalars + self.sections)])
 
@@ -858,8 +859,8 @@ class Section(dict):
         pos = the_list.index(oldkey)
         #
         val = self[oldkey]
-        dict.__delitem__(self, oldkey)
-        dict.__setitem__(self, newkey, val)
+        OrderedDict.__delitem__(self, oldkey)
+        OrderedDict.__setitem__(self, newkey, val)
         the_list.remove(oldkey)
         the_list.insert(pos, newkey)
         comm = self.comments[oldkey]
@@ -1076,7 +1077,7 @@ class Section(dict):
         If there is no default value for this key, ``KeyError`` is raised.
         """
         default = self.default_values[key]
-        dict.__setitem__(self, key, default)
+        OrderedDict.__setitem__(self, key, default)
         if key not in self.defaults:
             self.defaults.append(key)
         return default
@@ -1399,7 +1400,7 @@ class ConfigObj(Section):
             try:
                 return self[key]
             except MissingInterpolationOption:
-                return dict.__getitem__(self, key)
+                return OrderedDict.__getitem__(self, key)
         return ('ConfigObj({%s})' %
                 ', '.join([('%s: %s' % (repr(key), repr(_getval(key))))
                 for key in (self.scalars + self.sections)]))
@@ -1697,24 +1698,25 @@ class ConfigObj(Section):
                         group_name = entry[0]
                         group_key = '.'.join(entry[1:])
 
-                        group = self.zato_secrets_conf.get(group_name)
-                        if not group:
-                            raise ValueError('Group not found `{}`, config key `{}`, value `{}`'.format(
-                                group_name, key, value))
+                        if self.zato_secrets_conf:
+                            group = self.zato_secrets_conf.get(group_name)
+                            if not group:
+                                raise ValueError('Group not found `{}`, config key `{}`, value `{}`'.format(
+                                    group_name, key, value))
 
-                        if not group_key in group:
-                            raise ValueError('Group key not found `{}`, config key `{}`, value `{}`'.format(
-                                group_key, key, value))
-                        else:
-                            encrypted = group[group_key]
-                            if encrypted:
-                                try:
-                                    value = self.zato_crypto_manager.decrypt(encrypted)
-                                except Exception as e:
-                                    raise ValueError('Could not decrypt value `{}`, group:`{}`, group_key:`{}`, e:`{}`'.format(
-                                        encrypted, group, group_key, e))
+                            if not group_key in group:
+                                raise ValueError('Group key not found `{}`, config key `{}`, value `{}`'.format(
+                                    group_key, key, value))
                             else:
-                                value = encrypted # This will happen if 'encrypted' is actually an empty string
+                                encrypted = group[group_key]
+                                if encrypted:
+                                    try:
+                                        value = self.zato_crypto_manager.decrypt(encrypted)
+                                    except Exception as e:
+                                        raise ValueError('Could not decrypt value `{}`, group:`{}`, group_key:`{}`, e:`{}`'.format(
+                                            encrypted, group, group_key, e))
+                                else:
+                                    value = encrypted # This will happen if 'encrypted' is actually an empty string
 
                 if indent and (self.indent_type is None):
                     self.indent_type = indent
@@ -2079,11 +2081,13 @@ class ConfigObj(Section):
             val = self._decode_element(self._quote(this_entry))
         else:
             val = repr(this_entry)
-        return '%s%s%s%s%s' % (indent_string,
+        out = '%s%s%s%s %s' % (indent_string,
                                self._decode_element(self._quote(entry, multiline=False)),
                                self._a_to_u(' = '),
                                val,
                                self._decode_element(comment))
+        out = out.strip()
+        return out
 
 
     def _write_marker(self, indent_string, depth, entry, comment):
