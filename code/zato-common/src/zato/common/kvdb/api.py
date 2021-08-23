@@ -153,12 +153,8 @@ class KVDB(object):
         else:
             self.conn = self.conn_class(charset='utf-8', decode_responses=True, **config)
 
-        try:
-            self.ping()
-        except Exception as e:
-            logger.warn('Could not ping %s due to `%s`', self.conn, e.args[0])
-        else:
-            logger.info('Redis ping OK -> %s', self.conn)
+        # Confirm whether we can connect
+        self.ping()
 
 # ################################################################################################################################
 
@@ -217,7 +213,12 @@ class KVDB(object):
 # ################################################################################################################################
 
     def ping(self):
-        spawn_greenlet(self.conn.ping)
+        try:
+            spawn_greenlet(self.conn.ping)
+        except Exception as e:
+            logger.warn('Could not ping %s due to `%s`', self.conn, e.args[0])
+        else:
+            logger.info('Redis ping OK -> %s', self.conn)
 
 # ################################################################################################################################
 

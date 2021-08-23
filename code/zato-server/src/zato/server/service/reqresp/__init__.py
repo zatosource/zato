@@ -47,6 +47,7 @@ if 0:
     from kombu.message import Message as KombuAMQPMessage
 
     # Zato
+    from zato.common.kvdb.api import KVDB as KVDBAPI
     from zato.common.odb.api import PoolStore
     from zato.hl7.mllp.server import ConnCtx as HL7ConnCtx
     from zato.server.config import ConfigDict, ConfigStore
@@ -72,6 +73,7 @@ if 0:
     hl7apy_Message = hl7apy_Message
     HL7ConnCtx = HL7ConnCtx
     KombuAMQPMessage = KombuAMQPMessage
+    KVDBAPI = KVDBAPI
     Logger = Logger
     PoolStore = PoolStore
     SearchAPI = SearchAPI
@@ -281,32 +283,37 @@ class Outgoing(object):
     fetched from the service's self.worker_store.
     """
     __slots__ = ('amqp', 'ftp', 'ibm_mq', 'jms_wmq', 'wmq', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'zmq', 'wsx', 'vault',
-        'sms', 'sap', 'sftp', 'ldap', 'mongodb', 'def_kafka', 'hl7')
+        'sms', 'sap', 'sftp', 'ldap', 'mongodb', 'def_kafka', 'hl7', 'redis')
 
     def __init__(self, amqp=None, ftp=None, jms_wmq=None, odoo=None, plain_http=None, soap=None, sql=None, zmq=None,
             wsx=None, vault=None, sms=None, sap=None, sftp=None, ldap=None, mongodb=None, def_kafka=None,
-            hl7=None):
+            hl7=None, redis=None):
 
         self.amqp = amqp # type: AMQPFacade
-        self.ftp = ftp   # type: FTPStore
+        self.ftp  = ftp  # type: FTPStore
 
         # Backward compat with 2.0, self.ibm_mq is now preferred
         self.ibm_mq = self.wmq = self.jms_wmq = jms_wmq # type: WMQFacade
 
-        self.odoo = odoo # type: ConfigDict
+        self.odoo       = odoo # type: ConfigDict
         self.plain_http = self.rest = plain_http # type: ConfigDict
-        self.soap = soap # type: ConfigDict
-        self.sql = sql   # type: PoolStore
-        self.zmq = zmq     # type: ZMQFacade
-        self.wsx = wsx     # type: dict
+
+        self.soap  = soap  # type: ConfigDict
+        self.sql   = sql   # type: PoolStore
+        self.zmq   = zmq   # type: ZMQFacade
+        self.wsx   = wsx   # type: dict
         self.vault = vault # type: VaultConnAPI
-        self.sms = sms   # type: SMSAPI
-        self.sap = sap   # type: ConfigDict
+
+        self.sms  = sms  # type: SMSAPI
+        self.sap  = sap  # type: ConfigDict
         self.sftp = sftp # type: ConfigDict
         self.ldap = ldap # type: dict
+
         self.mongodb = mongodb # type: dict
         self.def_kafka = None  # type: dict
-        self.hl7       = hl7   # type: HL7API
+
+        self.hl7   = hl7   # type: HL7API
+        self.redis = redis # type: KVDBAPI
 
 # ################################################################################################################################
 # ################################################################################################################################
