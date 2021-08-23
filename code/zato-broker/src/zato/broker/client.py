@@ -10,271 +10,149 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-import time
-from json import dumps, loads
 from traceback import format_exc
 
 # Bunch
 from bunch import Bunch
 
 # gevent
-from gevent import sleep
+from gevent import spawn
 
-# Redis
-import redis
+# orjson
+from orjson import dumps
 
-# Python 2/3 compatibility
-from builtins import bytes
+# Requests
+from requests import post as requests_post
 
 # Zato
-from zato.common.api import BROKER, ZATO_NONE
-from zato.common.broker_message import KEYS, MESSAGE_TYPE, TOPICS
-from zato.common.kvdb.api import LuaContainer
-from zato.common.util.api import new_cid, spawn_greenlet
+from zato.common.broker_message import code_to_name, SCHEDULER
 
-logger = logging.getLogger(__name__)
-has_debug = logger.isEnabledFor(logging.DEBUG)
-
-REMOTE_END_CLOSED_SOCKET = 'Socket closed on remote end'
-FILE_DESCR_CLOSED_IN_ANOTHER_GREENLET = "Error while reading from socket: (9, 'File descriptor was closed in another greenlet')"
-
-# We use textual messages because some error may have codes whereas different won't.
-EXPECTED_CONNECTION_ERRORS = [REMOTE_END_CLOSED_SOCKET, FILE_DESCR_CLOSED_IN_ANOTHER_GREENLET]
-
-NEEDS_TMP_KEY = [v for k,v in TOPICS.items() if k in(
-    MESSAGE_TYPE.TO_PARALLEL_ANY,
-)]
-
-CODE_RENAMED = 10
-CODE_NO_SUCH_FROM_KEY = 11
-
+# ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.kvdb.api import KVDB
+    from zato.client import AnyServiceInvoker
+    from zato.server.connection.server.rpc.api import ServerRPC
 
-    KVDB = KVDB
+    AnyServiceInvoker = AnyServiceInvoker
+    ServerRPC = ServerRPC
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-class BrokerClientAPI(object):
-    """ BrokerClient is a function which cannot be used for type completion,
-    hence this no-op class that can be used in type hints.
+logger = logging.getLogger(__name__)
+has_debug = False
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+to_scheduler_actions = set([
+    SCHEDULER.CREATE.value,
+    SCHEDULER.EDIT.value,
+    SCHEDULER.DELETE.value,
+    SCHEDULER.EXECUTE.value,
+])
+
+from_scheduler_actions = set([
+    SCHEDULER.JOB_EXECUTED.value,
+    SCHEDULER.SET_JOB_INACTIVE,
+])
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class BrokerClient(object):
+    """ Simulates previous Redis-based RPC.
     """
-    def __init__(self, kvdb, client_type, topic_callbacks, initial_lua_programs):
-        # type: (KVDB, str, dict, dict)
-        raise NotImplementedError()
+    def __init__(self, server_rpc=None, scheduler_config=None, zato_client=None):
+        # type: (ServerRPC, Bunch) -> None
+
+        # This is used to invoke services
+        self.server_rpc = server_rpc
+
+        self.zato_client = None # type: AnyServiceInvoker
+        self.scheduler_url = ''
+
+        # We are a server so we will have configuration needed to set up the scheduler's details ..
+        if scheduler_config:
+            self.scheduler_url = 'https://{}:{}/'.format(
+                scheduler_config.scheduler_host,
+                scheduler_config.scheduler_port,
+            )
+
+        # .. otherwise, we are a scheduler so we have a client to invoke servers with.
+        else:
+            self.zato_client = zato_client
+
+# ################################################################################################################################
 
     def run(self):
-        raise NotImplementedError()
-
-    def publish(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL, *ignored_args, **ignored_kwargs):
-        # type: (dict, str, object, object)
-        raise NotImplementedError()
-
-    def invoke_async(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ANY, expiration=BROKER.DEFAULT_EXPIRATION):
-        # type: (dict, str, object, object)
-        raise NotImplementedError()
-
-    def on_message(self, msg):
-        raise NotImplementedError()
-
-    def close(self):
+        # type: () -> None
         raise NotImplementedError()
 
 # ################################################################################################################################
 
-def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
+    def _invoke_scheduler_from_server(self, msg):
+        msg = dumps(msg)
+        requests_post(self.scheduler_url, msg, verify=False)
 
-    # Imported here so it's guaranteed to be monkey-patched using gevent.monkey.patch_all by whoever called us
-    from zato.common.py23_ import start_new_thread
+# ################################################################################################################################
 
-    class _ClientThread(object):
-        def __init__(self, kvdb, pubsub, name, topic_callbacks=None, on_message=None):
-            self.kvdb = kvdb.copy()
-            self.kvdb.init()
-            self.pubsub = pubsub
-            self.topic_callbacks = topic_callbacks
-            self.on_message = on_message
-            self.client = None
-            self.keep_running = ZATO_NONE
-            self.connect_sleep_time = 1
+    def _invoke_server_from_scheduler(self, msg):
+        self.zato_client.invoke_async(msg['service'], msg['payload'])
 
-        def set_up_pub_sub_client(self):
-            try:
-                self.kvdb = self.kvdb.copy()
-                self.kvdb.init()
-                self.kvdb.conn.ping()
-                self.client = self.kvdb.pubsub()
-                self.client.subscribe(self.topic_callbacks.keys())
-            except Exception:
-                logger.warn('Redis connection error, will retry after %ss.\n%s', self.connect_sleep_time, format_exc())
-                sleep(self.connect_sleep_time)
+# ################################################################################################################################
 
-        def run(self):
+    def _rpc_invoke(self, msg):
 
-            # We're in a new thread and we can initialize the KVDB connection now.
-            self.kvdb.init()
+        # Local aliases ..
+        action = msg['action']
 
-            if self.pubsub == 'sub':
+        try:
 
-                self.set_up_pub_sub_client()
-                self.keep_running = True
+            # Special cases messages that are actually destined to the scheduler, not to servers ..
+            if action in to_scheduler_actions:
+                self._invoke_scheduler_from_server(msg)
+                return
 
-                try:
-                    while self.keep_running:
-                        try:
-                            for msg in self.client.listen():
-                                try:
-                                    msg = Bunch(msg)
-                                    msg.channel = msg.channel
-                                    if isinstance(msg.data, bytes):
-                                        msg.data = msg.data
-                                    self.on_message(msg)
-                                except Exception:
-                                    logger.warn('Could not handle broker message `%s`, e:`%s`', msg, format_exc())
-                        except redis.ConnectionError as e:
-                            if e.message not in EXPECTED_CONNECTION_ERRORS:  # Hm, there's no error code, only the message
-                                logger.warn('Caught Redis exception `%s`', e.message)
-                                self.set_up_pub_sub_client()
-                except KeyboardInterrupt:
-                    self.keep_running = False
+            # .. special-case messages from the scheduler to servers ..
+            elif action in from_scheduler_actions:
+                self._invoke_server_from_scheduler(msg)
+                return
 
-            else:
-                self.client = self.kvdb
-                self.keep_running = True
-
-        def publish(self, topic, msg):
+            # .. otherwise, we invoke servers.
+            code_name = code_to_name[action]
             if has_debug:
-                logger.debug('Publishing `%r` (%s) to `%s` (%s)', msg, type(msg), topic, self.client)
-            return self.client.publish(topic, msg)
+                logger.info('Invoking %s %s', code_name, msg)
 
-        def close(self):
-            self.keep_running = False
-            self.client.close()
+            self.server_rpc.invoke_all('zato.service.rpc-service-invoker', msg, ping_timeout=10)
 
-    class _BrokerClient(object):
-        """ Zato broker client. Starts two background threads, one for publishing and one for receiving of the messages.
+        except Exception:
+            logger.warn(format_exc())
 
-        There may be 3 types of messages sent out:
+# ################################################################################################################################
 
-        1) to the singleton server
-        2) to all the servers/connectors/all connectors of a certain type (e.g. only AMQP ones)
-        3) to one of the parallel servers
+    def publish(self, msg, *ignored_args, **ignored_kwargs):
+        # type: (dict, str, object, object) -> None
+        spawn(self._rpc_invoke, msg)
 
-        1) and 2) are straightforward, a message is being published on a topic,
-           off which it is read by broker client(s).
+# ################################################################################################################################
 
-        3) needs more work - the actual message is added to Redis and what is really
-           being published is a Redis key it's been stored under. The first client
-           to read it will be the one to handle it.
+    def invoke_async(self, msg, *ignored_args, **ignored_kwargs):
+        # type: (dict, object, object) -> None
+        spawn(self._rpc_invoke, msg)
 
-           Yup, it means the messages are sent across to all of the clients
-           and the winning one is the one that picked up the Redis message; it's not
-           that bad as it may seem, there will be at most as many clients as there
-           are servers in the cluster and truth to be told, Zero MQ < 3.x also would
-           do client-side PUB/SUB filtering and it did scale nicely.
-        """
-        def __init__(self, kvdb, client_type, topic_callbacks, initial_lua_programs):
-            self.kvdb = kvdb
-            self.decrypt_func = kvdb.decrypt_func
-            self.name = '{}-{}'.format(client_type, new_cid())
-            self.topic_callbacks = topic_callbacks
-            self.lua_container = LuaContainer(self.kvdb.conn, initial_lua_programs)
-            self.ready = False
+# ################################################################################################################################
 
-        def run(self):
-            logger.debug('Starting broker client, host:`%s`, port:`%s`, name:`%s`, topics:`%s`',
-                self.kvdb.config.host, self.kvdb.config.port, self.name, sorted(self.topic_callbacks))
+    def on_message(self, msg):
+        # type: (object) -> None
+        raise NotImplementedError()
 
-            self.pub_client = _ClientThread(self.kvdb.copy(), 'pub', self.name)
-            self.sub_client = _ClientThread(self.kvdb.copy(), 'sub', self.name, self.topic_callbacks, self.on_message)
+# ################################################################################################################################
 
-            start_new_thread(self.pub_client.run, ())
-            start_new_thread(self.sub_client.run, ())
+    def close(self):
+        # type: () -> None
+        raise NotImplementedError()
 
-            for client in(self.pub_client, self.sub_client):
-                while client.keep_running == ZATO_NONE:
-                    time.sleep(0.01)
-                self.ready = True
-
-        def publish(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL, *ignored_args, **ignored_kwargs):
-
-            # Make sure we do not publish bytes
-            if isinstance(msg, dict):
-                for key, value in list(msg.items()):
-                    if isinstance(value, bytes):
-                        msg[key] = value.decode('utf8')
-
-            msg['msg_type'] = msg_type
-            topic = TOPICS[msg_type]
-            msg = dumps(msg)
-            self.pub_client.publish(topic, msg)
-
-        def invoke_async(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ANY, expiration=BROKER.DEFAULT_EXPIRATION):
-            msg['msg_type'] = msg_type
-
-            try:
-                msg = dumps(msg)
-            except Exception:
-                error_msg = 'JSON serialization failed for msg:`%r`, e:`%s`'
-                logger.error(error_msg, msg, format_exc())
-                raise
-            else:
-                topic = TOPICS[msg_type]
-                key = broker_msg = 'zato:broker{}:{}'.format(KEYS[msg_type], new_cid())
-
-                self.kvdb.conn.set(key, str(msg))
-                self.kvdb.conn.expire(key, expiration)  # In seconds
-
-                self.pub_client.publish(topic, broker_msg)
-
-        def on_message(self, msg):
-            if has_debug:
-                logger.warn('Got broker message `%s`', msg)
-
-            if msg.type == 'message':
-
-                # Replace payload with stuff read off the KVDB in case this is where the actual message happens to reside.
-                if msg.channel in NEEDS_TMP_KEY:
-                    tmp_key = '{}.tmp'.format(msg.data)
-
-                    if self.lua_container.run_lua('zato.rename_if_exists', [msg.data, tmp_key]) == CODE_NO_SUCH_FROM_KEY:
-                        payload = None
-                    else:
-                        payload = self.kvdb.conn.get(tmp_key)
-                        self.kvdb.conn.delete(tmp_key)  # Note that it would've expired anyway
-                        if not payload:
-                            logger.info('No KVDB payload for key `%s` (already expired?)', tmp_key)
-                        else:
-                            if isinstance(payload, bytes):
-                                payload = payload
-                            payload = loads(payload)
-                else:
-                    if isinstance(msg.data, bytes):
-                        msg.data = msg.data
-                    payload = loads(msg.data)
-
-                if payload:
-                    payload = Bunch(payload)
-                    if has_debug:
-                        logger.debug('Got broker message payload `%s`', payload)
-
-                    callback = self.topic_callbacks[msg.channel]
-                    spawn_greenlet(callback, payload)
-
-                else:
-                    if has_debug:
-                        logger.debug('No payload in msg: `%s`', msg)
-
-        def close(self):
-            for client in(self.pub_client, self.sub_client):
-                client.keep_running = False
-                client.kvdb.close()
-
-    client = _BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs)
-    start_new_thread(client.run, ())
-
-    return client
-
+# ################################################################################################################################
 # ################################################################################################################################

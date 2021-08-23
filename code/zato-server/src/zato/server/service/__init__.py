@@ -41,7 +41,6 @@ from zato.common.json_schema import ValidationException as JSONSchemaValidationE
 from zato.common.nav import DictNav, ListNav
 from zato.common.util.api import get_response_value, make_repr, new_cid, payload_from_request, service_name_from_impl, \
      spawn_greenlet, uncamelify
-from zato.server.connection import slow_response
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.search import SearchAPI
@@ -90,10 +89,11 @@ if 0:
     from typing import Callable
 
     # Zato
-    from zato.broker.client import BrokerClient, BrokerClientAPI
+    from zato.broker.client import BrokerClientAPI
     from zato.common.audit import AuditPII
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.json_schema import Validator as JSONSchemaValidator
+    from zato.common.kvdb.api import KVDB as KVDBAPI
     from zato.common.odb.api import ODBManager
     from zato.server.connection.ftp import FTPStore
     from zato.server.base.worker import WorkerStore
@@ -109,7 +109,6 @@ if 0:
 
     # For pyflakes
     AuditPII = AuditPII
-    BrokerClient = BrokerClient
     BrokerClientAPI = BrokerClientAPI
     Callable = Callable
     CassandraAPI = CassandraAPI
@@ -120,6 +119,7 @@ if 0:
     FTPStore = FTPStore
     JSONPointerStore = JSONPointerStore
     JSONSchemaValidator = JSONSchemaValidator
+    KVDBAPI = KVDBAPI
     NamespaceStore = NamespaceStore
     ODBManager = ODBManager
     ParallelServer = ParallelServer
@@ -387,7 +387,6 @@ class Service(object):
     _out_ftp = None       # type: FTPStore
     _out_plain_http = None # type: ConfigDict
 
-    _req_resp_freq = 0
     _has_before_job_hooks = None # type: bool
     _has_after_job_hooks = None  # type: bool
     _before_job_hooks = []
@@ -476,6 +475,7 @@ class Service(object):
             self._worker_store.outconn_mongodb,
             self._worker_store.def_kafka,
             HL7API(self._worker_store.outconn_hl7_mllp) if self.component_enabled_hl7 else None,
+            self.kvdb
         )
 
 # ################################################################################################################################
@@ -659,7 +659,7 @@ class Service(object):
         data_format,   # type: str
         transport,     # type: str
         server,        # type: ParallelServer
-        broker_client, # type: BrokerClient
+        broker_client, # type: BrokerClientAPI
         worker_store,  # type: WorkerStore
         cid,           # type: str
         simple_io_config, # type: dict
@@ -712,7 +712,8 @@ class Service(object):
                         self.wsgi_environ['zato.http.remote_addr'])
 
                 if service.server.component_enabled.stats:
-                    service.usage = service.kvdb.conn.incr('{}{}'.format(KVDB.SERVICE_USAGE, service.name))
+                    service.server.current_usage.incr(service.name)
+
                 service.invocation_time = _utcnow()
 
                 # Check if there is a JSON Schema validator attached to the service and if so,
@@ -812,6 +813,7 @@ class Service(object):
             response.status_code = BAD_REQUEST
 
         if kwargs.get('skip_response_elem') and hasattr(response, 'keys'):
+
             keys = list(iterkeys(response))
             try:
                 keys.remove('_meta')
@@ -820,7 +822,17 @@ class Service(object):
                 # without the '_meta' pagination
                 pass
             response_elem = keys[0]
-            return response[response_elem]
+
+            # This covers responses that have only one top-level element
+            # and that element's name is 'response' or, e.g. 'zato_amqp_...'
+            if len(keys) == 1 and (response_elem == 'response' or response_elem.startswith('zato')):
+                return response[response_elem]
+
+            # .. otherwise, this could be a dictionary of elements other than the above
+            # so we just return the dict as it is.
+            else:
+                return response
+
         else:
             return response
 
@@ -997,75 +1009,25 @@ class Service(object):
 
         if self.server.component_enabled.stats:
 
+            # Time spent in this service, as a float rounding to the fifth digit
             proc_time = self.processing_time_raw.total_seconds() * 1000.0
-            proc_time = proc_time if proc_time > 1 else 0
+            proc_time = round(proc_time, 5)
 
-            self.processing_time = int(round(proc_time))
+            self.processing_time = proc_time
 
-            with self.kvdb.conn.pipeline() as pipe:
+            # Store usage statistics in the time series database ..
+            self.server.stats_client.push(
+                self.cid,
+                self.invocation_time.isoformat(),
+                self.name,
+                False,
+                self.processing_time
+            )
 
-                pipe.hset('%s%s' % (_service_time_basic, self.name), 'last', self.processing_time)
-                pipe.rpush('%s%s' % (_service_time_raw, self.name), self.processing_time)
+            # .. as well as in the in-RAM key keep track of the last duration times.
+            self.server.current_usage.set_last_duration(self.name, self.processing_time)
 
-                key = '%s%s:%s' % (_service_time_raw_by_minute,
-                    self.name, self.handle_return_time.strftime('%Y:%m:%d:%H:%M'))
-                pipe.rpush(key, self.processing_time)
-
-                # .. we'll have 5 minutes (5 * 60 seconds = 300 seconds)
-                # to aggregate processing times for a given minute and then it will expire
-
-                # Note that we need Redis 2.1.3+ otherwise the key has just been overwritten
-                pipe.expire(key, 300)
-                pipe.execute()
-
-        #
-        # Sample requests/responses
-        #
-
-        slow_response_enabled = self.server.component_enabled.slow_response
-        needs_usage = self._req_resp_freq and self.usage % self._req_resp_freq == 0
-
-        if slow_response_enabled or needs_usage:
-            raw_request = self.request.raw_request
-            if not raw_request:
-                req = ''
-            else:
-                req = raw_request if isinstance(raw_request, basestring) else repr(raw_request)
-
-        if needs_usage:
-
-            data = {
-                'cid': self.cid,
-                'req_ts': self.invocation_time.isoformat(),
-                'resp_ts': self.handle_return_time.isoformat(),
-                'req': req,
-                'resp':_get_response_value(self.response), # TODO: Don't parse it here and a moment later below
-            }
-            self.kvdb.conn.hmset(key, data)
-
-        #
-        # Slow responses
-        #
-        if slow_response_enabled and self.slow_threshold:
-
-            if self.processing_time > self.slow_threshold:
-
-                raw_request = self.request.raw_request
-                if not raw_request:
-                    req = ''
-                else:
-                    req = raw_request if isinstance(raw_request, basestring) else repr(raw_request)
-
-                data = {
-                    'cid': self.cid,
-                    'proc_time': self.processing_time,
-                    'slow_threshold': self.slow_threshold,
-                    'req_ts': self.invocation_time.isoformat(),
-                    'resp_ts': self.handle_return_time.isoformat(),
-                    'req': req,
-                    'resp':_get_response_value(self.response), # TODO: Don't parse it here and a moment earlier above
-                }
-                slow_response.store(self.kvdb, self.name, **data)
+# ################################################################################################################################
 
     def translate(self, *args, **kwargs):
         raise NotImplementedError('An initializer should override this method')
@@ -1108,6 +1070,11 @@ class Service(object):
 
     def accept(self, _zato_no_op_marker=zato_no_op_marker):
         return True
+
+# ################################################################################################################################
+
+    def spawn(self, *args, **kwargs):
+        return spawn(*args, **kwargs)
 
 # ################################################################################################################################
 
@@ -1261,7 +1228,7 @@ class Service(object):
         """ Takes a service instance and updates it with the current request's context data.
         """
         service.server = server
-        service.broker_client = broker_client # type: BrokerClient
+        service.broker_client = broker_client # type: BrokerClientAPI
         service.cid = cid
         service.request.payload = payload
         service.request.raw_request = raw_request

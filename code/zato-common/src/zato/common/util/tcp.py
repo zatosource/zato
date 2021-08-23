@@ -256,6 +256,13 @@ def parse_address(address):
 
 class ZatoStreamServer(StreamServer):
 
+# ################################################################################################################################
+
+    def shutdown(self):
+        self.close()
+
+# ################################################################################################################################
+
     # These two methods are reimplemented from gevent.server to make it possible to use SO_REUSEPORT.
 
     @classmethod

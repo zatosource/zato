@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import bz2
@@ -29,9 +27,13 @@ class Import(DataDictService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_kvdb_data_dict_impexp_import_request'
         response_elem = 'zato_kvdb_data_dict_impexp_import_response'
-        input_required = ('data',)
+        input_optional = 'data'
 
     def handle(self):
+
+        if not self.server.kvdb.conn:
+            return
+
         data = self.request.input.data
 
         data = b64decode(data)

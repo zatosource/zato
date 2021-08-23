@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
+# SQLAlchemy
+from sqlalchemy import and_, func, select
+from sqlalchemy.sql.expression import false as sa_false
 
 # Zato
 from zato.common.odb.model import PubSubMessage, PubSubTopic, PubSubSubscription
@@ -39,5 +41,23 @@ def get_gd_depth_topic(session, cluster_id, topic_id):
         filter(~MsgTable.c.is_in_sub_queue)
 
     return count(session, q)
+
+# ################################################################################################################################
+
+def get_gd_depth_topic_list(session, cluster_id, topic_id_list):
+    """ Returns topics matching the input list as long as they have any messages undelivered to their queues.
+    """
+
+    q = select([
+        MsgTable.c.topic_id,
+        func.count(MsgTable.c.topic_id).label('depth')]).\
+        where(and_(
+            MsgTable.c.cluster_id == cluster_id,
+            MsgTable.c.is_in_sub_queue == sa_false(),
+            MsgTable.c.topic_id.in_(topic_id_list),
+        )).\
+        group_by('topic_id')
+
+    return session.execute(q).fetchall()
 
 # ################################################################################################################################

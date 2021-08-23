@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Monkey-patching modules individually can be about 20% faster,
 # or, in absolute terms, instead of 275 ms it may take 220 ms.
@@ -86,7 +84,8 @@ class ZatoGunicornApplication(Application):
     def init(self, *ignored_args, **ignored_kwargs):
         self.cfg.set('post_fork', self.zato_wsgi_app.post_fork) # Initializes a worker
         self.cfg.set('on_starting', self.zato_wsgi_app.on_starting) # Generates the deployment key
-        self.cfg.set('worker_exit', self.zato_wsgi_app.worker_exit) # Cleans up after the worker
+        self.cfg.set('before_pid_kill', self.zato_wsgi_app.before_pid_kill) # Cleans up before the worker exits
+        self.cfg.set('worker_exit', self.zato_wsgi_app.worker_exit) # Cleans up after the worker exits
 
         for k, v in self.config_main.items():
             if k.startswith('gunicorn') and v:
@@ -228,7 +227,6 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     kvdb_config = get_kvdb_config_for_log(server_config.kvdb)
     kvdb_logger.info('Main process config `%s`', kvdb_config)
 
-    # New in 2.0 hence optional
     user_locale = server_config.misc.get('locale', None)
     if user_locale:
         locale.setlocale(locale.LC_ALL, user_locale)

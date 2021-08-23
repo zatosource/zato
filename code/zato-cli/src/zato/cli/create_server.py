@@ -11,8 +11,9 @@ from copy import deepcopy
 
 # Zato
 from zato.cli import common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents, ZatoCommand
-from zato.common.api import CONTENT_TYPE, default_internal_modules, SSO as CommonSSO
+from zato.common.api import CONTENT_TYPE, default_internal_modules, SCHEDULER, SSO as CommonSSO
 from zato.common.simpleio_ import simple_io_conf_contents
+from zato.common.events.common import Default as EventsDefault
 
 # ################################################################################################################################
 
@@ -44,6 +45,8 @@ gunicorn_proc_name=
 gunicorn_logger_class=
 gunicorn_graceful_timeout=1
 
+work_dir=../../work
+
 deployment_lock_expires=1073741824 # 2 ** 30 seconds = +/- 34 years
 deployment_lock_timeout=180
 
@@ -71,9 +74,12 @@ pool_size={{odb_pool_size}}
 username={{odb_user}}
 use_async_driver=True
 
+[scheduler]
+scheduler_host={{scheduler_host}}
+scheduler_port={{scheduler_port}}
+
 [hot_deploy]
 pickup_dir=../../pickup/incoming/services
-work_dir=../../work
 backup_history=100
 backup_format=bztar
 delete_after_pick_up=False
@@ -124,6 +130,11 @@ sftp_genkey_command=dropbearkey
 posix_ipc_skip_platform=darwin
 service_invoker_allow_internal=
 
+[events]
+fs_data_path = {{events_fs_data_path}}
+sync_threshold = {{events_sync_threshold}}
+sync_interval = {{events_sync_interval}}
+
 [http]
 methods_allowed=GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS
 
@@ -150,7 +161,6 @@ zato.helpers.input-logger=Sample payload for a startup service (first worker)
 zato.notif.init-notifiers=
 zato.kvdb.log-connection-info=
 zato.sso.cleanup.cleanup=300
-zato.updates.check-updates=
 pub.zato.channel.web-socket.cleanup-wsx=
 
 [startup_services_any_worker]
@@ -591,6 +601,9 @@ directories = (
     'pickup/processed/csv',
     'profiler',
     'work',
+    'work/events',
+    'work/events/v1',
+    'work/events/v2',
     'work/hot-deploy',
     'work/hot-deploy/current',
     'work/hot-deploy/backup',
@@ -641,7 +654,6 @@ class Create(ZatoCommand):
     """ Creates a new Zato server
     """
     needs_empty_dir = True
-    allow_empty_secrets = True
 
     opts = deepcopy(common_odb_opts)
     opts.extend(kvdb_opts)
@@ -668,6 +680,11 @@ class Create(ZatoCommand):
         self.target_dir = os.path.abspath(args.path)
         self.dirs_prepared = False
         self.token = uuid.uuid4().hex.encode('utf8')
+
+# ################################################################################################################################
+
+    def allow_empty_secrets(self):
+        return True
 
 # ################################################################################################################################
 
@@ -783,10 +800,15 @@ class Create(ZatoCommand):
                     odb_port=args.odb_port or '',
                     odb_pool_size=default_odb_pool_size,
                     odb_user=args.odb_user or '',
-                    kvdb_host=args.kvdb_host,
-                    kvdb_port=args.kvdb_port,
+                    kvdb_host=self.get_arg('kvdb_host'),
+                    kvdb_port=self.get_arg('kvdb_port'),
                     initial_cluster_name=args.cluster_name,
                     initial_server_name=args.server_name,
+                    events_fs_data_path=EventsDefault.fs_data_path,
+                    events_sync_threshold=EventsDefault.sync_threshold,
+                    events_sync_interval=EventsDefault.sync_interval,
+                    scheduler_host=self.get_arg('scheduler_host', SCHEDULER.DefaultHost),
+                    scheduler_port=self.get_arg('scheduler_port', SCHEDULER.DefaultPort),
                 ))
             server_conf.close()
 
@@ -812,12 +834,12 @@ class Create(ZatoCommand):
             secrets_conf_loc = os.path.join(self.target_dir, 'config/repo/secrets.conf')
             secrets_conf = open(secrets_conf_loc, 'w')
 
-            kvdb_password = args.kvdb_password or ''
+            kvdb_password = self.get_arg('kvdb_password') or ''
             kvdb_password = kvdb_password.encode('utf8')
             kvdb_password = fernet1.encrypt(kvdb_password)
             kvdb_password = kvdb_password.decode('utf8')
 
-            odb_password = args.odb_password or ''
+            odb_password = self.get_arg('odb_password') or ''
             odb_password = odb_password.encode('utf8')
             odb_password = fernet1.encrypt(odb_password)
             odb_password = odb_password.decode('utf8')
