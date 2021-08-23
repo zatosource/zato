@@ -93,6 +93,7 @@ if 0:
     from zato.common.audit import AuditPII
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.json_schema import Validator as JSONSchemaValidator
+    from zato.common.kvdb.api import KVDB as KVDBAPI
     from zato.common.odb.api import ODBManager
     from zato.server.connection.ftp import FTPStore
     from zato.server.base.worker import WorkerStore
@@ -118,6 +119,7 @@ if 0:
     FTPStore = FTPStore
     JSONPointerStore = JSONPointerStore
     JSONSchemaValidator = JSONSchemaValidator
+    KVDBAPI = KVDBAPI
     NamespaceStore = NamespaceStore
     ODBManager = ODBManager
     ParallelServer = ParallelServer
@@ -473,6 +475,7 @@ class Service(object):
             self._worker_store.outconn_mongodb,
             self._worker_store.def_kafka,
             HL7API(self._worker_store.outconn_hl7_mllp) if self.component_enabled_hl7 else None,
+            self.kvdb
         )
 
 # ################################################################################################################################
