@@ -154,7 +154,8 @@ class Response(object):
                 # .. someone assigns to self.response.payload an object that needs
                 # serialisation but we do not know how to do it.
                 else:
-                    raise Exception('Cannot serialise value without SimpleIO ouput declaration ({})'.format(value))
+                    if value:
+                        raise Exception('Cannot serialise value without SimpleIO ouput declaration ({})'.format(value))
 
     payload = property(_get_payload, _set_payload) # type: object
 

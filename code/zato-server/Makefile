@@ -9,7 +9,8 @@ run-tests:
 	$(PY_DIR)/py $(CURDIR)/test/zato/file_transfer/test_*.py
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/pattern/test_*.py -s
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/server_rpc/test_*.py -s
-
+	$(PY_DIR)/nosetests $(CURDIR)/test/zato/stats/test_*.py -s
+	$(PY_DIR)/nosetests $(CURDIR)/test/zato/test_zato_kvdb_*.py -s
 
 static-check:
 	echo "Running static checks in zato-server"

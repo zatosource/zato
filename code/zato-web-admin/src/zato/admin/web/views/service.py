@@ -229,12 +229,21 @@ def overview(req, service_name):
             service = Service()
 
             for name in('id', 'name', 'is_active', 'impl_name', 'is_internal',
-                  'usage', 'time_last', 'time_min_all_time', 'time_max_all_time',
-                  'time_mean_all_time'):
+                  'usage', 'last_duration', 'usage_min', 'usage_max',
+                  'usage_mean', 'last_timestamp'):
 
-                value = getattr(response.data, name)
+                value = getattr(response.data, name, None)
+
                 if name in('is_active', 'is_internal'):
                     value = is_boolean(value)
+
+                if name == 'last_timestamp':
+
+                    if value:
+                        setattr(service, 'last_timestamp_utc', value)
+                        setattr(service, 'last_timestamp', from_utc_to_user(value+'+00:00', req.zato.user_profile))
+
+                    continue
 
                 setattr(service, name, value)
 

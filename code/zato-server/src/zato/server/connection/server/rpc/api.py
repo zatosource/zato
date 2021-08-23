@@ -122,14 +122,15 @@ class ServerRPC:
             response = invoker.invoke_all_pids(service, request, *args, **kwargs)
 
             # .. continue if we know we can find something ..
-            if response.has_data:
+            if response and response.has_data:
 
                 # .. check all per-PID responses ..
                 for pid, per_pid_response in response.data.items(): # type: (int, PerPIDResponse)
 
                     # .. append the response if everything went fine ..
                     if per_pid_response.is_ok:
-                        out.data.append(per_pid_response.pid_data)
+                        if per_pid_response.pid_data is not None:
+                            out.data.append(per_pid_response.pid_data)
 
                     # .. otherwise, just set the overall response's success flag to false ..
                     else:

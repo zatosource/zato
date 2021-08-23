@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -40,19 +38,16 @@ class BrokerMessageReceiver(object):
         of all actions).
         """
         try:
-            if has_debug:
-                logger.debug('Got message `%r`', msg)
-
             # Apply pre-processing
             msg = self.preprocess_msg(msg)
 
             if self.filter(msg):
                 action = code_to_name[msg['action']]
                 handler = 'on_broker_msg_{0}'.format(action)
-                getattr(self, handler)(msg)
+                func = getattr(self.worker_store, handler)
+                func(msg)
             else:
-                if has_debug:
-                    logger.debug('Rejecting broker message `%r`', msg)
+                logger.info('Rejecting broker message `%r`', msg)
         except Exception:
             msg_action = msg.get('action') or 'undefined_msg_action' # type: str
             action = code_to_name.get(msg_action) or 'undefined_action'
@@ -71,6 +66,6 @@ class BrokerMessageReceiver(object):
         """ Subclasses may override the method in order to filter the messages prior to invoking the actual message handler.
         Default implementation always returns False which rejects all the incoming messages.
         """
-        return False
+        return True
 
 # ################################################################################################################################

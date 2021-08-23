@@ -61,7 +61,6 @@ class Create(ZatoCommand):
     """ Creates a new web admin web console
     """
     needs_empty_dir = True
-    allow_empty_secrets = True
 
     opts = deepcopy(common_odb_opts)
 
@@ -78,6 +77,11 @@ class Create(ZatoCommand):
 
         self.target_dir = os.path.abspath(args.path)
         super(Create, self).__init__(args)
+
+# ################################################################################################################################
+
+    def allow_empty_secrets(self):
+        return True
 
     def execute(self, args, show_output=True, admin_password=None, needs_admin_created_flag=False):
 

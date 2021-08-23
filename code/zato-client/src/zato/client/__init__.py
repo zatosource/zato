@@ -397,6 +397,7 @@ class _Client(object):
         self.max_cid_repr = max_cid_repr
         self.logger = logger or mod_logger
         self.tls_verify = tls_verify
+        self.has_debug = self.logger.isEnabledFor(logging.DEBUG)
 
         if not self.session.auth:
             self.session.auth = auth
@@ -412,7 +413,7 @@ class _Client(object):
         if isinstance(request, (bytes, bytearray)):
             request = request.decode('utf-8')
 
-        if self.logger.isEnabledFor(logging.DEBUG):
+        if self.has_debug:
             msg = 'request:[%s]\nresponse_class:[%s]\nis_async:[%s]\nheaders:[%s]\n text:[%s]\ndata:[%s]'
             self.logger.debug(msg, request, response_class, is_async, headers, raw_response.text, response.data)
 
@@ -464,7 +465,7 @@ class AnyServiceInvoker(_Client):
     def _invoke(self, name=None, payload='', headers=None, channel='invoke', data_format='json',
                 transport=None, is_async=False, expiration=BROKER.DEFAULT_EXPIRATION, id=None,
                 to_json=True, output_repeated=ZATO_NOT_GIVEN, pid=None, all_pids=False, timeout=None,
-                skip_response_elem=True):
+                skip_response_elem=True, **kwargs):
 
         if not(name or id):
             raise ZatoException(msg='Either name or id must be provided')
@@ -544,7 +545,6 @@ def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, s
 
     repo_location = get_repo_dir_from_component_dir(server_dir)
     stdin_data = stdin_data or read_stdin_data()
-
     crypto_manager = ServerCryptoManager.from_repo_dir(None, repo_location, stdin_data=stdin_data)
 
     secrets_config = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
