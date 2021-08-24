@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import re
@@ -28,7 +26,7 @@ class GetList(DataDictService):
     class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_kvdb_data_dict_dictionary_get_list_request'
         response_elem = 'zato_kvdb_data_dict_dictionary_get_list_response'
-        output_required = ('id', 'system', 'key', 'value')
+        output_required = 'id', 'system', 'key', 'value'
 
     def get_data(self):
         return self._get_dict_items()
@@ -41,9 +39,9 @@ class _CreateEdit(DataDictService):
     NAME_RE = re.compile(NAME_PATTERN)
 
     class SimpleIO(AdminSIO):
-        input_required = ('system', 'key', 'value')
-        input_optional = ('id',)
-        output_required = ('id',)
+        input_required = 'system', 'key', 'value'
+        input_optional = 'id'
+        output_optional = 'id'
 
     def _validate_entry(self, validate_item, id=None):
         for elem in('system', 'key'):
@@ -70,6 +68,10 @@ class _CreateEdit(DataDictService):
         return dict_item_name(self.request.input.system, self.request.input.key, self.request.input.value)
 
     def handle(self):
+
+        if not self.server.kvdb.conn:
+            return
+
         item = self._get_item_name()
 
         if self.request.input.get('id'):
@@ -106,6 +108,10 @@ class Edit(_CreateEdit):
         response_elem = 'zato_kvdb_data_dict_dictionary_edit_response'
 
     def _handle(self, id):
+
+        if not self.server.kvdb.conn:
+            return
+
         for item in self._get_translations():
             if item['id1'] == id or item['id2'] == id:
                 existing_name = self._name(item['system1'], item['key1'], item['value1'], item['system2'], item['key2'])
@@ -132,10 +138,14 @@ class Delete(DataDictService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_kvdb_data_dict_dictionary_delete_request'
         response_elem = 'zato_kvdb_data_dict_dictionary_delete_response'
-        input_required = ('id',)
-        output_required = ('id',)
+        input_required = 'id'
+        output_optional = 'id'
 
     def handle(self):
+
+        if not self.server.kvdb.conn:
+            return
+
         id = str(self.request.input.id)
         self.server.kvdb.conn.hdel(KVDB.DICTIONARY_ITEM, id)
         for item in self._get_translations():
@@ -149,6 +159,10 @@ class _DictionaryEntryService(DataDictService):
     """ Base class for returning a list of systems, keys and values.
     """
     def get_data(self, needs_systems=False, by_system=None, by_key=None):
+
+        if not self.server.kvdb.conn:
+            return
+
         for triple in self.server.kvdb.conn.hvals(KVDB.DICTIONARY_ITEM):
 
             triple = triple if isinstance(triple, unicode) else triple.decode('utf-8')
@@ -192,8 +206,8 @@ class GetValueList(_DictionaryEntryService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_kvdb_data_dict_dictionary_get_value_list_request'
         response_elem = 'zato_kvdb_data_dict_dictionary_get_value_list_response'
-        input_required = ('system', 'key')
-        output_required = ('name',)
+        input_required = 'system', 'key'
+        output_required = 'name'
 
     def handle(self):
         self.response.payload[:] = ({'name':elem} for elem in sorted(
@@ -205,7 +219,10 @@ class GetLastID(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_kvdb_data_dict_dictionary_get_last_id_request'
         response_elem = 'zato_kvdb_data_dict_dictionary_get_last_id_response'
-        output_optional = (Int('value'),)
+        output_optional = Int('value')
 
     def handle(self):
+        if not self.server.kvdb.conn:
+            return
+
         self.response.payload.value = self.server.kvdb.conn.get(KVDB.DICTIONARY_ITEM_ID) or ''

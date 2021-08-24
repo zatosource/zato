@@ -276,7 +276,7 @@ class SubscribeServiceImpl(_Subscribe):
     endpoint_type = None
 
     class SimpleIO(AdminSIO):
-        input_required = 'topic_name', 'is_internal'
+        input_required = 'topic_name'
         input_optional = drop_sio_elems(common_sub_data, 'is_internal', 'topic_name')
         output_optional = 'sub_key', 'queue_depth'
         default_value = None

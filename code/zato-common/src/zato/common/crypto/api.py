@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import base64
@@ -18,9 +16,6 @@ from math import ceil
 # Bunch
 from bunch import bunchify
 
-# configobj
-from configobj import ConfigObj
-
 # cryptography
 from cryptography.fernet import Fernet, InvalidToken
 
@@ -28,8 +23,9 @@ from cryptography.fernet import Fernet, InvalidToken
 from builtins import bytes
 
 # Zato
-from zato.common.json_internal import loads
 from zato.common.crypto.const import well_known_data, zato_stdin_prefix
+from zato.common.ext.configobj_ import ConfigObj
+from zato.common.json_internal import loads
 
 # ################################################################################################################################
 
@@ -166,10 +162,12 @@ class CryptoManager(object):
 # ################################################################################################################################
 
     @staticmethod
-    def generate_password(bits=192):
+    def generate_password(bits=192, to_str=False):
         """ Generates a string strong enough to be a password (default: 192 bits)
         """
-        return CryptoManager.generate_secret(bits)
+        # type: (int, bool) -> str
+        value = CryptoManager.generate_secret(bits)
+        return value.decode('utf8') if to_str else value
 
 # ################################################################################################################################
 
@@ -203,6 +201,7 @@ class CryptoManager(object):
         """
         if not isinstance(encrypted, bytes):
             encrypted = encrypted.encode('utf8')
+
         return self.secret_key.decrypt(encrypted).decode('utf8')
 
 # ################################################################################################################################

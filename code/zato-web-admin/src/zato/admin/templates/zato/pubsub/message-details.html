@@ -42,9 +42,9 @@
                 </td>
                 <td style="width:140px">
                     {% ifequal object_type "topic" %}
-                        <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ object_id }}">{{ object_name }}</a>
+                        <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;query={{ object_name }}">{{ object_name }}</a>
                     {% else %}
-                        <a href="{% url "pubsub-endpoint-queues" cluster_id endpoint_id object_name_slug %}?highlight={{ object_id }}">{{ object_name }}</a>
+                        <a href="{% url "pubsub-endpoint-queues" cluster_id endpoint_id object_name_slug %}?query={{ object_name }}">{{ object_name }}</a>
                         {% if ws_ext_client_id %}
                             <span class="form_hint">{{ ws_ext_client_id }}</span>
                         {% endif %}

@@ -5,7 +5,7 @@ set -o pipefail
 shopt -s compat31
 
 # Default python binary
-PY_BINARY="python3"
+PY_BINARY="${PY_BINARY:-python3}"
 INSTALL_PYTHON="y"
 
 # Taken from https://stackoverflow.com/a/14203146

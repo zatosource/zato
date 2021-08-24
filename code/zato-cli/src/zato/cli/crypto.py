@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # Zato
 from zato.cli import ManageCommand, ZatoCommand
+from zato.common.crypto.api import CryptoManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -22,16 +21,39 @@ class CreateSecretKey(ZatoCommand):
         # Zato
         from zato.common.crypto.api import CryptoManager
 
-        self.logger.info(CryptoManager.generate_key())
+        self.logger.info(CryptoManager.generate_key().decode('utf8'))
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Encrypt(ManageCommand):
-    """ Encrypts secrets using a public key.
+    """ Encrypts secrets using a secret key.
     """
     allow_empty_secrets = False
-    opts = [{'name':'--secret', 'help':'Secret to encrypt'}]
+    opts = [
+        {'name':'--data', 'help':'Data to encrypt'},
+        {'name':'--secret-key', 'help':'Secret key to encrypt data with'},
+        {'name':'--path', 'help':'Path to a Zato component where the secret key can be found'},
+    ]
+
+# ################################################################################################################################
+
+    def execute(self, args):
+
+        # We need to know what to encrypt
+        if not args.data:
+            raise ValueError('Parameter --data is required')
+
+        # We are encrypting using a given component's secret key ..
+        if args.path:
+            super().execute(args)
+
+        # .. otherwise, we use the key we were given on input
+        else:
+            cm = CryptoManager(secret_key=args.secret_key)
+            out = cm.encrypt(args.data)
+            out = out.decode('utf8')
+            self.logger.info(out)
 
 # ################################################################################################################################
 
@@ -64,10 +86,34 @@ class Encrypt(ManageCommand):
 # ################################################################################################################################
 
 class Decrypt(ManageCommand):
-    """ Decrypts secrets using a private key.
+    """ Decrypts secrets using a secret key.
     """
     allow_empty_secrets = False
-    opts = [{'name':'--secret', 'help':'Secret to decrypt'}]
+    opts = [
+        {'name':'--data', 'help':'Data to encrypt'},
+        {'name':'--secret-key', 'help':'Secret key to encrypt data with'},
+        {'name':'--path', 'help':'Path to a Zato component where the secret key can be found'},
+    ]
+
+# ################################################################################################################################
+
+    def execute(self, args):
+
+        # We need to know what to decrypt
+        if not args.data:
+            raise ValueError('Parameter --data is required')
+
+        # We are decrypting using a given component's secret key ..
+        if args.path:
+            super().execute(args)
+
+        # .. otherwise, we use the key we were given on input
+        else:
+            cm = CryptoManager(secret_key=args.secret_key)
+            out = cm.decrypt(args.data)
+            self.logger.info(out)
+
+# ################################################################################################################################
 
     def _decrypt(self, class_, args):
 
@@ -77,7 +123,10 @@ class Decrypt(ManageCommand):
         os.chdir(self.original_dir)
         repo_dir = os.path.abspath(os.path.join(args.path, 'config', 'repo'))
         cm = class_(repo_dir=repo_dir)
-        self.logger.info('Decrypted value: `%s`' % cm.decrypt(args.secret))
+        decrypted = cm.decrypt(args.secret)
+        self.logger.info(decrypted)
+
+# ################################################################################################################################
 
     def _on_web_admin(self, args):
 
@@ -86,12 +135,16 @@ class Decrypt(ManageCommand):
 
         self._decrypt(WebAdminCryptoManager, args)
 
+# ################################################################################################################################
+
     def _on_server(self, args):
 
         # Zato
         from zato.common.crypto.api import ServerCryptoManager
 
         self._decrypt(ServerCryptoManager, args)
+
+# ################################################################################################################################
 
     def _on_scheduler(self, args):
 
@@ -101,16 +154,21 @@ class Decrypt(ManageCommand):
         self._decrypt(SchedulerCryptoManager, args)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class GetHashRounds(ZatoCommand):
-    """ Encrypts secrets using a public key.
+    """ Computes PBKDF2-SHA512 hash rounds.
     """
-    allow_empty_secrets = True
     opts = [
         {'name':'--json', 'help':'Output full info in JSON', 'action':'store_true'},
         {'name':'--rounds-only', 'help':'Output only rounds in plain text', 'action':'store_true'},
         {'name':'goal',   'help':'How long a single hash should take in seconds (e.g. 0.2)'},
     ]
+
+# ################################################################################################################################
+
+    def allow_empty_secrets(self):
+        return True
 
 # ################################################################################################################################
 
@@ -157,4 +215,5 @@ class GetHashRounds(ZatoCommand):
         elif args.rounds_only:
             self.logger.info(info['rounds'])
 
+# ################################################################################################################################
 # ################################################################################################################################
