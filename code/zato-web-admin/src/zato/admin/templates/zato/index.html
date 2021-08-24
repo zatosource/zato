@@ -82,6 +82,7 @@
                     </ul>
                 </li>
 
+                <!--
                 <li><span class="like-a">Messages &darr;</span>
                     <ul>
                         <li>
@@ -97,13 +98,14 @@
                                 <li><a href="{% url "message-xpath" %}?cluster={{ cluster_id|default:'' }}">XPath</a></li>
                             </ul>
                         </li>
-                        <!--
+
                         <li>
                             <a href="{% url "message-live-browser-index" %}?cluster={{ cluster_id|default:'' }}">Live browser</a>
                         </li>
-                        -->
+
                     </ul>
                 </li>
+                -->
 
                 <li><span class="like-a">Security &darr;</span>
                     <ul>
@@ -112,7 +114,6 @@
                         <li><a href="{% url "security-basic-auth" %}?cluster={{ cluster_id|default:'' }}">HTTP Basic Auth</a></li>
                         <li><a href="{% url "security-jwt" %}?cluster={{ cluster_id|default:'' }}">JWT</a></li>
                         <li><a href="{% url "security-ntlm" %}?cluster={{ cluster_id|default:'' }}">NTLM</a></li>
-                        <li><a href="{% url "security-oauth" %}?cluster={{ cluster_id|default:'' }}">OAuth</a></li>
 
                         <li>
                             <span class="like-a">RBAC &rarr;</span>
@@ -200,6 +201,8 @@
                                 <li><a href="{% url "out-ldap" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-ldap">LDAP</a></li>
                                 <li><a href="{% url "out-mongodb" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-mongodb">MongoDB</a></li>
                                 <li><a href="{% url "out-odoo" %}?cluster={{ cluster_id|default:'' }}">Odoo</a></li>
+                                <li><a href="{% url "kvdb" %}?cluster={{ cluster_id|default:'' }}">Redis</a></li>
+
                                 <li><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=plain_http">REST</a></li>
                                 <li><a href="{% url "out-sap" %}?cluster={{ cluster_id|default:'' }}">SAP RFC</a></li>
                                 <li><a href="{% url "out-sftp" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-sftp">SFTP</a></li>
@@ -270,13 +273,6 @@
                     </ul>
                 </li>
 
-                <li><span class="like-a">Key/value DB &darr;</span>
-                    <ul>
-                        <li><a href="{% url "kvdb-data-dict-dictionary" %}?cluster={{ cluster_id|default:'' }}">Data dictionaries</a></li>
-                        <li><a href="{% url "kvdb-remote-command" %}?cluster={{ cluster_id|default:'' }}">Remote commands</a></li>
-                    </ul>
-                </li>
-
                 <li><span class="like-a">Pub/sub &darr;</span>
                     <ul>
                         <li><a href="{% url "pubsub-topic" %}?cluster={{ cluster_id|default:'' }}">Topics</a></li>
@@ -297,34 +293,7 @@
 
                 <li><a href="#">Statistics &darr;</a>
                     <ul>
-
-                        <li>
-                            <span class="like-a">Trends &rarr;</span>
-                            <ul>
-                                <li class='wide'><a href="{% url "stats-trends" 'last_hour' %}?cluster={{ cluster_id|default:'' }}">Last hour</a></li>
-                            </ul>
-                        </li>
-
-                        <li>
-                            <span class="like-a">Summary &rarr;</span>
-                            <ul>
-                                <li class='wide'><a href="{% url "stats-summary" 'today' %}?cluster={{ cluster_id|default:'' }}">Today</a></li>
-                                <li class='wide'><a href="{% url "stats-summary" 'yesterday' %}?cluster={{ cluster_id|default:'' }}">Yesterday</a></li>
-                                <li class='wide'><a href="{% url "stats-summary" 'this_week' %}?cluster={{ cluster_id|default:'' }}">This week</a></li>
-                                <li class='wide'><a href="{% url "stats-summary" 'this_month' %}?cluster={{ cluster_id|default:'' }}">This month</a></li>
-                                <li class='wide'><a href="{% url "stats-summary" 'this_year' %}?cluster={{ cluster_id|default:'' }}">This year</a></li>
-                            </ul>
-                        </li>
-
-
-                        <li>
-
-                        <li>
-                            <a href="{% url "stats-settings" %}?cluster={{ cluster_id|default:'' }}">Settings</a>
-                        </li>
-                        <li>
-                            <a href="{% url "stats-maintenance" %}?cluster={{ cluster_id|default:'' }}">Maintenance</a>
-                        </li>
+                        <li class='wide'><a href="{% url "stats-service-usage" %}?cluster={{ cluster_id|default:'' }}">Service usage</a></li>
                     </ul>
                 </li>
 

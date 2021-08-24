@@ -21,7 +21,7 @@ from gevent import spawn
 # Zato
 from zato.common.api import DATA_FORMAT, PUBSUB, ZATO_NONE
 from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
-from zato.common.json_internal import json_dumps, json_loads
+from zato.common.json_internal import json_dumps
 from zato.common.odb.query.pubsub.cleanup import delete_enq_delivered, delete_enq_marked_deleted, delete_msg_delivered, \
      delete_msg_expired
 from zato.common.odb.query.pubsub.publish import sql_publish_with_retry
@@ -29,7 +29,7 @@ from zato.common.odb.query.pubsub.topic import get_gd_depth_topic
 from zato.common.pubsub import PubSubMessage
 from zato.common.pubsub import new_msg_id
 from zato.common.util.sql import set_instance_opaque_attrs
-from zato.common.util.time_ import datetime_to_ms, utcnow_as_ms
+from zato.common.util.time_ import datetime_from_ms, datetime_to_ms, utcnow_as_ms
 from zato.server.pubsub import get_expiration, get_priority, PubSub, Topic
 from zato.server.service import AsIs, Int, List
 from zato.server.service.internal import AdminService
@@ -521,8 +521,12 @@ class Publish(AdminService):
                     # Re-run with GD and non-GD reversed now
                     self._publish(ctx)
 
+                    # Return here so as not to update metadata with information
+                    # about what the re-run is going to overwrite.
+                    return
+
         # Update topic and endpoint metadata in background if configured to - we have a series of if's to confirm
-        # if it's needed because it is not a given that each publication will required the update and we also
+        # if it's needed because it is not a given that each publication will require the update and we also
         # want to ensure that if there are two thigns to be updated at a time, it is only one greenlet spawned
         # which will in turn use a single Redis pipeline to cut down on the number of Redis calls needed.
         if ctx.pubsub.has_meta_topic or ctx.pubsub.has_meta_endpoint:
@@ -567,91 +571,81 @@ class Publish(AdminService):
         """
         try:
 
-            # If we have two updates to issue then we want to use a Redis pipeline,
-            # otherwise, the regular connection will do.
-            if has_topic and has_endpoint:
-                use_pipeline = True
-                conn = self.kvdb.conn.pipeline()
-            else:
-                conn = self.kvdb.conn
+            # For later use
+            dt_now = datetime_from_ms(ctx.now * 1000)
 
-            try:
+            # This is optional
+            ext_pub_time = ctx.last_msg.get('ext_pub_time')
+            if ext_pub_time:
+                ext_pub_time = datetime_from_ms(ext_pub_time* 1000)
 
-                # Prepare a request to update the topic's metadata with
-                if has_topic:
-                    topic_key = _topic_key % (ctx.cluster_id, ctx.topic.id)
-                    topic_data = {
-                        'pub_time': ctx.now,
-                        'endpoint_id': ctx.endpoint_id,
-                        'endpoint_name': ctx.endpoint_name,
-                        'pub_msg_id': ctx.last_msg['pub_msg_id'],
-                        'pub_pattern_matched': ctx.pub_pattern_matched,
-                        'has_gd': ctx.last_msg['has_gd'],
-                        'server_name': self.server.name,
-                        'server_pid': self.server.pid,
-                    }
+            # Prepare a document to update the topic's metadata with
+            if has_topic:
+                topic_key = _topic_key % (ctx.cluster_id, ctx.topic.id)
+                topic_data = {
+                    'pub_time': dt_now,
+                    'topic_id': ctx.topic.id,
+                    'endpoint_id': ctx.endpoint_id,
+                    'endpoint_name': ctx.endpoint_name,
+                    'pub_msg_id': ctx.last_msg['pub_msg_id'],
+                    'pub_pattern_matched': ctx.pub_pattern_matched,
+                    'has_gd': ctx.last_msg['has_gd'],
+                    'server_name': self.server.name,
+                    'server_pid': self.server.pid,
+                }
 
-                    for name in _topic_optional:
-                        value = ctx.last_msg.get(name)
-                        if value:
-                            topic_data[name] = value
+                for name in _topic_optional:
+                    value = ctx.last_msg.get(name)
+                    if value:
+                        topic_data[name] = value
 
-                    # Send to Redis, either immediately or under the pipeline
-                    conn.hmset(topic_key, topic_data)
+                # Store data in RAM
+                self.server.pub_sub_metadata.set(topic_key, topic_data)
 
-                # Prepare a request to udpate the endpoint's metadata with
-                if has_endpoint:
-                    endpoint_key = _endpoint_key % (ctx.cluster_id, ctx.endpoint_id)
+            # Prepare a request to udpate the endpoint's metadata with
+            if has_endpoint:
+                endpoint_key = _endpoint_key % (ctx.cluster_id, ctx.endpoint_id)
 
-                    idx_found = None
-                    endpoint_topic_list = conn.get(endpoint_key)
+                idx_found = None
+                endpoint_topic_list = self.server.pub_sub_metadata.get(endpoint_key) or []
 
-                    if use_pipeline:
-                        endpoint_topic_list = endpoint_topic_list.execute()[-1] # Elem [0] will be the result of .hmset
+                # If we already have something stored in RAM, find information about this topic and remove it
+                # to make room for the newest entry.
+                if endpoint_topic_list:
+                    for idx, elem in enumerate(endpoint_topic_list):
+                        if elem['topic_id'] == ctx.topic.id:
+                            idx_found = idx
+                            break
+                    if idx_found is not None:
+                        endpoint_topic_list.pop(idx_found)
 
-                    endpoint_topic_list = json_loads(endpoint_topic_list) if endpoint_topic_list else []
+                # Newest information about this endpoint's publication to this topic
+                endpoint_data = {
+                    'pub_time': dt_now,
+                    'pub_msg_id': ctx.last_msg['pub_msg_id'],
+                    'pub_correl_id': ctx.last_msg.get('pub_correl_id'),
+                    'in_reply_to': ctx.last_msg.get('in_reply_to'),
+                    'ext_client_id': ctx.last_msg.get('ext_client_id'),
+                    'ext_pub_time': ext_pub_time,
+                    'pub_pattern_matched': ctx.pub_pattern_matched,
+                    'topic_id': ctx.topic.id,
+                    'topic_name': ctx.topic.name,
+                    'has_gd': ctx.last_msg['has_gd'],
+                }
 
-                    # If we already have something stored in Redis, find information about this topic and remove it
-                    # to make room for the newest entry.
-                    if endpoint_topic_list:
-                        for idx, elem in enumerate(endpoint_topic_list):
-                            if elem['topic_id'] == ctx.topic.id:
-                                idx_found = idx
-                                break
-                        if idx_found is not None:
-                            endpoint_topic_list.pop(idx_found)
+                # Storing actual data along with other information is optional
+                data = ctx.last_msg['data'][:endpoint_data_len] if endpoint_data_len else None
+                endpoint_data['data'] = data
 
-                    # Newest information about this endpoint's publication to this topic
-                    endpoint_data = {
-                        'pub_time': ctx.now,
-                        'pub_msg_id': ctx.last_msg['pub_msg_id'],
-                        'pub_correl_id': ctx.last_msg.get('pub_correl_id'),
-                        'in_reply_to': ctx.last_msg.get('in_reply_to'),
-                        'ext_client_id': ctx.last_msg.get('ext_client_id'),
-                        'ext_pub_time': ctx.last_msg.get('ext_pub_time'),
-                        'pub_pattern_matched': ctx.pub_pattern_matched,
-                        'topic_id': ctx.topic.id,
-                        'topic_name': ctx.topic.name,
-                        'has_gd': ctx.last_msg['has_gd'],
-                    }
+                # Append the newest entry and sort all results by publication time
+                endpoint_topic_list.append(endpoint_data)
+                endpoint_topic_list.sort(key=_sort_key, reverse=True)
 
-                    # Storing actual data along with other information is optional
-                    data = ctx.last_msg['data'][:endpoint_data_len] if endpoint_data_len else None
-                    endpoint_data['data'] = data
+                # Store only as many entries as configured to
+                endpoint_topic_list = endpoint_topic_list[:endpoint_max_history]
 
-                    # Append the newest entry and sort all results by publication time
-                    endpoint_topic_list.append(endpoint_data)
-                    endpoint_topic_list.sort(key=_sort_key, reverse=True)
-
-                    # Store only as many entries as configured to
-                    endpoint_topic_list = endpoint_topic_list[:endpoint_max_history]
-
-                    # Same as for topics, sends to Redis immediately or under the pipeline
-                    conn.set(endpoint_key, json_dumps(endpoint_topic_list))
-
-            finally:
-                if use_pipeline:
-                    conn.execute()
+                # Same as for topics, store data in RAM
+                self.server.pub_sub_metadata.set(endpoint_key, endpoint_topic_list)
 
         except Exception:
             self.logger.warn('Error while updating pub metadata `%s`', format_exc())

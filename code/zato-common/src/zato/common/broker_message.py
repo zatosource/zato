@@ -75,6 +75,7 @@ class SCHEDULER(Constants):
     DELETE = ValueConstant('')
     EXECUTE = ValueConstant('')
     JOB_EXECUTED = ValueConstant('')
+    SET_JOB_INACTIVE = ValueConstant('')
 
 class ZMQ_SOCKET(Constants):
     code_start = 100200
@@ -494,6 +495,11 @@ class SSO(Constants):
 
     LINK_AUTH_CREATE = ValueConstant('')
     LINK_AUTH_DELETE = ValueConstant('')
+
+class EVENT(Constants):
+    code_start = 107400
+
+    PUSH = ValueConstant('')
 
 code_to_name = {}
 
