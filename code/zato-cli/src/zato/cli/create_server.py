@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from copy import deepcopy
 
 # Zato
 from zato.cli import common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents, ZatoCommand
-from zato.common.api import CONTENT_TYPE, default_internal_modules
+from zato.common.api import CONTENT_TYPE, default_internal_modules, SCHEDULER, SSO as CommonSSO
 from zato.common.simpleio_ import simple_io_conf_contents
+from zato.common.events.common import Default as EventsDefault
 
 # ################################################################################################################################
 
@@ -46,6 +45,8 @@ gunicorn_proc_name=
 gunicorn_logger_class=
 gunicorn_graceful_timeout=1
 
+work_dir=../../work
+
 deployment_lock_expires=1073741824 # 2 ** 30 seconds = +/- 34 years
 deployment_lock_timeout=180
 
@@ -73,9 +74,12 @@ pool_size={{odb_pool_size}}
 username={{odb_user}}
 use_async_driver=True
 
+[scheduler]
+scheduler_host={{scheduler_host}}
+scheduler_port={{scheduler_port}}
+
 [hot_deploy]
 pickup_dir=../../pickup/incoming/services
-work_dir=../../work
 backup_history=100
 backup_format=bztar
 delete_after_pick_up=False
@@ -126,6 +130,11 @@ sftp_genkey_command=dropbearkey
 posix_ipc_skip_platform=darwin
 service_invoker_allow_internal=
 
+[events]
+fs_data_path = {{events_fs_data_path}}
+sync_threshold = {{events_sync_threshold}}
+sync_interval = {{events_sync_interval}}
+
 [http]
 methods_allowed=GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS
 
@@ -152,7 +161,6 @@ zato.helpers.input-logger=Sample payload for a startup service (first worker)
 zato.notif.init-notifiers=
 zato.kvdb.log-connection-info=
 zato.sso.cleanup.cleanup=300
-zato.updates.check-updates=
 pub.zato.channel.web-socket.cleanup-wsx=
 
 [startup_services_any_worker]
@@ -322,6 +330,16 @@ parse_on_pickup=False
 delete_after_pickup=False
 services=zato.pickup.update-static
 topics=
+
+[_user_conf_backward_compatibility]
+# This is needed only for compatibility with pre-3.2 environments.
+# Do not use it in new environments. Instead, use the [user_conf] entry.
+pickup_from=./config/repo/user-conf
+patterns=*.conf
+parse_on_pickup=False
+delete_after_pickup=False
+services=zato.pickup.update-user-conf
+topics=
 """
 
 # ################################################################################################################################
@@ -353,6 +371,7 @@ sso_conf_contents = '''[main]
 encrypt_email=True
 encrypt_password=True
 smtp_conn=
+site_name=
 
 [backend]
 default=sql
@@ -379,6 +398,14 @@ inform_if_locked=True
 inform_if_not_confirmed=True
 inform_if_not_approved=True
 
+[password_reset]
+valid_for=1440 # In minutes = 1 day
+password_change_session_duration=1800 # In seconds = 30 minutes
+user_search_by=username
+email_title_en_GB=Password reset
+email_title_en_US=Password reset
+email_from=hello@example.com
+
 [user_address_list]
 
 [session]
@@ -394,6 +421,8 @@ about_to_expire_threshold=30 # In days
 log_in_if_about_to_expire=True
 min_length=8
 max_length=256
+min_complexity=4
+min_complexity_algorithm=zxcvbn
 reject_list = """
   111111
   123123
@@ -460,34 +489,56 @@ max_page_size=100
 # ################################################################################################################################
 
 sso_confirm_template = """
-Hello {data.display_name},
+Hello {username},
 
 your account is almost ready - all we need to do is make sure that this is your email.
 
-Use this URL to confirm your address:
+Use this link to confirm your address:
 
-https://example.com/zato/sso/confirm?token={data.token}
+https://example.com/signup-confirm/{token}
 
-If you didn't want to create the account, just delete this email and everything will go back to the way it was.
+If you did not want to create the account, just delete this email and everything will go back to the way it was.
 
---
+ZATO_FOOTER_MARKER
 Your Zato SSO team.
 """.strip()
 
 # ################################################################################################################################
 
 sso_welcome_template = """
-Hello {data.display_name}!
+Hello {username},
 
-Thanks for joining us. Here are a couple great ways to get started:
+thanks for joining us. Here are a couple great ways to get started:
 
 * https://example.com/link/1
 * https://example.com/link/2
 * https://example.com/link/3
 
---
+ZATO_FOOTER_MARKER
 Your Zato SSO team.
 """.strip()
+
+sso_password_reset_template = """
+Hello {username},
+
+a password reset was recently requested on your {site_name} account. If this was you, please click the link below to update your password.
+
+https://example.com/reset-password/{token}
+
+This link will expire in {expiration_time_hours} hours.
+
+If you do not want to reset your password, please ignore this message and the password will not be changed.
+
+ZATO_FOOTER_MARKER
+Your Zato SSO team.
+""".strip()
+
+# ################################################################################################################################
+
+# We need to do it because otherwise IDEs may replace '-- ' with '--' (stripping the whitespace)
+sso_confirm_template = sso_confirm_template.replace('ZATO_FOOTER_MARKER', '-- ')
+sso_welcome_template = sso_welcome_template.replace('ZATO_FOOTER_MARKER', '-- ')
+sso_password_reset_template = sso_password_reset_template.replace('ZATO_FOOTER_MARKER', '-- ')
 
 # ################################################################################################################################
 
@@ -550,6 +601,9 @@ directories = (
     'pickup/processed/csv',
     'profiler',
     'work',
+    'work/events',
+    'work/events/v1',
+    'work/events/v2',
     'work/hot-deploy',
     'work/hot-deploy/current',
     'work/hot-deploy/backup',
@@ -562,7 +616,10 @@ directories = (
     'config/repo/sftp',
     'config/repo/sftp/channel',
     'config/repo/static',
-    'config/repo/static/email',
+    'config/repo/static/sso',
+    'config/repo/static/sso/email',
+    'config/repo/static/sso/email/en_GB',
+    'config/repo/static/sso/email/en_US',
     'config/repo/tls',
     'config/repo/tls/keys-certs',
     'config/repo/tls/ca-certs',
@@ -575,8 +632,14 @@ files = {
     'config/repo/service-sources.txt': service_sources_contents,
     'config/repo/lua/internal/zato.rename_if_exists.lua': lua_zato_rename_if_exists,
     'config/repo/sql.conf': sql_conf_contents,
-    'config/repo/static/email/sso-confirm.txt': sso_confirm_template,
-    'config/repo/static/email/sso-welcome.txt': sso_welcome_template,
+
+    'config/repo/static/sso/email/en_GB/signup-confirm.txt': CommonSSO.EmailTemplate.SignupConfirm,
+    'config/repo/static/sso/email/en_GB/signup-welcome.txt': CommonSSO.EmailTemplate.SignupWelcome,
+    'config/repo/static/sso/email/en_GB/password-reset-link.txt': CommonSSO.EmailTemplate.PasswordResetLink,
+
+    'config/repo/static/sso/email/en_US/signup-confirm.txt': CommonSSO.EmailTemplate.SignupConfirm,
+    'config/repo/static/sso/email/en_US/signup-welcome.txt': CommonSSO.EmailTemplate.SignupWelcome,
+    'config/repo/static/sso/email/en_US/password-reset-link.txt': CommonSSO.EmailTemplate.PasswordResetLink,
 }
 
 # ################################################################################################################################
@@ -591,7 +654,6 @@ class Create(ZatoCommand):
     """ Creates a new Zato server
     """
     needs_empty_dir = True
-    allow_empty_secrets = True
 
     opts = deepcopy(common_odb_opts)
     opts.extend(kvdb_opts)
@@ -618,6 +680,11 @@ class Create(ZatoCommand):
         self.target_dir = os.path.abspath(args.path)
         self.dirs_prepared = False
         self.token = uuid.uuid4().hex.encode('utf8')
+
+# ################################################################################################################################
+
+    def allow_empty_secrets(self):
+        return True
 
 # ################################################################################################################################
 
@@ -733,10 +800,15 @@ class Create(ZatoCommand):
                     odb_port=args.odb_port or '',
                     odb_pool_size=default_odb_pool_size,
                     odb_user=args.odb_user or '',
-                    kvdb_host=args.kvdb_host,
-                    kvdb_port=args.kvdb_port,
+                    kvdb_host=self.get_arg('kvdb_host'),
+                    kvdb_port=self.get_arg('kvdb_port'),
                     initial_cluster_name=args.cluster_name,
                     initial_server_name=args.server_name,
+                    events_fs_data_path=EventsDefault.fs_data_path,
+                    events_sync_threshold=EventsDefault.sync_threshold,
+                    events_sync_interval=EventsDefault.sync_interval,
+                    scheduler_host=self.get_arg('scheduler_host', SCHEDULER.DefaultHost),
+                    scheduler_port=self.get_arg('scheduler_port', SCHEDULER.DefaultPort),
                 ))
             server_conf.close()
 
@@ -762,12 +834,12 @@ class Create(ZatoCommand):
             secrets_conf_loc = os.path.join(self.target_dir, 'config/repo/secrets.conf')
             secrets_conf = open(secrets_conf_loc, 'w')
 
-            kvdb_password = args.kvdb_password or ''
+            kvdb_password = self.get_arg('kvdb_password') or ''
             kvdb_password = kvdb_password.encode('utf8')
             kvdb_password = fernet1.encrypt(kvdb_password)
             kvdb_password = kvdb_password.decode('utf8')
 
-            odb_password = args.odb_password or ''
+            odb_password = self.get_arg('odb_password') or ''
             odb_password = odb_password.encode('utf8')
             odb_password = fernet1.encrypt(odb_password)
             odb_password = odb_password.decode('utf8')

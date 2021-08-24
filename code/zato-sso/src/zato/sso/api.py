@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Zato
 from zato.sso import const, status_code, ValidationError
+from zato.sso.password_reset import PasswordResetAPI
 from zato.sso.user import Forbidden, User, UserAPI
 
 # For pyflakes
@@ -42,8 +43,12 @@ class SSOAPI(object):
         self.user = UserAPI(server, sso_conf, odb_session_func, encrypt_func, decrypt_func, hash_func, verify_hash_func,
             new_user_id_func)
 
+        # Management of Password reset tokens (PRT)
+        self.password_reset = PasswordResetAPI(server, sso_conf, odb_session_func, decrypt_func, verify_hash_func)
+
     def post_configure(self, func, is_sqlite):
         self.odb_session_func = func
         self.user.post_configure(func, is_sqlite)
+        self.password_reset.post_configure(func, is_sqlite)
 
 # ################################################################################################################################

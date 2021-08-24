@@ -14,11 +14,12 @@ from six import add_metaclass
 
 # Zato
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
+from zato.common.api import PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubTopic
 from zato.common.odb.query import pubsub_messages_for_topic, pubsub_publishers_for_topic, pubsub_topic, pubsub_topic_list
-from zato.common.odb.query.pubsub.topic import get_gd_depth_topic, get_topics_by_sub_keys
+from zato.common.odb.query.pubsub.topic import get_gd_depth_topic, get_gd_depth_topic_list, get_topics_by_sub_keys
 from zato.common.util.api import ensure_pubsub_hook_is_valid
-from zato.common.util.pubsub import get_last_pub_data
+from zato.common.util.pubsub import get_last_pub_metadata
 from zato.common.util.time_ import datetime_from_ms
 from zato.server.service import AsIs, Bool, Dict, Int, List, Opaque
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -60,6 +61,11 @@ sub_broker_attrs = ('active_status', 'active_status', 'cluster_id', 'creation_ti
 
 # ################################################################################################################################
 
+_meta_topic_key = PUBSUB.REDIS.META_TOPIC_LAST_KEY
+_meta_endpoint_key = PUBSUB.REDIS.META_ENDPOINT_PUB_KEY
+
+# ################################################################################################################################
+
 def broker_message_hook(self, input, instance, attrs, service_type):
     # type: (Service, Bunch, PubSubTopic, Bunch, str)
 
@@ -79,31 +85,46 @@ def response_hook(self, input, instance, attrs, service_type):
 
     if service_type == 'get_list':
 
-        # Details are needed when topics are in their own main screen but if only basic information
-        # is needed, like a list of topic IDs and names, we don't need to look up additional details.
+        # Details are needed when the main list of topics is requested but if only basic information
+        # is needed, like a list of topic IDs and their names, we don't need to look up additional details.
         # The latter is the case of the message publication screen which simply needs a list of topic IDs/names.
         if input.get('needs_details', True):
 
+            # Topics to look up data for
+            topic_id_list = []
+
+            # Collect all topic IDs whose depth need to be looked up
+            for item in self.response.payload:
+                topic_id_list.append(item.id)
+
+            # .. query the database to find depth of all the topics from the list ..
             with closing(self.odb.session()) as session:
-                for item in self.response.payload:
+                depth_by_topic = get_gd_depth_topic_list(session, input.cluster_id, topic_id_list)
 
-                    # Checks current non-GD depth on all servers
-                    item.current_depth_non_gd = self.invoke('zato.pubsub.topic.collect-non-gd-depth', {
-                        'topic_name': item.name,
-                    })['response']['current_depth_non_gd']
+            # .. convert it to a dict to make it easier to use it ..
+            depth_by_topic = dict(depth_by_topic)
 
-                    # Checks current GD depth in SQL
-                    item.current_depth_gd = get_gd_depth_topic(session, input.cluster_id, item.id)
+            # .. look up last pub metadata among all the servers ..
+            last_pub_by_topic = get_last_pub_metadata(self.server, topic_id_list) # type: dict
 
-                    last_data = get_last_pub_data(self.kvdb.conn, self.server.cluster_id, item.id)
-                    if last_data:
-                        item.last_pub_time = last_data['pub_time']
-                        item.last_pub_has_gd = last_data['has_gd']
-                        item.last_pub_msg_id = last_data['pub_msg_id']
-                        item.last_endpoint_id = last_data['endpoint_id']
-                        item.last_endpoint_name = last_data['endpoint_name']
-                        item.last_pub_server_pid = last_data.get('server_pid')
-                        item.last_pub_server_name = last_data.get('server_name')
+            # .. now, having collected all the details, go through all the topics again
+            # .. and assign the metadata found.
+            for item in self.response.payload:
+
+                # .. assign depth ..
+                item.current_depth_gd = depth_by_topic.get(item.id) or 0
+
+                # .. assign last usage metadata ..
+                last_data = last_pub_by_topic.get(item.id)
+
+                if last_data:
+                    item.last_pub_time = last_data['pub_time']
+                    item.last_pub_has_gd = last_data['has_gd']
+                    item.last_pub_msg_id = last_data['pub_msg_id']
+                    item.last_endpoint_id = last_data['endpoint_id']
+                    item.last_endpoint_name = last_data['endpoint_name']
+                    item.last_pub_server_pid = last_data.get('server_pid')
+                    item.last_pub_server_name = last_data.get('server_name')
 
 # ################################################################################################################################
 
@@ -136,11 +157,13 @@ def instance_hook(self, input, instance, attrs):
             instance.hook_service_id = hook_service_id
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 @add_metaclass(GetListMeta)
 class GetList(AdminService):
     _filter_by = PubSubTopic.name,
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 @add_metaclass(CreateEditMeta)
@@ -148,17 +171,20 @@ class Create(AdminService):
     pass
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 @add_metaclass(CreateEditMeta)
 class Edit(AdminService):
     pass
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 @add_metaclass(DeleteMeta)
 class Delete(AdminService):
     pass
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Get(AdminService):
@@ -171,16 +197,21 @@ class Get(AdminService):
         output_optional = ('last_pub_time', 'on_no_subs_pub')
 
     def handle(self):
-        with closing(self.odb.session()) as session:
-            topic = pubsub_topic(session, self.request.input.cluster_id, self.request.input.id)
-            topic['current_depth_gd'] = get_gd_depth_topic(session, self.request.input.cluster_id, self.request.input.id)
 
-        last_data = get_last_pub_data(self.kvdb.conn, self.server.cluster_id, self.request.input.id)
+        # Local aliases
+        topic_id = self.request.input.id
+
+        with closing(self.odb.session()) as session:
+            topic = pubsub_topic(session, self.request.input.cluster_id, topic_id)
+            topic['current_depth_gd'] = get_gd_depth_topic(session, self.request.input.cluster_id, topic_id)
+
+        last_data = get_last_pub_metadata(self.server, topic_id)
         if last_data:
             topic['last_pub_time'] = last_data['pub_time']
 
         self.response.payload = topic
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ClearTopicNonGD(AdminService):
@@ -194,6 +225,7 @@ class ClearTopicNonGD(AdminService):
         self.pubsub.sync_backlog.clear_topic(self.request.input.topic_id)
         self.response.payload.status = 'ok.{}.{}'.format(self.server.name, self.server.pid)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Clear(AdminService):
@@ -233,6 +265,7 @@ class Clear(AdminService):
         }, timeout=90)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class GetPublisherList(AdminService):
     """ Returns all publishers that sent at least one message to a given topic.
@@ -260,6 +293,7 @@ class GetPublisherList(AdminService):
         self.response.payload[:] = response
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class GetGDMessageList(AdminService):
     """ Returns all GD messages currently in a topic that have not been moved to subscriber queues yet.
@@ -283,13 +317,35 @@ class GetGDMessageList(AdminService):
 # ################################################################################################################################
 
     def handle(self):
+
+        # Response to produce ..
+        out = []
+
+        # .. collect the data ..
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = self.get_gd_data(session)
+            data = self.get_gd_data(session)
 
-        for item in self.response.payload:
-            item.pub_time = datetime_from_ms(item.pub_time * 1000.0)
-            item.ext_pub_time = datetime_from_ms(item.ext_pub_time * 1000.0) if item.ext_pub_time else ''
+        # .. use ISO timestamps ..
+        for item in data:
 
+            # .. work with dicts ..
+            item = item._asdict()
+
+            # .. convert to ISO ..
+            pub_time = datetime_from_ms(item['pub_time'] * 1000.0)
+            ext_pub_time = datetime_from_ms(item['ext_pub_time'] * 1000.0) if item['ext_pub_time'] else ''
+
+            # .. assign it back ..
+            item['pub_time'] = pub_time
+            item['ext_pub_time'] = ext_pub_time
+
+            # .. and add it to our response ..
+            out.append(item)
+
+        # .. which we can return now.
+        self.response.payload[:] = out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class GetNonGDMessageList(NonGDSearchService):
@@ -319,6 +375,7 @@ class GetNonGDMessageList(NonGDSearchService):
         self.set_non_gd_msg_list_response(reply.data, self.request.input.cur_page)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class GetServerMessageList(AdminService):
     """ Returns a list of in-RAM messages matching input criteria from current server process.
@@ -334,6 +391,7 @@ class GetServerMessageList(AdminService):
         self.response.payload.data = self.pubsub.sync_backlog.get_messages_by_topic_id(
             self.request.input.topic_id, True, self.request.input.query)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class GetInRAMMessageList(AdminService):
@@ -364,6 +422,7 @@ class GetInRAMMessageList(AdminService):
         self.response.payload.messages = out
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class GetNonGDDepth(AdminService):
     """ Returns depth of non-GD messages in the input topic on current server.
@@ -371,10 +430,12 @@ class GetNonGDDepth(AdminService):
     class SimpleIO:
         input_required = ('topic_name',)
         output_optional = (Int('depth'),)
+        response_elem = None
 
     def handle(self):
         self.response.payload.depth = self.pubsub.get_non_gd_topic_depth(self.request.input.topic_name)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class CollectNonGDDepth(AdminService):
@@ -397,4 +458,26 @@ class CollectNonGDDepth(AdminService):
 
         self.response.payload.current_depth_non_gd = total
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetTopicMetadata(AdminService):
+
+    def handle(self):
+
+        # All the topic IDs we need to find our in-RAM metadata for
+        topic_id_list = self.request.raw_request['topic_id_list']
+
+        # Construct keys to look up topic metadata for ..
+        topic_key_list = (
+            _meta_topic_key % (self.server.cluster_id, topic_id) for topic_id in topic_id_list
+        )
+
+        # .. look up keys in RAM ..
+        result = self.server.pub_sub_metadata.get_many(topic_key_list)
+
+        if result:
+            self.response.payload = result
+
+# ################################################################################################################################
 # ################################################################################################################################

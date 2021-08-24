@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from logging import getLogger
@@ -61,13 +59,13 @@ def get_client_html(item, security_id, cluster_id):
 
 # ################################################################################################################################
 
-def get_endpoint_html(item, cluster_id, endpoint_id_attr='endpoint_id', endpoint_name_attr='endpoint_name'):
-    id_value = getattr(item, endpoint_id_attr, None) or item[endpoint_id_attr]
+def get_endpoint_html(item, cluster_id, endpoint_name_attr='endpoint_name'):
+
     name = getattr(item, endpoint_name_attr, None) or item[endpoint_name_attr]
 
     path = django_url_reverse('pubsub-endpoint')
-    endpoint = '<span style="font-size:smaller"><a href="{}?cluster={}&amp;highlight={}">{}</a>'.format(
-        path, cluster_id, id_value, name)
+    endpoint = '<span style="font-size:smaller"><a href="{}?cluster={}&amp;query={}">{}</a>'.format(
+        path, cluster_id, name, name)
 
     return endpoint
 
@@ -136,9 +134,6 @@ def get_message(req, cluster_id, object_type, object_id, msg_id):
             return_data.has_msg = True
             return_data.update(msg_service_response)
 
-            return_data.pub_endpoint_html = get_endpoint_html(return_data, cluster_id, 'published_by_id', 'published_by_name')
-            return_data.sub_endpoint_html = get_endpoint_html(return_data, cluster_id, 'subscriber_id', 'subscriber_name')
-
             if _is_topic:
                 hook_pub_endpoint_id = return_data.endpoint_id
                 hook_sub_endpoint_id = None
@@ -160,10 +155,8 @@ def get_message(req, cluster_id, object_type, object_id, msg_id):
                     return_data.pub_endpoint_id = topic_msg_service_response.endpoint_id
                     return_data.pub_endpoint_name = topic_msg_service_response.endpoint_name
                     return_data.pub_pattern_matched = topic_msg_service_response.pub_pattern_matched
-                    return_data.pub_endpoint_html = get_endpoint_html(
-                        return_data, cluster_id, 'pub_endpoint_id', 'pub_endpoint_name')
-                    return_data.sub_endpoint_html = get_endpoint_html(
-                        return_data, cluster_id, 'subscriber_id', 'subscriber_name')
+                    return_data.pub_endpoint_html = get_endpoint_html(return_data, cluster_id, 'pub_endpoint_name')
+                    return_data.sub_endpoint_html = get_endpoint_html(return_data, cluster_id, 'subscriber_name')
                     return_data.object_id = return_data.pop('queue_id')
 
                     hook_pub_endpoint_id = return_data.pub_endpoint_id

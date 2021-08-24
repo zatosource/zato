@@ -22,11 +22,11 @@ register = template.Library()
 def bunchget(obj, args):
     """ Try to get an attribute from an object.
 
-    Example: {% if block|getattr:"editable,True" %}
+    Example: {% if block|bunchget:"editable,True" %}
 
     Beware that the default is always a string, if you want this
     to return False, pass an empty second argument:
-    {% if block|getattr:"editable," %}
+    {% if block|bunchget:"editable," %}
     """
     args = str(args).split(',')
     if len(args) == 1:
@@ -55,5 +55,32 @@ def url_replace(request, field, value):
 @register.filter
 def no_value_indicator(value):
     return value or mark_safe('<span class="form_hint">---</span>')
+
+# ################################################################################################################################
+
+@register.filter
+def format_float(value, digits=5):
+
+    if not value:
+        return 0
+
+    value = str(value)
+    as_float = float(value)
+    as_int = int(as_float)
+
+    if as_int == as_float:
+        result = as_int
+    else:
+        result = round(as_float, digits)
+
+    result = str(result)
+
+    return result
+
+# ################################################################################################################################
+
+@register.filter
+def stats_float(value):
+    return value if value else '< 0.01'
 
 # ################################################################################################################################

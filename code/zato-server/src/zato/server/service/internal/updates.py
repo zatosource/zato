@@ -13,9 +13,6 @@ from errno import ENETUNREACH
 from http.client import OK
 from traceback import format_exc
 
-# Arrow
-from arrow import get as arrow_get, utcnow
-
 # Bunch
 from bunch import bunchify
 
@@ -103,43 +100,13 @@ class CheckUpdates(Service):
 
 # ################################################################################################################################
 
-    def _get_last_notified(self, key):
-        with self.lock():
-            value = self.kvdb.conn.get(key)
-            return arrow_get(value) if value else None
-
-# ################################################################################################################################
-
-    def _set_last_modified(self, key):
-        self.kvdb.conn.set(key, utcnow().format('YYYY-MM-DD'))
-
-# ################################################################################################################################
-
-    def _time_elapsed(self, cache_key, delta):
-        """ Returns True if enough time elapsed since the last time we let users
-        know that a new major version is available.
-        """
-        last_notified = self._get_last_notified(cache_key)
-
-        # We let users know at least once
-        if last_notified:
-            if (utcnow() - last_notified).total_seconds() >= delta:
-                return True
-
-        # We never let users know so we can do it now
-        else:
-            self._set_last_modified(cache_key)
-            return True
-
-# ################################################################################################################################
-
     def _time_elapsed_major(self, _delta_major):
-        return self._time_elapsed(cache_key_major, _delta_major)
+        return True
 
 # ################################################################################################################################
 
     def _time_elapsed_minor(self, _delta_minor):
-        return self._time_elapsed(cache_key_minor, _delta_minor)
+        return True
 
 # ################################################################################################################################
 

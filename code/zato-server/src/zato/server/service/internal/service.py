@@ -9,26 +9,21 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from base64 import b64decode, b64encode
 from contextlib import closing
-from http.client import BAD_REQUEST, NOT_FOUND
-from mimetypes import guess_type
 from operator import attrgetter
 from tempfile import NamedTemporaryFile
 from traceback import format_exc
 from uuid import uuid4
 
-# validate
-from validate import is_boolean
-
 # Python 2/3 compatibility
 from builtins import bytes
-from future.moves.urllib.parse import parse_qs
 from future.utils import iterkeys
 from past.builtins import basestring
 
 # Zato
-from zato.common.api import BROKER, KVDB
+from zato.common.api import BROKER, StatsKey
 from zato.common.broker_message import SERVICE
 from zato.common.exception import BadRequest, ZatoException
+from zato.common.ext.validate_ import is_boolean
 from zato.common.json_internal import dumps, loads
 from zato.common.json_schema import get_service_config
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, Service
@@ -36,10 +31,10 @@ from zato.common.odb.query import service_list
 from zato.common.rate_limiting import DefinitionParser
 from zato.common.scheduler import get_startup_job_services
 from zato.common.util.api import hot_deploy, payload_from_request
+from zato.common.util.stats import combine_table_data, collect_current_usage
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
-from zato.server.service import Boolean, Integer, Service as ZatoService
+from zato.server.service import Boolean, Float, Integer, Service as ZatoService
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
-
 
 # ################################################################################################################################
 
@@ -47,9 +42,11 @@ from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 ZatoService = ZatoService
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 _no_such_service_name = uuid4().hex
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class GetList(AdminService):
@@ -61,13 +58,15 @@ class GetList(AdminService):
         request_elem = 'zato_service_get_list_request'
         response_elem = 'zato_service_get_list_response'
         input_required = 'cluster_id'
-        input_optional = 'should_include_scheduler'
-        output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), Integer('usage'), \
-            Integer('slow_threshold')
+        input_optional = ('should_include_scheduler',) + GetListAdminSIO.input_optional
+        output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted')
         output_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_active', \
-            'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
+            'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def'), Integer('usage'), \
+            Integer('usage'), Integer('slow_threshold')
         output_repeated = True
         default_value = ''
+
+# ################################################################################################################################
 
     def _get_data(self, session, return_internal, include_list, internal_del):
 
@@ -78,7 +77,6 @@ class GetList(AdminService):
         for item in elems_with_opaque(search_result):
 
             item.may_be_deleted = internal_del if item.is_internal else True
-            item.usage = self.server.kvdb.conn.get('{}{}'.format(KVDB.SERVICE_USAGE, item.name)) or 0
 
             # Attach JSON Schema validation configuration
             json_schema_config = get_service_config(item, self.server)
@@ -89,6 +87,8 @@ class GetList(AdminService):
             out.append(item)
 
         return out
+
+# ################################################################################################################################
 
     def get_data(self, session):
 
@@ -125,16 +125,61 @@ class GetList(AdminService):
             self.response.payload[:] = self.get_data(session)
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+class _GetStatsTable(AdminService):
+
+    def handle(self):
+
+        table = self.server.stats_client.get_table()
+        if table:
+            self.response.payload = table
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetStatsTable(AdminService):
+
+    class SimpleIO(AdminSIO):
+        output_optional = ('name', Float('item_max'), Float('item_min'), Float('item_mean'), Float('item_total_time'), \
+            Float('item_usage_share'), Float('item_time_share'), Integer('item_total_usage'),
+            'item_total_time_human', 'item_total_usage_human')
+        response_elem = None
+
+    def handle(self):
+
+        # Invoke all servers and all PIDs..
+        response = self.server.rpc.invoke_all(_GetStatsTable.get_name())
+
+        # .. combine responses ..
+        response = combine_table_data(response.data)
+
+        # .. and return the response.
+        self.response.payload[:] = response
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetServiceStats(AdminService):
+
+    def handle(self):
+        usage = self.server.current_usage.get(self.request.raw_request['name'])
+        if usage:
+            self.response.payload = usage
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class _Get(AdminService):
 
     class SimpleIO(AdminSIO):
         input_required = 'cluster_id',
-        output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), \
-            Integer('usage'), Integer('slow_threshold'), Integer('time_last'), \
-            Integer('time_min_all_time'), Integer('time_max_all_time'), 'time_mean_all_time'
-        output_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_active', \
-            'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
+        output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted')
+        output_optional = Integer('usage'), Integer('slow_threshold'), 'last_duration', \
+            Integer('time_min_all_time'), Integer('time_max_all_time'), 'time_mean_all_time', \
+            'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_active', \
+            'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def'), 'last_timestamp', \
+            'usage_min', 'usage_max', 'usage_mean'
 
     def get_data(self, session):
         query = session.query(Service.id, Service.name, Service.is_active,
@@ -148,6 +193,7 @@ class _Get(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             service = self.get_data(session)
+
             internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
 
             self.response.payload.id = service.id
@@ -157,19 +203,21 @@ class _Get(AdminService):
             self.response.payload.is_internal = service.is_internal
             self.response.payload.slow_threshold = service.slow_threshold
             self.response.payload.may_be_deleted = internal_del if service.is_internal else True
-            self.response.payload.usage = self.server.kvdb.conn.get('{}{}'.format(KVDB.SERVICE_USAGE, service.name)) or 0
 
-            time_key = '{}{}'.format(KVDB.SERVICE_TIME_BASIC, service.name)
-            self.response.payload.time_last = self.server.kvdb.conn.hget(time_key, 'last')
+        usage_response = self.server.rpc.invoke_all(GetServiceStats.get_name(), {'name': self.request.input.name})
+        usage_response = collect_current_usage(usage_response.data) # type: dict
 
-            for name in('min_all_time', 'max_all_time', 'mean_all_time'):
-                setattr(self.response.payload, 'time_{}'.format(name), float(
-                    self.server.kvdb.conn.hget(time_key, name) or 0))
+        if usage_response:
 
-            self.response.payload.time_min_all_time = int(self.response.payload.time_min_all_time)
-            self.response.payload.time_max_all_time = int(self.response.payload.time_max_all_time)
-            self.response.payload.time_mean_all_time = round(self.response.payload.time_mean_all_time, 1)
+            self.response.payload.usage          = usage_response[StatsKey.PerKeyValue]
+            self.response.payload.last_duration  = usage_response[StatsKey.PerKeyLastDuration]
+            self.response.payload.last_timestamp = usage_response[StatsKey.PerKeyLastTimestamp]
 
+            self.response.payload.usage_min  = usage_response[StatsKey.PerKeyMin]
+            self.response.payload.usage_max  = usage_response[StatsKey.PerKeyMax]
+            self.response.payload.usage_mean = usage_response[StatsKey.PerKeyMean]
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class GetByName(_Get):
@@ -185,6 +233,7 @@ class GetByName(_Get):
                filter(Service.name==self.request.input.name)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class GetByID(_Get):
     """ Returns a particular service by its ID.
@@ -198,6 +247,7 @@ class GetByID(_Get):
         return query.\
                filter(Service.id==self.request.input.id)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Edit(AdminService):
@@ -253,6 +303,7 @@ class Edit(AdminService):
                 raise
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Delete(AdminService):
     """ Deletes a service.
@@ -297,6 +348,7 @@ class Delete(AdminService):
                 raise
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class GetChannelList(AdminService):
     """ Returns a list of channels of a given type through which the service is exposed.
@@ -330,6 +382,7 @@ class GetChannelList(AdminService):
 
             self.response.payload[:] = q.all()
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Invoke(AdminService):
@@ -377,6 +430,7 @@ class Invoke(AdminService):
                 response = self.invoke_async(name, payload, channel, data_format, transport, expiration)
 
         else:
+
             # This branch the same as above in is_async branch, except in is_async there was no all_pids
 
             # It is possible that we were given the all_pids flag on input but we know
@@ -388,22 +442,61 @@ class Invoke(AdminService):
                 use_all_pids = False
 
             if use_all_pids:
+
                 args = (name, payload, timeout) if timeout else (name, payload)
                 response = dumps(self.server.invoke_all_pids(*args, skip_response_elem=skip_response_elem))
+
             else:
+
                 if pid and pid != self.server.pid:
+
                     response = self.server.invoke(
-                        name, payload, pid=pid, data_format=data_format, skip_response_elem=skip_response_elem)
+                        name,
+                        payload,
+                        pid=pid,
+                        data_format=data_format,
+                        skip_response_elem=skip_response_elem)
+
+                    response = {
+                        pid: {
+                          'is_ok': True,
+                          'pid': pid,
+                          'pid_data': response or None,
+                          'error_info': '',
+                    }}
+
                 else:
+
                     func, id_ = (self.invoke, name) if name else (self.invoke_by_id, id)
                     response = func(
-                        id_, payload, channel, data_format, transport, skip_response_elem=skip_response_elem, serialize=True)
+                        id_,
+                        payload,
+                        channel,
+                        data_format,
+                        transport,
+                        skip_response_elem=skip_response_elem,
+                        serialize=True)
 
-        if isinstance(response, basestring):
-            if response:
-                response = response if isinstance(response, bytes) else response.encode('utf8')
-                self.response.payload.response = b64encode(response).decode('utf8') if response else ''
+                    if all_pids:
 
+                        response = {
+                            self.server.pid: {
+                              'is_ok': True,
+                              'pid': self.server.pid,
+                              'pid_data': response,
+                              'error_info': '',
+                        }}
+
+        if response:
+
+            if not isinstance(response, basestring):
+                if not isinstance(response, bytes):
+                    response = dumps(response)
+
+            response = response if isinstance(response, bytes) else response.encode('utf8')
+            self.response.payload.response = b64encode(response).decode('utf8') if response else ''
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class GetDeploymentInfoList(AdminService):
@@ -432,6 +525,7 @@ class GetDeploymentInfoList(AdminService):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class GetSourceInfo(AdminService):
@@ -466,158 +560,6 @@ class GetSourceInfo(AdminService):
             self.response.payload.source_hash_method = si.source_hash_method
 
 # ################################################################################################################################
-
-class GetWSDL(AdminService):
-    """ Returns a WSDL for the given service. Either uses a user-uploaded one, or, optionally generates one on fly if the service uses SimpleIO.
-    """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_service_get_wsdl_request'
-        response_elem = 'zato_service_get_wsdl_response'
-        input_optional = ('service', 'cluster_id')
-        output_required = ('content_type',)
-        output_optional = ('wsdl', 'wsdl_name',)
-
-    def handle(self, _parse_qs=parse_qs):
-        if self.wsgi_environ['QUERY_STRING']:
-            use_sio = False
-            query = _parse_qs(self.wsgi_environ['QUERY_STRING'])
-            service_name = query.get('service', (None,))[0]
-            cluster_id = query.get('cluster_id', (None,))[0]
-        else:
-            use_sio = True
-            service_name = self.request.input.service
-            cluster_id = self.request.input.cluster_id
-
-        if not(service_name and cluster_id):
-            msg = 'Both [service] and [cluster_id] parameters are required'
-            if use_sio:
-                raise ValueError(msg)
-            else:
-                self.response.status_code = BAD_REQUEST
-                self.response.payload = msg
-                return
-
-        with closing(self.odb.session()) as session:
-            service = session.query(Service).\
-                filter_by(name=service_name, cluster_id=cluster_id).\
-                first()
-
-            if not service:
-                self.response.status_code = NOT_FOUND
-                self.response.payload = 'Service [{}] not found'.format(service_name)
-                return
-
-        if service.wsdl_name:
-            content_type = guess_type(service.wsdl_name)[0] or 'application/octet-stream'
-        else:
-            content_type = 'text/plain'
-
-        if use_sio:
-            self.response.payload.wsdl = b64encode(service.wsdl or '')
-            self.response.payload.wsdl_name = service.wsdl_name
-            self.response.payload.content_type = content_type
-        else:
-            if service.wsdl:
-                self.set_attachment(service.wsdl_name, service.wsdl, content_type)
-            else:
-                self.response.status_code = NOT_FOUND
-                self.response.payload = 'No WSDL found'
-
-    def set_attachment(self, attachment_name, payload, content_type):
-        """ Sets the information that we're returning an attachment to the user.
-        """
-        self.response.content_type = content_type
-        self.response.payload = payload
-        self.response.headers['Content-Disposition'] = 'attachment; filename={}'.format(attachment_name)
-
-# ################################################################################################################################
-
-class SetWSDL(AdminService):
-    """ Updates the service's WSDL.
-    """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_service_set_wsdl_request'
-        response_elem = 'zato_service_set_wsdl_response'
-        input_required = ('cluster_id', 'name', 'wsdl', 'wsdl_name')
-
-    def handle(self):
-        with closing(self.odb.session()) as session:
-            service = session.query(Service).\
-                filter_by(name=self.request.input.name, cluster_id=self.request.input.cluster_id).\
-                one()
-            service.wsdl = b64decode(self.request.input.wsdl)
-            service.wsdl_name = self.request.input.wsdl_name
-
-            session.add(service)
-            session.commit()
-
-# ################################################################################################################################
-
-class HasWSDL(AdminService):
-    """ Returns a boolean flag indicating whether the server has a WSDL attached.
-    """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_service_has_wsdl_request'
-        response_elem = 'zato_service_has_wsdl_response'
-        input_required = ('name', 'cluster_id')
-        output_required = ('service_id', 'has_wsdl',)
-
-    def handle(self):
-        with closing(self.odb.session()) as session:
-            result = session.query(Service.id, Service.wsdl).\
-                filter_by(name=self.request.input.name, cluster_id=self.request.input.cluster_id).\
-                one()
-            self.response.payload.service_id = result.id
-            self.response.payload.has_wsdl = result.wsdl is not None
-
-# ################################################################################################################################
-
-class GetRequestResponse(AdminService):
-    """ Returns a sample request/response along with information on how often the pairs should be stored in the DB.
-    """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_service_get_request_response_request'
-        response_elem = 'zato_service_request_response_response'
-        input_required = ('cluster_id', 'name')
-        output_required = ('service_id', Integer('sample_req_resp_freq'))
-        output_optional = ('sample_cid', 'sample_req_ts', 'sample_resp_ts', 'sample_req', 'sample_resp', )
-
-    def get_data(self):
-        result = {}
-
-        with closing(self.odb.session()) as session:
-            result['id'] = session.query(Service.id).\
-                filter_by(name=self.request.input.name, cluster_id=self.request.input.cluster_id).\
-                one()[0]
-
-        result.update(**self.kvdb.conn.hgetall('{}{}'.format(KVDB.REQ_RESP_SAMPLE, self.request.input.name)))
-
-        return result
-
-    def handle(self):
-        result = self.get_data()
-        self.response.payload.service_id = result.get('id')
-        self.response.payload.sample_cid = result.get('cid')
-        self.response.payload.sample_req_ts = result.get('req_ts')
-        self.response.payload.sample_resp_ts = result.get('resp_ts')
-        self.response.payload.sample_req = b64encode(result.get('req', b''))
-        self.response.payload.sample_resp = b64encode(result.get('resp', b''))
-        self.response.payload.sample_req_resp_freq = result.get('freq', 0)
-
-# ################################################################################################################################
-
-class ConfigureRequestResponse(AdminService):
-    """ Updates the request/response-related configuration.
-    """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_service_configure_request_response_request'
-        response_elem = 'zato_service_configure_request_response_response'
-        input_required = ('cluster_id', 'name', Integer('sample_req_resp_freq'))
-
-    def handle(self):
-        key = '{}{}'.format(KVDB.REQ_RESP_SAMPLE, self.request.input.name)
-        self.kvdb.conn.hset(key, 'freq', self.request.input.sample_req_resp_freq)
-
 # ################################################################################################################################
 
 class UploadPackage(AdminService):
@@ -641,69 +583,6 @@ class UploadPackage(AdminService):
         }
 
 # ################################################################################################################################
-
-class _SlowResponseService(AdminService):
-    def get_data(self):
-        data = []
-        cid_needed = self.request.input.cid if 'cid' in self.SimpleIO.input_required else None
-        key = '{}{}'.format(KVDB.RESP_SLOW, self.request.input.name)
-
-        for item in self.kvdb.conn.lrange(key, 0, -1):
-            item = loads(item)
-
-            if cid_needed and cid_needed != item['cid']:
-                continue
-
-            elem = {}
-            for name in('cid', 'req_ts', 'resp_ts', 'proc_time'):
-                elem[name] = item[name]
-
-            if cid_needed and cid_needed == item['cid']:
-                for name in('req', 'resp'):
-                    elem[name] = item.get(name, '')
-
-            data.append(elem)
-
-        return data
-
-# ################################################################################################################################
-
-class GetSlowResponseList(_SlowResponseService):
-    """ Returns a list of basic information regarding slow responses of a given service.
-    """
-    @staticmethod
-    def get_name():
-        return 'zato.service.slow-response.get-list'
-
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_service_slow_response_get_list_request'
-        response_elem = 'zato_service_slow_response_get_list_response'
-        input_required = ('name',)
-        output_required = ('cid', 'req_ts', 'resp_ts', Integer('proc_time'))
-
-    def handle(self):
-        self.response.payload[:] = self.get_data()
-
-# ################################################################################################################################
-
-class GetSlowResponse(_SlowResponseService):
-    """ Returns information regading a particular slow response of a service.
-    """
-    @staticmethod
-    def get_name():
-        return 'zato.service.slow-response.get'
-
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_service_slow_response_get_request'
-        response_elem = 'zato_service_slow_response_get_response'
-        input_required = ('cid', 'name')
-        output_optional = ('cid', 'req_ts', 'resp_ts', Integer('proc_time'), 'req', 'resp')
-
-    def handle(self):
-        data = self.get_data()
-        if data:
-            self.response.payload = data[0]
-
 # ################################################################################################################################
 
 class ServiceInvoker(AdminService):
@@ -755,4 +634,14 @@ class ServiceInvoker(AdminService):
             self.response.data_format = 'text/plain'
             raise BadRequest(self.cid, 'No such service `{}`'.format(service_name))
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class RPCServiceInvoker(AdminService):
+    """ An invoker making use of the API that Redis-based communication used to use.
+    """
+    def handle(self):
+        self.server.on_broker_msg(self.request.raw_request)
+
+# ################################################################################################################################
 # ################################################################################################################################

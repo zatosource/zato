@@ -55,7 +55,7 @@ class ConfigCtx:
 
     def get_remote_server_invoker(self, server_name):
         # type: (str) -> RemoteServerInvoker
-        ctx = self.config_source.get_server_ctx(self.config_source.current_cluster_name, server_name)
+        ctx = self.config_source.get_server_ctx(self.parallel_server, self.config_source.current_cluster_name, server_name)
         return self.remote_server_invoker_class(ctx)
 
     def get_remote_server_invoker_list(self):
@@ -81,7 +81,11 @@ class ServerRPC:
     def _get_invoker_by_server_name(self, server_name):
         # type: (str) -> ServerInvoker
         if server_name == self.config_ctx.parallel_server.name:
-            return self.config_ctx.local_server_invoker_class(self.current_cluster_name, server_name)
+            return self.config_ctx.local_server_invoker_class(
+                self.config_ctx.parallel_server,
+                self.config_ctx.parallel_server.cluster_name,
+                self.config_ctx.parallel_server.name,
+            )
         else:
             return self.config_ctx.get_remote_server_invoker(server_name)
 
@@ -118,14 +122,15 @@ class ServerRPC:
             response = invoker.invoke_all_pids(service, request, *args, **kwargs)
 
             # .. continue if we know we can find something ..
-            if response.has_data:
+            if response and response.has_data:
 
                 # .. check all per-PID responses ..
                 for pid, per_pid_response in response.data.items(): # type: (int, PerPIDResponse)
 
                     # .. append the response if everything went fine ..
                     if per_pid_response.is_ok:
-                        out.data.append(per_pid_response.pid_data)
+                        if per_pid_response.pid_data is not None:
+                            out.data.append(per_pid_response.pid_data)
 
                     # .. otherwise, just set the overall response's success flag to false ..
                     else:

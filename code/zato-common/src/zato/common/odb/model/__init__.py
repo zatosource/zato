@@ -22,7 +22,7 @@ from zato.common.api import AMQP, CASSANDRA, CLOUD, DATA_FORMAT, HTTP_SOAP_SERIA
 from zato.common.json_internal import json_dumps
 from zato.common.odb.const import WMQ_DEFAULT_PRIORITY
 from zato.common.odb.model.base import Base, _JSON
-from zato.common.odb.model.sso import _SSOAttr, _SSOGroup, _SSOLinkedAuth, _SSOSession, _SSOUser
+from zato.common.odb.model.sso import _SSOAttr, _SSOPasswordReset, _SSOGroup, _SSOLinkedAuth, _SSOSession, _SSOUser
 
 # ################################################################################################################################
 
@@ -64,6 +64,12 @@ class SSOAttr(_SSOAttr):
 # ################################################################################################################################
 
 class SSOLinkedAuth(_SSOLinkedAuth):
+    pass
+
+
+# ################################################################################################################################
+
+class SSOPasswordReset(_SSOPasswordReset):
     pass
 
 # ################################################################################################################################
@@ -753,6 +759,9 @@ class Service(Base):
         self.docs_description = None # Not used by the database
         self.invokes = None # Not used by the database
         self.invoked_by = None # Not used by the database
+
+        self.last_timestamp = None # Not used by the database
+        self.last_timestamp_utc = None # Not used by the database
 
 # ################################################################################################################################
 

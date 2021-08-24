@@ -23,6 +23,9 @@ from zato.common.odb.model import AlembicRevision, Base, ZatoInstallState
 LATEST_ALEMBIC_REVISION = '0028_ae3419a9'
 VERSION = 1
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Create(ZatoCommand):
     """ Creates a new Zato ODB (Operational Database)
     """
@@ -30,7 +33,19 @@ class Create(ZatoCommand):
     opts.append({'name':'--skip-if-exists',
         'help':'Return without raising an error if ODB already exists', 'action':'store_true'})
 
+# ################################################################################################################################
+
+    def allow_empty_secrets(self):
+        return True
+
+# ################################################################################################################################
+
     def execute(self, args, show_output=True):
+
+        # Alembic
+        from alembic.migration import MigrationContext
+        from alembic.operations import Operations
+
         engine = self._get_engine(args)
         session = self._get_session(engine)
 
@@ -76,11 +91,28 @@ class Create(ZatoCommand):
 
             session.add(state)
             session.add(alembic_rev)
-
             session.commit()
+
+            # We need to add a foreign key to this SSO table because we are conducting
+            # an ODB installation that combines base tables with SSO ones.
+            alembic_ctx = MigrationContext.configure(engine.connect())
+            alembic_ops = Operations(alembic_ctx)
+
+            # There is no support for FKs during ALTER TABLE statements in SQLite.
+            if args.odb_type != 'sqlite':
+                alembic_ops.create_foreign_key(
+                    'fk_sso_linked_base_id',
+                    'zato_sso_linked_auth',
+                    'sec_base',
+                    ['auth_id'], ['id'],
+                    ondelete='CASCADE',
+                )
 
             if show_output:
                 if self.verbose:
-                    self.logger.debug('Successfully created the ODB')
+                    self.logger.debug('ODB created successfully')
                 else:
                     self.logger.info('OK')
+
+# ################################################################################################################################
+# ################################################################################################################################

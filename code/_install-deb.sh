@@ -33,6 +33,7 @@ fi
 
 curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
 $PY_BINARY -m pip install -U virtualenv==20.4.3
+# main -> $PY_BINARY -m pip install -U virtualenv==20.4.7
 
 $PY_BINARY -m virtualenv .
 source ./bin/activate

@@ -1,4 +1,5 @@
 {% extends "zato/index.html" %}
+{% load extras %}
 
 {% block html_title %}{{ service.name }} - Overview{% endblock %}
 
@@ -40,8 +41,6 @@
     <a href="{% url "service-overview" service.name %}?cluster={{ cluster_id }}" class="common current">Overview</a>
     <a href="{% url "service-invoker" service.name %}?cluster={{ cluster_id }}" class="common">Invoker</a>
     <a href="{% url "service-source-info" service.name %}?cluster={{ cluster_id }}" class="common">Source code</a>
-    <a href="{% url "service-request-response" service.name %}?cluster={{ cluster_id }}" class="common">Sample request/response</a>
-    <a href="{% url "service-slow-response" service.name %}?cluster={{ cluster_id }}" class="common">Slow responses</a>
 </div>
 
 <div id="markup">
@@ -61,46 +60,51 @@
                                         <td class='inline_header' colspan="2">Statistics</td>
                                     </tr>
                                     <tr>
-                                        <td>Last response time</td>
-                                        <td>{{ service.time_last|floatformat:0 }} ms</td>
-                                    </tr>
+
                                     <tr>
-                                        <td>All time usage</td>
+                                        <td style="width:35%">Usage</td>
                                         <td>{{ service.usage }}</td>
                                     </tr>
-                                    <tr>
-                                        <td>All time min/max/mean (ms)</td>
-                                        <td>{{ service.time_min_all_time|floatformat:0 }}/{{ service.time_max_all_time|floatformat:0 }}/{{ service.time_mean_all_time|floatformat:0 }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>1h usage</td>
-                                        <td>{{ service.time_usage_1h|default:0 }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>1h min/max/mean (ms)</td>
-                                        <td>{{ service.time_min_resp_time_1h|floatformat:0|default:0 }}/{{ service.time_max_resp_time_1h|floatformat:0|default:0 }}/{{ service.time_mean_1h|floatformat:0|default:0 }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>1h req/s</td>
-                                        <td>{{ service.time_rate_1h|default:"0.0" }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>1h mean trend</td>
+                                     </tr>
+                                        <td>Last used</td>
                                         <td>
-                                            {% if service.time_mean_trend_1h %}
-                                            <span class="sparklines" id="trend_mean_1h"><!-- {{ service.time_mean_trend_1h }} --></span>
+                                            {% if service.usage %}
+
+                                                <a
+                                                    id="a_last_timestamp"
+                                                    href="javascript:$.fn.zato.toggle_time('last_timestamp', '{{ service.last_timestamp }}', '{{ service.last_timestamp_utc }}')">{{ service.last_timestamp }}
+                                                </a>
+
                                             {% else %}
-                                            N/A
+                                                <span class="form_hint">n/a</span>
                                             {% endif %}
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td>1h req trend</td>
+                                        <td>Last response time</td>
                                         <td>
-                                            {% if service.time_usage_trend_1h %}
-                                            <span class="sparklines" id="trend_rate_1h"><!-- {{ service.time_usage_trend_1h }} --></span>
+                                            {% if service.usage %}
+                                                {{ service.last_duration|format_float:1 }} ms
                                             {% else %}
-                                            N/A
+                                                <span class="form_hint">n/a</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td>
+                                            Min/max/mean
+                                            <span class="form_hint">(ms)</span>
+                                        </td>
+                                        <td>
+                                            {% if service.usage %}
+                                                {{ service.usage_min|floatformat:1 }}
+                                                /
+                                                {{ service.usage_max|floatformat:1 }}
+                                                /
+                                                {{ service.usage_mean|floatformat:1 }}
+                                            {% else %}
+                                                <span class="form_hint">n/a</span>
                                             {% endif %}
                                         </td>
                                     </tr>
@@ -128,7 +132,7 @@
                                     </tr>
                                     <tr>
                                         <td>
-                                            Plain HTTP: {% if not service.plain_http_channels %}<span class="form_hint">(None)</span> {% endif %}{% for item in service.plain_http_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
+                                            REST: {% if not service.plain_http_channels %}<span class="form_hint">(None)</span> {% endif %}{% for item in service.plain_http_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
                                             SOAP: {% if not service.soap_channels %}<span class="form_hint">(None)</span> {% endif %}{% for item in service.soap_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
                                             AMQP: {% if not service.amqp_channels %}<span class="form_hint">(None)</span> {% endif %}{% for item in service.amqp_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
                                             IBM MQ: {% if not service.wmq_channels %}<span class="form_hint">(None)</span> {% endif %}{% for item in service.wmq_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
@@ -159,7 +163,7 @@
                     {% endfor %}
                     </table>
                 {% else %}
-                    (Service isn't deployed on any servers)
+                    (Service isn't deployed on any server)
                 {% endif %}
             </td>
         </tr>
