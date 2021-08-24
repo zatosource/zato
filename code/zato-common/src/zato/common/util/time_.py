@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from datetime import datetime, timedelta
@@ -61,23 +59,6 @@ class TimeUtil(object):
     Default format is always taken from ISO 8601 (so it's sorted lexicographically)
     and default timezone is always UTC.
     """
-    def __init__(self, kvdb):
-        self.kvdb = kvdb
-
-# ################################################################################################################################
-
-    def get_format_from_kvdb(self, format):
-        """ Returns format stored under a key pointed to by 'format' or raises
-        ValueError if the key is missing/has no value.
-        """
-        key = 'kvdb:date-format:{}'.format(format[5:])
-        format = self.kvdb.conn.get(key)
-        if not format:
-            msg = 'Key `{}` does not exist'.format(key)
-            logger.error(msg)
-            raise ValueError(msg)
-
-        return format
 
 # ################################################################################################################################
 
@@ -119,9 +100,6 @@ class TimeUtil(object):
         if tz != 'UTC':
             today = today.to(tz)
 
-        if format.startswith('kvdb:'):
-            format = self.get_format_from_kvdb(format)
-
         if needs_format:
             return today.format(format)
         else:
@@ -143,12 +121,6 @@ class TimeUtil(object):
         """ Reformats value from one datetime format to another, for instance
         from 23-03-2013 to 03/23/13 (MM-DD-YYYY to DD/MM/YY).
         """
-        if from_.startswith('kvdb:'):
-            from_ = self.get_format_from_kvdb(from_)
-
-        if to.startswith('kvdb:'):
-            to = self.get_format_from_kvdb(to)
-
         try:
             # Arrow compares to str, not basestring
             value = str(value) if isinstance(value, unicode) else value

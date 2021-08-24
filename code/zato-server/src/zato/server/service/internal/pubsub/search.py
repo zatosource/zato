@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from operator import itemgetter
@@ -26,22 +24,7 @@ _page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE
 class NonGDSearchService(AdminService):
     """ A base class for services that produce a list of paginated non-GD messages.
     """
-    def set_non_gd_msg_list_response(self, msg_list, cur_page, _sort_key=itemgetter('pub_time')):
-        """ Paginates a list of non-GD messages (from topics or queues) and returns results.
-        """
-        cur_page = cur_page - 1 if cur_page else 0 # We index lists from 0
-
-        # Set it here because later on it may be shortened to the page_size of elements
-        total = len(msg_list)
-
-        # If we get here, we must have collected some data at all
-        if msg_list:
-
-            # Sort the output before it is returned - messages last published (youngest) come first
-            msg_list.sort(key=_sort_key, reverse=True)
-            start = cur_page * _page_size
-            end = start + _page_size
-            msg_list = msg_list[start:end]
+    def _post_process_msg_list(self, msg_list):
 
         for msg in msg_list:
 
@@ -54,11 +37,17 @@ class NonGDSearchService(AdminService):
             msg['endpoint_id'] = msg.pop('published_by_id')
             msg['endpoint_name'] = self.pubsub.get_endpoint_by_id(msg['endpoint_id']).name
 
-        search_results = SearchResults(None, None, None, total)
-        search_results.set_data(cur_page, _page_size)
+    def set_non_gd_msg_list_response(self, msg_list, cur_page, _sort_key=itemgetter('pub_time')):
+        """ Paginates a list of non-GD messages (from topics or queues) and returns results.
+        """
+        # Build the results metadata
+        search_results = SearchResults.from_list(
+            msg_list, cur_page, _page_size, needs_sort=True, post_process_func=self._post_process_msg_list)
 
-        # This goes to the service's response payload object
+        # This goes to the service's response payload object ..
         self.response.payload.response = msg_list
+
+        # .. and this is metadata so it goes to _meta.
         self.response.payload._meta = search_results.to_dict()
 
 # ################################################################################################################################

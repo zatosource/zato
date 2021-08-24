@@ -1,21 +1,30 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
+# ################################################################################################################################
+# ################################################################################################################################
 
+if 0:
+    from typing import Callable
+
+    Callable = Callable
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 _search_attrs = 'num_pages', 'cur_page', 'prev_page', 'next_page', 'has_prev_page', 'has_next_page', 'page_size', 'total'
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class SearchResults(object):
     def __init__(self, q, result, columns, total):
+        # type: (object, object, object, int) -> None
         self.q = q
         self.result = result
         self.total = total
@@ -60,10 +69,54 @@ class SearchResults(object):
 
 # ################################################################################################################################
 
+    @staticmethod
+    def from_list(
+        data_list, # type: list
+        cur_page,  # type: int
+        page_size, # type: int
+        needs_sort=False,   # type: bool
+        post_process_func=None, # type: Callable
+        sort_key=None,     # type: object
+        needs_reverse=True # type: bool
+        ):
+
+        cur_page = cur_page - 1 if cur_page else 0 # We index lists from 0
+
+        # Set it here because later on it may be shortened to the page_size of elements
+        total = len(data_list)
+
+        # If we get here, we must have collected some data at all
+        if data_list:
+
+            # We need to sort the output ..
+            if needs_sort:
+                data_list.sort(key=sort_key, reverse=needs_reverse)
+
+            # .. the output may be already sorted but we may perhaps need to reverse it.
+            else:
+                if needs_reverse:
+                    data_list.reverse()
+
+            start = cur_page * page_size
+            end = start + page_size
+            data_list = data_list[start:end]
+
+        if post_process_func:
+            post_process_func(data_list)
+
+        search_results = SearchResults(None, data_list, None, total)
+        search_results.set_data(cur_page, page_size)
+
+        return search_results
+
+# ################################################################################################################################
+
     def to_dict(self, _search_attrs=_search_attrs):
         out = {}
+        out['result'] = self.result
         for name in _search_attrs:
             out[name] = getattr(self, name, None)
         return out
 
+# ################################################################################################################################
 # ################################################################################################################################

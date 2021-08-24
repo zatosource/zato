@@ -100,7 +100,7 @@ class Arbiter(object):
         self.worker_age = 0
         self.reexec_pid = 0
         self.master_pid = 0
-        self.master_name = "Master"
+        self.master_name = "Main"
 
         cwd = util.getcwd()
 
@@ -164,7 +164,7 @@ class Arbiter(object):
         if 'GUNICORN_PID' in os.environ:
             self.master_pid = int(os.environ.get('GUNICORN_PID'))
             self.proc_name = self.proc_name + ".2"
-            self.master_name = "Master.2"
+            self.master_name = "Main.2"
 
         self.pid = os.getpid()
         if self.cfg.pidfile is not None:
@@ -354,9 +354,9 @@ class Arbiter(object):
             return
 
         if self.master_pid != os.getppid():
-            self.log.info("Master has been promoted.")
+            self.log.info("Main has been promoted.")
             # reset master infos
-            self.master_name = "Master"
+            self.master_name = "Main"
             self.master_pid = 0
             self.proc_name = self.cfg.proc_name
             del os.environ['GUNICORN_PID']
@@ -679,6 +679,10 @@ class Arbiter(object):
         :attr pid: int, worker pid
         :attr sig: `signal.SIG*` value
          """
+
+        worker = self.WORKERS.get(pid)
+        self.cfg.before_pid_kill(self, worker)
+
         try:
             os.kill(pid, sig)
         except OSError as e:

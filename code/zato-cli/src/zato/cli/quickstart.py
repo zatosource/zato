@@ -181,7 +181,6 @@ class Create(ZatoCommand):
     """ Quickly creates a working cluster
     """
     needs_empty_dir = True
-    allow_empty_secrets = True
     opts = deepcopy(common_odb_opts) + deepcopy(kvdb_opts)
     opts.append({'name':'--cluster_name', 'help':'Name to be given to the new cluster'})
     opts.append({'name':'--servers', 'help':'How many servers to create', 'default':1})
@@ -203,16 +202,21 @@ class Create(ZatoCommand):
         bunch.odb_port = args.odb_port
         bunch.odb_user = args.odb_user
         bunch.odb_db_name = args.odb_db_name
-        bunch.kvdb_host = args.kvdb_host
-        bunch.kvdb_port = args.kvdb_port
+        bunch.kvdb_host = self.get_arg('kvdb_host')
+        bunch.kvdb_port = self.get_arg('kvdb_port')
         bunch.sqlite_path = getattr(args, 'sqlite_path', None)
         bunch.postgresql_schema = getattr(args, 'postgresql_schema', None)
         bunch.odb_password = args.odb_password
-        bunch.kvdb_password = args.kvdb_password
+        bunch.kvdb_password = self.get_arg('kvdb_password')
         bunch.cluster_name = cluster_name
         bunch.scheduler_name = 'scheduler1'
 
         return bunch
+
+# ################################################################################################################################
+
+    def allow_empty_secrets(self):
+        return True
 
 # ################################################################################################################################
 
@@ -367,6 +371,9 @@ class Create(ZatoCommand):
         # 4) servers
         #
 
+        # This is populated lower in order for the scheduler to use it.
+        first_server_path = ''
+
         for idx, name in enumerate(server_names):
             server_path = os.path.join(args_path, server_names[name])
             os.mkdir(server_path)
@@ -383,9 +390,14 @@ class Create(ZatoCommand):
 
             server_id = create_server.Create(create_server_args).execute(create_server_args, next(next_port), False, True)
 
-            # We make the first server a delivery server for sample pub/sub topics.
+            # We special case the first server ..
             if idx == 0:
+
+                # .. make it a delivery server for sample pub/sub topics ..
                 self._set_pubsub_server(args, server_id, cluster_name, '/zato/demo/sample')
+
+                # .. make the scheduler use it.
+                first_server_path = server_path
 
             self.logger.info('[{}/{}] server{} created'.format(next(next_step), total_steps, name))
 
@@ -458,6 +470,7 @@ class Create(ZatoCommand):
         create_scheduler_args.priv_key_path = scheduler_crypto_loc.priv_path
         create_scheduler_args.ca_certs_path = scheduler_crypto_loc.ca_certs_path
         create_scheduler_args.cluster_id = cluster_id
+        create_scheduler_args.server_path = first_server_path
 
         create_scheduler.Create(create_scheduler_args).execute(create_scheduler_args, False, True)
         self.logger.info('[{}/{}] Scheduler created'.format(next(next_step), total_steps))

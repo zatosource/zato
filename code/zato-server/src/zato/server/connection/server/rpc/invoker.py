@@ -13,6 +13,9 @@ from typing import Optional as optional
 # Requests
 from requests import get as requests_get
 
+# simdjson
+from simdjson import loads
+
 # Zato
 from zato.client import AnyServiceInvoker
 from zato.common.ext.dataclasses import dataclass, field
@@ -134,9 +137,18 @@ class RemoteServerInvoker(ServerInvoker):
     def _invoke(self, invoke_func, service, request=None, *args, **kwargs):
         # type: (Callable, str, object) -> ServerInvocationResult
 
+        if not self.invocation_ctx.address:
+            logger.info('RPC address not found for %s:%s -> `%r` (%s)',
+                self.invocation_ctx.cluster_name,
+                self.invocation_ctx.server_name,
+                self.address,
+                service)
+            return
+
         # Optionally, ping the remote server to quickly find out if it is still available ..
         if self.invocation_ctx.needs_ping:
-            requests_get(self.ping_address, timeout=self.ping_timeout)
+            ping_timeout = kwargs.get('ping_timeout') or self.ping_timeout
+            requests_get(self.ping_address, timeout=ping_timeout)
 
         # .. actually invoke the server now ..
         response = invoke_func(service, request, skip_response_elem=True, *args, **kwargs) # type: ServiceInvokeResponse
@@ -151,6 +163,15 @@ class RemoteServerInvoker(ServerInvoker):
         if response.ok:
             if response.has_data:
                 for pid, pid_data in response.data.items():
+
+                    per_pid_data = pid_data['pid_data']
+
+                    if per_pid_data == '':
+                        pid_data['pid_data'] = None
+
+                    if per_pid_data and isinstance(per_pid_data, str) and per_pid_data[0] == '{':
+                        pid_data['pid_data'] = loads(per_pid_data)
+
                     per_pid_response = from_dict(PerPIDResponse, pid_data) # type: PerPIDResponse
                     per_pid_response.pid = pid
                     out.data[pid] = per_pid_response

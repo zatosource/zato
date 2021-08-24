@@ -331,7 +331,6 @@ def new_cid(bytes=12, _random=random.getrandbits):
     for any cryptographical purposes; it is only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.
     """
-
     # Note that we need to convert bytes to bits here.
     return hex(_random(bytes * 8))[2:]
 
@@ -488,7 +487,10 @@ def payload_from_request(json_parser, cid, request, data_format, transport, chan
             if isinstance(request, basestring) and data_format == _data_format_json:
                 try:
                     request_bytes = request if isinstance(request, bytes) else request.encode('utf8')
-                    payload = json_parser.parse(request_bytes)
+                    try:
+                        payload = json_parser.parse(request_bytes)
+                    except ValueError:
+                        payload = request_bytes
                     if hasattr(payload, 'as_dict'):
                         payload = payload.as_dict()
                 except ValueError:
@@ -781,6 +783,30 @@ def dotted_getattr(o, path):
 
 # ################################################################################################################################
 
+def wait_for_odb_service(session, cluster_id, service_name):
+    # type: (object, int, str) -> Service
+
+    # Assume we do not have it
+    service = None
+
+    while not service:
+
+        # Try to look it up ..
+        service = session.query(Service).\
+            filter(Service.name==service_name).\
+            filter(Cluster.id==cluster_id).\
+            first()
+
+        # .. if not found, sleep for a moment.
+        if not service:
+            sleep(1)
+            logger.info('Waiting for ODB service `%s`', service_name)
+
+    # If we are here, it means that the service was found so we can return it
+    return service
+
+# ################################################################################################################################
+
 def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
     """ Adds internal jobs to the ODB. Note that it isn't being added
     directly to the scheduler because we want users to be able to fine-tune the job's
@@ -790,7 +816,7 @@ def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
         now = datetime.utcnow()
         for item in jobs:
 
-            if not stats_enabled and item['name'].startswith('zato.stats'):
+            if item['name'].startswith('zato.stats'):
                 continue
 
             try:
@@ -807,10 +833,12 @@ def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
                     if not isinstance(extra, bytes):
                         extra = extra.encode('utf8')
 
-                service = session.query(Service).\
-                    filter(Service.name==item['service']).\
-                    filter(Cluster.id==cluster_id).\
-                    one()
+                #
+                # This will block as long as this service is not available in the ODB.
+                # It is required to do it because the scheduler may start before servers
+                # in which case services will not be in the ODB yet and we need to wait for them.
+                #
+                service = wait_for_odb_service(session, cluster_id, item['service'])
 
                 cluster = session.query(Cluster).\
                     filter(Cluster.id==cluster_id).\

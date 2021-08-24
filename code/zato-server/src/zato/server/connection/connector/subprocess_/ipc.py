@@ -78,7 +78,7 @@ class SubprocessIPC(object):
     def __init__(self, server):
         # type: (ParallelServer)
         self.server = server
-        self.ipc_tcp_port = None
+        self.ipc_tcp_port = None # type: int
 
 # ################################################################################################################################
 
@@ -99,12 +99,16 @@ class SubprocessIPC(object):
 
 # ################################################################################################################################
 
-    def start_connector(self, ipc_tcp_start_port, timeout=5):
+    def start_connector(self, ipc_tcp_start_port, timeout=5, extra_options_kwargs=None):
         """ Starts an HTTP server acting as an connector process. Its port will be greater than ipc_tcp_start_port,
         which is the starting point to find a free port from.
         """
+        # Ensure we are enabled before we continue
         if self.check_enabled:
             self._check_enabled()
+
+        # Turn into a dict for later use
+        extra_options_kwargs = extra_options_kwargs or {}
 
         self.ipc_tcp_port = get_free_port(ipc_tcp_start_port)
         logger.info('Starting {} connector for server `%s` on port `%s`'.format(self.connector_name),
@@ -128,10 +132,7 @@ class SubprocessIPC(object):
         }))
 
         # Start connector in a sub-process
-        start_python_process('{} connector'.format(self.connector_name), False, self.connector_module, '', extra_options={
-            'deployment_key': self.server.deployment_key,
-            'shmem_size': self.server.shmem_size
-        }, stderr_path=self.server.stderr_path)
+        self._start_connector_process(extra_options_kwargs)
 
         # Wait up to timeout seconds for the connector to start as indicated by its responding to a PING request
         now = datetime.utcnow()
@@ -157,6 +158,30 @@ class SubprocessIPC(object):
             logger.warn('{} connector (%s) could not be started after %s'.format(self.connector_name), address, timeout)
         else:
             return is_ok
+
+# ################################################################################################################################
+
+    def _start_connector_process(self, extra_options_kwargs):
+        # type: (dict) -> None
+
+        # Base extra options
+        extra_options={
+            'deployment_key': self.server.deployment_key,
+            'shmem_size': self.server.shmem_size
+        }
+
+        # Merge any additional ones
+        extra_options.update(extra_options_kwargs)
+
+        # Start the process now
+        start_python_process(
+            '{} connector'.format(self.connector_name),
+            False,
+            self.connector_module,
+            '',
+            extra_options=extra_options,
+            stderr_path=self.server.stderr_path
+        )
 
 # ################################################################################################################################
 
@@ -244,4 +269,5 @@ class SubprocessIPC(object):
         text_pattern = 'Creating {} channel `%s`'.format(self.connector_name)
         self._create_initial_objects(config_dict, self.action_channel_create, text_pattern, text_func)
 
+# ################################################################################################################################
 # ################################################################################################################################
