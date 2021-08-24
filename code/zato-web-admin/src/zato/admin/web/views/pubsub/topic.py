@@ -50,9 +50,11 @@ class Index(_Index):
         initial_input_dict['needs_details'] = True
 
     def on_before_append_item(self, item):
+
         if item.last_pub_time:
             item.last_pub_time_utc = item.last_pub_time
             item.last_pub_time = from_utc_to_user(item.last_pub_time+'+00:00', self.req.zato.user_profile)
+
         return item
 
     def handle(self):
@@ -226,6 +228,7 @@ class TopicMessages(_Index):
         item.pub_time_utc = item.pub_time
         item.pub_time = from_utc_to_user(item.pub_time+'+00:00', self.req.zato.user_profile)
         item.endpoint_html = get_endpoint_html(item, self.req.zato.cluster_id)
+
         return item
 
     def set_input(self, *args, **kwargs):

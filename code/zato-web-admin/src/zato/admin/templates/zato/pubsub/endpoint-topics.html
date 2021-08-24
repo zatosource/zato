@@ -35,7 +35,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Topics last published to by endpoint : <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;highlight={{ endpoint.id }}">{{ endpoint.name }}</a></h2>
+<h2 class="zato">Topics last published to by endpoint : <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;query={{ endpoint.name }}">{{ endpoint.name }}</a></h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -66,19 +66,18 @@
                         <td style="width:20%">
 
                             <a
-                                id="a_pub_time_{{ item.msg_id }}"
-                                href="javascript:$.fn.zato.toggle_time('pub_time_{{ item.msg_id }}', '{{ item.pub_time }}', '{{ item.pub_time_utc }}')">{{ item.pub_time }}
+                                id="a_pub_time_{{ item.pub_msg_id }}"
+                                href="javascript:$.fn.zato.toggle_time('pub_time_{{ item.pub_msg_id }}', '{{ item.pub_time }}', '{{ item.pub_time_utc }}')">{{ item.pub_time }}
                             </a>
 
                             {% if item.ext_pub_time %}
                                 <br/>
                                 <a
-                                    id="a_ext_pub_time_{{ item.msg_id }}"
-                                    href="javascript:$.fn.zato.toggle_time('ext_pub_time_{{ item.msg_id }}', '{{ item.ext_pub_time }}', '{{ item.ext_pub_time_utc }}')">{{ item.ext_pub_time }}
+                                    id="a_ext_pub_time_{{ item.pub_msg_id }}"
+                                    href="javascript:$.fn.zato.toggle_time('ext_pub_time_{{ item.pub_msg_id }}', '{{ item.ext_pub_time }}', '{{ item.ext_pub_time_utc }}')">{{ item.ext_pub_time }}
                                 </a>
 
                             {% endif %}
-
 
                         </td>
                         <td>

@@ -29,8 +29,7 @@
             '_is_active',
             'impl_name',
             '_is_internal',
-            'rate_1h',
-            'mean_1h',
+
             '_edit',
             '_delete',
 
@@ -112,8 +111,6 @@
                         <th><a href="#">Active</a></th>
                         <th><a href="#">Implementation</a></th>
                         <th><a href="#">Internal</a></th>
-                        <th>1h req/s</th>
-                        <th>1h mean</th>
 
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -144,13 +141,13 @@
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.impl_name }}</td>
                         <td>{{ item.is_internal|yesno:'Yes,No' }}</td>
-                        <td id="rate_1h_{{ item.id }}">&lt;0.01</td>
-                        <td id="mean_1h_{{ item.id }}">&lt;0.01</td>
 
                         <td><a href="javascript:$.fn.zato.service.edit('{{ item.id }}')">Edit</a></td>
                         <td>
                             {% if item.may_be_deleted %}
-                            <a href="javascript:$.fn.zato.service.delete_('{{ item.id }}')">Delete</a>
+                                <a href="javascript:$.fn.zato.service.delete_('{{ item.id }}')">Delete</a>
+                            {% else %}
+                                <span class="form_hint">---</span>
                             {% endif %}
                         </td>
 

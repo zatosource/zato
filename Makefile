@@ -2,6 +2,11 @@
 .PHONY: build
 MAKEFLAGS += --silent
 
+BLACK_CMD=$(CURDIR)/code/bin/black \
+	--line-length=120 \
+	--color \
+	--skip-string-normalization
+
 default: run-tests
 
 common-tests:
@@ -37,5 +42,9 @@ run-tests:
 	$(MAKE) common-tests
 	$(MAKE) cy-tests
 	$(MAKE) server-tests
-	# $(MAKE) sso-tests
+	$(MAKE) sso-tests
 	$(MAKE) static-check
+
+black:
+	$(CURDIR)/code/bin/pip install black
+	$(BLACK_CMD) $(CURDIR)/code/zato-agent
