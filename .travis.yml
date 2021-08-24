@@ -1,4 +1,8 @@
 language: python
+
+services:
+  - docker
+
 cache:
   directories:
     - /tmp/travis-cache
@@ -29,11 +33,34 @@ sudo: required
 #   - linux
 #   - windows
 
-# List of matrix exclusions
+before_cache:
+  - sudo rm -rf /tmp/travis-cache/root/.cache/pip/http
+
+# https://zato.io/docs/admin/guide/install/index.html#operating-system-considerations
+env:
+  global:
+  - ZATO_BRANCH: support/3.2
+  - ZATO_VERSION: 3.2.0
+  - PY_BINARY: python3
+  - ZATO_UPLOAD_PACKAGES: "y"
+  jobs:
+    - MODE=packaging IMAGE=debian:10
+    - MODE=packaging IMAGE=ubuntu:18.04
+    - MODE=packaging IMAGE=ubuntu:20.04
+    - MODE=packaging IMAGE=centos:7
+    - MODE=packaging IMAGE=centos:8
+
+os:
+  - linux
+# Use Ubuntu Xenial
+dist: xenial
+
+before_install:
+  - sudo apt-get update
+
 matrix:
   allow_failures:
-    # Don't fail the build for a problem with OS X
-    - osx
+    os: osx
 
   include:
     - os: windows

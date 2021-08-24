@@ -13,7 +13,7 @@ from django.views.static import serve as django_static_serve
 
 # Zato
 from zato.admin import settings
-from zato.admin.web.views import account, audit_log, cluster, http_soap, kvdb, load_balancer, main, scheduler, service, stats
+from zato.admin.web.views import account, audit_log, cluster, http_soap, load_balancer, main, scheduler, service
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
@@ -35,7 +35,6 @@ from zato.admin.web.views.definition import kafka as def_kafka
 from zato.admin.web.views.definition import jms_wmq as def_wmq
 from zato.admin.web.views.email import imap as email_imap
 from zato.admin.web.views.email import smtp as email_smtp
-from zato.admin.web.views.kvdb.data_dict import dictionary, impexp, translation
 from zato.admin.web.views.message import json_pointer, live_browser, namespace, xpath
 from zato.admin.web.views.notif import sql as notif_sql
 from zato.admin.web.views.outgoing import amqp_ as out_amqp
@@ -47,11 +46,15 @@ from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
 from zato.admin.web.views.outgoing import ldap as out_ldap
 from zato.admin.web.views.outgoing import mongodb as out_mongodb
 from zato.admin.web.views.outgoing import odoo as out_odoo
+from zato.admin.web.views.outgoing import redis as out_redis
 from zato.admin.web.views.outgoing import sap as out_sap
 from zato.admin.web.views.outgoing import sftp as out_sftp
 from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.outgoing import wsx as out_wsx
 from zato.admin.web.views.outgoing import zmq as out_zmq
+from zato.admin.web.views.outgoing.redis.data_dict import dictionary as out_redis_dictionary
+from zato.admin.web.views.outgoing.redis.data_dict import impexp as out_redis_impexp
+from zato.admin.web.views.outgoing.redis.data_dict import translation as out_redis_translation
 from zato.admin.web.views.pubsub import endpoint as pubsub_endpoint
 from zato.admin.web.views.pubsub import message as pubsub_message
 from zato.admin.web.views.pubsub import subscription as pubsub_subscription
@@ -68,6 +71,7 @@ from zato.admin.web.views.security import apikey, aws, basic_auth, jwt, ntlm, oa
      wss, xpath as xpath_sec
 from zato.admin.web.views.security.tls import ca_cert as tls_ca_cert, channel as tls_channel, key_cert as tls_key_cert
 from zato.admin.web.views.security.vault import connection as vault_conn
+from zato.admin.web.views.stats import service_usage as stats_service_usage
 
 urlpatterns = [
 
@@ -1405,18 +1409,26 @@ urlpatterns += [
 
 urlpatterns += [
 
-    url(r'^zato/kvdb/remote-command/$',
-        login_required(kvdb.remote_command), name='kvdb-remote-command'),
-    url(r'^zato/kvdb/remote-command/execute/$',
-        login_required(kvdb.remote_command_execute), name='kvdb-remote-command-execute'),
-    url(r'^zato/kvdb/data-dict/dictionary/$',
-        login_required(dictionary.Index()), name=dictionary.Index.url_name),
-    url(r'^zato/kvdb/data-dict/dictionary/create/$',
-        login_required(dictionary.Create()), name=dictionary.Create.url_name),
-    url(r'^zato/kvdb/data-dict/dictionary/edit/$',
-        login_required(dictionary.Edit()), name=dictionary.Edit.url_name),
-    url(r'^zato/kvdb/data-dict/dictionary/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(dictionary.Delete()), name=dictionary.Delete.url_name),
+    url(r'^zato/outgoing/redis/$',
+        login_required(out_redis.Index()), name=out_redis.Index.url_name),
+    url(r'^zato/outgoing/redis/create/$',
+        login_required(out_redis.Create()), name=out_redis.Create.url_name),
+    url(r'^zato/outgoing/redis/edit/$',
+        login_required(out_redis.Edit()), name=out_redis.Edit.url_name),
+    url(r'^zato/outgoing/redis/change-password/$',
+        login_required(out_redis.change_password), name='out-redis-change-password'),
+    url(r'^zato/outgoing/redis/remote-command/$',
+        login_required(out_redis.remote_command), name='kvdb-remote-command'),
+    url(r'^zato/outgoing/redis/remote-command/execute/$',
+        login_required(out_redis.remote_command_execute), name='kvdb-remote-command-execute'),
+    url(r'^zato/outgoing/redis/data-dict/dictionary/$',
+        login_required(out_redis_dictionary.Index()), name=out_redis_dictionary.Index.url_name),
+    url(r'^zato/outgoing/redis/data-dict/dictionary/create/$',
+        login_required(out_redis_dictionary.Create()), name=out_redis_dictionary.Create.url_name),
+    url(r'^zato/outgoing/redis/data-dict/dictionary/edit/$',
+        login_required(out_redis_dictionary.Edit()), name=out_redis_dictionary.Edit.url_name),
+    url(r'^zato/outgoing/redis/data-dict/dictionary/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_redis_dictionary.Delete()), name=out_redis_dictionary.Delete.url_name),
     ]
 
 # ################################################################################################################################
@@ -1424,19 +1436,19 @@ urlpatterns += [
 urlpatterns += [
 
     url(r'^zato/kvdb/data-dict/translation/$',
-        login_required(translation.Index()), name=translation.Index.url_name),
+        login_required(out_redis_translation.Index()), name=out_redis_translation.Index.url_name),
     url(r'^zato/kvdb/data-dict/translation/create/$',
-        login_required(translation.Create()), name=translation.Create.url_name),
+        login_required(out_redis_translation.Create()), name=out_redis_translation.Create.url_name),
     url(r'^zato/kvdb/data-dict/translation/edit/$',
-        login_required(translation.Edit()), name=translation.Edit.url_name),
+        login_required(out_redis_translation.Edit()), name=out_redis_translation.Edit.url_name),
     url(r'^zato/kvdb/data-dict/translation/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(translation.Delete()), name=translation.Delete.url_name),
+        login_required(out_redis_translation.Delete()), name=out_redis_translation.Delete.url_name),
     url(r'^zato/kvdb/data-dict/translation/get-key-list/$',
-        login_required(translation.get_key_list), name='kvdb-data-dict-translation-get-key-list'),
+        login_required(out_redis_translation.get_key_list), name='kvdb-data-dict-translation-get-key-list'),
     url(r'^zato/kvdb/data-dict/translation/get-value-list/$',
-        login_required(translation.get_value_list), name='kvdb-data-dict-translation-get-value-list'),
+        login_required(out_redis_translation.get_value_list), name='kvdb-data-dict-translation-get-value-list'),
     url(r'^zato/kvdb/data-dict/translation/translate/$',
-        login_required(translation.translate), name='kvdb-data-dict-translation-translate'),
+        login_required(out_redis_translation.translate), name='kvdb-data-dict-translation-translate'),
     ]
 
 # ################################################################################################################################
@@ -1593,11 +1605,11 @@ urlpatterns += [
 urlpatterns += [
 
     url(r'^zato/kvdb/data-dict/impexp/$',
-        login_required(impexp.index), name='kvdb-data-dict-impexp'),
+        login_required(out_redis_impexp.index), name='kvdb-data-dict-impexp'),
     url(r'^zato/kvdb/data-dict/impexp/cluster/(?P<cluster_id>.*)/import/$',
-        login_required(impexp.import_), name='kvdb-data-dict-impexp-import'),
+        login_required(out_redis_impexp.import_), name='kvdb-data-dict-impexp-import'),
     url(r'^zato/kvdb/data-dict/impexp/cluster/(?P<cluster_id>.*)/export/$',
-        login_required(impexp.export), name='kvdb-data-dict-impexp-export'),
+        login_required(out_redis_impexp.export), name='kvdb-data-dict-impexp-export'),
     ]
 
 # ################################################################################################################################
@@ -1611,23 +1623,8 @@ urlpatterns += [
 urlpatterns += [
 
     # Statistics
-
-    url(r'^zato/stats/trends/data/$',
-        login_required(stats.stats_trends_data), name='stats-trends-data'),
-    url(r'^zato/stats/trends/(?P<choice>.*)/$',
-        login_required(stats.trends), name='stats-trends'),
-    url(r'^zato/stats/summary/data/$',
-        login_required(stats.stats_summary_data), name='stats-summary-data'),
-    url(r'^zato/stats/summary/(?P<choice>.*)/$',
-        login_required(stats.summary), name='stats-summary'),
-    url(r'^zato/stats/settings/$',
-        login_required(stats.settings), name='stats-settings'),
-    url(r'^zato/stats/settings/save/$',
-        login_required(stats.settings_save), name='stats-settings-save'),
-    url(r'^zato/stats/maintenance/$',
-        login_required(stats.maintenance), name='stats-maintenance'),
-    url(r'^zato/stats/maintenance/delete/$',
-        login_required(stats.maintenance_delete), name='stats-maintenance-delete'),
+    url(r'^zato/stats/service-usage/$',
+        login_required(stats_service_usage.Index()), name=stats_service_usage.Index.url_name),
     ]
 
 # ################################################################################################################################

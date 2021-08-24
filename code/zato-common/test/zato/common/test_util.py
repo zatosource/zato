@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
+import os
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest import TestCase
-from uuid import uuid4
 
 # Bunch
 from bunch import Bunch
@@ -19,42 +19,12 @@ from bunch import Bunch
 from lxml import etree
 
 # Zato
-from zato.common.api import ParsingException, soap_body_xpath, zato_path
-from zato.common.util.api import util_api
+from zato.common.util import api as util_api, StaticConfig
+from zato.common.util.search import SearchResults
 from zato.common.py23_ import maxint
 from zato.common.test.tls_material import ca_cert
 
 # ################################################################################################################################
-
-class ZatoPathTestCase(TestCase):
-    def test_zato_path(self):
-        xml = etree.fromstring("""<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
-         xmlns="https://zato.io/ns/20130518">
-      <soap:Body>
-            <zato_channel_amqp_edit_response xmlns="https://zato.io/ns/20130518">
-               <zato_env>
-                  <cid>K08984532360785332835581231451</cid>
-                  <result>ZATO_OK</result>
-               </zato_env>
-               <item>
-                  <id>1</id>
-                  <name>crm.account</name>
-               </item>
-            </zato_channel_amqp_edit_response>
-      </soap:Body>
-   </soap:Envelope>""")
-
-        request = soap_body_xpath(xml)[0].getchildren()[0]
-        zato_path('item', True).get_from(request)
-
-        path = uuid4().hex
-        try:
-            zato_path(path, True).get_from(request)
-        except ParsingException:
-            pass
-        else:
-            raise AssertionError('Expected an ParsingException with path:[{}]'.format(path))
-
 # ################################################################################################################################
 
 class UtilsTestCase(TestCase):
@@ -64,12 +34,14 @@ class UtilsTestCase(TestCase):
         self.assertEquals(util_api.uncamelify(original), expected1)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class XPathTestCase(TestCase):
     def test_validate_xpath(self):
         self.assertRaises(etree.XPathSyntaxError, util_api.validate_xpath, 'a b c')
         self.assertTrue(util_api.validate_xpath('//node'))
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TLSTestCase(TestCase):
@@ -83,6 +55,7 @@ class TLSTestCase(TestCase):
         replaced = util_api.replace_private_key(payload)
         self.assertEquals(replaced, '{"value": "-----BEGIN RSA PRIVATE KEY-----\******n-----END RSA PRIVATE KEY-----"}') # noqa: W605
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestUpdateBindPort(TestCase):
@@ -104,6 +77,8 @@ class TestUpdateBindPort(TestCase):
         self.assertEquals(config2.address, 'tcp://*:47050')
         self.assertEquals(config2.bind_port, 47050)
 
+# ################################################################################################################################
+
     def test_update_bind_port_websocket(self):
 
         config1 = Bunch()
@@ -123,9 +98,139 @@ class TestUpdateBindPort(TestCase):
         self.assertEquals(config2.bind_port, 16254)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class TestAPIKeyUsername(TestCase):
     def test_update_apikey_username(self):
         config = Bunch(username='x-aaa')
         util_api.update_apikey_username_to_channel(config)
         self.assertEquals(config.username, 'HTTP_X_AAA')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class StaticConfigTestCase(TestCase):
+
+    def test_read_file_no_directories(self):
+
+        with TemporaryDirectory() as base_dir:
+
+            file_dir = os.path.join(base_dir)
+            file_name = 'foo.txt'
+            file_path = os.path.join(file_dir, file_name)
+
+            contents = 'This is a test.'
+            Path(file_path).write_text(contents)
+
+            static_config = StaticConfig(base_dir)
+            static_config.read_file(file_path, file_name)
+
+            value = static_config[file_name]
+            self.assertEqual(value, contents)
+
+# ################################################################################################################################
+
+    def test_read_file_with_one_directory(self):
+
+        with TemporaryDirectory() as base_dir:
+
+            level1 = 'abc'
+
+            file_dir = os.path.join(base_dir, level1)
+            file_name = 'foo.txt'
+            file_path = os.path.join(file_dir, file_name)
+
+            contents = 'This is a test.'
+
+            Path(file_dir).mkdir(parents=True)
+            Path(file_path).write_text(contents)
+
+            static_config = StaticConfig(base_dir)
+            static_config.read_file(file_path, file_name)
+
+            value = static_config[level1][file_name]
+            self.assertEqual(value, contents)
+
+# ################################################################################################################################
+
+    def test_read_file_with_nested_directory(self):
+
+        with TemporaryDirectory() as base_dir:
+
+            level1 = 'abc'
+            level2 = 'zxc'
+            level3 = 'qwe'
+
+            file_dir = os.path.join(base_dir, *[level1, level2, level3])
+            file_name = 'foo.txt'
+            file_path = os.path.join(file_dir, file_name)
+
+            contents = 'This is a test.'
+
+            Path(file_dir).mkdir(parents=True)
+            Path(file_path).write_text(contents)
+
+            static_config = StaticConfig(base_dir)
+            static_config.read_file(file_path, file_name)
+
+            value = static_config[level1][level2][level3][file_name]
+            self.assertEqual(value, contents)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SearchResultsTestCase(TestCase):
+    def test_from_list(self):
+
+        data_list = [
+
+            # Page 1
+            'item1',
+            'item2',
+            'item3',
+
+            # Page 2
+            'item4',
+            'item5',
+            'item6',
+
+            # Page 3
+            'item7',
+            'item8',
+            'item9',
+
+            # Page 3
+            'item10',
+            'item11',
+            'item12',
+        ]
+
+        # Which page are we on in this result object
+        cur_page = 2
+
+        # How many results to return in each page
+        page_size = 3
+
+        search_results = SearchResults.from_list(data_list, cur_page, page_size, needs_sort=False)
+        search_results = search_results.to_dict()
+
+        self.assertIsInstance(search_results, dict)
+
+        self.assertEqual(search_results['num_pages'], 4)
+        self.assertEqual(search_results['cur_page'], 2)
+        self.assertEqual(search_results['prev_page'], 1)
+        self.assertEqual(search_results['next_page'], 3)
+        self.assertEqual(search_results['page_size'], 3)
+        self.assertEqual(search_results['total'], 12)
+
+        self.assertTrue(search_results['has_prev_page'])
+        self.assertTrue(search_results['has_next_page'])
+
+        self.assertListEqual(
+            search_results['result'],
+            ['item9', 'item8', 'item7']
+        )
+
+
+# ################################################################################################################################
+# ################################################################################################################################

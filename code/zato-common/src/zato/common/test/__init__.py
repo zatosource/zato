@@ -18,9 +18,6 @@ from uuid import uuid4
 # Bunch
 from bunch import Bunch, bunchify
 
-# ConfigObj
-from configobj import ConfigObj
-
 # mock
 from mock import MagicMock, Mock
 
@@ -35,6 +32,7 @@ from sqlalchemy import create_engine
 
 # Zato
 from zato.common.api import CHANNEL, DATA_FORMAT, SIMPLE_IO
+from zato.common.ext.configobj_ import ConfigObj
 from zato.common.json_internal import loads
 from zato.common.log_message import CID_LENGTH
 from zato.common.odb import model
@@ -122,8 +120,9 @@ rand_nested = rand_opaque
 
 # ################################################################################################################################
 
-def rand_datetime():
-    return datetime.utcnow().isoformat() # Random in the sense of not repeating
+def rand_datetime(to_string=True):
+    value = datetime.utcnow() # Current time is as random any other
+    return value.isoformat() if to_string else value
 
 # ################################################################################################################################
 
@@ -140,11 +139,13 @@ def rand_float(start=1.0, stop=100.0):
 
 # ################################################################################################################################
 
-def rand_string(count=1):
+def rand_string(count=1, prefix=''):
+    prefix = ('-' + prefix + '-') if prefix else ''
+
     if count == 1:
-        return 'a' + uuid4().hex
+        return 'a' + prefix + uuid4().hex
     else:
-        return ['a' + uuid4().hex for x in range(count)]
+        return ['a' + prefix + uuid4().hex for x in range(count)]
 
 # ################################################################################################################################
 

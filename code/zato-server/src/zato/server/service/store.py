@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -39,7 +39,7 @@ except ImportError:
     Dumper = Dumper
 
 # Zato
-from zato.common.api import CHANNEL, DONT_DEPLOY_ATTR_NAME, KVDB, RATE_LIMIT, SourceCodeInfo, TRACE1
+from zato.common.api import CHANNEL, DONT_DEPLOY_ATTR_NAME, RATE_LIMIT, SourceCodeInfo, TRACE1
 from zato.common.json_internal import dumps
 from zato.common.json_schema import get_service_config, ValidationConfig as JSONSchemaValidationConfig, \
      Validator as JSONSchemaValidator
@@ -421,9 +421,6 @@ class ServiceStore(object):
                 class_._json_pointer_store = service_store.server.worker_store.worker_config.json_pointer_store
                 class_._xpath_store = service_store.server.worker_store.worker_config.xpath_store
 
-                _req_resp_freq_key = '%s%s' % (KVDB.REQ_RESP_SAMPLE, name)
-                class_._req_resp_freq = int(service_store.server.kvdb.conn.hget(_req_resp_freq_key, 'freq') or 0)
-
                 class_.component_enabled_cassandra = service_store.server.fs_server_config.component_enabled.cassandra
                 class_.component_enabled_email = service_store.server.fs_server_config.component_enabled.email
                 class_.component_enabled_search = service_store.server.fs_server_config.component_enabled.search
@@ -560,8 +557,13 @@ class ServiceStore(object):
 # ################################################################################################################################
 
     def new_instance_by_name(self, name, *args, **kwargs):
-        impl_name = self.name_to_impl_name[name]
-        return self.new_instance(impl_name, *args, **kwargs)
+        try:
+            impl_name = self.name_to_impl_name[name]
+        except KeyError:
+            logger.warn('No such key `{}` among `{}`'.format(name, sorted(self.name_to_impl_name)))
+            raise
+        else:
+            return self.new_instance(impl_name, *args, **kwargs)
 
 # ################################################################################################################################
 

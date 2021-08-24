@@ -1793,6 +1793,18 @@ class WorkerExit(Setting):
         the just-exited Worker.
         """
 
+class BeforePidKill(Setting):
+    name = "before_pid_kill"
+    section = "Server Hooks"
+    validator = validate_callable(2)
+    type = six.callable
+
+    def before_pid_kill(server, worker):
+        pass
+    default = staticmethod(before_pid_kill)
+    desc = """\
+        Called just before a worker is to exit.
+        """
 
 class NumWorkersChanged(Setting):
     name = "nworkers_changed"

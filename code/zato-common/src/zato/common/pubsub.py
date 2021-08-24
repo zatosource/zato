@@ -112,7 +112,7 @@ class PubSubMessage(object):
         self.serialized = None # May be set by hooks to provide an explicitly serialized output for this message
         setattr(self, GENERIC.ATTR_NAME, None) # To make this class look more like an SQLAlchemy one
 
-    def to_dict(self, skip=None, needs_utf8_encode=True, add_id_attrs=False, _data_keys=_data_keys):
+    def to_dict(self, skip=None, needs_utf8_encode=False, add_id_attrs=False, _data_keys=_data_keys):
         """ Returns a dict representation of self.
         """
         skip = skip or []

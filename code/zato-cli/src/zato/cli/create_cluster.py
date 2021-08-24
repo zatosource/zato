@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from copy import deepcopy
@@ -40,26 +38,23 @@ zato_services = {
 
 # ################################################################################################################################
 
-def new_password():
-    from uuid import uuid4
-    return uuid4().hex
-
-# ################################################################################################################################
-
 class Create(ZatoCommand):
     """ Creates a new Zato cluster in the ODB
     """
     opts = deepcopy(common_odb_opts)
 
-    opts.append({'name':'lb_host', 'help':"Load-balancer host"})
-    opts.append({'name':'lb_port', 'help':'Load-balancer port'})
-    opts.append({'name':'lb_agent_port', 'help':'Load-balancer agent host'})
-    opts.append({'name':'broker_host', 'help':"Redis host"})
-    opts.append({'name':'broker_port', 'help':'Redis port'})
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to create'})
+    opts.append({'name':'--lb_host', 'help':'Load-balancer host', 'default':'127.0.0.1'})
+    opts.append({'name':'--lb_port', 'help':'Load-balancer port', 'default':'11223'})
+    opts.append({'name':'--lb_agent_port', 'help':'Load-balancer agent host', 'default':'20151'})
+    opts.append({'name':'--broker_host', 'help':'Redis host (unused, kept for backward compatibility)'})
+    opts.append({'name':'--broker_port', 'help':'Redis port (unused, kept for backward compatibility)'})
+    opts.append({'name':'--secret-key', 'help':'Secret key that servers will use for decryption and decryption'})
     opts.append({'name':'--admin-invoke-password', 'help':'Password for web-admin to connect to servers with'})
     opts.append({'name':'--skip-if-exists',
         'help':'Return without raising an error if cluster already exists', 'action':'store_true'})
+
+# ################################################################################################################################
 
     def execute(self, args, show_output=True):
 
@@ -111,17 +106,17 @@ class Create(ZatoCommand):
                 admin_invoke_password = getattr(args, 'admin_invoke_password', None)
 
             if not admin_invoke_password:
-                admin_invoke_password = new_password()
+                admin_invoke_password = self.generate_password()
 
             admin_invoke_sec = HTTPBasicAuth(None, 'admin.invoke', True, 'admin.invoke', 'Zato admin invoke',
                 admin_invoke_password, cluster)
             session.add(admin_invoke_sec)
 
-            pubapi_sec = HTTPBasicAuth(None, 'pubapi', True, 'pubapi', 'Zato public API', new_password(), cluster)
+            pubapi_sec = HTTPBasicAuth(None, 'pubapi', True, 'pubapi', 'Zato public API', self.generate_password(), cluster)
             session.add(pubapi_sec)
 
             internal_invoke_sec = HTTPBasicAuth(None, 'zato.internal.invoke', True, 'zato.internal.invoke.user',
-                'Zato internal invoker', new_password(), cluster)
+                'Zato internal invoker', self.generate_password(), cluster)
             session.add(internal_invoke_sec)
 
             self.add_default_rbac_permissions(session, cluster)
@@ -174,6 +169,33 @@ class Create(ZatoCommand):
                 self.logger.debug(msg)
             else:
                 self.logger.info('OK')
+
+# ################################################################################################################################
+
+    def generate_password(self):
+
+        # stdlib
+        from uuid import uuid4
+
+        # cryptography
+        from cryptography.fernet import Fernet
+
+        # Zato
+        from zato.common.const import SECRETS
+
+        # New password
+        password = uuid4().hex
+
+        # This is optional
+        secret_key = getattr(self.args, 'secret_key', None)
+
+        # Return encrypted if we have the secret key, otherwise, as it is.
+        if secret_key:
+            password = Fernet(secret_key).encrypt(password.encode('utf8'))
+            password = password.decode('utf8')
+            password = SECRETS.PREFIX + password
+
+        return password
 
 # ################################################################################################################################
 
@@ -251,7 +273,7 @@ class Create(ZatoCommand):
         }
 
         for password in passwords:
-            passwords[password] = new_password()
+            passwords[password] = self.generate_password()
 
         ping_impl_name = 'zato.server.service.internal.Ping'
         ping_service_name = 'zato.ping'
@@ -397,7 +419,7 @@ class Create(ZatoCommand):
         role = RBACRole(name=role_name, parent=root_rbac_role, cluster=cluster)
         session.add(role)
 
-        auth = HTTPBasicAuth(None, account_name, True, account_name, realm, new_password(), cluster)
+        auth = HTTPBasicAuth(None, account_name, True, account_name, realm, self.generate_password(), cluster)
         session.add(auth)
 
         client_role_def = MISC.SEPARATOR.join(('sec_def', 'basic_auth', account_name))
@@ -602,7 +624,7 @@ class Create(ZatoCommand):
 
         }
 
-        sec = HTTPBasicAuth(None, 'zato.default.cache.client', True, 'zato.cache', 'Zato cache', new_password(), cluster)
+        sec = HTTPBasicAuth(None, 'zato.default.cache.client', True, 'zato.cache', 'Zato cache', self.generate_password(), cluster)
         session.add(sec)
 
         for name, impl_name in iteritems(service_to_impl):
@@ -646,7 +668,7 @@ class Create(ZatoCommand):
             'zato.crypto.generate-password':  'zato.server.service.internal.crypto.GeneratePassword',
         }
 
-        sec = HTTPBasicAuth(None, 'zato.default.crypto.client', True, 'zato.crypto', 'Zato crypto', new_password(), cluster)
+        sec = HTTPBasicAuth(None, 'zato.default.crypto.client', True, 'zato.crypto', 'Zato crypto', self.generate_password(), cluster)
         session.add(sec)
 
         for name, impl_name in iteritems(service_to_impl):
@@ -673,11 +695,11 @@ class Create(ZatoCommand):
         from zato.common.util.time_ import utcnow_as_ms
 
         sec_demo = HTTPBasicAuth(
-            None, 'zato.pubsub.demo.secdef', True, 'zato.pubsub.demo', 'Zato pub/sub demo', new_password(), cluster)
+            None, 'zato.pubsub.demo.secdef', True, 'zato.pubsub.demo', 'Zato pub/sub demo', self.generate_password(), cluster)
         session.add(sec_demo)
 
         sec_default_internal = HTTPBasicAuth(None, 'zato.pubsub.internal.secdef', True, 'zato.pubsub.internal',
-            'Zato pub/sub internal', new_password(), cluster)
+            'Zato pub/sub internal', self.generate_password(), cluster)
         session.add(sec_default_internal)
 
         impl_name1 = 'zato.server.service.internal.pubsub.pubapi.TopicService'
@@ -785,7 +807,7 @@ class Create(ZatoCommand):
         service = Service(None, 'zato.channel.jms-wmq.on-message-received', True, impl_name, True, cluster)
 
         username = IPC.CONNECTOR.USERNAME.IBM_MQ
-        sec = HTTPBasicAuth(None, username, True, username, 'Zato IBM MQ', new_password(), cluster)
+        sec = HTTPBasicAuth(None, username, True, username, 'Zato IBM MQ', self.generate_password(), cluster)
 
         channel = HTTPSOAP(None, 'zato.internal.callback.wmq', True, True, 'channel', 'plain_http', None,
             '/zato/internal/callback/wmq',
@@ -803,7 +825,7 @@ class Create(ZatoCommand):
         from zato.common.odb.model import HTTPBasicAuth
 
         username = IPC.CONNECTOR.USERNAME.SFTP
-        sec = HTTPBasicAuth(None, username, True, username, 'Zato SFTP', new_password(), cluster)
+        sec = HTTPBasicAuth(None, username, True, username, 'Zato SFTP', self.generate_password(), cluster)
         session.add(sec)
 
 # ################################################################################################################################
@@ -814,7 +836,7 @@ class Create(ZatoCommand):
         from zato.common.odb.model import HTTPBasicAuth
 
         username = CACHE.API_USERNAME
-        sec = HTTPBasicAuth(None, username, True, username, 'Zato Cache', new_password(), cluster)
+        sec = HTTPBasicAuth(None, username, True, username, 'Zato Cache', self.generate_password(), cluster)
         session.add(sec)
 
 # ################################################################################################################################
@@ -846,10 +868,6 @@ class Create(ZatoCommand):
             ['zato.sso.session.session', 'zato.server.service.internal.sso.session.Session', '/zato/sso/user/session'],
             ['zato.sso.session.session-list', 'zato.server.service.internal.sso.session.SessionList', '/zato/sso/user/session/list'],
 
-            # Password reset
-            ['zato.sso.user.password-reset.begin', 'zato.server.service.internal.sso.password_reset.Begin', '/zato/sso/user/password/reset/begin'],
-            ['zato.sso.user.password-reset.complete', 'zato.server.service.internal.sso.password_reset.Complete', '/zato/sso/user/password/reset/complete'],
-
             # User attributes
             ['zato.sso.user-attr.user-attr', 'zato.server.service.internal.sso.user_attr.UserAttr', '/zato/sso/user/attr'],
             ['zato.sso.user-attr.user-attr-exists', 'zato.server.service.internal.sso.user_attr.UserAttrExists', '/zato/sso/user/attr/exists'],
@@ -859,6 +877,9 @@ class Create(ZatoCommand):
             ['zato.sso.session-attr.session-attr', 'zato.server.service.internal.sso.session_attr.SessionAttr', '/zato/sso/session/attr'],
             ['zato.sso.session-attr.session-attr-exists', 'zato.server.service.internal.sso.session_attr.SessionAttrExists', '/zato/sso/session/attr/exists'],
             ['zato.sso.session-attr.session-attr-names', 'zato.server.service.internal.sso.session_attr.SessionAttrNames', '/zato/sso/session/attr/names'],
+
+            # Password reset
+            ['zato.sso.password-reset.password-reset', 'zato.server.service.internal.sso.password-reset.PasswordReset', '/zato/sso/password/reset'],
         ]
 
         for name, impl_name, url_path in data:

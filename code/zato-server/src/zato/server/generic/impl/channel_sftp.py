@@ -23,7 +23,6 @@ from zato.common.model import SFTPChannel as SFTPChannelModel
 
 log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
 logging.basicConfig(level=logging.DEBUG, format=log_format)
-
 logger = logging.getLogger('zato')
 
 # ################################################################################################################################

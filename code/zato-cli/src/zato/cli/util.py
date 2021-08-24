@@ -81,7 +81,7 @@ def get_totp_info_from_args(args, default_key_label=None):
     import pyotp
 
     # Zato
-    from zato.common.crypto.totp import TOTPManager
+    from zato.common.crypto.totp_ import TOTPManager
     from zato.common.api import TOTP
 
     default_key_label = default_key_label or TOTP.default_label

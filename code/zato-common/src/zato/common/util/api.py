@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -36,6 +36,7 @@ from io import StringIO
 from operator import itemgetter
 from os import getlogin
 from os.path import abspath, isabs, join
+from pathlib import Path
 from pprint import pprint as _pprint, PrettyPrinter
 from string import Template
 from subprocess import Popen, PIPE
@@ -46,9 +47,6 @@ from traceback import format_exc
 
 # Bunch
 from bunch import Bunch, bunchify
-
-# ConfigObj
-from configobj import ConfigObj
 
 from dateutil.parser import parse as dt_parse
 
@@ -82,9 +80,6 @@ from sqlalchemy import orm
 # Texttable
 from texttable import Texttable
 
-# validate
-from validate import is_boolean, is_integer, VdtTypeError
-
 # Python 2/3 compatibility
 from builtins import bytes
 from future.moves.itertools import zip_longest
@@ -105,6 +100,8 @@ from zato.common.broker_message import SERVICE
 from zato.common.const import SECRETS
 from zato.common.crypto.api import CryptoManager
 from zato.common.exception import ZatoException
+from zato.common.ext.configobj_ import ConfigObj
+from zato.common.ext.validate_ import is_boolean, is_integer, VdtTypeError
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
 from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_ping, wait_until_port_free, wait_until_port_taken
@@ -333,7 +330,6 @@ def new_cid(bytes=12, _random=random.getrandbits):
     for any cryptographical purposes; it is only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.
     """
-
     # Note that we need to convert bytes to bits here.
     return hex(_random(bytes * 8))[2:]
 
@@ -367,14 +363,28 @@ def _get_config(conf, bunchified, needs_user_config, repo_location=None):
 
 # ################################################################################################################################
 
-def get_config(repo_location, config_name, bunchified=True, needs_user_config=True, crypto_manager=None, secrets_conf=None):
+def get_config(repo_location, config_name, bunchified=True, needs_user_config=True, crypto_manager=None, secrets_conf=None,
+    raise_on_error=False, log_exception=True):
     """ Returns the configuration object. Will load additional user-defined config files, if any are available.
     """
     # type: (str, str, bool, bool, object, object) -> Bunch
-    conf_location = os.path.join(repo_location, config_name)
-    conf = ConfigObj(conf_location, zato_crypto_manager=crypto_manager, zato_secrets_conf=secrets_conf)
 
-    return _get_config(conf, bunchified, needs_user_config, repo_location)
+    # Default output to produce
+    result = Bunch()
+
+    try:
+        conf_location = os.path.join(repo_location, config_name)
+        conf = ConfigObj(conf_location, zato_crypto_manager=crypto_manager, zato_secrets_conf=secrets_conf)
+        result = _get_config(conf, bunchified, needs_user_config, repo_location)
+    except Exception:
+        if log_exception:
+            logger.warn('Error while reading %s from %s; e:`%s`', config_name, repo_location, format_exc())
+        if raise_on_error:
+            raise
+        else:
+            return result
+    else:
+        return result
 
 # ################################################################################################################################
 
@@ -476,7 +486,10 @@ def payload_from_request(json_parser, cid, request, data_format, transport, chan
             if isinstance(request, basestring) and data_format == _data_format_json:
                 try:
                     request_bytes = request if isinstance(request, bytes) else request.encode('utf8')
-                    payload = json_parser.parse(request_bytes)
+                    try:
+                        payload = json_parser.parse(request_bytes)
+                    except ValueError:
+                        payload = request_bytes
                     if hasattr(payload, 'as_dict'):
                         payload = payload.as_dict()
                 except ValueError:
@@ -769,6 +782,30 @@ def dotted_getattr(o, path):
 
 # ################################################################################################################################
 
+def wait_for_odb_service(session, cluster_id, service_name):
+    # type: (object, int, str) -> Service
+
+    # Assume we do not have it
+    service = None
+
+    while not service:
+
+        # Try to look it up ..
+        service = session.query(Service).\
+            filter(Service.name==service_name).\
+            filter(Cluster.id==cluster_id).\
+            first()
+
+        # .. if not found, sleep for a moment.
+        if not service:
+            sleep(1)
+            logger.info('Waiting for ODB service `%s`', service_name)
+
+    # If we are here, it means that the service was found so we can return it
+    return service
+
+# ################################################################################################################################
+
 def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
     """ Adds internal jobs to the ODB. Note that it isn't being added
     directly to the scheduler because we want users to be able to fine-tune the job's
@@ -778,7 +815,7 @@ def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
         now = datetime.utcnow()
         for item in jobs:
 
-            if not stats_enabled and item['name'].startswith('zato.stats'):
+            if item['name'].startswith('zato.stats'):
                 continue
 
             try:
@@ -795,10 +832,12 @@ def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
                     if not isinstance(extra, bytes):
                         extra = extra.encode('utf8')
 
-                service = session.query(Service).\
-                    filter(Service.name==item['service']).\
-                    filter(Cluster.id==cluster_id).\
-                    one()
+                #
+                # This will block as long as this service is not available in the ODB.
+                # It is required to do it because the scheduler may start before servers
+                # in which case services will not be in the ODB yet and we need to wait for them.
+                #
+                service = wait_for_odb_service(session, cluster_id, item['service'])
 
                 cluster = session.query(Cluster).\
                     filter(Cluster.id==cluster_id).\
@@ -1073,7 +1112,7 @@ def validate_tls_from_payload(payload, is_key=False):
 
         cert_info = crypto.load_certificate(crypto.FILETYPE_PEM, pem)
         cert_info = sorted(cert_info.get_subject().get_components())
-        cert_info = '; '.join('{}={}'.format(k, v) for k, v in cert_info)
+        cert_info = '; '.join('{}={}'.format(k.decode('utf8'), v.decode('utf8')) for k, v in cert_info)
 
         if is_key:
             key_info = crypto.load_privatekey(crypto.FILETYPE_PEM, pem)
@@ -1173,30 +1212,59 @@ def ping_sap(conn):
 
 class StaticConfig(Bunch):
     def __init__(self, base_dir):
+        # type: (str) -> None
         super(StaticConfig, self).__init__()
         self.base_dir = base_dir
 
-    def read_file(self, name):
-        f = open(os.path.join(self.base_dir, name))
-        value = f.read()
+    def read_file(self, full_path, file_name):
+        # type: (str, str) -> None
+        f = open(full_path)
+        file_contents = f.read()
         f.close()
 
-        name = name.split('.')
+        # Convert to a Path object to prepare to manipulations ..
+        full_path = Path(full_path)
+
+        # .. this is the path to the directory containing the file
+        # relative to the base directory, e.g. the "config/repo/static" part
+        # in "/home/zato/server1/config/repo/static" ..
+        relative_dir = Path(full_path.parent).relative_to(self.base_dir)
+
+        # .. now, convert all the components from relative_dir into a nested Bunch of Bunch instances ..
+        relative_dir_elems = list(relative_dir.parts)
+
+        # .. start with ourselves ..
         _bunch = self
 
-        while name:
+        # .. if there are no directories leading to the file, simply assign
+        # its name to self and return ..
+        if not relative_dir_elems:
+            _bunch[file_name] = file_contents
+            return
 
-            if len(name) == 1:
-                break
+        # .. otherwise, if there are directories leading to the file,
+        # iterate until they exist and convert their names to Bunch keys ..
+        while relative_dir_elems:
 
-            elem = name.pop(0)
+            # .. name of a directory = a Bunch key ..
+            elem = relative_dir_elems.pop(0)
+
+            # .. attach to the parent Bunch as a new Bunch instance ..
             _bunch = _bunch.setdefault(elem, Bunch())
 
-        _bunch[name[0]] = value
+            # .. this was the last directory to visit so we can now attach the file name and its contents
+            # to the Bunch instance representing this directory.
+            if not relative_dir_elems:
+                _bunch[file_name] = file_contents
 
-    def read(self):
-        for item in os.listdir(self.base_dir):
-            self.read_file(item)
+    def read_directory(self, root_dir):
+        for elem in Path(root_dir).rglob('*'): # type: Path
+            full_path = str(elem)
+            try:
+                if elem.is_file():
+                    self.read_file(full_path, elem.name)
+            except Exception as e:
+                logger.warn('Could not read file `%s`, e:`%s`', full_path, e.args)
 
 # ################################################################################################################################
 
@@ -1362,17 +1430,19 @@ def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted):
 
             if security:
                 password = security.password.replace(SECRETS.PREFIX, '')
-                return (security.username, cm.decrypt(password))
+                if password.startswith(SECRETS.EncryptedMarker):
+                    password = cm.decrypt(password)
+                return (security.username, password)
 
 # ################################################################################################################################
 
-def get_client_from_server_conf(server_dir, require_server=True):
+def get_client_from_server_conf(server_dir, require_server=True, stdin_data=None):
 
     # Imports go here to avoid circular dependencies
     from zato.client import get_client_from_server_conf as client_get_client_from_server_conf
 
     # Get the client object ..
-    client = client_get_client_from_server_conf(server_dir, get_server_client_auth, get_config)
+    client = client_get_client_from_server_conf(server_dir, get_server_client_auth, get_config, stdin_data=stdin_data)
 
     # .. make sure the server is available ..
     if require_server:

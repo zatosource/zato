@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -399,6 +397,7 @@ class _Client(object):
         self.max_cid_repr = max_cid_repr
         self.logger = logger or mod_logger
         self.tls_verify = tls_verify
+        self.has_debug = self.logger.isEnabledFor(logging.DEBUG)
 
         if not self.session.auth:
             self.session.auth = auth
@@ -414,7 +413,7 @@ class _Client(object):
         if isinstance(request, (bytes, bytearray)):
             request = request.decode('utf-8')
 
-        if self.logger.isEnabledFor(logging.DEBUG):
+        if self.has_debug:
             msg = 'request:[%s]\nresponse_class:[%s]\nis_async:[%s]\nheaders:[%s]\n text:[%s]\ndata:[%s]'
             self.logger.debug(msg, request, response_class, is_async, headers, raw_response.text, response.data)
 
@@ -466,7 +465,7 @@ class AnyServiceInvoker(_Client):
     def _invoke(self, name=None, payload='', headers=None, channel='invoke', data_format='json',
                 transport=None, is_async=False, expiration=BROKER.DEFAULT_EXPIRATION, id=None,
                 to_json=True, output_repeated=ZATO_NOT_GIVEN, pid=None, all_pids=False, timeout=None,
-                skip_response_elem=True):
+                skip_response_elem=True, **kwargs):
 
         if not(name or id):
             raise ZatoException(msg='Either name or id must be provided')
@@ -525,13 +524,18 @@ class RawDataClient(_Client):
 
 # ################################################################################################################################
 
-def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, server_url=None):
+def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, server_url=None, stdin_data=None):
     """ Returns a Zato client built out of data found in a given server's config files.
     """
 
+    # stdlib
+    import os
+
     # To avoid circular references
     from zato.common.crypto.api import ServerCryptoManager
+    from zato.common.ext.configobj_ import ConfigObj
     from zato.common.util.api import get_odb_session_from_server_config, get_repo_dir_from_component_dir
+    from zato.common.util.cli import read_stdin_data
 
     class ZatoClient(AnyServiceInvoker):
         def __init__(self, *args, **kwargs):
@@ -539,13 +543,18 @@ def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, s
             self.cluster_id = None
             self.odb_session = None
 
-    repo_dir = get_repo_dir_from_component_dir(server_dir)
-    cm = ServerCryptoManager.from_repo_dir(None, repo_dir, None)
+    repo_location = get_repo_dir_from_component_dir(server_dir)
+    stdin_data = stdin_data or read_stdin_data()
+    crypto_manager = ServerCryptoManager.from_repo_dir(None, repo_location, stdin_data=stdin_data)
 
-    secrets_conf = get_config_func(repo_dir, 'secrets.conf', needs_user_config=False)
-    config = get_config_func(repo_dir, 'server.conf', crypto_manager=cm, secrets_conf=secrets_conf)
+    secrets_config = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
+    secrets_conf = get_config_func(
+        repo_location, 'secrets.conf', needs_user_config=False,
+        crypto_manager=crypto_manager, secrets_conf=secrets_config)
+
+    config = get_config_func(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_conf)
     server_url = server_url if server_url else config.main.gunicorn_bind
-    client_auth = client_auth_func(config, repo_dir, cm, False)
+    client_auth = client_auth_func(config, repo_location, crypto_manager, False)
     client = ZatoClient('http://{}'.format(server_url), '/zato/admin/invoke', client_auth, max_response_repr=15000)
     session = get_odb_session_from_server_config(config, None, False)
 

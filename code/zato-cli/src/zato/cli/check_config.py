@@ -110,14 +110,16 @@ class CheckConfig(ManageCommand):
         # Zato
         from zato.common.kvdb.api import KVDB
 
-        # Python 2/3 compatibility
-        from future.utils import iteritems
-
-        kvdb_config = Bunch(dict(iteritems((conf[conf_key]))))
+        # Redis is not configured = we can return
+        kvdb_config = conf.get(conf_key) or {}
+        if not kvdb_config:
+            return
 
         # Redis is not enabled = we can return
         if not KVDB.is_config_enabled(kvdb_config):
             return
+
+        kvdb_config = Bunch(kvdb_config)
 
         kvdb = KVDB(kvdb_config, cm.decrypt)
         kvdb.init()
@@ -240,8 +242,8 @@ class CheckConfig(ManageCommand):
         # stdlib
         from os.path import join
 
-        # ConfigObj
-        from configobj import ConfigObj
+        # Zato
+        from zato.common.ext.configobj_ import ConfigObj
 
         repo_dir = repo_dir or join(self.config_dir, 'repo')
         return ConfigObj(join(repo_dir, conf_file))
@@ -253,8 +255,8 @@ class CheckConfig(ManageCommand):
         # stdlib
         from os.path import join
 
-        # ConfigObj
-        from configobj import ConfigObj
+        # Zato
+        from zato.common.ext.configobj_ import ConfigObj
 
         # Zato
         from zato.common.crypto.api import ServerCryptoManager
@@ -343,11 +345,9 @@ class CheckConfig(ManageCommand):
         # stdlib
         from os.path import join
 
-        # ConfigObj
-        from configobj import ConfigObj
-
         # Zato
         from zato.common.crypto.api import SchedulerCryptoManager
+        from zato.common.ext.configobj_ import ConfigObj
 
         repo_dir = join(self.component_dir, 'config', 'repo')
         server_conf_path = join(repo_dir, 'scheduler.conf')
@@ -358,10 +358,7 @@ class CheckConfig(ManageCommand):
         server_conf = ConfigObj(server_conf_path, zato_secrets_conf=secrets_conf_path, zato_crypto_manager=cm, use_zato=True)
 
         fs_sql_config = self.get_sql_ini('sql.conf')
-
         self.check_sql_odb_server_scheduler(cm, server_conf, fs_sql_config)
-        self.on_server_check_kvdb(cm, server_conf, 'broker')
-
         self.ensure_no_pidfile('scheduler')
 
 # ################################################################################################################################

@@ -90,6 +90,8 @@ class GeventWorker(AsyncWorker):
         from gevent import monkey
         monkey.noisy = False
 
+        os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
+
         # if the new version is used make sure to patch subprocess
         if gevent.version_info[0] == 0:
             monkey.patch_all()

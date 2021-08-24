@@ -17,6 +17,9 @@ from zato.cli import common_totp_opts, ManageCommand
 class _WebAdminAuthCommand(ManageCommand):
     def _prepare(self, args):
 
+        import pymysql
+        pymysql.install_as_MySQLdb()
+
         # stdlib
         import os
 
