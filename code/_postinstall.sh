@@ -12,6 +12,7 @@ then
     exit 1
 fi
 
+<< '###BLOCK-COMMENT'
 source ./_common.sh
 
 PY_BINARY=$1
@@ -67,3 +68,4 @@ EOF
 
 # .. and make the command executable.
 chmod 755 $VIRTUAL_ENV/bin/zato
+###BLOCK-COMMENT
