@@ -113,7 +113,7 @@ switch_to_basedir
 
 if [ "$(type -p apt-get)" ]
 then
-    source ./clean.sh
+    # source ./clean.sh
     source ./_install-deb.sh $PY_BINARY ${INSTALL_PYTHON}
 elif [ "$(type -p yum)" ] || [ "$(type -p dnf)" ]
 then
