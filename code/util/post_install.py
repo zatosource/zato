@@ -43,8 +43,6 @@ class PostInstallProcess:
         command = command.strip()
         command = command.split()
 
-        #process = Popen(command, stdout=PIPE, stderr=PIPE)
-
         # This will be potentially returned to our caller
         stdout = None
 
@@ -55,11 +53,6 @@ class PostInstallProcess:
         while True:
 
             stderr = process.stderr.readline()
-
-            #print()
-            #print(111, stdout)
-            #print(222, stderr)
-            #print()
 
             if needs_stdout:
                 stdout = process.stdout.readline()
@@ -80,24 +73,6 @@ class PostInstallProcess:
 
         if needs_stdout:
             return stdout
-
-# ################################################################################################################################
-
-    def update_git_revision(self):
-
-        # This is where we will store our last git commit ID
-        revision_file_path = os.path.join(self.base_dir, 'release-info', 'revision.txt')
-
-        # Build the command ..
-        command = 'git log -n 1 --pretty=format:%H --no-color'
-
-        # .. run the command to get our latest commit ID ..
-        commit_id = self.run_command(command, needs_stdout=True)
-
-        # .. and store it in an external file for 'zato --version' and other tools to use.
-        f = open(revision_file_path, 'w')
-        f.write(commit_id)
-        f.close()
 
 # ################################################################################################################################
 
@@ -183,16 +158,62 @@ class PostInstallProcess:
 
 # ################################################################################################################################
 
+    def update_git_revision(self):
+
+        # This is where we will store our last git commit ID
+        revision_file_path = os.path.join(self.base_dir, 'release-info', 'revision.txt')
+
+        # Build the command ..
+        command = 'git log -n 1 --pretty=format:%H --no-color'
+
+        # .. run the command to get our latest commit ID ..
+        commit_id = self.run_command(command, needs_stdout=True)
+
+        # .. and store it in an external file for 'zato --version' and other tools to use.
+        f = open(revision_file_path, 'w')
+        f.write(commit_id)
+        f.close()
+
+# ################################################################################################################################
+
+    def add_eggs_symlink(self):
+
+        # This needs to be checked in runtime because we do not know
+        # under what Python version we are are going to run.
+        py_version = '{}.{}'.format(sys.version_info.major, sys.version_info.minor)
+        logger.info('Python version maj.min -> %s', py_version)
+
+        py_lib_dir = 'python' + py_version
+        py_lib_dir = os.path.join(self.base_dir, 'lib', py_lib_dir)
+        logger.info('Python lib dir -> %s', py_lib_dir)
+
+        site_packages_dir = os.path.join(py_lib_dir, 'site-packages')
+        logger.info('Python site-packages dir -> %s', site_packages_dir)
+
+        eggs_dir = os.path.join(self.base_dir, 'eggs')
+        logger.info('Python eggs dir -> %s', eggs_dir)
+
+        try:
+            os.symlink(site_packages_dir, eggs_dir)
+        except FileExistsError:
+            # It is not an issue if it exists, likely install.sh/.bat ran twice.
+            pass
+        else:
+            logger.info('Symlinked from  `%s` to `%s`', site_packages_dir, eggs_dir)
+
+# ################################################################################################################################
+
     def run(self):
 
+        '''
         self.update_git_revision()
-
-        return
-
         self.pip_install_core_pip()
         self.pip_install_requirements()
         self.pip_install_zato_packages()
         self.pip_uninstall()
+        '''
+
+        self.add_eggs_symlink()
 
 # ################################################################################################################################
 # ################################################################################################################################
