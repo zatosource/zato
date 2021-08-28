@@ -51,5 +51,5 @@ echo Activating virtualenv in $CURDIR
 source $CURDIR/bin/activate
 
 echo Setting up packages in $CURDIR
-$CURDIR/bin/python $CURDIR/util/post_install.py
+$CURDIR/bin/python $CURDIR/util/install.py
 #source ./_postinstall.sh $PY_BINARY
