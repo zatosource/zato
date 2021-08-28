@@ -29,7 +29,6 @@ then
     sudo ${INSTALL_CMD} config-manager --set-enabled "$(sudo dnf repolist all|grep PowerTools|awk '{print $1}')"
 fi
 
-
 sudo ${INSTALL_CMD} install -y \
     bzip2 bzip2-devel curl cyrus-sasl-devel gcc-c++ git haproxy \
     keyutils-libs-devel libev libev-devel libevent-devel libffi libffi-devel \
@@ -37,11 +36,13 @@ sudo ${INSTALL_CMD} install -y \
     openssl-devel patch postgresql-devel suitesparse swig uuid \
     uuid-devel wget ${PYTHON_DEPENDENCIES}
 
+echo Installing virtualenv in $CURDIR
 $PY_BINARY -m venv .
 
-source ./bin/activate
-./bin/python -m pip install -U setuptools pip
+echo Activating virtualenv in $CURDIR
+source $CURDIR/bin/activate
 
-source ./_postinstall.sh $PY_BINARY
+echo Setting up environment in $CURDIR
+$CURDIR/bin/python $CURDIR/util/environment.py install
 
-
+echo ⭐ Successfully installed `zato --version`
