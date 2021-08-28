@@ -86,8 +86,7 @@ class URLData(CyURLData, OAuthDataStore):
     def __init__(self, worker, channel_data=None, url_sec=None, basic_auth_config=None, jwt_config=None, ntlm_config=None, \
                  oauth_config=None, wss_config=None, apikey_config=None, aws_config=None, \
                  xpath_sec_config=None, tls_channel_sec_config=None, tls_key_cert_config=None, \
-                 vault_conn_sec_config=None, kvdb=None, broker_client=None, odb=None, json_pointer_store=None, xpath_store=None,
-                 jwt_secret=None, vault_conn_api=None):
+                 vault_conn_sec_config=None, kvdb=None, broker_client=None, odb=None, jwt_secret=None, vault_conn_api=None):
         super(URLData, self).__init__(channel_data)
 
         self.worker = worker # type: WorkerStore
@@ -114,9 +113,6 @@ class URLData(CyURLData, OAuthDataStore):
         self.sec_config_getter[SEC_DEF_TYPE.BASIC_AUTH] = self.basic_auth_get
         self.sec_config_getter[SEC_DEF_TYPE.APIKEY] = self.apikey_get
         self.sec_config_getter[SEC_DEF_TYPE.JWT] = self.jwt_get
-
-        self.json_pointer_store = json_pointer_store
-        self.xpath_store = xpath_store
 
         self.url_sec_lock = RLock()
         self.update_lock = RLock()

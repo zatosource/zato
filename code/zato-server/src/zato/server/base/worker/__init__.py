@@ -228,10 +228,6 @@ class WorkerStore(_WorkerStoreBase):
 
     def init(self):
 
-        self.msg_ns_store = self.worker_config.msg_ns_store
-        self.json_pointer_store = self.worker_config.json_pointer_store
-        self.xpath_store = self.worker_config.xpath_store
-
         # Cassandra
         self.cassandra_api = CassandraAPI(CassandraConnStore())
         self.cassandra_query_store = CassandraQueryStore()
@@ -299,13 +295,6 @@ class WorkerStore(_WorkerStoreBase):
         # Maps message actions against generic connection types and their message handlers
         self.generic_impl_func_map = {}
 
-        # Message-related config - init_msg_ns_store must come before init_xpath_store
-        # so the latter has access to the former's namespace map.
-
-        self.init_msg_ns_store()
-        self.init_json_pointer_store()
-        self.init_xpath_store()
-
         # After connection is establised, a flag is stored here to let queries consult it
         # before they attempt to prepare statements. In other words, queries wait for connections.
         # They do it in separate greenlets.
@@ -362,7 +351,7 @@ class WorkerStore(_WorkerStoreBase):
             self.worker_config.wss, self.worker_config.apikey, self.worker_config.aws,
             self.worker_config.xpath_sec, self.worker_config.tls_channel_sec,
             self.worker_config.tls_key_cert, self.worker_config.vault_conn_sec, self.kvdb, self.broker_client, self.server.odb,
-            self.json_pointer_store, self.xpath_store, self.server.jwt_secret, self.vault_conn_api)
+            self.server.jwt_secret, self.vault_conn_api)
 
         self.request_dispatcher.request_handler = RequestHandler(self.server)
 
@@ -929,20 +918,6 @@ class WorkerStore(_WorkerStoreBase):
         for config_dict in self.worker_config.apikey.values():
             config_dict.config.orig_username = config_dict.config.username
             update_apikey_username_to_channel(config_dict.config)
-
-# ################################################################################################################################
-
-    def init_msg_ns_store(self):
-        for k, v in self.worker_config.msg_ns.items():
-            self.msg_ns_store.add(k, v.config)
-
-    def init_xpath_store(self):
-        for k, v in self.worker_config.xpath.items():
-            self.xpath_store.add(k, v.config, self.msg_ns_store.ns_map)
-
-    def init_json_pointer_store(self):
-        for k, v in self.worker_config.json_pointer.items():
-            self.json_pointer_store.add(k, v.config)
 
 # ################################################################################################################################
 
@@ -2002,59 +1977,6 @@ class WorkerStore(_WorkerStoreBase):
 
     def on_broker_msg_SERVICE_PUBLISH(self, msg, args=None):
         return self.on_message_invoke_service(msg, msg.get('channel') or CHANNEL.INVOKE_ASYNC, 'SERVICE_PUBLISH', args)
-
-# ################################################################################################################################
-
-    def on_broker_msg_MSG_NS_CREATE(self, msg, *args):
-        """ Creates a new namespace.
-        """
-        self.msg_ns_store.on_broker_msg_MSG_NS_CREATE(msg, *args)
-
-    def on_broker_msg_MSG_NS_EDIT(self, msg, *args):
-        """ Updates an existing namespace.
-        """
-        self.msg_ns_store.on_broker_msg_MSG_NS_EDIT(msg, *args)
-
-    def on_broker_msg_MSG_NS_DELETE(self, msg, *args):
-        """ Deletes a namespace.
-        """
-        self.msg_ns_store.on_broker_msg_MSG_NS_DELETE(msg, *args)
-
-# ################################################################################################################################
-
-    def on_broker_msg_MSG_XPATH_CREATE(self, msg, *args):
-        """ Creates a new XPath.
-        """
-        self.xpath_store.on_broker_msg_create(msg, self.msg_ns_store.ns_map)
-
-    def on_broker_msg_MSG_XPATH_EDIT(self, msg, *args):
-        """ Updates an existing XPath.
-        """
-        self.xpath_store.on_broker_msg_edit(msg, self.msg_ns_store.ns_map)
-
-    def on_broker_msg_MSG_XPATH_DELETE(self, msg, *args):
-        """ Deletes an XPath.
-        """
-        self.xpath_store.on_broker_msg_delete(msg, *args)
-
-# ################################################################################################################################
-
-    def on_broker_msg_MSG_JSON_POINTER_CREATE(self, msg, *args):
-        """ Creates a new JSON Pointer.
-        """
-        self.json_pointer_store.on_broker_msg_create(msg)
-
-    def on_broker_msg_MSG_JSON_POINTER_EDIT(self, msg, *args):
-        """ Updates an existing JSON Pointer.
-        """
-        self.request_dispatcher.url_data.on_broker_msg_MSG_JSON_POINTER_EDIT(msg)
-        self.json_pointer_store.on_broker_msg_edit(msg)
-
-    def on_broker_msg_MSG_JSON_POINTER_DELETE(self, msg, *args):
-        """ Deletes an JSON Pointer.
-        """
-        # Delete the pattern from its store
-        self.json_pointer_store.on_broker_msg_delete(msg, *args)
 
 # ################################################################################################################################
 
