@@ -213,6 +213,14 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
+    def pip_install(self):
+        self.pip_install_core_pip()
+        self.pip_install_requirements()
+        self.pip_install_zato_packages()
+        self.pip_uninstall()
+
+# ################################################################################################################################
+
     def update_git_revision(self):
 
         # This is where we will store our last git commit ID
@@ -228,6 +236,8 @@ class EnvironmentManager:
         f = open(revision_file_path, 'w')
         f.write(commit_id)
         f.close()
+
+        logger.info('Git commit ID -> `%s`', commit_id)
 
 # ################################################################################################################################
 
@@ -344,18 +354,19 @@ class EnvironmentManager:
     def install(self):
 
         self.update_git_revision()
-
-        self.pip_install_core_pip()
-        self.pip_install_requirements()
-        self.pip_install_zato_packages()
-        self.pip_uninstall()
-
+        self.pip_install()
         self.add_eggs_symlink()
         self.add_extlib()
-
         self.add_py_command()
         self.add_zato_command()
+        self.copy_patches()
 
+# ################################################################################################################################
+
+    def update(self):
+
+        self.update_git_revision()
+        self.pip_install()
         self.copy_patches()
 
 # ################################################################################################################################
