@@ -1,5 +1,9 @@
 #!/bin/bash
 
+CURDIR="${BASH_SOURCE[0]}";RL="readlink";([[ `uname -s`=='Darwin' ]] || RL="$RL -f")
+while([ -h "${CURDIR}" ]) do CURDIR=`$RL "${CURDIR}"`; done
+N="/dev/null";pushd .>$N;cd `dirname ${CURDIR}`>$N;CURDIR=`pwd`;popd>$N
+
 # Python version to use needs to be provided by our caller
 PY_BINARY=$1
 INSTALL_PYTHON=${2:-y}
@@ -40,7 +44,12 @@ source ./bin/activate
 source ./_postinstall.sh $PY_BINARY
 ###BLOCK-COMMENT
 
-#$PY_BINARY -m virtualenv .
-source ./bin/activate
-./bin/python ./util/post_install.py
+echo Installing virtualenv in $CURDIR
+$PY_BINARY -m virtualenv $CURDIR
+
+echo Activating virtualenv in $CURDIR
+source $CURDIR/bin/activate
+
+echo Setting up virtualenv in $CURDIR
+$CURDIR/bin/python $CURDIR/util/post_install.py
 #source ./_postinstall.sh $PY_BINARY
