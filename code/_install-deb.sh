@@ -41,6 +41,6 @@ source ./_postinstall.sh $PY_BINARY
 ###BLOCK-COMMENT
 
 #$PY_BINARY -m virtualenv .
-#source ./bin/activate
+source ./bin/activate
 ./bin/python ./util/post_install.py
 #source ./_postinstall.sh $PY_BINARY
