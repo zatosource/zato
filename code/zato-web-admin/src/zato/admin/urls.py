@@ -35,7 +35,6 @@ from zato.admin.web.views.definition import kafka as def_kafka
 from zato.admin.web.views.definition import jms_wmq as def_wmq
 from zato.admin.web.views.email import imap as email_imap
 from zato.admin.web.views.email import smtp as email_smtp
-from zato.admin.web.views.message import json_pointer, live_browser, namespace, xpath
 from zato.admin.web.views.notif import sql as notif_sql
 from zato.admin.web.views.outgoing import amqp_ as out_amqp
 from zato.admin.web.views.outgoing import ftp as out_ftp
@@ -211,67 +210,6 @@ urlpatterns += [
         login_required(audit_log.delete_event), name='audit-event-delete'),
 ]
 
-# ################################################################################################################################
-# ################################################################################################################################
-# #
-# #   Messages
-# #
-# ################################################################################################################################
-# ################################################################################################################################
-
-urlpatterns += [
-
-    # .. Namespace
-    url(r'^zato/messages/namespace/$',
-        login_required(namespace.Index()), name=namespace.Index.url_name),
-    url(r'^zato/messages/namespace/create/$',
-        login_required(namespace.Create()), name=namespace.Create.url_name),
-    url(r'^zato/messages/namespace/edit/$',
-        login_required(namespace.Edit()), name=namespace.Edit.url_name),
-    url(r'^zato/messages/namespace/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(namespace.Delete()), name=namespace.Delete.url_name),
-    ]
-
-# ################################################################################################################################
-
-urlpatterns += [
-
-    # .. XPath
-    url(r'^zato/messages/xpath/$',
-        login_required(xpath.Index()), name=xpath.Index.url_name),
-    url(r'^zato/messages/xpath/create/$',
-        login_required(xpath.Create()), name=xpath.Create.url_name),
-    url(r'^zato/messages/xpath/edit/$',
-        login_required(xpath.Edit()), name=xpath.Edit.url_name),
-    url(r'^zato/messages/xpath/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(xpath.Delete()), name=xpath.Delete.url_name),
-    ]
-
-# ################################################################################################################################
-
-urlpatterns += [
-
-    # .. JSON Pointer
-    url(r'^zato/messages/json-pointer/$',
-        login_required(json_pointer.Index()), name=json_pointer.Index.url_name),
-    url(r'^zato/messages/json-pointer/create/$',
-        login_required(json_pointer.Create()), name=json_pointer.Create.url_name),
-    url(r'^zato/messages/json-pointer/edit/$',
-        login_required(json_pointer.Edit()), name=json_pointer.Edit.url_name),
-    url(r'^zato/messages/json-pointer/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(json_pointer.Delete()), name=json_pointer.Delete.url_name),
-    ]
-
-# ################################################################################################################################
-
-urlpatterns += [
-
-    # .. Live browser
-    url(r'^zato/messages/live-browser/$',
-        login_required(live_browser.index), name='message-live-browser-index'),
-    url(r'^zato/messages/live-browser/get-connection-details$',
-        login_required(live_browser.get_connection_details), name='message-live-browser-get-connection-details'),
-    ]
 
 # ################################################################################################################################
 # ################################################################################################################################
