@@ -47,9 +47,8 @@ hiredis==0.3.1
 httpagentparser==1.9.0
 httplib2==0.18.1
 https://github.com/dsuch/bunch/archive/master.zip#egg=bunch
-https://github.com/dsuch/dpath-python/archive/66a2f5ab.zip#egg=dpath
 https://github.com/dsuch/paodate/archive/master.zip#egg=paodate
-https://github.com/ovnicraft/suds/archive/9140d27a2c10d6bb870f2c29e39029a400887b11.zip#egg=suds-ovnicraft
+https://github.com/dsuch/suds-1/archive/62d11e0561cf698bbe0687946cb7403733e579f2.zip#egg=suds-ovnicraft
 https://github.com/salmito/simple-rbac/archive/master.zip#egg=simple-rbac
 geventhttpclient==1.4.4
 globre==0.1.5
