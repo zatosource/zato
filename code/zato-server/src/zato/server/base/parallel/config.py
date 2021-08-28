@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
@@ -21,7 +19,6 @@ from zato.common.util.api import asbool
 from zato.common.util.sql import elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
 from zato.server.config import ConfigDict
-from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.url_dispatcher import Matcher
 
 # ################################################################################################################################
@@ -385,11 +382,6 @@ class ConfigLoader(object):
         # E-mail - IMAP
         query = self.odb.get_email_imap_list(server.cluster.id, True)
         self.config.email_imap = ConfigDict.from_query('email_imap', query, decrypt_func=self.decrypt)
-
-        # Message paths
-        self.config.msg_ns_store = NamespaceStore()
-        self.config.json_pointer_store = JSONPointerStore()
-        self.config.xpath_store = XPathStore()
 
         # HTTP access log should optionally ignore certain requests
         access_log_ignore = self.fs_server_config.get('logging', {}).get('http_access_log_ignore')

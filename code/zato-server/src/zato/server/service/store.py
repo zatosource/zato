@@ -417,9 +417,6 @@ class ServiceStore(object):
                 class_.im.telegram = service_store.server.worker_store.outconn_im_telegram
 
                 class_._worker_config = service_store.server.worker_store.worker_config
-                class_._msg_ns_store = service_store.server.worker_store.worker_config.msg_ns_store
-                class_._json_pointer_store = service_store.server.worker_store.worker_config.json_pointer_store
-                class_._xpath_store = service_store.server.worker_store.worker_config.xpath_store
 
                 class_.component_enabled_cassandra = service_store.server.fs_server_config.component_enabled.cassandra
                 class_.component_enabled_email = service_store.server.fs_server_config.component_enabled.email
