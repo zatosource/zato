@@ -7,8 +7,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 import logging
+import os
+import platform
 import sys
 from subprocess import CalledProcessError, PIPE, Popen, run as subprocess_run
 
@@ -31,6 +32,7 @@ class PostInstallProcess:
         self.base_dir = base_dir
         self.bin_dir = bin_dir
         self.pip_command = os.path.join(self.bin_dir, 'pip')
+        self.python_command = os.path.join(self.bin_dir, 'python')
 
 # ################################################################################################################################
 
@@ -203,17 +205,53 @@ class PostInstallProcess:
 
 # ################################################################################################################################
 
+    def add_py_command(self):
+
+        # This is where will will save it
+        py_command_path = os.path.join(self.bin_dir, 'py')
+
+        # There will be two versions, one for Windows and one for other systems
+
+        #
+        # Windows
+        #
+        if 'windows' in platform.system().lower():
+            template = ''
+            template += '"{}" %*'
+
+        # Non-Windows
+        else:
+            template = ''
+            template += '#!/bin/sh'
+            template = '\n'
+            template += '"{}" "$@"'
+
+        # Add the full path to the OS-specific template ..
+        data = template.format(self.python_command)
+
+        # .. add the file to the system ..
+        f = open(py_command_path, 'w')
+        f.write(data)
+        f.close()
+
+        # .. and make it executable.
+        os.chmod(py_command_path, 0o740)
+
+# ################################################################################################################################
+
     def run(self):
 
         '''
         self.update_git_revision()
+
         self.pip_install_core_pip()
         self.pip_install_requirements()
         self.pip_install_zato_packages()
         self.pip_uninstall()
-        '''
 
         self.add_eggs_symlink()
+        self.add_py_command()
+        '''
 
 # ################################################################################################################################
 # ################################################################################################################################
