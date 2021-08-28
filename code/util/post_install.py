@@ -34,7 +34,7 @@ class PostInstallProcess:
 
 # ################################################################################################################################
 
-    def run_command(self, command, exit_on_error=True):
+    def run_command(self, command, exit_on_error=True, needs_stdout=False):
         # type: (str) -> str
 
         logger.info('Running `%s`', command)
@@ -45,11 +45,15 @@ class PostInstallProcess:
 
         #process = Popen(command, stdout=PIPE, stderr=PIPE)
 
-        process = Popen(command, stderr=PIPE)
+        # This will be potentially returned to our caller
+        stdout = None
 
+        # Run the command ..
+        process = Popen(command, stderr=PIPE, stdout=PIPE if needs_stdout else None)
+
+        # .. and wait until it completes.
         while True:
 
-            #stdout = process.stdout.readline()
             stderr = process.stderr.readline()
 
             #print()
@@ -57,10 +61,10 @@ class PostInstallProcess:
             #print(222, stderr)
             #print()
 
-            if 0:
+            if needs_stdout:
+                stdout = process.stdout.readline()
                 stdout = stdout.strip()
                 stdout = stdout.decode('utf8')
-                logger.info(stdout)
 
             if stderr:
                 stderr = stderr.strip()
@@ -74,23 +78,21 @@ class PostInstallProcess:
             if process.poll() is not None:
                 break
 
+        if needs_stdout:
+            return stdout
+
 # ################################################################################################################################
 
     def update_git_revision(self):
 
-        # sh
-        import sh
-
         # This is where we will store our last git commit ID
         revision_file_path = os.path.join(self.base_dir, 'release-info', 'revision.txt')
 
-        #out = sh.pip('install', 'gevent')
+        # Build the command ..
+        command = 'git log -n 1 --pretty=format:%H --no-color'
 
-        # Invoke git ..
-        out = sh.git('log', '-n', '1', '--pretty=format:%H', '--no-color')
-
-        # .. get our latest commit ID (we use repr because out.stdout may contain shell escape codes) ..
-        commit_id = repr(out)
+        # .. run the command to get our latest commit ID ..
+        commit_id = self.run_command(command, needs_stdout=True)
 
         # .. and store it in an external file for 'zato --version' and other tools to use.
         f = open(revision_file_path, 'w')
@@ -164,12 +166,33 @@ class PostInstallProcess:
 
 # ################################################################################################################################
 
+    def pip_uninstall(self):
+
+        # Packages that will be uninstalled, e.g. no longer needed
+        packages = [
+            'imbox',
+            'pycrypto',
+            'python-keyczar',
+        ]
+
+        # Build the command ..
+        command = '{} uninstall -y -qq {}'.format(self.pip_command, ' '.join(packages))
+
+        # .. and run it.
+        self.run_command(command)
+
+# ################################################################################################################################
+
     def run(self):
+
+        self.update_git_revision()
+
+        return
+
         self.pip_install_core_pip()
         self.pip_install_requirements()
         self.pip_install_zato_packages()
-
-        # self.update_git_revision()
+        self.pip_uninstall()
 
 # ################################################################################################################################
 # ################################################################################################################################
