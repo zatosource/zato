@@ -4,8 +4,6 @@ CURDIR="${BASH_SOURCE[0]}";RL="readlink";([[ `uname -s`=='Darwin' ]] || RL="$RL 
 while([ -h "${CURDIR}" ]) do CURDIR=`$RL "${CURDIR}"`; done
 N="/dev/null";pushd .>$N;cd `dirname ${CURDIR}`>$N;CURDIR=`pwd`;popd>$N
 
-source $CURDIR/_common.sh
-
 echo "*** Downloading updates ***"
 git -C $CURDIR pull
 
@@ -22,6 +20,10 @@ if [[ -n "${ZATO_BRANCH}" ]];then
     git checkout "${ZATO_BRANCH}" 2>/dev/null || git checkout -b "${ZATO_BRANCH}" "origin/${ZATO_BRANCH}"
 fi
 
-pip_install $CURDIR
+echo Activating virtualenv in $CURDIR
+source $CURDIR/bin/activate
 
-apply_patches $CURDIR
+echo Updating environment in $CURDIR
+$CURDIR/bin/python $CURDIR/util/environment.py update
+
+echo ⭐ Installation updated to `zato --version`
