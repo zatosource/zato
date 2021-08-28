@@ -37,6 +37,19 @@ class PostInstallProcess:
 
 # ################################################################################################################################
 
+    def _create_symlink(self, from_, to):
+        # type: (str, str) -> None
+
+        try:
+            os.symlink(from_, to)
+        except FileExistsError:
+            # It is not an issue if it exists, likely install.sh/.bat ran twice.
+            pass
+        else:
+            logger.info('Symlinked from  `%s` to `%s`', from_, to)
+
+# ################################################################################################################################
+
     def run_command(self, command, exit_on_error=True, needs_stdout=False):
         # type: (str) -> str
 
@@ -196,13 +209,7 @@ class PostInstallProcess:
         eggs_dir = os.path.join(self.base_dir, 'eggs')
         logger.info('Python eggs dir -> %s', eggs_dir)
 
-        try:
-            os.symlink(site_packages_dir, eggs_dir)
-        except FileExistsError:
-            # It is not an issue if it exists, likely install.sh/.bat ran twice.
-            pass
-        else:
-            logger.info('Symlinked from  `%s` to `%s`', site_packages_dir, eggs_dir)
+        self._create_symlink(site_packages_dir, eggs_dir)
 
 # ################################################################################################################################
 
@@ -243,13 +250,28 @@ class PostInstallProcess:
     def add_extlib(self):
 
         # This is where external depdendencies can be kept
-        extlib_dir = os.path.join(self.base_dir, 'extlib')
+        extlib_dir_path = os.path.join(self.base_dir, 'extlib')
 
         # For backward compatibility, this will point to extlib
         extra_paths_dir = os.path.join(self.base_dir, 'zato_extra_paths')
 
-        extlib_dir = Path(extlib_dir)
+        # This is what the extlib will be found through in runtime
+        easy_install_path = os.path.join(self.base_dir, 'eggs', 'easy-install.pth')
+
+        # Build a Path object ..
+        extlib_dir = Path(extlib_dir_path)
+
+        # .. create the underlying directory ..
         extlib_dir.mkdir(exist_ok=True)
+
+        # .. symlink it for backward compatibility ..
+        self._create_symlink(extlib_dir_path, extra_paths_dir)
+
+        # .. and add the path to easy_install.
+        f = open(easy_install_path, 'a')
+        f.write(extlib_dir_path)
+        f.write(os.linesep)
+        f.close()
 
 # ################################################################################################################################
 
