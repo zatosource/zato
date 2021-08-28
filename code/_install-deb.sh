@@ -9,7 +9,6 @@ PY_BINARY=$1
 INSTALL_PYTHON=${2:-y}
 echo "*** Zato Ubuntu/Debian installation using $PY_BINARY ***"
 
-<< '###BLOCK-COMMENT'
 # Always run an update so there are no surprises later on when it actually
 # comes to fetching the packages from repositories.
 sudo apt-get update
@@ -39,17 +38,11 @@ fi
 curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
 $PY_BINARY -m pip install -U virtualenv==20.4.3
 
-$PY_BINARY -m virtualenv .
-source ./bin/activate
-source ./_postinstall.sh $PY_BINARY
-###BLOCK-COMMENT
-
 echo Installing virtualenv in $CURDIR
 $PY_BINARY -m virtualenv $CURDIR
 
 echo Activating virtualenv in $CURDIR
 source $CURDIR/bin/activate
 
-echo Setting up packages in $CURDIR
+echo Setting up environment in $CURDIR
 $CURDIR/bin/python $CURDIR/util/environment.py install
-#source ./_postinstall.sh $PY_BINARY
