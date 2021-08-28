@@ -1,18 +1,16 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import inspect, json, os
-
-'''
-# sh
-import sh
-
+import inspect
+import json
+import os
+from subprocess import PIPE, run as subprocess_run
 
 # Cannot use built in __file__ because we are execfile'd
 _file = inspect.currentframe().f_code.co_filename
@@ -20,7 +18,7 @@ _file = inspect.currentframe().f_code.co_filename
 # Prepare all the directories needed
 curdir = os.path.dirname(os.path.abspath(_file))
 release_info_dir = os.path.join(curdir, 'release-info')
-git_repo_dir = os.path.join(release_info_dir, '..')
+git_repo_dir = os.path.abspath(os.path.join(release_info_dir, '..'))
 
 #
 # This is Zato version information
@@ -35,10 +33,16 @@ release = json.loads(release)
 # the latter may result in spurious pip errors, such as:
 # "error in zato-agent setup command: Distribution contains no modules or packages for namespace package 'zato'"
 #
-with sh.pushd(release_info_dir):
-    revision = sh.git('rev-parse', '--short', 'HEAD').strip()
+git_command = ['git', 'rev-parse', '--short', 'HEAD']
 
-version = '{}.{}+rev.{}'.format(release['major'], release['minor'], revision)
-'''
+try:
+    process = subprocess_run(git_command, stdout=PIPE, check=True)
 
-version = '3.2'
+    revision = process.stdout
+    revision = revision.decode('utf8')
+    revision = revision.strip()
+except Exception as e:
+    print(e)
+    version = '3.2-nogit'
+else:
+    version = '{}.{}+rev.{}'.format(release['major'], release['minor'], revision)
