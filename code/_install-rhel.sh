@@ -41,6 +41,9 @@ sudo ${INSTALL_CMD} install -y \
     openssl-devel patch postgresql-devel suitesparse swig uuid \
     uuid-devel wget ${PYTHON_DEPENDENCIES}
 
+curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
+$PY_BINARY -m pip install -U virtualenv==20.4.3
+
 echo Installing virtualenv in $CURDIR
 $PY_BINARY -m venv .
 
