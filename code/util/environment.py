@@ -298,7 +298,7 @@ class EnvironmentManager:
         else:
             template = ''
             template += '#!/bin/sh'
-            template = '\n'
+            template += '\n'
             template += '"{}" "$@"'
 
         # Add the full path to the OS-specific template ..
