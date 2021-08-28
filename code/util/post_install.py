@@ -11,6 +11,7 @@ import logging
 import os
 import platform
 import sys
+from pathlib import Path
 from subprocess import CalledProcessError, PIPE, Popen, run as subprocess_run
 
 # ################################################################################################################################
@@ -239,6 +240,19 @@ class PostInstallProcess:
 
 # ################################################################################################################################
 
+    def add_extlib(self):
+
+        # This is where external depdendencies can be kept
+        extlib_dir = os.path.join(self.base_dir, 'extlib')
+
+        # For backward compatibility, this will point to extlib
+        extra_paths_dir = os.path.join(self.base_dir, 'zato_extra_paths')
+
+        extlib_dir = Path(extlib_dir)
+        extlib_dir.mkdir(exist_ok=True)
+
+# ################################################################################################################################
+
     def run(self):
 
         '''
@@ -252,6 +266,8 @@ class PostInstallProcess:
         self.add_eggs_symlink()
         self.add_py_command()
         '''
+
+        self.add_extlib()
 
 # ################################################################################################################################
 # ################################################################################################################################
