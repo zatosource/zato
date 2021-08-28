@@ -25,7 +25,24 @@ logger = logging.getLogger('zato')
 # ################################################################################################################################
 # ################################################################################################################################
 
+zato_command_template = """
+#!{base_dir}/bin/python3
 
+# Zato
+from zato.cli.zato_command import main
+
+if __name__ == '__main__':
+
+    # stdlib
+    import re
+    import sys
+
+    # This is needed by SUSE
+    sys.path.append('{base_dir}/lib64/python3.6/site-packages/')
+
+    sys.argv[0] = re.sub(r'(-script\.pyw?|\.exe)?$', '', sys.argv[0])
+    sys.exit(main())
+""".strip()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,6 +69,22 @@ class InstallUtil:
             pass
         else:
             logger.info('Symlinked from  `%s` to `%s`', from_, to)
+
+# ################################################################################################################################
+
+    def _create_executable(self, path, data):
+        # type: (str) -> None
+
+        f = open(path, 'w')
+        f.write(data)
+        f.close()
+
+        logger.info('Created file `%s`', path)
+
+        # .. and make it executable.
+        os.chmod(path, 0o740)
+
+        logger.info('Made file executable `%s`', path)
 
 # ################################################################################################################################
 
@@ -218,40 +251,6 @@ class InstallUtil:
 
 # ################################################################################################################################
 
-    def add_py_command(self):
-
-        # This is where will will save it
-        py_command_path = os.path.join(self.bin_dir, 'py')
-
-        # There will be two versions, one for Windows and one for other systems
-
-        #
-        # Windows
-        #
-        if 'windows' in platform.system().lower():
-            template = ''
-            template += '"{}" %*'
-
-        # Non-Windows
-        else:
-            template = ''
-            template += '#!/bin/sh'
-            template = '\n'
-            template += '"{}" "$@"'
-
-        # Add the full path to the OS-specific template ..
-        data = template.format(self.python_command)
-
-        # .. add the file to the system ..
-        f = open(py_command_path, 'w')
-        f.write(data)
-        f.close()
-
-        # .. and make it executable.
-        os.chmod(py_command_path, 0o740)
-
-# ################################################################################################################################
-
     def add_extlib(self):
 
         # This is where external depdendencies can be kept
@@ -280,9 +279,52 @@ class InstallUtil:
 
 # ################################################################################################################################
 
+    def add_py_command(self):
+
+        # This is where will will save it
+        py_command_path = os.path.join(self.bin_dir, 'py')
+
+        # There will be two versions, one for Windows and one for other systems
+
+        #
+        # Windows
+        #
+        if 'windows' in platform.system().lower():
+            template = ''
+            template += '"{}" %*'
+
+        # Non-Windows
+        else:
+            template = ''
+            template += '#!/bin/sh'
+            template = '\n'
+            template += '"{}" "$@"'
+
+        # Add the full path to the OS-specific template ..
+        data = template.format(self.python_command)
+
+        # .. and add the file to the system.
+        self._create_executable(py_command_path, data)
+
+# ################################################################################################################################
+
+    def add_zato_command(self):
+
+        # This is where the command file will be created
+        command_path = os.path.join(self.bin_dir, 'zato')
+
+        # Build the full contents of the command file ..
+        data = zato_command_template.format(**{
+            'base_dir': self.base_dir
+        })
+
+        # .. and add the file to the file system.
+        self._create_executable(command_path, data)
+
+# ################################################################################################################################
+
     def run(self):
 
-        '''
         self.update_git_revision()
 
         self.pip_install_core_pip()
@@ -291,9 +333,10 @@ class InstallUtil:
         self.pip_uninstall()
 
         self.add_eggs_symlink()
-        self.add_py_command()
         self.add_extlib()
-        '''
+
+        self.add_py_command()
+        self.add_zato_command()
 
 # ################################################################################################################################
 # ################################################################################################################################
