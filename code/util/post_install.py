@@ -26,9 +26,11 @@ logger = logging.getLogger('zato')
 class PostInstallProcess:
     """ Tasks run after the main installation process.
     """
-    def __init__(self, base_dir):
+    def __init__(self, base_dir, bin_dir):
         # type: (str) -> None
         self.base_dir = base_dir
+        self.bin_dir = bin_dir
+        self.pip_command = os.path.join(self.bin_dir, 'pip')
 
 # ################################################################################################################################
 
@@ -41,13 +43,21 @@ class PostInstallProcess:
         command = command.strip()
         command = command.split()
 
-        process = Popen(command, stdout=PIPE, stderr=PIPE)
+        #process = Popen(command, stdout=PIPE, stderr=PIPE)
+
+        process = Popen(command, stderr=PIPE)
 
         while True:
-            stdout = process.stdout.readline()
+
+            #stdout = process.stdout.readline()
             stderr = process.stderr.readline()
 
-            if stdout:
+            #print()
+            #print(111, stdout)
+            #print(222, stderr)
+            #print()
+
+            if 0:
                 stdout = stdout.strip()
                 stdout = stdout.decode('utf8')
                 logger.info(stdout)
@@ -57,25 +67,12 @@ class PostInstallProcess:
                 stderr = stderr.decode('utf8')
                 logger.warn(stderr)
 
+                if exit_on_error:
+                    process.kill()
+                    sys.exit(1)
+
             if process.poll() is not None:
                 break
-
-        #rc = process.poll()
-        #return rc
-
-        '''
-        try:
-            out = subprocess_run(command, check=True, stdout=PIPE, stderr=PIPE)
-        except CalledProcessError as e:
-            stderr = e.stderr.decode('utf8').strip()
-            msg = 'Error while executing command `{}` -> `{}`\n'.format(command, stderr)
-            sys.stderr.write(msg)
-            sys.exit(1)
-
-        print()
-        print(222, command)
-        print()
-        '''
 
 # ################################################################################################################################
 
@@ -102,19 +99,76 @@ class PostInstallProcess:
 
 # ################################################################################################################################
 
-    def pip_install_requirements(self):
+    def pip_install_core_pip(self):
 
-        # Core pip dependencies ..
-        command = 'pip install --no-warn-script-location -U setuptools pip'
+        # Set up the command ..
+        command = '{} install --no-warn-script-location -U setuptools pip'.format(self.pip_command)
 
-        # .. run the command ..
+        # .. and run it.
         self.run_command(command)
 
+# ################################################################################################################################
+
+    def pip_install_requirements(self):
+
+        # Always use full paths to resolve any doubts
+        reqs_path = os.path.join(self.base_dir, 'requirements.txt')
+
+        # Set up the command ..
+        command = """
+            {} install
+            --no-warn-script-location
+            -r {}
+        """.format(self.pip_command, reqs_path)
+
+        # .. and run it.
+        self.run_command(command)
+
+# ################################################################################################################################
+
+    def pip_install_zato_packages(self):
+
+        # Note that zato-common must come first.
+        packages = [
+            'zato-common',
+            'zato-agent',
+            'zato-broker',
+            'zato-cli',
+            'zato-client',
+            'zato-cy',
+            'zato-distlock',
+            'zato-hl7',
+            'zato-lib',
+            'zato-scheduler',
+            'zato-server',
+            'zato-web-admin',
+            'zato-zmq',
+            'zato-sso',
+            'zato-testing',
+        ]
+
+        # All the -e arguments that pip will receive
+        pip_args = []
+
+        # Build the arguments
+        for name in packages:
+            package_path = os.path.join(self.base_dir, name)
+            arg = '-e {}'.format(package_path)
+            pip_args.append(arg)
+
+        # Build the command ..
+        command = '{} install {}'.format(self.pip_command, ' '.join(pip_args))
+
+        # .. and run it.
+        self.run_command(command)
 
 # ################################################################################################################################
 
     def run(self):
+        self.pip_install_core_pip()
         self.pip_install_requirements()
+        self.pip_install_zato_packages()
+
         # self.update_git_revision()
 
 # ################################################################################################################################
@@ -122,12 +176,12 @@ class PostInstallProcess:
 
 if __name__ == '__main__':
 
-    sys_exec_dir = os.path.dirname(sys.executable)
+    bin_dir = os.path.dirname(sys.executable)
 
-    base_dir = os.path.join(sys_exec_dir, '..')
+    base_dir = os.path.join(bin_dir, '..')
     base_dir = os.path.abspath(base_dir)
 
-    process = PostInstallProcess(base_dir)
+    process = PostInstallProcess(base_dir, bin_dir)
     process.run()
 
 # ################################################################################################################################
