@@ -582,15 +582,19 @@ class BaseSIOTestCase(TestCase):
 
     def get_server_config(self, needs_response_elem=False):
 
-        with NamedTemporaryFile() as f:
+        with NamedTemporaryFile(delete=False) as f:
             contents = simple_io_conf_contents.format(bytes_to_str_encoding=get_bytes_to_str_encoding())
             if isinstance(contents, unicode):
                 contents = contents.encode('utf8')
             f.write(contents)
             f.flush()
+            temporary_file_name=f.name
 
-            sio_fs_config = ConfigObj(f.name)
-            sio_fs_config = bunchify(sio_fs_config)
+        sio_fs_config = ConfigObj(temporary_file_name)
+        sio_fs_config = bunchify(sio_fs_config)
+
+        import os
+        os.remove(temporary_file_name)
 
         sio_server_config = get_sio_server_config(sio_fs_config)
 

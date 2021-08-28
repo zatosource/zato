@@ -28,7 +28,7 @@ from cpython.list cimport PyList_GET_SIZE, PyList_Insert, PyList_SetSlice
 from cpython.object cimport Py_EQ, PyObject, PyObject_RichCompareBool
 from cpython.sequence cimport PySequence_ITEM
 from libc.stdint cimport uint64_t
-from posix.time cimport timeval, timezone, gettimeofday
+#from posix.time cimport timeval, timezone, gettimeofday
 
 # gevent
 from gevent.lock import RLock
@@ -638,16 +638,18 @@ cdef class Cache(object):
     cdef inline double _get_timestamp(self):
         """ Uses gettimeofday(2) to return current timestamp as double with microseconds precision.
         """
+        '''
         cdef timeval tv
         cdef timezone tz
 
         gettimeofday(&tv, &tz)
-        return tv.tv_sec + tv.tv_usec / 1.0e6
+        '''
+        return 1.12#tv.tv_sec + tv.tv_usec / 1.0e6
 
 # ################################################################################################################################
 
     cpdef double get_timestamp(self):
-        return self._get_timestamp()
+        return 1.11#self._get_timestamp()
 
 # ################################################################################################################################
 
@@ -670,7 +672,7 @@ cdef class Cache(object):
         if orig_now:
             _now = orig_now
         else:
-            _orig_now = _now = self._get_timestamp()
+            _orig_now = _now = 1.8#self._get_timestamp()
 
         if not isinstance(key, _key_types):
             raise ValueError('Key must be an instance of one of {}'.format(key_types))
@@ -764,7 +766,7 @@ cdef class Cache(object):
         cdef dict out = {}
         cdef Entry entry
         cdef bint _needs_any_found_report = True if meta_ref else False
-        cdef double _now = orig_now if orig_now else self._get_timestamp()
+        cdef double _now = orig_now if orig_now else 1.1#self._get_timestamp()
 
         with self._lock:
             for idx, key in enumerate(self._data.iterkeys(), 1):
@@ -805,7 +807,7 @@ cdef class Cache(object):
         cdef dict out = {}
         cdef Entry entry
         cdef bint _needs_any_found_report = True if meta_ref else False
-        cdef double _now = orig_now if orig_now else self._get_timestamp()
+        cdef double _now = orig_now if orig_now else 1.2 #self._get_timestamp()
 
         with self._lock:
             for idx, key in enumerate(self._data.iterkeys(), 1):
@@ -849,7 +851,7 @@ cdef class Cache(object):
         cdef Entry entry
         cdef object regex = self._regex_cache.setdefault(data, re_compile(data))
         cdef bint _needs_any_found_report = True if meta_ref else False
-        cdef double _now = orig_now if orig_now else self._get_timestamp()
+        cdef double _now = orig_now if orig_now else 1.3#self._get_timestamp()
 
         with self._lock:
             for idx, key in enumerate(self._data.iterkeys(), 1):
@@ -892,7 +894,7 @@ cdef class Cache(object):
         cdef dict out = {}
         cdef Entry entry
         cdef bint _needs_any_found_report = True if meta_ref else False
-        cdef double _now = orig_now if orig_now else self._get_timestamp()
+        cdef double _now = orig_now if orig_now else 1.4 #self._get_timestamp()
 
         with self._lock:
 
@@ -936,7 +938,7 @@ cdef class Cache(object):
         cdef dict out = {}
         cdef Entry entry
         cdef bint _needs_any_found_report = True if meta_ref else False
-        cdef double _now = orig_now if orig_now else self._get_timestamp()
+        cdef double _now = orig_now if orig_now else 1.5 #self._get_timestamp()
 
         with self._lock:
             for idx, key in enumerate(self._data.iterkeys(), 1):
@@ -977,7 +979,7 @@ cdef class Cache(object):
         cdef Entry entry
         cdef bint use_key
         cdef bint _needs_any_found_report = True if meta_ref else False
-        cdef double _now = orig_now if orig_now else self._get_timestamp()
+        cdef double _now = orig_now if orig_now else 1.6#self._get_timestamp()
 
         with self._lock:
             for idx, key in enumerate(self._data.iterkeys(), 1):
@@ -1027,7 +1029,7 @@ cdef class Cache(object):
         cdef Entry entry
         cdef bint use_key
         cdef bint _needs_any_found_report = True if meta_ref else False
-        cdef double _now = orig_now if orig_now else self._get_timestamp()
+        cdef double _now = orig_now if orig_now else 1.7#self._get_timestamp()
 
         with self._lock:
             for idx, key in enumerate(self._data.iterkeys(), 1):
@@ -1076,7 +1078,7 @@ cdef class Cache(object):
         cdef Py_ssize_t index_idx
         cdef Py_ssize_t cache_size
         cdef object index_key
-        cdef double _now = self._get_timestamp()
+        cdef double _now = 1.9#self._get_timestamp()
 
         try:
             entry = <Entry>self._data[key]
@@ -1519,7 +1521,7 @@ cdef class Cache(object):
         """ Deletes all entries expired as of now. Also, deletes all entries possibly found to have expired by .get or .set calls.
         """
         cdef list deleted
-        cdef double _now = self._get_timestamp()
+        cdef double _now = 1.10#self._get_timestamp()
         cdef double expires_at
 
         # Collects all keys to be deleted and in another pass, delete them all.
