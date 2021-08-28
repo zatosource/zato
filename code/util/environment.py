@@ -11,7 +11,9 @@ import logging
 import os
 import platform
 import sys
+from distutils.dir_util import copy_tree
 from pathlib import Path
+from shutil import copytree
 from subprocess import CalledProcessError, PIPE, Popen, run as subprocess_run
 
 # ################################################################################################################################
@@ -47,9 +49,8 @@ if __name__ == '__main__':
 # ################################################################################################################################
 # ################################################################################################################################
 
-class InstallUtil:
-    """ Tasks run after the main installation process.
-    """
+class EnvironmentManager:
+
     def __init__(self, base_dir, bin_dir):
         # type: (str) -> None
         self.base_dir = base_dir
@@ -323,7 +324,24 @@ class InstallUtil:
 
 # ################################################################################################################################
 
-    def run(self):
+    def copy_patches(self):
+
+        # Where our patches can be found
+        patches_dir = os.path.join(self.base_dir, 'patches')
+
+        # Where to copy them to
+        dest_dir = easy_install_path = os.path.join(self.base_dir, 'eggs')
+
+        logger.info('Copying patches from %s -> %s', patches_dir, dest_dir)
+
+        # Recursively copy all the patches, overwriting any files found
+        copy_tree(patches_dir, dest_dir, preserve_symlinks=True, verbose=1)
+
+        logger.info('Copied patches from %s -> %s', patches_dir, dest_dir)
+
+# ################################################################################################################################
+
+    def install(self):
 
         self.update_git_revision()
 
@@ -338,6 +356,8 @@ class InstallUtil:
         self.add_py_command()
         self.add_zato_command()
 
+        self.copy_patches()
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -348,8 +368,11 @@ if __name__ == '__main__':
     base_dir = os.path.join(bin_dir, '..')
     base_dir = os.path.abspath(base_dir)
 
-    util = InstallUtil(base_dir, bin_dir)
-    util.run()
+    command = sys.argv[1]
+
+    util = EnvironmentManager(base_dir, bin_dir)
+    func = getattr(util, command)
+    func()
 
 # ################################################################################################################################
 # ################################################################################################################################
