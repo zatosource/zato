@@ -11,8 +11,6 @@ echo "*** Zato RHEL/CentOS installation using $PY_BINARY ***"
 
 INSTALL_CMD="yum"
 
-os_version=`lsb_release -sir`
-
 if [ "$(type -p dnf)" ]
 then
     INSTALL_CMD="dnf"
@@ -27,6 +25,8 @@ fi
 if [[ "$INSTALL_PYTHON" == "y" ]]; then
     PYTHON_DEPENDENCIES="python3-devel"
 fi
+
+os_version=`lsb_release -sir`
 
 if [[ $os_version == CentOS\ 8* ]]
 then
