@@ -11,7 +11,7 @@ echo "*** Zato RHEL/CentOS installation using $PY_BINARY ***"
 
 INSTALL_CMD="yum"
 
-os_version=`lsb_release -sir)`
+os_version=`lsb_release -sir`
 
 if [ "$(type -p dnf)" ]
 then
