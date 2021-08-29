@@ -110,7 +110,7 @@ class EnvironmentManager:
         #
 
         linux_distro = self._get_linux_distro_name()
-        is_rhel = is_linux and ('red hat' in linux_distro or 'centos' in linux_distro)
+        is_rhel = 'red hat' in linux_distro or 'centos' in linux_distro
 
         # Explicitly ignore the non-existing option and add a different one..
         if is_rhel:
