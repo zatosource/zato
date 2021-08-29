@@ -97,6 +97,7 @@ class EnvironmentManager:
 
                 break
 
+        logger.info('Linux distribution found -> `%s`', distro_name)
         return distro_name
 
 # ################################################################################################################################
