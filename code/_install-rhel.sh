@@ -32,7 +32,7 @@ if [[ $os_version == CentOS\ 8* ]]
 then
     sudo yum install dnf-plugins-core
     sudo yum config-manager --set-enabled powertools
-elif [[ $os_version == RedHatEnterprise\ 8* ]
+elif [[ $os_version == RedHatEnterprise\ 8* ]]
 then
     sudo dnf config-manager --set-enabled codeready-builder-for-rhel-8-rhui-rpms
 fi
