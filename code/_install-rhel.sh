@@ -28,13 +28,11 @@ if [[ "$INSTALL_PYTHON" == "y" ]]; then
     PYTHON_DEPENDENCIES="python3-devel"
 fi
 
-if [[ $os_version == CentOS.8* ]]
+if [[ $os_version == CentOS\ 8* ]]
 then
-    [[ "$INSTALL_PYTHON" == "y" ]] && sudo ${INSTALL_CMD} install -y python3
-    sudo ${INSTALL_CMD} -y groupinstall development
-    sudo ${INSTALL_CMD} install -y 'dnf-command(config-manager)'
-    sudo ${INSTALL_CMD} config-manager --set-enabled "$(sudo dnf repolist all|grep PowerTools|awk '{print $1}')"
-elif [[ $os_version == RedHatEnterprise\ 8* ]]
+    sudo yum install dnf-plugins-core
+    sudo yum config-manager --set-enabled powertools
+elif [[ $os_version == RedHatEnterprise\ 8* ]
 then
     sudo dnf config-manager --set-enabled codeready-builder-for-rhel-8-rhui-rpms
 fi
