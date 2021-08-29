@@ -13,7 +13,7 @@ import platform
 import sys
 from distutils.dir_util import copy_tree
 from pathlib import Path
-from subprocess import check_output
+from subprocess import check_output, PIPE, Popen
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -150,7 +150,8 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def run_command(self, command, exit_on_error=True, needs_stdout=False, needs_stderr=False, log_stderr=True):
+    def run_command(self, command, exit_on_error=True, needs_stdout=False, needs_stderr=False, log_stderr=True,
+        use_check_output=False):
         # type: (str) -> str
 
         logger.info('Running `%s`', command)
@@ -159,6 +160,13 @@ class EnvironmentManager:
         command = command.strip()
         command = command.split()
 
+        func = self._run_check_output if use_check_output else self._run_popen
+        return func(command, exit_on_error, needs_stdout, needs_stderr, log_stderr)
+
+# ################################################################################################################################
+
+    def _run_check_output(self, command, exit_on_error=True, needs_stdout=False, needs_stderr=False, log_stderr=True):
+
         # This will be potentially returned to our caller
         stdout = b''
 
@@ -166,7 +174,7 @@ class EnvironmentManager:
         try:
             stdout = check_output(command) # type: bytes
         except Exception as e:
-            stderr = e.args[1]
+            stderr = e.args
             if log_stderr:
                 logger.warning(stderr)
             if exit_on_error:
@@ -177,6 +185,46 @@ class EnvironmentManager:
         else:
             if needs_stdout:
                 return stdout.decode('utf8')
+
+# ################################################################################################################################
+
+    def _run_popen(self, command, exit_on_error=True, needs_stdout=False, needs_stderr=False, log_stderr=True):
+
+        # This will be potentially returned to our caller
+        stdout = None
+
+        # Run the command ..
+        process = Popen(command, stderr=PIPE, stdout=PIPE if needs_stdout else None)
+
+        # .. and wait until it completes.
+        while True:
+
+            stderr = process.stderr.readline()
+
+            if needs_stdout:
+                stdout = process.stdout.readline()
+                stdout = stdout.strip()
+                stdout = stdout.decode('utf8')
+
+            if stderr:
+                stderr = stderr.strip()
+                stderr = stderr.decode('utf8')
+
+                if log_stderr:
+                    logger.warning(stderr)
+
+                if exit_on_error:
+                    process.kill()
+                    sys.exit(1)
+                else:
+                    if needs_stderr:
+                        return stderr
+
+            if process.poll() is not None:
+                break
+
+        if needs_stdout:
+            return stdout
 
 # ################################################################################################################################
 
@@ -418,9 +466,6 @@ class EnvironmentManager:
     def update(self):
 
         self.update_git_revision()
-
-        return
-
         self.pip_install()
         self.copy_patches()
 
