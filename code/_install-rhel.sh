@@ -1,3 +1,8 @@
+#!/bin/bash
+
+CURDIR="${BASH_SOURCE[0]}";RL="readlink";([[ `uname -s`=='Darwin' ]] || RL="$RL -f")
+while([ -h "${CURDIR}" ]) do CURDIR=`$RL "${CURDIR}"`; done
+N="/dev/null";pushd .>$N;cd `dirname ${CURDIR}`>$N;CURDIR=`pwd`;popd>$N
 
 # Python version to use needs to be provided by our caller
 PY_BINARY=$1
@@ -21,14 +26,16 @@ if [[ "$INSTALL_PYTHON" == "y" ]]; then
     PYTHON_DEPENDENCIES="python3-devel"
 fi
 
-if [[ "$(lsb_release -sir)" =~ '^CentOS.8\.' ]]
-then
-    [[ "$INSTALL_PYTHON" == "y" ]] && sudo ${INSTALL_CMD} install -y python3
-    sudo ${INSTALL_CMD} -y groupinstall development
-    sudo ${INSTALL_CMD} install -y 'dnf-command(config-manager)'
-    sudo ${INSTALL_CMD} config-manager --set-enabled "$(sudo dnf repolist all|grep PowerTools|awk '{print $1}')"
-fi
+os_version=`lsb_release -sir`
 
+if [[ $os_version == CentOS\ 8* ]]
+then
+    sudo yum install dnf-plugins-core
+    sudo yum config-manager --set-enabled powertools
+elif [[ $os_version == RedHatEnterprise\ 8* ]]
+then
+    sudo dnf config-manager --set-enabled codeready-builder-for-rhel-8-rhui-rpms
+fi
 
 sudo ${INSTALL_CMD} install -y \
     bzip2 bzip2-devel curl cyrus-sasl-devel gcc-c++ git haproxy \
@@ -37,11 +44,16 @@ sudo ${INSTALL_CMD} install -y \
     openssl-devel patch postgresql-devel suitesparse swig uuid \
     uuid-devel wget ${PYTHON_DEPENDENCIES}
 
+curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
+$PY_BINARY -m pip install -U virtualenv==20.4.3
+
+echo Installing virtualenv in $CURDIR
 $PY_BINARY -m venv .
 
-source ./bin/activate
-./bin/python -m pip install -U setuptools pip
+echo Activating virtualenv in $CURDIR
+source $CURDIR/bin/activate
 
-source ./_postinstall.sh $PY_BINARY
+echo Setting up environment in $CURDIR
+$CURDIR/bin/python $CURDIR/util/environment.py install
 
-
+echo ⭐ Successfully installed `zato --version`

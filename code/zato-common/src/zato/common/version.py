@@ -23,6 +23,7 @@ def get_sys_info():
 
         info = distro.info()
         codename = info['codename'].lower()
+        codename = codename.replace('/', '')
 
         out = '{}.{}'.format(info['id'], info['version'])
 
@@ -49,17 +50,24 @@ def get_version():
 
     # stdlib
     import os
+    import sys
     from sys import version_info as py_version_info
 
     # Python 2/3 compatibility
     from past.builtins import execfile
 
     try:
+
+        # Make sure the underlying git command runs in our git repository ..
+        code_dir = os.path.dirname(sys.executable)
+        os.chdir(code_dir)
+
         curdir = os.path.dirname(os.path.abspath(__file__))
         _version_py = os.path.normpath(os.path.join(curdir, '..', '..', '..', '..', '.version.py'))
         _locals = {}
         execfile(_version_py, _locals)
         version = 'Zato {}'.format(_locals['version'])
+
     except IOError:
         version = '3.2'
     finally:
