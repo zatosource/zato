@@ -234,7 +234,7 @@ class EnvironmentManager:
         command = '{} install {} -U setuptools pip wheel'.format(self.pip_command, self.pip_options)
 
         # .. and run it.
-        self.run_command(command)
+        self.run_command(command, exit_on_error=False)
 
 # ################################################################################################################################
 
@@ -251,7 +251,7 @@ class EnvironmentManager:
         """.format(self.pip_command, self.pip_options, reqs_path)
 
         # .. and run it.
-        self.run_command(command)
+        self.run_command(command, exit_on_error=False)
 
 # ################################################################################################################################
 
@@ -289,7 +289,7 @@ class EnvironmentManager:
         command = '{} install {}'.format(self.pip_command, ' '.join(pip_args))
 
         # .. and run it.
-        self.run_command(command)
+        self.run_command(command, exit_on_error=False)
 
 # ################################################################################################################################
 
@@ -306,7 +306,7 @@ class EnvironmentManager:
         command = '{} uninstall -y -qq {}'.format(self.pip_command, ' '.join(packages))
 
         # .. and run it.
-        self.run_command(command)
+        self.run_command(command, exit_on_error=False)
 
 # ################################################################################################################################
 
