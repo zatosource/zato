@@ -36,7 +36,7 @@ then
     sudo ${INSTALL_CMD} config-manager --set-enabled "$(sudo dnf repolist all|grep PowerTools|awk '{print $1}')"
 elif [[ $os_version == RedHatEnterprise\ 8* ]]
 then
-    sudo subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
+    sudo dnf config-manager --set-enabled codeready-builder-for-rhel-8-rhui-rpms
 fi
 
 sudo ${INSTALL_CMD} install -y \
