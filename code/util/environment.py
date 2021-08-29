@@ -13,8 +13,7 @@ import platform
 import sys
 from distutils.dir_util import copy_tree
 from pathlib import Path
-from shutil import copytree
-from subprocess import CalledProcessError, PIPE, Popen, run as subprocess_run
+from subprocess import PIPE, Popen
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -23,6 +22,14 @@ log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
 logging.basicConfig(level=logging.DEBUG, format=log_format)
 
 logger = logging.getLogger('zato')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+platform_system = platform.system().lower()
+
+is_windows = 'windows' in platform_system
+is_linux   = 'linux'   in platform_system # noqa: E272
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,7 +51,7 @@ if __name__ == '__main__':
 
     sys.argv[0] = re.sub(r'(-script\.pyw?|\.exe)?$', '', sys.argv[0])
     sys.exit(main())
-""".strip()
+""".strip() # noqa: W605
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,6 +64,60 @@ class EnvironmentManager:
         self.bin_dir = bin_dir
         self.pip_command = os.path.join(self.bin_dir, 'pip')
         self.python_command = os.path.join(self.bin_dir, 'python')
+        self.pip_options = ''
+
+        self._set_up_pip_flags()
+
+# ################################################################################################################################
+
+    def _get_linux_distro_name(self):
+
+        # Short-cut for non-Linux systems
+        if not is_linux:
+            return ''
+
+        # If we are here, it means that we are under a Linux distribution and we assume
+        # that the file exists per https://www.freedesktop.org/software/systemd/man/os-release.html
+
+        # By default, we do not have it
+        distro_name = ''
+
+        data = open('/etc/os-release').read() # type: str
+        data = data.splitlines()
+
+        for line in data:
+            if line.startswith('PRETTY_NAME'):
+
+                line = line.split('=')
+
+                distro_name = line[1]
+                distro_name = distro_name.replace('"', '')
+                distro_name = distro_name.lower()
+
+                break
+
+        logger.info('Linux distribution found -> `%s`', distro_name)
+        return distro_name
+
+# ################################################################################################################################
+
+    def _set_up_pip_flags(self):
+
+        #
+        # Under RHEL, pip install may not have the '--no-warn-script-location' flag.
+        # At the same time, under RHEL, we need to use --no-cache-dir.
+        #
+
+        linux_distro = self._get_linux_distro_name()
+        is_rhel = 'red hat' in linux_distro or 'centos' in linux_distro
+
+        # Explicitly ignore the non-existing option and add a different one..
+        if is_rhel:
+            self.pip_options = '--no-cache-dir'
+
+        # .. or make use of it.
+        else:
+            self.pip_options = '--no-warn-script-location'
 
 # ################################################################################################################################
 
@@ -89,7 +150,7 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def run_command(self, command, exit_on_error=True, needs_stdout=False):
+    def run_command(self, command, exit_on_error=True, needs_stdout=False, needs_stderr=False, log_stderr=True):
         # type: (str) -> str
 
         logger.info('Running `%s`', command)
@@ -117,11 +178,16 @@ class EnvironmentManager:
             if stderr:
                 stderr = stderr.strip()
                 stderr = stderr.decode('utf8')
-                logger.warn(stderr)
+
+                if log_stderr:
+                    logger.warn(stderr)
 
                 if exit_on_error:
                     process.kill()
                     sys.exit(1)
+                else:
+                    if needs_stderr:
+                        return stderr
 
             if process.poll() is not None:
                 break
@@ -134,7 +200,7 @@ class EnvironmentManager:
     def pip_install_core_pip(self):
 
         # Set up the command ..
-        command = '{} install --no-warn-script-location -U setuptools pip'.format(self.pip_command)
+        command = '{} install {} -U setuptools pip wheel'.format(self.pip_command, self.pip_options)
 
         # .. and run it.
         self.run_command(command)
@@ -149,9 +215,9 @@ class EnvironmentManager:
         # Set up the command ..
         command = """
             {} install
-            --no-warn-script-location
+            {}
             -r {}
-        """.format(self.pip_command, reqs_path)
+        """.format(self.pip_command, self.pip_options, reqs_path)
 
         # .. and run it.
         self.run_command(command)
@@ -225,6 +291,9 @@ class EnvironmentManager:
 
         # This is where we will store our last git commit ID
         revision_file_path = os.path.join(self.base_dir, 'release-info', 'revision.txt')
+
+        # Make sure the underlying git command runs in our git repository ..
+        os.chdir(self.base_dir)
 
         # Build the command ..
         command = 'git log -n 1 --pretty=format:%H --no-color'
@@ -300,7 +369,7 @@ class EnvironmentManager:
         #
         # Windows
         #
-        if 'windows' in platform.system().lower():
+        if is_windows:
             template = ''
             template += '"{}" %*'
 
@@ -340,7 +409,7 @@ class EnvironmentManager:
         patches_dir = os.path.join(self.base_dir, 'patches')
 
         # Where to copy them to
-        dest_dir = easy_install_path = os.path.join(self.base_dir, 'eggs')
+        dest_dir = os.path.join(self.base_dir, 'eggs')
 
         logger.info('Copying patches from %s -> %s', patches_dir, dest_dir)
 

@@ -42,7 +42,6 @@ try:
     revision = revision.decode('utf8')
     revision = revision.strip()
 except Exception as e:
-    print(e)
     version = '3.2-nogit'
 else:
     version = '{}.{}+rev.{}'.format(release['major'], release['minor'], revision)
