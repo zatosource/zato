@@ -293,6 +293,9 @@ class EnvironmentManager:
         # This is where we will store our last git commit ID
         revision_file_path = os.path.join(self.base_dir, 'release-info', 'revision.txt')
 
+        # Make sure the underlying git command runs in our git repository ..
+        os.chdir(self.base_dir)
+
         # Build the command ..
         command = 'git log -n 1 --pretty=format:%H --no-color'
 
