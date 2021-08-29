@@ -27,6 +27,14 @@ logger = logging.getLogger('zato')
 # ################################################################################################################################
 # ################################################################################################################################
 
+platform_system = platform.system().lower()
+
+is_windows = 'windows' in platform_system
+is_linux   = 'linux'   in platform_system
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 zato_command_template = """
 #!{base_dir}/bin/python3
 
@@ -66,15 +74,15 @@ class EnvironmentManager:
     def _set_up_pip_flags(self):
 
         #
-        # Under RHEL, pip install may not have the '--no-warn-script-location' flag
-        # which is why we run the command and check its stderr.
-        #
+        # Under RHEL, pip install may not have the '--no-warn-script-location' flag.
         # At the same time, under RHEL, we need to use --no-cache-dir.
         #
-        out = self.run_command('pip install --no-warn-script-location', log_stderr=False, needs_stderr=True, exit_on_error=False)
+
+        linux_distro = platform.linux_distribution()[0]
+        is_rhel = is_linux and ('red hat' in linux_distro or 'centos' in linux_distro)
 
         # Explicitly ignore the non-existing option and add a different one..
-        if 'no such option' in out:
+        if is_rhel:
             self.pip_options = '--no-cache-dir'
 
         # .. or make use of it.
@@ -328,7 +336,7 @@ class EnvironmentManager:
         #
         # Windows
         #
-        if 'windows' in platform.system().lower():
+        if is_windows:
             template = ''
             template += '"{}" %*'
 
