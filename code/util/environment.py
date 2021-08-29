@@ -330,7 +330,7 @@ class EnvironmentManager:
         command = 'git log -n 1 --pretty=format:%H --no-color'
 
         # .. run the command to get our latest commit ID ..
-        commit_id = self.run_command(command, needs_stdout=True)
+        commit_id = self.run_command(command, needs_stdout=True, use_check_output=True)
 
         # .. and store it in an external file for 'zato --version' and other tools to use.
         f = open(revision_file_path, 'w')
