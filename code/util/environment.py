@@ -13,8 +13,7 @@ import platform
 import sys
 from distutils.dir_util import copy_tree
 from pathlib import Path
-from shutil import copytree
-from subprocess import CalledProcessError, PIPE, Popen, run as subprocess_run
+from subprocess import PIPE, Popen
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,7 +29,7 @@ logger = logging.getLogger('zato')
 platform_system = platform.system().lower()
 
 is_windows = 'windows' in platform_system
-is_linux   = 'linux'   in platform_system
+is_linux   = 'linux'   in platform_system # noqa: E272
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,7 +51,7 @@ if __name__ == '__main__':
 
     sys.argv[0] = re.sub(r'(-script\.pyw?|\.exe)?$', '', sys.argv[0])
     sys.exit(main())
-""".strip()
+""".strip() # noqa: W605
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -410,7 +409,7 @@ class EnvironmentManager:
         patches_dir = os.path.join(self.base_dir, 'patches')
 
         # Where to copy them to
-        dest_dir = easy_install_path = os.path.join(self.base_dir, 'eggs')
+        dest_dir = os.path.join(self.base_dir, 'eggs')
 
         logger.info('Copying patches from %s -> %s', patches_dir, dest_dir)
 
