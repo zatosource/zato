@@ -201,7 +201,7 @@ class EnvironmentManager:
     def pip_install_core_pip(self):
 
         # Set up the command ..
-        command = '{} install {} -U setuptools pip'.format(self.pip_command, self.pip_options)
+        command = '{} install {} -U setuptools pip wheel'.format(self.pip_command, self.pip_options)
 
         # .. and run it.
         self.run_command(command)
