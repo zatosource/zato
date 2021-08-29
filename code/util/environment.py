@@ -57,7 +57,7 @@ class EnvironmentManager:
         self.bin_dir = bin_dir
         self.pip_command = os.path.join(self.bin_dir, 'pip')
         self.python_command = os.path.join(self.bin_dir, 'python')
-        self.pip_flags = ''
+        self.pip_options = ''
 
         self._set_up_pip_flags()
 
@@ -75,11 +75,11 @@ class EnvironmentManager:
 
         # Explicitly ignore the non-existing option and add a different one..
         if 'no such option' in out:
-            self.pip_flags = '--no-cache-dir'
+            self.pip_options = '--no-cache-dir'
 
         # .. or make use of it.
         else:
-            self.pip_flags = '--no-warn-script-location'
+            self.pip_options = '--no-warn-script-location'
 
 # ################################################################################################################################
 
@@ -162,7 +162,7 @@ class EnvironmentManager:
     def pip_install_core_pip(self):
 
         # Set up the command ..
-        command = '{} install --no-warn-script-location -U setuptools pip'.format(self.pip_command)
+        command = '{} install {} -U setuptools pip'.format(self.pip_command, self.pip_options)
 
         # .. and run it.
         self.run_command(command)
@@ -177,9 +177,9 @@ class EnvironmentManager:
         # Set up the command ..
         command = """
             {} install
-            --no-warn-script-location
+            {}
             -r {}
-        """.format(self.pip_command, reqs_path)
+        """.format(self.pip_command, self.pip_options, reqs_path)
 
         # .. and run it.
         self.run_command(command)
