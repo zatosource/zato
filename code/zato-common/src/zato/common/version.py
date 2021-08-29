@@ -23,6 +23,7 @@ def get_sys_info():
 
         info = distro.info()
         codename = info['codename'].lower()
+        codename = codename.replace('/', '')
 
         out = '{}.{}'.format(info['id'], info['version'])
 
