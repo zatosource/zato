@@ -71,6 +71,36 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
+    def _get_linux_distro_name(self):
+
+        # Short-cut for non-Linux systems
+        if not is_linux:
+            return ''
+
+        # If we are here, it means that we are under a Linux distribution and we assume
+        # that the file exists per https://www.freedesktop.org/software/systemd/man/os-release.html
+
+        # By default, we do not have it
+        distro_name = ''
+
+        data = open('/etc/os-release').read() # type: str
+        data = data.splitlines()
+
+        for line in data:
+            if line.startswith('PRETTY_NAME'):
+
+                line = line.split('=')
+
+                distro_name = line[1]
+                distro_name = distro_name.replace('"', '')
+                distro_name = distro_name.lower()
+
+                break
+
+        return distro_name
+
+# ################################################################################################################################
+
     def _set_up_pip_flags(self):
 
         #
@@ -78,7 +108,7 @@ class EnvironmentManager:
         # At the same time, under RHEL, we need to use --no-cache-dir.
         #
 
-        linux_distro = platform.linux_distribution()[0]
+        linux_distro = self._get_linux_distro_name()
         is_rhel = is_linux and ('red hat' in linux_distro or 'centos' in linux_distro)
 
         # Explicitly ignore the non-existing option and add a different one..
@@ -388,6 +418,8 @@ class EnvironmentManager:
 # ################################################################################################################################
 
     def install(self):
+
+        return
 
         self.update_git_revision()
         self.pip_install()
