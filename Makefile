@@ -36,6 +36,7 @@ static-check:
 	cd $(CURDIR)/code/zato-testing && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-web-admin && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-zmq && $(MAKE) static-check
+	$(CURDIR)/bin/flake8 --config=$(CURDIR)/tox.ini $(CURDIR)/util
 	echo "Static checks OK"
 
 run-tests:
