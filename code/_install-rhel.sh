@@ -11,6 +11,8 @@ echo "*** Zato RHEL/CentOS installation using $PY_BINARY ***"
 
 INSTALL_CMD="yum"
 
+os_version=`lsb_release -sir)`
+
 if [ "$(type -p dnf)" ]
 then
     INSTALL_CMD="dnf"
@@ -26,13 +28,13 @@ if [[ "$INSTALL_PYTHON" == "y" ]]; then
     PYTHON_DEPENDENCIES="python3-devel"
 fi
 
-if [[ "$(lsb_release -sir)" =~ '^CentOS.8\.' ]]
+if [[ $os_version == CentOS.8* ]]
 then
     [[ "$INSTALL_PYTHON" == "y" ]] && sudo ${INSTALL_CMD} install -y python3
     sudo ${INSTALL_CMD} -y groupinstall development
     sudo ${INSTALL_CMD} install -y 'dnf-command(config-manager)'
     sudo ${INSTALL_CMD} config-manager --set-enabled "$(sudo dnf repolist all|grep PowerTools|awk '{print $1}')"
-elif [[ "$(lsb_release -sir)" =~ '^RedHatEnterprise 8\.' ]]
+elif [[ $os_version == RedHatEnterprise\ 8* ]]
 then
     sudo subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
 fi
