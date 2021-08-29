@@ -57,6 +57,29 @@ class EnvironmentManager:
         self.bin_dir = bin_dir
         self.pip_command = os.path.join(self.bin_dir, 'pip')
         self.python_command = os.path.join(self.bin_dir, 'python')
+        self.pip_flags = ''
+
+        self._set_up_pip_flags()
+
+# ################################################################################################################################
+
+    def _set_up_pip_flags(self):
+
+        #
+        # Under RHEL, pip install may not have the '--no-warn-script-location' flag
+        # which is why we run the command and check its stderr.
+        #
+        # At the same time, under RHEL, we need to use --no-cache-dir.
+        #
+        out = self.run_command('pip install --no-warn-script-location', log_stderr=False, needs_stderr=True, exit_on_error=False)
+
+        # Explicitly ignore the non-existing option and add a different one..
+        if 'no such option' in out:
+            self.pip_flags = '--no-cache-dir'
+
+        # .. or make use of it.
+        else:
+            self.pip_flags = '--no-warn-script-location'
 
 # ################################################################################################################################
 
@@ -89,7 +112,7 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def run_command(self, command, exit_on_error=True, needs_stdout=False):
+    def run_command(self, command, exit_on_error=True, needs_stdout=False, needs_stderr=False, log_stderr=True):
         # type: (str) -> str
 
         logger.info('Running `%s`', command)
@@ -117,11 +140,16 @@ class EnvironmentManager:
             if stderr:
                 stderr = stderr.strip()
                 stderr = stderr.decode('utf8')
-                logger.warn(stderr)
+
+                if log_stderr:
+                    logger.warn(stderr)
 
                 if exit_on_error:
                     process.kill()
                     sys.exit(1)
+                else:
+                    if needs_stderr:
+                        return stderr
 
             if process.poll() is not None:
                 break
