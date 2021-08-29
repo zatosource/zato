@@ -13,7 +13,7 @@ import platform
 import sys
 from distutils.dir_util import copy_tree
 from pathlib import Path
-from subprocess import PIPE, Popen
+from subprocess import check_output, PIPE, Popen
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -150,7 +150,8 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def run_command(self, command, exit_on_error=True, needs_stdout=False, needs_stderr=False, log_stderr=True):
+    def run_command(self, command, exit_on_error=True, needs_stdout=False, needs_stderr=False, log_stderr=True,
+        use_check_output=False):
         # type: (str) -> str
 
         logger.info('Running `%s`', command)
@@ -158,6 +159,36 @@ class EnvironmentManager:
         # Turn what is possibly a multi-line command into a list of arguments ..
         command = command.strip()
         command = command.split()
+
+        func = self._run_check_output if use_check_output else self._run_popen
+        return func(command, exit_on_error, needs_stdout, needs_stderr, log_stderr)
+
+# ################################################################################################################################
+
+    def _run_check_output(self, command, exit_on_error=True, needs_stdout=False, needs_stderr=False, log_stderr=True):
+
+        # This will be potentially returned to our caller
+        stdout = b''
+
+        # Run the command ..
+        try:
+            stdout = check_output(command) # type: bytes
+        except Exception as e:
+            stderr = e.args
+            if log_stderr:
+                logger.warning(stderr)
+            if exit_on_error:
+                sys.exit(1)
+            else:
+                if needs_stderr:
+                    return stderr
+        else:
+            if needs_stdout:
+                return stdout.decode('utf8')
+
+# ################################################################################################################################
+
+    def _run_popen(self, command, exit_on_error=True, needs_stdout=False, needs_stderr=False, log_stderr=True):
 
         # This will be potentially returned to our caller
         stdout = None
@@ -180,7 +211,7 @@ class EnvironmentManager:
                 stderr = stderr.decode('utf8')
 
                 if log_stderr:
-                    logger.warn(stderr)
+                    logger.warning(stderr)
 
                 if exit_on_error:
                     process.kill()
@@ -203,7 +234,7 @@ class EnvironmentManager:
         command = '{} install {} -U setuptools pip wheel'.format(self.pip_command, self.pip_options)
 
         # .. and run it.
-        self.run_command(command)
+        self.run_command(command, exit_on_error=False)
 
 # ################################################################################################################################
 
@@ -220,7 +251,7 @@ class EnvironmentManager:
         """.format(self.pip_command, self.pip_options, reqs_path)
 
         # .. and run it.
-        self.run_command(command)
+        self.run_command(command, exit_on_error=False)
 
 # ################################################################################################################################
 
@@ -258,7 +289,7 @@ class EnvironmentManager:
         command = '{} install {}'.format(self.pip_command, ' '.join(pip_args))
 
         # .. and run it.
-        self.run_command(command)
+        self.run_command(command, exit_on_error=False)
 
 # ################################################################################################################################
 
@@ -275,7 +306,7 @@ class EnvironmentManager:
         command = '{} uninstall -y -qq {}'.format(self.pip_command, ' '.join(packages))
 
         # .. and run it.
-        self.run_command(command)
+        self.run_command(command, exit_on_error=False)
 
 # ################################################################################################################################
 
@@ -299,7 +330,7 @@ class EnvironmentManager:
         command = 'git log -n 1 --pretty=format:%H --no-color'
 
         # .. run the command to get our latest commit ID ..
-        commit_id = self.run_command(command, needs_stdout=True)
+        commit_id = self.run_command(command, needs_stdout=True, use_check_output=True)
 
         # .. and store it in an external file for 'zato --version' and other tools to use.
         f = open(revision_file_path, 'w')

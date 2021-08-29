@@ -19,16 +19,20 @@ def get_sys_info():
     is_mac = 'darwin' in system.lower()
 
     if is_linux:
-        import distro
 
-        info = distro.info()
-        codename = info['codename'].lower()
-        codename = codename.replace('/', '')
+        try:
+            import distro
 
-        out = '{}.{}'.format(info['id'], info['version'])
+            info = distro.info()
+            codename = info['codename'].lower()
+            codename = codename.replace('/', '')
 
-        if codename:
-            out += '-{}'.format(codename)
+            out = '{}.{}'.format(info['id'], info['version'])
+
+            if codename:
+                out += '-{}'.format(codename)
+        except ImportError:
+            out = 'linux'
 
     elif is_windows:
         _platform = platform.platform().lower()
