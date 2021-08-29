@@ -46,7 +46,6 @@ from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.search import SearchAPI
 from zato.server.connection.sms import SMSAPI
 from zato.server.connection.zmq_.outgoing import ZMQFacade
-from zato.server.message import MessageFacade
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
 from zato.server.pattern.api import ParallelExec
@@ -432,7 +431,6 @@ class Service(object):
         self.environ = _Bunch()
         self.request = _Request(self.logger)
         self.response = _Response(self.logger)
-        self.msg = None
         self.time = None
         self.patterns = None
         self.user_config = None
@@ -563,10 +561,6 @@ class Service(object):
         if self.component_enabled_search:
             if not Service.search:
                 Service.search = SearchAPI(self._worker_store.search_es_api, self._worker_store.search_solr_api)
-
-        if self.component_enabled_msg_path:
-            self.msg = MessageFacade(
-                self._json_pointer_store, self._xpath_store, self._msg_ns_store, self.request.payload, self.time)
 
         if self.component_enabled_patterns:
             self.patterns = PatternsFacade(self, self.server.internal_cache_patterns, self.server.internal_cache_lock_patterns)

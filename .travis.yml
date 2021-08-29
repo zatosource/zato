@@ -7,6 +7,32 @@ cache:
   directories:
     - /tmp/travis-cache
 
+# # List of environment variable combinations to test against (first dimension)
+# # https://zato.io/docs/admin/guide/install/index.html#operating-system-considerations
+# env:
+#   - MODE=packaging
+#   # For later use with matrix.include later and OS X.
+#   #- MODE=packaging IMAGE=
+#   - MODE=packaging IMAGE=centos:7
+#   - MODE=packaging IMAGE=centos:7 PY_VERSION=python3
+#   - MODE=packaging IMAGE=ubuntu:16.04
+#   - MODE=packaging IMAGE=ubuntu:16.04 PY_VERSION=python3
+#   - MODE=packaging IMAGE=ubuntu:18.04
+#   - MODE=packaging IMAGE=ubuntu:18.04 PY_VERSION=python3
+#   - MODE=packaging IMAGE=debian:8
+#   - MODE=packaging IMAGE=debian:8 PY_VERSION=python3
+#   - MODE=packaging IMAGE=debian:9
+#   - MODE=packaging IMAGE=debian:9 PY_VERSION=python3
+#   - MODE=packaging IMAGE=alpine:3.11
+#   - MODE=packaging IMAGE=alpine:3.11 PY_VERSION=python3
+
+# List of operating systems to test under (second dimension)
+# https://docs.travis-ci.com/user/reference/overview/
+sudo: required
+# os:
+#   - linux
+#   - windows
+
 before_cache:
   - sudo rm -rf /tmp/travis-cache/root/.cache/pip/http
 
@@ -36,8 +62,41 @@ matrix:
   allow_failures:
     os: osx
 
+  include:
+    - os: windows
+      language: shell
+      before_install:
+        - choco install make
+    - os: linux
+      env: MODE=packaging IMAGE=centos:7 PY_VERSION=python3
+      services:
+        - docker
+    - os: linux
+      env: MODE=packaging IMAGE=centos:8 PY_VERSION=python3
+      services:
+        - docker
+    - os: linux
+      env: MODE=packaging IMAGE=ubuntu:18.04 PY_VERSION=python3
+      services:
+        - docker
+    - os: linux
+      env: MODE=packaging IMAGE=ubuntu:20.04 PY_VERSION=python3
+      services:
+        - docker
+    - os: linux
+      env: MODE=packaging IMAGE=debian:10 PY_VERSION=python3
+      services:
+        - docker
+
 notifications:
   email: false
 
 script:
-  - source .travis/test_${MODE}.sh
+  - |-
+    case $TRAVIS_OS_NAME in
+      windows)
+        .travis/test_installing.sh || exit 1
+        ;;
+      linux)
+        source .travis/test_${MODE}.sh
+    esac

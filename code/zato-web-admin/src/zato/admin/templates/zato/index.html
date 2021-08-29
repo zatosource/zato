@@ -82,31 +82,6 @@
                     </ul>
                 </li>
 
-                <!--
-                <li><span class="like-a">Messages &darr;</span>
-                    <ul>
-                        <li>
-                            <span class="like-a">JSON &rarr;</span>
-                            <ul>
-                                <li><a href="{% url "message-json-pointer" %}?cluster={{ cluster_id|default:'' }}">JSON Pointers</a></li>
-                            </ul>
-                        </li>
-                        <li>
-                            <span class="like-a">XML &rarr;</span>
-                            <ul>
-                                <li><a href="{% url "message-namespace" %}?cluster={{ cluster_id|default:'' }}">Namespaces</a></li>
-                                <li><a href="{% url "message-xpath" %}?cluster={{ cluster_id|default:'' }}">XPath</a></li>
-                            </ul>
-                        </li>
-
-                        <li>
-                            <a href="{% url "message-live-browser-index" %}?cluster={{ cluster_id|default:'' }}">Live browser</a>
-                        </li>
-
-                    </ul>
-                </li>
-                -->
-
                 <li><span class="like-a">Security &darr;</span>
                     <ul>
                         <li><a href="{% url "security-apikey" %}?cluster={{ cluster_id|default:'' }}">API keys</a></li>
