@@ -180,7 +180,7 @@ class EnvironmentManager:
                 stderr = stderr.decode('utf8')
 
                 if log_stderr:
-                    logger.warn(stderr)
+                    logger.warning(stderr)
 
                 if exit_on_error:
                     process.kill()
