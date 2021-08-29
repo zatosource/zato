@@ -13,7 +13,7 @@ import platform
 import sys
 from distutils.dir_util import copy_tree
 from pathlib import Path
-from subprocess import PIPE, Popen
+from subprocess import check_output
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -160,40 +160,23 @@ class EnvironmentManager:
         command = command.split()
 
         # This will be potentially returned to our caller
-        stdout = None
+        stdout = b''
 
         # Run the command ..
-        process = Popen(command, stderr=PIPE, stdout=PIPE if needs_stdout else None)
-
-        # .. and wait until it completes.
-        while True:
-
-            stderr = process.stderr.readline()
-
+        try:
+            stdout = check_output(command) # type: bytes
+        except Exception as e:
+            stderr = e.args[1]
+            if log_stderr:
+                logger.warning(stderr)
+            if exit_on_error:
+                sys.exit(1)
+            else:
+                if needs_stderr:
+                    return stderr
+        else:
             if needs_stdout:
-                stdout = process.stdout.readline()
-                stdout = stdout.strip()
-                stdout = stdout.decode('utf8')
-
-            if stderr:
-                stderr = stderr.strip()
-                stderr = stderr.decode('utf8')
-
-                if log_stderr:
-                    logger.warning(stderr)
-
-                if exit_on_error:
-                    process.kill()
-                    sys.exit(1)
-                else:
-                    if needs_stderr:
-                        return stderr
-
-            if process.poll() is not None:
-                break
-
-        if needs_stdout:
-            return stdout
+                return stdout.decode('utf8')
 
 # ################################################################################################################################
 
@@ -435,6 +418,9 @@ class EnvironmentManager:
     def update(self):
 
         self.update_git_revision()
+
+        return
+
         self.pip_install()
         self.copy_patches()
 
