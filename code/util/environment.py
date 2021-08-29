@@ -419,8 +419,6 @@ class EnvironmentManager:
 
     def install(self):
 
-        return
-
         self.update_git_revision()
         self.pip_install()
         self.add_eggs_symlink()
