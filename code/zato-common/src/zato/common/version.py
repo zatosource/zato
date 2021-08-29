@@ -68,7 +68,7 @@ def get_version():
         execfile(_version_py, _locals)
         version = 'Zato {}'.format(_locals['version'])
 
-    except IOError as e:
+    except IOError:
         version = '3.2'
     finally:
         sys_info = get_sys_info()
