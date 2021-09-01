@@ -34,6 +34,18 @@ is_linux   = 'linux'   in platform_system # noqa: E272
 # ################################################################################################################################
 # ################################################################################################################################
 
+pip_deps_windows     = 'setuptools wheel'
+pip_deps_non_windows = 'setuptools wheel pip'
+
+pip_flags_windows     = '--user'
+pip_flags_non_windows = '' # Explicitly no flags here
+
+pip_flags = pip_flags_windows if is_windows else pip_flags_non_windows
+pip_deps  = pip_deps_windows  if is_windows else pip_deps_non_windows
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 zato_command_template = """
 #!{base_dir}/bin/python3
 
@@ -125,8 +137,7 @@ class EnvironmentManager:
         # type: (str, str) -> None
 
         try:
-            #os.symlink(from_, to)
-            pass
+            os.symlink(from_, to)
         except FileExistsError:
             # It is not an issue if it exists, likely install.sh/.bat ran twice.
             pass
@@ -231,10 +242,13 @@ class EnvironmentManager:
 
     def pip_install_core_pip(self):
 
-        return
-
         # Set up the command ..
-        command = '{} install {} --user -U setuptools wheel'.format(self.pip_command, self.pip_options)
+        command = '{pip_command} install {pip_options} {pip_flags} -U {pip_deps}'.format(**{
+            'pip_command': self.pip_command,
+            'pip_options': self.pip_options,
+            'pip_flags':   pip_flags,
+            'pip_deps':    pip_deps,
+        })
 
         # .. and run it.
         self.run_command(command, exit_on_error=False)
@@ -243,18 +257,22 @@ class EnvironmentManager:
 
     def pip_install_requirements(self):
 
-        return
-
         # Always use full paths to resolve any doubts
         reqs_path = os.path.join(self.base_dir, 'requirements.txt')
 
         # Set up the command ..
         command = """
-            {} install
-            {}
-            --user
-            -r {}
-        """.format(self.pip_command, self.pip_options, reqs_path)
+            {pip_command}
+            install
+            {pip_options}
+            {pip_flags}
+            -r {reqs_path}
+        """.format(**{
+               'pip_command': self.pip_command,
+               'pip_options': self.pip_options,
+               'pip_flags':   pip_flags,
+               'reqs_path':   reqs_path
+            })
 
         # .. and run it.
         self.run_command(command, exit_on_error=False)
@@ -364,7 +382,8 @@ class EnvironmentManager:
         eggs_dir = os.path.join(self.base_dir, 'eggs')
         logger.info('Python eggs dir -> %s', eggs_dir)
 
-        self._create_symlink(site_packages_dir, eggs_dir)
+        if not is_windows:
+            self._create_symlink(site_packages_dir, eggs_dir)
 
 # ################################################################################################################################
 
