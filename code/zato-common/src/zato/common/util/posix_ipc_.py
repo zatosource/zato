@@ -53,7 +53,6 @@ class SharedMemoryIPC(object):
     def create(self, shmem_suffix, size, needs_create):
         """ Creates all IPC structures.
         """
-        zzz
         self.shmem_name = _shmem_pattern.format(shmem_suffix)
         self.size = size
 
