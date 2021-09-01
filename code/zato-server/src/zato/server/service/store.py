@@ -46,6 +46,7 @@ from zato.common.json_schema import get_service_config, ValidationConfig as JSON
 from zato.common.match import Matcher
 from zato.common.odb.model.base import Base as ModelBase
 from zato.common.util.api import deployment_info, import_module_from_path, is_func_overridden, is_python_file, visit_py_source
+from zato.common.util.platform_ import is_non_windows
 from zato.server.config import ConfigDict
 from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, PubSubHook, Service, \
      WSXFacade
@@ -259,6 +260,14 @@ class ServiceStore(object):
         self.update_lock = RLock()
         self.patterns_matcher = Matcher()
         self.needs_post_deploy_attr = 'needs_post_deploy'
+        self.has_internal_cache = is_non_windows
+
+        if self.has_internal_cache:
+            self.action_internal_doing = 'Deploying and caching'
+            self.action_internal_done  = 'Deployed and cached'
+        else:
+             self.action_internal_doing = 'Deploying'
+             self.action_internal_done  = 'Deployed'
 
         if self.is_testing:
             self._testing_worker_store = _TestingWorkerStore()
@@ -620,7 +629,7 @@ class ServiceStore(object):
                 'service_info': service_info
             }
 
-            logger.info('Deploying and caching internal services (%s)', self.server.name)
+            logger.info('{} internal services (%s)'.format(self.action_internal_doing), self.server.name)
             info = self.import_services_from_anywhere(items, base_dir)
 
             for service in info.to_process: # type: InRAMService
@@ -639,12 +648,13 @@ class ServiceStore(object):
                     'deployment_info': '<todo>'
                 })
 
-            # All set, write out the cache file
-            f = open(cache_file_path, 'wb')
-            #f.write(dill_dumps(internal_cache))
-            f.close()
+            if self.has_internal_cache:
+                # All set, write out the cache file
+                f = open(cache_file_path, 'wb')
+                f.write(dill_dumps(internal_cache))
+                f.close()
 
-            logger.info('Deployed and cached %d internal services (%s) (%s)',
+            logger.info('{} %d internal services (%s) (%s)'.format(self.action_internal_done),
                 len(info.to_process), info.total_size_human, self.server.name)
 
             return info.to_process

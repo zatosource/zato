@@ -16,12 +16,6 @@ from tempfile import gettempdir
 from threading import current_thread
 from traceback import format_exc
 
-try:
-    from pwd import getpwuid
-except ImportError:
-    # Ignore it under Windows
-    pass
-
 # gevent
 from gevent import sleep, spawn
 
@@ -32,7 +26,7 @@ from portalocker import lock, LockException, LOCK_NB, LOCK_EX, unlock
 from sqlalchemy import func
 
 # Zato
-from zato.common.util.api import make_repr
+from zato.common.util.api import get_current_user, make_repr
 
 # ################################################################################################################################
 
@@ -314,6 +308,15 @@ user={}
 
 # ################################################################################################################################
 
+class PassThrough(Lock):
+    """ A pass-through lock used under Windows.
+    """
+    def _acquire_impl(self, *ignored_args, **ignored_kwargs):
+        z
+        pass
+
+# ################################################################################################################################
+
 class LockManager(object):
     """ A distributed lock manager based on SQL or, if only IPC is needed, on fcntl.
     """
@@ -322,14 +325,15 @@ class LockManager(object):
         'oracle': OracleLock,
         'mysql+pymysql': MySQLLock,
         'fcntl': FCNTLLock,
+        'zato-pass-through': PassThrough,
         }
 
     def __init__(self, backend_type, default_namespace, session=None):
         self.backend_type = backend_type
         self.default_namespace = default_namespace
         self.session = session
-        self._lock_class = self._lock_impl[backend_type]
-        self.user_name = getpwuid(os.getuid()).pw_name
+        self._lock_class = PassThrough #self._lock_impl[backend_type]
+        self.user_name = get_current_user()
 
     def __call__(self, name, namespace='', ttl=DEFAULT.TTL, block=DEFAULT.BLOCK, block_interval=DEFAULT.BLOCK_INTERVAL,
             max_len_ns=MAX.LEN_NS, max_len_name=MAX.LEN_NAME):
