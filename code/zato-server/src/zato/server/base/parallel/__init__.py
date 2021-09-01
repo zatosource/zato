@@ -46,9 +46,10 @@ from zato.common.rate_limiting import RateLimiting
 from zato.common.util.api import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
      invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
      register_diag_handlers
-from zato.common.util.tcp import wait_until_port_taken
+from zato.common.util.platform_ import is_linux
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC
 from zato.common.util.time_ import TimeUtil
+from zato.common.util.tcp import wait_until_port_taken
 from zato.distlock import LockManager
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigStore
@@ -190,7 +191,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self._hash_secret_salt_size = None # type: int
         self.sso_tool = SSOTool(self)
         self.platform_system = platform_system().lower() # type: unicode
-        self.has_posix_ipc = True
+        self.has_posix_ipc = 0 #is_linux
         self.user_config = Bunch()
         self.stderr_path = None # type: str
         self.json_parser = SIMDJSONParser()
@@ -559,9 +560,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         _skip_platform = _skip_platform if isinstance(_skip_platform, list) else [_skip_platform]
         _skip_platform = [elem for elem in _skip_platform if elem]
         self.fs_server_config.misc.posix_ipc_skip_platform = _skip_platform
-
-        if self.platform_system in self.fs_server_config.misc.posix_ipc_skip_platform:
-            self.has_posix_ipc = False
 
         # Create all POSIX IPC objects now that we have the deployment key,
         # but only if our platform allows it.
