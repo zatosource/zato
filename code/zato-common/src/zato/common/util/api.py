@@ -1003,7 +1003,7 @@ def dump_stacks(*ignored):
 def register_diag_handlers():
     """ Registers diagnostic handlers dumping stacks, threads and greenlets on receiving a signal.
     """
-    #signal.signal(signal.SIGURG, dump_stacks)
+    signal.signal(signal.SIGURG, dump_stacks)
 
 # ################################################################################################################################
 
