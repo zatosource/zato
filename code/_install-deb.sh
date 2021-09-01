@@ -38,9 +38,6 @@ fi
 curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
 $PY_BINARY -m pip install -U virtualenv==20.4.3
 
-.\Scripts\python -m ensurepip
-.\Scripts\ -m pip install --upgrade pip
-
 echo Installing virtualenv in $CURDIR
 $PY_BINARY -m virtualenv $CURDIR
 
@@ -50,4 +47,4 @@ source $CURDIR/bin/activate
 echo Setting up environment in $CURDIR
 $CURDIR/bin/python $CURDIR/util/environment.py install
 
-echo â­� Successfully installed `zato --version`
+echo ⭐ Successfully installed `zato --version`
