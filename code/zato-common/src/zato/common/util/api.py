@@ -34,7 +34,6 @@ from inspect import isfunction, ismethod
 from itertools import tee
 from io import StringIO
 from operator import itemgetter
-from os import getlogin
 from os.path import abspath, isabs, join
 from pathlib import Path
 from pprint import pprint as _pprint, PrettyPrinter
@@ -169,7 +168,7 @@ wait_until_port_taken = wait_until_port_taken
 _hostname = socket.gethostname()
 _fqdn = socket.getfqdn()
 _current_host = '{}/{}'.format(_hostname, _fqdn)
-_current_user = getlogin()
+_current_user = getpass_getuser()
 
 # ################################################################################################################################
 
