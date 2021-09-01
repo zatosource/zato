@@ -312,7 +312,9 @@ class PassThrough(Lock):
     """ A pass-through lock used under Windows.
     """
     def _acquire_impl(self, *ignored_args, **ignored_kwargs):
-        z
+        return True
+
+    def release(self, *ignored_args, **ignored_kwargs):
         pass
 
 # ################################################################################################################################
