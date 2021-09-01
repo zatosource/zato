@@ -95,7 +95,7 @@ class Create(ZatoCommand):
         from uuid import uuid4
 
         # Django
-        # from django.core.management import call_command
+        from django.core.management import call_command
 
         # Python 2/3 compatibility
         from past.builtins import unicode
@@ -119,7 +119,7 @@ class Create(ZatoCommand):
         os.mkdir(os.path.join(self.target_dir, 'config'))
         os.mkdir(repo_dir)
 
-        # user_name = 'admin'
+        user_name = 'admin'
         admin_password = admin_password if admin_password else WebAdminCryptoManager.generate_password()
 
         # If we have a CA's certificate then it implicitly means that there is some CA
@@ -192,32 +192,32 @@ class Create(ZatoCommand):
         os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
 
         admin_created = True
-        # import django
-        # django.setup()
-        # self.reset_logger(args, True)
+        import django
+        django.setup()
+        self.reset_logger(args, True)
 
         # # Can't import these without DJANGO_SETTINGS_MODULE being set
-        # from django.contrib.auth.models import User
-        # from django.db import connection
-        # from django.db.utils import IntegrityError
+        from django.contrib.auth.models import User
+        from django.db import connection
+        from django.db.utils import IntegrityError
 
-        # call_command('migrate', run_syncdb=True, interactive=False, verbosity=0)
-        # call_command('loaddata', initial_data_json_path, verbosity=0)
+        call_command('migrate', run_syncdb=True, interactive=False, verbosity=0)
+        call_command('loaddata', initial_data_json_path, verbosity=0)
 
-        # try:
-        #     call_command(
-        #         'createsuperuser', interactive=False, username=user_name, first_name='admin-first-name',
-        #         last_name='admin-last-name', email='admin@invalid.example.com')
-        #     admin_created = True
+        try:
+            call_command(
+                'createsuperuser', interactive=False, username=user_name, first_name='admin-first-name',
+                last_name='admin-last-name', email='admin@invalid.example.com')
+            admin_created = True
 
-        #     user = User.objects.get(username=user_name)
-        #     user.set_password(admin_password)
-        #     user.save()
+            user = User.objects.get(username=user_name)
+            user.set_password(admin_password)
+            user.save()
 
-        # except IntegrityError:
-        #     # This will happen if user 'admin' already exists, e.g. if this is not the first cluster in this database
-        #     admin_created = False
-        #     connection._rollback()
+        except IntegrityError:
+            # This will happen if user 'admin' already exists, e.g. if this is not the first cluster in this database
+            admin_created = False
+            connection._rollback()
 
         # Needed because Django took over our logging config
         self.reset_logger(args, True)
