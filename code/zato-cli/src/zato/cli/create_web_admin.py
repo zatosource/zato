@@ -104,10 +104,11 @@ class Create(ZatoCommand):
         # TODO: There really shouldn't be any direct dependency between zato-cli and zato-web-admin
         from zato.admin.zato_settings import update_globals
 
-        from zato.cli import common_logging_conf_contents, is_arg_given
+        from zato.cli import is_arg_given
         from zato.common.crypto.api import WebAdminCryptoManager
         from zato.common.crypto.const import well_known_data
         from zato.common.defaults import web_admin_host, web_admin_port
+        from zato.common.util.logging_ import get_logging_conf_contents
 
         os.chdir(self.target_dir)
 
@@ -177,8 +178,9 @@ class Create(ZatoCommand):
         for name in 'zato_secret_key', 'well_known_data', 'DATABASE_PASSWORD', 'SECRET_KEY', 'ADMIN_INVOKE_PASSWORD':
             config[name] = config[name].decode('utf8')
 
-        open(os.path.join(repo_dir, 'logging.conf'), 'w').write(
-            common_logging_conf_contents.format(log_path='./logs/web-admin.log'))
+        logging_conf_contents = get_logging_conf_contents()
+
+        open(os.path.join(repo_dir, 'logging.conf'), 'w').write(logging_conf_contents)
         open(web_admin_conf_path, 'w').write(config_template.format(**config))
         open(initial_data_json_path, 'w').write(initial_data_json.format(**config))
 
