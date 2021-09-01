@@ -39,20 +39,39 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def main():
+
+    print(444)
+
     store_pidfile(os.path.abspath('.'))
     repo_dir = os.path.join('.', 'config', 'repo')
+
+    print(555)
 
     # Update Django settings
     config = loads(open(os.path.join(repo_dir, 'web-admin.conf')).read())
     config['config_dir'] = os.path.abspath('.')
     update_globals(config)
 
+    print(666)
+
     os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
+
+    print(777)
+
     django.setup()
+
+    print(888)
+
+    call_command('migrate')#, os.path.join(repo_dir, 'initial-data.json'))
+
     call_command('loaddata', os.path.join(repo_dir, 'initial-data.json'))
 
-    RepoManager(repo_dir).ensure_repo_consistency()
+    print(999)
+
+    #RepoManager(repo_dir).ensure_repo_consistency()
+    print(444)
     execute_from_command_line(['zato-web-admin', 'runserver', '--noreload', '--nothreading', '{host}:{port}'.format(**config)])
+    print(555)
 
 if __name__ == '__main__':
     main()

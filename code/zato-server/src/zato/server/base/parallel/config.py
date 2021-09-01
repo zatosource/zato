@@ -569,36 +569,36 @@ class ConfigLoader(object):
             'tls_key_cert', 'wss', 'vault_conn_sec', 'xpath_sec')
 
         # Global lock to make sure only one server attempts to do it at a time
-        with self.zato_lock_manager('zato_encrypt_secrets'):
+        #with self.zato_lock_manager('zato_encrypt_secrets'):
 
-            # An SQL session shared by all updates
-            with closing(self.odb.session()) as session:
+        # An SQL session shared by all updates
+        with closing(self.odb.session()) as session:
 
-                # Iterate over all security definitions
-                for sec_config_dict_type in sec_config_dict_types:
-                    config_dicts = getattr(self.config, sec_config_dict_type)
-                    for config in config_dicts.values():
-                        config = config['config']
+            # Iterate over all security definitions
+            for sec_config_dict_type in sec_config_dict_types:
+                config_dicts = getattr(self.config, sec_config_dict_type)
+                for config in config_dicts.values():
+                    config = config['config']
 
-                        # Continue to encryption only if needed and not already encrypted
-                        if config.get('_encryption_needed'):
-                            if not config['_encrypted_in_odb']:
-                                odb_func = getattr(self.odb, '_migrate_30_encrypt_sec_{}'.format(sec_config_dict_type))
+                    # Continue to encryption only if needed and not already encrypted
+                    if config.get('_encryption_needed'):
+                        if not config['_encrypted_in_odb']:
+                            odb_func = getattr(self.odb, '_migrate_30_encrypt_sec_{}'.format(sec_config_dict_type))
 
-                                # Encrypt all params that are applicable
-                                for secret_param in SECRETS.PARAMS:
-                                    if secret_param in config:
-                                        data = config[secret_param]
-                                        if data:
-                                            encrypted = self.encrypt(data)
-                                            odb_func(session, config['id'], secret_param, encrypted)
+                            # Encrypt all params that are applicable
+                            for secret_param in SECRETS.PARAMS:
+                                if secret_param in config:
+                                    data = config[secret_param]
+                                    if data:
+                                        encrypted = self.encrypt(data)
+                                        odb_func(session, config['id'], secret_param, encrypted)
 
-                        # Clean up config afterwards
-                        config.pop('_encryption_needed', None)
-                        config.pop('_encrypted_in_odb', None)
+                    # Clean up config afterwards
+                    config.pop('_encryption_needed', None)
+                    config.pop('_encrypted_in_odb', None)
 
-                # Commit to SQL now that all updates are made
-                session.commit()
+            # Commit to SQL now that all updates are made
+            session.commit()
 
 # ################################################################################################################################
 

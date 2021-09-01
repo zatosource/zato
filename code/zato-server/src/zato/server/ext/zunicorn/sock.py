@@ -134,7 +134,7 @@ class TCP6Socket(TCPSocket):
 
 class UnixSocket(BaseSocket):
 
-    FAMILY = socket.AF_UNIX
+    FAMILY = None#socket.AF_UNIX
 
     def __init__(self, addr, conf, log, fd=None):
         if fd is None:

@@ -64,9 +64,9 @@ keyring==23.0.0
 kombu==5.0.2
 ldap3==2.8.1
 lxml==4.6.3
-Mako==0.9.0
+Mako==1.1.5
 markdown==3.3.4
-MarkupSafe==1.1.1
+MarkupSafe==2.0
 mccabe==0.6.1
 mock==3.0.5
 ndg-httpsclient==0.4.0
@@ -82,7 +82,7 @@ oslo.config==1.2.1
 pandas==1.1.5
 parse-type==0.3.4
 parse==1.6.6
-passlib==1.7.1
+passlib==1.7.4
 Paste==3.0.6
 pathtools==0.1.2
 pep8==1.5.7

@@ -12,10 +12,15 @@ import os
 from datetime import datetime, timedelta
 from errno import ENOENT
 from hashlib import sha256
-from pwd import getpwuid
 from tempfile import gettempdir
 from threading import current_thread
 from traceback import format_exc
+
+try:
+    from pwd import getpwuid
+except ImportError:
+    # Ignore it under Windows
+    pass
 
 # gevent
 from gevent import sleep, spawn

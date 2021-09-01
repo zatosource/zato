@@ -125,7 +125,8 @@ class EnvironmentManager:
         # type: (str, str) -> None
 
         try:
-            os.symlink(from_, to)
+            #os.symlink(from_, to)
+            pass
         except FileExistsError:
             # It is not an issue if it exists, likely install.sh/.bat ran twice.
             pass
@@ -230,8 +231,10 @@ class EnvironmentManager:
 
     def pip_install_core_pip(self):
 
+        return
+
         # Set up the command ..
-        command = '{} install {} -U setuptools pip wheel'.format(self.pip_command, self.pip_options)
+        command = '{} install {} --user -U setuptools wheel'.format(self.pip_command, self.pip_options)
 
         # .. and run it.
         self.run_command(command, exit_on_error=False)
@@ -240,6 +243,8 @@ class EnvironmentManager:
 
     def pip_install_requirements(self):
 
+        return
+
         # Always use full paths to resolve any doubts
         reqs_path = os.path.join(self.base_dir, 'requirements.txt')
 
@@ -247,6 +252,7 @@ class EnvironmentManager:
         command = """
             {} install
             {}
+            --user
             -r {}
         """.format(self.pip_command, self.pip_options, reqs_path)
 

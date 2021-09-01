@@ -374,41 +374,41 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         logger.debug('Will use the lock_name: `%s`', lock_name)
 
-        with self.zato_lock_manager(lock_name, ttl=self.deployment_lock_expires, block=self.deployment_lock_timeout):
-            if self.kv_data_api.get(already_deployed_flag):
-                # There has been already the first worker who's done everything there is to be done so we may just return.
-                self.is_starting_first = False
-                logger.debug('Not attempting to obtain the lock_name:`%s`', lock_name)
+        #with self.zato_lock_manager(lock_name, ttl=self.deployment_lock_expires, block=self.deployment_lock_timeout):
+        if self.kv_data_api.get(already_deployed_flag):
+            # There has been already the first worker who's done everything there is to be done so we may just return.
+            self.is_starting_first = False
+            logger.debug('Not attempting to obtain the lock_name:`%s`', lock_name)
 
-                # Simply deploy services, including any missing ones, the first worker has already cleared out the ODB
-                locally_deployed = import_initial_services_jobs()
+            # Simply deploy services, including any missing ones, the first worker has already cleared out the ODB
+            locally_deployed = import_initial_services_jobs()
 
-                return locally_deployed
+            return locally_deployed
 
-            else:
-                # We are this server's first worker so we need to re-populate
-                # the database and create the flag indicating we're done.
-                self.is_starting_first = True
-                logger.debug('Got lock_name:`%s`, ttl:`%s`', lock_name, self.deployment_lock_expires)
+        else:
+            # We are this server's first worker so we need to re-populate
+            # the database and create the flag indicating we're done.
+            self.is_starting_first = True
+            logger.debug('Got lock_name:`%s`, ttl:`%s`', lock_name, self.deployment_lock_expires)
 
-                # .. Remove all the deployed services from the DB ..
-                self.odb.drop_deployed_services(server.id)
+            # .. Remove all the deployed services from the DB ..
+            self.odb.drop_deployed_services(server.id)
 
-                # .. deploy them back including any missing ones found on other servers.
-                locally_deployed = import_initial_services_jobs()
+            # .. deploy them back including any missing ones found on other servers.
+            locally_deployed = import_initial_services_jobs()
 
-                # Add the flag to Redis indicating that this server has already
-                # deployed its services. Note that by default the expiration
-                # time is more than a century in the future. It will be cleared out
-                # next time the server will be started.
+            # Add the flag to Redis indicating that this server has already
+            # deployed its services. Note that by default the expiration
+            # time is more than a century in the future. It will be cleared out
+            # next time the server will be started.
 
-                self.kv_data_api.set(
-                    already_deployed_flag,
-                    dumps({'create_time_utc':datetime.utcnow().isoformat()}),
-                    self.deployment_lock_expires,
-                )
+            self.kv_data_api.set(
+                already_deployed_flag,
+                dumps({'create_time_utc':datetime.utcnow().isoformat()}),
+                self.deployment_lock_expires,
+            )
 
-                return locally_deployed
+            return locally_deployed
 
 # ################################################################################################################################
 
@@ -587,11 +587,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Set up the server-wide default lock manager
         odb_data = self.config.odb_data
         backend_type = 'fcntl' if odb_data.engine == 'sqlite' else odb_data.engine
+
+        '''
         self.zato_lock_manager = LockManager(backend_type, 'zato', self.odb.session)
 
         # Just to make sure distributed locking is configured correctly
         with self.zato_lock_manager(uuid4().hex):
             pass
+        '''
 
         # Basic metadata
         self.id = server.id
@@ -745,8 +748,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             self.invoke_startup_services()
 
             # Subprocess-based connectors
-            if self.has_posix_ipc:
-                self.init_subprocess_connectors(subprocess_start_config)
+            #if self.has_posix_ipc:
+            #    self.init_subprocess_connectors(subprocess_start_config)
 
             # SFTP channels are new in 3.1 and the directories may not exist
             if not os.path.exists(self.sftp_channel_dir):
@@ -758,20 +761,20 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 'server': self,
             })
 
-            if self.has_posix_ipc:
-                self._populate_connector_config(subprocess_start_config)
+            #if self.has_posix_ipc:
+            #    self._populate_connector_config(subprocess_start_config)
 
         # IPC
         self.ipc_api.name = self.ipc_api.get_endpoint_name(self.cluster_name, self.name, self.pid)
         self.ipc_api.pid = self.pid
         self.ipc_api.on_message_callback = self.worker_store.on_ipc_message
-        spawn_greenlet(self.ipc_api.run)
+        #spawn_greenlet(self.ipc_api.run)
 
-        events_config = self.connector_config_ipc.get_config(ZatoEventsIPC.ipc_config_name, as_dict=True) # type: dict
-        events_tcp_port = events_config['port']
+        #events_config = self.connector_config_ipc.get_config(ZatoEventsIPC.ipc_config_name, as_dict=True) # type: dict
+        #events_tcp_port = events_config['port']
 
         # Statistics
-        self._run_stats_client(events_tcp_port)
+        #self._run_stats_client(events_tcp_port)
 
         # Invoke startup callables
         self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.AFTER_STARTED, kwargs={
