@@ -294,7 +294,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server.default_error_message = server_config.misc.get('default_error_message', 'An error has occurred')
 
     # Turn the repo dir into an actual repository and commit any new/modified files
-    RepoManager(repo_location).ensure_repo_consistency()
+    #RepoManager(repo_location).ensure_repo_consistency()
 
     # New in 2.0 so it's optional.
     profiler_enabled = server_config.get('profiler', {}).get('enabled', False)
@@ -356,6 +356,12 @@ def run(base_dir, start_gunicorn_app=True, options=None):
 # ################################################################################################################################
 
 if __name__ == '__main__':
+
+    #
+    #Scripts\zato start C:\env\qs-3\server1 --fg
+    #
+    #Scripts\zato start C:\env\qs-3\web-admin --fg
+    #
 
     env_key_name = 'ZATO_SERVER_BASE_DIR'
     env_server_base_dir = os.environ.get(env_key_name)

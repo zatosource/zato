@@ -13,8 +13,11 @@ from mmap import mmap
 from time import sleep
 from traceback import format_exc
 
-# posix-ipc
-import posix_ipc as ipc
+try:
+    import posix_ipc as ipc
+except ImportError:
+    # Ignore it under Windows
+    pass
 
 # Zato
 from zato.common.json_internal import dumps, loads
@@ -50,6 +53,7 @@ class SharedMemoryIPC(object):
     def create(self, shmem_suffix, size, needs_create):
         """ Creates all IPC structures.
         """
+        return
         self.shmem_name = _shmem_pattern.format(shmem_suffix)
         self.size = size
 

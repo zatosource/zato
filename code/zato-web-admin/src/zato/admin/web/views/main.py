@@ -62,7 +62,7 @@ def get_login_response(req, needs_post_form_data, has_errors):
 
 def login(req):
 
-    logger.info('Login request received')
+    #logger.info('Login request received')
 
     # By default, assume the credentials are invalid unless proved otherwise
     has_errors = True
@@ -70,20 +70,20 @@ def login(req):
     # If it is a GET request, we only return the form to display
     if req.method == 'GET':
         needs_post_form_data = False
-        logger.info('Login request -> GET')
+        ##logger.info('Login request -> GET')
 
         # No data was POST-ed so there cannot be any errors yet
         has_errors = False
     else:
 
-        logger.info('Login request -> POST')
+        #logger.info('Login request -> POST')
 
         # Get credentials from request
         username = req.POST['username']
         password = req.POST['password']
         totp_code = req.POST.get('totp_code') or -1
 
-        logger.info('Login username -> `%s`', username)
+        #logger.info('Login username -> `%s`', username)
 
         # Check if basic credentials are valid
         user = authenticate(username=username, password=password)
@@ -94,12 +94,12 @@ def login(req):
             # Log in the user to site because we need the Django user object
             django_login(req, user)
 
-            logger.info('User password confirmed `%s`', username)
+            #logger.info('User password confirmed `%s`', username)
 
             # If TOTP is enabled, make sure that it matches what is expected
             if zato_settings.is_totp_enabled:
 
-                logger.info('TOTP is enabled')
+                #logger.info('TOTP is enabled')
 
                 # At this point the user is logged in but we still do not have the person's profile
                 # so we need to look it up ourselves instead of relying on req.zato.user_profile.
@@ -131,7 +131,7 @@ def login(req):
 
             # At this point we know that all the possible credentials are valid
             # so we can log the user in and redirect the person further.
-            logger.info('User credentials are valid, redirecting `%s` to `%s`', username, redirect_to)
+            #logger.info('User credentials are valid, redirecting `%s` to `%s`', username, redirect_to)
             return HttpResponseRedirect(redirect_to)
 
         else:

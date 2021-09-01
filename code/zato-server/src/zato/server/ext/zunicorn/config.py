@@ -39,19 +39,24 @@ OTHER DEALINGS IN THE SOFTWARE.
 # Please remember to run "make -C docs html" after update "desc" attributes.
 
 import copy
-import grp
 import inspect
 try:
     import argparse
 except ImportError:  # python 2.6
     from . import argparse_compat as argparse
 import os
-import pwd
 import re
 import ssl
 import sys
 import textwrap
 import shlex
+
+try:
+    import grp
+    import pwd
+except ImportError:
+    # Ignore it under Windows
+    pass
 
 from zato.server.ext.zunicorn import _compat
 from zato.server.ext.zunicorn.errors import ConfigError
@@ -1099,7 +1104,7 @@ class User(Setting):
     cli = ["-u", "--user"]
     meta = "USER"
     validator = validate_user
-    default = os.geteuid()
+    default = None #os.geteuid()
     desc = """\
         Switch worker processes to run as this user.
 
@@ -1115,7 +1120,7 @@ class Group(Setting):
     cli = ["-g", "--group"]
     meta = "GROUP"
     validator = validate_group
-    default = os.getegid()
+    default = None #os.getegid()
     desc = """\
         Switch worker process to run as this group.
 

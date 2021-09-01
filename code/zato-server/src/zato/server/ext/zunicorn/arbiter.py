@@ -79,8 +79,9 @@ class Arbiter(object):
 
     # I love dynamic languages
     SIG_QUEUE = []
-    SIGNALS = [getattr(signal, "SIG%s" % x)
-               for x in "HUP QUIT INT TERM TTIN TTOU USR1 USR2 WINCH".split()]
+    #SIGNALS = [getattr(signal, "SIG%s" % x)
+    #           for x in "HUP QUIT INT TERM TTIN TTOU USR1 USR2 WINCH".split()]
+    SIGNALS = []
     SIG_NAMES = dict(
         (getattr(signal, name), name[3:].lower()) for name in dir(signal)
         if name[:3] == "SIG" and name[3] != "_"
@@ -208,6 +209,7 @@ class Arbiter(object):
         Initialize master signal handling. Most of the signals
         are queued. Child signals only wake up the master.
         """
+        return
         # close old PIPE
         for p in self.PIPE:
             os.close(p)
@@ -419,8 +421,8 @@ class Arbiter(object):
 
         self.LISTENERS = []
         sig = signal.SIGTERM
-        if not graceful:
-            sig = signal.SIGQUIT
+        #if not graceful:
+        #    sig = signal.SIGQUIT
         limit = time.time() + self.cfg.graceful_timeout
         # instruct the workers to exit
         self.kill_workers(sig)
@@ -428,7 +430,8 @@ class Arbiter(object):
         while self.WORKERS and time.time() < limit:
             time.sleep(0.1)
 
-        self.kill_workers(signal.SIGKILL)
+        #self.kill_workers(signal.SIGKILL)
+        self.kill_workers(signal.SIGTERM)
 
     def reexec(self):
         """\
@@ -623,7 +626,18 @@ class Arbiter(object):
             util._setproctitle("worker [%s]" % self.proc_name)
             self.log.info("Booting worker with pid: %s", worker.pid)
             self.cfg.post_fork(self, worker)
-            worker.init_process()
+
+            print()
+            print(222, worker.init_process)
+            print()
+
+            try:
+                worker.init_process()
+            except Exception as e:
+                print()
+                print(111, e)
+                print()
+                a2
             sys.exit(0)
         except SystemExit:
             raise

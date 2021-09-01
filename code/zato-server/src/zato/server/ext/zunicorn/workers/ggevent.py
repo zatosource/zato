@@ -114,10 +114,15 @@ class GeventWorker(AsyncWorker):
 
     def notify(self):
         super(GeventWorker, self).notify()
+
+        print()
+        print('NNN-1', self.ppid, os.getppid())
+        print()
+
         if self.ppid != os.getppid():
             if is_forking:
                 self.log.info("Parent changed, shutting down: %s", self)
-            sys.exit(0)
+            #sys.exit(0)
 
     def timeout_ctx(self):
         return gevent.Timeout(self.cfg.keepalive, False)
@@ -129,8 +134,12 @@ class GeventWorker(AsyncWorker):
         if self.cfg.is_ssl:
             ssl_args = dict(server_side=True, **self.cfg.ssl_options)
 
+        print('RRR-1')
+
         for s in self.sockets:
+            print('RRR-2', s)
             s.setblocking(1)
+            print('RRR-3', s)
             pool = Pool(self.worker_connections)
             if self.server_class is not None:
                 environ = base_environ(self.cfg)
@@ -146,12 +155,19 @@ class GeventWorker(AsyncWorker):
                 hfun = partial(self.handle, s)
                 server = StreamServer(s, handle=hfun, spawn=pool, **ssl_args)
 
+            print('RRR-4')
             server.start()
+            print('RRR-5')
             servers.append(server)
+            print('RRR-6')
 
+        print('RRR-7')
         while self.alive:
+            print('RRR-8')
             self.notify()
+            print('RRR-9')
             gevent.sleep(1.0)
+            print('RRR-10')
 
         try:
             # Stop accepting requests
@@ -180,8 +196,8 @@ class GeventWorker(AsyncWorker):
             self.log.warning("Worker graceful timeout (pid:%s)" % self.pid)
             for server in servers:
                 server.stop(timeout=1)
-        except:
-            pass
+        except Exception as e:
+            print('EEE-1', e)
 
     def handle(self, listener, client, addr):
         # Connected socket timeout defaults to socket.getdefaulttimeout().
@@ -210,14 +226,26 @@ class GeventWorker(AsyncWorker):
 
     def init_process(self):
         # monkey patch here
+
+        print('AAA-1')
+
         self.patch()
+
+        print('AAA-2')
 
         # reinit the hub
         from gevent import hub
+
+        print('AAA-3')
+
         hub.reinit()
+
+        print('AAA-4')
 
         # then initialize the process
         super(GeventWorker, self).init_process()
+
+        print('AAA-5')
 
 
 class GeventResponse(object):
