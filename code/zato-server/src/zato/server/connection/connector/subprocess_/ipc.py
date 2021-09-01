@@ -117,8 +117,6 @@ class SubprocessIPC(object):
         # Credentials for both servers and connectors
         username, password = self.get_credentials()
 
-        return
-
         # Employ IPC to exchange subprocess startup configuration
         self.server.connector_config_ipc.set_config(self.ipc_config_name, dumps({
             'port': self.ipc_tcp_port,
