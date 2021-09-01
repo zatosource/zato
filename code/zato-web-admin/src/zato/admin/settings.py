@@ -38,7 +38,11 @@ from zato.admin.zato_settings import *  # NOQA
 logging.addLevelName('TRACE1', TRACE1)
 if log_config:
     with open(log_config) as f:
-        logging.config.dictConfig(yaml.load(f, yaml.FullLoader))
+        try:
+            logging.config.dictConfig(yaml.load(f, yaml.FullLoader))
+        except ValueError:
+            # This will be raised by 'zato quickstart' but we can ignore it
+            pass
 else:
     logging.basicConfig(level=logging.DEBUG)
 
