@@ -173,7 +173,7 @@ class Create(ZatoCommand):
         is_windows = 'windows' in system.lower()
 
         if is_windows:
-            config['DATABASE_NAME'] = args.odb_db_name or args.sqlite_path.replace('\\','/'),
+            config['DATABASE_NAME'] = config['DATABASE_NAME'].replace('\\', '\\\\')
 
         for name in 'zato_secret_key', 'well_known_data', 'DATABASE_PASSWORD', 'SECRET_KEY', 'ADMIN_INVOKE_PASSWORD':
             config[name] = config[name].decode('utf8')
