@@ -194,32 +194,6 @@ class Create(ZatoCommand):
         os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
 
         admin_created = True
-        # import django
-        # django.setup()
-        # self.reset_logger(args, True)
-
-        # # Can't import these without DJANGO_SETTINGS_MODULE being set
-        # from django.contrib.auth.models import User
-        # from django.db import connection
-        # from django.db.utils import IntegrityError
-
-        # call_command('migrate', run_syncdb=True, interactive=False, verbosity=0)
-        # call_command('loaddata', initial_data_json_path, verbosity=0)
-
-        # try:
-        #     call_command(
-        #         'createsuperuser', interactive=False, username=user_name, first_name='admin-first-name',
-        #         last_name='admin-last-name', email='admin@invalid.example.com')
-        #     admin_created = True
-
-        #     user = User.objects.get(username=user_name)
-        #     user.set_password(admin_password)
-        #     user.save()
-
-        # except IntegrityError:
-        #     # This will happen if user 'admin' already exists, e.g. if this is not the first cluster in this database
-        #     admin_created = False
-        #     connection._rollback()
 
         # Needed because Django took over our logging config
         self.reset_logger(args, True)
