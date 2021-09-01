@@ -648,8 +648,9 @@ class ServiceStore(object):
                     'deployment_info': '<todo>'
                 })
 
+            # All set, write out the cache file, assuming that we can do it (on Windows, we cannot)
             if self.has_internal_cache:
-                # All set, write out the cache file
+
                 f = open(cache_file_path, 'wb')
                 f.write(dill_dumps(internal_cache))
                 f.close()

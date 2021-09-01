@@ -359,12 +359,6 @@ def run(base_dir, start_gunicorn_app=True, options=None):
 
 if __name__ == '__main__':
 
-    #
-    #Scripts\zato start C:\env\qs-3\server1 --fg
-    #
-    #Scripts\zato start C:\env\qs-3\web-admin --fg
-    #
-
     env_key_name = 'ZATO_SERVER_BASE_DIR'
     env_server_base_dir = os.environ.get(env_key_name)
 
