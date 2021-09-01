@@ -550,7 +550,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.deployment_key = zato_deployment_key
 
         # This is to handle SIGURG signals.
-        register_diag_handlers()
+        if is_linux:
+            register_diag_handlers()
 
         # Configure paths and load data pertaining to Zato KVDB
         self.set_up_zato_kvdb()
@@ -584,7 +585,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Set up the server-wide default lock manager
         odb_data = self.config.odb_data
-        backend_type = 'fcntl' if odb_data.engine == 'sqlite' else odb_data.engine
+
+        if is_linux:
+            backend_type = 'fcntl' if odb_data.engine == 'sqlite' else odb_data.engine
+        else:
+            backend_type = 'zato-pass-through'
 
         self.zato_lock_manager = LockManager(backend_type, 'zato', self.odb.session)
 
