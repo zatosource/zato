@@ -61,8 +61,9 @@ from zato.server.ext.zunicorn.six import MAXSIZE
 
 class Worker(object):
 
-    SIGNALS = [getattr(signal, "SIG%s" % x)
-            for x in "ABRT HUP QUIT INT TERM USR1 USR2 WINCH CHLD".split()]
+    #SIGNALS = [getattr(signal, "SIG%s" % x)
+    #        for x in "ABRT HUP QUIT INT TERM USR1 USR2 WINCH CHLD".split()]
+    SIGNALS = []
 
     PIPE = []
 
@@ -88,7 +89,7 @@ class Worker(object):
         self.max_requests = cfg.max_requests + jitter or MAXSIZE
         self.alive = True
         self.log = log
-        self.tmp = WorkerTmp(cfg)
+        self.tmp = None#WorkerTmp(cfg)
 
     def __str__(self):
         return "<Worker %s>" % self.pid
@@ -99,7 +100,7 @@ class Worker(object):
         once every ``self.timeout`` seconds. If you fail in accomplishing
         this task, the master process will murder your workers.
         """
-        self.tmp.notify()
+        #self.tmp.notify()
 
     def run(self):
         """\
@@ -117,6 +118,8 @@ class Worker(object):
         loop is initiated.
         """
 
+        print('BBB-1')
+
         # set environment' variables
         if self.cfg.env:
             for k, v in self.cfg.env.items():
@@ -125,25 +128,32 @@ class Worker(object):
         util.set_owner_process(self.cfg.uid, self.cfg.gid,
                                initgroups=self.cfg.initgroups)
 
+        print('BBB-2')
+
         # Reseed the random number generator
         util.seed()
+
+        print('BBB-3')
 
         # For waking ourselves up
         self.PIPE = os.pipe()
         for p in self.PIPE:
-            util.set_non_blocking(p)
-            util.close_on_exec(p)
+            #util.set_non_blocking(p)
+            #util.close_on_exec(p)
+            pass
 
         # Prevent fd inheritance
+        '''
         for s in self.sockets:
             util.close_on_exec(s)
         util.close_on_exec(self.tmp.fileno())
+        '''
 
         self.wait_fds = self.sockets + [self.PIPE[0]]
 
-        self.log.close_on_exec()
+        #self.log.close_on_exec()
 
-        self.init_signals()
+        #self.init_signals()
 
         # start the reloader
         if self.cfg.reload:
@@ -159,12 +169,24 @@ class Worker(object):
                                          callback=changed)
             self.reloader.start()
 
+        print('BBB-4')
+
         self.load_wsgi()
+
+        print('BBB-5')
+
         self.cfg.post_worker_init(self)
+
+        print('BBB-6')
 
         # Enter main run loop
         self.booted = True
+
+        print('BBB-7')
+
         self.run()
+
+        print('BBB-8')
 
     def load_wsgi(self):
         try:

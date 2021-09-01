@@ -682,7 +682,8 @@ class PubSub(object):
 
                         # Store in shared RAM information that our process handles this key
                         if self.server.has_posix_ipc:
-                            self.server.server_startup_ipc.set_pubsub_pid(self.server.pid)
+                            #self.server.server_startup_ipc.set_pubsub_pid(self.server.pid)
+                            pass
 
                         config.server_pid = self.server.pid
                         config.server_name = self.server.name

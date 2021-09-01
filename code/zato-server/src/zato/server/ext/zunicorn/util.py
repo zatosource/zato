@@ -39,11 +39,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 # flake8: noqa
 
 import email.utils
-import fcntl
 import io
 import os
 import pkg_resources
-import pwd
 import random
 import socket
 import sys
@@ -57,6 +55,13 @@ import logging
 import re
 from platform import system as platform_system
 from time import gmtime
+
+try:
+    import fcntl
+    import pwd
+except ImportError:
+    # Ignore it under Windows
+    pass
 
 from zato.server.ext.zunicorn import _compat
 from zato.server.ext.zunicorn.errors import AppImportError
@@ -212,6 +217,7 @@ def set_owner_process(uid, gid, initgroups=False):
 
 
 def chown(path, uid, gid):
+    return
     gid = abs(gid) & 0x7FFFFFFF  # see note above.
     os.chown(path, uid, gid)
 

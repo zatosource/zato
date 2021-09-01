@@ -641,7 +641,7 @@ class ServiceStore(object):
 
             # All set, write out the cache file
             f = open(cache_file_path, 'wb')
-            f.write(dill_dumps(internal_cache))
+            #f.write(dill_dumps(internal_cache))
             f.close()
 
             logger.info('Deployed and cached %d internal services (%s) (%s)',
