@@ -16,7 +16,7 @@ python -m pip install -U virtualenv==20.4.3
 
 rem
 rem Note that we install virtualenv but we do not activate it,
-rem as it would otherwise prevent from calling the following .bat file.
+rem as it would otherwise prevent us from calling the following .bat file.
 rem
 echo Installing virtualenv in %curdir%
 python -m virtualenv %curdir%
