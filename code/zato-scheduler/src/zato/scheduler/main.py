@@ -72,7 +72,7 @@ def main():
     try:
         SchedulerServer(config, repo_location).serve_forever()
     except Exception:
-        logger.warn(format_exc())
+        logger.warning(format_exc())
 
 # ################################################################################################################################
 
