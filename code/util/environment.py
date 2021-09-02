@@ -395,7 +395,7 @@ class EnvironmentManager:
     def add_eggs_symlink(self):
 
         if not is_windows:
-            self._create_symlink(site_packages_dir, eggs_dir)
+            self._create_symlink(self.site_packages_dir, self.eggs_dir)
 
 # ################################################################################################################################
 
@@ -462,7 +462,7 @@ class EnvironmentManager:
         command_name = 'zato.py' if is_windows else 'zato'
 
         # This is where the command file will be created
-        command_path = os.path.join(self.bin_dir, 'zato.py')
+        command_path = os.path.join(self.bin_dir, command_name)
 
         # Build the full contents of the command file ..
         data = zato_command_template.format(**{
@@ -494,13 +494,13 @@ class EnvironmentManager:
 
     def install(self):
 
-        #self.update_git_revision()
-        #self.pip_install()
-        #self.add_eggs_symlink()
-        #self.add_extlib()
+        self.update_git_revision()
+        self.pip_install()
+        self.add_eggs_symlink()
+        self.add_extlib()
         self.add_py_command()
         self.add_zato_command()
-        #self.copy_patches()
+        self.copy_patches()
 
 # ################################################################################################################################
 
