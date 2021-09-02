@@ -36,11 +36,6 @@ is_linux   = 'linux'   in platform_system # noqa: E272
 
 pip_deps_windows     = 'setuptools wheel'
 pip_deps_non_windows = 'setuptools wheel pip'
-
-pip_flags_windows     = ''
-pip_flags_non_windows = '' # Explicitly no flags here
-
-pip_flags = pip_flags_windows if is_windows else pip_flags_non_windows
 pip_deps  = pip_deps_windows  if is_windows else pip_deps_non_windows
 
 # ################################################################################################################################
@@ -270,10 +265,9 @@ class EnvironmentManager:
     def pip_install_core_pip(self):
 
         # Set up the command ..
-        command = '{pip_command} install {pip_options} {pip_flags} -U {pip_deps}'.format(**{
+        command = '{pip_command} install {pip_options} -U {pip_deps}'.format(**{
             'pip_command': self.pip_command,
             'pip_options': self.pip_options,
-            'pip_flags':   pip_flags,
             'pip_deps':    pip_deps,
         })
 
@@ -292,12 +286,10 @@ class EnvironmentManager:
             {pip_command}
             install
             {pip_options}
-            {pip_flags}
             -r {reqs_path}
         """.format(**{
                'pip_command': self.pip_command,
                'pip_options': self.pip_options,
-               'pip_flags':   pip_flags,
                'reqs_path':   reqs_path
             })
 
