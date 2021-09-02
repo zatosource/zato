@@ -1,7 +1,4 @@
-
-rem
-rem Echo what we are about to do
-rem
+echo
 echo Zato Windows installation
 ver
 
@@ -21,13 +18,11 @@ rem
 rem Note that we install virtualenv but we do not activate it,
 rem as it would otherwise prevent from calling the following .bat file.
 rem
-set curdir=%~dp0
 echo Installing virtualenv in %curdir%
 python -m virtualenv %curdir%
 
 rem
 rem Actually install all Python dependencies
 rem
-set curdir=%~dp0
 echo Setting up environment in %curdir%
 start "Zato install" call _windows-run-install.bat
