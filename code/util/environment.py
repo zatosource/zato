@@ -494,13 +494,13 @@ class EnvironmentManager:
 
     def install(self):
 
-        #self.update_git_revision()
-        #self.pip_install()
-        #self.add_eggs_symlink()
-        #self.add_extlib()
+        self.update_git_revision()
+        self.pip_install()
+        self.add_eggs_symlink()
+        self.add_extlib()
         self.add_py_command()
         self.add_zato_command()
-        #self.copy_patches()
+        self.copy_patches()
 
 # ################################################################################################################################
 
