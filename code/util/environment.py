@@ -37,7 +37,7 @@ is_linux   = 'linux'   in platform_system # noqa: E272
 pip_deps_windows     = 'setuptools wheel'
 pip_deps_non_windows = 'setuptools wheel pip'
 
-pip_flags_windows     = '--user'
+pip_flags_windows     = ''
 pip_flags_non_windows = '' # Explicitly no flags here
 
 pip_flags = pip_flags_windows if is_windows else pip_flags_non_windows
@@ -47,7 +47,7 @@ pip_deps  = pip_deps_windows  if is_windows else pip_deps_non_windows
 # ################################################################################################################################
 
 zato_command_template = """
-#!{base_dir}/bin/python3
+#!{bin_dir}/python
 
 # Zato
 from zato.cli.zato_command import main
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     import sys
 
     # This is needed by SUSE
-    sys.path.append('{base_dir}/lib64/python3.6/site-packages/')
+    sys.path.append(r'{base_dir}/lib64/python3.6/site-packages/')
 
     sys.argv[0] = re.sub(r'(-script\.pyw?|\.exe)?$', '', sys.argv[0])
     sys.exit(main())
@@ -78,7 +78,11 @@ class EnvironmentManager:
         self.python_command = os.path.join(self.bin_dir, 'python')
         self.pip_options = ''
 
+        self.site_packages_dir = 'invalid-site_packages_dir'
+        self.eggs_dir = 'invalid-self.eggs_dir'
+
         self._set_up_pip_flags()
+        self._set_up_dir_names()
 
 # ################################################################################################################################
 
@@ -130,6 +134,29 @@ class EnvironmentManager:
         # .. or make use of it.
         else:
             self.pip_options = '--no-warn-script-location'
+
+    def _set_up_dir_names(self):
+
+        # This needs to be checked in runtime because we do not know
+        # under what Python version we are are going to run.
+        py_version = '{}.{}'.format(sys.version_info.major, sys.version_info.minor)
+        logger.info('Python version maj.min -> %s', py_version)
+
+        # Under Linux, the path to site-packages contains the Python version but it does not under Windows.
+        # E.g. ~/src-zato/lib/python3.8/site-packages vs. C:\src-zato\lib\site-packages
+        if is_linux:
+            py_lib_dir = 'python' + py_version
+        else:
+            py_lib_dir = ''
+
+        py_lib_dir = os.path.join(self.base_dir, 'lib', py_lib_dir)
+        logger.info('Python lib dir -> %s', py_lib_dir)
+
+        self.site_packages_dir = os.path.join(py_lib_dir, 'site-packages')
+        logger.info('Python site-packages dir -> %s', self.site_packages_dir)
+
+        self.eggs_dir = os.path.join(self.base_dir, 'eggs')
+        logger.info('Python eggs dir -> %s', self.eggs_dir)
 
 # ################################################################################################################################
 
@@ -367,21 +394,6 @@ class EnvironmentManager:
 
     def add_eggs_symlink(self):
 
-        # This needs to be checked in runtime because we do not know
-        # under what Python version we are are going to run.
-        py_version = '{}.{}'.format(sys.version_info.major, sys.version_info.minor)
-        logger.info('Python version maj.min -> %s', py_version)
-
-        py_lib_dir = 'python' + py_version
-        py_lib_dir = os.path.join(self.base_dir, 'lib', py_lib_dir)
-        logger.info('Python lib dir -> %s', py_lib_dir)
-
-        site_packages_dir = os.path.join(py_lib_dir, 'site-packages')
-        logger.info('Python site-packages dir -> %s', site_packages_dir)
-
-        eggs_dir = os.path.join(self.base_dir, 'eggs')
-        logger.info('Python eggs dir -> %s', eggs_dir)
-
         if not is_windows:
             self._create_symlink(site_packages_dir, eggs_dir)
 
@@ -396,7 +408,7 @@ class EnvironmentManager:
         extra_paths_dir = os.path.join(self.base_dir, 'zato_extra_paths')
 
         # This is what the extlib will be found through in runtime
-        easy_install_path = os.path.join(self.base_dir, 'eggs', 'easy-install.pth')
+        easy_install_path = os.path.join(self.site_packages_dir, 'easy-install.pth')
 
         # Build a Path object ..
         extlib_dir = Path(extlib_dir_path)
@@ -446,12 +458,16 @@ class EnvironmentManager:
 
     def add_zato_command(self):
 
+        # Differentiate between Windows and other systems as the extension is needed under the former
+        command_name = 'zato.py' if is_windows else 'zato'
+
         # This is where the command file will be created
-        command_path = os.path.join(self.bin_dir, 'zato')
+        command_path = os.path.join(self.bin_dir, 'zato.py')
 
         # Build the full contents of the command file ..
         data = zato_command_template.format(**{
-            'base_dir': self.base_dir
+            'base_dir': self.base_dir,
+            'bin_dir': self.bin_dir
         })
 
         # .. and add the file to the file system.
@@ -478,13 +494,13 @@ class EnvironmentManager:
 
     def install(self):
 
-        self.update_git_revision()
-        self.pip_install()
-        self.add_eggs_symlink()
-        self.add_extlib()
+        #self.update_git_revision()
+        #self.pip_install()
+        #self.add_eggs_symlink()
+        #self.add_extlib()
         self.add_py_command()
         self.add_zato_command()
-        self.copy_patches()
+        #self.copy_patches()
 
 # ################################################################################################################################
 
