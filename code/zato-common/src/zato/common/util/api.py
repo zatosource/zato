@@ -1443,8 +1443,6 @@ def get_client_from_server_conf(server_dir, require_server=True, stdin_data=None
     # Get the client object ..
     client = client_get_client_from_server_conf(server_dir, get_server_client_auth, get_config, stdin_data=stdin_data)
 
-    client.address = '127.0.0.1:17010'
-
     # .. make sure the server is available ..
     if require_server:
         wait_for_zato_ping(client.address)

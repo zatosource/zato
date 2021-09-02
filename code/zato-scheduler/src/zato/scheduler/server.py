@@ -150,7 +150,6 @@ class SchedulerServer(object):
         # .. no configuration, assume this is a default quickstart cluster.
         else:
             # This is what quickstart environments use by default
-            #ZZZ Windows
             server_path = '/opt/zato/env/qs-1'
             return self._set_up_zato_client_by_server_path(server_path)
 
