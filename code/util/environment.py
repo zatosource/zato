@@ -473,7 +473,7 @@ class EnvironmentManager:
         patches_dir = os.path.join(self.base_dir, 'patches')
 
         # Where to copy them to
-        dest_dir = os.path.join(self.base_dir, 'eggs')
+        dest_dir = self.site_packages_dir
 
         logger.info('Copying patches from %s -> %s', patches_dir, dest_dir)
 
