@@ -45,9 +45,10 @@ import sys
 import time
 import traceback
 
+from zato.common.util.platform_ import is_posix
 from zato.server.ext.zunicorn import six
 from zato.server.ext.zunicorn import util
-from zato.server.ext.zunicorn.workers.workertmp import WorkerTmp
+from zato.server.ext.zunicorn.workers.workertmp import PassThroughTmp, WorkerTmp
 from zato.server.ext.zunicorn.reloader import reloader_engines
 from zato.server.ext.zunicorn.http.errors import (
     InvalidHeader, InvalidHeaderName, InvalidRequestLine, InvalidRequestMethod,
@@ -93,7 +94,7 @@ class Worker(object):
 
         # Under POSIX, we use a real class that communicates with arbiter via temporary files.
         # On other systems, this is a pass-through class that does nothing.
-        worker_tmp_class = WorkerTmp if has_posix else PassThroughTmp
+        worker_tmp_class = WorkerTmp if is_posix else PassThroughTmp
         self.tmp = worker_tmp_class(cfg)
 
     def __str__(self):
