@@ -182,7 +182,7 @@ class GeventWorker(AsyncWorker):
             for server in servers:
                 server.stop(timeout=1)
         except Exception as e:
-            self.log.warning('Exception in GeventWorker.run (pid:%s) -> `%s`', self.pid, format_exc()
+            self.log.warning('Exception in GeventWorker.run (pid:%s) -> `%s`', self.pid, format_exc())
 
     def handle(self, listener, client, addr):
         # Connected socket timeout defaults to socket.getdefaulttimeout().
