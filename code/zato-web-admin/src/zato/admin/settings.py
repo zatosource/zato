@@ -183,4 +183,3 @@ else:
 
     settings_db = None
     is_totp_enabled = False
-
