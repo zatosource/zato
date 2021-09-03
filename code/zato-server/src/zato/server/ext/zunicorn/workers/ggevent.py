@@ -36,12 +36,12 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 # flake8: noqa
 
-import errno
-import os
-import sys
 from datetime import datetime
 from functools import partial
 from traceback import format_exc
+import errno
+import os
+import sys
 import time
 
 _socket = __import__("socket")
@@ -118,7 +118,7 @@ class GeventWorker(AsyncWorker):
         if self.ppid != os.getppid():
             if is_forking:
                 self.log.info("Parent changed, shutting down: %s", self)
-            #sys.exit(0)
+            sys.exit(0)
 
     def timeout_ctx(self):
         return gevent.Timeout(self.cfg.keepalive, False)
@@ -182,7 +182,7 @@ class GeventWorker(AsyncWorker):
             for server in servers:
                 server.stop(timeout=1)
         except Exception as e:
-            self.log.warning('Exception in GeventWorker.run -> `%s`', format_exc())
+            self.log.warning('Exception in GeventWorker.run (pid:%s) -> `%s`', self.pid, format_exc()
 
     def handle(self, listener, client, addr):
         # Connected socket timeout defaults to socket.getdefaulttimeout().
@@ -219,6 +219,7 @@ class GeventWorker(AsyncWorker):
 
         # then initialize the process
         super(GeventWorker, self).init_process()
+
 
 class GeventResponse(object):
 
