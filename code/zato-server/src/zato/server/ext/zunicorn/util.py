@@ -56,13 +56,6 @@ import re
 from platform import system as platform_system
 from time import gmtime
 
-try:
-    import fcntl
-    import pwd
-except ImportError:
-    # Ignore it under Windows
-    pass
-
 from zato.server.ext.zunicorn import _compat
 from zato.server.ext.zunicorn.errors import AppImportError
 from zato.server.ext.zunicorn.six import text_type
@@ -190,8 +183,11 @@ def load_class(uri, default="zato.server.ext.zunicorn.workers.sync.SyncWorker", 
 
 def get_username(uid):
     """ get the username for a user id"""
-    return pwd.getpwuid(uid).pw_name
 
+    # stdlib
+    import pwd
+
+    return pwd.getpwuid(uid).pw_name
 
 def set_owner_process(uid, gid, initgroups=False):
     """ set user and group of workers processes """
@@ -217,7 +213,6 @@ def set_owner_process(uid, gid, initgroups=False):
 
 
 def chown(path, uid, gid):
-    return
     gid = abs(gid) & 0x7FFFFFFF  # see note above.
     os.chown(path, uid, gid)
 
@@ -311,12 +306,20 @@ def parse_address(netloc, default_port=8000):
 
 
 def close_on_exec(fd):
+
+    # stdlib
+    import fcntl
+
     flags = fcntl.fcntl(fd, fcntl.F_GETFD)
     flags |= fcntl.FD_CLOEXEC
     fcntl.fcntl(fd, fcntl.F_SETFD, flags)
 
 
 def set_non_blocking(fd):
+
+    # stdlib
+    import fcntl
+
     flags = fcntl.fcntl(fd, fcntl.F_GETFL) | os.O_NONBLOCK
     fcntl.fcntl(fd, fcntl.F_SETFL, flags)
 
