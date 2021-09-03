@@ -879,7 +879,7 @@ class Create(ZatoCommand):
             ['zato.sso.session-attr.session-attr-names', 'zato.server.service.internal.sso.session_attr.SessionAttrNames', '/zato/sso/session/attr/names'],
 
             # Password reset
-            ['zato.sso.password-reset.password-reset', 'zato.server.service.internal.sso.password-reset.PasswordReset', '/zato/sso/password/reset'],
+            ['zato.sso.password-reset.password-reset', 'zato.server.service.internal.sso.password_reset.PasswordReset', '/zato/sso/password/reset'],
         ]
 
         for name, impl_name, url_path in data:
