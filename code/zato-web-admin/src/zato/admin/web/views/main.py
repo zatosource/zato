@@ -129,7 +129,7 @@ def login(req):
 
             # At this point we know that all the possible credentials are valid
             # so we can log the user in and redirect the person further.
-            #logger.info('User credentials are valid, redirecting `%s` to `%s`', username, redirect_to)
+            logger.info('User credentials are valid, redirecting `%s` to `%s`', username, redirect_to)
             return HttpResponseRedirect(redirect_to)
 
         else:
