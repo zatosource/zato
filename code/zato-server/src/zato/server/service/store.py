@@ -266,8 +266,8 @@ class ServiceStore(object):
             self.action_internal_doing = 'Deploying and caching'
             self.action_internal_done  = 'Deployed and cached'
         else:
-             self.action_internal_doing = 'Deploying'
-             self.action_internal_done  = 'Deployed'
+            self.action_internal_doing = 'Deploying'
+            self.action_internal_done  = 'Deployed'
 
         if self.is_testing:
             self._testing_worker_store = _TestingWorkerStore()
