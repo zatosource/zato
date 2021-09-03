@@ -627,17 +627,9 @@ class Arbiter(object):
             self.log.info("Booting worker with pid: %s", worker.pid)
             self.cfg.post_fork(self, worker)
 
-            print()
-            print(222, worker.init_process)
-            print()
-
             try:
                 worker.init_process()
             except Exception as e:
-                print()
-                print(111, e)
-                print()
-                a2
             sys.exit(0)
         except SystemExit:
             raise
