@@ -43,7 +43,7 @@ import stat
 import sys
 import time
 
-from zato.common.util.platform_ import has_posix
+from zato.common.util.platform_ import is_posix
 from zato.server.ext.zunicorn import util
 from zato.server.ext.zunicorn.six import string_types
 
@@ -136,7 +136,7 @@ class TCP6Socket(TCPSocket):
 class UnixSocket(BaseSocket):
 
     # This is POSIX-only
-    if has_posix:
+    if is_posix:
         FAMILY = socket.AF_UNIX
     else:
         FAMILY = None

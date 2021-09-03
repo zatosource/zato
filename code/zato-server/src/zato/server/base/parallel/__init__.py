@@ -46,7 +46,7 @@ from zato.common.rate_limiting import RateLimiting
 from zato.common.util.api import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
      invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
      register_diag_handlers
-from zato.common.util.platform_ import has_posix
+from zato.common.util.platform_ import is_posix
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC
 from zato.common.util.time_ import TimeUtil
 from zato.common.util.tcp import wait_until_port_taken
@@ -191,7 +191,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self._hash_secret_salt_size = None # type: int
         self.sso_tool = SSOTool(self)
         self.platform_system = platform_system().lower() # type: unicode
-        self.has_posix_ipc = has_posix
+        self.has_posix_ipc = is_posix
         self.user_config = Bunch()
         self.stderr_path = None # type: str
         self.json_parser = SIMDJSONParser()
@@ -550,7 +550,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.deployment_key = zato_deployment_key
 
         # This is to handle SIGURG signals.
-        if has_posix:
+        if is_posix:
             register_diag_handlers()
 
         # Configure paths and load data pertaining to Zato KVDB
@@ -586,7 +586,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Set up the server-wide default lock manager
         odb_data = self.config.odb_data
 
-        if has_posix:
+        if is_posix:
             backend_type = 'fcntl' if odb_data.engine == 'sqlite' else odb_data.engine
         else:
             backend_type = 'zato-pass-through'
@@ -770,7 +770,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.ipc_api.pid = self.pid
         self.ipc_api.on_message_callback = self.worker_store.on_ipc_message
 
-        if has_posix:
+        if is_posix:
             spawn_greenlet(self.ipc_api.run)
 
             events_config = self.connector_config_ipc.get_config(ZatoEventsIPC.ipc_config_name, as_dict=True) # type: dict

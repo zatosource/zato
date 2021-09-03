@@ -30,4 +30,4 @@ is_non_windows = is_non_windows
 non_linux   = non_linux
 non_windows = non_windows
 
-has_posix = is_non_windows
+is_posix = is_non_windows
