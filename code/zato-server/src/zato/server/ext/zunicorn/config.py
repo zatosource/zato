@@ -51,7 +51,7 @@ import sys
 import textwrap
 import shlex
 
-from zato.common.util.platform_ import has_posix
+from zato.common.util.platform_ import is_posix
 from zato.server.ext.zunicorn import _compat
 from zato.server.ext.zunicorn.errors import ConfigError
 from zato.server.ext.zunicorn.reloader import reloader_engines
@@ -1105,7 +1105,7 @@ class User(Setting):
     cli = ["-u", "--user"]
     meta = "USER"
 
-    if has_posix:
+    if is_posix:
         default = os.geteuid()
         validator = validate_user
     else:
@@ -1128,7 +1128,7 @@ class Group(Setting):
     cli = ["-g", "--group"]
     meta = "GROUP"
 
-    if has_posix:
+    if is_posix:
         default = os.getegid()
         validator = validate_group
     else:
