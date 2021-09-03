@@ -123,36 +123,34 @@ class Worker(object):
         super(MyWorkerClass, self).init_process() so that the ``run()``
         loop is initiated.
         """
+        # Reseed the random number generator
+        util.seed()
+
         # set environment' variables
         if self.cfg.env:
             for k, v in self.cfg.env.items():
                 os.environ[k] = v
 
-        util.set_owner_process(self.cfg.uid, self.cfg.gid,
-                               initgroups=self.cfg.initgroups)
+        if is_posix:
+            util.set_owner_process(self.cfg.uid, self.cfg.gid, initgroups=self.cfg.initgroups)
 
-        # Reseed the random number generator
-        util.seed()
+            # Reseed the random number generator
+            util.seed()
 
-        # For waking ourselves up
-        self.PIPE = os.pipe()
-        for p in self.PIPE:
-            #util.set_non_blocking(p)
-            #util.close_on_exec(p)
-            pass
+            # For waking ourselves up
+            self.PIPE = os.pipe()
+            for p in self.PIPE:
+                util.set_non_blocking(p)
+                util.close_on_exec(p)
 
-        # Prevent fd inheritance
-        '''
-        for s in self.sockets:
-            util.close_on_exec(s)
-        util.close_on_exec(self.tmp.fileno())
-        '''
+            # Prevent fd inheritance
+            for s in self.sockets:
+                util.close_on_exec(s)
 
-        self.wait_fds = self.sockets + [self.PIPE[0]]
+            util.close_on_exec(self.tmp.fileno())
+            self.log.close_on_exec()
 
-        #self.log.close_on_exec()
-
-        #self.init_signals()
+            self.init_signals()
 
         # start the reloader
         if self.cfg.reload:
