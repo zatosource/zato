@@ -25,4 +25,4 @@ rem
 rem Actually install all Python dependencies
 rem
 echo Setting up environment in %curdir%
-start "Zato install" call _windows-run-install.bat
+start "Zato install" call %curdir%\_windows-run-install.bat
