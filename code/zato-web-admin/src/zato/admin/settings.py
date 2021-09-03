@@ -29,15 +29,11 @@ SSL_CA_CERTS = None
 SSL_CERT_FILE = None
 SSL_KEY_FILE = None
 
-print(111)
-
 # Zato
 from zato.common.api import TRACE1
 from zato.common.settings_db import SettingsDB
 from zato.common.util.api import get_engine_url
 from zato.admin.zato_settings import *  # NOQA
-
-print(222)
 
 logging.addLevelName('TRACE1', TRACE1)
 if log_config:
@@ -188,4 +184,3 @@ else:
     settings_db = None
     is_totp_enabled = False
 
-print(333)
