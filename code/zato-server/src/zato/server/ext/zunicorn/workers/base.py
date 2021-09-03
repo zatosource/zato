@@ -61,9 +61,10 @@ from zato.server.ext.zunicorn.six import MAXSIZE
 
 class Worker(object):
 
-    #SIGNALS = [getattr(signal, "SIG%s" % x)
-    #        for x in "ABRT HUP QUIT INT TERM USR1 USR2 WINCH CHLD".split()]
-    SIGNALS = []
+    if is_posix:
+        SIGNALS = [getattr(signal, "SIG%s" % x)for x in "ABRT HUP QUIT INT TERM USR1 USR2 WINCH CHLD".split()]
+    else:
+        SIGNALS = []
 
     PIPE = []
 
@@ -171,7 +172,6 @@ class Worker(object):
 
         # Enter main run loop
         self.booted = True
-
         self.run()
 
     def load_wsgi(self):
@@ -198,9 +198,11 @@ class Worker(object):
                 del exc_tb
 
     def init_signals(self):
+
         # reset signaling
         for s in self.SIGNALS:
             signal.signal(s, signal.SIG_DFL)
+
         # init new signaling
         signal.signal(signal.SIGQUIT, self.handle_quit)
         signal.signal(signal.SIGTERM, self.handle_exit)
