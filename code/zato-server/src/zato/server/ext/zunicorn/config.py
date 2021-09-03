@@ -51,6 +51,7 @@ import sys
 import textwrap
 import shlex
 
+from zato.common.util.platform_ import has_posix
 from zato.server.ext.zunicorn import _compat
 from zato.server.ext.zunicorn.errors import ConfigError
 from zato.server.ext.zunicorn.reloader import reloader_engines
@@ -453,6 +454,43 @@ def validate_callable(arity):
             raise TypeError("Value must have an arity of: %s" % arity)
         return val
     return _validate_callable
+
+
+def validate_user(val):
+
+    # stdlib
+    import pwd
+
+    if val is None:
+        return os.geteuid()
+    if isinstance(val, int):
+        return val
+    elif val.isdigit():
+        return int(val)
+    else:
+        try:
+            return pwd.getpwnam(val).pw_uid
+        except KeyError:
+            raise ConfigError("No such user: '%s'" % val)
+
+
+def validate_group(val):
+
+    # stdlib
+    import grp
+
+    if val is None:
+        return os.getegid()
+
+    if isinstance(val, int):
+        return val
+    elif val.isdigit():
+        return int(val)
+    else:
+        try:
+            return grp.getgrnam(val).gr_gid
+        except KeyError:
+            raise ConfigError("No such group: '%s'" % val)
 
 def validate_post_request(val):
     val = validate_callable(-1)(val)
@@ -1066,8 +1104,15 @@ class User(Setting):
     section = "Server Mechanics"
     cli = ["-u", "--user"]
     meta = "USER"
-    validator = None
-    default = None # Under Zato, We do not use this functionality
+
+    if has_posix:
+        default = os.geteuid()
+        validator = validate_user
+    else:
+        # Under Windows, We do not use this functionality
+        default = None
+        validator = None
+
     desc = """\
         Switch worker processes to run as this user.
 
@@ -1082,8 +1127,15 @@ class Group(Setting):
     section = "Server Mechanics"
     cli = ["-g", "--group"]
     meta = "GROUP"
-    validator = None
-    default = None # Under Zato, We do not use this functionality
+
+    if has_posix:
+        default = os.getegid()
+        validator = validate_group
+    else:
+        # Under Windows, We do not use this functionality
+        default = None
+        validator = None
+
     desc = """\
         Switch worker process to run as this group.
 
