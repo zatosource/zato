@@ -731,7 +731,6 @@ class Create(ZatoCommand):
             'config/repo/static/sso/email/en_US/password-reset-link.txt': CommonSSO.EmailTemplate.PasswordResetLink,
         }
 
-
         default_http_port = default_http_port or http_plain_server_port
 
         engine = self._get_engine(args)

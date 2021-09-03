@@ -50,7 +50,7 @@ def main():
 
     django.setup()
 
-    call_command('migrate')#, os.path.join(repo_dir, 'initial-data.json'))
+    call_command('migrate')
     call_command('loaddata', os.path.join(repo_dir, 'initial-data.json'))
 
     RepoManager(repo_dir).ensure_repo_consistency()
