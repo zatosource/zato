@@ -51,13 +51,6 @@ import sys
 import textwrap
 import shlex
 
-try:
-    import grp
-    import pwd
-except ImportError:
-    # Ignore it under Windows
-    pass
-
 from zato.server.ext.zunicorn import _compat
 from zato.server.ext.zunicorn.errors import ConfigError
 from zato.server.ext.zunicorn.reloader import reloader_engines
@@ -460,36 +453,6 @@ def validate_callable(arity):
             raise TypeError("Value must have an arity of: %s" % arity)
         return val
     return _validate_callable
-
-
-def validate_user(val):
-    if val is None:
-        return os.geteuid()
-    if isinstance(val, int):
-        return val
-    elif val.isdigit():
-        return int(val)
-    else:
-        try:
-            return pwd.getpwnam(val).pw_uid
-        except KeyError:
-            raise ConfigError("No such user: '%s'" % val)
-
-
-def validate_group(val):
-    if val is None:
-        return os.getegid()
-
-    if isinstance(val, int):
-        return val
-    elif val.isdigit():
-        return int(val)
-    else:
-        try:
-            return grp.getgrnam(val).gr_gid
-        except KeyError:
-            raise ConfigError("No such group: '%s'" % val)
-
 
 def validate_post_request(val):
     val = validate_callable(-1)(val)
@@ -1103,8 +1066,8 @@ class User(Setting):
     section = "Server Mechanics"
     cli = ["-u", "--user"]
     meta = "USER"
-    validator = validate_user
-    default = None #os.geteuid()
+    validator = None
+    default = None # Under Zato, We do not use this functionality
     desc = """\
         Switch worker processes to run as this user.
 
@@ -1119,8 +1082,8 @@ class Group(Setting):
     section = "Server Mechanics"
     cli = ["-g", "--group"]
     meta = "GROUP"
-    validator = validate_group
-    default = None #os.getegid()
+    validator = None
+    default = None # Under Zato, We do not use this functionality
     desc = """\
         Switch worker process to run as this group.
 
