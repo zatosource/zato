@@ -117,9 +117,6 @@ class Worker(object):
         super(MyWorkerClass, self).init_process() so that the ``run()``
         loop is initiated.
         """
-
-        print('BBB-1')
-
         # set environment' variables
         if self.cfg.env:
             for k, v in self.cfg.env.items():
@@ -128,12 +125,8 @@ class Worker(object):
         util.set_owner_process(self.cfg.uid, self.cfg.gid,
                                initgroups=self.cfg.initgroups)
 
-        print('BBB-2')
-
         # Reseed the random number generator
         util.seed()
-
-        print('BBB-3')
 
         # For waking ourselves up
         self.PIPE = os.pipe()
@@ -169,24 +162,13 @@ class Worker(object):
                                          callback=changed)
             self.reloader.start()
 
-        print('BBB-4')
-
         self.load_wsgi()
-
-        print('BBB-5')
-
         self.cfg.post_worker_init(self)
-
-        print('BBB-6')
 
         # Enter main run loop
         self.booted = True
 
-        print('BBB-7')
-
         self.run()
-
-        print('BBB-8')
 
     def load_wsgi(self):
         try:
