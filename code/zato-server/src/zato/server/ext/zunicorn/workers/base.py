@@ -89,7 +89,11 @@ class Worker(object):
         self.max_requests = cfg.max_requests + jitter or MAXSIZE
         self.alive = True
         self.log = log
-        self.tmp = None#WorkerTmp(cfg)
+
+        # Under POSIX, we use a real class that communicates with arbiter via temporary files.
+        # On other systems, this is a pass-through class that does nothing.
+        worker_tmp_class = WorkerTmp if has_posix else PassThroughTmp
+        self.tmp = worker_tmp_class(cfg)
 
     def __str__(self):
         return "<Worker %s>" % self.pid
@@ -100,7 +104,7 @@ class Worker(object):
         once every ``self.timeout`` seconds. If you fail in accomplishing
         this task, the master process will murder your workers.
         """
-        #self.tmp.notify()
+        self.tmp.notify()
 
     def run(self):
         """\
