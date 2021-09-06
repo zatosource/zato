@@ -126,7 +126,7 @@ echo [1/$STEPS] Load-balancer stopped
 # .. servers ..
 {stop_servers}
 
-$ZATO_BIN stop $BASE_DIR/load-balancer
+$ZATO_BIN stop $BASE_DIR/web-admin
 echo [4/$STEPS] Web admin stopped
 
 $ZATO_BIN stop $BASE_DIR/scheduler
