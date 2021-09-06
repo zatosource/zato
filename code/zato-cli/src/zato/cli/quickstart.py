@@ -127,7 +127,7 @@ echo [1/$STEPS] Load-balancer stopped
 {stop_servers}
 
 $ZATO_BIN stop $BASE_DIR/web-admin
-echo [4/$STEPS] Web admin stopped
+echo [{web_admin_step_count}/$STEPS] Web admin stopped
 
 $ZATO_BIN stop $BASE_DIR/scheduler
 echo [$STEPS/$STEPS] Scheduler stopped
@@ -508,7 +508,12 @@ class Create(ZatoCommand):
         zato_qs_start = zato_qs_start_head + zato_qs_start_body + zato_qs_start_tail
 
         zato_qs_stop = zato_qs_stop_template.format(
-            zato_bin=zato_bin, script_dir=script_dir, cluster_name=cluster_name, stop_steps=stop_steps, stop_servers=stop_servers)
+            zato_bin=zato_bin,
+            script_dir=script_dir,
+            cluster_name=cluster_name,
+            web_admin_step_count=stop_steps-1,
+            stop_steps=stop_steps,
+            stop_servers=stop_servers)
 
         open(zato_qs_start_path, 'w').write(zato_qs_start)
         open(zato_qs_stop_path, 'w').write(zato_qs_stop)
