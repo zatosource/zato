@@ -750,7 +750,11 @@ def pre_process_sys_argv(sys_argv):
 def main():
 
     # stdlib
+    import os
     import sys
+
+    # Used by start/stop commands
+    os.environ['ZATO_CURDIR'] = os.getcwd()
 
     # Special-case the most commonly used commands to make the parser build quickly in these cases.
     has_args = len(sys.argv) > 1
@@ -773,7 +777,12 @@ def main():
 
         # Take into account changes introduced between versions
         pre_process_sys_argv(sys.argv)
+
+        # This may change what os.getcwd returns
         parser = command_store.load_full_parser()
+
+        # Set it back for further use after it was potentially reset by command_store.load_full_parser
+        os.chdir(os.environ['ZATO_CURDIR'])
 
     # Parse the arguments
     args = parser.parse_args()
