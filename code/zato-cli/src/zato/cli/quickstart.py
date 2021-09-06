@@ -74,7 +74,7 @@ echo [4/$STEPS] Load-balancer started
 
 # .. scheduler ..
 $ZATO_BIN start $BASE_DIR/scheduler --verbose
-echo [7/$STEPS] Scheduler started
+echo [{scheduler_step_count}/$STEPS] Scheduler started
 """
 
 zato_qs_start_tail = """
@@ -493,8 +493,18 @@ class Create(ZatoCommand):
         stop_steps = 3 + servers
 
         zato_qs_start_head = zato_qs_start_head_template.format(
-            zato_bin=zato_bin, script_dir=script_dir, cluster_name=cluster_name, start_steps=start_steps)
-        zato_qs_start_body = zato_qs_start_body_template.format(sanity_checks=sanity_checks, start_servers=start_servers)
+            zato_bin=zato_bin,
+            script_dir=script_dir,
+            cluster_name=cluster_name,
+            start_steps=start_steps
+        )
+
+        zato_qs_start_body = zato_qs_start_body_template.format(
+            sanity_checks=sanity_checks,
+            scheduler_step_count=start_steps-1,
+            start_servers=start_servers,
+        )
+
         zato_qs_start = zato_qs_start_head + zato_qs_start_body + zato_qs_start_tail
 
         zato_qs_stop = zato_qs_stop_template.format(
