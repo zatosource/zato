@@ -806,7 +806,7 @@ def main():
                     ', '.join(missing)            + \
                     '`'                           + \
                     missing_verb                  + \
-                    'required if odb_type is '   + \
+                    'required if odb_type is '    + \
                     '`{}`.'.format(args.odb_type) + \
                     '\n'
                 )
