@@ -199,7 +199,6 @@ class Arbiter(object):
         listeners_str = ",".join([str(l) for l in self.LISTENERS])
         self.log.debug("Arbiter booted")
         self.log.info("Listening at: %s (%s)", listeners_str, self.pid)
-        self.log.info("Using worker: %s", self.cfg.worker_class_str)
 
         # check worker class requirements
         if hasattr(self.worker_class, "check_config"):
@@ -632,8 +631,8 @@ class Arbiter(object):
             self.WORKERS[worker.pid] = worker
 
         try:
-            util._setproctitle("worker [%s]" % self.proc_name)
-            self.log.info("Booting worker with pid: %s", worker.pid)
+            util._setproctitle("zato [%s]" % self.proc_name)
+            self.log.info("Booting process with pid: %s", worker.pid)
             self.cfg.post_fork(self, worker)
             worker.init_process()
             sys.exit(0)
