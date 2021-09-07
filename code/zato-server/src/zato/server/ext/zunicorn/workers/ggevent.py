@@ -59,6 +59,7 @@ from gevent.server import StreamServer
 from gevent.socket import wait_write, socket
 from gevent import pywsgi
 
+from zato.common.util.platform_ import is_windows
 from zato.server.ext.zunicorn import SERVER_SOFTWARE
 from zato.server.ext.zunicorn.http.wsgi import base_environ
 from zato.server.ext.zunicorn.workers.base_async import AsyncWorker
@@ -150,11 +151,12 @@ class GeventWorker(AsyncWorker):
             server.start()
             servers.append(server)
 
-        while self.alive:
-            self.notify()
-            gevent.sleep(1.0)
-
         try:
+
+            while self.alive:
+                self.notify()
+                gevent.sleep(1.0)
+
             # Stop accepting requests
             for server in servers:
                 if hasattr(server, 'close'):  # gevent 1.0
@@ -181,6 +183,13 @@ class GeventWorker(AsyncWorker):
             self.log.warning("Worker graceful timeout (pid:%s)" % self.pid)
             for server in servers:
                 server.stop(timeout=1)
+
+        except KeyboardInterrupt:
+            if is_windows:
+                sys.exit(0)
+            else:
+                raise
+
         except Exception as e:
             self.log.warning('Exception in GeventWorker.run (pid:%s) -> `%s`', self.pid, format_exc())
 
