@@ -81,9 +81,9 @@ orjson==3.5.0
 oslo.config==1.2.1
 pandas==1.1.5
 parse-type==0.3.4
-#parse==1.6.6
-passlib==1.7.4
-#Paste==3.0.6
+parse==1.6.6
+passlib==1.7.1
+Paste==3.0.6
 pg8000==1.13.1
 portalocker==0.5.7
 prettytable==0.7.2

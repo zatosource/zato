@@ -34,8 +34,8 @@ is_linux   = 'linux'   in platform_system # noqa: E272
 # ################################################################################################################################
 # ################################################################################################################################
 
-pip_deps_windows     = 'setuptools wheel'
-pip_deps_non_windows = 'setuptools wheel pip'
+pip_deps_windows     = 'setuptools==57.4.0 wheel'
+pip_deps_non_windows = 'setuptools==57.4.0 wheel pip'
 pip_deps = pip_deps_windows if is_windows else pip_deps_non_windows
 
 # ################################################################################################################################
