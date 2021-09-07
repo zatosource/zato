@@ -9,6 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from logging import Formatter
 
+# Zato
+from zato.common.util.platform_ import is_posix
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -241,7 +244,7 @@ class ColorFormatter(Formatter):
     }
 
     def __init__(self, fmt):
-        self.use_color = True
+        self.use_color = True if is_posix else False
         super(ColorFormatter, self).__init__(fmt)
 
 # ################################################################################################################################
