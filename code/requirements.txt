@@ -48,7 +48,7 @@ httpagentparser==1.9.0
 httplib2==0.18.1
 https://github.com/dsuch/bunch/archive/master.zip#egg=bunch
 https://github.com/dsuch/paodate/archive/master.zip#egg=paodate
-https://github.com/dsuch/suds-1/archive/62d11e0561cf698bbe0687946cb7403733e579f2.zip#egg=suds-ovnicraft
+https://github.com/dsuch/suds-1/archive/7627b642cf366c34ac9d1a10200cd00f82550b0f.zip#egg=suds-ovnicraft
 https://github.com/salmito/simple-rbac/archive/master.zip#egg=simple-rbac
 geventhttpclient==1.4.4
 globre==0.1.5
