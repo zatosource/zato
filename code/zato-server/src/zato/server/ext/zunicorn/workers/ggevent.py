@@ -118,7 +118,7 @@ class GeventWorker(AsyncWorker):
         if self.ppid != os.getppid():
             if is_forking:
                 self.log.info("Parent changed, shutting down: %s", self)
-            sys.exit(0)
+                sys.exit(0)
 
     def timeout_ctx(self):
         return gevent.Timeout(self.cfg.keepalive, False)

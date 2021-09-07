@@ -99,7 +99,11 @@ def start_process(component_name, executable, run_in_fg, cli_options, extra_cli_
 
     stdout_redirect = ''
     stderr_redirect = ''
-    if not is_windows:
+
+    # We always run in foreground under Windows
+    if is_windows:
+        run_in_fg = True
+    else:
         if not run_in_fg:
             stdout_redirect = '1> /dev/null'
         stderr_redirect = '2> {}'.format(stderr_path)
