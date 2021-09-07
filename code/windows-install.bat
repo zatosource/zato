@@ -27,6 +27,7 @@ rem
 echo Setting up environment in %curdir%
 start "Zato install" call %curdir%\_windows-run-install.bat
 
+goto comment
 rem ##############################################################
 
 rem
@@ -76,7 +77,6 @@ cd %BASE_DIR%
 echo Zato cluster %CLUSTER% started
 echo Visit https://zato.io/support for more information and support options
 
-goto comment
 #!/bin/bash
 
 set -e
