@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import os
@@ -15,7 +13,13 @@ from copy import deepcopy
 # Zato
 from zato.cli import common_odb_opts, kvdb_opts, ZatoCommand
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 DEFAULT_NO_SERVERS=1
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 # Taken from http://stackoverflow.com/a/246128
 script_dir = """SOURCE="${BASH_SOURCE[0]}"
@@ -29,12 +33,21 @@ done
 BASE_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 """
 
-sanity_checks_template = """$ZATO_BIN check-config $BASE_DIR/{server_name}"""
+# ################################################################################################################################
+# ################################################################################################################################
+
+check_config_template = """$ZATO_BIN check-config $BASE_DIR/{server_name}"""
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 start_servers_template = """
 $ZATO_BIN start $BASE_DIR/{server_name} --verbose
 echo [{step_number}/$STEPS] {server_name} started
 """
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 zato_qs_start_head_template = """#!/bin/bash
 
@@ -50,8 +63,11 @@ echo Starting Zato cluster $CLUSTER
 echo Checking configuration
 """
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 zato_qs_start_body_template = """
-{sanity_checks}
+{check_config}
 
 echo [1/$STEPS] Redis connection OK
 echo [2/$STEPS] SQL ODB connection OK
@@ -77,6 +93,9 @@ $ZATO_BIN start $BASE_DIR/scheduler --verbose
 echo [{scheduler_step_count}/$STEPS] Scheduler started
 """
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 zato_qs_start_tail = """
 # .. web admin comes as the last one because it may ask Django-related questions.
 $ZATO_BIN start $BASE_DIR/web-admin --verbose
@@ -92,6 +111,9 @@ stop_servers_template = """
 $ZATO_BIN stop $BASE_DIR/{server_name}
 echo [{step_number}/$STEPS] {server_name} stopped
 """
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 zato_qs_stop_template = """#!/bin/bash
 
@@ -136,6 +158,9 @@ cd $BASE_DIR
 echo Zato cluster $CLUSTER stopped
 """
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 zato_qs_restart = """#!/bin/bash
 
 {script_dir}
@@ -145,6 +170,7 @@ $BASE_DIR/zato-qs-stop.sh
 $BASE_DIR/zato-qs-start.sh
 """
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class CryptoMaterialLocation(object):
@@ -477,16 +503,16 @@ class Create(ZatoCommand):
         zato_qs_stop_path = os.path.join(args_path, 'zato-qs-stop.sh')
         zato_qs_restart_path = os.path.join(args_path, 'zato-qs-restart.sh')
 
-        sanity_checks = []
+        check_config = []
         start_servers = []
         stop_servers = []
 
         for name in server_names:
-            sanity_checks.append(sanity_checks_template.format(server_name=server_names[name]))
+            check_config.append(check_config_template.format(server_name=server_names[name]))
             start_servers.append(start_servers_template.format(server_name=server_names[name], step_number=int(name)+4))
             stop_servers.append(stop_servers_template.format(server_name=server_names[name], step_number=int(name)+1))
 
-        sanity_checks = '\n'.join(sanity_checks)
+        check_config = '\n'.join(check_config)
         start_servers = '\n'.join(start_servers)
         stop_servers = '\n'.join(stop_servers)
         start_steps = 6 + servers
@@ -500,7 +526,7 @@ class Create(ZatoCommand):
         )
 
         zato_qs_start_body = zato_qs_start_body_template.format(
-            sanity_checks=sanity_checks,
+            check_config=check_config,
             scheduler_step_count=start_steps-1,
             start_servers=start_servers,
         )
