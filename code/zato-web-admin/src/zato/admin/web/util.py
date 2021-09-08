@@ -35,7 +35,7 @@ windows_disabled = [
 
 def get_template_response(req, template_name, return_data):
 
-    if 1:#is_windows:
+    if is_windows:
         for name in windows_disabled:
             if name in template_name:
                 return_data['is_disabled'] = True
