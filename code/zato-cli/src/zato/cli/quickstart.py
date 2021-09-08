@@ -588,7 +588,7 @@ class Create(ZatoCommand):
         if is_non_windows:
             self.logger.info('Start the cluster by issuing this command: %s', start_command)
         else:
-            self.logger.info('Start the cluster by issuing these commands:')
+            self.logger.info('Start the cluster by issuing these commands (each in its own cmd.exe window):')
             self.logger.info(' * zato start %s', server_path)
             self.logger.info(' * zato start %s', web_admin_path)
             self.logger.info(' * zato start %s', scheduler_path)
