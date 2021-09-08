@@ -1,24 +1,49 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 from logging import getLogger
+
+# Django
+from django.shortcuts import redirect
+from django.template.response import TemplateResponse
 
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.json_internal import loads
+from zato.common.util.platform_ import is_windows
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+windows_disabled = [
+    'jms-wmq.html'
+]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_template_response(req, template_name, return_data):
+
+    if 1:#is_windows:
+        for name in windows_disabled:
+            if 1:#name in template_name:
+                return_data['is_disabled'] = True
+                return_data['disabled_template_name'] = template_name
+
+    return TemplateResponse(req, template_name, return_data)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def get_user_profile(user, needs_logging=True):
@@ -48,6 +73,7 @@ def get_user_profile(user, needs_logging=True):
         return user_profile
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 def set_user_profile_totp_key(user_profile, zato_secret_key, totp_key, totp_key_label=None, opaque_attrs=None):
 
@@ -68,5 +94,5 @@ def set_user_profile_totp_key(user_profile, zato_secret_key, totp_key, totp_key_
 
     return opaque_attrs
 
-
+# ################################################################################################################################
 # ################################################################################################################################
