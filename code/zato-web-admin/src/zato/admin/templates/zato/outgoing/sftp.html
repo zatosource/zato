@@ -89,6 +89,10 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
+{% if is_disabled %}
+    {% include "zato/disabled-windows.html" %}
+{% else %}
+
 {% with has_generic="1" generic_type="outconn-sftp" %}
     {% include "zato/search-form.html" with page_prompt="Show connections" %}
 {% endwith %}
@@ -549,6 +553,7 @@
 
     {% endif %}
 
+{% endif %}{% comment %}is_disabled{% endcomment %}
 
 {% endif %}{% comment %}not zato_clusters{% endcomment %}
 

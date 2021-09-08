@@ -136,7 +136,7 @@ class ZatoMiddleware(object):
                     one()
 
                 # .. on Windows, we communicate with servers directly so we can just use a direct address ..
-                if 1:
+                if is_windows:
                     url = 'http://127.0.0.1:17010'
 
                 # .. but on other systems we go through the load balancer.
