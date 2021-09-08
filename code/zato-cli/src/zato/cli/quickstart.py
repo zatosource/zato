@@ -12,6 +12,7 @@ from copy import deepcopy
 
 # Zato
 from zato.cli import common_odb_opts, kvdb_opts, ZatoCommand
+from zato.common.util.platform_ import is_windows
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -81,9 +82,7 @@ UTIL_DIR=`python -c "import os; print(os.path.join('$ZATO_BIN_DIR', '..', 'util'
 
 $ZATO_BIN_DIR/py $UTIL_DIR/check_tcp_ports.py
 
-# Start the load balancer first ..
-$ZATO_BIN start $BASE_DIR/load-balancer --verbose
-echo [4/$STEPS] Load-balancer started
+{start_lb}
 
 # .. servers ..
 {start_servers}
@@ -91,6 +90,17 @@ echo [4/$STEPS] Load-balancer started
 # .. scheduler ..
 $ZATO_BIN start $BASE_DIR/scheduler --verbose
 echo [{scheduler_step_count}/$STEPS] Scheduler started
+"""
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+zato_qs_start_lb_windows = 'echo "[4/%STEPS%] (Skipped starting load balancer)"'
+
+zato_qs_start_lb_non_windows = """
+# Start the load balancer first ..
+$ZATO_BIN start $BASE_DIR/load-balancer --verbose
+echo [4/$STEPS] Load-balancer started
 """
 
 # ################################################################################################################################
@@ -527,6 +537,7 @@ class Create(ZatoCommand):
 
         zato_qs_start_body = zato_qs_start_body_template.format(
             check_config=check_config,
+            start_lb=zato_qs_start_lb_windows if is_windows else zato_qs_start_lb_non_windows,
             scheduler_step_count=start_steps-1,
             start_servers=start_servers,
         )
