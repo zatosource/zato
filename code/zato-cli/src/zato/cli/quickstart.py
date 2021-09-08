@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import sys
 from copy import deepcopy
 
 # Zato
@@ -18,6 +19,18 @@ from zato.common.util.platform_ import is_windows, is_non_windows
 # ################################################################################################################################
 
 DEFAULT_NO_SERVERS=1
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+windows_qs_start_template = """
+set zato_cmd={zato_cmd}
+set env_dir="{env_dir}"
+
+start /b %zato_cmd% start %env_dir%\server1
+start /b %zato_cmd% start %env_dir%\web-admin
+start /b %zato_cmd% start %env_dir%\scheduler
+""".strip()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -322,8 +335,8 @@ class Create(ZatoCommand):
             server_names['{}'.format(idx)] = 'server{}'.format(idx)
 
         # Under Windows, even if the load balancer is created, we do not log this information.
-        # Also, we do not create management scripts. Hence, there are two steps less.
-        total_non_servers_steps = 5# if is_windows else 7
+        # Hence, there is one step less under Windows.
+        total_non_servers_steps = 6 if is_windows else 7
 
         total_steps = total_non_servers_steps + servers
         admin_invoke_password = 'admin.invoke.' + uuid4().hex
@@ -519,8 +532,11 @@ class Create(ZatoCommand):
         #
         zato_bin = 'zato'
 
+        # This will exist for Windows and other systems
+        zato_qs_start_path = 'zato-qs-start.bat' if is_windows else 'zato-qs-start.sh'
+        zato_qs_start_path = os.path.join(args_path, zato_qs_start_path)
+
         # These commands are generated for non-Windows systems only
-        zato_qs_start_path = os.path.join(args_path, 'zato-qs-start.sh')
         zato_qs_stop_path = os.path.join(args_path, 'zato-qs-stop.sh')
         zato_qs_restart_path = os.path.join(args_path, 'zato-qs-restart.sh')
 
@@ -563,7 +579,18 @@ class Create(ZatoCommand):
             stop_steps=stop_steps,
             stop_servers=stop_servers)
 
-        if is_non_windows:
+        if is_windows:
+
+            zato_bin_dir = os.path.dirname(sys.executable)
+            zato_cmd = os.path.join(zato_bin_dir, zato_bin)
+
+            windows_qs_start = windows_qs_start_template.format(
+                zato_cmd=zato_cmd,
+                env_dir=args_path)
+
+            open(zato_qs_start_path, 'w').write(windows_qs_start)
+
+        else:
             open(zato_qs_start_path, 'w').write(zato_qs_start)
             open(zato_qs_stop_path, 'w').write(zato_qs_stop)
             open(zato_qs_restart_path, 'w').write(zato_qs_restart.format(script_dir=script_dir, cluster_name=cluster_name))
@@ -583,15 +610,7 @@ class Create(ZatoCommand):
         else:
             self.logger.info('User [admin] already exists in the ODB')
 
-        start_command = os.path.join(args_path, 'zato-qs-start.sh')
-
-        if is_non_windows:
-            self.logger.info('Start the cluster by issuing this command: %s', start_command)
-        else:
-            self.logger.info('Start the cluster by issuing these commands (each in its own cmd.exe window):')
-            self.logger.info(' * zato start %s', server_path)
-            self.logger.info(' * zato start %s', web_admin_path)
-            self.logger.info(' * zato start %s', scheduler_path)
+        self.logger.info('Start the cluster by issuing this command: %s', zato_qs_start_path)
 
         self.logger.info('Visit https://zato.io/support for more information and support options')
 
