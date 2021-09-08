@@ -12,7 +12,7 @@ from copy import deepcopy
 
 # Zato
 from zato.cli import common_odb_opts, kvdb_opts, ZatoCommand
-from zato.common.util.platform_ import is_windows
+from zato.common.util.platform_ import is_windows, is_non_windows
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -321,7 +321,11 @@ class Create(ZatoCommand):
         for idx in range(1, servers+1):
             server_names['{}'.format(idx)] = 'server{}'.format(idx)
 
-        total_steps = 7 + servers
+        # Under Windows, even if the load balancer is created, we do not log this information.
+        # Also, we do not create management scripts. Hence, there are two steps less.
+        total_non_servers_steps = 5# if is_windows else 7
+
+        total_steps = total_non_servers_steps + servers
         admin_invoke_password = 'admin.invoke.' + uuid4().hex
         broker_host = 'localhost'
         broker_port = 6379
@@ -434,6 +438,7 @@ class Create(ZatoCommand):
         #
         # 5) load-balancer
         #
+
         lb_path = os.path.join(args_path, 'load-balancer')
         os.mkdir(lb_path)
 
@@ -449,7 +454,11 @@ class Create(ZatoCommand):
         servers_port = next(next_port) - 1
 
         create_lb.Create(create_lb_args).execute(create_lb_args, True, servers_port, False)
-        self.logger.info('[{}/{}] Load-balancer created'.format(next(next_step), total_steps))
+
+        # Under Windows, we create the directory for the load-balancer
+        # but we do not advertise it because we do not start it.
+        if is_non_windows:
+            self.logger.info('[{}/{}] Load-balancer created'.format(next(next_step), total_steps))
 
 # ################################################################################################################################
 
@@ -509,6 +518,8 @@ class Create(ZatoCommand):
         # 8) Scripts
         #
         zato_bin = 'zato'
+
+        # These commands are generated for non-Windows systems only
         zato_qs_start_path = os.path.join(args_path, 'zato-qs-start.sh')
         zato_qs_stop_path = os.path.join(args_path, 'zato-qs-stop.sh')
         zato_qs_restart_path = os.path.join(args_path, 'zato-qs-restart.sh')
@@ -552,17 +563,19 @@ class Create(ZatoCommand):
             stop_steps=stop_steps,
             stop_servers=stop_servers)
 
-        open(zato_qs_start_path, 'w').write(zato_qs_start)
-        open(zato_qs_stop_path, 'w').write(zato_qs_stop)
-        open(zato_qs_restart_path, 'w').write(zato_qs_restart.format(script_dir=script_dir, cluster_name=cluster_name))
+        if is_non_windows:
+            open(zato_qs_start_path, 'w').write(zato_qs_start)
+            open(zato_qs_stop_path, 'w').write(zato_qs_stop)
+            open(zato_qs_restart_path, 'w').write(zato_qs_restart.format(script_dir=script_dir, cluster_name=cluster_name))
 
-        file_mod = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP
+            file_mod = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP
 
-        os.chmod(zato_qs_start_path, file_mod)
-        os.chmod(zato_qs_stop_path, file_mod)
-        os.chmod(zato_qs_restart_path, file_mod)
+            os.chmod(zato_qs_start_path, file_mod)
+            os.chmod(zato_qs_stop_path, file_mod)
+            os.chmod(zato_qs_restart_path, file_mod)
 
-        self.logger.info('[{}/{}] Management scripts created'.format(next(next_step), total_steps))
+            self.logger.info('[{}/{}] Management scripts created'.format(next(next_step), total_steps))
+
         self.logger.info('Quickstart cluster {} created'.format(cluster_name))
 
         if admin_created:
@@ -571,7 +584,15 @@ class Create(ZatoCommand):
             self.logger.info('User [admin] already exists in the ODB')
 
         start_command = os.path.join(args_path, 'zato-qs-start.sh')
-        self.logger.info('Start the cluster by issuing the {} command'.format(start_command))
+
+        if is_non_windows:
+            self.logger.info('Start the cluster by issuing this command: %s', start_command)
+        else:
+            self.logger.info('Start the cluster by issuing these commands:')
+            self.logger.info(' * zato start %s', server_path)
+            self.logger.info(' * zato start %s', web_admin_path)
+            self.logger.info(' * zato start %s', scheduler_path)
+
         self.logger.info('Visit https://zato.io/support for more information and support options')
 
 # ################################################################################################################################
