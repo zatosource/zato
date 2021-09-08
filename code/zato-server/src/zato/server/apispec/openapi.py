@@ -141,7 +141,7 @@ class OpenAPIGenerator(object):
             'title': 'API spec',
             'version': '1.0',
         }
-        out.servers = [{'url': 'http://localhost:11223'}]
+        out.servers = [{'url': 'http://127.0.0.1:17010'}]
 
         # Responses to refer to in paths
         out.components = Bunch()
