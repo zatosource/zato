@@ -787,6 +787,10 @@ def main():
     # Parse the arguments
     args = parser.parse_args()
 
+    # Expand user directories to full paths
+    if args.path:
+        args.path = os.path.expanduser(args.path)
+
     # Exit if no known command was found among arguments ..
     if not hasattr(args, 'command'):
         parser.print_help()
