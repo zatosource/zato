@@ -64,7 +64,7 @@
                     <th>&nbsp;</th>
                     <th>&nbsp;</th>
                     <th>Cluster</th>
-                    <th>{% if is_windows %}Address{% else %}Addresses{% endif %}</th>
+                    <th>Addresses</th>
                     <th>&nbsp;</th>
                     <th>&nbsp;</th>
                     <th>&nbsp;</th>
@@ -84,9 +84,18 @@
 
             {% if items %}
             {% for item in items %}
+
+                {% if is_windows %}
+
+                <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+
+                {% else %}
+
                 <tr
                     class="{% if not item.lb_config or item.some_down or item.some_maint or item.all_down %}attention{% else %} {% cycle 'odd' 'even' %}{% endif %}"
                         id='tr_{{ item.id }}'>
+
+                {% endif %}
 
                     <td class='numbering' style="width:3%">&nbsp;</td>
                     <td class="impexp"><input type="checkbox" /></td>
@@ -98,7 +107,9 @@
                     {% endif %}
 
                     {% if not item.lb_config %}
-                    <br/> Could not fetch the load balancer's configuration
+                        {% if not is_windows %}
+                            <br/> Could not fetch the load balancer's configuration
+                        {% endif %}
                     {% endif %}
 
 
@@ -110,7 +121,9 @@
                     <td style="width:30%">
 
                     {% if is_windows %}
-                        HTTP: <a href="http://localhost:17010">http://localhost:17010</a>
+                        Dashboard: <a href="http://127.0.0.1:8183">http://127.0.0.1:8183</a>
+                        <br/>
+                        REST Ping: <a href="http://127.0.0.1:17010/zato/ping">http://localhost:17010/zato/ping</a>
                     {% else %}
                         {% if item.lb_config %}
                             {% include "zato/cluster/addresses.html" %}
