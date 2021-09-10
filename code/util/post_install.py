@@ -43,8 +43,8 @@ site_packages_relative = ['lib', 'site-packages']
 # with a final path that the package has been installed to, e.g. C:\Users\Jane\LocalAppData\ZatoSource\Zato\Zato-3.2-python38
 #
 build_dir_list = [
-    r'c:\Users\Administrator\Desktop\projects\zato\code'
-    r'c:\\\\Users\\\Administrator\\\Desktop\\\projects\\\zato\\\code'
+    r'c:\Users\Administrator\Desktop\projects\zato\code',
+    r'C:\\Users\\Administrator\\Desktop\\projects\\zato\\code'
 ]
 
 # ################################################################################################################################
@@ -105,14 +105,26 @@ class WindowsPostInstall:
             # .. and make the backup before modifying the file.
             shutil_copy(name, backup_name)
 
-            print(name)
+            if 'zato-client-nspkg.pth' in name:
+                print(111, name)
 
             # Now, we can get the contents of the original file
             data = open(name, 'r').read() # type: str
 
             # Work only with files that actually need to be updated
             for build_dir in build_dir_list:
+
+                if 'zato-client-nspkg.pth' in name:
+                    print(222, build_dir)
+                    print(333, data)
+                    print(444, build_dir in data)
+
                 if build_dir in data:
+
+                    if 'zato-client-nspkg.pth' in name:
+                        print(555, data)
+                        print(666, repr(self.base_dir))
+                        print(777, self.base_dir)
 
                     # Replace the build directory with the actual installation directory ..
                     data = data.replace(build_dir, self.base_dir)
@@ -177,6 +189,8 @@ if __name__ == '__main__':
 
     base_dir = os.path.join(curdir, '..')
     base_dir = os.path.abspath(base_dir)
+
+    base_dir = base_dir.replace('\\', '\\\\')
 
     bin_dir = os.path.join(base_dir, 'Scripts')
     bin_dir = os.path.abspath(bin_dir)
