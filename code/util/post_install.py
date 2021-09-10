@@ -42,8 +42,10 @@ site_packages_relative = ['lib', 'site-packages']
 # This is where the source code is built under Windows and this is what we are replacing during the installation
 # with a final path that the package has been installed to, e.g. C:\Users\Jane\LocalAppData\ZatoSource\Zato\Zato-3.2-python38
 #
-#build_dir = 'C:\Users\Administrator\Desktop\projects\zato\code'
-build_dir = '/home/dsuch/projects/zatosource-zato/3.2/code'
+build_dir_list = [
+    r'c:\Users\Administrator\Desktop\projects\zato\code'
+    r'c:\\\\Users\\\Administrator\\\Desktop\\\projects\\\zato\\\code'
+]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -103,14 +105,17 @@ class WindowsPostInstall:
             # .. and make the backup before modifying the file.
             shutil_copy(name, backup_name)
 
+            print(name)
+
             # Now, we can get the contents of the original file
             data = open(name, 'r').read() # type: str
 
             # Work only with files that actually need to be updated
-            if build_dir in data:
+            for build_dir in build_dir_list:
+                if build_dir in data:
 
-                # Replace the build directory with the actual installation directory ..
-                data = data.replace(build_dir, self.base_dir)
+                    # Replace the build directory with the actual installation directory ..
+                    data = data.replace(build_dir, self.base_dir)
 
                 # .. and save the data on disk.
                 f = open(name, 'w')
@@ -168,10 +173,13 @@ class WindowsPostInstall:
 
 if __name__ == '__main__':
 
-    bin_dir = os.path.dirname(sys.executable)
+    curdir = os.path.dirname(os.path.abspath(__file__))
 
-    base_dir = os.path.join(bin_dir, '..')
+    base_dir = os.path.join(curdir, '..')
     base_dir = os.path.abspath(base_dir)
+
+    bin_dir = os.path.join(base_dir, 'Scripts')
+    bin_dir = os.path.abspath(bin_dir)
 
     post_install = WindowsPostInstall(base_dir, bin_dir)
     post_install.run()
