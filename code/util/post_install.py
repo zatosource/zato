@@ -173,8 +173,8 @@ class WindowsPostInstall:
              SetValueEx
 
         # pywin32
-        from win32con import                      \
-             HWND_BROADCAST as hwnd_broadcast,    \
+        from win32con import                         \
+             HWND_BROADCAST as hwnd_broadcast,       \
              WM_SETTINGCHANGE as wm_settingchange
 
         # pywin32 as well
