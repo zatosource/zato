@@ -163,12 +163,22 @@ class WindowsPostInstall:
 
     def update_windows_registry(self):
 
+        # stdlib
         from winreg import                           \
              HKEY_CURRENT_USER as hkey_current_user, \
              KEY_ALL_ACCESS    as key_all_access,    \
              REG_EXPAND_SZ     as reg_expand_sz,     \
+             OpenKey,                                \
+             QueryValueEx,                           \
+             SetValueEx
 
-        from winreg import OpenKey, QueryValueEx, SetValueEx
+        # pywin32
+        from win32con import                      \
+             HWND_BROADCAST as hwnd_broadcast,    \
+             WM_SETTINGCHANGE as wm_settingchange
+
+        # pywin32 as well
+        from win32gui import SendMessage
 
         # We look up environment variables for current user
         root = hkey_current_user
@@ -176,9 +186,6 @@ class WindowsPostInstall:
 
         # This is the path to the 'zato' command
         zato_windows_bin_path = os.path.join(self.base_dir, 'windows-bin')
-
-        # Note that the path cannot contain double backslashes, otherwise the path is ignored by Windows
-        zato_windows_bin_path = zato_windows_bin_path.replace('\\\\', '\\')
 
         # Open the registry key ..
         with OpenKey(root, sub_key, 0, key_all_access) as reg_key_handle:
@@ -193,8 +200,11 @@ class WindowsPostInstall:
             # .. if we are here, it means that we add our path ..
             env_path += ';' + zato_windows_bin_path
 
-            # .. now, we can save the new value of %path% in the registry.
+            # .. now, we can save the new value of %path% in the registry ..
             SetValueEx(reg_key_handle, 'path', 0, reg_expand_sz, env_path)
+
+        # .. finally, we can notify the system of the change.
+        SendMessage(hwnd_broadcast, wm_settingchange, 0, sub_key)
 
 # ################################################################################################################################
 
