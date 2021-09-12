@@ -105,26 +105,13 @@ class WindowsPostInstall:
             # .. and make the backup before modifying the file.
             shutil_copy(name, backup_name)
 
-            if 'zato-client-nspkg.pth' in name:
-                print(111, name)
-
             # Now, we can get the contents of the original file
             data = open(name, 'r').read() # type: str
 
             # Work only with files that actually need to be updated
             for build_dir in build_dir_list:
 
-                if 'zato-client-nspkg.pth' in name:
-                    print(222, build_dir)
-                    print(333, data)
-                    print(444, build_dir in data)
-
                 if build_dir in data:
-
-                    if 'zato-client-nspkg.pth' in name:
-                        print(555, data)
-                        print(666, repr(self.base_dir))
-                        print(777, self.base_dir)
 
                     # Replace the build directory with the actual installation directory ..
                     data = data.replace(build_dir, self.base_dir)
@@ -176,9 +163,7 @@ class WindowsPostInstall:
     def run(self):
         self.update_site_packages_files()
         self.update_bin_files()
-
-        if is_windows:
-            self.update_windows_registry()
+        self.update_windows_registry()
 
 # ################################################################################################################################
 # ################################################################################################################################
