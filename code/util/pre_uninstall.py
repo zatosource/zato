@@ -24,8 +24,8 @@ logger = logging.getLogger('zato')
 # ################################################################################################################################
 # ################################################################################################################################
 
-class WindowsPostUninstall:
-    """ Code to run after a Windows package has been just installed.
+class WindowsPreUninstall:
+    """ Code to run before a Windows package is to be uninstalled.
     """
     def __init__(self, base_dir, bin_dir):
         # type: (str) -> None
@@ -108,8 +108,8 @@ if __name__ == '__main__':
     bin_dir = os.path.join(base_dir, 'Scripts')
     bin_dir = os.path.abspath(bin_dir)
 
-    post_install = WindowsPostUninstall(base_dir, bin_dir)
-    post_install.run()
+    pre_uninstall = WindowsPreUninstall(base_dir, bin_dir)
+    pre_uninstall.run()
 
 # ################################################################################################################################
 # ################################################################################################################################
