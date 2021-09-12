@@ -47,6 +47,7 @@ build_dir_list = [
     r'C:\\Users\\Administrator\\Desktop\\projects\\zato\\code'
 ]
 
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -155,14 +156,65 @@ class WindowsPostInstall:
 
 # ################################################################################################################################
 
-    def update_windows_registry(self):
+    def copy_zato_binary(self):
         pass
 
 # ################################################################################################################################
 
+    def update_windows_registry(self):
+
+        from winreg import                           \
+             HKEY_CURRENT_USER as hkey_current_user, \
+             KEY_ALL_ACCESS    as key_all_access,    \
+             KEY_READ          as key_read,          \
+             REG_EXPAND_SZ     as reg_expand_sz,     \
+             REG_SZ            as reg_sz
+        from winreg import CloseKey, ExpandEnvironmentStrings, OpenKey, QueryValueEx, SetValueEx
+
+        # We look up environment variables for current user
+        root = hkey_current_user
+        sub_key = 'Environment'
+
+        # This is the path to the 'zato' command
+        zato_windows_bin_path = os.path.join(self.base_dir, 'windows-bin')
+
+        # Note that the path cannot contain double backslashes, otherwise the path is ignored by Windows
+        zato_windows_bin_path = zato_windows_bin_path.replace('\\\\', '\\')
+
+        # Open the registry key ..
+        with OpenKey(root, sub_key, 0, key_all_access) as reg_key_handle:
+
+            # .. look up the current value of %path% ..
+            env_path, _ = QueryValueEx(reg_key_handle, 'path')
+
+            # .. make sure that new path is not already there ..
+            if zato_windows_bin_path in env_path:
+                return
+
+            # .. if we are here, it means that we add our path ..
+            env_path += ';' + zato_windows_bin_path
+
+            # .. now, we can save the new value of %path% in the registry.
+            SetValueEx(reg_key_handle, 'path', 0, reg_expand_sz, env_path)
+
+            print(111, zato_windows_bin_path)
+
+            #current_path = ExpandEnvironmentStrings('%path%')
+            #new_path = current_path + ';AAA'
+            #SetValueEx(reg_key_handle, 'EEE-1', 0, reg_expand_sz, new_path)
+
+            #print(111, current_path)
+
+            #SetValueEx(reg_key_handle, 'ZZZ', 0, reg_sz, 'AAA')
+            #print(111, key)
+            pass
+
+# ################################################################################################################################
+
     def run(self):
-        self.update_site_packages_files()
-        self.update_bin_files()
+        #self.update_site_packages_files()
+        #self.update_bin_files()
+        #self.copy_zato_binary()
         self.update_windows_registry()
 
 # ################################################################################################################################
