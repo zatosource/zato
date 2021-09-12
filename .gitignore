@@ -42,7 +42,6 @@ code/*/build
 code/*/dist
 hotfixes
 pidfile
-windows-bin
 *.egg-info*
 *.geany*
 *.pyc
