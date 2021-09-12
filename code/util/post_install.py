@@ -59,7 +59,14 @@ class WindowsPostInstall:
         self.base_dir = base_dir
         self.bin_dir = bin_dir
 
+        # Packages are installed here
         self.site_packages_dir = os.path.join(self.base_dir, *site_packages_relative)
+
+        # This is the path to the directory that 'zato.py' command is in
+        self.zato_windows_bin_dir = os.path.join(self.base_dir, 'windows-bin')
+
+        # Full path to 'zato.py'
+        self.zato_windows_bin_path = os.path.join(self.zato_windows_bin_dir, 'zato.py')
 
 # ################################################################################################################################
 
@@ -157,7 +164,12 @@ class WindowsPostInstall:
 # ################################################################################################################################
 
     def copy_zato_binary(self):
-        pass
+
+        # This is the path that 'zato.py' was saved to by default
+        zato_py_path = os.path.join(self.bin_dir, 'zato.py')
+
+        # Copy the binary to its final destination
+        shutil_copy(zato_py_path, self.zato_windows_bin_path)
 
 # ################################################################################################################################
 
@@ -184,9 +196,6 @@ class WindowsPostInstall:
         root = hkey_current_user
         sub_key = 'Environment'
 
-        # This is the path to the 'zato' command
-        zato_windows_bin_path = os.path.join(self.base_dir, 'windows-bin')
-
         # Open the registry key ..
         with OpenKey(root, sub_key, 0, key_all_access) as reg_key_handle:
 
@@ -194,11 +203,11 @@ class WindowsPostInstall:
             env_path, _ = QueryValueEx(reg_key_handle, 'path')
 
             # .. make sure that new path is not already there ..
-            if zato_windows_bin_path in env_path:
+            if self.zato_windows_bin_dir in env_path:
                 return
 
             # .. if we are here, it means that we add our path ..
-            env_path += ';' + zato_windows_bin_path
+            env_path += ';' + self.zato_windows_bin_dir
 
             # .. now, we can save the new value of %path% in the registry ..
             SetValueEx(reg_key_handle, 'path', 0, reg_expand_sz, env_path)
@@ -209,9 +218,9 @@ class WindowsPostInstall:
 # ################################################################################################################################
 
     def run(self):
-        #self.update_site_packages_files()
-        #self.update_bin_files()
-        #self.copy_zato_binary()
+        self.update_site_packages_files()
+        self.update_bin_files()
+        self.copy_zato_binary()
         self.update_windows_registry()
 
 # ################################################################################################################################
