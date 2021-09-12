@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
-import sys
 from glob import glob
 from platform import system as platform_system
 from shutil import copy as shutil_copy
@@ -182,7 +181,7 @@ class WindowsPostInstall:
              REG_EXPAND_SZ     as reg_expand_sz,     \
              OpenKey,                                \
              QueryValueEx,                           \
-             SetValueEx
+             SetValueEx # noqa: E272
 
         # pywin32
         from win32con import                         \
