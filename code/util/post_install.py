@@ -166,10 +166,9 @@ class WindowsPostInstall:
         from winreg import                           \
              HKEY_CURRENT_USER as hkey_current_user, \
              KEY_ALL_ACCESS    as key_all_access,    \
-             KEY_READ          as key_read,          \
              REG_EXPAND_SZ     as reg_expand_sz,     \
-             REG_SZ            as reg_sz
-        from winreg import CloseKey, ExpandEnvironmentStrings, OpenKey, QueryValueEx, SetValueEx
+
+        from winreg import OpenKey, QueryValueEx, SetValueEx
 
         # We look up environment variables for current user
         root = hkey_current_user
@@ -196,18 +195,6 @@ class WindowsPostInstall:
 
             # .. now, we can save the new value of %path% in the registry.
             SetValueEx(reg_key_handle, 'path', 0, reg_expand_sz, env_path)
-
-            print(111, zato_windows_bin_path)
-
-            #current_path = ExpandEnvironmentStrings('%path%')
-            #new_path = current_path + ';AAA'
-            #SetValueEx(reg_key_handle, 'EEE-1', 0, reg_expand_sz, new_path)
-
-            #print(111, current_path)
-
-            #SetValueEx(reg_key_handle, 'ZZZ', 0, reg_sz, 'AAA')
-            #print(111, key)
-            pass
 
 # ################################################################################################################################
 
