@@ -45,8 +45,8 @@ build_dir_list = [
     r'c:\Users\Administrator\Desktop\projects\zato\code',
     r'C:\Users\Administrator\Desktop\projects\zato\code',
 
-    r'c:\\Users\\Administrator\\Desktop\\projects\\zato\\code'
-    r'C:\\Users\\Administrator\\Desktop\\projects\\zato\\code'
+    r'c:\\Users\\Administrator\\Desktop\\projects\\zato\\code',
+    r'C:\\Users\\Administrator\\Desktop\\projects\\zato\\code',
 ]
 
 
