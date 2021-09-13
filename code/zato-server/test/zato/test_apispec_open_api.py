@@ -90,7 +90,7 @@ class OpenAPITestCase(BaseSIOTestCase):
         result_servers    = result.servers    # type: Bunch
 
         localhost = result_servers[0]
-        self.assertEqual(localhost.url, 'http://localhost:11223')
+        self.assertEqual(localhost.url, 'http://127.0.0.1:17010')
 
         self.assertEqual(result_info.title, 'API spec')
         self.assertEqual(result_info.version, '1.0')

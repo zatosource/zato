@@ -41,6 +41,7 @@ rm -rf ./develop-eggs
 rm -rf ./docs
 rm -rf ./downloads
 rm -rf ./eggs
+rm -rf ./extlib
 rm -rf ./get-pip.py
 rm -rf ./include
 rm -rf ./lib
