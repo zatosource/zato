@@ -6,7 +6,7 @@ rem Local aliases
 rem
 set curdir=%~dp0
 
-echo *** Downloading updates ***
+echo Downloading updates
 git -C %curdir% pull
 
 python %curdir%\util\post_install.py update_paths
