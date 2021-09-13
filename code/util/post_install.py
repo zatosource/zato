@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
+import sys
 from glob import glob
 from platform import system as platform_system
 from shutil import copy as shutil_copy
@@ -219,10 +220,14 @@ class WindowsPostInstall:
 
 # ################################################################################################################################
 
-    def run(self):
+    def update_paths(self):
         self.update_site_packages_files()
         self.update_bin_files()
         self.copy_zato_binary()
+
+# ################################################################################################################################
+
+    def update_registry(self):
         self.update_windows_registry()
 
 # ################################################################################################################################
@@ -240,8 +245,12 @@ if __name__ == '__main__':
     bin_dir = os.path.join(base_dir, 'Scripts')
     bin_dir = os.path.abspath(bin_dir)
 
-    post_install = WindowsPostInstall(base_dir, bin_dir)
-    post_install.run()
+    command = sys.argv[1]
+
+    util = WindowsPostInstall(base_dir, bin_dir)
+    func = getattr(util, command)
+    func()
 
 # ################################################################################################################################
 # ################################################################################################################################
+
