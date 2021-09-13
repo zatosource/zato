@@ -45,9 +45,10 @@ import sys
 import time
 import traceback
 
+from zato.common.util.platform_ import is_posix
 from zato.server.ext.zunicorn import six
 from zato.server.ext.zunicorn import util
-from zato.server.ext.zunicorn.workers.workertmp import WorkerTmp
+from zato.server.ext.zunicorn.workers.workertmp import PassThroughTmp, WorkerTmp
 from zato.server.ext.zunicorn.reloader import reloader_engines
 from zato.server.ext.zunicorn.http.errors import (
     InvalidHeader, InvalidHeaderName, InvalidRequestLine, InvalidRequestMethod,
@@ -61,8 +62,10 @@ from zato.server.ext.zunicorn.six import MAXSIZE
 
 class Worker(object):
 
-    SIGNALS = [getattr(signal, "SIG%s" % x)
-            for x in "ABRT HUP QUIT INT TERM USR1 USR2 WINCH CHLD".split()]
+    if is_posix:
+        SIGNALS = [getattr(signal, "SIG%s" % x)for x in "ABRT HUP QUIT INT TERM USR1 USR2 WINCH CHLD".split()]
+    else:
+        SIGNALS = []
 
     PIPE = []
 
@@ -88,7 +91,11 @@ class Worker(object):
         self.max_requests = cfg.max_requests + jitter or MAXSIZE
         self.alive = True
         self.log = log
-        self.tmp = WorkerTmp(cfg)
+
+        # Under POSIX, we use a real class that communicates with arbiter via temporary files.
+        # On other systems, this is a pass-through class that does nothing.
+        worker_tmp_class = WorkerTmp if is_posix else PassThroughTmp
+        self.tmp = worker_tmp_class(cfg)
 
     def __str__(self):
         return "<Worker %s>" % self.pid
@@ -116,34 +123,34 @@ class Worker(object):
         super(MyWorkerClass, self).init_process() so that the ``run()``
         loop is initiated.
         """
+        # Reseed the random number generator
+        util.seed()
 
         # set environment' variables
         if self.cfg.env:
             for k, v in self.cfg.env.items():
                 os.environ[k] = v
 
-        util.set_owner_process(self.cfg.uid, self.cfg.gid,
-                               initgroups=self.cfg.initgroups)
+        if is_posix:
+            util.set_owner_process(self.cfg.uid, self.cfg.gid, initgroups=self.cfg.initgroups)
 
-        # Reseed the random number generator
-        util.seed()
+            # Reseed the random number generator
+            util.seed()
 
-        # For waking ourselves up
-        self.PIPE = os.pipe()
-        for p in self.PIPE:
-            util.set_non_blocking(p)
-            util.close_on_exec(p)
+            # For waking ourselves up
+            self.PIPE = os.pipe()
+            for p in self.PIPE:
+                util.set_non_blocking(p)
+                util.close_on_exec(p)
 
-        # Prevent fd inheritance
-        for s in self.sockets:
-            util.close_on_exec(s)
-        util.close_on_exec(self.tmp.fileno())
+            # Prevent fd inheritance
+            for s in self.sockets:
+                util.close_on_exec(s)
 
-        self.wait_fds = self.sockets + [self.PIPE[0]]
+            util.close_on_exec(self.tmp.fileno())
+            self.log.close_on_exec()
 
-        self.log.close_on_exec()
-
-        self.init_signals()
+            self.init_signals()
 
         # start the reloader
         if self.cfg.reload:
@@ -190,9 +197,11 @@ class Worker(object):
                 del exc_tb
 
     def init_signals(self):
+
         # reset signaling
         for s in self.SIGNALS:
             signal.signal(s, signal.SIG_DFL)
+
         # init new signaling
         signal.signal(signal.SIGQUIT, self.handle_quit)
         signal.signal(signal.SIGTERM, self.handle_exit)

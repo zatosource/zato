@@ -84,13 +84,22 @@
 
             {% if items %}
             {% for item in items %}
+
+                {% if is_windows %}
+
+                <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+
+                {% else %}
+
                 <tr
                     class="{% if not item.lb_config or item.some_down or item.some_maint or item.all_down %}attention{% else %} {% cycle 'odd' 'even' %}{% endif %}"
                         id='tr_{{ item.id }}'>
 
-                    <td class='numbering'>&nbsp;</td>
+                {% endif %}
+
+                    <td class='numbering' style="width:3%">&nbsp;</td>
                     <td class="impexp"><input type="checkbox" /></td>
-                    <td>{{ item.name }}
+                    <td style="width:30%">{{ item.name }}
 
                     {% if item.description %}
                         <br/>
@@ -98,7 +107,9 @@
                     {% endif %}
 
                     {% if not item.lb_config %}
-                    <br/> Could not fetch the load balancer's configuration
+                        {% if not is_windows %}
+                            <br/> Could not fetch the load balancer's configuration
+                        {% endif %}
                     {% endif %}
 
 
@@ -107,29 +118,42 @@
                     {% endif %}
 
                     </td>
-                    <td>
+                    <td style="width:30%">
 
-                    {% if item.lb_config %}
-                        {% include "zato/cluster/addresses.html" %}
+                    {% if is_windows %}
+                        Dashboard: <a href="http://127.0.0.1:8183">http://127.0.0.1:8183</a>
+                        <br/>
+                        REST Ping: <a href="http://127.0.0.1:17010/zato/ping">http://localhost:17010/zato/ping</a>
+                    {% else %}
+                        {% if item.lb_config %}
+                            {% include "zato/cluster/addresses.html" %}
+                        {% endif %}
                     {% endif %}
 
                     </td>
                     <td>
-                        <a href="javascript:$.fn.zato.cluster.edit('{{ item.id }}')">Edit</a>
-                    </td>
-                    <td>
-                        <a href="javascript:$.fn.zato.cluster.delete_('{{ item.id }}')">Delete</a>
-                    </td>
-                    <td>
-                        {% if item.lb_config %}
-                            <a href="{% url "lb-manage" item.id %}">Load-balancer</a>
+                        {% if not is_windows %}
+                            <a href="javascript:$.fn.zato.cluster.edit('{{ item.id }}')">Edit</a>
                         {% endif %}
                     </td>
                     <td>
-                        {% if item.lb_config %}
-                            <a href="{% url "cluster-servers" %}?cluster={{ item.id }}">Servers</a>
+                        {% if not is_windows %}
+                            <a href="javascript:$.fn.zato.cluster.delete_('{{ item.id }}')">Delete</a>
                         {% endif %}
-
+                    </td>
+                    <td>
+                        {% if not is_windows %}
+                            {% if item.lb_config %}
+                                <a href="{% url "lb-manage" item.id %}">Load-balancer</a>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if not is_windows %}
+                            {% if item.lb_config %}
+                                <a href="{% url "cluster-servers" %}?cluster={{ item.id }}">Servers</a>
+                            {% endif %}
+                        {% endif %}
                     </td>
 
                     <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>

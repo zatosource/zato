@@ -28,7 +28,7 @@ import globre
 # Zato
 from zato.common.api import FILE_TRANSFER
 from zato.common.util.api import new_cid, spawn_greenlet
-from zato.common.util.platform_ import is_linux, is_other_than_linux
+from zato.common.util.platform_ import is_linux, is_non_linux
 from zato.server.file_transfer.event import FileTransferEventHandler, singleton
 from zato.server.file_transfer.observer.base import BackgroundPathInspector, PathCreatedEvent
 from zato.server.file_transfer.observer.local_ import LocalObserver
@@ -676,7 +676,7 @@ class FileTransferAPI(object):
         # type: (Bunch) -> None
 
         # We do not prefer inotify only if we need recursive scans or if we are not under Linux ..
-        if channel_config.is_recursive or is_other_than_linux:
+        if channel_config.is_recursive or is_non_linux:
             return False
 
         # .. otherwise, we prefer inotify.

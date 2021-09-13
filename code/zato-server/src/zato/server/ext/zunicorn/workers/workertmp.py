@@ -45,6 +45,29 @@ from zato.server.ext.zunicorn import util
 PLATFORM = platform.system()
 IS_CYGWIN = PLATFORM.startswith('CYGWIN')
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class PassThroughTmp(object):
+    """ Used under windows in lieu of WorkerTmp.
+    """
+    def __init__(self, *ignored_args, **ignored_kwargs):
+        pass
+
+    def notify(self, *ignored_args, **ignored_kwargs):
+        pass
+
+    def last_update(self, *ignored_args, **ignored_kwargs):
+        pass
+
+    def fileno(self, *ignored_args, **ignored_kwargs):
+        pass
+
+    def close(self, *ignored_args, **ignored_kwargs):
+        pass
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class WorkerTmp(object):
 
@@ -63,7 +86,7 @@ class WorkerTmp(object):
         try:
             if not IS_CYGWIN:
                 util.unlink(name)
-            self._tmp = os.fdopen(fd, 'w+b', 1)
+            self._tmp = os.fdopen(fd, 'w+b')
         except:
             os.close(fd)
             raise
@@ -87,3 +110,6 @@ class WorkerTmp(object):
 
     def close(self):
         return self._tmp.close()
+
+# ################################################################################################################################
+# ################################################################################################################################

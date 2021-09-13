@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -31,8 +29,15 @@ from zato.admin.web.views import Delete as _Delete, get_lb_client, method_allowe
 from zato.common.api import SERVER_UP_STATUS
 from zato.common.json_internal import dumps
 from zato.common.odb.model import Cluster, Server
+from zato.common.util.platform_ import is_windows, is_non_windows
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 def _edit_create_response(item, verb):
     if item.lb_config:
@@ -48,7 +53,11 @@ def _edit_create_response(item, verb):
         'addresses': addresses,
         'has_lb_config': has_lb_config
         }
+
     return HttpResponse(dumps(return_data), content_type='application/javascript')
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 def _create_edit(req, verb, item, form_class, prefix=''):
 
@@ -92,6 +101,9 @@ def _create_edit(req, verb, item, form_class, prefix=''):
         req.zato.odb.rollback()
         return HttpResponseServerError(str(format_exc()))
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _get_server_data(client, server_name):
     """ Gets the server's state as seen by the load balancer.
     """
@@ -111,7 +123,11 @@ def _get_server_data(client, server_name):
         'lb_address': lb_address,
         })
 
-def _common_edit_message(client, success_msg, id, name, host, up_status, up_mod_date, cluster_id, user_profile, fetch_lb_data=True):
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _common_edit_message(client, success_msg, id, name, host, up_status, up_mod_date, cluster_id, user_profile,
+    fetch_lb_data=True):
     """ Returns a common JSON message for both the actual 'edit' and 'add/remove to/from LB' actions.
     """
     return_data = {
@@ -140,27 +156,32 @@ def _common_edit_message(client, success_msg, id, name, host, up_status, up_mod_
 
     return HttpResponse(dumps(return_data), content_type='application/javascript')
 
+# ################################################################################################################################
+# ################################################################################################################################
 
 @method_allowed('GET')
 def index(req):
 
     delete_form = DeleteClusterForm(prefix='delete')
-
     items = req.zato.odb.query(Cluster).order_by(Cluster.name).all()
+
     for item in items:
-        client = get_lb_client(item)
 
-        try:
-            lb_config = client.get_config()
-            item.lb_config = lb_config
+        if is_non_windows:
 
-            # Assign the flags indicating whether servers are DOWN or in the MAINT mode.
-            set_servers_state(item, client)
+            client = get_lb_client(item)
 
-        except Exception:
-            msg = 'Could not invoke agent, client:`{!r}`, e:`{}`'.format(client, format_exc())
-            logger.error(msg)
-            item.lb_config = None
+            try:
+                lb_config = client.get_config()
+                item.lb_config = lb_config
+
+                # Assign the flags indicating whether servers are DOWN or in the MAINT mode.
+                set_servers_state(item, client)
+
+            except Exception:
+                msg = 'Could not invoke agent, client:`{!r}`, e:`{}`'.format(client, format_exc())
+                logger.error(msg)
+                item.lb_config = None
 
     return_data = {
         'delete_form':delete_form,
@@ -168,26 +189,42 @@ def index(req):
         'items':items,
         'lb_use_tls': req.zato.lb_use_tls,
         'lb_tls_verify': req.zato.lb_tls_verify,
+        'is_windows': is_windows,
     }
 
     return TemplateResponse(req, 'zato/cluster/index.html', return_data)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 @method_allowed('POST')
 def edit(req):
     return _create_edit(req, 'updated',
         req.zato.odb.query(Cluster).filter_by(id=req.POST['id']).one(), EditClusterForm, 'edit')
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _get(req, **filter):
     cluster = req.zato.odb.query(Cluster).filter_by(**filter).one()
     return HttpResponse(cluster.to_json(), content_type='application/javascript')
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 @method_allowed('GET')
 def get_by_id(req, cluster_id):
     return _get(req, id=cluster_id)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 @method_allowed('GET')
 def get_by_name(req, cluster_name):
     return _get(req, name=cluster_name)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 @method_allowed('GET')
 def get_servers_state(req, cluster_id):
@@ -203,6 +240,9 @@ def get_servers_state(req, cluster_id):
         return HttpResponseServerError(msg)
 
     return TemplateResponse(req, 'zato/cluster/servers_state.html', {'cluster':cluster})
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 @method_allowed('POST')
 def delete(req, id):
@@ -220,6 +260,9 @@ def delete(req, id):
         return HttpResponseServerError(msg)
     else:
         return HttpResponse()
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 @method_allowed('GET')
 def servers(req):
@@ -267,6 +310,9 @@ def servers(req):
 
     return TemplateResponse(req, 'zato/cluster/servers.html', return_data)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 @method_allowed('POST')
 def servers_edit(req):
     """ Updates a server in both ODB and the load balancer.
@@ -293,6 +339,9 @@ def servers_edit(req):
     except Exception:
         return HttpResponseServerError(format_exc())
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 @method_allowed('POST')
 def servers_add_remove_lb(req, action, server_id):
     """ Adds or removes a server from the load balancer's configuration.
@@ -315,6 +364,9 @@ def servers_add_remove_lb(req, action, server_id):
         server.id, server.name, server.host, server.up_status, up_mod_date,
         server.cluster_id, req.zato.user_profile, fetch_lb_data)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ServerDelete(_Delete):
     url_name = 'cluster-servers-delete'
     error_message = 'Could not delete the server'
@@ -330,3 +382,6 @@ class ServerDelete(_Delete):
             client.add_remove_server('remove', response.data.name)
 
         return super(ServerDelete, self).__call__(req, *args, **kwargs)
+
+# ################################################################################################################################
+# ################################################################################################################################

@@ -736,7 +736,7 @@ class Create(ZatoCommand):
             cluster=cluster)
 
         outconn_demo = HTTPSOAP(None, 'pubsub.demo.sample.outconn', True, True, CONNECTION.OUTGOING,
-            URL_TYPE.PLAIN_HTTP, 'http://localhost:11223', '/zato/pubsub/zato.demo.sample',
+            URL_TYPE.PLAIN_HTTP, 'http://127.0.0.1:17010', '/zato/pubsub/zato.demo.sample',
             None, '', None, DATA_FORMAT.JSON, security=sec_demo, opaque=opaque,
             cluster=cluster)
 
