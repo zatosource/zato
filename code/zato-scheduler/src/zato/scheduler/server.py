@@ -87,15 +87,18 @@ class SchedulerServer(object):
         main = self.config.main
 
         if main.crypto.use_tls:
-            priv_key, cert = main.crypto.priv_key_location, main.crypto.cert_location
+            tls_kwargs = {
+                'keyfile': main.crypto.priv_key_location,
+                'certfile': main.crypto.cert_location
+            }
         else:
-            priv_key, cert = None, None
+            tls_kwargs = {}
 
         # Configures a client to Zato servers
         self.zato_client = self.set_up_zato_client(self.config.main)
 
         # API server
-        self.api_server = WSGIServer((main.bind.host, int(main.bind.port)), self, keyfile=priv_key, certfile=cert)
+        self.api_server = WSGIServer((main.bind.host, int(main.bind.port)), self, **tls_kwargs)
 
         self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME].pool
         self.odb.init_session(ZATO_ODB_POOL_NAME, self.config.main.odb, self.odb.pool, False)

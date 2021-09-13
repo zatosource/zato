@@ -49,6 +49,7 @@ import yaml
 # Zato
 from zato.common.api import SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.crypto.api import ServerCryptoManager
+from zato.common.ext.configobj_ import ConfigObj
 from zato.common.ipaddress_ import get_preferred_ip
 from zato.common.kvdb.api import KVDB
 from zato.common.odb.api import ODBManager, PoolStore
@@ -56,10 +57,10 @@ from zato.common.repo import RepoManager
 from zato.common.util.api import absjoin, asbool, get_config, get_kvdb_config_for_log, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
 from zato.common.util.cli import read_stdin_data
+from zato.common.util.platform_ import is_linux
 from zato.common.simpleio_ import get_sio_server_config
 from zato.server.base.parallel import ParallelServer
 from zato.server.ext import zunicorn
-from zato.common.ext.configobj_ import ConfigObj
 from zato.server.ext.zunicorn.app.base import Application
 from zato.server.service.store import ServiceStore
 from zato.server.startup_callable import StartupCallableTool
@@ -131,7 +132,8 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     store_pidfile(base_dir)
 
     # For dumping stacktraces
-    register_diag_handlers()
+    if is_linux:
+        register_diag_handlers()
 
     # Capture warnings to log files
     logging.captureWarnings(True)

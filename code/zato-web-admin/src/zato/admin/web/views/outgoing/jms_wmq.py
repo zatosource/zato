@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -20,6 +18,7 @@ from django.template.response import TemplateResponse
 from zato.admin.settings import delivery_friendly_name
 from zato.admin.web.forms.outgoing.jms_wmq import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, get_definition_list, method_allowed, parse_response_data
+from zato.admin.web.util import get_template_response
 from zato.common.json_internal import dumps
 from zato.common.odb.model import OutgoingWMQ
 
@@ -98,7 +97,7 @@ def index(req):
         'req': req,
         }
 
-    return TemplateResponse(req, 'zato/outgoing/jms-wmq.html', return_data)
+    return get_template_response(req, 'zato/outgoing/jms-wmq.html', return_data)
 
 # ################################################################################################################################
 

@@ -527,7 +527,6 @@ class RawDataClient(_Client):
 def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, server_url=None, stdin_data=None):
     """ Returns a Zato client built out of data found in a given server's config files.
     """
-
     # stdlib
     import os
 
@@ -553,7 +552,11 @@ def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, s
         crypto_manager=crypto_manager, secrets_conf=secrets_config)
 
     config = get_config_func(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_conf)
-    server_url = server_url if server_url else config.main.gunicorn_bind
+
+    # Note that we cannot use 0.0.0.0 under Windows but, since it implies localhost, we can just replace it as below.
+    server_url = server_url if server_url else config.main.gunicorn_bind # type: str
+    server_url = server_url.replace('0.0.0.0', '127.0.0.1')
+
     client_auth = client_auth_func(config, repo_location, crypto_manager, False)
     client = ZatoClient('http://{}'.format(server_url), '/zato/admin/invoke', client_auth, max_response_repr=15000)
     session = get_odb_session_from_server_config(config, None, False)

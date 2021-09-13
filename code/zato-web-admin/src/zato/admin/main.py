@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
 import cloghandler
@@ -39,6 +37,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def main():
+
     store_pidfile(os.path.abspath('.'))
     repo_dir = os.path.join('.', 'config', 'repo')
 
@@ -48,7 +47,10 @@ def main():
     update_globals(config)
 
     os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
+
     django.setup()
+
+    call_command('migrate')
     call_command('loaddata', os.path.join(repo_dir, 'initial-data.json'))
 
     RepoManager(repo_dir).ensure_repo_consistency()

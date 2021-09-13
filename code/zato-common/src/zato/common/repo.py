@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -15,9 +13,7 @@ import socket
 
 # Zato
 from zato.common.util.api import get_current_user
-
-# Python 2/3 compatibility
-from six import PY2
+from zato.common.util.platform_ import is_linux
 
 # ################################################################################################################################
 
@@ -43,7 +39,7 @@ class _BaseRepoManager(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class NoneRepoManager(_BaseRepoManager):
+class PassThroughRepoManager(_BaseRepoManager):
     def ensure_repo_consistency(self):
         pass
 
@@ -83,10 +79,10 @@ class GitRepoManager(_BaseRepoManager):
 # ################################################################################################################################
 # ################################################################################################################################
 
-if PY2:
-    RepoManager = NoneRepoManager
-else:
+if is_linux:
     RepoManager = GitRepoManager
+else:
+    RepoManager = PassThroughRepoManager
 
 # ################################################################################################################################
 # ################################################################################################################################
