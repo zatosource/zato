@@ -335,8 +335,7 @@ class Create(ZatoCommand):
             server_names['{}'.format(idx)] = 'server{}'.format(idx)
 
         # Under Windows, even if the load balancer is created, we do not log this information.
-        # Hence, there is one step less under Windows.
-        total_non_servers_steps = 6 if is_windows else 7
+        total_non_servers_steps = 5 if is_windows else 7
 
         total_steps = total_non_servers_steps + servers
         admin_invoke_password = 'admin.invoke.' + uuid4().hex
