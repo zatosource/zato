@@ -353,33 +353,39 @@ class Create(ZatoCommand):
         # to store their own configs.
         args.store_config = False
 
+        # We use TLS only on systems other than Windows
+        has_tls = is_non_windows
+
 # ################################################################################################################################
 
         #
         # 1) CA
         #
-        ca_path = os.path.join(args_path, 'ca')
-        os.mkdir(ca_path)
 
-        ca_args = self._bunch_from_args(args, cluster_name)
-        ca_args.path = ca_path
+        if has_tls:
 
-        ca_create_ca.Create(ca_args).execute(ca_args, False)
-        ca_create_lb_agent.Create(ca_args).execute(ca_args, False)
-        ca_create_web_admin.Create(ca_args).execute(ca_args, False)
-        ca_create_scheduler.Create(ca_args).execute(ca_args, False)
+            ca_path = os.path.join(args_path, 'ca')
+            os.mkdir(ca_path)
 
-        server_crypto_loc = {}
+            ca_args = self._bunch_from_args(args, cluster_name)
+            ca_args.path = ca_path
 
-        for name in server_names:
-            ca_args_server = deepcopy(ca_args)
-            ca_args_server.server_name = server_names[name]
-            ca_create_server.Create(ca_args_server).execute(ca_args_server, False)
-            server_crypto_loc[name] = CryptoMaterialLocation(ca_path, '{}-{}'.format(cluster_name, server_names[name]))
+            ca_create_ca.Create(ca_args).execute(ca_args, False)
+            ca_create_lb_agent.Create(ca_args).execute(ca_args, False)
+            ca_create_web_admin.Create(ca_args).execute(ca_args, False)
+            ca_create_scheduler.Create(ca_args).execute(ca_args, False)
 
-        lb_agent_crypto_loc = CryptoMaterialLocation(ca_path, 'lb-agent')
-        web_admin_crypto_loc = CryptoMaterialLocation(ca_path, 'web-admin')
-        scheduler_crypto_loc = CryptoMaterialLocation(ca_path, 'scheduler1')
+            server_crypto_loc = {}
+
+            for name in server_names:
+                ca_args_server = deepcopy(ca_args)
+                ca_args_server.server_name = server_names[name]
+                ca_create_server.Create(ca_args_server).execute(ca_args_server, False)
+                server_crypto_loc[name] = CryptoMaterialLocation(ca_path, '{}-{}'.format(cluster_name, server_names[name]))
+
+            lb_agent_crypto_loc = CryptoMaterialLocation(ca_path, 'lb-agent')
+            web_admin_crypto_loc = CryptoMaterialLocation(ca_path, 'web-admin')
+            scheduler_crypto_loc = CryptoMaterialLocation(ca_path, 'scheduler1')
 
         self.logger.info('[{}/{}] Certificate authority created'.format(next(next_step), total_steps))
 
@@ -426,12 +432,14 @@ class Create(ZatoCommand):
             create_server_args = self._bunch_from_args(args, cluster_name)
             create_server_args.server_name = server_names[name]
             create_server_args.path = server_path
-            create_server_args.cert_path = server_crypto_loc[name].cert_path
-            create_server_args.pub_key_path = server_crypto_loc[name].pub_path
-            create_server_args.priv_key_path = server_crypto_loc[name].priv_path
-            create_server_args.ca_certs_path = server_crypto_loc[name].ca_certs_path
             create_server_args.jwt_secret = jwt_secret
             create_server_args.secret_key = secret_key
+
+            if has_tls:
+                create_server_args.cert_path = server_crypto_loc[name].cert_path
+                create_server_args.pub_key_path = server_crypto_loc[name].pub_path
+                create_server_args.priv_key_path = server_crypto_loc[name].priv_path
+                create_server_args.ca_certs_path = server_crypto_loc[name].ca_certs_path
 
             server_id = create_server.Create(create_server_args).execute(create_server_args, next(next_port), False, True)
 
@@ -457,10 +465,12 @@ class Create(ZatoCommand):
 
         create_lb_args = self._bunch_from_args(args, cluster_name)
         create_lb_args.path = lb_path
-        create_lb_args.cert_path = lb_agent_crypto_loc.cert_path
-        create_lb_args.pub_key_path = lb_agent_crypto_loc.pub_path
-        create_lb_args.priv_key_path = lb_agent_crypto_loc.priv_path
-        create_lb_args.ca_certs_path = lb_agent_crypto_loc.ca_certs_path
+
+        if has_tls:
+            create_lb_args.cert_path = lb_agent_crypto_loc.cert_path
+            create_lb_args.pub_key_path = lb_agent_crypto_loc.pub_path
+            create_lb_args.priv_key_path = lb_agent_crypto_loc.priv_path
+            create_lb_args.ca_certs_path = lb_agent_crypto_loc.ca_certs_path
 
         # Need to substract 1 because we've already called .next() twice
         # when creating servers above.
@@ -483,11 +493,13 @@ class Create(ZatoCommand):
 
         create_web_admin_args = self._bunch_from_args(args, cluster_name)
         create_web_admin_args.path = web_admin_path
-        create_web_admin_args.cert_path = web_admin_crypto_loc.cert_path
-        create_web_admin_args.pub_key_path = web_admin_crypto_loc.pub_path
-        create_web_admin_args.priv_key_path = web_admin_crypto_loc.priv_path
-        create_web_admin_args.ca_certs_path = web_admin_crypto_loc.ca_certs_path
         create_web_admin_args.admin_invoke_password = admin_invoke_password
+
+        if has_tls:
+            create_web_admin_args.cert_path = web_admin_crypto_loc.cert_path
+            create_web_admin_args.pub_key_path = web_admin_crypto_loc.pub_path
+            create_web_admin_args.priv_key_path = web_admin_crypto_loc.priv_path
+            create_web_admin_args.ca_certs_path = web_admin_crypto_loc.ca_certs_path
 
         web_admin_password = CryptoManager.generate_password()
         admin_created = create_web_admin.Create(create_web_admin_args).execute(
@@ -515,12 +527,14 @@ class Create(ZatoCommand):
 
         create_scheduler_args = self._bunch_from_args(args, cluster_name)
         create_scheduler_args.path = scheduler_path
-        create_scheduler_args.cert_path = scheduler_crypto_loc.cert_path
-        create_scheduler_args.pub_key_path = scheduler_crypto_loc.pub_path
-        create_scheduler_args.priv_key_path = scheduler_crypto_loc.priv_path
-        create_scheduler_args.ca_certs_path = scheduler_crypto_loc.ca_certs_path
         create_scheduler_args.cluster_id = cluster_id
         create_scheduler_args.server_path = first_server_path
+
+        if has_tls:
+            create_scheduler_args.cert_path = scheduler_crypto_loc.cert_path
+            create_scheduler_args.pub_key_path = scheduler_crypto_loc.pub_path
+            create_scheduler_args.priv_key_path = scheduler_crypto_loc.priv_path
+            create_scheduler_args.ca_certs_path = scheduler_crypto_loc.ca_certs_path
 
         create_scheduler.Create(create_scheduler_args).execute(create_scheduler_args, False, True)
         self.logger.info('[{}/{}] Scheduler created'.format(next(next_step), total_steps))
