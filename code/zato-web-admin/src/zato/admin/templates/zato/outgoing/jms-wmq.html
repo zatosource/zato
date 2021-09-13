@@ -54,6 +54,10 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
+{% if is_disabled %}
+    {% include "zato/disabled-windows.html" %}
+{% else %}
+
 {% include "zato/search-form.html" with page_prompt="Show outgoing connections"%}
 
 
@@ -214,6 +218,7 @@
         </div>
     {% endif %}
 
+{% endif %}{% comment %}is_disabled{% endcomment %}
 
 {% endif %}{% comment %}not zato_clusters{% endcomment %}
 

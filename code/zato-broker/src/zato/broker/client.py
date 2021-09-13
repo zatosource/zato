@@ -6,8 +6,6 @@ Copyright (C) Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 import logging
 from traceback import format_exc
@@ -26,6 +24,7 @@ from requests import post as requests_post
 
 # Zato
 from zato.common.broker_message import code_to_name, SCHEDULER
+from zato.common.util.platform_ import is_non_windows
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -42,6 +41,8 @@ if 0:
 
 logger = logging.getLogger(__name__)
 has_debug = False
+
+use_tls = is_non_windows
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,7 +76,8 @@ class BrokerClient(object):
 
         # We are a server so we will have configuration needed to set up the scheduler's details ..
         if scheduler_config:
-            self.scheduler_url = 'https://{}:{}/'.format(
+            self.scheduler_url = 'http{}://{}:{}/'.format(
+                's' if use_tls else '',
                 scheduler_config.scheduler_host,
                 scheduler_config.scheduler_port,
             )
