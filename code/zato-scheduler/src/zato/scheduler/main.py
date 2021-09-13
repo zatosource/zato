@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # First thing in the process
 from gevent import monkey
@@ -29,7 +27,7 @@ import yaml
 from future.utils import iteritems
 
 # Zato
-from zato.common.util.api import absjoin, get_config, store_pidfile
+from zato.common.util.api import as_bool, absjoin, get_config, store_pidfile
 from zato.scheduler.server import Config, SchedulerServer
 
 # ################################################################################################################################
@@ -52,6 +50,7 @@ def main():
     # Read config in and extend it with ODB-specific information
     config.main = get_config(repo_location, 'scheduler.conf')
     config.main.odb.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
+    config.main.crypto.use_tls = as_bool(config.main.crypto.use_tls)
 
     # Make all paths absolute
     if config.main.crypto.use_tls:
