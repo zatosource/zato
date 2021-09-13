@@ -39,20 +39,19 @@ OTHER DEALINGS IN THE SOFTWARE.
 # Please remember to run "make -C docs html" after update "desc" attributes.
 
 import copy
-import grp
 import inspect
 try:
     import argparse
 except ImportError:  # python 2.6
     from . import argparse_compat as argparse
 import os
-import pwd
 import re
 import ssl
 import sys
 import textwrap
 import shlex
 
+from zato.common.util.platform_ import is_posix
 from zato.server.ext.zunicorn import _compat
 from zato.server.ext.zunicorn.errors import ConfigError
 from zato.server.ext.zunicorn.reloader import reloader_engines
@@ -458,6 +457,10 @@ def validate_callable(arity):
 
 
 def validate_user(val):
+
+    # stdlib
+    import pwd
+
     if val is None:
         return os.geteuid()
     if isinstance(val, int):
@@ -472,6 +475,10 @@ def validate_user(val):
 
 
 def validate_group(val):
+
+    # stdlib
+    import grp
+
     if val is None:
         return os.getegid()
 
@@ -484,7 +491,6 @@ def validate_group(val):
             return grp.getgrnam(val).gr_gid
         except KeyError:
             raise ConfigError("No such group: '%s'" % val)
-
 
 def validate_post_request(val):
     val = validate_callable(-1)(val)
@@ -1098,8 +1104,15 @@ class User(Setting):
     section = "Server Mechanics"
     cli = ["-u", "--user"]
     meta = "USER"
-    validator = validate_user
-    default = os.geteuid()
+
+    if is_posix:
+        default = os.geteuid()
+        validator = validate_user
+    else:
+        # Under Windows, We do not use this functionality
+        default = None
+        validator = None
+
     desc = """\
         Switch worker processes to run as this user.
 
@@ -1114,8 +1127,15 @@ class Group(Setting):
     section = "Server Mechanics"
     cli = ["-g", "--group"]
     meta = "GROUP"
-    validator = validate_group
-    default = os.getegid()
+
+    if is_posix:
+        default = os.getegid()
+        validator = validate_group
+    else:
+        # Under Windows, We do not use this functionality
+        default = None
+        validator = None
+
     desc = """\
         Switch worker process to run as this group.
 

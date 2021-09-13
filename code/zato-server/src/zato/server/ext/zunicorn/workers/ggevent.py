@@ -36,11 +36,12 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 # flake8: noqa
 
+from datetime import datetime
+from functools import partial
+from traceback import format_exc
 import errno
 import os
 import sys
-from datetime import datetime
-from functools import partial
 import time
 
 _socket = __import__("socket")
@@ -58,6 +59,7 @@ from gevent.server import StreamServer
 from gevent.socket import wait_write, socket
 from gevent import pywsgi
 
+from zato.common.util.platform_ import is_windows
 from zato.server.ext.zunicorn import SERVER_SOFTWARE
 from zato.server.ext.zunicorn.http.wsgi import base_environ
 from zato.server.ext.zunicorn.workers.base_async import AsyncWorker
@@ -117,7 +119,7 @@ class GeventWorker(AsyncWorker):
         if self.ppid != os.getppid():
             if is_forking:
                 self.log.info("Parent changed, shutting down: %s", self)
-            sys.exit(0)
+                sys.exit(0)
 
     def timeout_ctx(self):
         return gevent.Timeout(self.cfg.keepalive, False)
@@ -149,11 +151,12 @@ class GeventWorker(AsyncWorker):
             server.start()
             servers.append(server)
 
-        while self.alive:
-            self.notify()
-            gevent.sleep(1.0)
-
         try:
+
+            while self.alive:
+                self.notify()
+                gevent.sleep(1.0)
+
             # Stop accepting requests
             for server in servers:
                 if hasattr(server, 'close'):  # gevent 1.0
@@ -180,8 +183,15 @@ class GeventWorker(AsyncWorker):
             self.log.warning("Worker graceful timeout (pid:%s)" % self.pid)
             for server in servers:
                 server.stop(timeout=1)
-        except:
-            pass
+
+        except KeyboardInterrupt:
+            if is_windows:
+                sys.exit(0)
+            else:
+                raise
+
+        except Exception as e:
+            self.log.warning('Exception in GeventWorker.run (pid:%s) -> `%s`', self.pid, format_exc())
 
     def handle(self, listener, client, addr):
         # Connected socket timeout defaults to socket.getdefaulttimeout().

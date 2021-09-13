@@ -48,6 +48,7 @@ import time
 import traceback
 
 # Zato
+from zato.common.util.platform_ import is_posix
 from zato.common.version import get_version
 from zato.server.ext.zunicorn import SERVER_SOFTWARE, sock, systemd, util
 from zato.server.ext.zunicorn.errors import HaltServer, AppImportError
@@ -76,11 +77,13 @@ class Arbiter(object):
     LISTENERS = []
     WORKERS = {}
     PIPE = []
-
-    # I love dynamic languages
     SIG_QUEUE = []
-    SIGNALS = [getattr(signal, "SIG%s" % x)
-               for x in "HUP QUIT INT TERM TTIN TTOU USR1 USR2 WINCH".split()]
+
+    if is_posix:
+        SIGNALS = [getattr(signal, "SIG%s" % x) for x in "HUP QUIT INT TERM TTIN TTOU USR1 USR2 WINCH".split()]
+    else:
+        SIGNALS = []
+
     SIG_NAMES = dict(
         (getattr(signal, name), name[3:].lower()) for name in dir(signal)
         if name[:3] == "SIG" and name[3] != "_"
@@ -175,7 +178,8 @@ class Arbiter(object):
             self.pidfile.create(self.pid)
         self.cfg.on_starting(self)
 
-        self.init_signals()
+        if is_posix:
+            self.init_signals()
 
         if not self.LISTENERS:
             fds = None
@@ -195,7 +199,6 @@ class Arbiter(object):
         listeners_str = ",".join([str(l) for l in self.LISTENERS])
         self.log.debug("Arbiter booted")
         self.log.info("Listening at: %s (%s)", listeners_str, self.pid)
-        self.log.info("Using worker: %s", self.cfg.worker_class_str)
 
         # check worker class requirements
         if hasattr(self.worker_class, "check_config"):
@@ -419,16 +422,24 @@ class Arbiter(object):
 
         self.LISTENERS = []
         sig = signal.SIGTERM
-        if not graceful:
-            sig = signal.SIGQUIT
+
+        if is_posix:
+            if not graceful:
+                sig = signal.SIGQUIT
+
         limit = time.time() + self.cfg.graceful_timeout
+
         # instruct the workers to exit
         self.kill_workers(sig)
+
         # wait until the graceful timeout
         while self.WORKERS and time.time() < limit:
             time.sleep(0.1)
 
-        self.kill_workers(signal.SIGKILL)
+        if is_posix:
+            self.kill_workers(signal.SIGKILL)
+        else:
+            self.kill_workers(signal.SIGTERM)
 
     def reexec(self):
         """\
@@ -620,8 +631,8 @@ class Arbiter(object):
             self.WORKERS[worker.pid] = worker
 
         try:
-            util._setproctitle("worker [%s]" % self.proc_name)
-            self.log.info("Booting worker with pid: %s", worker.pid)
+            util._setproctitle("zato [%s]" % self.proc_name)
+            self.log.info("Booting process with pid: %s", worker.pid)
             self.cfg.post_fork(self, worker)
             worker.init_process()
             sys.exit(0)

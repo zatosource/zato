@@ -15,10 +15,15 @@ import os
 import stat
 import tempfile
 from datetime import datetime, timedelta
-from fcntl import fcntl
 from io import StringIO
 from traceback import format_exc
 from uuid import uuid4
+
+try:
+    from fcntl import fcntl
+except ImportError:
+    # Ignore it under Windows
+    pass
 
 # gevent
 from gevent import sleep

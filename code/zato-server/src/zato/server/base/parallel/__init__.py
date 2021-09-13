@@ -46,9 +46,10 @@ from zato.common.rate_limiting import RateLimiting
 from zato.common.util.api import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
      invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
      register_diag_handlers
-from zato.common.util.tcp import wait_until_port_taken
+from zato.common.util.platform_ import is_posix
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC
 from zato.common.util.time_ import TimeUtil
+from zato.common.util.tcp import wait_until_port_taken
 from zato.distlock import LockManager
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigStore
@@ -190,7 +191,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self._hash_secret_salt_size = None # type: int
         self.sso_tool = SSOTool(self)
         self.platform_system = platform_system().lower() # type: unicode
-        self.has_posix_ipc = True
+        self.has_posix_ipc = is_posix
         self.user_config = Bunch()
         self.stderr_path = None # type: str
         self.json_parser = SIMDJSONParser()
@@ -549,7 +550,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.deployment_key = zato_deployment_key
 
         # This is to handle SIGURG signals.
-        register_diag_handlers()
+        if is_posix:
+            register_diag_handlers()
 
         # Configure paths and load data pertaining to Zato KVDB
         self.set_up_zato_kvdb()
@@ -559,9 +561,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         _skip_platform = _skip_platform if isinstance(_skip_platform, list) else [_skip_platform]
         _skip_platform = [elem for elem in _skip_platform if elem]
         self.fs_server_config.misc.posix_ipc_skip_platform = _skip_platform
-
-        if self.platform_system in self.fs_server_config.misc.posix_ipc_skip_platform:
-            self.has_posix_ipc = False
 
         # Create all POSIX IPC objects now that we have the deployment key,
         # but only if our platform allows it.
@@ -586,7 +585,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Set up the server-wide default lock manager
         odb_data = self.config.odb_data
-        backend_type = 'fcntl' if odb_data.engine == 'sqlite' else odb_data.engine
+
+        if is_posix:
+            backend_type = 'fcntl' if odb_data.engine == 'sqlite' else odb_data.engine
+        else:
+            backend_type = 'zato-pass-through'
+
         self.zato_lock_manager = LockManager(backend_type, 'zato', self.odb.session)
 
         # Just to make sure distributed locking is configured correctly
@@ -765,13 +769,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.ipc_api.name = self.ipc_api.get_endpoint_name(self.cluster_name, self.name, self.pid)
         self.ipc_api.pid = self.pid
         self.ipc_api.on_message_callback = self.worker_store.on_ipc_message
-        spawn_greenlet(self.ipc_api.run)
 
-        events_config = self.connector_config_ipc.get_config(ZatoEventsIPC.ipc_config_name, as_dict=True) # type: dict
-        events_tcp_port = events_config['port']
+        if is_posix:
+            spawn_greenlet(self.ipc_api.run)
 
-        # Statistics
-        self._run_stats_client(events_tcp_port)
+            events_config = self.connector_config_ipc.get_config(ZatoEventsIPC.ipc_config_name, as_dict=True) # type: dict
+            events_tcp_port = events_config['port']
+
+            # Statistics
+            self._run_stats_client(events_tcp_port)
 
         # Invoke startup callables
         self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.AFTER_STARTED, kwargs={
