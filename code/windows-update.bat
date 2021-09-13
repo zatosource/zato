@@ -1,12 +1,16 @@
 rem
 rem Local aliases
 rem
+rem
+rem Local aliases
+rem
 set curdir=%~dp0
 
 echo *** Downloading updates ***
 git -C %curdir% pull
 
-%curdir%\Scripts\python %curdir%\util\post_install.py
+python %curdir%\util\post_install.py update_paths
+%curdir%\Scripts\python %curdir%\util\post_install.py update_registry
 
 %curdir%\Scripts\python -m pip uninstall -y pip
 %curdir%\Scripts\python -m ensurepip
@@ -17,4 +21,3 @@ echo Updating environment in %curdir%
 
 echo Installation updated
 %curdir%\windows-bin\zato --version
-
