@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from copy import deepcopy
 
-from zato.cli import common_logging_conf_contents, common_odb_opts, is_arg_given, kvdb_opts, sql_conf_contents, ZatoCommand
+from zato.cli import common_odb_opts, is_arg_given, kvdb_opts, sql_conf_contents, ZatoCommand
 from zato.common.api import SCHEDULER
 from zato.common.crypto.api import SchedulerCryptoManager
 from zato.common.crypto.const import well_known_data
@@ -123,6 +123,10 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
     def execute(self, args, show_output=True, needs_created_flag=False):
+
+        # Zato
+        from zato.common.util.logging_ import get_logging_conf_contents
+
         os.chdir(self.target_dir)
 
         repo_dir = os.path.join(self.target_dir, 'config', 'repo')
@@ -214,8 +218,9 @@ class Create(ZatoCommand):
             'initial_sleep_time': initial_sleep_time,
         }
 
-        open(os.path.join(repo_dir, 'logging.conf'), 'w').write(
-            common_logging_conf_contents.format(log_path='./logs/scheduler.log'))
+        logging_conf_contents = get_logging_conf_contents()
+
+        open(os.path.join(repo_dir, 'logging.conf'), 'w').write(logging_conf_contents)
         open(conf_path, 'w').write(config_template.format(**config))
         open(startup_jobs_conf_path, 'w').write(startup_jobs)
         open(sql_conf_path, 'w').write(sql_conf_contents)

@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -20,7 +18,6 @@ from bunch import Bunch
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
-from django.template.response import TemplateResponse
 
 # pytz
 from pytz import UTC
@@ -36,6 +33,7 @@ except ImportError:
 
 from zato.admin.settings import ssl_key_file, ssl_cert_file, ssl_ca_certs, LB_AGENT_CONNECT_TIMEOUT
 from zato.admin.web import from_utc_to_user
+from zato.admin.web.util import get_template_response
 from zato.common.api import CONNECTION, SEC_DEF_TYPE_NAME, URL_TYPE, ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
@@ -521,7 +519,7 @@ class Index(_BaseView):
             for k, v in sorted(return_data.items()):
                 logger.info('Index key/value `%s` -> `%r`', k, v)
 
-            return TemplateResponse(req, template_name, return_data)
+            return get_template_response(req, template_name, return_data)
 
         except Exception:
             return HttpResponseServerError(format_exc())

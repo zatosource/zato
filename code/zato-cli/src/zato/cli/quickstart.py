@@ -1,21 +1,39 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 import os
+import sys
 from copy import deepcopy
 
 # Zato
 from zato.cli import common_odb_opts, kvdb_opts, ZatoCommand
+from zato.common.util.platform_ import is_windows, is_non_windows
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 DEFAULT_NO_SERVERS=1
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+windows_qs_start_template = """
+set zato_cmd={zato_cmd}
+set env_dir="{env_dir}"
+
+start /b %zato_cmd% start %env_dir%\server1
+start /b %zato_cmd% start %env_dir%\web-admin
+start /b %zato_cmd% start %env_dir%\scheduler
+""".strip() # noqa: W605
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 # Taken from http://stackoverflow.com/a/246128
 script_dir = """SOURCE="${BASH_SOURCE[0]}"
@@ -29,12 +47,21 @@ done
 BASE_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 """
 
-sanity_checks_template = """$ZATO_BIN check-config $BASE_DIR/{server_name}"""
+# ################################################################################################################################
+# ################################################################################################################################
+
+check_config_template = """$ZATO_BIN check-config $BASE_DIR/{server_name}"""
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 start_servers_template = """
 $ZATO_BIN start $BASE_DIR/{server_name} --verbose
 echo [{step_number}/$STEPS] {server_name} started
 """
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 zato_qs_start_head_template = """#!/bin/bash
 
@@ -50,8 +77,11 @@ echo Starting Zato cluster $CLUSTER
 echo Checking configuration
 """
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 zato_qs_start_body_template = """
-{sanity_checks}
+{check_config}
 
 echo [1/$STEPS] Redis connection OK
 echo [2/$STEPS] SQL ODB connection OK
@@ -65,9 +95,7 @@ UTIL_DIR=`python -c "import os; print(os.path.join('$ZATO_BIN_DIR', '..', 'util'
 
 $ZATO_BIN_DIR/py $UTIL_DIR/check_tcp_ports.py
 
-# Start the load balancer first ..
-$ZATO_BIN start $BASE_DIR/load-balancer --verbose
-echo [4/$STEPS] Load-balancer started
+{start_lb}
 
 # .. servers ..
 {start_servers}
@@ -76,6 +104,20 @@ echo [4/$STEPS] Load-balancer started
 $ZATO_BIN start $BASE_DIR/scheduler --verbose
 echo [{scheduler_step_count}/$STEPS] Scheduler started
 """
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+zato_qs_start_lb_windows = 'echo "[4/%STEPS%] (Skipped starting load balancer)"'
+
+zato_qs_start_lb_non_windows = """
+# Start the load balancer first ..
+$ZATO_BIN start $BASE_DIR/load-balancer --verbose
+echo [4/$STEPS] Load-balancer started
+"""
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 zato_qs_start_tail = """
 # .. web admin comes as the last one because it may ask Django-related questions.
@@ -92,6 +134,9 @@ stop_servers_template = """
 $ZATO_BIN stop $BASE_DIR/{server_name}
 echo [{step_number}/$STEPS] {server_name} stopped
 """
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 zato_qs_stop_template = """#!/bin/bash
 
@@ -136,6 +181,9 @@ cd $BASE_DIR
 echo Zato cluster $CLUSTER stopped
 """
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 zato_qs_restart = """#!/bin/bash
 
 {script_dir}
@@ -145,6 +193,7 @@ $BASE_DIR/zato-qs-stop.sh
 $BASE_DIR/zato-qs-start.sh
 """
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class CryptoMaterialLocation(object):
@@ -285,7 +334,10 @@ class Create(ZatoCommand):
         for idx in range(1, servers+1):
             server_names['{}'.format(idx)] = 'server{}'.format(idx)
 
-        total_steps = 7 + servers
+        # Under Windows, even if the load balancer is created, we do not log this information.
+        total_non_servers_steps = 5 if is_windows else 7
+
+        total_steps = total_non_servers_steps + servers
         admin_invoke_password = 'admin.invoke.' + uuid4().hex
         broker_host = 'localhost'
         broker_port = 6379
@@ -300,33 +352,39 @@ class Create(ZatoCommand):
         # to store their own configs.
         args.store_config = False
 
+        # We use TLS only on systems other than Windows
+        has_tls = is_non_windows
+
 # ################################################################################################################################
 
         #
         # 1) CA
         #
-        ca_path = os.path.join(args_path, 'ca')
-        os.mkdir(ca_path)
 
-        ca_args = self._bunch_from_args(args, cluster_name)
-        ca_args.path = ca_path
+        if has_tls:
 
-        ca_create_ca.Create(ca_args).execute(ca_args, False)
-        ca_create_lb_agent.Create(ca_args).execute(ca_args, False)
-        ca_create_web_admin.Create(ca_args).execute(ca_args, False)
-        ca_create_scheduler.Create(ca_args).execute(ca_args, False)
+            ca_path = os.path.join(args_path, 'ca')
+            os.mkdir(ca_path)
 
-        server_crypto_loc = {}
+            ca_args = self._bunch_from_args(args, cluster_name)
+            ca_args.path = ca_path
 
-        for name in server_names:
-            ca_args_server = deepcopy(ca_args)
-            ca_args_server.server_name = server_names[name]
-            ca_create_server.Create(ca_args_server).execute(ca_args_server, False)
-            server_crypto_loc[name] = CryptoMaterialLocation(ca_path, '{}-{}'.format(cluster_name, server_names[name]))
+            ca_create_ca.Create(ca_args).execute(ca_args, False)
+            ca_create_lb_agent.Create(ca_args).execute(ca_args, False)
+            ca_create_web_admin.Create(ca_args).execute(ca_args, False)
+            ca_create_scheduler.Create(ca_args).execute(ca_args, False)
 
-        lb_agent_crypto_loc = CryptoMaterialLocation(ca_path, 'lb-agent')
-        web_admin_crypto_loc = CryptoMaterialLocation(ca_path, 'web-admin')
-        scheduler_crypto_loc = CryptoMaterialLocation(ca_path, 'scheduler1')
+            server_crypto_loc = {}
+
+            for name in server_names:
+                ca_args_server = deepcopy(ca_args)
+                ca_args_server.server_name = server_names[name]
+                ca_create_server.Create(ca_args_server).execute(ca_args_server, False)
+                server_crypto_loc[name] = CryptoMaterialLocation(ca_path, '{}-{}'.format(cluster_name, server_names[name]))
+
+            lb_agent_crypto_loc = CryptoMaterialLocation(ca_path, 'lb-agent')
+            web_admin_crypto_loc = CryptoMaterialLocation(ca_path, 'web-admin')
+            scheduler_crypto_loc = CryptoMaterialLocation(ca_path, 'scheduler1')
 
         self.logger.info('[{}/{}] Certificate authority created'.format(next(next_step), total_steps))
 
@@ -373,12 +431,14 @@ class Create(ZatoCommand):
             create_server_args = self._bunch_from_args(args, cluster_name)
             create_server_args.server_name = server_names[name]
             create_server_args.path = server_path
-            create_server_args.cert_path = server_crypto_loc[name].cert_path
-            create_server_args.pub_key_path = server_crypto_loc[name].pub_path
-            create_server_args.priv_key_path = server_crypto_loc[name].priv_path
-            create_server_args.ca_certs_path = server_crypto_loc[name].ca_certs_path
             create_server_args.jwt_secret = jwt_secret
             create_server_args.secret_key = secret_key
+
+            if has_tls:
+                create_server_args.cert_path = server_crypto_loc[name].cert_path
+                create_server_args.pub_key_path = server_crypto_loc[name].pub_path
+                create_server_args.priv_key_path = server_crypto_loc[name].priv_path
+                create_server_args.ca_certs_path = server_crypto_loc[name].ca_certs_path
 
             server_id = create_server.Create(create_server_args).execute(create_server_args, next(next_port), False, True)
 
@@ -398,22 +458,29 @@ class Create(ZatoCommand):
         #
         # 5) load-balancer
         #
+
         lb_path = os.path.join(args_path, 'load-balancer')
         os.mkdir(lb_path)
 
         create_lb_args = self._bunch_from_args(args, cluster_name)
         create_lb_args.path = lb_path
-        create_lb_args.cert_path = lb_agent_crypto_loc.cert_path
-        create_lb_args.pub_key_path = lb_agent_crypto_loc.pub_path
-        create_lb_args.priv_key_path = lb_agent_crypto_loc.priv_path
-        create_lb_args.ca_certs_path = lb_agent_crypto_loc.ca_certs_path
+
+        if has_tls:
+            create_lb_args.cert_path = lb_agent_crypto_loc.cert_path
+            create_lb_args.pub_key_path = lb_agent_crypto_loc.pub_path
+            create_lb_args.priv_key_path = lb_agent_crypto_loc.priv_path
+            create_lb_args.ca_certs_path = lb_agent_crypto_loc.ca_certs_path
 
         # Need to substract 1 because we've already called .next() twice
         # when creating servers above.
         servers_port = next(next_port) - 1
 
         create_lb.Create(create_lb_args).execute(create_lb_args, True, servers_port, False)
-        self.logger.info('[{}/{}] Load-balancer created'.format(next(next_step), total_steps))
+
+        # Under Windows, we create the directory for the load-balancer
+        # but we do not advertise it because we do not start it.
+        if is_non_windows:
+            self.logger.info('[{}/{}] Load-balancer created'.format(next(next_step), total_steps))
 
 # ################################################################################################################################
 
@@ -425,11 +492,13 @@ class Create(ZatoCommand):
 
         create_web_admin_args = self._bunch_from_args(args, cluster_name)
         create_web_admin_args.path = web_admin_path
-        create_web_admin_args.cert_path = web_admin_crypto_loc.cert_path
-        create_web_admin_args.pub_key_path = web_admin_crypto_loc.pub_path
-        create_web_admin_args.priv_key_path = web_admin_crypto_loc.priv_path
-        create_web_admin_args.ca_certs_path = web_admin_crypto_loc.ca_certs_path
         create_web_admin_args.admin_invoke_password = admin_invoke_password
+
+        if has_tls:
+            create_web_admin_args.cert_path = web_admin_crypto_loc.cert_path
+            create_web_admin_args.pub_key_path = web_admin_crypto_loc.pub_path
+            create_web_admin_args.priv_key_path = web_admin_crypto_loc.priv_path
+            create_web_admin_args.ca_certs_path = web_admin_crypto_loc.ca_certs_path
 
         web_admin_password = CryptoManager.generate_password()
         admin_created = create_web_admin.Create(create_web_admin_args).execute(
@@ -457,12 +526,14 @@ class Create(ZatoCommand):
 
         create_scheduler_args = self._bunch_from_args(args, cluster_name)
         create_scheduler_args.path = scheduler_path
-        create_scheduler_args.cert_path = scheduler_crypto_loc.cert_path
-        create_scheduler_args.pub_key_path = scheduler_crypto_loc.pub_path
-        create_scheduler_args.priv_key_path = scheduler_crypto_loc.priv_path
-        create_scheduler_args.ca_certs_path = scheduler_crypto_loc.ca_certs_path
         create_scheduler_args.cluster_id = cluster_id
         create_scheduler_args.server_path = first_server_path
+
+        if has_tls:
+            create_scheduler_args.cert_path = scheduler_crypto_loc.cert_path
+            create_scheduler_args.pub_key_path = scheduler_crypto_loc.pub_path
+            create_scheduler_args.priv_key_path = scheduler_crypto_loc.priv_path
+            create_scheduler_args.ca_certs_path = scheduler_crypto_loc.ca_certs_path
 
         create_scheduler.Create(create_scheduler_args).execute(create_scheduler_args, False, True)
         self.logger.info('[{}/{}] Scheduler created'.format(next(next_step), total_steps))
@@ -473,20 +544,25 @@ class Create(ZatoCommand):
         # 8) Scripts
         #
         zato_bin = 'zato'
-        zato_qs_start_path = os.path.join(args_path, 'zato-qs-start.sh')
+
+        # This will exist for Windows and other systems
+        zato_qs_start_path = 'zato-qs-start.bat' if is_windows else 'zato-qs-start.sh'
+        zato_qs_start_path = os.path.join(args_path, zato_qs_start_path)
+
+        # These commands are generated for non-Windows systems only
         zato_qs_stop_path = os.path.join(args_path, 'zato-qs-stop.sh')
         zato_qs_restart_path = os.path.join(args_path, 'zato-qs-restart.sh')
 
-        sanity_checks = []
+        check_config = []
         start_servers = []
         stop_servers = []
 
         for name in server_names:
-            sanity_checks.append(sanity_checks_template.format(server_name=server_names[name]))
+            check_config.append(check_config_template.format(server_name=server_names[name]))
             start_servers.append(start_servers_template.format(server_name=server_names[name], step_number=int(name)+4))
             stop_servers.append(stop_servers_template.format(server_name=server_names[name], step_number=int(name)+1))
 
-        sanity_checks = '\n'.join(sanity_checks)
+        check_config = '\n'.join(check_config)
         start_servers = '\n'.join(start_servers)
         stop_servers = '\n'.join(stop_servers)
         start_steps = 6 + servers
@@ -500,7 +576,8 @@ class Create(ZatoCommand):
         )
 
         zato_qs_start_body = zato_qs_start_body_template.format(
-            sanity_checks=sanity_checks,
+            check_config=check_config,
+            start_lb=zato_qs_start_lb_windows if is_windows else zato_qs_start_lb_non_windows,
             scheduler_step_count=start_steps-1,
             start_servers=start_servers,
         )
@@ -515,17 +592,30 @@ class Create(ZatoCommand):
             stop_steps=stop_steps,
             stop_servers=stop_servers)
 
-        open(zato_qs_start_path, 'w').write(zato_qs_start)
-        open(zato_qs_stop_path, 'w').write(zato_qs_stop)
-        open(zato_qs_restart_path, 'w').write(zato_qs_restart.format(script_dir=script_dir, cluster_name=cluster_name))
+        if is_windows:
 
-        file_mod = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP
+            zato_bin_dir = os.path.dirname(sys.executable)
+            zato_cmd = os.path.join(zato_bin_dir, zato_bin)
 
-        os.chmod(zato_qs_start_path, file_mod)
-        os.chmod(zato_qs_stop_path, file_mod)
-        os.chmod(zato_qs_restart_path, file_mod)
+            windows_qs_start = windows_qs_start_template.format(
+                zato_cmd=zato_cmd,
+                env_dir=args_path)
 
-        self.logger.info('[{}/{}] Management scripts created'.format(next(next_step), total_steps))
+            open(zato_qs_start_path, 'w').write(windows_qs_start)
+
+        else:
+            open(zato_qs_start_path, 'w').write(zato_qs_start)
+            open(zato_qs_stop_path, 'w').write(zato_qs_stop)
+            open(zato_qs_restart_path, 'w').write(zato_qs_restart.format(script_dir=script_dir, cluster_name=cluster_name))
+
+            file_mod = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP
+
+            os.chmod(zato_qs_start_path, file_mod)
+            os.chmod(zato_qs_stop_path, file_mod)
+            os.chmod(zato_qs_restart_path, file_mod)
+
+            self.logger.info('[{}/{}] Management scripts created'.format(next(next_step), total_steps))
+
         self.logger.info('Quickstart cluster {} created'.format(cluster_name))
 
         if admin_created:
@@ -533,8 +623,8 @@ class Create(ZatoCommand):
         else:
             self.logger.info('User [admin] already exists in the ODB')
 
-        start_command = os.path.join(args_path, 'zato-qs-start.sh')
-        self.logger.info('Start the cluster by issuing the {} command'.format(start_command))
+        self.logger.info('Start the cluster by issuing this command: %s', zato_qs_start_path)
+
         self.logger.info('Visit https://zato.io/support for more information and support options')
 
 # ################################################################################################################################

@@ -39,11 +39,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 # flake8: noqa
 
 import email.utils
-import fcntl
 import io
 import os
 import pkg_resources
-import pwd
 import random
 import socket
 import sys
@@ -185,8 +183,11 @@ def load_class(uri, default="zato.server.ext.zunicorn.workers.sync.SyncWorker", 
 
 def get_username(uid):
     """ get the username for a user id"""
-    return pwd.getpwuid(uid).pw_name
 
+    # stdlib
+    import pwd
+
+    return pwd.getpwuid(uid).pw_name
 
 def set_owner_process(uid, gid, initgroups=False):
     """ set user and group of workers processes """
@@ -305,12 +306,20 @@ def parse_address(netloc, default_port=8000):
 
 
 def close_on_exec(fd):
+
+    # stdlib
+    import fcntl
+
     flags = fcntl.fcntl(fd, fcntl.F_GETFD)
     flags |= fcntl.FD_CLOEXEC
     fcntl.fcntl(fd, fcntl.F_SETFD, flags)
 
 
 def set_non_blocking(fd):
+
+    # stdlib
+    import fcntl
+
     flags = fcntl.fcntl(fd, fcntl.F_GETFL) | os.O_NONBLOCK
     fcntl.fcntl(fd, fcntl.F_SETFL, flags)
 

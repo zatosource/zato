@@ -13,8 +13,11 @@ from mmap import mmap
 from time import sleep
 from traceback import format_exc
 
-# posix-ipc
-import posix_ipc as ipc
+try:
+    import posix_ipc as ipc
+except ImportError:
+    # Ignore it under Windows
+    pass
 
 # Zato
 from zato.common.json_internal import dumps, loads

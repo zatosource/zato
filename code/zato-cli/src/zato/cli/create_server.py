@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from copy import deepcopy
 
 # Zato
-from zato.cli import common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents, ZatoCommand
+from zato.cli import common_odb_opts, kvdb_opts, sql_conf_contents, ZatoCommand
 from zato.common.api import CONTENT_TYPE, default_internal_modules, SCHEDULER, SSO as CommonSSO
 from zato.common.simpleio_ import simple_io_conf_contents
 from zato.common.events.common import Default as EventsDefault
@@ -628,23 +628,6 @@ directories = (
 
 # ################################################################################################################################
 
-files = {
-    'config/repo/logging.conf': common_logging_conf_contents.format(log_path='./logs/server.log'),
-    'config/repo/service-sources.txt': service_sources_contents,
-    'config/repo/lua/internal/zato.rename_if_exists.lua': lua_zato_rename_if_exists,
-    'config/repo/sql.conf': sql_conf_contents,
-
-    'config/repo/static/sso/email/en_GB/signup-confirm.txt': CommonSSO.EmailTemplate.SignupConfirm,
-    'config/repo/static/sso/email/en_GB/signup-welcome.txt': CommonSSO.EmailTemplate.SignupWelcome,
-    'config/repo/static/sso/email/en_GB/password-reset-link.txt': CommonSSO.EmailTemplate.PasswordResetLink,
-
-    'config/repo/static/sso/email/en_US/signup-confirm.txt': CommonSSO.EmailTemplate.SignupConfirm,
-    'config/repo/static/sso/email/en_US/signup-welcome.txt': CommonSSO.EmailTemplate.SignupWelcome,
-    'config/repo/static/sso/email/en_US/password-reset-link.txt': CommonSSO.EmailTemplate.PasswordResetLink,
-}
-
-# ################################################################################################################################
-
 priv_key_location = './config/repo/config-priv.pem'
 priv_key_location = './config/repo/config-pub.pem'
 
@@ -729,6 +712,24 @@ class Create(ZatoCommand):
         from zato.common.crypto.const import well_known_data
         from zato.common.defaults import http_plain_server_port
         from zato.common.odb.model import Cluster, Server
+        from zato.common.util.logging_ import get_logging_conf_contents
+
+        logging_conf_contents = get_logging_conf_contents()
+
+        files = {
+            'config/repo/logging.conf': logging_conf_contents,
+            'config/repo/service-sources.txt': service_sources_contents,
+            'config/repo/lua/internal/zato.rename_if_exists.lua': lua_zato_rename_if_exists,
+            'config/repo/sql.conf': sql_conf_contents,
+
+            'config/repo/static/sso/email/en_GB/signup-confirm.txt': CommonSSO.EmailTemplate.SignupConfirm,
+            'config/repo/static/sso/email/en_GB/signup-welcome.txt': CommonSSO.EmailTemplate.SignupWelcome,
+            'config/repo/static/sso/email/en_GB/password-reset-link.txt': CommonSSO.EmailTemplate.PasswordResetLink,
+
+            'config/repo/static/sso/email/en_US/signup-confirm.txt': CommonSSO.EmailTemplate.SignupConfirm,
+            'config/repo/static/sso/email/en_US/signup-welcome.txt': CommonSSO.EmailTemplate.SignupWelcome,
+            'config/repo/static/sso/email/en_US/password-reset-link.txt': CommonSSO.EmailTemplate.PasswordResetLink,
+        }
 
         default_http_port = default_http_port or http_plain_server_port
 
