@@ -237,8 +237,9 @@ class OnUpdateUserConf(_OnUpdate):
 
     def sync_pickup_file_in_ram(self, ctx):
         # type: (UpdateCtx) -> None
-        conf = get_config(self.server.user_conf_location, ctx.file_path, raise_on_error=True, log_exception=False)
-        entry = self.server.user_config.setdefault(get_user_config_name(ctx.file_path), Bunch())
+        conf_key = ctx.file_name
+        conf = get_config(self.server.user_conf_location, conf_key, raise_on_error=True, log_exception=False)
+        entry = self.server.user_config.setdefault(get_user_config_name(conf_key), Bunch())
         entry.clear()
         entry.update(conf)
 
