@@ -243,6 +243,9 @@ class GetList(AdminService):
                 self._enrich_conn_dict(conn_dict)
                 out['response'].append(conn_dict)
 
+        # Results are already included in the list of out['response'] elements
+        out['_meta'].pop('result', None)
+
         self.response.payload = dumps(out)
 
 # ################################################################################################################################
