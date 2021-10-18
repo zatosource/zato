@@ -77,6 +77,7 @@ use_async_driver=True
 [scheduler]
 scheduler_host={{scheduler_host}}
 scheduler_port={{scheduler_port}}
+scheduler_use_tls={{scheduler_use_tls}}
 
 [hot_deploy]
 pickup_dir=../../pickup/incoming/services
@@ -811,6 +812,7 @@ class Create(ZatoCommand):
                     events_sync_interval=EventsDefault.sync_interval,
                     scheduler_host=self.get_arg('scheduler_host', SCHEDULER.DefaultHost),
                     scheduler_port=self.get_arg('scheduler_port', SCHEDULER.DefaultPort),
+                    scheduler_use_tls=True
                 ))
             server_conf.close()
 
