@@ -76,8 +76,12 @@ class BrokerClient(object):
 
         # We are a server so we will have configuration needed to set up the scheduler's details ..
         if scheduler_config:
+
+            # Introduced after 3.2 was released, hence optional
+            scheduler_use_tls = scheduler_config.get('scheduler_use_tls', True)
+
             self.scheduler_url = 'http{}://{}:{}/'.format(
-                's' if use_tls else '',
+                's' if scheduler_use_tls else '',
                 scheduler_config.scheduler_host,
                 scheduler_config.scheduler_port,
             )
