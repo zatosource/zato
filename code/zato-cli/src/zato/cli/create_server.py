@@ -13,6 +13,7 @@ from copy import deepcopy
 from zato.cli import common_odb_opts, kvdb_opts, sql_conf_contents, ZatoCommand
 from zato.common.api import CONTENT_TYPE, default_internal_modules, SCHEDULER, SSO as CommonSSO
 from zato.common.simpleio_ import simple_io_conf_contents
+from zato.common.util import as_bool
 from zato.common.events.common import Default as EventsDefault
 
 # ################################################################################################################################
@@ -791,6 +792,10 @@ class Create(ZatoCommand):
             if odb_engine.startswith('postgresql'):
                 odb_engine = 'postgresql+pg8000'
 
+            # This can be overridden through an environment variable
+            scheduler_use_tls = os.environ.get('ZATO_SERVER_SCHEDULER_USE_TLS', True)
+            scheduler_use_tls = as_bool(scheduler_use_tls)
+
             server_conf_loc = os.path.join(self.target_dir, 'config/repo/server.conf')
             server_conf = open(server_conf_loc, 'w')
             server_conf.write(
@@ -812,7 +817,7 @@ class Create(ZatoCommand):
                     events_sync_interval=EventsDefault.sync_interval,
                     scheduler_host=self.get_arg('scheduler_host', SCHEDULER.DefaultHost),
                     scheduler_port=self.get_arg('scheduler_port', SCHEDULER.DefaultPort),
-                    scheduler_use_tls=True
+                    scheduler_use_tls=scheduler_use_tls
                 ))
             server_conf.close()
 
