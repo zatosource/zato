@@ -36,7 +36,7 @@ then
 fi
 
 curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
-$PY_BINARY -m pip install -U virtualenv==20.4.3
+$PY_BINARY -m pip install -U virtualenv==20.8.1
 
 echo Installing virtualenv in $CURDIR
 $PY_BINARY -m virtualenv $CURDIR
