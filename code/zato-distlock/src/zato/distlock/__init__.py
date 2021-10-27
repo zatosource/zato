@@ -373,8 +373,14 @@ class LockManager(object):
             logger.warn('Lock could not be acquired, e:`%s`', format_exc())
 
         else:
+
+            namespace = namespace or self.default_namespace
+
+            logger.info('Acquiring lock class:`%s` -> ns:%s, n:%s, t:%s, b:%s, bi:%s, s:%s',
+                self._lock_class, namespace, name, ttl, block, block_interval, self.session)
+
             return self._lock_class(
-                self.user_name, self.session, namespace or self.default_namespace, name, ttl, block, block_interval)
+                self.user_name, self.session, namespace, name, ttl, block, block_interval)
 
     def acquire(self, *args, **kwargs):
         return self(*args, **kwargs).acquire()
