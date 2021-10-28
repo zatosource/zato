@@ -334,7 +334,7 @@ class LockManager(object):
         self.backend_type = backend_type
         self.default_namespace = default_namespace
         self.session = session
-        self._lock_class = PassThrough #self._lock_impl[backend_type]
+        self._lock_class = self._lock_impl[backend_type]
         self.user_name = get_current_user()
 
     def __call__(self, name, namespace='', ttl=DEFAULT.TTL, block=DEFAULT.BLOCK, block_interval=DEFAULT.BLOCK_INTERVAL,
