@@ -27,7 +27,7 @@ LB_AGENT_CONNECT_TIMEOUT=500 # In milliseconds
 
 # ################################################################################################################################
 
-def update_globals(config, base_dir='.'):
+def update_globals(config, base_dir='.', needs_crypto=True):
     globals()['DATABASES'] = {'default': {}}
 
     for name in 'zato_secret_key', 'well_known_data', 'DATABASE_PASSWORD', 'SECRET_KEY', 'ADMIN_INVOKE_PASSWORD':
@@ -50,7 +50,7 @@ def update_globals(config, base_dir='.'):
                 v = cm.decrypt(v)
             default[k] = str(v)
         else:
-            if k == 'ADMIN_INVOKE_PASSWORD':
+            if k == 'ADMIN_INVOKE_PASSWORD' and needs_crypto:
                 v = cm.decrypt(v)
             elif k == 'log_config':
                 v = os.path.join(base_dir, v)
