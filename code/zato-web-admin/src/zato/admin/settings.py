@@ -133,9 +133,10 @@ if 'DATABASES' in globals():
     db_data['db_type'] = db_type
 
     # Crypto
-    ssl_key_file = os.path.abspath(os.path.join(config_dir, SSL_KEY_FILE))
-    ssl_cert_file = os.path.abspath(os.path.join(config_dir, SSL_CERT_FILE))
-    ssl_ca_certs = os.path.abspath(os.path.join(config_dir, SSL_CA_CERTS))
+    if config_dir:
+        ssl_key_file = os.path.abspath(os.path.join(config_dir, SSL_KEY_FILE))
+        ssl_cert_file = os.path.abspath(os.path.join(config_dir, SSL_CERT_FILE))
+        ssl_ca_certs = os.path.abspath(os.path.join(config_dir, SSL_CA_CERTS))
 
     # ODB SQLAlchemy setup
     SASession = scoped_session(sessionmaker())
