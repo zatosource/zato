@@ -39,13 +39,13 @@ static-check:
 	$(CURDIR)/code/bin/flake8 --config=$(CURDIR)/code/tox.ini $(CURDIR)/code/util
 	echo "Static checks OK"
 
+web-admin-tests:
+	cd $(CURDIR)/code/zato-web-admin && make run-tests
+
 run-tests:
 	$(MAKE) common-tests
 	$(MAKE) cy-tests
 	$(MAKE) server-tests
 	$(MAKE) sso-tests
+	$(MAKE) web-admin-tests
 	$(MAKE) static-check
-
-black:
-	$(CURDIR)/code/bin/pip install black
-	$(BLACK_CMD) $(CURDIR)/code/zato-agent
