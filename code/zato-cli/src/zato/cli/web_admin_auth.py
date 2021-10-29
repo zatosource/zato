@@ -90,19 +90,20 @@ class CreateUser(_WebAdminAuthCommand):
                 self.logger.error('Both --username and --email are required if either is provided')
                 sys.exit(self.SYS_ERROR.INVALID_INPUT)
             else:
-                from django.contrib.auth.management.commands.createsuperuser import is_valid_email
+                from django.core.validators import EmailValidator
                 from django.core import exceptions
                 self.reset_logger(self.args, True)
 
                 try:
-                    is_valid_email(email)
+                    validator = EmailValidator()
+                    validator(email)
                 except exceptions.ValidationError:
                     self.logger.error('Invalid e-mail `%s`', email)
                     sys.exit(self.SYS_ERROR.INVALID_INPUT)
                 else:
                     self.is_interactive = False
 
-    def execute(self, args):
+    def execute(self, args, needs_sys_exit=True):
 
         # stdlib
         import sys
@@ -123,7 +124,10 @@ class CreateUser(_WebAdminAuthCommand):
             Command().handle(interactive=self.is_interactive, **options)
         except Exception:
             self.logger.error('Could not create the user, details: `%s`', format_exc())
-            sys.exit(self.SYS_ERROR.INVALID_INPUT)
+            if needs_sys_exit:
+                sys.exit(self.SYS_ERROR.INVALID_INPUT)
+            else:
+                raise
         else:
             self._ok(args)
 

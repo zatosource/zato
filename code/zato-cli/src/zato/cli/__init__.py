@@ -512,7 +512,7 @@ class ZatoCommand(object):
 
 # ################################################################################################################################
 
-    def run(self, args, offer_save_opts=True, work_args=None):
+    def run(self, args, offer_save_opts=True, work_args=None, needs_sys_exit=True):
         """ Parses the command line or the args passed in and figures out
         whether the user wishes to use a config file or command line switches.
         """
@@ -571,10 +571,11 @@ class ZatoCommand(object):
             # https://github.com/zatosource/zato/issues/328
 
             return_code = self.execute(args)
-            if isinstance(return_code, int):
-                sys.exit(return_code)
-            else:
-                sys.exit(0)
+            if needs_sys_exit:
+                if isinstance(return_code, int):
+                    sys.exit(return_code)
+                else:
+                    sys.exit(0)
 
         except Exception as e:
             self.reset_logger(self.args)
