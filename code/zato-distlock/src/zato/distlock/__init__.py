@@ -4,7 +4,7 @@
 Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
-"""
+""" # noqa: D400
 
 # stdlib
 import logging
@@ -20,7 +20,7 @@ from traceback import format_exc
 from gevent import sleep, spawn
 
 # portalocker
-from portalocker import lock, LockException, LOCK_NB, LOCK_EX, unlock
+from portalocker import lock as portalocker_lock, LockException, LOCK_NB, LOCK_EX, unlock
 
 # SQLAlchemy
 from sqlalchemy import func
@@ -247,7 +247,7 @@ user={}
 """.lstrip()
 
     def __init__(self, *args, **kwargs):
-        super(FCNTLLock, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.tmp_file_name = None
         self.tmp_file = None
 
@@ -273,7 +273,7 @@ user={}
             logger.debug('Created lock file `%s` (%s %s %s)', self.tmp_file_name, pid, current_name, current_ident)
 
         try:
-            lock(self.tmp_file, _flags)
+            portalocker_lock(self.tmp_file, _flags)
         except LockException:
             return False
         else:
@@ -293,11 +293,11 @@ user={}
 
             try:
                 os.remove(self.tmp_file.name)
-            except OSError as e:
+            except OSError as exc:
 
                 # ENOENT = No such file, this is fine, apparently another process beat us to that lock's deletion.
                 # But any other exception needs to be re-raised.
-                if e.errno != ENOENT:
+                if exc.errno != ENOENT:
                     raise
             else:
                 if _has_debug:
@@ -338,7 +338,7 @@ class LockManager(object):
         self.user_name = get_current_user()
 
     def __call__(self, name, namespace='', ttl=DEFAULT.TTL, block=DEFAULT.BLOCK, block_interval=DEFAULT.BLOCK_INTERVAL,
-            max_len_ns=MAX.LEN_NS, max_len_name=MAX.LEN_NAME):
+            max_len_ns=MAX.LEN_NS, max_len_name=MAX.LEN_NAME, max_chars=31):
 
         try:
             if len(namespace) > max_len_ns:
@@ -358,8 +358,8 @@ class LockManager(object):
                     hash_digest = sha256(name).hexdigest()
                     name = name.decode('utf8')
 
-                name_prefix = name[:31]
-                name_suffix = name[-31:]
+                name_prefix = name[:max_chars]
+                name_suffix = name[-max_chars:]
                 name = '{}-{}-{}'.format(name_prefix, name_suffix, hash_digest)
 
             # To be on the safe side, check again if the limit is not exceeded
