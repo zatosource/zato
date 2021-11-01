@@ -4,7 +4,7 @@
 Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
-""" # noqa: D400
+"""
 
 # stdlib
 import logging
@@ -56,7 +56,7 @@ class LockTimeout(Exception):
 
 # ################################################################################################################################
 
-class LockInfo(object):
+class LockInfo:
     __slots__ = ('lock', 'namespace', 'name', 'priv_id', 'pub_id', 'ttl', 'acquired', 'lock_type', 'block', 'block_interval',
         'release')
 
@@ -81,7 +81,7 @@ class LockInfo(object):
 
 # ################################################################################################################################
 
-class Lock(object):
+class Lock:
     """ Base class for all backend-specific locks.
     """
     def __init__(self, os_user_name, session, namespace, name, ttl, block, block_interval, _permanent=LOCK_TYPE.PERMANENT,
@@ -151,7 +151,7 @@ class Lock(object):
 
             if not acquired:
                 msg = 'Could not obtain lock for `{}` `{}` within {}s'.format(self.namespace, self.name, _block)
-                logger.warn(msg)
+                logger.warning(msg)
                 raise LockTimeout(msg)
 
         if _has_debug:
@@ -178,6 +178,11 @@ class Lock(object):
 
 # ################################################################################################################################
 
+    def release(self, *ignored_args, **ignored_kwargs):
+        raise NotImplementedError()
+
+# ################################################################################################################################
+
     def _sustain(self):
         """ Spawns a greenlet that will sustain the lock for at least self.ttl,
         possibly less if self.__exit__ is called earlier.
@@ -186,7 +191,7 @@ class Lock(object):
 
 # ################################################################################################################################
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, type_, value, traceback):
         self.release()
 
 # ################################################################################################################################
@@ -207,6 +212,12 @@ class SQLLock(Lock):
                 logger.debug('Released %s', self.priv_id)
 
         self.session.close()
+
+
+# ################################################################################################################################
+
+    def _release_func(self, *ignored_args, **ignored_kwargs):
+        raise NotImplementedError()
 
 # ################################################################################################################################
 
@@ -319,7 +330,8 @@ class PassThrough(Lock):
 
 # ################################################################################################################################
 
-class LockManager(object):
+# pylint: disable-next=unused-variable
+class LockManager:
     """ A distributed lock manager based on SQL or, if only IPC is needed, on fcntl.
     """
     _lock_impl = {
@@ -337,13 +349,14 @@ class LockManager(object):
         self._lock_class = self._lock_impl[backend_type]
         self.user_name = get_current_user()
 
+    # pylint: disable-next=inconsistent-return-statements
     def __call__(self, name, namespace='', ttl=DEFAULT.TTL, block=DEFAULT.BLOCK, block_interval=DEFAULT.BLOCK_INTERVAL,
             max_len_ns=MAX.LEN_NS, max_len_name=MAX.LEN_NAME, max_chars=31):
 
         try:
             if len(namespace) > max_len_ns:
                 msg = 'Lock operation rejected. Namespace `{}` exceeds the limit of {} characters.'.format(namespace, max_len_ns)
-                logger.warn(msg)
+                logger.warning(msg)
                 raise ValueError(msg)
 
             if len(name) > max_len_name:
@@ -366,11 +379,11 @@ class LockManager(object):
             if len(name) > max_len_name:
 
                 msg = 'Lock operation rejected. Name `{}` exceeds the limit of {} characters.'.format(name, max_len_name)
-                logger.warn(msg)
+                logger.warning(msg)
                 raise ValueError(msg)
 
         except Exception:
-            logger.warn('Lock could not be acquired, e:`%s`', format_exc())
+            logger.warning('Lock could not be acquired, e:`%s`', format_exc())
 
         else:
 
