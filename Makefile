@@ -2,11 +2,6 @@
 .PHONY: build
 MAKEFLAGS += --silent
 
-BLACK_CMD=$(CURDIR)/code/bin/black \
-	--line-length=120 \
-	--color \
-	--skip-string-normalization
-
 default: run-tests
 
 common-tests:
