@@ -17,8 +17,11 @@ sso-tests:
 	cd $(CURDIR)/code/zato-sso && make run-tests
 
 pylint:
-	$(CURDIR)/code/bin/pylint --rcfile $(CURDIR)/code/pylint.ini $(CURDIR)/code/zato-distlock/src
-	$(CURDIR)/code/bin/pylint --rcfile $(CURDIR)/code/pylint.ini $(CURDIR)/code/zato-distlock/test
+	echo Running pylint in $(CURDIR)/code/zato-distlock/src
+	$(CURDIR)/code/bin/pylint -j 0 --verbose --rcfile $(CURDIR)/code/pylint.ini $(CURDIR)/code/zato-distlock/src
+
+	echo Running pylint in $(CURDIR)/code/zato-distlock/test
+	$(CURDIR)/code/bin/pylint -j 0 --verbose --rcfile $(CURDIR)/code/pylint.ini $(CURDIR)/code/zato-distlock/test
 
 static-check:
 	cd $(CURDIR)/code/zato-agent && $(MAKE) static-check
