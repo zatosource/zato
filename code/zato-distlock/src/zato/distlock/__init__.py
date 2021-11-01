@@ -6,6 +6,8 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# pylint: disable=abstract-method, arguments-differ
+
 # stdlib
 import logging
 import os
