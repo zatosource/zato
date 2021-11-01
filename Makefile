@@ -16,6 +16,10 @@ server-tests:
 sso-tests:
 	cd $(CURDIR)/code/zato-sso && make run-tests
 
+pylint:
+	$(CURDIR)/code/bin/pylint --rcfile $(CURDIR)/code/pylint.ini $(CURDIR)/code/zato-distlock/src
+	$(CURDIR)/code/bin/pylint --rcfile $(CURDIR)/code/pylint.ini $(CURDIR)/code/zato-distlock/test
+
 static-check:
 	cd $(CURDIR)/code/zato-agent && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-broker && $(MAKE) static-check
@@ -32,6 +36,7 @@ static-check:
 	cd $(CURDIR)/code/zato-web-admin && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-zmq && $(MAKE) static-check
 	$(CURDIR)/code/bin/flake8 --config=$(CURDIR)/code/tox.ini $(CURDIR)/code/util
+	$(MAKE) pylint
 	echo "Static checks OK"
 
 web-admin-tests:
