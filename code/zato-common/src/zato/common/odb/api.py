@@ -506,7 +506,7 @@ class PoolStore(object):
         """ Invoked when the server is stopping.
         """
         with self._lock:
-            for name, wrapper in self.wrappers.items():
+            for _ignored_name, wrapper in self.wrappers.items():
                 wrapper.pool.engine.dispose()
 
 # ################################################################################################################################

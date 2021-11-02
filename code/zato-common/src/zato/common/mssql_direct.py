@@ -147,9 +147,9 @@ class MSSQLDirectAPI(object):
             conn.commit()
             conn.close()
 
-            # Return the result only if there was no exception along the way
-            if not has_exception:
-                return result
+        # Return the result only if there was no exception along the way
+        if not has_exception:
+            return result
 
 # ################################################################################################################################
 
