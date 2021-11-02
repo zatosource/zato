@@ -45,7 +45,7 @@ logging.addLevelName('TRACE1', TRACE1)
 
 # All known HAProxy commands
 haproxy_commands = {}
-for version, commands in haproxy_stats.items():
+for _ignored_version, commands in haproxy_stats.items():
     haproxy_commands.update(commands)
 
 # ################################################################################################################################
@@ -85,9 +85,10 @@ class BaseLoadBalancerAgent(object):
 
 # ################################################################################################################################
 
-    def _re_start_load_balancer(self, timeout_msg, rc_non_zero_msg, additional_params=[]):
+    def _re_start_load_balancer(self, timeout_msg, rc_non_zero_msg, additional_params=None):
         """ A common method for (re-)starting HAProxy.
         """
+        additional_params = additional_params or []
         command = [self.haproxy_command, '-D', '-f', self.config_path, '-p', self.haproxy_pidfile]
         command.extend(additional_params)
         timeouting_popen(command, 5.0, timeout_msg, rc_non_zero_msg)

@@ -215,7 +215,6 @@ class SQLLock(Lock):
 
         self.session.close()
 
-
 # ################################################################################################################################
 
     def _release_func(self, *ignored_args, **ignored_kwargs):
