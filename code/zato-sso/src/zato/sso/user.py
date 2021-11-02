@@ -778,7 +778,7 @@ class UserAPI(object):
             for auth_id_link_map in self.auth_id_link_map.values(): # type: dict
                 to_delete = set()
 
-                for auth_id, sso_user_id in auth_id_link_map.items():
+                for sso_user_id in auth_id_link_map.values():
                     if user_id == sso_user_id:
                         to_delete.add(user_id)
 
