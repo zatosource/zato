@@ -29,7 +29,7 @@ class BunchTestCase(TestCase):
 
     def _check_bunch(self, impl, test_data, iters):
         start = datetime.utcnow()
-        for x in range(100):
+        for _x in range(100):
             impl(test_data)
         return datetime.utcnow() - start
 

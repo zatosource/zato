@@ -151,7 +151,7 @@ class ConnectionQueue(object):
             self.queue_building_stopped = True
 
     def _spawn_add_client_func_no_lock(self, count):
-        for x in range(count):
+        for _x in range(count):
             gevent.spawn(self.add_client_func)
             self.in_progress_count += 1
 

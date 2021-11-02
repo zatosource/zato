@@ -107,8 +107,13 @@ class SMTPConnection(_Connection):
         self.config = config
         self.config_no_sensitive = config_no_sensitive
 
-        self.conn_args = [self.config.host.encode('utf-8'), int(self.config.port), self.config.mode_outbox,
-            self.config.is_debug, self.config.timeout]
+        self.conn_args = [
+            self.config.host.encode('utf-8'),
+            int(self.config.port),
+            self.config.mode_outbox,
+            self.config.is_debug,
+            self.config.timeout
+        ]
 
         if config.username or config.password:
 

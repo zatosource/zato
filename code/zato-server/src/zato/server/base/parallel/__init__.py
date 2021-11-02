@@ -275,7 +275,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         if other_servers:
             other_server = other_servers[0] # Index 0 is as random as any other because the list is not sorted.
-            missing = self.odb.get_missing_services(other_server, set(item.name for item in locally_deployed))
+            missing = self.odb.get_missing_services(other_server, {item.name for item in locally_deployed})
 
             if missing:
 
@@ -286,7 +286,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
                 # Coalesce all service modules - it is possible that each one has multiple services
                 # so we do want to deploy the same module over for each service found.
-                for service_id, name, source_path, source in missing:
+                for _ignored_service_id, name, source_path, source in missing:
                     file_name = os.path.basename(source_path)
                     _, tmp_full_path = mkstemp(suffix='-'+ file_name)
 
@@ -1167,7 +1167,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         set of server processes. It needs to be added to the arbiter because
         we want for each worker to be (re-)started to see the same key.
         """
-        setattr(arbiter, 'zato_deployment_key', '{}.{}'.format(datetime.utcnow().isoformat(), uuid4().hex))
+        arbiter.zato_deployment_key = '{}.{}'.format(datetime.utcnow().isoformat(), uuid4().hex)
 
 # ################################################################################################################################
 

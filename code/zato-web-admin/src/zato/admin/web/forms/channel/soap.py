@@ -13,4 +13,4 @@ from django import forms
 
 class DefinitionForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())
-    url_pattern = forms.CharField(widget=forms.TextInput(attrs={"class":"required", "style":"width:90%"}))
+    url_pattern = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:90%'}))
