@@ -6,13 +6,33 @@ Copyright (C) Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from zato.common.ext.dataclasses import dataclass
+from dataclasses import _FIELDS
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def is_simple_type(value):
+    return issubclass(value, (int, str, float))
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 class MarshalAPI:
 
+    def __init__(self):
+        self._field_cache = {}
+
     def from_dict(self, data, DataClass):
-        pass
+
+        fields = getattr(DataClass, _FIELDS) # type: dict
+
+        print()
+        for field in fields.values():
+            print(111, field.type)
+            print(222, is_simple_type(field.type))
+        print()
 
     def to_dict(self):
         pass
