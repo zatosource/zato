@@ -44,7 +44,8 @@ class RemoteCommandForm(forms.Form):
     command = forms.CharField(widget=forms.Textarea(attrs={'style':'overflow:auto; width:100%; white-space: pre-wrap;height:80px'}))
     result = forms.CharField(widget=forms.Textarea(attrs={'style':'overflow:auto; width:100%; white-space: pre-wrap;height:400px'}))
 
-    def __init__(self, initial={}):
+    def __init__(self, initial=None):
+        initial = initial or {}
         super(RemoteCommandForm, self).__init__(initial=initial)
 
 # ################################################################################################################################

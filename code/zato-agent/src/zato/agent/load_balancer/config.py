@@ -22,41 +22,41 @@ logger = logging.getLogger(__name__)
 
 # It's something Zato can understood and treat accordingly if such a token is
 # found on any HAProxy configuration file's line.
-zato_item_token = "# ZATO "
+zato_item_token = '# ZATO '
 
 # PyParsing grammar for config values.
 
 uri = Word(alphanums + punctuation)
-backend_server = Literal("server").suppress() + Word(alphanums + ".-_") + \
-                             Word(alphanums + ".-_") + Literal(":").suppress() + \
+backend_server = Literal('server').suppress() + Word(alphanums + '.-_') + \
+                             Word(alphanums + '.-_') + Literal(':').suppress() + \
                              Word(nums) + restOfLine
-simple_option = Literal("option").suppress() + Word(alphas)
-frontend_bind = Literal("bind").suppress() + Or("*" | Word(alphanums + ".-_")) + Literal(":").suppress() + Word(nums)
-maxconn = Literal("maxconn").suppress() + Word(nums)
-timeout = Literal("timeout").suppress() + Word(alphas).suppress() + Word(nums)
+simple_option = Literal('option').suppress() + Word(alphas)
+frontend_bind = Literal('bind').suppress() + Or('*' | Word(alphanums + '.-_')) + Literal(':').suppress() + Word(nums)
+maxconn = Literal('maxconn').suppress() + Word(nums)
+timeout = Literal('timeout').suppress() + Word(alphas).suppress() + Word(nums)
 
-global_log = Literal("log").suppress() + Word(alphanums + ".-_") + Literal(":").suppress() + \
+global_log = Literal('log').suppress() + Word(alphanums + '.-_') + Literal(':').suppress() + \
                    Word(nums) + Word(alphanums) + Word(alphanums)
-option_httpchk = Literal("option httpchk").suppress() + Word(alphas) + uri
-monitor_uri = Literal("monitor-uri").suppress() + uri
-stats_uri = Literal("stats uri").suppress() + uri
-stats_socket = Literal("stats socket").suppress() + uri
+option_httpchk = Literal('option httpchk').suppress() + Word(alphas) + uri
+monitor_uri = Literal('monitor-uri').suppress() + uri
+stats_uri = Literal('stats uri').suppress() + uri
+stats_socket = Literal('stats socket').suppress() + uri
 
 # Config tokens recognized by the parser -> PyParsing grammar for their respective
 # values.
 config_tokens_grammar = {
-    "global:log":global_log,
-    "global:stats_socket":stats_socket,
-    "defaults:timeout connect":timeout,
-    "defaults:timeout client":timeout,
-    "defaults:timeout server":timeout,
-    "defaults:stats uri":stats_uri,
-    "backend bck_http_plain:server": backend_server,
-    "backend bck_http_plain:option httpchk": option_httpchk,
-    "frontend front_http_plain:monitor-uri":monitor_uri,
-    "frontend front_http_plain:option log-http-requests":simple_option,
-    "frontend front_http_plain:bind":frontend_bind,
-    "frontend front_http_plain:maxconn":maxconn,
+    'global:log':global_log,
+    'global:stats_socket':stats_socket,
+    'defaults:timeout connect':timeout,
+    'defaults:timeout client':timeout,
+    'defaults:timeout server':timeout,
+    'defaults:stats uri':stats_uri,
+    'backend bck_http_plain:server': backend_server,
+    'backend bck_http_plain:option httpchk': option_httpchk,
+    'frontend front_http_plain:monitor-uri':monitor_uri,
+    'frontend front_http_plain:option log-http-requests':simple_option,
+    'frontend front_http_plain:bind':frontend_bind,
+    'frontend front_http_plain:maxconn':maxconn,
 }
 
 backend_template = 'server {server_type}--{server_name} '
@@ -69,7 +69,7 @@ def config_from_string(data):
     """
     config = Config()
 
-    for line in data.split("\n"):
+    for line in data.split('\n'):
         if zato_item_token not in line:
             continue
         value, config_token_name = line.split(zato_item_token)
@@ -95,15 +95,15 @@ def string_from_config(config, config_template):
     # understood by Zato are given here, that's because not all of them are editable
     # by users and we simply won't receive them on input in the 'config' object.
     zato_item_dispatch = {
-        "global:log": ("log {host}:{port} {facility} {level}", config["global_"]["log"]),
+        'global:log': ('log {host}:{port} {facility} {level}', config['global_']['log']),
 
-        "defaults:timeout connect": ("timeout connect {timeout_connect}", config["defaults"]),
-        "defaults:timeout client": ("timeout client {timeout_client}", config["defaults"]),
-        "defaults:timeout server": ("timeout server {timeout_server}", config["defaults"]),
+        'defaults:timeout connect': ('timeout connect {timeout_connect}', config['defaults']),
+        'defaults:timeout client': ('timeout client {timeout_client}', config['defaults']),
+        'defaults:timeout server': ('timeout server {timeout_server}', config['defaults']),
 
-        "frontend front_http_plain:monitor-uri": ("monitor-uri {monitor_uri}", config["frontend"]["front_http_plain"]),
-        "frontend front_http_plain:bind": ("bind {address}:{port}", config["frontend"]["front_http_plain"]["bind"]),
-        "frontend front_http_plain:maxconn": ("maxconn {maxconn}", config["frontend"]["front_http_plain"]),
+        'frontend front_http_plain:monitor-uri': ('monitor-uri {monitor_uri}', config['frontend']['front_http_plain']),
+        'frontend front_http_plain:bind': ('bind {address}:{port}', config['frontend']['front_http_plain']['bind']),
+        'frontend front_http_plain:maxconn': ('maxconn {maxconn}', config['frontend']['front_http_plain']),
 
         # That below, it looks .. well you know what I mean. But that's the price of
         # using a generic dispatch dictionary. Basically, it boils down to
@@ -111,8 +111,8 @@ def string_from_config(config, config_template):
         # given a string representing an integer and we need to translate it
         # back to a format understood by HAProxy, so that '1' translates into 'nolog' etc.
 
-        "frontend front_http_plain:option log-http-requests":                                                               # noqa
-          ("option {value}", dict(value=http_log[int(config["frontend"]["front_http_plain"]["log_http_requests"])][0])), # noqa
+        'frontend front_http_plain:option log-http-requests':                                                               # noqa
+          ('option {value}', dict(value=http_log[int(config['frontend']['front_http_plain']['log_http_requests'])][0])), # noqa
     }
 
     new_config = []
@@ -120,27 +120,31 @@ def string_from_config(config, config_template):
 
         # Make sure we don't accidentally overwrite something that's not ours.
         if zato_item_token in line:
-            if "bck_http" in line or [key for key in zato_item_dispatch if key in line]:
+            if 'bck_http' in line or [key for key in zato_item_dispatch if key in line]:
 
                 # Let's see how much the line was indented in the template
                 indent = len(line) - len(line.strip()) - 1 # -1 because of the \n
-                new_line = " " * indent
+                new_line = ' ' * indent
 
                 # Let's see to the simple options first..
                 for zato_item, (template, value) in zato_item_dispatch.items():
                     if zato_item_token + zato_item in line:
-                        new_line += template.format(**value) + " " + zato_item_token + zato_item
+                        new_line += template.format(**value) + ' ' + zato_item_token + zato_item
 
                 # .. and the more complex ones now.
-                if zato_item_token + "backend" in line and "--" in line:
-                    line = line.split(zato_item_token + "backend")
-                    backend_info = line[1].split("--")
-                    backend_type, server_name = (backend_info[0].strip().split(":")[0], backend_info[1].strip())
-                    server_type = backend_type.split("bck_")[1]
+                if zato_item_token + 'backend' in line and '--' in line:
+                    line = line.split(zato_item_token + 'backend')
+                    backend_info = line[1].split('--')
+                    backend_type, server_name = (backend_info[0].strip().split(':')[0], backend_info[1].strip())
+                    server_type = backend_type.split('bck_')[1]
 
-                    backend_values = {"backend_type": backend_type, "server_name":server_name,
-                                      "server_type":server_type, "zato_item_token": zato_item_token}
-                    backend_values.update(config["backend"][backend_type][server_name])
+                    backend_values = {
+                        'backend_type': backend_type,
+                        'server_name':server_name,
+                        'server_type':server_type,
+                        'zato_item_token': zato_item_token
+                    }
+                    backend_values.update(config['backend'][backend_type][server_name])
 
                     new_line += backend_template.format(**backend_values)
                 else:
@@ -148,11 +152,11 @@ def string_from_config(config, config_template):
                         prefix = '{}{}'.format(zato_item_token, name)
                         if line.startswith(prefix):
                             new_line += line
-                new_line += "\n"
+                new_line += '\n'
                 new_config.append(new_line)
             else:
                 new_config.append(line)
         else:
             new_config.append(line)
 
-    return "".join(new_config)
+    return ''.join(new_config)

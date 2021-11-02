@@ -240,7 +240,7 @@ class Broker(object):
             'ZeroMQ MDP channel `%s` adding %s worker{} for `%s`'.format('' if n==1 else 's'),
             self.config.name, n, service.name)
 
-        for x in range(n):
+        for _x in range(n):
             self._add_worker('mdp.{}'.format(new_cid()), service.name, self.y100, const.worker_type.zato)
 
     def add_workers(self, service):
@@ -328,7 +328,7 @@ class Broker(object):
                 'service': service,
                 'channel': self.zato_channel,
                 'payload': request
-            }, self.zato_channel, None, needs_response=True)
+        }, self.zato_channel, None, needs_response=True)
 
     def send_to_worker_zato(self, request, worker, zmq_service_name):
         """ Sends a message to a Zato service rather than an actual ZeroMQ socket.

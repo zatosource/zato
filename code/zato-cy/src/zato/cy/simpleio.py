@@ -1737,7 +1737,7 @@ class CySimpleIO(object):
         # If there are elements shared by required and optional lists, the ones from the optional list
         # need to be removed, the required ones take priority. The reason for that is that it is common
         # to have a base SimpleIO class with optional elements that are made mandatory in a child class.
-        shared_elems = set(elem.name for elem in required) & set(elem.name for elem in optional)
+        shared_elems = {elem.name for elem in required} & {elem.name for elem in optional}
 
         if shared_elems:
 

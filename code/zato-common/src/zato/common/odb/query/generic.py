@@ -99,7 +99,7 @@ class GenericObjectWrapper:
         return update(ModelGenericObjectTable).\
             values({
                 _generic_attr_name: opaque,
-                }).\
+            }).\
             where(and_(
                 ModelGenericObjectTable.c.name==name,
                 ModelGenericObjectTable.c.type_==self.type_,

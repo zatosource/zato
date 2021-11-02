@@ -73,7 +73,8 @@ def get_logging_config(conn_type, file_name):
         },
         'formatters': {
             'default': {
-                'format': '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'}
+                'format': '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
+            }
         }
     }
 
@@ -331,7 +332,7 @@ class BaseConnectionContainer(object):
             'queue_name': msg_ctx.queue_name,
             'service_name': msg_ctx.service_name,
             'data_format': msg_ctx.data_format,
-            })
+        })
 
 # ################################################################################################################################
 

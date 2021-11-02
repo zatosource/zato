@@ -101,7 +101,7 @@ def settings_basic(req):
     }
 
     cluster_color_markers = req.zato.user_profile.cluster_color_markers.all()
-    cluster_colors = {str(getattr(item, 'cluster_id')):getattr(item, 'color') for item in cluster_color_markers}
+    cluster_colors = {str(item.cluster_id):item.color for item in cluster_color_markers}
     return_data['cluster_colors'] = cluster_colors
 
     return TemplateResponse(req, 'zato/account/settings.html', return_data)

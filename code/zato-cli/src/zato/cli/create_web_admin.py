@@ -45,7 +45,7 @@ config_template = """{{
   "ADMIN_INVOKE_PASSWORD": "{ADMIN_INVOKE_PASSWORD}",
   "ADMIN_INVOKE_PATH": "/zato/admin/invoke"
 }}
-"""
+""" # noqa
 
 initial_data_json = """[{{
 "pk": {SITE_ID},
@@ -55,7 +55,7 @@ initial_data_json = """[{{
     "domain":"webadmin-{SITE_ID}.example.com"
     }}
 }}]
-"""
+""" # noqa
 
 class Create(ZatoCommand):
     """ Creates a new web admin web console
@@ -64,10 +64,10 @@ class Create(ZatoCommand):
 
     opts = deepcopy(common_odb_opts)
 
-    opts.append({'name':'--pub_key_path', 'help':"Path to the web admin's public key in PEM"})
-    opts.append({'name':'--priv_key_path', 'help':"Path to the web admin's private key in PEM"})
-    opts.append({'name':'--cert_path', 'help':"Path to the web admin's certificate in PEM"})
-    opts.append({'name':'--ca_certs_path', 'help':"Path to a bundle of CA certificates to be trusted"})
+    opts.append({'name':'--pub_key_path', 'help':'Path to the web admin\'s public key in PEM'})
+    opts.append({'name':'--priv_key_path', 'help':'Path to the web admin\'s private key in PEM'})
+    opts.append({'name':'--cert_path', 'help':'Path to the web admin\'s certificate in PEM'})
+    opts.append({'name':'--ca_certs_path', 'help':'Path to a bundle of CA certificates to be trusted'})
     opts.append({'name':'--admin-invoke-password', 'help':'Password for web-admin to connect to servers with'})
 
     def __init__(self, args):

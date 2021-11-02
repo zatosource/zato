@@ -125,7 +125,7 @@ class ServerRPC:
             if response and response.has_data:
 
                 # .. check all per-PID responses ..
-                for pid, per_pid_response in response.data.items(): # type: (int, PerPIDResponse)
+                for _ignored_pid, per_pid_response in response.data.items(): # type: (int, PerPIDResponse)
 
                     # .. append the response if everything went fine ..
                     if per_pid_response.is_ok:
