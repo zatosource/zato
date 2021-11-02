@@ -683,7 +683,7 @@ class ODBManager(SessionWrapper):
                 SEC_DEF_TYPE.WSS: WSSDefinition,
                 SEC_DEF_TYPE.VAULT: VaultConnection,
                 SEC_DEF_TYPE.XPATH_SEC: XPathSecurity,
-                }
+            }
 
             result = {}
 

@@ -38,6 +38,7 @@ flake8==3.8.4
 flake8-bugbear
 flake8-coding
 flake8-comprehensions
+flake8-multiline-containers
 flatbuffers==1.12
 fs==2.4.11
 future==0.18.2

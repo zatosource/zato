@@ -44,8 +44,10 @@ singleton = object()
 class FileTransferEvent(object):
     """ Encapsulates information about a file picked up from file system.
     """
-    __slots__ = ('base_dir', 'relative_dir', 'file_name', 'full_path', 'channel_name', 'ts_utc', 'raw_data', 'data',
-        'has_raw_data', 'has_data', 'parse_error')
+    __slots__ = (
+        'base_dir', 'relative_dir', 'file_name', 'full_path', 'channel_name', 'ts_utc', 'raw_data', 'data',
+        'has_raw_data', 'has_data', 'parse_error'
+    )
 
     def __init__(self):
 

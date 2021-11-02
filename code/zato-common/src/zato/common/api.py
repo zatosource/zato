@@ -88,11 +88,13 @@ simple_types = (bytes, str, dict, list, tuple, bool, Number)
 # ################################################################################################################################
 # ################################################################################################################################
 
-generic_attrs = ('is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def',
+generic_attrs = (
+    'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def',
     'is_audit_log_sent_active', 'is_audit_log_received_active', 'max_len_messages_sent', 'max_len_messages_received',
     'max_bytes_per_message_sent', 'max_bytes_per_message_received', 'hl7_version', 'json_path', 'data_encoding',
     'max_msg_size', 'read_buffer_size', 'recv_timeout', 'logging_level', 'should_log_messages', 'start_seq', 'end_seq',
-    'max_wait_time')
+    'max_wait_time'
+)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -888,8 +890,15 @@ class PUBSUB:
         WEB_SOCKETS = NameId('WebSockets', 'wsx')
 
         def __iter__(self):
-            return iter((self.AMQP.id, self.INTERNAL.id, self.REST.id, self.SERVICE.id, self.SOAP.id,
-                self.WEB_SOCKETS.id, self.SERVICE.id))
+            return iter((
+                self.AMQP.id,
+                self.INTERNAL.id,
+                self.REST.id,
+                self.SERVICE.id,
+                self.SOAP.id,
+                self.WEB_SOCKETS.id,
+                self.SERVICE.id
+            ))
 
     class REDIS:
         META_TOPIC_LAST_KEY = 'zato.ps.meta.topic.last.%s.%s'
