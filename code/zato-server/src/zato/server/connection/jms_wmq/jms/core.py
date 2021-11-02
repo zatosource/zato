@@ -44,12 +44,14 @@ logger_zato = logging.getLogger('zato')
 # ################################################################################################################################
 
 # These attributes have special meaning to connection factories.
-reserved_attributes = set(('text', 'jms_correlation_id', 'jms_delivery_mode', 'jms_destination', 'jms_expiration',
+reserved_attributes = {
+    'text', 'jms_correlation_id', 'jms_delivery_mode', 'jms_destination', 'jms_expiration',
     'jms_message_id', 'jms_priority', 'jms_redelivered', 'jms_reply_to', 'jms_timestamp', 'max_chars_printed',
     'JMS_IBM_Report_Exception', 'JMS_IBM_Report_Expiration', 'JMS_IBM_Report_COA', 'JMS_IBM_Report_COD', 'JMS_IBM_Report_PAN',
     'JMS_IBM_Report_NAN', 'JMS_IBM_Report_Pass_Msg_ID', 'JMS_IBM_Report_Pass_Correl_ID', 'JMS_IBM_Report_Discard_Msg',
     'JMSXGroupID', 'JMSXGroupSeq', 'JMS_IBM_Feedback', 'JMS_IBM_Last_Msg_In_Group', 'JMSXUserID', 'JMS_IBM_PutTime',
-    'JMS_IBM_PutDate', 'JMSXAppID'))
+    'JMS_IBM_PutDate', 'JMSXAppID'
+}
 
 # ################################################################################################################################
 

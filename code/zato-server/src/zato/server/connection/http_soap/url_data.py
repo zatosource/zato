@@ -572,7 +572,7 @@ class URLData(CyURLData, OAuthDataStore):
 # ################################################################################################################################
 
     def check_rbac_delegated_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store,
-            sep=MISC.SEPARATOR, plain_http=URL_TYPE.PLAIN_HTTP, _empty_client_def=tuple()):
+            sep=MISC.SEPARATOR, plain_http=URL_TYPE.PLAIN_HTTP, _empty_client_def=tuple()): # noqa: C408
 
         auth_result = False
 
@@ -682,7 +682,7 @@ class URLData(CyURLData, OAuthDataStore):
                     if delete:
                         del self.url_sec[target_match]
                     else:
-                        for key, new_value in msg.items():
+                        for key, _ignored_new_value in msg.items():
                             if key in sec_def:
                                 sec_def[key] = msg[key]
 
@@ -1203,9 +1203,10 @@ class URLData(CyURLData, OAuthDataStore):
 
 # ################################################################################################################################
 
-    def _channel_item_from_msg(self, msg, match_target, old_data={}):
+    def _channel_item_from_msg(self, msg, match_target, old_data=None):
         """ Creates a channel info bunch out of an incoming CREATE_EDIT message.
         """
+        old_data = old_data or {}
         channel_item = {}
         for name in('connection', 'content_type', 'data_format', 'host', 'id', 'has_rbac', 'impl_name', 'is_active',
             'is_internal', 'merge_url_params_req', 'method', 'name', 'params_pri', 'ping_method', 'pool_size', 'service_id',
@@ -1252,7 +1253,7 @@ class URLData(CyURLData, OAuthDataStore):
             sec_config = getattr(self, '{}_config'.format(msg['sec_type']))
             config_item = sec_config[msg['security_name']]
 
-            for k, v in iteritems(config_item['config']):
+            for k, _v in iteritems(config_item['config']):
                 sec_info.sec_def[k] = config_item['config'][k]
         else:
             sec_info.sec_def = ZATO_NONE

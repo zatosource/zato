@@ -570,7 +570,7 @@ class FileTransferAPI(object):
         # type: (dict) -> None
 
         # Run background inspectors waiting for each path from the list
-        for path, inspector_list in path_to_inspector_list.items(): # type: (str, list)
+        for _ignored_path, inspector_list in path_to_inspector_list.items(): # type: (str, list)
             for inspector in inspector_list: # type: BackgroundPathInspector
                 inspector.start()
 

@@ -863,7 +863,7 @@ class ManageCommand(ZatoCommand):
             self.COMPONENTS.SCHEDULER.code: self._on_scheduler,
         }
 
-    command_files = set([ZATO_INFO_FILE])
+    command_files = {ZATO_INFO_FILE}
 
 # ################################################################################################################################
 

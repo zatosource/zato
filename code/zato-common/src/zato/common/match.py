@@ -49,7 +49,7 @@ class Matcher(object):
 
         # Now sort everything lexicographically, the way it will be used in run-time
         for key in self.items:
-            self.items[key] = list(reversed(sorted(self.items[key])))
+            self.items[key] = sorted(self.items[key], reverse=True)
 
         for empty, non_empty in ((True, False), (False, True)):
             if not self.items[empty] and '*' in self.items[non_empty]:

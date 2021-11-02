@@ -538,10 +538,12 @@ class CreateEdit(_BaseView):
         self.input = Bunch()
         self.input_dict = {}
 
-    def __call__(self, req, initial_input_dict={}, initial_return_data={}, *args, **kwargs):
+    def __call__(self, req, initial_input_dict=None, initial_return_data=None, *args, **kwargs):
         """ Handles the request, taking care of common things and delegating
         control to the subclass for fetching this view-specific data.
         """
+        initial_input_dict = initial_input_dict or {}
+        initial_return_data = initial_return_data or {}
         self.input_dict.clear()
         self.clear_user_message()
 
@@ -634,7 +636,8 @@ class BaseCallView(_BaseView):
     def get_input_dict(self):
         raise NotImplementedError('Must be defined in subclasses')
 
-    def __call__(self, req, initial_input_dict={}, *args, **kwargs):
+    def __call__(self, req, initial_input_dict=None, *args, **kwargs):
+        initial_input_dict = initial_input_dict or {}
         try:
             super(BaseCallView, self).__call__(req, *args, **kwargs)
             input_dict = self.get_input_dict()
