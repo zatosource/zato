@@ -42,8 +42,8 @@ class InputOutputParsingTestCase(BaseSIOTestCase):
         elem1 = repr(unicode('aaa'))
         elem2 = repr(unicode('bbb'))
 
-        expected = "Cannot provide input_required if input is given, input:`qwerty`, " \
-            "input_required:`({}, {})`, input_optional:`[]`".format(elem1, elem2)
+        expected = 'Cannot provide input_required if input is given, input:`qwerty`, ' \
+            'input_required:`({}, {})`, input_optional:`[]`'.format(elem1, elem2)
 
         self.assertEquals(ctx.exception.args[0], expected)
 
@@ -62,8 +62,8 @@ class InputOutputParsingTestCase(BaseSIOTestCase):
         elem1 = repr(unicode('aaa'))
         elem2 = repr(unicode('bbb'))
 
-        expected = "Cannot provide input_optional if input is given, input:`qwerty`, " \
-            "input_required:`[]`, input_optional:`({}, {})`".format(elem1, elem2)
+        expected = 'Cannot provide input_optional if input is given, input:`qwerty`, ' \
+            'input_required:`[]`, input_optional:`({}, {})`'.format(elem1, elem2)
 
         self.assertEquals(ctx.exception.args[0], expected)
 
@@ -86,8 +86,8 @@ class InputOutputParsingTestCase(BaseSIOTestCase):
         elem3 = repr(unicode('aaa'))
         elem4 = repr(unicode('bbb'))
 
-        expected = "Cannot provide input_required/input_optional if input is given, input:`qwerty`, " \
-            "input_required:`({}, {})`, input_optional:`({}, {})`".format(elem1, elem2, elem3, elem4)
+        expected = 'Cannot provide input_required/input_optional if input is given, input:`qwerty`, ' \
+            'input_required:`({}, {})`, input_optional:`({}, {})`'.format(elem1, elem2, elem3, elem4)
 
         self.assertEquals(ctx.exception.args[0], expected)
 
@@ -106,8 +106,8 @@ class InputOutputParsingTestCase(BaseSIOTestCase):
         elem1 = repr(unicode('aaa'))
         elem2 = repr(unicode('bbb'))
 
-        expected = "Cannot provide output_required if output is given, output:`qwerty`, " \
-            "output_required:`({}, {})`, output_optional:`[]`".format(elem1, elem2)
+        expected = 'Cannot provide output_required if output is given, output:`qwerty`, ' \
+            'output_required:`({}, {})`, output_optional:`[]`'.format(elem1, elem2)
 
         self.assertEquals(ctx.exception.args[0], expected)
 
@@ -126,8 +126,8 @@ class InputOutputParsingTestCase(BaseSIOTestCase):
         elem1 = repr(unicode('aaa'))
         elem2 = repr(unicode('bbb'))
 
-        expected = "Cannot provide output_optional if output is given, output:`qwerty`, " \
-            "output_required:`[]`, output_optional:`({}, {})`".format(elem1, elem2)
+        expected = 'Cannot provide output_optional if output is given, output:`qwerty`, ' \
+            'output_required:`[]`, output_optional:`({}, {})`'.format(elem1, elem2)
 
         self.assertEquals(ctx.exception.args[0], expected)
 
@@ -150,8 +150,8 @@ class InputOutputParsingTestCase(BaseSIOTestCase):
         elem3 = repr(unicode('aaa'))
         elem4 = repr(unicode('bbb'))
 
-        expected = "Cannot provide output_required/output_optional if output is given, output:`qwerty`, " \
-            "output_required:`({}, {})`, output_optional:`({}, {})`".format(elem1, elem2, elem3, elem4)
+        expected = 'Cannot provide output_required/output_optional if output is given, output:`qwerty`, ' \
+            'output_required:`({}, {})`, output_optional:`({}, {})`'.format(elem1, elem2, elem3, elem4)
 
         self.assertEquals(ctx.exception.args[0], expected)
 
