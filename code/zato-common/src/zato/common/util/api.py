@@ -1272,12 +1272,14 @@ def add_scheduler_jobs(api, odb, cluster_id, spawn=True):
         _, weeks, days, hours, minutes, seconds, repeats, cron_definition)\
             in odb.get_job_list(cluster_id):
 
-        job_data = Bunch({'id':id, 'name':name, 'is_active':is_active,
+        job_data = Bunch({
+            'id':id, 'name':name, 'is_active':is_active,
             'job_type':job_type, 'start_date':start_date,
             'extra':extra, 'service':service_name, 'weeks':weeks,
             'days':days, 'hours':hours, 'minutes':minutes,
             'seconds':seconds, 'repeats':repeats,
-            'cron_definition':cron_definition})
+            'cron_definition':cron_definition
+        })
 
         if is_active:
             api.create_edit('create', job_data, spawn=spawn)
@@ -1491,9 +1493,11 @@ def get_engine_url(args):
     else:
         is_sqlite = args.get('engine') == 'sqlite' or args.get('db_type') == 'sqlite'
 
-    names = ('engine', 'username', 'password', 'host', 'port', 'name', 'db_name', 'db_type', 'sqlite_path', 'odb_type',
-             'odb_user', 'odb_password', 'odb_host', 'odb_port', 'odb_db_name', 'odb_type', 'ENGINE', 'NAME', 'HOST', 'USER',
-             'PASSWORD', 'PORT')
+    names = (
+        'engine', 'username', 'password', 'host', 'port', 'name', 'db_name', 'db_type', 'sqlite_path', 'odb_type',
+        'odb_user', 'odb_password', 'odb_host', 'odb_port', 'odb_db_name', 'odb_type', 'ENGINE', 'NAME', 'HOST', 'USER',
+        'PASSWORD', 'PORT'
+    )
 
     for name in names:
         if has_get:

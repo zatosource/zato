@@ -45,7 +45,7 @@ config_template = """{{
   "ADMIN_INVOKE_PASSWORD": "{ADMIN_INVOKE_PASSWORD}",
   "ADMIN_INVOKE_PATH": "/zato/admin/invoke"
 }}
-"""
+""" # noqa
 
 initial_data_json = """[{{
 "pk": {SITE_ID},
@@ -55,7 +55,7 @@ initial_data_json = """[{{
     "domain":"webadmin-{SITE_ID}.example.com"
     }}
 }}]
-"""
+""" # noqa
 
 class Create(ZatoCommand):
     """ Creates a new web admin web console

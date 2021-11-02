@@ -59,8 +59,9 @@ class LockTimeout(Exception):
 # ################################################################################################################################
 
 class LockInfo:
-    __slots__ = ('lock', 'namespace', 'name', 'priv_id', 'pub_id', 'ttl', 'acquired', 'lock_type', 'block', 'block_interval',
-        'release')
+    __slots__ = (
+        'lock', 'namespace', 'name', 'priv_id', 'pub_id', 'ttl', 'acquired', 'lock_type', 'block', 'block_interval', 'release'
+    )
 
     def __init__(self, lock, namespace, name, priv_id, pub_id, ttl, acquired, lock_type, block, block_interval):
         self.lock = lock
