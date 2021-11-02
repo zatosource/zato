@@ -26,9 +26,9 @@ SOFTWARE.
 
 # flake8: noqa
 
-from dacite.config import Config
-from dacite.core import from_dict
-from dacite.exceptions import (
+from zato.common.ext.dacite.config import Config
+from zato.common.ext.dacite.core import from_dict
+from zato.common.ext.dacite.exceptions import (
     DaciteError,
     DaciteFieldError,
     WrongTypeError,
