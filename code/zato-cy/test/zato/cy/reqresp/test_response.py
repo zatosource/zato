@@ -106,7 +106,7 @@ class ResponseTestCase(BaseSIOTestCase):
         data = [{'a':'aa', 'b':'bb'}, {'a':'aa2', 'b':'bb2'}]
         response.payload[:] = data
 
-        for idx, elem in enumerate(data):
+        for idx, _ignored_elem in enumerate(data):
             self.assertDictEqual(data[idx], response.payload.user_attrs_list[idx])
 
 # ################################################################################################################################
