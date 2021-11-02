@@ -276,7 +276,7 @@ def validate_save_source_code(req, cluster_id):
 
     # Invoke the LB agent
     client = get_lb_client(cluster)
-    return _client_validate_save(req, client.validate_save_source_code, req.POST["source_code"], save)
+    return _client_validate_save(req, client.validate_save_source_code, req.POST['source_code'], save)
 
 @method_allowed('GET')
 def get_addresses(req, cluster_id):
