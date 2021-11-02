@@ -285,7 +285,7 @@ class Create(AdminService):
 
                     self.response.payload.services_deployed = services_deployed
 
-                except(IOError, OSError) as e:
+                except OSError as e:
                     if e.errno == ENOENT:
                         self.logger.debug('Caught ENOENT e:`%s`', format_exc())
                     else:

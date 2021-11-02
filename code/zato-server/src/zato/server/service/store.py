@@ -694,7 +694,7 @@ class ServiceStore(object):
 
             len_si = len(dill_items['service_info'])
 
-            for idx, item in enumerate(dill_items['service_info'], 1):
+            for _idx, item in enumerate(dill_items['service_info'], 1):
                 class_ = self._visit_class(item['mod'], item['service_class'], item['fs_location'], True)
                 to_process.append(class_)
 

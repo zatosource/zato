@@ -155,12 +155,12 @@ def update_attrs(cls, name, attrs):
     attrs = bunchify(attrs)
     mod = getmodule(cls)
 
-    attrs.elem = getattr(mod, 'elem')
-    attrs.label = getattr(mod, 'label')
-    attrs.model = getattr(mod, 'model')
+    attrs.elem = mod.elem
+    attrs.label = mod.label
+    attrs.model = mod.model
     attrs.output_required_extra = getattr(mod, 'output_required_extra', [])
     attrs.output_optional_extra = getattr(mod, 'output_optional_extra', [])
-    attrs.get_data_func = getattr(mod, 'list_func')
+    attrs.get_data_func = mod.list_func
     attrs.def_needed = getattr(mod, 'def_needed', False)
     attrs.initial_input = getattr(mod, 'initial_input', {})
     attrs.skip_input_params = getattr(mod, 'skip_input_params', [])
@@ -197,8 +197,8 @@ def update_attrs(cls, name, attrs):
         attrs.output_optional = attrs.model
     else:
 
-        attrs.broker_message = getattr(mod, 'broker_message')
-        attrs.broker_message_prefix = getattr(mod, 'broker_message_prefix')
+        attrs.broker_message = mod.broker_message
+        attrs.broker_message_prefix = mod.broker_message_prefix
 
         if name in('Create', 'Edit'):
 
