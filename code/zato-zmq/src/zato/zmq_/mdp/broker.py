@@ -240,7 +240,7 @@ class Broker(object):
             'ZeroMQ MDP channel `%s` adding %s worker{} for `%s`'.format('' if n==1 else 's'),
             self.config.name, n, service.name)
 
-        for x in range(n):
+        for _x in range(n):
             self._add_worker('mdp.{}'.format(new_cid()), service.name, self.y100, const.worker_type.zato)
 
     def add_workers(self, service):

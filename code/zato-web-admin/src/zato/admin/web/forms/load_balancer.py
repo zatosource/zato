@@ -47,7 +47,8 @@ class ManageLoadBalancerForm(forms.Form):
     http_plain_maxconn = forms.CharField(widget=forms.TextInput(attrs={"class":"required validate-digits", "style":"width:30%"}))
     http_plain_monitor_uri = forms.CharField(widget=forms.TextInput(attrs={"class":"required", "style":"width:70%"}))
 
-    def __init__(self, initial={}):
+    def __init__(self, initial=None):
+        initial = initial or {}
         super(ManageLoadBalancerForm, self).__init__(initial=initial)
 
         fields_choices = (
@@ -71,7 +72,8 @@ class RemoteCommandForm(forms.Form):
     extra = forms.CharField(widget=forms.TextInput(attrs={"style":"width:40%"}))
     result = forms.CharField(widget=forms.Textarea(attrs={"style":"overflow:auto; width:100%; white-space: pre-wrap;height:400px"}))
 
-    def __init__(self, commands, initial={}):
+    def __init__(self, commands, initial=None):
+        initial = initial or {}
         super(RemoteCommandForm, self).__init__(initial=initial)
 
         fields_choices = (
