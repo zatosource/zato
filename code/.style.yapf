@@ -82,7 +82,7 @@ blank_line_before_nested_class_or_def=False
 coalesce_brackets=True
 
 # The column limit.
-column_limit=140
+column_limit=130
 
 # The style for continuation alignment. Possible values are:
 #
@@ -114,11 +114,11 @@ continuation_indent_width=4
 #       start_ts=now()-timedelta(days=3),
 #       end_ts=now(),
 #   )        # <--- this bracket is dedented and on a separate line
-dedent_closing_brackets=False
+dedent_closing_brackets=True
 
 # Disable the heuristic which places each list element on a separate line
 # if the list is comma-terminated.
-disable_ending_comma_heuristic=False
+disable_ending_comma_heuristic=True
 
 # Place each dictionary entry onto its own line.
 each_dict_entry_on_separate_line=True
@@ -129,7 +129,7 @@ each_dict_entry_on_separate_line=True
 #   config = {
 #       'key1': 'value1'
 #   }
-force_multiline_dict=False
+force_multiline_dict=True
 
 # The regex for an i18n comment. The presence of this comment stops
 # reformatting of that line, because the comments are required to be
@@ -267,7 +267,7 @@ spaces_before_comment=1
 
 # Insert a space between the ending comma and closing bracket of a list,
 # etc.
-space_between_ending_comma_and_closing_bracket=True
+space_between_ending_comma_and_closing_bracket=False
 
 # Use spaces inside brackets, braces, and parentheses.  For example:
 #
@@ -350,7 +350,7 @@ split_before_named_assigns=True
 split_complex_comprehension=False
 
 # The penalty for splitting right after the opening bracket.
-split_penalty_after_opening_bracket=0
+split_penalty_after_opening_bracket=300
 
 # The penalty for splitting the line after a unary operator.
 split_penalty_after_unary_operator=10000
@@ -360,7 +360,7 @@ split_penalty_after_unary_operator=10000
 split_penalty_arithmetic_operator=300
 
 # The penalty for splitting right before an if expression.
-split_penalty_before_if_expr=0
+split_penalty_before_if_expr=300
 
 # The penalty of splitting the line around the '&', '|', and '^'
 # operators.

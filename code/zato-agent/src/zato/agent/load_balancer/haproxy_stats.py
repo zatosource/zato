@@ -30,7 +30,7 @@ class HAProxyStats(object):
     def __init__(self, socket_name=None):
         self.socket_name = socket_name
 
-    def execute(self, command, extra="", timeout=200):
+    def execute(self, command, extra='', timeout=200):
         """ Executes a HAProxy command by sending a message to a HAProxy's local
         UNIX socket and waiting up to 'timeout' milliseconds for the response.
         """

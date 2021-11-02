@@ -36,13 +36,13 @@ class _Base(TestCase):
         lock_manager = LockManager(self.backend_type, default_ns)
 
         with lock_manager(name) as lock_info:
-            self.assertEquals(lock_info.namespace, default_ns)
-            self.assertEquals(lock_info.name, name)
-            self.assertEquals(lock_info.ttl, DEFAULT.TTL)
-            self.assertEquals(lock_info.acquired, True)
-            self.assertEquals(lock_info.lock_type, LOCK_TYPE.PERMANENT)
-            self.assertEquals(lock_info.block, DEFAULT.BLOCK)
-            self.assertEquals(lock_info.block_interval, DEFAULT.BLOCK_INTERVAL)
+            self.assertEqual(lock_info.namespace, default_ns)
+            self.assertEqual(lock_info.name, name)
+            self.assertEqual(lock_info.ttl, DEFAULT.TTL)
+            self.assertEqual(lock_info.acquired, True)
+            self.assertEqual(lock_info.lock_type, LOCK_TYPE.PERMANENT)
+            self.assertEqual(lock_info.block, DEFAULT.BLOCK)
+            self.assertEqual(lock_info.block_interval, DEFAULT.BLOCK_INTERVAL)
 
 # ################################################################################################################################
 
@@ -57,13 +57,13 @@ class _Base(TestCase):
         lock_manager = LockManager(self.backend_type, default_ns)
 
         with lock_manager(name, ns) as lock_info:
-            self.assertEquals(lock_info.namespace, ns)
-            self.assertEquals(lock_info.name, name)
-            self.assertEquals(lock_info.ttl, DEFAULT.TTL)
-            self.assertEquals(lock_info.acquired, True)
-            self.assertEquals(lock_info.lock_type, LOCK_TYPE.PERMANENT)
-            self.assertEquals(lock_info.block, DEFAULT.BLOCK)
-            self.assertEquals(lock_info.block_interval, DEFAULT.BLOCK_INTERVAL)
+            self.assertEqual(lock_info.namespace, ns)
+            self.assertEqual(lock_info.name, name)
+            self.assertEqual(lock_info.ttl, DEFAULT.TTL)
+            self.assertEqual(lock_info.acquired, True)
+            self.assertEqual(lock_info.lock_type, LOCK_TYPE.PERMANENT)
+            self.assertEqual(lock_info.block, DEFAULT.BLOCK)
+            self.assertEqual(lock_info.block_interval, DEFAULT.BLOCK_INTERVAL)
 
 # ################################################################################################################################
 
@@ -81,13 +81,13 @@ class _Base(TestCase):
         lock_manager = LockManager(self.backend_type, default_ns)
 
         with lock_manager(name, ns, ttl, block, block_interval) as lock_info:
-            self.assertEquals(lock_info.namespace, ns)
-            self.assertEquals(lock_info.name, name)
-            self.assertEquals(lock_info.ttl, ttl)
-            self.assertEquals(lock_info.acquired, True)
-            self.assertEquals(lock_info.lock_type, LOCK_TYPE.PERMANENT)
-            self.assertEquals(lock_info.block, block)
-            self.assertEquals(lock_info.block_interval, block_interval)
+            self.assertEqual(lock_info.namespace, ns)
+            self.assertEqual(lock_info.name, name)
+            self.assertEqual(lock_info.ttl, ttl)
+            self.assertEqual(lock_info.acquired, True)
+            self.assertEqual(lock_info.lock_type, LOCK_TYPE.PERMANENT)
+            self.assertEqual(lock_info.block, block)
+            self.assertEqual(lock_info.block_interval, block_interval)
 
 # ################################################################################################################################
 
@@ -102,16 +102,16 @@ class _Base(TestCase):
         lock_manager = LockManager(self.backend_type, default_ns)
 
         lock1 = lock_manager.acquire(name, ttl=1)
-        self.assertEquals(lock1.acquired, True)
+        self.assertEqual(lock1.acquired, True)
 
         # This will not obtain the lock because it's just been taken above ..
         lock2 = lock_manager.acquire(name, block=False)
-        self.assertEquals(lock2.acquired, False)
+        self.assertEqual(lock2.acquired, False)
 
         # .. however, if we wait a moment we will get it because the original will have expired.
         sleep(2)
         lock3 = lock_manager.acquire(name)
-        self.assertEquals(lock3.acquired, True)
+        self.assertEqual(lock3.acquired, True)
 
 # ################################################################################################################################
 
@@ -126,17 +126,17 @@ class _Base(TestCase):
         lock_manager = LockManager(self.backend_type, default_ns)
 
         lock1 = lock_manager.acquire(name, ttl=10)
-        self.assertEquals(lock1.acquired, True)
+        self.assertEqual(lock1.acquired, True)
 
         # This will not obtain the lock because it's just been taken above ..
         lock2 = lock_manager.acquire(name, block=False)
-        self.assertEquals(lock2.acquired, False)
+        self.assertEqual(lock2.acquired, False)
 
         # .. however, if we release the lock manually it will become available straightaway.
         lock1.release()
 
         lock3 = lock_manager.acquire(name)
-        self.assertEquals(lock3.acquired, True)
+        self.assertEqual(lock3.acquired, True)
 
 # ################################################################################################################################
 
@@ -151,19 +151,20 @@ class _Base(TestCase):
         lock_manager = LockManager(self.backend_type, default_ns)
 
         lock1 = lock_manager.acquire(name, ttl=2)
-        self.assertEquals(lock1.acquired, True)
+        self.assertEqual(lock1.acquired, True)
 
         # This raises LockTimeout because we wait for 1 second only and the lock above has ttl of 2 seconds.
         try:
             lock_manager.acquire(name, block=1)
         except LockTimeout as e:
             expected = 'Could not obtain lock for `{}` `{}` within 1s'.format(default_ns, name)
-            self.assertEquals(e.args[0], expected)
+            self.assertEqual(e.args[0], expected)
         else:
             self.fail('Expected a LockTimeout here')
 
 # ################################################################################################################################
 
+# pylint: disable-next=unused-variable
 class FCNTLLockTestCase(_Base):
     backend_type = 'fcntl'
 
@@ -172,6 +173,7 @@ class FCNTLLockTestCase(_Base):
 
 # ################################################################################################################################
 
+# pylint: disable-next=unused-variable
 class MySQLLockTestCase(_Base):
     backend_type = 'mysql+pymysql'
 
@@ -180,6 +182,7 @@ class MySQLLockTestCase(_Base):
 
 # ################################################################################################################################
 
+# pylint: disable-next=unused-variable
 class PostgresSQLLockTestCase(_Base):
     backend_type = 'postgresql+pg8000'
 

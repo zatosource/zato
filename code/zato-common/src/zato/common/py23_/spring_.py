@@ -167,10 +167,16 @@ class SSLServer(SimpleXMLRPCServer):
         # 'ciphers' argument is new in 2.7 and we must support 2.6 so add it
         # to kwargs conditionally, depending on the Python version.
 
-        kwargs = {"keyfile":self.keyfile, "certfile":self.certfile,
-                    "server_side":True, "cert_reqs":self.cert_reqs, "ssl_version":self.ssl_version,
-                    "ca_certs":self.ca_certs, "do_handshake_on_connect":self.do_handshake_on_connect,
-                    "suppress_ragged_eofs":self.suppress_ragged_eofs}
+        kwargs = {
+            "keyfile":self.keyfile,
+            "certfile":self.certfile,
+            "server_side":True,
+            "cert_reqs":self.cert_reqs,
+            "ssl_version":self.ssl_version,
+            "ca_certs":self.ca_certs,
+            "do_handshake_on_connect":self.do_handshake_on_connect,
+            "suppress_ragged_eofs":self.suppress_ragged_eofs
+        }
 
         if sys.version_info >= (2, 7):
             kwargs["ciphers"] = self.ciphers

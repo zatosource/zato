@@ -565,8 +565,9 @@ class ConfigLoader(object):
         """ All passwords are always encrypted so we need to look up any that are not,
         for instance, because it is a cluster newly migrated from 2.0 to 3.0, and encrypt them now in ODB.
         """
-        sec_config_dict_types = ('apikey', 'aws', 'basic_auth', 'jwt', 'ntlm', 'oauth',
-            'tls_key_cert', 'wss', 'vault_conn_sec', 'xpath_sec')
+        sec_config_dict_types = (
+            'apikey', 'aws', 'basic_auth', 'jwt', 'ntlm', 'oauth', 'tls_key_cert', 'wss', 'vault_conn_sec', 'xpath_sec'
+        )
 
         # Global lock to make sure only one server attempts to do it at a time
         with self.zato_lock_manager('zato_encrypt_secrets'):

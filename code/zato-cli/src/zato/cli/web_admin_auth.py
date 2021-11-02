@@ -156,7 +156,7 @@ class UpdatePassword(_WebAdminAuthCommand):
 
         # An optional password tells us if we are to use the Django's command
         # or our own wrapper returning the user-provided password without asking for one.
-        if getattr(args, 'password'):
+        if getattr(args, 'password', None):
             class _Command(Command):
                 def _get_pass(self, *ignored_args, **ignored_kwargs):
                     return args.password

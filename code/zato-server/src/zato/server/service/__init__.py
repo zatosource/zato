@@ -531,7 +531,7 @@ class Service(object):
             if name.startswith('handle_'):
 
                 if not getattr(class_, 'http_method_handlers', False):
-                    setattr(class_, 'http_method_handlers', {})
+                    class_.http_method_handlers = {}
 
                 method = name.replace('handle_', '')
                 class_.http_method_handlers[method] = getattr(class_, name)
@@ -570,8 +570,7 @@ class Service(object):
 
         # self.has_sio attribute is set by ServiceStore during deployment
         if self.has_sio:
-            self.request.init(True, self.cid, self._sio, self.data_format, self.transport, self.wsgi_environ,
-                self.server.encrypt)
+            self.request.init(True, self.cid, self._sio, self.data_format, self.transport, self.wsgi_environ, self.server.encrypt)
             self.response.init(self.cid, self._sio, self.data_format)
 
         # Cache is always enabled

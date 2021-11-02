@@ -67,8 +67,9 @@ _sub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.SUBSCRIBER.id)
 
 # ################################################################################################################################
 
-_update_attrs = ('data', 'size', 'expiration', 'priority', 'pub_correl_id', 'in_reply_to', 'mime_type',
-    'expiration', 'expiration_time')
+_update_attrs = (
+    'data', 'size', 'expiration', 'priority', 'pub_correl_id', 'in_reply_to', 'mime_type', 'expiration', 'expiration_time'
+)
 
 # ################################################################################################################################
 
@@ -452,7 +453,7 @@ class InRAMSync(object):
                     # Calling it once will suffice.
                     now = _utcnow()
 
-                    for msg_id, msg in iteritems(self.msg_id_to_msg):
+                    for _ignored_msg_id, msg in iteritems(self.msg_id_to_msg):
 
                         if now >= msg['expiration_time']:
 
@@ -520,9 +521,10 @@ class InRAMSync(object):
 
 # ################################################################################################################################
 
-    def get_topic_depth(self, topic_id, _default=set()):
+    def get_topic_depth(self, topic_id, _default=None):
         """ Returns depth of a given in-RAM queue for the topic.
         """
+        _default = _default or set()
         with self.lock:
             return len(self.topic_msg_id.get(topic_id, _default))
 

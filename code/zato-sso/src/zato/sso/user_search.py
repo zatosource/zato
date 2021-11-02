@@ -44,10 +44,10 @@ class OrderBy(object):
         self.desc = 'desc'
 
         # All ORDER BY directions allowed
-        self.dir_allowed = set((self.asc, self.desc))
+        self.dir_allowed = {self.asc, self.desc}
 
         # All columns that results may be ordered by
-        self.out_columns_allowed = set(('display_name', 'username', 'sign_up_time', 'user_id'))
+        self.out_columns_allowed = {'display_name', 'username', 'sign_up_time', 'user_id'}
 
         # How results will be sorted if no user-defined order is given
         self.default = (

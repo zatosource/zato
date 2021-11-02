@@ -345,12 +345,12 @@ class ConnectorAMQP(Connector):
         self.on_message_callback(
             channel_config['service_name'], body, channel=_CHANNEL_AMQP,
             data_format=channel_config['data_format'],
-            zato_ctx={'zato.channel_item': {
+            zato_ctx={'zato.channel_item': {  # noqa: JS101
                 'id': channel_config.id,
                 'name': channel_config.name,
                 'is_internal': False,
                 'amqp_msg': msg,
-            }})
+            }}) # noqa: JS101
 
         if msg._state == _RECEIVED:
             if channel_config['ack_mode'] == _ZATO_ACK_MODE_ACK:
@@ -395,7 +395,7 @@ class ConnectorAMQP(Connector):
         for config in itervalues(self.channels):
             self._enrich_channel_config(config)
 
-            for x in xrange(config.pool_size):
+            for _x in xrange(config.pool_size):
                 spawn(self._create_consumer, config)
 
 # ################################################################################################################################
@@ -457,7 +457,7 @@ class ConnectorAMQP(Connector):
         self.channels[config.name] = config
         self._enrich_channel_config(config)
 
-        for x in xrange(config.pool_size):
+        for _x in xrange(config.pool_size):
             spawn(self._create_consumer, config)
 
 # ################################################################################################################################

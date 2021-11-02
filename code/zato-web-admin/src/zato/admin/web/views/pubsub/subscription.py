@@ -136,7 +136,7 @@ class _CreateEdit(CreateEdit):
 
         topic_list = []
 
-        for key, value in sorted(self.req.POST.items()):
+        for key in sorted(self.req.POST):
             if key.startswith('topic_checkbox_'):
                 topic_name = key.replace('topic_checkbox_', '')
                 topic_list.append(topic_name)

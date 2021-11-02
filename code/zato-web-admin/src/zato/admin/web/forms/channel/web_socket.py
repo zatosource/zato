@@ -33,7 +33,8 @@ class CreateForm(DataFormatForm, WithAuditLog):
     pings_missed_threshold = forms.CharField(initial=WEB_SOCKET.DEFAULT.PINGS_MISSED_THRESHOLD,
         widget=forms.TextInput(attrs={'style':'width:10%'}))
 
-    def __init__(self, security_list=[], prefix=None, post_data=None, req=None):
+    def __init__(self, security_list=None, prefix=None, post_data=None, req=None):
+        security_list = security_list or []
         super(CreateForm, self).__init__(post_data, prefix=prefix)
         super(WithAuditLog).__init__()
 
