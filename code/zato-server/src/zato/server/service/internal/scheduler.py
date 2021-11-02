@@ -123,7 +123,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
 
             value = input['repeats'] or None
             if value != ZATO_NONE:
-                setattr(ib_job, 'repeats', value)
+                ib_job.repeats = value
 
             session.add(ib_job)
 

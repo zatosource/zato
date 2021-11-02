@@ -452,7 +452,7 @@ class InRAMSync(object):
                     # Calling it once will suffice.
                     now = _utcnow()
 
-                    for msg_id, msg in iteritems(self.msg_id_to_msg):
+                    for _ignored_msg_id, msg in iteritems(self.msg_id_to_msg):
 
                         if now >= msg['expiration_time']:
 
@@ -520,9 +520,10 @@ class InRAMSync(object):
 
 # ################################################################################################################################
 
-    def get_topic_depth(self, topic_id, _default=set()):
+    def get_topic_depth(self, topic_id, _default=None):
         """ Returns depth of a given in-RAM queue for the topic.
         """
+        _default = _default or set()
         with self.lock:
             return len(self.topic_msg_id.get(topic_id, _default))
 

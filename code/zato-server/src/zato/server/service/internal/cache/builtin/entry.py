@@ -69,7 +69,7 @@ class GetList(_Base):
         start = query_ctx.cur_page * query_ctx.page_size
         stop = start + query_ctx.page_size
 
-        for idx, item in enumerate(sliceable[start:stop]):
+        for _idx, item in enumerate(sliceable[start:stop]):
 
             # Internally, time is kept as doubles so we need to convert it to a datetime object or null it out.
             for name in _time_keys:

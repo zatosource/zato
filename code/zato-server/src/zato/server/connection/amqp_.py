@@ -395,7 +395,7 @@ class ConnectorAMQP(Connector):
         for config in itervalues(self.channels):
             self._enrich_channel_config(config)
 
-            for x in xrange(config.pool_size):
+            for _x in xrange(config.pool_size):
                 spawn(self._create_consumer, config)
 
 # ################################################################################################################################
@@ -457,7 +457,7 @@ class ConnectorAMQP(Connector):
         self.channels[config.name] = config
         self._enrich_channel_config(config)
 
-        for x in xrange(config.pool_size):
+        for _x in xrange(config.pool_size):
             spawn(self._create_consumer, config)
 
 # ################################################################################################################################

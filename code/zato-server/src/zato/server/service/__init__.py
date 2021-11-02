@@ -531,7 +531,7 @@ class Service(object):
             if name.startswith('handle_'):
 
                 if not getattr(class_, 'http_method_handlers', False):
-                    setattr(class_, 'http_method_handlers', {})
+                    class_.http_method_handlers = {}
 
                 method = name.replace('handle_', '')
                 class_.http_method_handlers[method] = getattr(class_, name)
