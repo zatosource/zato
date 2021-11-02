@@ -438,8 +438,14 @@ class WorkerStore(_WorkerStoreBase):
         """ Creates a new HTTP/SOAP connection wrapper out of a configuration dictionary.
         """
         security_name = config.get('security_name')
-        sec_config = {'security_name':security_name, 'sec_type':None, 'username':None, 'password':None, 'password_type':None,
-            'orig_username':None}
+        sec_config = {
+            'security_name':security_name,
+            'sec_type':None,
+            'username':None,
+            'password':None,
+            'password_type':None,
+            'orig_username':None
+        }
         _sec_config = None
 
         # This will be set to True only if the method's invoked on a server's starting up
@@ -472,16 +478,23 @@ class WorkerStore(_WorkerStoreBase):
                 sec_config['tls_key_cert_full_path'] = get_tls_key_cert_full_path(
                     self.server.tls_dir, get_tls_from_payload(auth_data, True))
 
-        wrapper_config = {'id':config.id,
-            'is_active':config.is_active, 'method':config.method,
+        wrapper_config = {
+            'id':config.id,
+            'is_active':config.is_active,
+            'method':config.method,
             'data_format':config.get('data_format'),
-            'name':config.name, 'transport':config.transport,
+            'name':config.name,
+            'transport':config.transport,
             'address_host':config.host,
             'address_url_path':config.url_path,
-            'soap_action':config.soap_action, 'soap_version':config.soap_version, 'ping_method':config.ping_method,
-            'pool_size':config.pool_size, 'serialization_type':config.serialization_type,
-            'timeout':config.timeout, 'content_type':config.content_type,
-            }
+            'soap_action':config.soap_action,
+            'soap_version':config.soap_version,
+            'ping_method':config.ping_method,
+            'pool_size':config.pool_size,
+            'serialization_type':config.serialization_type,
+            'timeout':config.timeout,
+            'content_type':config.content_type,
+        }
         wrapper_config.update(sec_config)
 
         # Key 'sec_tls_ca_cert_verify_strategy' was added in 3.2
