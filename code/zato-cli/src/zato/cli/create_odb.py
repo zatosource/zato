@@ -80,7 +80,7 @@ class Create(ZatoCommand):
 
                 text = name
                 if type_.length and name != 'TEXT':
-                    text += "(%d)" % type_.length
+                    text += '(%d)' % type_.length
                 if type_.collation:
                     text += ' COLLATE "%s"' % type_.collation
                 return text
