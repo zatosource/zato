@@ -59,8 +59,8 @@ tcp_log = {
     2: ("tcplog", "TCP log"),
 }
 
-reversed_http_log = dict((v[0],k) for k,v in http_log.items())
-reversed_tcp_log = dict((v[0],k) for k,v in tcp_log.items())
+reversed_http_log = {v[0]: k for k, v in http_log.items()}
+reversed_tcp_log = {v[0]: k for k, v in tcp_log.items()}
 
 class Config(object):
     """ An object for representing a HAProxy configuration file.

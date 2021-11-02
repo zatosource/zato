@@ -82,7 +82,7 @@ def get_mail_addresses(message, header_name):
     """
     Retrieve all email addresses from one message header.
     """
-    headers = [h for h in message.get_all(header_name, [])]
+    headers = message.get_all(header_name, [])
     addresses = email.utils.getaddresses(headers)
 
     for index, (address_name, address_email) in enumerate(addresses):
@@ -199,7 +199,7 @@ def parse_email(raw_email, policy=None):
     if isinstance(raw_email, bytes):
         raw_email = str_encode(raw_email, 'utf-8', errors='ignore')
     if policy is not None:
-        email_parse_kwargs = dict(policy=policy)
+        email_parse_kwargs = {'policy': policy}
     else:
         email_parse_kwargs = {}
 

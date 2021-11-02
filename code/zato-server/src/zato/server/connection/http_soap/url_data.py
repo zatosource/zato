@@ -572,7 +572,7 @@ class URLData(CyURLData, OAuthDataStore):
 # ################################################################################################################################
 
     def check_rbac_delegated_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store,
-            sep=MISC.SEPARATOR, plain_http=URL_TYPE.PLAIN_HTTP, _empty_client_def=tuple()):
+            sep=MISC.SEPARATOR, plain_http=URL_TYPE.PLAIN_HTTP, _empty_client_def=tuple()): # noqa: C408
 
         auth_result = False
 
