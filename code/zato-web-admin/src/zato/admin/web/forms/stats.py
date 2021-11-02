@@ -20,7 +20,8 @@ class NForm(forms.Form):
 class CompareForm(forms.Form):
     compare_to = forms.ChoiceField(widget=forms.Select(attrs={'id':'shift'}))
 
-    def __init__(self, compare_to=[], *args, **kwargs):
+    def __init__(self, compare_to=None, *args, **kwargs):
+        compare_to = compare_to or []
         super(CompareForm, self).__init__(*args, **kwargs)
         for name, value in self.fields.items():
             if isinstance(value, forms.ChoiceField):

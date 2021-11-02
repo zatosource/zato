@@ -158,17 +158,16 @@ _no_such_value = object()
 class update:
 
     # Accessible to regular users only
-    regular_attrs = set(('email', 'display_name', 'first_name', 'middle_name', 'last_name', 'is_totp_enabled', 'totp_label'))
+    regular_attrs = {'email', 'display_name', 'first_name', 'middle_name', 'last_name', 'is_totp_enabled', 'totp_label'}
 
     # Accessible to super-users only
-    super_user_attrs = set(('is_locked', 'password_expiry', 'password_must_change', 'sign_up_status',
-        'approval_status'))
+    super_user_attrs = {'is_locked', 'password_expiry', 'password_must_change', 'sign_up_status', 'approval_status'}
 
     # All updateable attributes
     all_update_attrs = regular_attrs.union(super_user_attrs)
 
     # All updateable attributes + user_id
-    all_attrs = all_update_attrs.union(set(['user_id']))
+    all_attrs = all_update_attrs.union({'user_id'})
 
     # There cannot be more than this many attributes on input
     max_len_attrs = len(all_update_attrs)
@@ -187,13 +186,13 @@ class update:
 class change_password:
 
     # Accessible to regular users only
-    regular_attrs = set(('old_password', 'new_password'))
+    regular_attrs = {'old_password', 'new_password'}
 
     # Accessible to super-users only
-    super_user_attrs = set(('new_password', 'password_expiry', 'password_must_change'))
+    super_user_attrs = {'new_password', 'password_expiry', 'password_must_change'}
 
     # This is used only for input validation which is why it is not called 'all_update_attrs'
-    all_attrs = regular_attrs.union(super_user_attrs).union(set(['user_id']))
+    all_attrs = regular_attrs.union(super_user_attrs).union({'user_id'})
 
     # There cannot be more than this many attributes on input
     max_len_attrs = len(all_attrs)
@@ -778,7 +777,7 @@ class UserAPI(object):
             for auth_id_link_map in self.auth_id_link_map.values(): # type: dict
                 to_delete = set()
 
-                for auth_id, sso_user_id in auth_id_link_map.items():
+                for sso_user_id in auth_id_link_map.values():
                     if user_id == sso_user_id:
                         to_delete.add(user_id)
 

@@ -244,7 +244,7 @@ class User(object):
         self.is_current_super_user = False
 
     def to_dict(self):
-        return dict((name, getattr(self, name)) for name in self.__slots__ if name != 'attr')
+        return {name: getattr(self, name) for name in self.__slots__ if name != 'attr'}
 
 # ################################################################################################################################
 
@@ -261,6 +261,6 @@ class Session(object):
         self.user_agent = None
 
     def to_dict(self):
-        return dict((name, getattr(self, name)) for name in self.__slots__ if name != 'attr')
+        return {name: getattr(self, name) for name in self.__slots__ if name != 'attr'}
 
 # ################################################################################################################################

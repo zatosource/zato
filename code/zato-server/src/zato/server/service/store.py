@@ -694,7 +694,7 @@ class ServiceStore(object):
 
             len_si = len(dill_items['service_info'])
 
-            for idx, item in enumerate(dill_items['service_info'], 1):
+            for _idx, item in enumerate(dill_items['service_info'], 1):
                 class_ = self._visit_class(item['mod'], item['service_class'], item['fs_location'], True)
                 to_process.append(class_)
 
@@ -941,7 +941,7 @@ class ServiceStore(object):
         # This is a list of services to turn into a set
         deployed_service_list = self.odb.get_basic_data_deployed_service_list()
 
-        return dict((elem[0], elem[1]) for elem in deployed_service_list)
+        return {elem[0]:elem[1] for elem in deployed_service_list}
 
 # ################################################################################################################################
 

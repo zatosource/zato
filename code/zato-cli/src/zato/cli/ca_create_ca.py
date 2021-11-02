@@ -102,7 +102,7 @@ class Create(ZatoCommand):
         self.target_dir = os.path.abspath(args.path)
 
     def execute(self, args, show_output=True):
-        self.logger.info("Create CA execute")
+        self.logger.info('Create CA execute')
         # Prepare the directory layout
         os.mkdir(os.path.join(self.target_dir, 'ca-material'))
         open(os.path.join(self.target_dir, 'ca-material', 'ca-serial'), 'w').write('01')
@@ -145,7 +145,7 @@ class Create(ZatoCommand):
         ca_key = os.path.join(self.target_dir, 'ca-material', 'ca-key.pem')
         ca_cert = os.path.join(self.target_dir, 'ca-material', 'ca-cert.pem')
         ca_password = os.path.relpath(os.path.join(self.target_dir, 'ca-material', 'ca-password'))
-        
+
         if is_windows:
             ca_key = os.path.join(self.target_dir, 'ca-material', 'ca-key.pem').replace('\\','\\\\')
             ca_cert = os.path.join(self.target_dir, 'ca-material', 'ca-cert.pem').replace('\\','\\\\')
