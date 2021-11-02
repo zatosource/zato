@@ -31,10 +31,10 @@ from dataclasses import is_dataclass
 from itertools import zip_longest
 from typing import TypeVar, Type, Optional, get_type_hints, Mapping, Any
 
-from dacite.config import Config
-from dacite.data import Data
-from dacite.dataclasses import get_default_value_for_field, create_instance, DefaultValueNotFoundError, get_fields
-from dacite.exceptions import (
+from zato.common.ext.dacite.config import Config
+from zato.common.ext.dacite.data import Data
+from zato.common.ext.dacite.dataclasses import get_default_value_for_field, create_instance, DefaultValueNotFoundError, get_fields
+from zato.common.ext.dacite.exceptions import (
     ForwardReferenceError,
     WrongTypeError,
     DaciteError,
@@ -44,7 +44,7 @@ from dacite.exceptions import (
     UnexpectedDataError,
     StrictUnionMatchError,
 )
-from dacite.types import (
+from zato.common.ext.dacite.types import (
     is_instance,
     is_generic_collection,
     is_union,
@@ -67,44 +67,82 @@ def from_dict(data_class: Type[T], data: Data, config: Optional[Config] = None) 
     :param config: a configuration of the creation process
     :return: an instance of a data class
     """
+    is_class_init_false = data_class.__dataclass_params__.init is False
     init_values: Data = {}
     post_init_values: Data = {}
     config = config or Config()
+
     try:
         data_class_hints = get_type_hints(data_class, globalns=config.forward_references)
     except NameError as error:
         raise ForwardReferenceError(str(error))
+
     data_class_fields = get_fields(data_class)
-    if config.strict:
+
+    if 1:#config.strict:
         extra_fields = set(data.keys()) - {f.name for f in data_class_fields}
         if extra_fields:
             raise UnexpectedDataError(keys=extra_fields)
+
+    print()
+    for field in data_class_fields:
+        print('AAA-1', field)
+    print()
+
     for field in data_class_fields:
         field = copy.copy(field)
         field.type = data_class_hints[field.name]
+
         if field.name in data:
+
             try:
                 field_data = data[field.name]
                 transformed_value = transform_value(
                     type_hooks=config.type_hooks, cast=config.cast, target_type=field.type, value=field_data
                 )
                 value = _build_value(type_=field.type, data=transformed_value, config=config)
+
+                print()
+                print(444, value)
+                print(555, field_data)
+                print(666, transformed_value)
+                print()
+
             except DaciteFieldError as error:
                 error.update_path(field.name)
                 raise
-            if config.check_types and not is_instance(value, field.type):
-                raise WrongTypeError(field_path=field.name, field_type=field.type, value=value)
+
+            #if config.check_types and not is_instance(value, field.type):
+            #    raise WrongTypeError(field_path=field.name, field_type=field.type, value=value)
+
         else:
             try:
                 value = get_default_value_for_field(field)
+
+                print()
+                print(333, value)
+                print()
+
             except DefaultValueNotFoundError:
                 if not field.init:
                     continue
+
+                print()
+                print(111, field)
+                print(222, data)
+                print()
+
+                #zzz
+
                 raise MissingValueError(field.name)
-        if field.init:
-            init_values[field.name] = value
-        else:
+
+        if is_class_init_false:
             post_init_values[field.name] = value
+        else:
+            if field.init:
+                init_values[field.name] = value
+            else:
+                post_init_values[field.name] = value
 
     return create_instance(data_class=data_class, init_values=init_values, post_init_values=post_init_values)
 
