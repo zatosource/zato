@@ -345,12 +345,12 @@ class ConnectorAMQP(Connector):
         self.on_message_callback(
             channel_config['service_name'], body, channel=_CHANNEL_AMQP,
             data_format=channel_config['data_format'],
-            zato_ctx={'zato.channel_item': {
+            zato_ctx={'zato.channel_item': {  # noqa: JS101
                 'id': channel_config.id,
                 'name': channel_config.name,
                 'is_internal': False,
                 'amqp_msg': msg,
-            }})
+            }}) # noqa: JS101
 
         if msg._state == _RECEIVED:
             if channel_config['ack_mode'] == _ZATO_ACK_MODE_ACK:

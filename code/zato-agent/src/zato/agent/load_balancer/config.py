@@ -120,27 +120,31 @@ def string_from_config(config, config_template):
 
         # Make sure we don't accidentally overwrite something that's not ours.
         if zato_item_token in line:
-            if "bck_http" in line or [key for key in zato_item_dispatch if key in line]:
+            if 'bck_http' in line or [key for key in zato_item_dispatch if key in line]:
 
                 # Let's see how much the line was indented in the template
                 indent = len(line) - len(line.strip()) - 1 # -1 because of the \n
-                new_line = " " * indent
+                new_line = ' ' * indent
 
                 # Let's see to the simple options first..
                 for zato_item, (template, value) in zato_item_dispatch.items():
                     if zato_item_token + zato_item in line:
-                        new_line += template.format(**value) + " " + zato_item_token + zato_item
+                        new_line += template.format(**value) + ' ' + zato_item_token + zato_item
 
                 # .. and the more complex ones now.
-                if zato_item_token + "backend" in line and "--" in line:
-                    line = line.split(zato_item_token + "backend")
-                    backend_info = line[1].split("--")
-                    backend_type, server_name = (backend_info[0].strip().split(":")[0], backend_info[1].strip())
-                    server_type = backend_type.split("bck_")[1]
+                if zato_item_token + 'backend' in line and '--' in line:
+                    line = line.split(zato_item_token + 'backend')
+                    backend_info = line[1].split('--')
+                    backend_type, server_name = (backend_info[0].strip().split(':')[0], backend_info[1].strip())
+                    server_type = backend_type.split('bck_')[1]
 
-                    backend_values = {"backend_type": backend_type, "server_name":server_name,
-                                      "server_type":server_type, "zato_item_token": zato_item_token}
-                    backend_values.update(config["backend"][backend_type][server_name])
+                    backend_values = {
+                        'backend_type': backend_type,
+                        'server_name':server_name,
+                        'server_type':server_type,
+                        'zato_item_token': zato_item_token
+                    }
+                    backend_values.update(config['backend'][backend_type][server_name])
 
                     new_line += backend_template.format(**backend_values)
                 else:
@@ -148,7 +152,7 @@ def string_from_config(config, config_template):
                         prefix = '{}{}'.format(zato_item_token, name)
                         if line.startswith(prefix):
                             new_line += line
-                new_line += "\n"
+                new_line += '\n'
                 new_config.append(new_line)
             else:
                 new_config.append(line)

@@ -394,8 +394,7 @@ class Exact(BaseLimiter):
 
     def _get_current_periods(self):
         with closing(self.sql_session_func()) as session:
-            return [elem[0] for elem in current_period_list(session, self.cluster_id).\
-                   all()]
+            return [elem[0] for elem in current_period_list(session, self.cluster_id).all()]
 
 # ################################################################################################################################
 

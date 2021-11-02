@@ -328,7 +328,7 @@ class Broker(object):
                 'service': service,
                 'channel': self.zato_channel,
                 'payload': request
-            }, self.zato_channel, None, needs_response=True)
+        }, self.zato_channel, None, needs_response=True)
 
     def send_to_worker_zato(self, request, worker, zmq_service_name):
         """ Sends a message to a Zato service rather than an actual ZeroMQ socket.
