@@ -28,7 +28,7 @@ from portalocker import lock as portalocker_lock, LockException, LOCK_NB, LOCK_E
 from sqlalchemy import func
 
 # Zato
-from zato.common.util.api import get_current_user, make_repr
+from zato.common.util.api import get_current_user, make_repr # pylint: disable=no-name-in-module
 
 # ################################################################################################################################
 
