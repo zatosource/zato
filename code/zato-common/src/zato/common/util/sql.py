@@ -46,7 +46,7 @@ _DeadlockException = (SAInternalError, SAOperationalError)
 # but the underlying PyMySQL library returns only a string rather than an integer code.
 _deadlock_code = 'Deadlock found when trying to get lock'
 
-_zato_opaque_skip_attrs=set(['needs_details', 'paginate', 'cur_page', 'query'])
+_zato_opaque_skip_attrs = {'needs_details', 'paginate', 'cur_page', 'query'}
 
 # ################################################################################################################################
 
@@ -242,8 +242,8 @@ def set_instance_opaque_attrs(instance, input, skip=None, only=None, _zato_skip=
     input_attrs = set(input)
 
     if only:
-        input_attrs = set([elem for elem in input_attrs if elem in only])
-        instance_attrs = set([elem for elem in instance_attrs if elem not in only])
+        input_attrs = {elem for elem in input_attrs if elem in only}
+        instance_attrs = {elem for elem in instance_attrs if elem not in only}
 
     # Any extra input attributes will be treated as opaque ones
     input_opaque_attrs = input_attrs - instance_attrs

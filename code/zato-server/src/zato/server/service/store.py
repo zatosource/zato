@@ -941,7 +941,7 @@ class ServiceStore(object):
         # This is a list of services to turn into a set
         deployed_service_list = self.odb.get_basic_data_deployed_service_list()
 
-        return dict((elem[0], elem[1]) for elem in deployed_service_list)
+        return {elem[0]:elem[1] for elem in deployed_service_list}
 
 # ################################################################################################################################
 

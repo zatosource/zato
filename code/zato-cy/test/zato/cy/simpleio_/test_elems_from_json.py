@@ -290,7 +290,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
 
     def test_list_from_tuple(self):
         sio = List('myname')
-        data = tuple(['q,w,e,r,t,Y,U,I,O,P'])
+        data = ('q,w,e,r,t,Y,U,I,O,P')
         parsed = self._parse(sio, data)
 
         self.assertIsInstance(parsed, tuple)
