@@ -615,7 +615,7 @@ class EventsDatabaseTestCase(TestCase):
 
         events_db = self.get_events_db(sync_threshold=sync_threshold)
 
-        for x in range(num_iters):
+        for _x in range(num_iters):
             events_db.access_state(OpCode.Push, {'timestamp':'unused'})
 
         # This is 0 because we were syncing state after each modification
@@ -637,7 +637,7 @@ class EventsDatabaseTestCase(TestCase):
 
         events_db = self.get_events_db(sync_interval=sync_interval)
 
-        for x in range(num_iters):
+        for _x in range(num_iters):
             events_db.access_state(OpCode.Push, {'timestamp':'unused'})
             sleep(sync_interval * 5)
 

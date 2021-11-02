@@ -594,7 +594,7 @@ class RequestHandler(object):
             channel_params = path_params
         else:
             if _qs:
-                channel_params = dict((key, value) for key, value in _qs.items())
+                channel_params = {key:value for key, value in _qs.items()}
             else:
                 channel_params = {}
             channel_params.update(path_params)

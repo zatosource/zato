@@ -26,18 +26,24 @@ logger_zato = getLogger('zato')
 
 sk_lists = ('reply_to_sk', 'deliver_to_sk')
 
-skip_to_external=('delivery_status', 'topic_id', 'cluster_id', 'pub_pattern_matched', 'sub_pattern_matched',
+skip_to_external = (
+    'delivery_status', 'topic_id', 'cluster_id', 'pub_pattern_matched', 'sub_pattern_matched',
     'published_by_id', 'data_prefix', 'data_prefix_short', 'pub_time', 'expiration_time', 'recv_time',
-    'pub_msg_id', 'pub_correl_id', 'zato_ctx') + sk_lists
+    'pub_msg_id', 'pub_correl_id', 'zato_ctx'
+) + sk_lists
 
-_data_keys=('data', 'data_prefix', 'data_prefix_short')
+_data_keys = (
+    'data', 'data_prefix', 'data_prefix_short'
+)
 
-msg_pub_attrs = ('topic', 'sub_key', 'pub_msg_id', 'pub_correl_id', 'in_reply_to', 'ext_client_id', 'group_id',
+msg_pub_attrs = (
+    'topic', 'sub_key', 'pub_msg_id', 'pub_correl_id', 'in_reply_to', 'ext_client_id', 'group_id',
     'position_in_group', 'pub_time', 'ext_pub_time', 'data', 'data_prefix', 'data_prefix_short', 'mime_type', 'priority',
     'expiration', 'expiration_time', 'has_gd', 'delivery_status', 'size', 'published_by_id', 'topic_id',
     'is_in_sub_queue', 'topic_name', 'cluster_id', 'pub_time_iso', 'ext_pub_time_iso', 'expiration_time_iso',
     'recv_time', 'data_prefix_short', 'server_name', 'server_pid', 'pub_pattern_matched', 'sub_pattern_matched',
-    'delivery_count', 'user_ctx', 'zato_ctx')
+    'delivery_count', 'user_ctx', 'zato_ctx'
+)
 
 class MSG_PREFIX:
     GROUP_ID = 'zpsg'

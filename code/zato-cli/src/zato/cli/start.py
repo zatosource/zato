@@ -42,7 +42,7 @@ Examples:
         {'name':'--fg', 'help':'If given, the component will run in foreground', 'action':'store_true'},
         {'name':'--sync-internal', 'help':"Whether to synchronize component's internal state with ODB", 'action':'store_true'},
         {'name':'--secret-key', 'help':"Component's secret key", 'action':'store'},
-        {'name':'--stderr-path', 'help':"Where to redirect stderr", 'action':'store'}
+        {'name':'--stderr-path', 'help':'Where to redirect stderr', 'action':'store'}
     ]
 
 # ################################################################################################################################

@@ -38,7 +38,7 @@ class SAPWrapper(Wrapper):
 
         config.auth_url = 'rfc://{user}@{host}:{sysnr}/{client}'.format(**config)
         super(SAPWrapper, self).__init__(config, 'SAP', server)
-        self.logger.info("config: %r", config)
+        self.logger.info('config: %r', config)
 
     def add_client(self):
         # Decrypt the password if it is encrypted.

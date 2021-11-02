@@ -30,8 +30,11 @@ class Create(ZatoCommand):
     """ Creates a new Zato ODB (Operational Database)
     """
     opts = common_odb_opts
-    opts.append({'name':'--skip-if-exists',
-        'help':'Return without raising an error if ODB already exists', 'action':'store_true'})
+    opts.append({
+        'name':'--skip-if-exists',
+        'help':'Return without raising an error if ODB already exists',
+        'action':'store_true'
+    })
 
 # ################################################################################################################################
 
@@ -77,7 +80,7 @@ class Create(ZatoCommand):
 
                 text = name
                 if type_.length and name != 'TEXT':
-                    text += "(%d)" % type_.length
+                    text += '(%d)' % type_.length
                 if type_.collation:
                     text += ' COLLATE "%s"' % type_.collation
                 return text

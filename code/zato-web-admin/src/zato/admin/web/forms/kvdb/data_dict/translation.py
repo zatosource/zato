@@ -21,7 +21,8 @@ class _Base(forms.Form):
     system2 = forms.ChoiceField()
     key2 = forms.ChoiceField()
 
-    def __init__(self, systems=[], *args, **kwargs):
+    def __init__(self, systems=None, *args, **kwargs):
+        systems = systems or []
         super(_Base, self).__init__(*args, **kwargs)
         for name, value in self.fields.items():
             if isinstance(value, forms.ChoiceField):

@@ -832,12 +832,12 @@ class MQRFH2JMS(object):
 
         if 'xsi:nil="true"' in raw_folder and not 'xmlns' in raw_folder:
             if self.has_debug:
-                logger.debug("Binding xsi:nil to a dummy namespace:`%s`" % raw_folder)
+                logger.debug('Binding xsi:nil to a dummy namespace:`%s`' % raw_folder)
 
             raw_folder = raw_folder.replace('xsi:nil="true"', 'xmlns:xsi="dummy" xsi:nil="true"')
 
             if self.has_debug:
-                logger.debug("raw_folder after binding:`%s`" % raw_folder)
+                logger.debug('raw_folder after binding:`%s`' % raw_folder)
 
         folder = etree.fromstring(raw_folder)
         root_name = folder.tag

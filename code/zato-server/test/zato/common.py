@@ -25,7 +25,7 @@ sio_config.bytes_to_str = Bunch()
 
 sio_config.int.prefix = set()
 sio_config.int.exact = set()
-sio_config.int.suffix = set(['_id'])
+sio_config.int.suffix = {'_id'}
 
 sio_config.bool.prefix = set()
 sio_config.bool.exact = set()

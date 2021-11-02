@@ -106,7 +106,7 @@ class GetSphinx(Service):
         """ Returns default static files that always exist.
         """
         apispec_dir = os.path.join(self.server.static_dir, 'sphinxdoc', 'apispec')
-        for dir_path, dir_names, file_names in os.walk(apispec_dir):
+        for dir_path, _ignored_dir_names, file_names in os.walk(apispec_dir):
             if dir_path == apispec_dir:
                 base_dir = '.'
             else:

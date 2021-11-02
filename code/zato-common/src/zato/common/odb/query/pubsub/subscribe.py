@@ -182,7 +182,7 @@ def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, sub_p
             update(MsgTable).\
             values({
                 'is_in_sub_queue': True,
-                }).\
+            }).\
             where(and_(
                 MsgTable.c.pub_msg_id.in_(msg_ids),
                 ~MsgTable.c.is_in_sub_queue
