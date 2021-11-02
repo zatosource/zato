@@ -18,7 +18,7 @@ def logging_Logger_log(self, level, msg, args, exc_info=None, extra=None, _LogRe
     try:
         fn, lno, func = self.findCaller()
     except ValueError:
-        fn, lno, func = '(unknown file)", 0, "(unknown function)'
+        fn, lno, func = '(unknown file)', 0, '(unknown function)'
 
     if exc_info:
         if not isinstance(exc_info, tuple):
