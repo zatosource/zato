@@ -236,7 +236,7 @@ class ServiceInfo(object):
             return set()
 
         input_required = method_sig['simple_io']['zato']['input_required']
-        required = set(f['name'] for f in input_required)
+        required = {f['name'] for f in input_required}
         required.discard('cluster_id')
         return required
 
@@ -411,7 +411,7 @@ HTTP_SOAP_KINDS = (
     ('outconn_soap',        'outgoing',     'soap'),
     ('outconn_plain_http',  'outgoing',     'plain_http')
 )
-HTTP_SOAP_ITEM_TYPES = set(tup[0] for tup in HTTP_SOAP_KINDS)
+HTTP_SOAP_ITEM_TYPES = {tup[0] for tup in HTTP_SOAP_KINDS}
 
 class _DummyLink(object):
     """ Pip requires URLs to have a .url attribute.

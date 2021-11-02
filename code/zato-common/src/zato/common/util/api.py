@@ -958,7 +958,7 @@ def get_stack(f, with_locals=False):
 
 def get_threads_traceback(pid):
     result = {}
-    id_name = dict([(th.ident, th.name) for th in threading.enumerate()])
+    id_name = {th.ident: th.name for th in threading.enumerate()}
 
     for thread_id, frame in iteritems(sys._current_frames()):
         key = '{}:{}'.format(pid, id_name.get(thread_id, '(No name)'))

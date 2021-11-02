@@ -40,7 +40,7 @@ def match_pattern(text, pattern):
     """ Returns True if every element in pattern is contained in words extracted ouf of text,
     pattern is assumed to be a set of lower-cased string elements.
     """
-    return pattern <= set(elem.lower() for elem in TextBlob(text).words)
+    return pattern <= {elem.lower() for elem in TextBlob(text).words}
 
 # ################################################################################################################################
 
