@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """
 This module is a modified vendor copy of the Imbox package from https://pypi.org/project/imbox/
 
