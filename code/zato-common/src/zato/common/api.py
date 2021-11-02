@@ -1701,7 +1701,8 @@ class StatsElem:
         self.temp_mean = 0
         self.temp_mean_count = 0
 
-    def get_attrs(self, ignore=[]):
+    def get_attrs(self, ignore=None):
+        ignore = ignore or []
         for attr in dir(self):
             if attr.startswith('__') or attr.startswith('temp_') or callable(getattr(self, attr)) or attr in ignore:
                 continue
