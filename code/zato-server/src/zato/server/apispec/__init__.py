@@ -306,7 +306,7 @@ class ServiceInfo(object):
 
         # This gives us the full docstring out of which we need to extract description alone.
         full_docstring = format_docstring('', '"{}"'.format(doc), post_description_blank=False)
-        full_docstring = full_docstring.lstrip('"""').rstrip('"""')
+        full_docstring = full_docstring.lstrip('"').rstrip('"')
         description = full_docstring.splitlines()
 
         # If there are multiple lines and the second one is empty this means it is an indicator of a summary to follow.
@@ -707,7 +707,7 @@ class Generator(object):
             out['services'].append(item.toDict())
 
         # For each namespace, add copy of its services
-        for ns_name, ns_info in iteritems(out['namespaces']):
+        for ns_name, _ignored_ns_info in iteritems(out['namespaces']):
             for service in out['services']:
                 if service['namespace_name'] == ns_name:
                     out['namespaces'][ns_name]['services'].append(deepcopy(service))
@@ -725,7 +725,7 @@ class Generator(object):
 
     def parse(self):
 
-        for impl_name, details in iteritems(self.service_store_services):
+        for _ignored_impl_name, details in iteritems(self.service_store_services):
 
             details = bunchify(details)
             _should_include = self._should_handle(details.name, self.include)

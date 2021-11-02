@@ -72,8 +72,8 @@ def dict_match(haystack, needle):
 
 #: List of zato services we explicitly don't support.
 IGNORE_PREFIXES = {
-    "zato.kvdb.data-dict.dictionary",
-    "zato.kvdb.data-dict.translation",
+    'zato.kvdb.data-dict.dictionary',
+    'zato.kvdb.data-dict.translation',
 }
 
 def populate_services_from_apispec(client, logger):
@@ -236,7 +236,7 @@ class ServiceInfo(object):
             return set()
 
         input_required = method_sig['simple_io']['zato']['input_required']
-        required = set(f['name'] for f in input_required)
+        required = {f['name'] for f in input_required}
         required.discard('cluster_id')
         return required
 
@@ -411,7 +411,7 @@ HTTP_SOAP_KINDS = (
     ('outconn_soap',        'outgoing',     'soap'),
     ('outconn_plain_http',  'outgoing',     'plain_http')
 )
-HTTP_SOAP_ITEM_TYPES = set(tup[0] for tup in HTTP_SOAP_KINDS)
+HTTP_SOAP_ITEM_TYPES = {tup[0] for tup in HTTP_SOAP_KINDS}
 
 class _DummyLink(object):
     """ Pip requires URLs to have a .url attribute.
@@ -546,7 +546,7 @@ class DependencyScanner(object):
 
             if dep_key not in item:
                 results.add_error(
-                    (dep_key, dep_info), ERROR_MISSING_DEP, "{} lacks required {} field: {}", item_type, dep_key, item)
+                    (dep_key, dep_info), ERROR_MISSING_DEP, '{} lacks required {} field: {}', item_type, dep_key, item)
 
             value = item.get(dep_key)
             if value != dep_info.get('empty_value'):
@@ -623,9 +623,9 @@ class ObjectImporter(object):
             service_name = item.get(dep_field)
             raw = (service_name, item_dict, item_type)
             if not service_name:
-                self.results.add_error(raw, ERROR_SERVICE_NAME_MISSING, "No {} service key defined type {}: {}", dep_field, item_type, item_dict)
+                self.results.add_error(raw, ERROR_SERVICE_NAME_MISSING, 'No {} service key defined type {}: {}', dep_field, item_type, item_dict)
             elif service_name not in self.object_mgr.services:
-                self.results.add_error(raw, ERROR_SERVICE_MISSING, "Service '{}' from '{}' missing in ODB ({})", service_name, item_dict, item_type)
+                self.results.add_error(raw, ERROR_SERVICE_MISSING, 'Service `{}` from `{}` missing in ODB ({})', service_name, item_dict, item_type)
 
 # ################################################################################################################################
 
@@ -1138,9 +1138,9 @@ class ObjectManager(object):
             'id': item.id,
         })
         if response.ok:
-            self.logger.info("Deleted {} ID {}".format(item_type, item.id))
+            self.logger.info('Deleted {} ID {}'.format(item_type, item.id))
         else:
-            self.logger.error("Could not delete {} ID {}: {}".format(item_type, item.id, response))
+            self.logger.error('Could not delete {} ID {}: {}'.format(item_type, item.id, response))
 
 # ################################################################################################################################
 
@@ -1344,7 +1344,7 @@ class InputParser(object):
         if not isinstance(obj, dict):
             raw = (abs_path, obj)
             results.add_error(raw, ERROR_INVALID_INPUT,
-                "Include {} is incorrect: expected a dictionary containing one item, or a fully formed dump file.")
+                'Include {} is incorrect: expected a dictionary containing one item, or a fully formed dump file.')
             return
 
         if 'name' in obj or 'id' in obj:
@@ -1414,7 +1414,7 @@ class InputParser(object):
         for item_type, items in iteritems(dict_):
             if item_type not in SERVICE_BY_NAME and item_type not in HTTP_SOAP_ITEM_TYPES:
                 raw = (item_type,)
-                results.add_error(raw, ERROR_UNKNOWN_ELEM, "Ignoring unknown element type {} in the input.", item_type)
+                results.add_error(raw, ERROR_UNKNOWN_ELEM, 'Ignoring unknown element type {} in the input.', item_type)
                 continue
 
             for item in items:

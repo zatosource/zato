@@ -91,7 +91,7 @@ class NumberTestCase(TestCase):
         repo = NumberRepo(repo_name, sync_threshold, sync_interval, max_value=max_value)
 
         # By multiplying we ensure that max_value is reached ..
-        for x in range(max_value * 2):
+        for _x in range(max_value * 2):
             value = repo.incr(key_name)
 
         # .. yet, it will never be exceeded.
@@ -132,11 +132,11 @@ class NumberTestCase(TestCase):
         repo = NumberRepo(repo_name, sync_threshold, sync_interval, allow_negative=allow_negative)
 
         # Add new items ..
-        for x in range(total_increases):
+        for _x in range(total_increases):
             repo.incr(key_name)
 
         # By multiplying we ensure that we decrement it below zero ..
-        for x in range(total_decreases):
+        for _x in range(total_decreases):
             value = repo.decr(key_name)
 
         # .. and we confirm that the below-zero value is as expected (remember, allow_negative is True).
@@ -158,11 +158,11 @@ class NumberTestCase(TestCase):
         repo = NumberRepo(repo_name, sync_threshold, sync_interval, allow_negative=allow_negative)
 
         # Add new items ..
-        for x in range(total_increases):
+        for _x in range(total_increases):
             repo.incr(key_name)
 
         # By multiplying we ensure that we decrement it below zero ..
-        for x in range(total_decreases):
+        for _x in range(total_decreases):
             value = repo.decr(key_name)
 
         # .. and we confirm that the value is zero (remember, allow_negative is True).

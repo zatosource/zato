@@ -41,7 +41,7 @@ class SSO(WorkerImpl):
                 'is_active': msg.is_rate_limit_active,
                 'parent_type': None,
                 'parent_name': None,
-              }, msg.rate_limit_def, True)
+            }, msg.rate_limit_def, True)
 
 # ################################################################################################################################
 

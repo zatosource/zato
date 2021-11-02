@@ -60,17 +60,25 @@ class ForceTypeService(Service):
     name = '_test.force-type'
 
     class SimpleIO:
-        input_required = (AsIs('is_a'), Boolean('b'), Bool('c'), CSV('d'), Dict('e'), Float('f'), Int('g'), Integer('h'),
-            List('i'), ListOfDicts('j'), Nested('k'), Opaque('l'), Unicode('m'), UTC('n'))
+        input_required = (
+            AsIs('is_a'), Boolean('b'), Bool('c'), CSV('d'), Dict('e'), Float('f'), Int('g'), Integer('h'),
+            List('i'), ListOfDicts('j'), Nested('k'), Opaque('l'), Unicode('m'), UTC('n')
+        )
 
-        input_optional = (AsIs('is_aa'), Boolean('bb'), Bool('cc'), CSV('dd'), Dict('ee'), Float('ff'), Int('gg'), Integer('hh'),
-            List('ii'), ListOfDicts('jj'), Nested('kk'), Opaque('ll'), Unicode('mm'), UTC('nn'))
+        input_optional = (
+            AsIs('is_aa'), Boolean('bb'), Bool('cc'), CSV('dd'), Dict('ee'), Float('ff'), Int('gg'), Integer('hh'),
+            List('ii'), ListOfDicts('jj'), Nested('kk'), Opaque('ll'), Unicode('mm'), UTC('nn')
+        )
 
-        output_required = (AsIs('is_aaa'), Boolean('bbb'), Bool('ccc'), CSV('ddd'), Dict('eee'), Float('fff'), Int('ggg'),
-            Integer('hhh'), List('iii'), ListOfDicts('jjj'), Nested('kkk'), Opaque('lll'), Unicode('mmm'), UTC('nnn'))
+        output_required = (
+            AsIs('is_aaa'), Boolean('bbb'), Bool('ccc'), CSV('ddd'), Dict('eee'), Float('fff'), Int('ggg'),
+            Integer('hhh'), List('iii'), ListOfDicts('jjj'), Nested('kkk'), Opaque('lll'), Unicode('mmm'), UTC('nnn')
+        )
 
-        output_optional = (AsIs('is_aaaa'), Boolean('bbbb'), Bool('cccc'), CSV('dddd'), Dict('eeee'), Float('ffff'), Int('gggg'),
-            Integer('hhhh'), List('iiii'), ListOfDicts('jjjj'), Nested('kkkk'), Opaque('llll'), Unicode('mmmm'), UTC('nnnn'))
+        output_optional = (
+            AsIs('is_aaaa'), Boolean('bbbb'), Bool('cccc'), CSV('dddd'), Dict('eeee'), Float('ffff'), Int('gggg'),
+            Integer('hhhh'), List('iiii'), ListOfDicts('jjjj'), Nested('kkkk'), Opaque('llll'), Unicode('mmmm'), UTC('nnnn')
+        )
 
 # ################################################################################################################################
 

@@ -1075,7 +1075,7 @@ class PubSubTool(object):
         count = 0
         msg_ids = []
 
-        for idx, msg in enumerate(gd_msg_list):
+        for _idx, msg in enumerate(gd_msg_list):
 
             msg_ids.append(msg.pub_msg_id)
             self.delivery_lists[sub_key].add(GDMessage(sub_key, topic_name, msg))

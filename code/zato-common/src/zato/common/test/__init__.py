@@ -87,7 +87,7 @@ def rand_dict():
     out = {}
     funcs = [rand_bool, rand_int, rand_string]
 
-    for x in range(rand_int(30)):
+    for _x in range(rand_int(30)):
         out[choice(funcs)()] = choice(funcs)()
 
     return out
@@ -98,7 +98,7 @@ def rand_list():
     out = []
     funcs = [rand_bool, rand_int, rand_string]
 
-    for x in range(rand_int(30)):
+    for _x in range(rand_int(30)):
         out.append(choice(funcs)())
 
     return out
@@ -107,7 +107,7 @@ def rand_list():
 
 def rand_list_of_dicts():
     out = []
-    for x in range(rand_int(30)):
+    for _x in range(rand_int(30)):
         out.append(rand_dict())
     return out
 
@@ -345,11 +345,12 @@ class ServiceTestCase(TestCase):
         self.maxDiff = None
         super(ServiceTestCase, self).__init__(*args, **kwargs)
 
-    def invoke(self, class_, request_data, expected, mock_data={}, channel=CHANNEL.HTTP_SOAP, job_type=None,
+    def invoke(self, class_, request_data, expected, mock_data=None, channel=CHANNEL.HTTP_SOAP, job_type=None,
         data_format=DATA_FORMAT.JSON, service_store_name_to_impl_name=None, service_store_impl_name_to_service=None):
         """ Sets up a service's invocation environment, then invokes and returns
         an instance of the service.
         """
+        mock_data = mock_data or {}
         class_.component_enabled_cassandra = True
         class_.component_enabled_email = True
         class_.component_enabled_search = True
@@ -419,8 +420,8 @@ class ServiceTestCase(TestCase):
         self.assertFalse(diff, 'There should be no difference between sio_keys {} and given_keys {}, diff {}'.format(
             sio_keys, given_keys, diff))
 
-    def check_impl(self, service_class, request_data, response_data, response_elem, mock_data={}):
-
+    def check_impl(self, service_class, request_data, response_data, response_elem, mock_data=None):
+        mock_data = mock_data or {}
         expected_data = sorted(response_data.items())
 
         instance = self.invoke(service_class, request_data, None, mock_data)

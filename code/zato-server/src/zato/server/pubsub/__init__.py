@@ -90,8 +90,9 @@ _sub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.SUBSCRIBER.id)
 
 # ################################################################################################################################
 
-_update_attrs = ('data', 'size', 'expiration', 'priority', 'pub_correl_id', 'in_reply_to', 'mime_type',
-    'expiration', 'expiration_time')
+_update_attrs = (
+    'data', 'size', 'expiration', 'priority', 'pub_correl_id', 'in_reply_to', 'mime_type', 'expiration', 'expiration_time'
+)
 
 # ################################################################################################################################
 
@@ -1363,7 +1364,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def invoke_before_delivery_hook(self, hook, topic_id, sub_key, batch, messages, actions=list(PUBSUB.HOOK_ACTION()),
+    def invoke_before_delivery_hook(self, hook, topic_id, sub_key, batch, messages, actions=tuple(PUBSUB.HOOK_ACTION()),
         _deliver=PUBSUB.HOOK_ACTION.DELIVER):
         """ Invokes a hook service for each message from a batch of messages possibly to be delivered and arranges
         each one to a specific key in messages dict.

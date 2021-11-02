@@ -29,7 +29,8 @@ class CreateForm(WithAuditLog):
     service = forms.ChoiceField(widget=forms.Select(attrs={'class':'required', 'style':'width:100%'}))
     security_id = forms.ChoiceField(widget=forms.Select())
 
-    def __init__(self, security_list=[], prefix=None, post_data=None, req=None):
+    def __init__(self, security_list=None, prefix=None, post_data=None, req=None):
+        security_list = security_list or []
         super(WithAuditLog, self).__init__(post_data, prefix=prefix)
 
         add_security_select(self, security_list, field_name='security_id', needs_rbac=False)

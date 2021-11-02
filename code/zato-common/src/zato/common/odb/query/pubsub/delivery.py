@@ -128,7 +128,7 @@ def confirm_pubsub_msg_delivered(session, cluster_id, sub_key, delivered_pub_msg
         values({
             'delivery_status': _delivered,
             'delivery_time': now
-            }).\
+        }).\
         where(PubSubEndpointEnqueuedMessage.pub_msg_id.in_(delivered_pub_msg_id_list)).\
         where(PubSubEndpointEnqueuedMessage.sub_key==sub_key)
     )
