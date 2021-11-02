@@ -57,8 +57,11 @@ def new_msg_id(pattern='zhl7{}', id_len=6, _new_cid=new_cid):
 class ConnCtx:
     """ Details of an individual remote connection to a server.
     """
-    __slots__ = ('conn_id', 'conn_name', 'socket', 'peer_ip', 'peer_port', 'peer_fqdn', 'local_ip', \
-        'local_port', 'local_fqdn', 'stats_per_msg_type', 'total_message_packets_received', 'total_messages_received')
+    __slots__ = (
+        'conn_id', 'conn_name', 'socket', 'peer_ip', 'peer_port', 'peer_fqdn', 'local_ip',
+        'local_port', 'local_fqdn', 'stats_per_msg_type', 'total_message_packets_received',
+        'total_messages_received'
+    )
 
     def __init__(self, conn_name, socket, peer_address, _new_conn_id=new_conn_id):
         # type: (socket, tuple)
@@ -273,8 +276,9 @@ class HL7MLLPServer:
         _socket_send = conn_ctx.socket.send
         _socket_settimeout = conn_ctx.socket.settimeout
 
-        _handle_complete_message_args = (_buffer, _buffer_join_func, conn_ctx, request_ctx, _request_ctx_reset,
-            _socket_send, _run_callback)
+        _handle_complete_message_args = (
+            _buffer, _buffer_join_func, conn_ctx, request_ctx, _request_ctx_reset, _socket_send, _run_callback
+        )
 
         # Run the main loop
         while self.keep_running:
@@ -547,14 +551,16 @@ class HL7MLLPServer:
                 self.config.service_name,
                 request_ctx.data,
                 data_format = _hl7_v2,
-                zato_ctx = {'zato.channel_item': {
+                zato_ctx = {
+                    'zato.channel_item': {
                     'data_encoding': 'utf8',
                     'hl7_version': _hl7_v2,
                     'json_path': None,
                     'should_parse_on_input': True,
                     'should_validate': True,
                     'hl7_mllp_conn_ctx': conn_ctx,
-                }}
+                    }
+                }
             )
 
         except Exception:

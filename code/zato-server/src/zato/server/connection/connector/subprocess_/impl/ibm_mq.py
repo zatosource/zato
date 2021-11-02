@@ -231,7 +231,7 @@ class IBMMQConnectionContainer(BaseConnectionContainer):
             'queue_name': msg_ctx.queue_name,
             'service_name': msg_ctx.service_name,
             'data_format': msg_ctx.data_format,
-            })
+        })
 
 # ################################################################################################################################
 

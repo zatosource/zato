@@ -103,7 +103,7 @@ class _CreateEdit(CreateEdit):
         if name in ('service_list', 'topic_list', 'outconn_rest_list'):
             if value:
                 if isinstance(value, list):
-                    value = sorted(set(elem for elem in value if elem))
+                    value = sorted({elem for elem in value if elem})
                 else:
                     value = [value] if value else []
 
@@ -126,7 +126,7 @@ class _CreateEdit(CreateEdit):
             all_outconn_rest_list = get_outconn_rest_list(self.req)
 
             outconn_rest_list = outconn_rest_list if isinstance(outconn_rest_list, list) else [outconn_rest_list]
-            outconn_rest_list = sorted(set(all_outconn_rest_list[int(elem)] for elem in outconn_rest_list if elem))
+            outconn_rest_list = sorted({all_outconn_rest_list[int(elem)] for elem in outconn_rest_list if elem})
 
         #
         # Services

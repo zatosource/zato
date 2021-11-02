@@ -40,12 +40,12 @@ from zato.common.util.api import get_lb_agent_json_config, timeouting_popen
 public_method_prefix = '_lb_agent_'
 config_file = 'zato.config'
 
-logger = logging.getLogger("")
+logger = logging.getLogger('')
 logging.addLevelName('TRACE1', TRACE1)
 
 # All known HAProxy commands
 haproxy_commands = {}
-for version, commands in haproxy_stats.items():
+for _ignored_version, commands in haproxy_stats.items():
     haproxy_commands.update(commands)
 
 # ################################################################################################################################
@@ -85,9 +85,10 @@ class BaseLoadBalancerAgent(object):
 
 # ################################################################################################################################
 
-    def _re_start_load_balancer(self, timeout_msg, rc_non_zero_msg, additional_params=[]):
+    def _re_start_load_balancer(self, timeout_msg, rc_non_zero_msg, additional_params=None):
         """ A common method for (re-)starting HAProxy.
         """
+        additional_params = additional_params or []
         command = [self.haproxy_command, '-D', '-f', self.config_path, '-p', self.haproxy_pidfile]
         command.extend(additional_params)
         timeouting_popen(command, 5.0, timeout_msg, rc_non_zero_msg)
@@ -105,7 +106,7 @@ class BaseLoadBalancerAgent(object):
         """ Restarts the HAProxy load balancer without disrupting existing connections.
         """
         additional_params = ['-sf', open(self.haproxy_pidfile).read().strip()]
-        self._re_start_load_balancer("Could not restart in `{}` seconds. ", 'Failed to restart HAProxy. ', additional_params)
+        self._re_start_load_balancer('Could not restart in `{}` seconds. ', 'Failed to restart HAProxy. ', additional_params)
 
 # ################################################################################################################################
 
@@ -365,7 +366,7 @@ class BaseLoadBalancerAgent(object):
 
 # ################################################################################################################################
 
-    def _lb_agent_execute_command(self, command, timeout, extra=""):
+    def _lb_agent_execute_command(self, command, timeout, extra=''):
         """ Execute an HAProxy command through its UNIX socket interface.
         """
         command = haproxy_commands[int(command)][0]

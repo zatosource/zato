@@ -86,7 +86,7 @@ if 0:
 
 # ################################################################################################################################
 
-_supported_json_dumps = set(['stdlib', 'zato_default', 'rapidjson', 'bson', 'orjson'])
+_supported_json_dumps = {'stdlib', 'zato_default', 'rapidjson', 'bson', 'orjson'}
 
 # ################################################################################################################################
 
@@ -147,8 +147,10 @@ log_msg_max_size = 1024
 # ################################################################################################################################
 
 class HookCtx(object):
-    __slots__ = ('hook_type', 'config', 'pub_client_id', 'ext_client_id', 'ext_client_name', 'connection_time', 'user_data',
-        'forwarded_for', 'forwarded_for_fqdn', 'peer_address', 'peer_host', 'peer_fqdn', 'peer_conn_info_pretty', 'msg')
+    __slots__ = (
+        'hook_type', 'config', 'pub_client_id', 'ext_client_id', 'ext_client_name', 'connection_time', 'user_data',
+        'forwarded_for', 'forwarded_for_fqdn', 'peer_address', 'peer_host', 'peer_fqdn', 'peer_conn_info_pretty', 'msg'
+    )
 
     def __init__(self, hook_type, *args, **kwargs):
         self.hook_type = hook_type
@@ -1750,7 +1752,7 @@ if __name__ == '__main__':
             for name, connector in web_socket_api.connectors.items(): # type: (str, Connector)
                 report = connector.get_conn_report()
                 print('*', name, report)
-                '''
+                ''' # noqa: Q001
 
 # ################################################################################################################################
 # ################################################################################################################################

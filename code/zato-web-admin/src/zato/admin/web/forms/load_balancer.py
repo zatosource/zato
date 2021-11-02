@@ -32,26 +32,27 @@ def populate_choices(form, fields_choices):
 class ManageLoadBalancerForm(forms.Form):
     """ Form for the graphical management of HAProxy.
     """
-    global_log_host = forms.CharField(widget=forms.TextInput(attrs={"class":"required", "style":"width:70%"}))
-    global_log_port = forms.CharField(widget=forms.TextInput(attrs={"class":"required validate-digits", "style":"width:70%"}))
-    global_log_facility = forms.CharField(widget=forms.TextInput(attrs={"class":"required", "style":"width:70%"}))
-    global_log_level = forms.CharField(widget=forms.TextInput(attrs={"class":"required", "style":"width:70%"}))
+    global_log_host = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:70%'}))
+    global_log_port = forms.CharField(widget=forms.TextInput(attrs={'class':'required validate-digits', 'style':'width:70%'}))
+    global_log_facility = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:70%'}))
+    global_log_level = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:70%'}))
 
-    timeout_connect = forms.CharField(widget=forms.TextInput(attrs={"class":"required validate-digits", "style":"width:30%"}))
-    timeout_client = forms.CharField(widget=forms.TextInput(attrs={"class":"required validate-digits", "style":"width:30%"}))
-    timeout_server = forms.CharField(widget=forms.TextInput(attrs={"class":"required validate-digits", "style":"width:30%"}))
+    timeout_connect = forms.CharField(widget=forms.TextInput(attrs={'class':'required validate-digits', 'style':'width:30%'}))
+    timeout_client = forms.CharField(widget=forms.TextInput(attrs={'class':'required validate-digits', 'style':'width:30%'}))
+    timeout_server = forms.CharField(widget=forms.TextInput(attrs={'class':'required validate-digits', 'style':'width:30%'}))
 
-    http_plain_bind_address = forms.CharField(widget=forms.TextInput(attrs={"class":"required", "style":"width:70%"}))
-    http_plain_bind_port = forms.CharField(widget=forms.TextInput(attrs={"class":"required validate-digits", "style":"width:30%"}))
+    http_plain_bind_address = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:70%'}))
+    http_plain_bind_port = forms.CharField(widget=forms.TextInput(attrs={'class':'required validate-digits', 'style':'width:30%'}))
     http_plain_log_http_requests = forms.ChoiceField()
-    http_plain_maxconn = forms.CharField(widget=forms.TextInput(attrs={"class":"required validate-digits", "style":"width:30%"}))
-    http_plain_monitor_uri = forms.CharField(widget=forms.TextInput(attrs={"class":"required", "style":"width:70%"}))
+    http_plain_maxconn = forms.CharField(widget=forms.TextInput(attrs={'class':'required validate-digits', 'style':'width:30%'}))
+    http_plain_monitor_uri = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:70%'}))
 
-    def __init__(self, initial={}):
+    def __init__(self, initial=None):
+        initial = initial or {}
         super(ManageLoadBalancerForm, self).__init__(initial=initial)
 
         fields_choices = (
-            ("http_plain_log_http_requests", http_log),
+            ('http_plain_log_http_requests', http_log),
         )
         populate_choices(self, fields_choices)
 
@@ -61,22 +62,23 @@ class ManageLoadBalancerForm(forms.Form):
 class ManageLoadBalancerSourceCodeForm(forms.Form):
     """ Form for the source code-level management of HAProxy.
     """
-    source_code = forms.CharField(widget=forms.Textarea(attrs={"style":"overflow:auto; width:100%; white-space: pre-wrap;height:400px"}))
+    source_code = forms.CharField(widget=forms.Textarea(attrs={'style':'overflow:auto; width:100%; white-space: pre-wrap;height:400px'}))
 
 class RemoteCommandForm(forms.Form):
     """ Form for the direct interface to HAProxy's commands.
     """
     command = forms.ChoiceField()
     timeout = forms.ChoiceField()
-    extra = forms.CharField(widget=forms.TextInput(attrs={"style":"width:40%"}))
-    result = forms.CharField(widget=forms.Textarea(attrs={"style":"overflow:auto; width:100%; white-space: pre-wrap;height:400px"}))
+    extra = forms.CharField(widget=forms.TextInput(attrs={'style':'width:40%'}))
+    result = forms.CharField(widget=forms.Textarea(attrs={'style':'overflow:auto; width:100%; white-space: pre-wrap;height:400px'}))
 
-    def __init__(self, commands, initial={}):
+    def __init__(self, commands, initial=None):
+        initial = initial or {}
         super(RemoteCommandForm, self).__init__(initial=initial)
 
         fields_choices = (
-            ("command", commands),
-            ("timeout", timeouts),
+            ('command', commands),
+            ('timeout', timeouts),
         )
         populate_choices(self, fields_choices)
 

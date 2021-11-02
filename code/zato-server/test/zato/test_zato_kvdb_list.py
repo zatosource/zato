@@ -47,7 +47,7 @@ class TransientRepositoryTestCase(TestCase):
         repo = ListRepo(name, data_path, max_size)
 
         # Push more object than the max size allows ..
-        for x in range(max_size + 1):
+        for _x in range(max_size + 1):
             repo.append(None)
 
         # .. we have reached the maximum size but it should not be greater than that.

@@ -151,7 +151,7 @@ def _cron_style_job_def(user_profile, start_date, cron_definition):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_create_edit_message(user_profile, cluster, params, form_prefix=""):
+def _get_create_edit_message(user_profile, cluster, params, form_prefix=''):
     """ A dictionary of core data which can be used by both 'edit' and 'create'
     actions, regardless of the job's type.
     """

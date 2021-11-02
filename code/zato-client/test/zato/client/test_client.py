@@ -297,7 +297,7 @@ NoResultFound: No row was found for one()
 ]]]></faultstring>
        </SOAP-ENV:Fault>
    </SOAP-ENV:Body>
- </SOAP-ENV:Envelope>"""
+ </SOAP-ENV:Envelope>""" # noqa: JS101, JS102
 
         client = self.get_client(FakeInnerResponse(headers, ok, text, status_code))
         response = client.invoke(soap_action, '')

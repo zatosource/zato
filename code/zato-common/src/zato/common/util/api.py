@@ -126,7 +126,7 @@ random.seed()
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
-logging.addLevelName(TRACE1, "TRACE1")
+logging.addLevelName(TRACE1, 'TRACE1')
 
 _repr_template = Template('<$class_name at $mem_loc$attrs>')
 _uncamelify_re = re.compile(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))')
@@ -222,7 +222,7 @@ def pprint(obj):
     """ Pretty-print an object into a string buffer.
     """
     # Get dicts' items.
-    if hasattr(obj, "items"):
+    if hasattr(obj, 'items'):
         obj = sorted(obj.items())
 
     buf = StringIO()
@@ -246,7 +246,7 @@ def object_attrs(_object, ignore_double_underscore, to_avoid_list, sort):
     attrs = dir(_object)
 
     if ignore_double_underscore:
-        attrs = ifilter(lambda elem: not elem.startswith("__"), attrs)
+        attrs = ifilter(lambda elem: not elem.startswith('__'), attrs)
 
     _to_avoid_list = getattr(_object, to_avoid_list, None) # Don't swallow exceptions
     if _to_avoid_list is not None:
@@ -284,7 +284,7 @@ def to_form(_object):
     a true Django model.
     """
     out = {}
-    attrs = object_attrs(_object, True, "repr_to_avoid", False)
+    attrs = object_attrs(_object, True, 'repr_to_avoid', False)
     for attr in attrs:
         out[attr] = getattr(_object, attr)
 
@@ -671,7 +671,8 @@ def multikeysort(items, columns):
 
 # From http://docs.python.org/release/2.7/library/itertools.html#recipes
 def grouper(n, iterable, fillvalue=None):
-    "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
+    """ grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx
+    """
     args = [iter(iterable)] * n
     return zip_longest(fillvalue=fillvalue, *args)
 
@@ -689,7 +690,8 @@ def dict_item_name(system, key, value):
 
 # From http://docs.python.org/release/2.7/library/itertools.html#recipes
 def pairwise(iterable):
-    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    """ s -> (s0,s1), (s1,s2), (s2, s3), ...
+    """
     a, b = tee(iterable)
     next(b, None)
     return izip(a, b)
@@ -949,7 +951,7 @@ def get_stack(f, with_locals=False):
             try:
                 reprs = spformat(localvars)
             except Exception:
-                reprs = "failed to format local variables"
+                reprs = 'failed to format local variables'
             out += [' ' + line for line in reprs.splitlines()]
             out.append('')
     return '\n'.join(out)
@@ -958,7 +960,7 @@ def get_stack(f, with_locals=False):
 
 def get_threads_traceback(pid):
     result = {}
-    id_name = dict([(th.ident, th.name) for th in threading.enumerate()])
+    id_name = {th.ident: th.name for th in threading.enumerate()}
 
     for thread_id, frame in iteritems(sys._current_frames()):
         key = '{}:{}'.format(pid, id_name.get(thread_id, '(No name)'))
@@ -1272,12 +1274,14 @@ def add_scheduler_jobs(api, odb, cluster_id, spawn=True):
         _, weeks, days, hours, minutes, seconds, repeats, cron_definition)\
             in odb.get_job_list(cluster_id):
 
-        job_data = Bunch({'id':id, 'name':name, 'is_active':is_active,
+        job_data = Bunch({
+            'id':id, 'name':name, 'is_active':is_active,
             'job_type':job_type, 'start_date':start_date,
             'extra':extra, 'service':service_name, 'weeks':weeks,
             'days':days, 'hours':hours, 'minutes':minutes,
             'seconds':seconds, 'repeats':repeats,
-            'cron_definition':cron_definition})
+            'cron_definition':cron_definition
+        })
 
         if is_active:
             api.create_edit('create', job_data, spawn=spawn)
@@ -1491,9 +1495,11 @@ def get_engine_url(args):
     else:
         is_sqlite = args.get('engine') == 'sqlite' or args.get('db_type') == 'sqlite'
 
-    names = ('engine', 'username', 'password', 'host', 'port', 'name', 'db_name', 'db_type', 'sqlite_path', 'odb_type',
-             'odb_user', 'odb_password', 'odb_host', 'odb_port', 'odb_db_name', 'odb_type', 'ENGINE', 'NAME', 'HOST', 'USER',
-             'PASSWORD', 'PORT')
+    names = (
+        'engine', 'username', 'password', 'host', 'port', 'name', 'db_name', 'db_type', 'sqlite_path', 'odb_type',
+        'odb_user', 'odb_password', 'odb_host', 'odb_port', 'odb_db_name', 'odb_type', 'ENGINE', 'NAME', 'HOST', 'USER',
+        'PASSWORD', 'PORT'
+    )
 
     for name in names:
         if has_get:

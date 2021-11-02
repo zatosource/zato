@@ -48,7 +48,7 @@ class GetServerDeliveryTaskList(AdminService):
 
         for ps_tool in self.pubsub.pubsub_tools: # type: PubSubTool
             with ps_tool.lock:
-                for sub_key, task in ps_tool.delivery_tasks.items(): # type: (str, DeliveryTask)
+                for _ignored_sub_key, task in ps_tool.delivery_tasks.items(): # type: (str, DeliveryTask)
 
                     last_sync = task.last_iter_run # ps_tool.last_gd_run
                     if last_sync:
