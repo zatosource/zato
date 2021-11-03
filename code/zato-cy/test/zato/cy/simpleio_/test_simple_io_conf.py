@@ -157,7 +157,7 @@ class SimpleIOConfig(BaseSIOTestCase):
             class SimpleIO:
                 input = 'is_ready', 'abc_timeout'
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         MyService._sio.parse_input({
             'is_ready': 'true',

@@ -200,7 +200,16 @@ def set_password(odb_session_func, encrypt_func, hash_func, sso_conf, user_id, p
 def check_credentials(decrypt_func, verify_hash_func, stored_password, input_password):
     """ Checks that an incoming password is equal to the one that is stored in the database.
     """
+
+    print()
+    print('AAA-1', decrypt_func)
+    print('AAA-2', verify_hash_func)
+    print('AAA-3', stored_password)
+    print('AAA-4', input_password)
+    print()
+
     password_decrypted = decrypt_func(stored_password) # At this point it is decrypted but still hashed
+
     return verify_hash_func(input_password, password_decrypted)
 
 # ################################################################################################################################
