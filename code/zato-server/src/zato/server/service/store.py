@@ -44,6 +44,8 @@ from zato.common.json_internal import dumps
 from zato.common.json_schema import get_service_config, ValidationConfig as JSONSchemaValidationConfig, \
      Validator as JSONSchemaValidator
 from zato.common.match import Matcher
+from zato.common.marshal_.api import Model as DataClassModel
+from zato.common.marshal_.simpleio import DataClassSimpleIO
 from zato.common.odb.model.base import Base as ModelBase
 from zato.common.util.api import deployment_info, import_module_from_path, is_func_overridden, is_python_file, visit_py_source
 from zato.common.util.platform_ import is_non_windows
@@ -380,7 +382,15 @@ class ServiceStore(object):
         except AttributeError:
             class_.has_sio = False
         else:
-            CySimpleIO.attach_sio(service_store.server, service_store.server.sio_config, class_)
+            sio_input  = getattr(class_.SimpleIO, 'input', None)
+            sio_output = getattr(class_.SimpleIO, 'output', None)
+
+            if (sio_input and issubclass(sio_input, DataClassModel)) or (sio_output and issubclass(sio_output, DataClassModel)):
+                SIOClass = DataClassSimpleIO
+            else:
+                SIOClass = CySimpleIO
+
+            SIOClass.attach_sio(service_store.server, service_store.server.sio_config, class_)
 
         # May be None during unit-tests - not every test provides it.
         if service_store:

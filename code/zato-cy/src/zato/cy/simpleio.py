@@ -1312,6 +1312,10 @@ class CySimpleIO(object):
     """ If a service uses SimpleIO then, during deployment, its class will receive an attribute called _sio
     based on the service's SimpleIO attribute. The _sio one will be an instance of this Cython class.
     """
+
+    # We are not based on dataclasses, unlike DataClassSimpleIO
+    is_dataclass = False
+
     # A parallel server instance
     server = cy.declare(object, visibility='public') # type: ParallelServer
 
@@ -1793,13 +1797,13 @@ class CySimpleIO(object):
                 return
 
             # Attach the Cython object representing the parsed user definition
-            cy_simple_io = CySimpleIO(server, server_config, user_sio)
-            cy_simple_io.service_class = class_
-            cy_simple_io.build(class_)
-            class_._sio = cy_simple_io
+            sio = CySimpleIO(server, server_config, user_sio)
+            sio.service_class = class_
+            sio.build(class_)
+            class_._sio = sio
 
         except Exception:
-            logger.warn('Could not attach SimpleIO to class `%s`, e:`%s`', class_, format_exc())
+            logger.warn('Could not attach CySimpleIO to class `%s`, e:`%s`', class_, format_exc())
             raise
 
 # ################################################################################################################################
