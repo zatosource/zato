@@ -39,7 +39,7 @@ class JSONInputParsing(BaseSIOTestCase):
             class SimpleIO:
                 input = 'aaa', Int('bbb'), Opaque('ccc'), '-ddd', '-eee'
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         aaa = 'aaa-111'
         bbb = '222'
@@ -74,7 +74,7 @@ class JSONInputParsing(BaseSIOTestCase):
                     Dict('hhh', 'a', 'b', 'c'), DictList('iii', 'd', 'e', 'f'), Float('jjj'), Int('mmm'), List('nnn'), \
                     Opaque('ooo'), Text('ppp'), UUID('qqq')
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         aaa = 'aaa-111'
         bbb = object()
@@ -139,7 +139,7 @@ class JSONInputParsing(BaseSIOTestCase):
                     Dict('hhh', 'a', 'b', 'c'), DictList('iii', 'd', 'e', 'f'), Float('jjj'), Int('mmm'), List('nnn'), \
                     Opaque('ooo'), Text('ppp'), UUID('qqq')
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         aaa = 'aaa-111'
         bbb = object()
@@ -267,7 +267,7 @@ class JSONInputParsing(BaseSIOTestCase):
                     Text('-fff', default=_default_fff)
                 default_input_value = _default_input_value
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         aaa = 'aaa-111'
         ccc = object()
@@ -302,7 +302,7 @@ class JSONInputParsing(BaseSIOTestCase):
                 input = 'aaa', Int('-bbb', default=_default_bbb), Opaque('ccc'), '-ddd', Text('-eee'), \
                     Text('-fff', default=_default_fff)
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         aaa = 'aaa-111'
         ccc = object()
@@ -339,7 +339,7 @@ class JSONInputParsing(BaseSIOTestCase):
                     Text('-fff', default=_default_fff)
                 default_value = _default_input_value
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         aaa = 'aaa-111'
         ccc = object()
@@ -389,7 +389,7 @@ class JSONInputParsing(BaseSIOTestCase):
                     Float('-jjj', default=jjj), Int('-mmm', default=mmm), List('-nnn', default=nnn), \
                     Opaque('-ooo', default=ooo), Text('-ppp', default=ppp), UUID('-qqq', default=qqq)
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         # Note that the input document is empty
         input = MyService._sio.parse_input({}, DATA_FORMAT.DICT)
@@ -428,7 +428,7 @@ class JSONInputParsing(BaseSIOTestCase):
                 input = Dict(aaa, bbb, ccc, ggg, '-ppp')
                 default_input_value = _default_input_value
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         data = {
             'aaa': {
@@ -467,7 +467,7 @@ class JSONInputParsing(BaseSIOTestCase):
             class SimpleIO:
                 input = customer
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         data = Bunch()
         data.customer = Bunch()
@@ -507,7 +507,7 @@ class JSONInputParsing(BaseSIOTestCase):
                 input = customer
                 default_input_value = 'default-input-value'
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         # Note that locality has no type nor name and we expect for the SimpleIO-level default value to be used
         data = Bunch()
@@ -548,7 +548,7 @@ class JSONInputParsing(BaseSIOTestCase):
                 input = customer
                 default_input_value = 'default-input-value'
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         # Note that this locality has no type nor name but we expect for that Dict's default value to be used,
         # also, address has no street but since this Dict has no default value, again, SimpleIO one will be used.
@@ -584,7 +584,7 @@ class JSONInputParsing(BaseSIOTestCase):
             class SimpleIO:
                 input = customer
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         data = Bunch()
         data.customer = Bunch()
@@ -650,7 +650,7 @@ class JSONInputParsing(BaseSIOTestCase):
                 input = customer
                 default_input_value = 'default-input-value'
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         # Note that 'join_date', 'street_id', 'coords' and one of 'pos' keys are missing in input below,
         # the test ensures that default values are used in their place.
@@ -707,7 +707,7 @@ class JSONInputParsing(BaseSIOTestCase):
                 class SkipEmpty:
                     input = True
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         data = Bunch()
         data.aaa = 'aaa'
@@ -729,7 +729,7 @@ class JSONInputParsing(BaseSIOTestCase):
                 input = 'aaa', 'bbb', '-ccc', '-ddd'
                 skip_empty_keys = True
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         data = Bunch()
         data.aaa = 'aaa'
@@ -756,7 +756,7 @@ class JSONInputParsing(BaseSIOTestCase):
                     input = True
                     force_empty_input = 'eee'
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         data = Bunch()
         data.aaa = 'aaa'
@@ -782,7 +782,7 @@ class JSONInputParsing(BaseSIOTestCase):
                     input = True
                     force_empty_input = 'eee', 'fff'
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         data = Bunch()
         data.aaa = 'aaa'
@@ -809,7 +809,7 @@ class JSONInputParsing(BaseSIOTestCase):
                 class SkipEmpty:
                     input = 'ccc'
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         data = Bunch()
         data.aaa = 'aaa'
@@ -838,7 +838,7 @@ class JSONInputParsing(BaseSIOTestCase):
                 class SkipEmpty:
                     input = 'ccc', 'ddd'
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         data = Bunch()
         data.aaa = 'aaa'
