@@ -26,7 +26,7 @@ class AttachSIOTestCase(BaseSIOTestCase):
                 input = 'aaa', 'bbb', 'ccc', '-ddd', '-eee'
                 output = 'qqq', 'www', '-eee', '-fff'
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         self.assertEquals(MyService._sio.definition._input_required.get_elem_names(), ['aaa', 'bbb', 'ccc'])
         self.assertEquals(MyService._sio.definition._input_optional.get_elem_names(), ['ddd', 'eee'])

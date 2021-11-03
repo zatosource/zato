@@ -43,7 +43,7 @@ class InputPlainParsingTestCase(BaseSIOTestCase):
                 input_required = 'aaa', 'bbb', 'ccc', '-ddd', '-eee'
                 output_required = 'qqq', 'www', '-eee', '-fff'
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         self.assertEquals(MyService._sio.definition._input_required.get_elem_names(), ['-ddd', '-eee', 'aaa', 'bbb', 'ccc'])
         self.assertEquals(MyService._sio.definition._output_required.get_elem_names(), ['-eee', '-fff', 'qqq', 'www'])

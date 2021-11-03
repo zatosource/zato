@@ -288,7 +288,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server.startup_callable_tool = startup_callable_tool
     server.is_sso_enabled = server.fs_server_config.component_enabled.sso
     if server.is_sso_enabled:
-        server.sso_api = SSOAPI(server, sso_config, None, crypto_manager.encrypt, crypto_manager.decrypt,
+        server.sso_api = SSOAPI(server, sso_config, None, crypto_manager.encrypt, server.decrypt,
             crypto_manager.hash_secret, crypto_manager.verify_hash, new_user_id)
 
     # New in 2.0.8
