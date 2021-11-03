@@ -43,8 +43,8 @@ class MarshalAPI:
     def __init__(self):
         self._field_cache = {}
 
-    def from_dict(self, service, data, DataClass):
-        # type: (Service, dict, object)
+    def from_dict(self, service, data, DataClass, extra=None):
+        # type: (Service, dict, object, dict)
 
         # Whether the dataclass defines the __init__method
         has_init = getattr(DataClass, _PARAMS).init
@@ -78,11 +78,20 @@ class MarshalAPI:
 
                 # .. if we are here, it means that we can recurse into the nested data structure.
                 else:
-                    value = self.from_dict(service, value, field.type)
+
+                    # Note that we do not pass extra data on to nested models because we can only ever
+                    # overwrite top-level elements with what extra contains.
+                    value = self.from_dict(service, value, field.type, None)
 
             # Add the computed value for later use
             if value != ZatoNotGiven:
                 attrs_container[field.name] = value
+
+            # If we have any extra elements, we need to add them as well
+            if extra:
+                for param, value in extra.items():
+                    if param not in attrs_container:
+                        attrs_container[param] = value
 
         # Create a new instance, potentially with attributes ..
         instance = DataClass(**init_attrs) # type: Model

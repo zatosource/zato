@@ -429,7 +429,7 @@ class Service(object):
         self.wsgi_environ = None # type: dict
         self.job_type = None     # type: str
         self.environ = _Bunch()
-        self.request = _Request(self.logger)
+        self.request = _Request(self)
         self.response = _Response(self.logger)
         self.time = None
         self.patterns = None

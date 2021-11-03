@@ -1981,7 +1981,7 @@ class CySimpleIO(object):
 # ################################################################################################################################
 
     @cy.returns(object)
-    def parse_input(self, data:object, data_format:cy.unicode, extra:dict=None) -> object:
+    def parse_input(self, data:object, data_format:cy.unicode, service:object=None, extra:dict=None) -> object:
 
         is_csv:cy.bint = data_format == DATA_FORMAT_CSV and isinstance(data, basestring)
 
