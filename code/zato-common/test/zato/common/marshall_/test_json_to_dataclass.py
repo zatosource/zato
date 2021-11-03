@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main, TestCase
 
 # Zato
-from zato.common.ext.dataclasses import dataclass
+from zato.common.ext.dataclasses import dataclass, field
 from zato.common.marshal_.api import MarshalAPI, Model
 from zato.common.test import rand_int, rand_string
 
@@ -33,7 +33,10 @@ class MyRequest(Model):
 # ################################################################################################################################
 
 class JSONToDataclass(TestCase):
-    def test_unmarshall(self):
+
+# ################################################################################################################################
+
+    def xtest_unmarshall(self):
 
         request_id   = rand_int()
         user_name = rand_string()
@@ -50,10 +53,40 @@ class JSONToDataclass(TestCase):
 
         result = api.from_dict(service, data, MyRequest) # type: MyRequest
 
-        self.assertIsInstance(result, MyRequest)
+        self.assertIs(type(result), MyRequest)
         self.assertIsInstance(result.user, User)
 
         self.assertEqual(result.request_id, request_id)
+        self.assertEqual(result.user.user_name, user_name)
+
+# ################################################################################################################################
+
+    def test_unmarshall_default(self):
+
+        request_id = rand_int()
+        user_name  = rand_string()
+
+        @dataclass
+        class MyRequestWithDefault(MyRequest):
+            request_group: str = field(default='MyRequestGroup')
+
+        data = {
+            'request_id': request_id,
+            'user': {
+                'user_name': user_name
+            }
+        }
+
+        service = None
+        api = MarshalAPI()
+
+        result = api.from_dict(service, data, MyRequestWithDefault) # type: MyRequestWithDefault
+
+        self.assertIs(type(result), MyRequestWithDefault)
+        self.assertIsInstance(result.user, User)
+
+        self.assertEqual(result.request_id, request_id)
+        self.assertEqual(result.request_group, 'MyRequestGroup')
         self.assertEqual(result.user.user_name, user_name)
 
 # ################################################################################################################################
