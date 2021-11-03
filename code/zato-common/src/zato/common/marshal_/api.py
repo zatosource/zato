@@ -29,6 +29,15 @@ class Model:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class ModelCtx:
+    def __init__(self):
+        self.service = None   # type: Service
+        self.data = None      # type: dict
+        self.DataClass = None # type: object
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class MarshalAPI:
 
     def __init__(self):
@@ -84,7 +93,13 @@ class MarshalAPI:
 
         # .. run the post-creation hook ..
         if instance.after_created:
-            instance.after_created()
+
+            ctx = ModelCtx()
+            ctx.service = service
+            ctx.data = data
+            ctx.DataClass = DataClass
+
+            instance.after_created(ctx)
 
         # .. and return the new dataclass to our caller.
         return instance
