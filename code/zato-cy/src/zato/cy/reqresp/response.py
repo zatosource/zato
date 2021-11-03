@@ -26,6 +26,8 @@ from sqlalchemy.util import KeyedTuple
 
 # Zato
 from zato.common.api import simple_types, ZATO_OK
+from zato.common.ext.dataclasses import asdict
+from zato.common.marshal_.api import Model
 from zato.cy.reqresp.payload import SimpleIOPayload
 
 # Python 2/3 compatibility
@@ -155,11 +157,14 @@ class Response(object):
                     self._payload.set_payload_attrs(value)
 
                 # 2b2)
-                # .. someone assigns to self.response.payload an object that needs
-                # serialisation but we do not know how to do it.
                 else:
                     if value:
-                        raise Exception('Cannot serialise value without SimpleIO ouput declaration ({})'.format(value))
+                        if isinstance(value, Model):
+                            self._payload = asdict(value)
+                        else:
+                            # .. someone assigned to self.response.payload an object that needs
+                            # serialisation but we do not know how to do it.
+                            raise Exception('Cannot serialise value without SimpleIO ouput declaration ({})'.format(value))
 
     payload = property(_get_payload, _set_payload) # type: object
 
