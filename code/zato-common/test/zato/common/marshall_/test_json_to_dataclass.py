@@ -12,7 +12,8 @@ from unittest import main, TestCase
 # Zato
 from zato.common.ext.dataclasses import dataclass, field
 from zato.common.marshal_.api import MarshalAPI, Model, ModelCtx
-from zato.common.test import rand_int, rand_string
+from zato.common.marshal_.simpleio import DataClassSimpleIO
+from zato.common.test import BaseSIOTestCase, rand_int, rand_string
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,11 +39,9 @@ class TestService:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class JSONToDataclass(TestCase):
+class JSONToDataclassTestCase(TestCase):
 
-# ################################################################################################################################
-
-    def xtest_unmarshall(self):
+    def test_unmarshall(self):
 
         request_id   = rand_int()
         user_name = rand_string()
@@ -67,7 +66,7 @@ class JSONToDataclass(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_unmarshall_default(self):
+    def test_unmarshall_default(self):
 
         request_id = rand_int()
         user_name  = rand_string()
@@ -134,6 +133,30 @@ class JSONToDataclass(TestCase):
         api = MarshalAPI()
         api.from_dict(service, data, MyRequestWithAfterCreated)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SIOAttachTestCase(TestCase):
+
+    def test_attach_sio(self):
+
+        class MyService(Service):
+            class SimpleIO:
+                input = MyRequest
+
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
+
+        self.assertEquals(MyService._sio.definition._input_required.get_elem_names(), ['aaa', 'bbb', 'ccc'])
+        self.assertEquals(MyService._sio.definition._input_optional.get_elem_names(), ['ddd', 'eee'])
+
+        self.assertEquals(MyService._sio.definition._output_required.get_elem_names(), ['qqq', 'www'])
+        self.assertEquals(MyService._sio.definition._output_optional.get_elem_names(), ['eee', 'fff'])
+
+        self.assertTrue(MyService._sio.definition.has_input_required)
+        self.assertTrue(MyService._sio.definition.has_input_optional)
+
+        self.assertTrue(MyService._sio.definition.has_output_required)
+        self.assertTrue(MyService._sio.definition.has_output_optional)
 
 # ################################################################################################################################
 # ################################################################################################################################

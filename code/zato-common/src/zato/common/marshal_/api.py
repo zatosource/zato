@@ -6,9 +6,9 @@ Copyright (C) Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
+# Zato
 from zato.common.api import ZatoNotGiven
-from dataclasses import _FIELDS, _PARAMS
+from zato.common.ext.dataclasses import _FIELDS, _PARAMS
 
 # ################################################################################################################################
 # ################################################################################################################################

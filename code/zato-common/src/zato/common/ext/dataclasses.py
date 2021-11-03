@@ -14,8 +14,10 @@ try:
 
 # Python 3.6
 except ImportError:
-    from zato.common.ext._dataclasses import * #
+    from zato.common.ext._dataclasses import _FIELDS, _PARAMS
+    from zato.common.ext._dataclasses import * # noqa
 
 # Python 3.6+
 else:
+    from dataclasses import _FIELDS, _PARAMS
     from dataclasses import *
