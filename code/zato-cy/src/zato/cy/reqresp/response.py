@@ -95,9 +95,13 @@ class Response(object):
         self.sio = sio # type: CySimpleIO
         self.data_format = data_format
 
-        if self.sio and cy.cast(cy.bint, self.sio.definition.has_output_declared):
-            self._payload = SimpleIOPayload(self.sio, self.sio.definition.all_output_elem_names, self.cid, self.data_format)
-            self._has_sio_output = True
+        # We get below only if there is an SIO definition, but not a dataclass-based one, and it has output declared
+        if self.sio:
+            if not self.sio.is_dataclass:
+                if cy.cast(cy.bint, self.sio.definition.has_output_declared):
+                    self._payload = SimpleIOPayload(self.sio, self.sio.definition.all_output_elem_names, self.cid,
+                        self.data_format)
+                    self._has_sio_output = True
 
 # ################################################################################################################################
 
