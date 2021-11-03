@@ -608,7 +608,7 @@ class BaseSIOTestCase(TestCase):
 
     def get_sio(self, declaration, class_):
 
-        sio = CySimpleIO(self.get_server_config(), declaration)
+        sio = CySimpleIO(None, self.get_server_config(), declaration)
         sio.build(class_)
 
         return sio

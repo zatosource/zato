@@ -69,6 +69,9 @@ class PasswordReset(BaseRESTService):
         """
         # type: (SSOCtx) -> None
 
+        # This will be encrypted by SIO
+        ctx.input.token = self.server.decrypt(ctx.input.token)
+
         # Try to get a reset key for the input PRT ..
         reset_key = self.sso.password_reset.access_token(
             self.cid, ctx.input.token, ctx.input.current_app, ctx.remote_addr, ctx.user_agent)
@@ -83,6 +86,10 @@ class PasswordReset(BaseRESTService):
         """ Updates a password based on a PRT and reset key.
         """
         # type: (SSOCtx) -> None
+
+        # This will be encrypted by SIO
+        ctx.input.token = self.server.decrypt(ctx.input.token)
+        ctx.input.password = self.server.decrypt(ctx.input.password)
 
         # Try to get a reset key for the input PRT and reset key ..
         self.sso.password_reset.change_password(
