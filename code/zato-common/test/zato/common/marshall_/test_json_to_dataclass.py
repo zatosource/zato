@@ -12,6 +12,22 @@ from unittest import main, TestCase
 # Zato
 from zato.common.ext.dataclasses import dataclass
 from zato.common.marshal_.api import MarshalAPI, Model
+from zato.common.test import rand_int, rand_string
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False, repr=False)
+class User(Model):
+    user_name: str
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=True, repr=False)
+class MyRequest(Model):
+    request_id: int
+    user: User
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -19,29 +35,26 @@ from zato.common.marshal_.api import MarshalAPI, Model
 class JSONToDataclass(TestCase):
     def test_unmarshall(self):
 
-        @dataclass(init=False)
-        class User(Model):
-            user_name: str
-
-        @dataclass(init=False)
-        class MyRequest(Model):
-            user_id: int
-            user: User
+        request_id   = rand_int()
+        user_name = rand_string()
 
         data = {
-            'user_id': 123,
+            'request_id': request_id,
             'user': {
-                'user_name': 'zzz'
+                'user_name': user_name
             }
         }
 
+        service = None
         api = MarshalAPI()
-        result = api.from_dict(data, MyRequest)
 
-        print('QQQ-1', result)
+        result = api.from_dict(service, data, MyRequest) # type: MyRequest
 
-        # result = from_dict(MyRequest, data) # type: MyRequest
-        # print(111, result.user.user_name)
+        self.assertIsInstance(result, MyRequest)
+        self.assertIsInstance(result.user, User)
+
+        self.assertEqual(result.request_id, request_id)
+        self.assertEqual(result.user.user_name, user_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
