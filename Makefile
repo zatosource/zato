@@ -10,6 +10,10 @@ common-tests:
 cy-tests:
 	cd $(CURDIR)/code/zato-cy && make run-tests
 
+pylint:
+	echo Running pylint in $(CURDIR)/code/server/src
+	$(CURDIR)/code/bin/pylint -j 0 --verbose --rcfile $(CURDIR)/code/pylint.ini $(CURDIR)/code/zato-server/src
+
 server-tests:
 	cd $(CURDIR)/code/zato-server && make run-tests
 
