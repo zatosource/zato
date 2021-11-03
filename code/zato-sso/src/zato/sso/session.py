@@ -234,6 +234,22 @@ class SessionAPI(object):
 
                     # Check credentials first to make sure that attackers do not learn about any sort
                     # of metadata (e.g. is the account locked) if they do not know username and password.
+
+                    password = self.decrypt_func(user.password)
+
+
+                    print()
+                    print(111, user)
+                    print(222, user.password)
+                    print(333, password)
+                    print(444, ctx.input)
+                    print(445, self.decrypt_func)
+
+                    ctx.input['password'] = self.decrypt_func(ctx.input['password'])
+
+                    print(555, ctx.input)
+                    print()
+
                     if not self.user_checker.check_credentials(ctx, user.password if user else _dummy_password):
                         raise ValidationError(status_code.auth.not_allowed, False)
 

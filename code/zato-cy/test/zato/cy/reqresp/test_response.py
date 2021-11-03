@@ -86,7 +86,7 @@ class ResponseTestCase(BaseSIOTestCase):
     def test_init_has_sio(self):
 
         MyService = deepcopy(MyBaseService)
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         response = Response()
         response.init('abc', MyService._sio, DATA_FORMAT.CSV)
@@ -98,7 +98,7 @@ class ResponseTestCase(BaseSIOTestCase):
     def test_setslice(self):
 
         MyService = deepcopy(MyBaseService)
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         response = Response()
         response.init('abc', MyService._sio, DATA_FORMAT.CSV)
@@ -114,7 +114,7 @@ class ResponseTestCase(BaseSIOTestCase):
     def test_set_payload_dict_has_sio_case_1a(self):
 
         MyService = deepcopy(MyBaseService)
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         response = Response()
         response.init('abc', MyService._sio, DATA_FORMAT.XML)

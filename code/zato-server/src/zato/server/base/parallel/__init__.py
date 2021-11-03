@@ -1076,10 +1076,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def decrypt(self, data, _prefix=SECRETS.PREFIX):
+    def decrypt(self, data, _prefix=SECRETS.PREFIX, _marker=SECRETS.EncryptedMarker):
         """ Returns data decrypted using server's CryptoManager.
         """
-        if data.startswith(_prefix):
+        if data.startswith((_prefix, _marker)):
             return self.decrypt_no_prefix(data.replace(_prefix, '', 1))
         else:
             return data # Already decrypted, return as is
