@@ -13,7 +13,7 @@ from unittest import main, TestCase
 from zato.common.ext.dataclasses import dataclass, field
 from zato.common.marshal_.api import MarshalAPI, Model, ModelCtx
 from zato.common.marshal_.simpleio import DataClassSimpleIO
-from zato.common.test import BaseSIOTestCase, rand_int, rand_string
+from zato.common.test import rand_int, rand_string
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -140,11 +140,13 @@ class SIOAttachTestCase(TestCase):
 
     def test_attach_sio(self):
 
+        from zato.server.service import Service
+
         class MyService(Service):
             class SimpleIO:
                 input = MyRequest
 
-        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
+        DataClassSimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         self.assertEquals(MyService._sio.definition._input_required.get_elem_names(), ['aaa', 'bbb', 'ccc'])
         self.assertEquals(MyService._sio.definition._input_optional.get_elem_names(), ['ddd', 'eee'])

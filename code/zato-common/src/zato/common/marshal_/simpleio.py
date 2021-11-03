@@ -10,10 +10,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from logging import getLogger
 from traceback import format_exc
 
-# Zato
-from zato.common.api import ZatoNotGiven
-from zato.common.ext.dataclasses import _FIELDS, _PARAMS
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -85,12 +81,11 @@ class DataClassSimpleIO:
 
 # ################################################################################################################################
 
-    def parse_input(self, data, _ignored_data_format, **_ignored_kwargs):
-        # type: (dict, object, object)
+    def parse_input(self, data, _ignored_data_format, service, extra):
+        # type: (dict, object, Service, object)
 
-        print()
-        print(111, data)
-        print()
+        if getattr(self.user_declaration, 'input', None):
+            return self.server.marshal_api.from_dict(service, data, self.user_declaration.input, extra)
 
 # ################################################################################################################################
 # ################################################################################################################################
