@@ -7,28 +7,24 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from zato.common.ext.dataclasses import dataclass
-from dataclasses import _FIELDS
+from zato.common.api import ZatoNotGiven
+from dataclasses import _FIELDS, _PARAMS
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from dataclasses import Field
+    from zato.server.service import Service
 
     Field = Field
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def is_simple_type(value):
-    return issubclass(value, (int, str, float))
+    Service = Service
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Model:
-    pass
+    after_created = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,10 +34,11 @@ class MarshalAPI:
     def __init__(self):
         self._field_cache = {}
 
-    def from_dict(self, data:dict, DataClass:object):
+    def from_dict(self, service, data, DataClass):
+        # type: (Service, dict, object)
 
         # Whether the dataclass defines the __init__method
-        has_init = DataClass.__dataclass_params__.init
+        has_init = getattr(DataClass, _PARAMS).init
 
         # This will be populated with parameters to the dataclass's __init__ method, assuming that the class has one.
         init_attrs = {}
@@ -60,29 +57,36 @@ class MarshalAPI:
             is_model = issubclass(field.type, Model)
 
             # Get the value given on input
-            value = data.get(field.name)
+            value = data.get(field.name, ZatoNotGiven)
 
-            # If this is to be a model, we need a dict as value as it is the only container possible for nested values
-            if is_model and (not isinstance(value, dict)):
-                raise ValueError('Expected for `{}` to be a dict instead of `{}` ({})'.format(
-                    field.name, value, value.__class__.__name__))
+            # This field points to a model ..
+            if is_model:
 
-            print()
-            print(111, field.name, field.type, field.init)
-            print(222, )
-            print(333, value)
-            print()
+                # .. first, we need a dict as value as it is the only container possible for nested values ..
+                if not isinstance(value, dict):
+                    raise ValueError('Expected for `{}` to be a dict instead of `{}` ({})'.format(
+                        field.name, value, value.__class__.__name__))
+
+                # .. if we are here, it means that we can recurse into the nested data structure.
+                else:
+                    value = self.from_dict(service, value, field.type)
 
             # Add the computed value for later use
-            attrs_container[field.name] = value
+            if value != ZatoNotGiven:
+                attrs_container[field.name] = value
 
         # Create a new instance, potentially with attributes ..
-        instance = DataClass(**init_attrs)
+        instance = DataClass(**init_attrs) # type: Model
 
-        # .. and add extra ones in case __init__ was not defined.
+        # .. and add extra ones in case __init__ was not defined ..
         for k, v in setattr_attrs.items():
             setattr(instance, k, v)
 
+        # .. run the post-creation hook ..
+        if instance.after_created:
+            instance.after_created()
+
+        # .. and return the new dataclass to our caller.
         return instance
 
     def to_dict(self):
