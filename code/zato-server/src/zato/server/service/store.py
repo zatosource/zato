@@ -380,7 +380,7 @@ class ServiceStore(object):
         except AttributeError:
             class_.has_sio = False
         else:
-            CySimpleIO.attach_sio(service_store.server.sio_config, class_)
+            CySimpleIO.attach_sio(service_store.server, service_store.server.sio_config, class_)
 
         # May be None during unit-tests - not every test provides it.
         if service_store:

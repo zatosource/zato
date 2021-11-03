@@ -40,7 +40,7 @@ class XMLResponse(BaseSIOTestCase):
                 xml_declaration = False
                 response_elem = 'my_response'
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         aaa = 'aaa-111'
         bbb = '222'
@@ -73,7 +73,7 @@ class XMLResponse(BaseSIOTestCase):
                 xml_encoding = 'ASCII'
                 response_elem = 'my_response'
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         aaa = 'aaa-111'
         bbb = '222'
@@ -104,7 +104,7 @@ class XMLResponse(BaseSIOTestCase):
                 xml_pretty_print = False
                 xml_declaration = False
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         aaa1 = 'aaa-111-1'
         bbb1 = '2221'
@@ -137,7 +137,7 @@ class XMLResponse(BaseSIOTestCase):
                 output = 'aaa', AsIs('bbb'), Bool('ccc'), 'ddd', Date('eee'), DateTime('fff'), Decimal('ggg'), \
                     Float('jjj'), Int('mmm'), Opaque('ooo'), Text('ppp'), UUID('qqq')
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         aaa = 'aaa-111'
         bbb = 'bbb-222-bbb'
@@ -184,7 +184,7 @@ class XMLResponse(BaseSIOTestCase):
             class SimpleIO:
                 output = Int('aaa'), 'bbb'
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         aaa = 'aaa'
         bbb = '222'

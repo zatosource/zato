@@ -177,6 +177,10 @@ class User(BaseRESTService):
             name = name.name if isinstance(name, SIOElem) else name
             value = ctx.input.get(name)
             if value != self.SimpleIO.default_value:
+
+                if name == 'password':
+                    value = self.server.decrypt(value)
+
                 data[name] = value
 
         auto_approve = self.request.input.auto_approve
