@@ -465,6 +465,11 @@ def payload_from_request(json_parser, cid, request, data_format, transport, chan
     """
     # type: (SIMDJSONParser, str, object, str, str, object)
 
+    print()
+    print(555, repr(request))
+    print(666, data_format)
+    print()
+
     if request is not None:
 
         #
@@ -487,7 +492,10 @@ def payload_from_request(json_parser, cid, request, data_format, transport, chan
                     request_bytes = request if isinstance(request, bytes) else request.encode('utf8')
                     try:
                         payload = json_parser.parse(request_bytes)
-                    except ValueError:
+                    except ValueError as e:
+                        print()
+                        print(777, e)
+                        print()
                         payload = request_bytes
                     if hasattr(payload, 'as_dict'):
                         payload = payload.as_dict()
