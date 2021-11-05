@@ -60,6 +60,10 @@ class MarshalAPI:
 
         fields = getattr(DataClass, _FIELDS) # type: dict
 
+        print()
+        print(111, repr(data))
+        print()
+
         for field in fields.values(): # type: Field
 
             # Is this particular field a further dataclass-based model?
@@ -73,7 +77,7 @@ class MarshalAPI:
 
                 # .. first, we need a dict as value as it is the only container possible for nested values ..
                 if not isinstance(value, dict):
-                    raise ValueError('Expected for `{}` to be a dict instead of `{}` ({})'.format(
+                    raise ValueError('Dict missing for elem `{}`; found:`{}` ()'.format(
                         field.name, value, value.__class__.__name__))
 
                 # .. if we are here, it means that we can recurse into the nested data structure.

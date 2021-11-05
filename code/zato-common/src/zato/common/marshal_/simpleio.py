@@ -84,6 +84,10 @@ class DataClassSimpleIO:
     def parse_input(self, data, _ignored_data_format, service, extra):
         # type: (dict, object, Service, object)
 
+        print()
+        print(222, repr(data))
+        print()
+
         if getattr(self.user_declaration, 'input', None):
             return self.server.marshal_api.from_dict(service, data, self.user_declaration.input, extra)
 
