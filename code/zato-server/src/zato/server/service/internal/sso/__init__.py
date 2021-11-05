@@ -20,6 +20,13 @@ from zato.sso.common import SSOCtx
 
 # ################################################################################################################################
 
+if 0:
+    from zato.common.sso import TestConfig
+
+    TestConfig = TestConfig
+
+# ################################################################################################################################
+
 class BaseSIO:
     """ A set of attributes common to all SSO services.
     """
@@ -148,5 +155,43 @@ class BaseRESTService(BaseService):
             self.response.payload.status = status_code.ok
         finally:
             self.response.payload.cid = self.cid
+
+# ################################################################################################################################
+
+class SSOTestService(Service):
+
+    def handle(self):
+
+        # Zato
+        from zato.common.sso import TestConfig
+
+        # Run the test suite
+        self._test_login(TestConfig)
+
+# ################################################################################################################################
+
+    def _test_login(self, config):
+        # type: (TestConfig) -> None
+
+        # Zato
+        from zato.common.crypto.totp_ import TOTPManager
+
+        # We want to ensure that both str and bytes passwords can be used
+        password1 = config.super_user_password
+        password2 = config.super_user_password.encode('utf8')
+
+        self.logger.info('SSO login with password1 (str)')
+
+        # Check the str password
+        self.sso.user.login(
+            self.cid, config.super_user_name, password1, config.current_app,
+            '127.0.0.1', 'Zato', totp_code=TOTPManager.get_current_totp_code(config.super_user_totp_key))
+
+        self.logger.info('SSO login with password2 (bytes)')
+
+        # Check the bytes password
+        self.sso.user.login(
+            self.cid, config.super_user_name, password2, config.current_app,
+            '127.0.0.1', 'Zato', totp_code=TOTPManager.get_current_totp_code(config.super_user_totp_key))
 
 # ################################################################################################################################
