@@ -468,6 +468,10 @@ class Invoke(AdminService):
                 else:
 
                     func, id_ = (self.invoke, name) if name else (self.invoke_by_id, id)
+
+                    if 'palo-alto' in name:
+                        payload = loads(payload)
+
                     response = func(
                         id_,
                         payload,
