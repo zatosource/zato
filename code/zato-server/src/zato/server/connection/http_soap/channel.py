@@ -202,7 +202,7 @@ class RequestDispatcher(object):
     """
     def __init__(self, server=None, url_data=None, security=None, request_handler=None, simple_io_config=None,
             return_tracebacks=None, default_error_message=None, http_methods_allowed=None):
-        # type: (ParallelServer, URLData, object, object, dict, bool, unicode, list)
+        # type: (ParallelServer, URLData, object, RequestHandler, dict, bool, unicode, list)
 
         self.server = server
         self.url_data = url_data
@@ -376,6 +376,10 @@ class RequestDispatcher(object):
 
                 # This is handy if someone invoked URLData's OAuth API manually
                 wsgi_environ['zato.oauth.post_data'] = post_data
+
+                print()
+                print(333, payload)
+                print()
 
                 # OK, no security exception at that point means we can finally invoke the service.
                 response = self.request_handler.handle(cid, url_match, channel_item, wsgi_environ,
@@ -660,7 +664,7 @@ class RequestHandler(object):
             path_info, soap_action, channel_type=CHANNEL.HTTP_SOAP, _response_404=response_404):
         """ Create a new instance of a service and invoke it.
         """
-        service, is_active = self.server.service_store.new_instance(channel_item.service_impl_name)
+        service, is_active = self.server.service_store.new_instance(channel_item.service_impl_name) # type: (Service, bool)
         if not is_active:
             logger.warn('Could not invoke an inactive service:`%s`, cid:`%s`', service.get_name(), cid)
             raise NotFound(cid, _response_404.format(
