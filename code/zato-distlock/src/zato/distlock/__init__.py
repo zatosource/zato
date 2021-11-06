@@ -391,7 +391,7 @@ class LockManager:
 
             namespace = namespace or self.default_namespace
 
-            logger.info('Acquiring lock class:`%s` -> ns:%s, n:%s, t:%s, b:%s, bi:%s, s:%s',
+            logger.debug('Acquiring lock class:`%s` -> ns:%s, n:%s, t:%s, b:%s, bi:%s, s:%s',
                 self._lock_class, namespace, name, ttl, block, block_interval, self.session)
 
             return self._lock_class(

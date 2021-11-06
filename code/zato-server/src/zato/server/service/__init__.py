@@ -58,6 +58,8 @@ from zato.cy.reqresp.payload import SimpleIOPayload
 from zato.cy.reqresp.response import Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
+from zato.common.ext.dataclasses import dataclass
+from zato.common.marshal_.api import Model
 from zato.simpleio import AsIs, CSV, Bool, Date, DateTime, Dict, Decimal, DictList, Elem as SIOElem, Float, Int, List, \
      Opaque, Text, UTC, UUID
 
@@ -65,6 +67,7 @@ from zato.simpleio import AsIs, CSV, Bool, Date, DateTime, Dict, Decimal, DictLi
 AsIs = AsIs
 CSV = CSV
 Bool = Bool
+dataclass = dataclass
 Date = Date
 DateTime = DateTime
 Decimal = Decimal
@@ -74,6 +77,7 @@ DictList = DictList
 Float = Float
 Int = Int
 List = List
+Model = Model
 Opaque = Opaque
 Text = Text
 UTC = UTC
