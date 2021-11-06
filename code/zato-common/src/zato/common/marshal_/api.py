@@ -47,6 +47,12 @@ class ModelValidationError(Exception):
         self.parent_list = parent_list
         self.field       = field
         self.value       = value
+        self.reason      = self.get_reason()
+
+# ################################################################################################################################
+
+    def get_reason(self):
+        raise NotImplementedError()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,9 +60,14 @@ class ModelValidationError(Exception):
 class ElementMissing(ModelValidationError):
 
     def __repr__(self):
-        return 'Element missing: {}'.format(self.elem_path)
+        return '<{} at {} -> {}>'.format(self.__class__.__name__, hex(id(self)), self.reason)
 
     __str__ = __repr__
+
+# ################################################################################################################################
+
+    def get_reason(self):
+        return 'Element missing: {}'.format(self.elem_path)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -71,8 +82,11 @@ class MarshalAPI:
     def get_validation_error(self, field, value, parent_list):
         # type: (Field, object, list) -> ModelValidationError
 
+        # This needs to be empty if field is a top-level element
+        parent_to_elem_sep = '/' if parent_list else ''
+
         parent_path = '/' + '/'.join(parent_list)
-        elem_path   = parent_path + field.name
+        elem_path   = parent_path + parent_to_elem_sep + field.name
 
         return ElementMissing(elem_path, parent_list, field, value)
 

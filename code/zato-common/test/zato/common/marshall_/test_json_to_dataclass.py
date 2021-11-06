@@ -25,11 +25,15 @@ class JSONToDataclassTestCase(TestCase):
 
         request_id   = rand_int()
         user_name = rand_string()
+        locality   = rand_string()
 
         data = {
             'request_id': request_id,
             'user': {
-                'user_name': user_name
+                'user_name': user_name,
+                'address': {
+                    'locality': locality,
+                }
             }
         }
 
@@ -50,6 +54,7 @@ class JSONToDataclassTestCase(TestCase):
 
         request_id = rand_int()
         user_name  = rand_string()
+        locality   = rand_string()
 
         @dataclass
         class MyRequestWithDefault(MyRequest):
@@ -58,7 +63,10 @@ class JSONToDataclassTestCase(TestCase):
         data = {
             'request_id': request_id,
             'user': {
-                'user_name': user_name
+                'user_name': user_name,
+                'address': {
+                    'locality': locality,
+                }
             }
         }
 
@@ -80,6 +88,7 @@ class JSONToDataclassTestCase(TestCase):
 
         request_id = 123456789
         user_name  = 'my.user.name'
+        locality   = 'my.locality'
 
         @dataclass
         class MyRequestWithAfterCreated(MyRequest):
@@ -102,10 +111,16 @@ class JSONToDataclassTestCase(TestCase):
                 if user_name != 'my.user.name':
                     raise ValueError('Value of request_id should be "my.user.name"instead of `{}`'.format(user_name))
 
+                if locality != 'my.locality':
+                    raise ValueError('Value of locality should be "my.locality"instead of `{}`'.format(locality))
+
         data = {
             'request_id': request_id,
             'user': {
-                'user_name': user_name
+                'user_name': user_name,
+                'address': {
+                    'locality': locality,
+                }
             }
         }
 
