@@ -60,10 +60,6 @@ class MarshalAPI:
 
         fields = getattr(DataClass, _FIELDS) # type: dict
 
-        print()
-        print(111, repr(data))
-        print()
-
         for field in fields.values(): # type: Field
 
             # Is this particular field a further dataclass-based model?
