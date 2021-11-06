@@ -19,6 +19,24 @@ from zato.common.test import rand_int, rand_string
 
 class ValidationTestCase(TestCase):
 
+# ################################################################################################################################
+
+    def test_validate_top_simple_elem_missing(self):
+
+        # Input is entirely missing here
+        data = {}
+
+        service = None
+        api = MarshalAPI()
+
+        with self.assertRaises(ElementMissing) as cm:
+            api.from_dict(service, data, MyRequest)
+
+        e = cm.exception # type: ElementMissing
+        self.assertEquals(e.reason, 'Element missing: /request_id')
+
+# ################################################################################################################################
+
     def test_validate_top_level_dict_missing(self):
 
         request_id = rand_int()
