@@ -486,7 +486,7 @@ def payload_from_request(json_parser, cid, request, data_format, transport, chan
                     request_bytes = request if isinstance(request, bytes) else request.encode('utf8')
                     try:
                         payload = json_parser.parse(request_bytes)
-                    except ValueError as e:
+                    except ValueError:
                         payload = request_bytes
                     if hasattr(payload, 'as_dict'):
                         payload = payload.as_dict()
