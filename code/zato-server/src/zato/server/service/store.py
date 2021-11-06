@@ -382,7 +382,7 @@ class ServiceStore(object):
         except AttributeError:
             class_.has_sio = False
         else:
-            sio_input  = getattr(class_.SimpleIO, 'input', None)
+            sio_input  = getattr(class_.SimpleIO, 'input',  None)
             sio_output = getattr(class_.SimpleIO, 'output', None)
 
             has_input_data_class  = isclass(sio_input)  and issubclass(sio_input,  DataClassModel)
