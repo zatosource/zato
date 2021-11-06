@@ -377,10 +377,6 @@ class RequestDispatcher(object):
                 # This is handy if someone invoked URLData's OAuth API manually
                 wsgi_environ['zato.oauth.post_data'] = post_data
 
-                print()
-                print(333, payload)
-                print()
-
                 # OK, no security exception at that point means we can finally invoke the service.
                 response = self.request_handler.handle(cid, url_match, channel_item, wsgi_environ,
                     payload, worker_store, self.simple_io_config, post_data, path_info, soap_action)
