@@ -6,6 +6,9 @@ Copyright (C) Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from http.client import BAD_REQUEST
+
 # Zato
 from zato.common.api import ZatoNotGiven
 from zato.common.ext.dataclasses import _FIELDS, _PARAMS
@@ -47,7 +50,8 @@ class ModelValidationError(Exception):
         self.parent_list = parent_list
         self.field       = field
         self.value       = value
-        self.reason      = self.get_reason()
+        self.reason = self.msg = self.get_reason()
+        self.status = BAD_REQUEST
 
 # ################################################################################################################################
 
@@ -138,6 +142,8 @@ class MarshalAPI:
             # Add the computed value for later use
             if value != ZatoNotGiven:
                 attrs_container[field.name] = value
+            else:
+                raise self.get_validation_error(field, value, parent_list)
 
             # If we have any extra elements, we need to add them as well
             if extra:
