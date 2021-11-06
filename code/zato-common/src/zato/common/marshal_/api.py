@@ -176,3 +176,90 @@ class MarshalAPI:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+'''
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+
+Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# stdlib
+from shutil import copy as shutil_copy
+
+# Zato
+from api_model import MyRequest, User
+from zato.server.service import Service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MyService(Service):
+
+    class SimpleIO:
+        input = MyRequest
+
+    def handle(self):
+
+        # stdlib
+        import gc
+        import importlib
+        from inspect import getmodule, getsourcefile
+
+        my_class = MyRequest
+        model_impl_name = '{}.{}'.format(my_class.__module__, my_class.__name__)
+
+        # A set of Python objects, each representing a model class (rather than its name)
+        model_classes = set()
+
+        # All the modules to be reloaded due to changes to the data model
+        to_auto_deploy = set()
+
+        for item in gc.get_objects():
+
+            if isinstance(item, type):
+                item_impl_name = '{}.{}'.format(item.__module__, item.__name__)
+                if item_impl_name == model_impl_name:
+                    model_classes.add(item)
+
+        for model_class in model_classes:
+            for ref in gc.get_referrers(model_class):
+
+                if isinstance(ref, dict):
+
+                    print(111, type(ref))
+                    print(222, sorted(ref))
+                    print(333, ref.get('__file__'))
+                    print()
+
+                '''
+                if isinstance(ref, dict):
+                    mod_name = ref.get('__module__')
+                    if mod_name:
+                        to_auto_deploy.add(mod_name)
+                '''
+
+        zzz
+
+        to_auto_deploy = sorted(to_auto_deploy)
+
+        self.logger.warn('QQQ=1 %r', to_auto_deploy)
+        self.logger.warn('QQQ=2 %r', model_classes)
+        self.logger.warn('QQQ=3 %r', model_impl_name)
+
+        # Inform users that we are to auto-redeploy services and why we are doing it
+        self.logger.info('Model class `%s` changed; auto-redeploying `%s`', model_class, to_auto_deploy)
+
+        # Go through each child service found and hot-deploy it
+        for item in to_auto_deploy:
+
+            mod = importlib.import_module(item)
+            module_path = getsourcefile(mod)
+
+            shutil_copy(module_path, self.server.hot_deploy_config.pickup_dir)
+
+# ################################################################################################################################
+# ################################################################################################################################
+'''

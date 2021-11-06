@@ -1247,7 +1247,7 @@ class ServiceStore(object):
             # Go through each child service found and hot-deploy it
             for item in to_auto_deploy:
                 module_path = getsourcefile(item['service_class'])
-                logger.info('Copying `%s` to `%s`', module_path)
+                logger.debug('Copying `%s` to `%s`', module_path, self.server.hot_deploy_config.pickup_dir)
 
                 shutil_copy(module_path, self.server.hot_deploy_config.pickup_dir)
 
