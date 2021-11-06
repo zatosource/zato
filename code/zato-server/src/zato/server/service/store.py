@@ -385,7 +385,10 @@ class ServiceStore(object):
             sio_input  = getattr(class_.SimpleIO, 'input', None)
             sio_output = getattr(class_.SimpleIO, 'output', None)
 
-            if (sio_input and issubclass(sio_input, DataClassModel)) or (sio_output and issubclass(sio_output, DataClassModel)):
+            has_input_data_class  = isclass(sio_input)  and issubclass(sio_input,  DataClassModel)
+            has_output_data_class = isclass(sio_output) and issubclass(sio_output, DataClassModel)
+
+            if has_input_data_class or has_output_data_class:
                 SIOClass = DataClassSimpleIO
             else:
                 SIOClass = CySimpleIO
