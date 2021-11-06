@@ -228,9 +228,6 @@ class Request(object):
 
         if is_sio:
 
-            if isinstance(self.payload, bytes) and b'"user' in self.payload:
-                zzz
-
             parsed = sio.parse_input(self.payload or {}, data_format, extra=self.channel_params, service=self.service)
 
             if isinstance(parsed, Model):
