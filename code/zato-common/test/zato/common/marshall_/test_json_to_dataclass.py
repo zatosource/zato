@@ -13,7 +13,7 @@ from unittest import main, TestCase
 from zato.common.ext.dataclasses import dataclass, field
 from zato.common.marshal_.api import MarshalAPI, Model, ModelCtx
 from zato.common.marshal_.simpleio import DataClassSimpleIO
-from zato.common.test import rand_int, rand_string
+from zato.common.test import BaseSIOTestCase, rand_int, rand_string
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -96,7 +96,7 @@ class JSONToDataclassTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_unmarshall_after_created(self):
+    def test_unmarshall_and_run_after_created(self):
 
         request_id = 123456789
         user_name  = 'my.user.name'
@@ -136,7 +136,7 @@ class JSONToDataclassTestCase(TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SIOAttachTestCase(TestCase):
+class SIOAttachTestCase(BaseSIOTestCase):
 
     def test_attach_sio(self):
 
@@ -147,18 +147,7 @@ class SIOAttachTestCase(TestCase):
                 input = MyRequest
 
         DataClassSimpleIO.attach_sio(None, self.get_server_config(), MyService)
-
-        self.assertEquals(MyService._sio.definition._input_required.get_elem_names(), ['aaa', 'bbb', 'ccc'])
-        self.assertEquals(MyService._sio.definition._input_optional.get_elem_names(), ['ddd', 'eee'])
-
-        self.assertEquals(MyService._sio.definition._output_required.get_elem_names(), ['qqq', 'www'])
-        self.assertEquals(MyService._sio.definition._output_optional.get_elem_names(), ['eee', 'fff'])
-
-        self.assertTrue(MyService._sio.definition.has_input_required)
-        self.assertTrue(MyService._sio.definition.has_input_optional)
-
-        self.assertTrue(MyService._sio.definition.has_output_required)
-        self.assertTrue(MyService._sio.definition.has_output_optional)
+        self.assertIsInstance(MyService._sio, DataClassSimpleIO)
 
 # ################################################################################################################################
 # ################################################################################################################################
