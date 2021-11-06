@@ -38,13 +38,51 @@ class ModelCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class ModelValidationError(Exception):
+    """ Base class for model validation errors.
+    """
+    def __init__(self, elem_path, parent_list, field, value):
+        # type: (list, list, Field, object)
+        self.elem_path   = elem_path
+        self.parent_list = parent_list
+        self.field       = field
+        self.value       = value
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ElementMissing(ModelValidationError):
+
+    def __repr__(self):
+        return 'Element missing: {}'.format(self.elem_path)
+
+    __str__ = __repr__
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class MarshalAPI:
 
     def __init__(self):
         self._field_cache = {}
 
-    def from_dict(self, service, data, DataClass, extra=None):
-        # type: (Service, dict, object, dict)
+# ################################################################################################################################
+
+    def get_validation_error(self, field, value, parent_list):
+        # type: (Field, object, list) -> ModelValidationError
+
+        parent_path = '/' + '/'.join(parent_list)
+        elem_path   = parent_path + field.name
+
+        return ElementMissing(elem_path, parent_list, field, value)
+
+# ################################################################################################################################
+
+    def from_dict(self, service, data, DataClass, parent_list=None, extra=None):
+        # type: (Service, dict, object, list, dict)
+
+        # This will be None the first time around
+        parent_list = parent_list or []
 
         # Whether the dataclass defines the __init__method
         has_init = getattr(DataClass, _PARAMS).init
@@ -73,15 +111,15 @@ class MarshalAPI:
 
                 # .. first, we need a dict as value as it is the only container possible for nested values ..
                 if not isinstance(value, dict):
-                    raise ValueError('Dict missing for elem `{}`; found:`{}` ()'.format(
-                        field.name, value, value.__class__.__name__))
+                    raise self.get_validation_error(field, value, parent_list)
 
                 # .. if we are here, it means that we can recurse into the nested data structure.
                 else:
 
                     # Note that we do not pass extra data on to nested models because we can only ever
                     # overwrite top-level elements with what extra contains.
-                    value = self.from_dict(service, value, field.type, None)
+                    parent_list.append(field.name)
+                    value = self.from_dict(service, value, field.type, parent_list=parent_list, extra=None)
 
             # Add the computed value for later use
             if value != ZatoNotGiven:

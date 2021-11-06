@@ -10,31 +10,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main, TestCase
 
 # Zato
+from .base import MyRequest, TestService, User
 from zato.common.ext.dataclasses import dataclass, field
-from zato.common.marshal_.api import MarshalAPI, Model, ModelCtx
+from zato.common.marshal_.api import MarshalAPI, ModelCtx
 from zato.common.marshal_.simpleio import DataClassSimpleIO
 from zato.common.test import BaseSIOTestCase, rand_int, rand_string
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@dataclass(init=False, repr=False)
-class User(Model):
-    user_name: str
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@dataclass(init=True, repr=False)
-class MyRequest(Model):
-    request_id: int
-    user: User
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class TestService:
-    pass
 
 # ################################################################################################################################
 # ################################################################################################################################
