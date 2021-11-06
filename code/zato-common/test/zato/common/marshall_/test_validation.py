@@ -12,16 +12,16 @@ from unittest import main, TestCase
 # Zato
 from .base import MyRequest
 from zato.common.marshal_.api import ElementMissing, MarshalAPI
-from zato.common.test import rand_int
+from zato.common.test import rand_int, rand_string
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ValidationTestCase(TestCase):
 
-    def test_validate_dict(self):
+    def test_validate_top_level_dict_missing(self):
 
-        request_id   = rand_int()
+        request_id = rand_int()
 
         # The user element is entirely missing here
         data = {
@@ -31,9 +31,35 @@ class ValidationTestCase(TestCase):
         service = None
         api = MarshalAPI()
 
-        with self.assertRaises(ElementMissing) as e:
-            api.from_dict(service, data, MyRequest) # type: MyRequest
-            self.assertEquals(e.msg, 'Element missing: /user')
+        with self.assertRaises(ElementMissing) as cm:
+            api.from_dict(service, data, MyRequest)
+
+        e = cm.exception # type: ElementMissing
+        self.assertEquals(e.reason, 'Element missing: /user')
+
+# ################################################################################################################################
+
+    def test_validate_nested_dict_missing(self):
+
+        request_id = rand_int()
+        user_name  = rand_string()
+
+        # The address element is entirely missing here
+        data = {
+            'request_id': request_id,
+            'user': {
+                'user_name': user_name,
+            }
+        }
+
+        service = None
+        api = MarshalAPI()
+
+        with self.assertRaises(ElementMissing) as cm:
+            api.from_dict(service, data, MyRequest)
+
+        e = cm.exception # type: ElementMissing
+        self.assertEquals(e.reason, 'Element missing: /user/address')
 
 # ################################################################################################################################
 # ################################################################################################################################
