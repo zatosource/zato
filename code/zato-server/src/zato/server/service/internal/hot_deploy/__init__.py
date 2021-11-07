@@ -149,7 +149,7 @@ class Create(AdminService):
     def _deploy_models(self, current_work_dir, file_name):
         # type: (str, str) -> list
 
-        model_name_list = []
+        model_name_list = self.server.service_store.import_models_from_file(file_name, False, current_work_dir)
 
         return model_name_list
 
