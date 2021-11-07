@@ -184,12 +184,6 @@ class Create(AdminService):
                         # the service because it will be done anyway in _deploy_services,
                         # which means that we need to skip this file ..
                         if file_name != module_path:
-
-                            print()
-                            print(111, file_name)
-                            print(222, module_path)
-                            print()
-
                             to_auto_deploy.add(module_path)
 
         # If there are any services to be deployed ..

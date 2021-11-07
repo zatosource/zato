@@ -1145,7 +1145,8 @@ class ServiceStore(object):
 
         if isclass(item) and hasattr(item, '__mro__'):
             if issubclass(item, DataClassModel) and (item is not DataClassModel):
-                return True
+                if item.__module__ == current_module.__name__:
+                    return True
 
 # ################################################################################################################################
 
