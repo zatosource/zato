@@ -1116,8 +1116,8 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def _should_deploy(self, name, item, current_module):
-        """ Is an object something we can deploy on a server?
+    def _should_deploy_service(self, name, item, current_module):
+        """ Is item a service that we can deploy?
         """
         if isclass(item) and hasattr(item, '__mro__') and hasattr(item, 'get_name'):
             if item is not Service and item is not AdminService and item is not PubSubHook:
@@ -1262,7 +1262,7 @@ class ServiceStore(object):
                 with self.update_lock:
                     item = getattr(mod, name)
 
-                    if self._should_deploy(name, item, mod):
+                    if self._should_deploy_service(name, item, mod):
 
                         if self.is_testing:
                             before_add_to_store_result = True
