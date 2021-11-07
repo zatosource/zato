@@ -1253,26 +1253,35 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def _visit_module(self, mod, is_internal, fs_location, needs_odb_deployment=True):
-        """ Actually imports services from a module object.
+    def _visit_module_for_objects(self, mod, is_internal, fs_location, should_deploy_func, visit_class_func,
+        needs_before_add_to_store_result):
+        """ Imports services or models from a module object.
         """
+        # type: (object, bool, str, object, object, bool) -> list
         to_process = []
         try:
             for name in sorted(dir(mod)):
                 with self.update_lock:
                     item = getattr(mod, name)
 
-                    if self._should_deploy_service(name, item, mod):
+                    if should_deploy_func(name, item, mod):
 
-                        if self.is_testing:
-                            before_add_to_store_result = True
+                        # Only services enter here ..
+                        if needs_before_add_to_store_result:
+                            if self.is_testing:
+                                before_add_to_store_result = True
+                            else:
+                                before_add_to_store_result = item.before_add_to_store(logger)
+
+                        # .. while models go here.
                         else:
-                            before_add_to_store_result = item.before_add_to_store(logger)
+                            before_add_to_store_result = True
 
                         if before_add_to_store_result:
-                            to_process.append(self._visit_class(mod, item, fs_location, is_internal))
+                            to_process.append(visit_class_func(mod, item, fs_location, is_internal))
                         else:
                             logger.info('Skipping `%s` from `%s`', item, fs_location)
+
 
         except Exception:
             logger.error(
@@ -1280,5 +1289,15 @@ class ServiceStore(object):
                 mod, is_internal, fs_location, format_exc())
         finally:
             return to_process
+
+# ################################################################################################################################
+
+    def _visit_module(self, mod, is_internal, fs_location):
+        """ Imports services from a module object.
+        """
+        # type: (object, bool, str) -> list
+        return self._visit_module_for_objects(mod, is_internal, fs_location,
+            self._should_deploy_service, self._visit_class,
+            needs_before_add_to_store_result=True)
 
 # ################################################################################################################################
