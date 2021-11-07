@@ -1089,6 +1089,7 @@ class ServiceStore(object):
     def import_models_from_file(self, file_name, is_internal, base_dir):
         """ Imports all the models from the path to a file.
         """
+        # type: (str, bool, str) -> list
         return self.import_objects_from_file(file_name, is_internal, base_dir, self._visit_module_for_models)
 
 # ################################################################################################################################
@@ -1096,6 +1097,7 @@ class ServiceStore(object):
     def import_services_from_file(self, file_name, is_internal, base_dir):
         """ Imports all the services from the path to a file.
         """
+        # type: (str, bool, str) -> list
         return self.import_objects_from_file(file_name, is_internal, base_dir, self._visit_module_for_services)
 
 # ################################################################################################################################
@@ -1103,6 +1105,8 @@ class ServiceStore(object):
     def import_services_from_directory(self, dir_name, base_dir):
         """ Imports services from a specified directory.
         """
+        # type: (str, str) -> list
+
         to_process = []
 
         for py_path in visit_py_source(dir_name):
@@ -1115,6 +1119,8 @@ class ServiceStore(object):
     def import_services_from_module(self, mod_name, is_internal):
         """ Imports all the services from a module specified by the given name.
         """
+        # type: (str, bool) -> list
+
         try:
             return self.import_services_from_module_object(import_module(mod_name), is_internal)
         except ImportError:
@@ -1126,6 +1132,8 @@ class ServiceStore(object):
     def import_services_from_module_object(self, mod, is_internal):
         """ Imports all the services from a Python module object.
         """
+        # type: (str, bool) -> list
+
         return self._visit_module_for_services(mod, is_internal, inspect.getfile(mod))
 
 # ################################################################################################################################
@@ -1133,6 +1141,8 @@ class ServiceStore(object):
     def _should_deploy_model(self, name, item, current_module):
         """ Is item a model that we can deploy?
         """
+        # type: (str, object, object) -> bool
+
         if isclass(item) and hasattr(item, '__mro__'):
             if issubclass(item, DataClassModel) and (item is not DataClassModel):
                 return True
@@ -1142,6 +1152,8 @@ class ServiceStore(object):
     def _should_deploy_service(self, name, item, current_module):
         """ Is item a service that we can deploy?
         """
+        # type: (str, object, object) -> bool
+
         if isclass(item) and hasattr(item, '__mro__') and hasattr(item, 'get_name'):
             if item is not Service and item is not AdminService and item is not PubSubHook:
                 if not hasattr(item, DONT_DEPLOY_ATTR_NAME) and not issubclass(item, ModelBase):
@@ -1198,9 +1210,9 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def _visit_class_for_model(self, mod, class_, fs_location, is_internal):
+    def _visit_class_for_model(self, _ignored_mod, class_, _ignored_fs_location, _ignored_is_internal):
         # type: (object, object, str, bool) -> object
-        return class_.__name__
+        return '{}.{}'.format(class_.__module__, class_.__name__)
 
 # ################################################################################################################################
 
