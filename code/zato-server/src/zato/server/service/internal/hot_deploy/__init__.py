@@ -7,10 +7,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os, shutil
+import gc
+import os
+import shutil
 from contextlib import closing
 from datetime import datetime
 from errno import ENOENT
+from importlib import import_module
+from inspect import getsourcefile
 from time import sleep
 from traceback import format_exc
 
@@ -149,7 +153,57 @@ class Create(AdminService):
     def _deploy_models(self, current_work_dir, file_name):
         # type: (str, str) -> list
 
-        model_name_list = self.server.service_store.import_models_from_file(file_name, False, current_work_dir)
+        # This returns names of all the model classes deployed from the file
+        model_name_list = set(self.server.service_store.import_models_from_file(file_name, False, current_work_dir))
+
+        # A set of Python objects, each representing a model class (rather than its name)
+        model_classes = set()
+
+        # All the modules to be reloaded due to changes to the data model
+        to_auto_deploy = set()
+
+        for item in gc.get_objects():
+
+            if isinstance(item, type):
+                item_impl_name = '{}.{}'.format(item.__module__, item.__name__)
+                if item_impl_name in model_name_list:
+                    model_classes.add(item)
+
+        for model_class in model_classes:
+            for ref in gc.get_referrers(model_class):
+
+                if isinstance(ref, dict):
+                    mod_name = ref.get('__module__')
+                    if mod_name:
+
+                        mod = import_module(mod_name)
+                        module_path = getsourcefile(mod)
+
+                        # It is possible that the model class is deployed along
+                        # with a service that uses it. In that case, we do not redeploy
+                        # the service because it will be done anyway in _deploy_services,
+                        # which means that we need to skip this file ..
+                        if file_name != module_path:
+
+                            print()
+                            print(111, file_name)
+                            print(222, module_path)
+                            print()
+
+                            to_auto_deploy.add(module_path)
+
+        # If there are any services to be deployed ..
+        if to_auto_deploy:
+
+            # .. format lexicographically for logging ..
+            to_auto_deploy = sorted(to_auto_deploy)
+
+            #  .. nform users that we are to auto-redeploy services and why we are doing it ..
+            self.logger.info('Model class `%s` changed; auto-redeploying `%s`', model_class, to_auto_deploy)
+
+            # .. go through each child service found and hot-deploy it ..
+            for module_path in to_auto_deploy:
+                shutil.copy(module_path, self.server.hot_deploy_config.pickup_dir)
 
         return model_name_list
 
@@ -204,23 +258,31 @@ class Create(AdminService):
         """
         # type: (object, int, str, str)
 
+        # Local objects
         current_work_dir = self.server.hot_deploy_config.current_work_dir
         file_name = os.path.join(current_work_dir, payload_name)
 
+        # Deploy some objects of interest from the file ..
         ctx = self._deploy_file(current_work_dir, payload, file_name)
 
+        # We enter here if there were some models or services that we deployed ..
         if ctx.model_name_list or ctx.service_name_list:
 
+            # .. no matter what kind of objects we found, the package has been deployed ..
             self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.DEPLOYED)
 
+            # .. report any models found ..
             if ctx.model_name_list:
                 self._report_deployment(file_name, ctx.model_name_list, 'model')
 
+            # .. report any services found ..
             if ctx.service_name_list:
                 self._report_deployment(file_name, ctx.service_name_list, 'service')
 
+            # .. our callers only need services ..
             return ctx.service_id_list
 
+        # .. we could not find anything to deploy in the file.
         else:
             msg = 'No services nor models were deployed from module `%s`'
             self.logger.warn(msg, payload_name)
