@@ -1086,6 +1086,13 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
+    def import_models_from_file(self, file_name, is_internal, base_dir):
+        """ Imports all the models from the path to a file.
+        """
+        return self.import_objects_from_file(file_name, is_internal, base_dir, self._visit_module_for_models)
+
+# ################################################################################################################################
+
     def import_services_from_file(self, file_name, is_internal, base_dir):
         """ Imports all the services from the path to a file.
         """
@@ -1120,6 +1127,15 @@ class ServiceStore(object):
         """ Imports all the services from a Python module object.
         """
         return self._visit_module_for_services(mod, is_internal, inspect.getfile(mod))
+
+# ################################################################################################################################
+
+    def _should_deploy_model(self, name, item, current_module):
+        """ Is item a model that we can deploy?
+        """
+        if isclass(item) and hasattr(item, '__mro__'):
+            if issubclass(item, DataClassModel) and (item is not DataClassModel):
+                return True
 
 # ################################################################################################################################
 
@@ -1182,8 +1198,14 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
+    def _visit_class_for_model(self, mod, class_, fs_location, is_internal):
+        # type: (object, object, str, bool) -> object
+        return class_.__name__
+
+# ################################################################################################################################
+
     def _visit_class_for_service(self, mod, class_, fs_location, is_internal, _utcnow=datetime.utcnow):
-        # type: (Any, Any, str, bool, Any, Any) -> InRAMService
+        # type: (object, object, str, bool, object, object) -> InRAMService
 
         name = class_.get_name()
         impl_name = class_.get_impl_name()
@@ -1295,6 +1317,16 @@ class ServiceStore(object):
                 mod, is_internal, fs_location, format_exc())
         finally:
             return to_process
+
+# ################################################################################################################################
+
+    def _visit_module_for_models(self, mod, is_internal, fs_location):
+        """ Imports models from a module object.
+        """
+        # type: (object, bool, str) -> list
+        return self._visit_module_for_objects(mod, is_internal, fs_location,
+            self._should_deploy_model, self._visit_class_for_model,
+            needs_before_add_to_store_result=False)
 
 # ################################################################################################################################
 
