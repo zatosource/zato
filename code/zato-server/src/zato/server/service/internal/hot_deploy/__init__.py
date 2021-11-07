@@ -217,7 +217,7 @@ class Create(AdminService):
                 self._report_deployment(file_name, ctx.model_name_list, 'model')
 
             if ctx.service_name_list:
-                self._report_deployment(file_name, ctx.service_name_list, 'model')
+                self._report_deployment(file_name, ctx.service_name_list, 'service')
 
             return ctx.service_id_list
 
