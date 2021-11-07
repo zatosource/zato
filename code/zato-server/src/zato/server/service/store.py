@@ -1263,6 +1263,7 @@ class ServiceStore(object):
                     item = getattr(mod, name)
 
                     if self._should_deploy(name, item, mod):
+
                         if self.is_testing:
                             before_add_to_store_result = True
                         else:

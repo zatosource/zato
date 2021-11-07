@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import copy
 import errno
 import gc
-import imp
+import importlib.util
 import inspect
 import linecache
 import logging
@@ -597,18 +597,23 @@ def import_module_from_path(file_name, base_dir=None):
         file_name = os.path.normpath(os.path.join(base_dir, file_name))
 
     if not os.path.exists(file_name):
-        raise ValueError("Module could not be imported, path:`{}` doesn't exist".format(file_name))
+        raise ValueError('Module could not be imported, path:`{}` does not exist'.format(file_name))
 
     _, mod_file = os.path.split(file_name)
     mod_name, _ = os.path.splitext(mod_file)
 
-    # Delete compiled bytecode if it exists so that imp.load_source actually picks up the source module
+    # Delete compiled bytecode if it exists so that importlib actually picks up the source module
     for suffix in('c', 'o'):
         path = file_name + suffix
         if os.path.exists(path):
             os.remove(path)
 
-    return ModuleInfo(file_name, imp.load_source(mod_name, file_name))
+    spec = importlib.util.spec_from_file_location(mod_name, file_name)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[mod_name] = mod
+    spec.loader.exec_module(mod)
+
+    return ModuleInfo(file_name, mod)
 
 # ################################################################################################################################
 
