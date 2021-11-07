@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import os, shutil
@@ -16,10 +14,6 @@ from errno import ENOENT
 from time import sleep
 from traceback import format_exc
 
-# Python 2/3 compatibility
-from future.utils import PY3
-from builtins import bytes
-
 # Zato
 from zato.common.api import DEPLOYMENT_STATUS, KVDB
 from zato.common.broker_message import HOT_DEPLOY
@@ -27,26 +21,29 @@ from zato.common.json_internal import dumps
 from zato.common.odb.model import DeploymentPackage, DeploymentStatus
 from zato.common.util.api import is_python_file, is_archive_file, new_cid
 from zato.common.util.file_system import fs_safe_now
-from zato.server.service import AsIs
+from zato.server.service import AsIs, dataclass
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
 
-# Type checking
-import typing
+if 0:
 
-if typing.TYPE_CHECKING:
-
-    # Zato
     from zato.server.service.store import InRAMService
-
-    # For pyflakes
     InRAMService = InRAMService
 
 # ################################################################################################################################
 
 MAX_BACKUPS = 1000
 _first_prefix = '0' * (len(str(MAX_BACKUPS)) - 1) # So it runs from, e.g.,  000 to 999
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class DeploymentCtx:
+    model_name_list:   list
+    service_id_list:   list
+    service_name_list: list
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -149,23 +146,25 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def _deploy_file(self, current_work_dir, payload, file_name):
+    def _deploy_models(self, current_work_dir, file_name):
+        # type: (str, str) -> list
 
-        if PY3:
-            f = open(file_name, 'w', encoding='utf-8')
-        else:
-            f = open(file_name, 'w')
+        model_name_list = []
 
-        f.write(payload.decode('utf8') if isinstance(payload, bytes) else payload)
-        f.close()
+        return model_name_list
 
-        services_deployed = []
+# ################################################################################################################################
+
+    def _deploy_services(self, current_work_dir, file_name):
+        # type: (str, str) -> list
+
+        service_id_list = []
         info = self.server.service_store.import_services_from_anywhere(file_name, current_work_dir)
 
         for service in info.to_process: # type: InRAMService
 
             service_id = self.server.service_store.impl_name_to_id[service.impl_name]
-            services_deployed.append(service_id)
+            service_id_list.append(service_id)
 
             msg = {}
             msg['cid'] = new_cid()
@@ -176,7 +175,26 @@ class Create(AdminService):
 
             self.broker_client.publish(msg)
 
-        return services_deployed
+        return service_id_list
+
+# ################################################################################################################################
+
+    def _deploy_file(self, current_work_dir, payload, file_name):
+        # type: (str, object, str) -> DeploymentCtx
+
+        with open(file_name, 'w', encoding='utf-8') as f:
+            payload = payload.decode('utf8') if isinstance(payload, bytes) else payload
+            f.write(payload)
+
+        model_name_list = self._deploy_models(current_work_dir, file_name)
+        service_id_list = self._deploy_services(current_work_dir, file_name)
+
+        ctx = DeploymentCtx()
+        ctx.model_name_list = model_name_list
+        ctx.service_id_list = service_id_list
+        ctx.service_name_list = [self.server.service_store.get_service_name_by_id(elem) for elem in service_id_list]
+
+        return ctx
 
 # ################################################################################################################################
 
@@ -184,18 +202,37 @@ class Create(AdminService):
         """ Deploy a package, either a plain Python file or an archive, and update
         the deployment status.
         """
+        # type: (object, int, str, str)
+
         current_work_dir = self.server.hot_deploy_config.current_work_dir
         file_name = os.path.join(current_work_dir, payload_name)
-        services_deployed = self._deploy_file(current_work_dir, payload, file_name)
 
-        if services_deployed:
+        ctx = self._deploy_file(current_work_dir, payload, file_name)
+
+        if ctx.model_name_list or ctx.service_name_list:
+
             self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.DEPLOYED)
-            msg = 'Uploaded package id:`%s`, payload_name:`%s`'
-            self.logger.info(msg, package_id, payload_name)
-            return services_deployed
+
+            if ctx.model_name_list:
+                self._report_deployment(file_name, ctx.model_name_list, 'model')
+
+            if ctx.service_name_list:
+                self._report_deployment(file_name, ctx.service_name_list, 'model')
+
+            return ctx.service_id_list
+
         else:
-            msg = 'No services were deployed from module `%s`'
+            msg = 'No services nor models were deployed from module `%s`'
             self.logger.warn(msg, payload_name)
+
+# ################################################################################################################################
+
+    def _report_deployment(self, file_name, items, noun):
+        # type: (str, list, str)
+        msg = 'Deployed %s {}%sfrom `%s` -> %s'.format(noun)
+        len_items = len(items)
+        suffix = 's ' if len_items > 1 else ' '
+        self.logger.info(msg, len_items, suffix, file_name, sorted(items))
 
 # ################################################################################################################################
 
