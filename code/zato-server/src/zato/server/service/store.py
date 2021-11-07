@@ -1069,8 +1069,8 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def import_services_from_file(self, file_name, is_internal, base_dir):
-        """ Imports all the services from the path to a file.
+    def import_objects_from_file(self, file_name, is_internal, base_dir, visit_func):
+        """ Imports all the services or models from the path to a file.
         """
         to_process = []
 
@@ -1080,9 +1080,16 @@ class ServiceStore(object):
             msg = 'Could not load source, file_name:`%s`, e:`%s`'
             logger.error(msg, file_name, format_exc())
         else:
-            to_process.extend(self._visit_module(mod_info.module, is_internal, mod_info.file_name))
+            to_process.extend(visit_func(mod_info.module, is_internal, mod_info.file_name))
         finally:
             return to_process
+
+# ################################################################################################################################
+
+    def import_services_from_file(self, file_name, is_internal, base_dir):
+        """ Imports all the services from the path to a file.
+        """
+        return self.import_objects_from_file(file_name, is_internal, base_dir, self._visit_module_for_services)
 
 # ################################################################################################################################
 
@@ -1112,7 +1119,7 @@ class ServiceStore(object):
     def import_services_from_module_object(self, mod, is_internal):
         """ Imports all the services from a Python module object.
         """
-        return self._visit_module(mod, is_internal, inspect.getfile(mod))
+        return self._visit_module_for_services(mod, is_internal, inspect.getfile(mod))
 
 # ################################################################################################################################
 
@@ -1282,7 +1289,6 @@ class ServiceStore(object):
                         else:
                             logger.info('Skipping `%s` from `%s`', item, fs_location)
 
-
         except Exception:
             logger.error(
                 'Exception while visiting module:`%s`, is_internal:`%s`, fs_location:`%s`, e:`%s`',
@@ -1292,7 +1298,7 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def _visit_module(self, mod, is_internal, fs_location):
+    def _visit_module_for_services(self, mod, is_internal, fs_location):
         """ Imports services from a module object.
         """
         # type: (object, bool, str) -> list
