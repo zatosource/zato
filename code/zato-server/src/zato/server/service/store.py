@@ -708,7 +708,7 @@ class ServiceStore(object):
             len_si = len(dill_items['service_info'])
 
             for _idx, item in enumerate(dill_items['service_info'], 1):
-                class_ = self._visit_class(item['mod'], item['service_class'], item['fs_location'], True)
+                class_ = self._visit_class_for_service(item['mod'], item['service_class'], item['fs_location'], True)
                 to_process.append(class_)
 
             self._store_in_ram(None, to_process)
@@ -1182,7 +1182,7 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def _visit_class(self, mod, class_, fs_location, is_internal, _utcnow=datetime.utcnow):
+    def _visit_class_for_service(self, mod, class_, fs_location, is_internal, _utcnow=datetime.utcnow):
         # type: (Any, Any, str, bool, Any, Any) -> InRAMService
 
         name = class_.get_name()
@@ -1303,7 +1303,7 @@ class ServiceStore(object):
         """
         # type: (object, bool, str) -> list
         return self._visit_module_for_objects(mod, is_internal, fs_location,
-            self._should_deploy_service, self._visit_class,
+            self._should_deploy_service, self._visit_class_for_service,
             needs_before_add_to_store_result=True)
 
 # ################################################################################################################################
