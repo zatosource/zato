@@ -11,7 +11,7 @@ from http.client import BAD_REQUEST
 
 # Zato
 from zato.common.api import ZatoNotGiven
-from zato.common.ext.dataclasses import _FIELDS, _PARAMS
+from zato.common.ext.dataclasses import _FIELDS, MISSING, _PARAMS
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -96,8 +96,28 @@ class MarshalAPI:
 
 # ################################################################################################################################
 
+    def _visit_list(self, list_, service, data, DataClass, parent_list):
+        # type: (list, Service, dict, object, list) -> list
+
+        # Respone to produce
+        out = []
+
+        # Visit each element in the list ..
+        for elem in list_:
+
+            # .. convert it to a model instance ..
+            instance = self.from_dict(service, elem, DataClass, parent_list)
+
+            # .. and append it for our caller ..
+            out.append(instance)
+
+        # .. finally, return the response.
+        return out
+
+# ################################################################################################################################
+
     def from_dict(self, service, data, DataClass, parent_list=None, extra=None):
-        # type: (Service, dict, object, list, dict)
+        # type: (Service, dict, object, list, dict) -> object
 
         # This will be None the first time around
         parent_list = parent_list or []
@@ -116,10 +136,13 @@ class MarshalAPI:
 
         fields = getattr(DataClass, _FIELDS) # type: dict
 
-        for field in fields.values(): # type: Field
+        for _ignored_name, field in sorted(fields.items()): # type: Field
 
             # Is this particular field a further dataclass-based model?
             is_model = issubclass(field.type, Model)
+
+            # Is this field a list that we can recurse into as well?
+            is_list = issubclass(field.type, list)
 
             # Get the value given on input
             value = data.get(field.name, ZatoNotGiven)
@@ -139,9 +162,48 @@ class MarshalAPI:
                     parent_list.append(field.name)
                     value = self.from_dict(service, value, field.type, parent_list=parent_list, extra=None)
 
+            elif is_list:
+
+                #
+                # This is a list and we need to check if its definition
+                # contains information about the actual type of elements inside.
+                #
+                # If it does, we will be extracting that particular type.
+                # Otherwise, we will just pass this list on as it is.
+                #
+
+                # By default, assume we have no type information (we do not know what model class it is)
+                model_class = None
+
+                # Access the list's arguments ..
+                type_args = field.type.__args__
+
+                # .. if there are any ..
+                if type_args:
+
+                    # .. the first one will be our model class.
+                    model_class = type_args[0]
+
+                print()
+                print(111, field)
+                print(222, issubclass(field.type, list))
+                print(333, field.type)
+                print(444, dir(field.type))
+                print(555, field.type.__args__)
+                print(666, model_class)
+                print(777, value)
+                print()
+
+                # If we have a model class the elements of the list are of
+                # we need to visit each one of them now.
+                if model_class:
+                    if value:
+                        value = self._visit_list(value, service, data, model_class,
+                            parent_list=[field.name])
+
             # If we do not have a value yet, perhaps we will find a default one
             if value == ZatoNotGiven:
-                if field.default:
+                if field.default and field.default is not MISSING:
                     value = field.default
 
             # Let's check if found any value
