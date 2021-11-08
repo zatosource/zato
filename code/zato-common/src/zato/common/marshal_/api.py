@@ -133,7 +133,7 @@ class MarshalAPI:
         parent_list = parent_list or []
 
         # This will be None the first time around
-        current_path = current_path or [None]
+        current_path = current_path or []
 
         # Whether the dataclass defines the __init__method
         has_init = getattr(DataClass, _PARAMS).init
@@ -163,9 +163,11 @@ class MarshalAPI:
             # Get the value given on input
             value = data.get(field.name, ZatoNotGiven)
 
-            path_idx_suffix = '[{}]'.format(0 if list_depth is None else list_depth) if is_list else ''
+            # path_idx_suffix = '[{}]'.format(0 if list_depth is None else list_depth) if is_list else ''
+            # current_path[-1] = field.name + path_idx_suffix
 
-            current_path[-1] = field.name + path_idx_suffix
+            current_path.append(field.name)
+            print(111, field.name, list_depth)
 
             # This field points to a model ..
             if is_model:
@@ -177,10 +179,11 @@ class MarshalAPI:
                 # .. if we are here, it means that we can recurse into the nested data structure.
                 else:
 
+                    parent_list.append(field.name)
+                    #current_path.append(field.name)
+
                     # Note that we do not pass extra data on to nested models because we can only ever
                     # overwrite top-level elements with what extra contains.
-                    parent_list.append(field.name)
-                    current_path.append(field.name)
                     value = self.from_dict(service, value, field.type, parent_list=parent_list,
                         extra=None, list_depth=list_depth, current_path=current_path)
 
