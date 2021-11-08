@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main, TestCase
 
 # Zato
-from .base import MyRequest, TestService, User
+from .base import CreateUserRequest, TestService, User
 from zato.common.ext.dataclasses import dataclass, field
 from zato.common.marshal_.api import MarshalAPI, ModelCtx
 from zato.common.marshal_.simpleio import DataClassSimpleIO
@@ -40,9 +40,9 @@ class JSONToDataclassTestCase(TestCase):
         service = None
         api = MarshalAPI()
 
-        result = api.from_dict(service, data, MyRequest) # type: MyRequest
+        result = api.from_dict(service, data, CreateUserRequest) # type: MyRequest
 
-        self.assertIs(type(result), MyRequest)
+        self.assertIs(type(result), CreateUserRequest)
         self.assertIsInstance(result.user, User)
 
         self.assertEqual(result.request_id, request_id)
@@ -57,8 +57,8 @@ class JSONToDataclassTestCase(TestCase):
         locality   = rand_string()
 
         @dataclass
-        class MyRequestWithDefault(MyRequest):
-            request_group: str = field(default='MyRequestGroup')
+        class CreateAdminRequest(CreateUserRequest):
+            admin_type: str = field(default='MyDefaultValue')
 
         data = {
             'request_id': request_id,
@@ -73,13 +73,13 @@ class JSONToDataclassTestCase(TestCase):
         service = None
         api = MarshalAPI()
 
-        result = api.from_dict(service, data, MyRequestWithDefault) # type: MyRequestWithDefault
+        result = api.from_dict(service, data, CreateAdminRequest) # type: MyRequestWithDefault
 
-        self.assertIs(type(result), MyRequestWithDefault)
+        self.assertIs(type(result), CreateAdminRequest)
         self.assertIsInstance(result.user, User)
 
         self.assertEqual(result.request_id, request_id)
-        self.assertEqual(result.request_group, 'MyRequestGroup')
+        self.assertEqual(result.admin_type, CreateAdminRequest.admin_type)
         self.assertEqual(result.user.user_name, user_name)
 
 # ################################################################################################################################
@@ -91,7 +91,7 @@ class JSONToDataclassTestCase(TestCase):
         locality   = 'my.locality'
 
         @dataclass
-        class MyRequestWithAfterCreated(MyRequest):
+        class MyRequestWithAfterCreated(CreateUserRequest):
             def after_created(self, ctx):
                 # type: (ModelCtx)
 
@@ -139,7 +139,7 @@ class SIOAttachTestCase(BaseSIOTestCase):
 
         class MyService(Service):
             class SimpleIO:
-                input = MyRequest
+                input = CreateUserRequest
 
         DataClassSimpleIO.attach_sio(None, self.get_server_config(), MyService)
         self.assertIsInstance(MyService._sio, DataClassSimpleIO)

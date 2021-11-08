@@ -139,7 +139,12 @@ class MarshalAPI:
                     parent_list.append(field.name)
                     value = self.from_dict(service, value, field.type, parent_list=parent_list, extra=None)
 
-            # Add the computed value for later use
+            # If we do not have a value yet, perhaps we will find a default one
+            if value == ZatoNotGiven:
+                if field.default:
+                    value = field.default
+
+            # Let's check if found any value
             if value != ZatoNotGiven:
                 attrs_container[field.name] = value
             else:
