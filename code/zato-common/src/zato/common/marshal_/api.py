@@ -91,12 +91,14 @@ class MarshalAPI:
     def get_validation_error(self, field, value, parent_list, list_depth=None):
         # type: (Field, object, list, int) -> ModelValidationError
 
+        '''
         print()
         print(111, field)
         print(222, value)
         print(333, parent_list)
         print(444, list_depth)
         print()
+        '''
 
         # This needs to be empty if field is a top-level element
         parent_to_elem_sep = '/' if parent_list else ''
@@ -149,6 +151,11 @@ class MarshalAPI:
 
         fields = getattr(DataClass, _FIELDS) # type: dict
 
+        print()
+        print(111, data)
+        print(222, parent_list)
+        print(333, list_depth)
+
         for _ignored_name, field in sorted(fields.items()): # type: (str, Field)
 
             # Local aliases
@@ -190,14 +197,17 @@ class MarshalAPI:
                 #
 
                 parent_with_idx = '{}[{}]'.format(field.name, 0 if list_depth is None else list_depth)
-                parent_list.append(parent_with_idx)
 
-                print()
-                print(111, field)
-                print(222, list_depth)
-                print(333, parent_list)
-                print(444, value)
-                print()
+                '''
+                if parent_list:
+                    last = parent_list[-1] # type: str
+                    if last.startswith(field.name):
+                        parent_list[-1] = parent_with_idx
+                    else:
+                        parent_list.append(parent_with_idx)
+                else:
+                    parent_list.append(parent_with_idx)
+                '''
 
                 # By default, assume we have no type information (we do not know what model class it is)
                 model_class = None
@@ -223,7 +233,7 @@ class MarshalAPI:
                 if field.default and field.default is not MISSING:
                     value = field.default
 
-            # Let's check if found any value
+            # Let's check if we found any value
             if value != ZatoNotGiven:
                 attrs_container[field.name] = value
             else:

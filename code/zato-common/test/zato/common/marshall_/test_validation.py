@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main, TestCase
 
 # Zato
-from .base import CreatePhoneListRequest, CreateUserRequest
+from .base import CreateAttrListRequest, CreatePhoneListRequest, CreateUserRequest
 from zato.common.marshal_.api import ElementMissing, MarshalAPI
 from zato.common.test import rand_int, rand_string
 
@@ -21,7 +21,7 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_validate_top_simple_elem_missing(self):
+    def test_validate_top_simple_elem_missing(self):
 
         # Input is entirely missing here
         data = {}
@@ -37,7 +37,7 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_validate_top_level_dict_missing(self):
+    def test_validate_top_level_dict_missing(self):
 
         request_id = rand_int()
 
@@ -58,7 +58,7 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_validate_nested_dict_missing(self):
+    def test_validate_nested_dict_missing(self):
 
         request_id = rand_int()
         user_name  = rand_string()
@@ -84,7 +84,7 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_unmarshall_top_level_list_elem_missing(self):
+    def test_unmarshall_top_level_list_elem_missing(self):
 
         request_id = rand_int()
         user_name  = rand_string()
@@ -128,7 +128,7 @@ class ValidationTestCase(TestCase):
 
         data = {
             'phone_list': [
-                {'attr_list': [{'type':'name_0_0'}]},
+                {'attr_list': [{'type':'type_0_0'}]},
             ]
         }
 
@@ -143,16 +143,14 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_unmarshall_nested_list_elem_missing_0_1(self):
+    def test_unmarshall_nested_list_elem_missing_3_0(self):
 
         data = {
             'phone_list': [
-                {'attr_list': [{'type':'type_0_0', 'name':'name_0_0'}, {'type':'type_0_1'}]},
-                # {'attr_list': [{'type':'type_1_0', 'name':'name_2_0'}, {'type':'type_2_1', 'name':'name_2_1'}, {'type':'type_2_2', 'name':'name_2_2'}]},
-                # {'attr_list': [{'type':'type_2_0', 'name':'name_2_0'}, {'type':'type_2_1', 'name':'name_2_1'}, {'type':'type_2_2', 'name':'name_2_2'}]},
-                # {'attr_list': [{'type':'type_2_0', 'name':'name_2_0'}, {'type':'type_2_1', 'name':'name_2_1'}, {'type':'type_2_2', 'name':'name_2_2'}]},
-                # {'attr_list': [{'type':'type_2_0', 'name':'name_2_0'}, {'type':'type_2_1', 'name':'name_2_1'}, {'type':'type_2_2', 'name':'name_2_2'}]},
-                # {'attr_list': [{'type':'type_2_0', 'name':'name_2_0'}, {'type':'type_2_1', 'name':'name_2_1'}, {'type':'type_2_2'}]},
+                {'attr_list': [{'type':'type_0_0', 'name':'name_0_0'}]},
+                {'attr_list': [{'type':'type_1_0', 'name':'name_1_0'}]},
+                {'attr_list': [{'type':'type_2_0', 'name':'name_2_0'}]},
+                {'attr_list': [{'type':'type_3_0'}]},
             ]
         }
 
@@ -163,7 +161,23 @@ class ValidationTestCase(TestCase):
             api.from_dict(service, data, CreatePhoneListRequest)
 
         e = cm.exception # type: ElementMissing
-        self.assertEquals(e.reason, 'Element missing: /phone_list[0]/attr_list[1]/name')
+        self.assertEquals(e.reason, 'Element missing: /phone_list[3]/attr_list[0]/name')
+
+# ################################################################################################################################
+
+    def test_unmarshall_top_level_list_is_missing(self):
+
+        # There is no input (and attr_list is a list that is missing)
+        data = {}
+
+        service = None
+        api = MarshalAPI()
+
+        with self.assertRaises(ElementMissing) as cm:
+            api.from_dict(service, data, CreateAttrListRequest)
+
+        e = cm.exception # type: ElementMissing
+        self.assertEquals(e.reason, 'Element missing: /attr_list')
 
 # ################################################################################################################################
 # ################################################################################################################################
