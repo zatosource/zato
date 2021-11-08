@@ -21,7 +21,7 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_validate_top_simple_elem_missing(self):
+    def xtest_validate_top_simple_elem_missing(self):
 
         # Input is entirely missing here
         data = {}
@@ -37,7 +37,7 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_validate_top_level_dict_missing(self):
+    def xtest_validate_top_level_dict_missing(self):
 
         request_id = rand_int()
 
@@ -84,7 +84,7 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_unmarshall_top_level_list_elem_missing(self):
+    def xtest_unmarshall_top_level_list_elem_missing(self):
 
         request_id = rand_int()
         user_name  = rand_string()
