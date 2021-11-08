@@ -23,8 +23,8 @@ class JSONToDataclassTestCase(TestCase):
 
     def test_unmarshall(self):
 
-        request_id   = rand_int()
-        user_name = rand_string()
+        request_id = rand_int()
+        user_name  = rand_string()
         locality   = rand_string()
 
         data = {
