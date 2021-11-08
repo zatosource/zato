@@ -88,7 +88,7 @@ class MarshalAPI:
 
 # ################################################################################################################################
 
-    def get_validation_error(self, field, value, parent_list, list_depth=None):
+    def get_validation_error(self, field, value, parent_list, list_depth=None, current_path=None):
         # type: (Field, object, list, int) -> ModelValidationError
 
         # This needs to be empty if field is a top-level element
@@ -97,6 +97,10 @@ class MarshalAPI:
 
         parent_path = '/' + '/'.join(parent_list)
         elem_path   = parent_path + list_depth_sep + parent_to_elem_sep + field.name
+
+        print()
+        print('CCC-1', current_path)
+        print()
 
         return ElementMissing(elem_path, parent_list, field, value)
 
@@ -122,11 +126,14 @@ class MarshalAPI:
 
 # ################################################################################################################################
 
-    def from_dict(self, service, data, DataClass, parent_list=None, extra=None, list_depth=None):
-        # type: (Service, dict, object, list, dict, int) -> object
+    def from_dict(self, service, data, DataClass, parent_list=None, extra=None, list_depth=None, current_path=None):
+        # type: (Service, dict, object, list, dict, int, list) -> object
 
         # This will be None the first time around
         parent_list = parent_list or []
+
+        # This will be None the first time around
+        current_path = current_path or [None]
 
         # Whether the dataclass defines the __init__method
         has_init = getattr(DataClass, _PARAMS).init
@@ -159,9 +166,11 @@ class MarshalAPI:
             # This field points to a model ..
             if is_model:
 
+                current_path.append(field.name)
+
                 # .. first, we need a dict as value as it is the only container possible for nested values ..
                 if not isinstance(value, dict):
-                    raise self.get_validation_error(field, value, parent_list, list_depth=list_depth)
+                    raise self.get_validation_error(field, value, parent_list, list_depth=list_depth, current_path=current_path)
 
                 # .. if we are here, it means that we can recurse into the nested data structure.
                 else:
@@ -202,6 +211,9 @@ class MarshalAPI:
                         value = self._visit_list(value, service, data, model_class,
                             parent_list=[field.name])
 
+            else:
+                current_path[-1] = field.name
+
             # If we do not have a value yet, perhaps we will find a default one
             if value == ZatoNotGiven:
                 if field.default and field.default is not MISSING:
@@ -211,7 +223,7 @@ class MarshalAPI:
             if value != ZatoNotGiven:
                 attrs_container[field.name] = value
             else:
-                raise self.get_validation_error(field, value, parent_list, list_depth=list_depth)
+                raise self.get_validation_error(field, value, parent_list, list_depth=list_depth, current_path=current_path)
 
             # If we have any extra elements, we need to add them as well
             if extra:
