@@ -8,6 +8,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from http.client import BAD_REQUEST
+from inspect import isclass
+from typing import _GenericAlias, List as list_
+
+# typing-utils
+from typing_utils import issubtype
 
 # Zato
 from zato.common.api import ZatoNotGiven
@@ -144,13 +149,22 @@ class MarshalAPI:
 
         fields = getattr(DataClass, _FIELDS) # type: dict
 
-        for _ignored_name, field in sorted(fields.items()): # type: Field
+        for _ignored_name, field in sorted(fields.items()): # type: (str, Field)
+
+            # Local aliases
+            is_class = isclass(field.type)
 
             # Is this particular field a further dataclass-based model?
-            is_model = issubclass(field.type, Model)
+            is_model = is_class and issubclass(field.type, Model)
 
             # Is this field a list that we can recurse into as well?
-            is_list = issubclass(field.type, list)
+            is_list = (is_class and issubtype(field.type, list)) or isinstance(field.type, _GenericAlias)
+
+            print()
+            print(111, field.type)
+            print(222, is_model)
+            print(333, is_list)
+            print()
 
             # Get the value given on input
             value = data.get(field.name, ZatoNotGiven)
@@ -185,7 +199,7 @@ class MarshalAPI:
                 model_class = None
 
                 # Access the list's arguments ..
-                type_args = field.type.__args__
+                type_args = getattr(field.type, '__args__', None)
 
                 # .. if there are any ..
                 if type_args:
@@ -195,10 +209,10 @@ class MarshalAPI:
 
                 print()
                 print(111, field)
-                print(222, issubclass(field.type, list))
+                #print(222, issubclass(field.type, list))
                 print(333, field.type)
                 print(444, dir(field.type))
-                print(555, field.type.__args__)
+                #print(555, field.type.__args__)
                 print(666, model_class)
                 print(777, value)
                 print()
