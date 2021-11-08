@@ -103,7 +103,7 @@ class MarshalAPI:
         list_depth_sep = '[{}]'.format(list_depth) if list_depth is not None else ''
 
         parent_path = '/' + '/'.join(parent_list)
-        elem_path   = parent_path + list_depth_sep + parent_to_elem_sep + field.name
+        elem_path   = parent_path + parent_to_elem_sep + field.name
 
         return ElementMissing(elem_path, parent_list, field, value)
 
@@ -198,8 +198,6 @@ class MarshalAPI:
                 print(333, parent_list)
                 print(444, value)
                 print()
-
-                zz
 
                 # By default, assume we have no type information (we do not know what model class it is)
                 model_class = None
