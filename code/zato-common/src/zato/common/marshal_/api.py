@@ -163,7 +163,9 @@ class MarshalAPI:
             # Get the value given on input
             value = data.get(field.name, ZatoNotGiven)
 
-            current_path[-1] = field.name
+            path_idx_suffix = '[{}]'.format(0 if list_depth is None else list_depth) if is_list else ''
+
+            current_path[-1] = field.name + path_idx_suffix
 
             # This field points to a model ..
             if is_model:
@@ -192,9 +194,14 @@ class MarshalAPI:
                 # Otherwise, we will just pass this list on as it is.
                 #
 
-                current_path.append(field.name + 'z')
+                # last = current_path[-1] # type: str
 
-                print(111, current_path)
+                #current_path.append(field.name)
+
+                #if last.startswith(field.name):
+                #    current_path.append(field.name)
+
+                #print(111, current_path)
 
                 '''
                 print(111, current_path)
@@ -219,7 +226,7 @@ class MarshalAPI:
                 # If we have a model class the elements of the list are of
                 # we need to visit each of them now.
                 if model_class:
-                    if value:
+                    if value and value != ZatoNotGiven:
                         value = self._visit_list(value, service, data, model_class,
                             parent_list=[field.name], current_path=current_path)
 
