@@ -91,6 +91,13 @@ class MarshalAPI:
     def get_validation_error(self, field, value, parent_list, list_depth=None):
         # type: (Field, object, list, int) -> ModelValidationError
 
+        print()
+        print(111, field)
+        print(222, value)
+        print(333, parent_list)
+        print(444, list_depth)
+        print()
+
         # This needs to be empty if field is a top-level element
         parent_to_elem_sep = '/' if parent_list else ''
         list_depth_sep = '[{}]'.format(list_depth) if list_depth is not None else ''
@@ -182,6 +189,18 @@ class MarshalAPI:
                 # Otherwise, we will just pass this list on as it is.
                 #
 
+                parent_with_idx = '{}[{}]'.format(field.name, 0 if list_depth is None else list_depth)
+                parent_list.append(parent_with_idx)
+
+                print()
+                print(111, field)
+                print(222, list_depth)
+                print(333, parent_list)
+                print(444, value)
+                print()
+
+                zz
+
                 # By default, assume we have no type information (we do not know what model class it is)
                 model_class = None
 
@@ -198,9 +217,8 @@ class MarshalAPI:
                 # If we have a model class the elements of the list are of
                 # we need to visit each of them now.
                 if model_class:
-                    if value:
-                        value = self._visit_list(value, service, data, model_class,
-                            parent_list=[field.name])
+                    if value and value != ZatoNotGiven:
+                        value = self._visit_list(value, service, data, model_class, parent_list=parent_list)
 
             # If we do not have a value yet, perhaps we will find a default one
             if value == ZatoNotGiven:
