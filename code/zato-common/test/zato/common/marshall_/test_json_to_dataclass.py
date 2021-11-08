@@ -75,63 +75,6 @@ class JSONToDataclassTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_unmarshall_list_elem_missing(self):
-
-        request_id = rand_int()
-        user_name  = rand_string()
-        locality   = rand_string()
-
-        role_type1 = 111
-        role_type2 = 222
-
-        role_name1 = 'role.name.111'
-        role_name2 = 'role.name.222'
-
-        data = {
-            'request_id': request_id,
-            'user': {
-                'user_name': user_name,
-                'address': {
-                    'locality': locality,
-                }
-            },
-            'role_list': [
-
-                # Element name is missing here
-                {'type': role_type1},
-
-                {'type': role_type2, 'name': role_name2},
-            ]
-        }
-
-        service = None
-        api = MarshalAPI()
-
-        result = api.from_dict(service, data, CreateUserRequest) # type: CreateUserRequest
-
-        self.assertIs(type(result), CreateUserRequest)
-        self.assertIsInstance(result.user, User)
-
-        self.assertEqual(result.request_id, request_id)
-        self.assertEqual(result.user.user_name, user_name)
-
-        self.assertIsInstance(result.role_list, list)
-        self.assertEquals(len(result.role_list), 2)
-
-        role1 = result.role_list[0] # type: Role
-        role2 = result.role_list[1] # type: Role
-
-        self.assertIsInstance(role1, Role)
-        self.assertIsInstance(role2, Role)
-
-        self.assertEqual(role1.type, role_type1)
-        self.assertEqual(role1.name, role_name1)
-
-        self.assertEqual(role2.type, role_type2)
-        self.assertEqual(role2.name, role_name2)
-
-# ################################################################################################################################
-
     def test_unmarshall_default(self):
 
         request_id = rand_int()
