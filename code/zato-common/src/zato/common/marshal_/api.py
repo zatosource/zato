@@ -95,15 +95,6 @@ class MarshalAPI:
         parent_to_elem_sep = '/' if parent_list else ''
         list_depth_sep = '[{}]'.format(list_depth) if list_depth is not None else ''
 
-        """
-        print()
-        print(111, field)
-        print(222, value)
-        print(333, parent_list)
-        print(444, list_depth)
-        print()
-        """
-
         parent_path = '/' + '/'.join(parent_list)
         elem_path   = parent_path + list_depth_sep + parent_to_elem_sep + field.name
 
@@ -204,20 +195,8 @@ class MarshalAPI:
                     # .. the first one will be our model class.
                     model_class = type_args[0]
 
-                """
-                print()
-                print(111, field)
-                #print(222, issubclass(field.type, list))
-                print(333, field.type)
-                print(444, dir(field.type))
-                #print(555, field.type.__args__)
-                print(666, model_class)
-                print(777, value)
-                print()
-                """
-
                 # If we have a model class the elements of the list are of
-                # we need to visit each one of them now.
+                # we need to visit each of them now.
                 if model_class:
                     if value:
                         value = self._visit_list(value, service, data, model_class,
