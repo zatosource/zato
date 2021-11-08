@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from typing import List as list_
 
 # Zato
-from zato.common.ext.dataclasses import dataclass
+from zato.common.ext.dataclasses import dataclass, field
 from zato.common.marshal_.api import Model
 
 # ################################################################################################################################
@@ -33,8 +33,8 @@ class User(Model):
 
 @dataclass(init=False, repr=False)
 class Role(Model):
-    name: str
     type: str
+    name: str
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,7 +43,7 @@ class Role(Model):
 class CreateUserRequest(Model):
     request_id: int
     user: User
-    role_list: list_[Role]
+    role_list: list_[Role] = field(default_factory=list)
 
 # ################################################################################################################################
 # ################################################################################################################################
