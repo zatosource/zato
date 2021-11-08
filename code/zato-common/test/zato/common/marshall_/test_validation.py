@@ -124,16 +124,11 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_unmarshall_nested_list_elem_missing(self):
+    def test_unmarshall_nested_list_elem_missing_0_0(self):
 
         data = {
             'phone_list': [
-                {'attr_list': [{'type':'type_0_0', 'name':'name_0_0'}, {'type':'name_0_1', 'name':'name_0_1'}, {'type':'name_0_2', 'name':'name_0_2'}]},
-                {'attr_list': [{'type':'type_1_0', 'name':'name_2_0'}, {'type':'name_2_1', 'name':'name_2_1'}, {'type':'name_2_2', 'name':'name_2_2'}]},
-                {'attr_list': [{'type':'type_2_0', 'name':'name_2_0'}, {'type':'name_2_1', 'name':'name_2_1'}, {'type':'name_2_2', 'name':'name_2_2'}]},
-                {'attr_list': [{'type':'type_2_0', 'name':'name_2_0'}, {'type':'name_2_1', 'name':'name_2_1'}, {'type':'name_2_2', 'name':'name_2_2'}]},
-                {'attr_list': [{'type':'type_2_0', 'name':'name_2_0'}, {'type':'name_2_1', 'name':'name_2_1'}, {'type':'name_2_2', 'name':'name_2_2'}]},
-                {'attr_list': [{'type':'type_2_0', 'name':'name_2_0'}, {'type':'name_2_1', 'name':'name_2_1'}, {'type':'name_2_2'}]},
+                {'attr_list': [{'type':'name_0_0'}]},
             ]
         }
 
@@ -144,7 +139,31 @@ class ValidationTestCase(TestCase):
             api.from_dict(service, data, CreatePhoneListRequest)
 
         e = cm.exception # type: ElementMissing
-        self.assertEquals(e.reason, 'Element missing: /phone_list[5]/attr_list[2]/name')
+        self.assertEquals(e.reason, 'Element missing: /phone_list[0]/attr_list[0]/name')
+
+# ################################################################################################################################
+
+    def xtest_unmarshall_nested_list_elem_missing_0_1(self):
+
+        data = {
+            'phone_list': [
+                {'attr_list': [{'type':'type_0_0', 'name':'name_0_0'}, {'type':'type_0_1'}]},
+                # {'attr_list': [{'type':'type_1_0', 'name':'name_2_0'}, {'type':'type_2_1', 'name':'name_2_1'}, {'type':'type_2_2', 'name':'name_2_2'}]},
+                # {'attr_list': [{'type':'type_2_0', 'name':'name_2_0'}, {'type':'type_2_1', 'name':'name_2_1'}, {'type':'type_2_2', 'name':'name_2_2'}]},
+                # {'attr_list': [{'type':'type_2_0', 'name':'name_2_0'}, {'type':'type_2_1', 'name':'name_2_1'}, {'type':'type_2_2', 'name':'name_2_2'}]},
+                # {'attr_list': [{'type':'type_2_0', 'name':'name_2_0'}, {'type':'type_2_1', 'name':'name_2_1'}, {'type':'type_2_2', 'name':'name_2_2'}]},
+                # {'attr_list': [{'type':'type_2_0', 'name':'name_2_0'}, {'type':'type_2_1', 'name':'name_2_1'}, {'type':'type_2_2'}]},
+            ]
+        }
+
+        service = None
+        api = MarshalAPI()
+
+        with self.assertRaises(ElementMissing) as cm:
+            api.from_dict(service, data, CreatePhoneListRequest)
+
+        e = cm.exception # type: ElementMissing
+        self.assertEquals(e.reason, 'Element missing: /phone_list[0]/attr_list[1]/name')
 
 # ################################################################################################################################
 # ################################################################################################################################
