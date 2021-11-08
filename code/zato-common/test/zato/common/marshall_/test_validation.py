@@ -213,7 +213,7 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_unmarshall_top_level_list_5(self):
+    def xtest_unmarshall_top_level_list_5(self):
 
         data = {
             'attr_list': [
@@ -237,7 +237,7 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_unmarshall_nested_list_elem_missing_0(self):
+    def test_unmarshall_nested_list_elem_missing_0(self):
 
         data = {
             'phone_list': [
