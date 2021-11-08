@@ -230,14 +230,22 @@ class MarshalAPI:
                 # we need to visit each of them now.
                 if model_class:
 
-                    print()
-                    print(111, value)
-                    print(222, model_class)
-                    print()
-
                     if value and value != ZatoNotGiven:
+
+
+                        print()
+                        print(111, value)
+                        print(222, model_class)
+                        print(333, parent_list, list_depth)
+                        print()
+
+                        if parent_list:
+                            parent_list[-1] = '{}[{}]'.format(parent_list[-1], list_depth)
+
+                        parent_list.append(field.name)
+
                         value = self._visit_list(value, service, data, model_class,
-                            parent_list=[field.name], current_path=current_path)
+                            parent_list=parent_list, current_path=current_path)
 
             # If we do not have a value yet, perhaps we will find a default one
             if value == ZatoNotGiven:
