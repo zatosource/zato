@@ -75,7 +75,7 @@ class JSONToDataclassTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_unmarshall_list_elem_missing(self):
+    def test_unmarshall_list_elem_missing(self):
 
         request_id = rand_int()
         user_name  = rand_string()
