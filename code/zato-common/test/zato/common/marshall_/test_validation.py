@@ -58,7 +58,7 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_validate_nested_dict_missing(self):
+    def xtest_validate_nested_dict_missing(self):
 
         request_id = rand_int()
         user_name  = rand_string()
@@ -84,7 +84,7 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_unmarshall_top_level_list_elem_missing(self):
+    def test_unmarshall_top_level_list_elem_missing(self):
 
         request_id = rand_int()
         user_name  = rand_string()
