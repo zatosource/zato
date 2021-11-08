@@ -106,8 +106,8 @@ class MarshalAPI:
 
 # ################################################################################################################################
 
-    def _visit_list(self, list_, service, data, DataClass, parent_list):
-        # type: (list, Service, dict, object, list) -> list
+    def _visit_list(self, list_, service, data, DataClass, parent_list, current_path):
+        # type: (list, Service, dict, object, list, list) -> list
 
         # Respone to produce
         out = []
@@ -116,7 +116,7 @@ class MarshalAPI:
         for idx, elem in enumerate(list_):
 
             # .. convert it to a model instance ..
-            instance = self.from_dict(service, elem, DataClass, parent_list, list_depth=idx)
+            instance = self.from_dict(service, elem, DataClass, parent_list, list_depth=idx, current_path=current_path)
 
             # .. and append it for our caller ..
             out.append(instance)
@@ -163,10 +163,10 @@ class MarshalAPI:
             # Get the value given on input
             value = data.get(field.name, ZatoNotGiven)
 
+            current_path[-1] = field.name
+
             # This field points to a model ..
             if is_model:
-
-                current_path.append(field.name)
 
                 # .. first, we need a dict as value as it is the only container possible for nested values ..
                 if not isinstance(value, dict):
@@ -178,8 +178,9 @@ class MarshalAPI:
                     # Note that we do not pass extra data on to nested models because we can only ever
                     # overwrite top-level elements with what extra contains.
                     parent_list.append(field.name)
+                    current_path.append(field.name)
                     value = self.from_dict(service, value, field.type, parent_list=parent_list,
-                        extra=None, list_depth=list_depth)
+                        extra=None, list_depth=list_depth, current_path=current_path)
 
             elif is_list:
 
@@ -190,6 +191,17 @@ class MarshalAPI:
                 # If it does, we will be extracting that particular type.
                 # Otherwise, we will just pass this list on as it is.
                 #
+
+                current_path.append(field.name + 'z')
+
+                print(111, current_path)
+
+                '''
+                print(111, current_path)
+                print(222, parent_list)
+
+                current_path.append(current_path[-1] + '[{}]'.format(0 if list_depth is None else list_depth))
+                '''
 
                 # By default, assume we have no type information (we do not know what model class it is)
                 model_class = None
@@ -209,10 +221,7 @@ class MarshalAPI:
                 if model_class:
                     if value:
                         value = self._visit_list(value, service, data, model_class,
-                            parent_list=[field.name])
-
-            else:
-                current_path[-1] = field.name
+                            parent_list=[field.name], current_path=current_path)
 
             # If we do not have a value yet, perhaps we will find a default one
             if value == ZatoNotGiven:
