@@ -232,16 +232,18 @@ class MarshalAPI:
 
                     if value and value != ZatoNotGiven:
 
-
+                        '''
                         print()
-                        print(111, value)
+                        print(111, field.name, value)
                         print(222, model_class)
                         print(333, parent_list, list_depth)
                         print()
+                        '''
 
-                        if parent_list:
-                            parent_list[-1] = '{}[{}]'.format(parent_list[-1], list_depth)
+                        #if parent_list:
+                        #    parent_list[-1] = '{}[{}]'.format(parent_list[-1], list_depth)
 
+                        print(444, 'Appending', field.name, 'to', parent_list)
                         parent_list.append(field.name)
 
                         value = self._visit_list(value, service, data, model_class,
