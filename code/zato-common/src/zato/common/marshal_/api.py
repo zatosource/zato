@@ -226,6 +226,12 @@ class MarshalAPI:
                 # If we have a model class the elements of the list are of
                 # we need to visit each of them now.
                 if model_class:
+
+                    print()
+                    print(111, value)
+                    print(222, model_class)
+                    print()
+
                     if value and value != ZatoNotGiven:
                         value = self._visit_list(value, service, data, model_class,
                             parent_list=[field.name], current_path=current_path)
