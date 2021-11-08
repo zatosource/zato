@@ -166,11 +166,74 @@ class ValidationTestCase(TestCase):
         service = None
         api = MarshalAPI()
 
+        result = api.from_dict(service, data, CreateAttrListRequest) # type: CreateAttrListRequest
+
+        # It is not an error to send a list that is empty,
+        # which is unlike not sending the list at all (as checked in other tests).
+        self.assertListEqual(result.attr_list, [])
+
+# ################################################################################################################################
+
+    def test_unmarshall_top_level_list_0(self):
+
+        data = {
+            'attr_list': [
+                {'type':'type_0'},
+            ],
+        }
+
+        service = None
+        api = MarshalAPI()
+
         with self.assertRaises(ElementMissing) as cm:
             api.from_dict(service, data, CreateAttrListRequest)
 
         e = cm.exception # type: ElementMissing
         self.assertEquals(e.reason, 'Element missing: /attr_list[0]/name')
+
+# ################################################################################################################################
+
+    def test_unmarshall_top_level_list_1(self):
+
+        data = {
+            'attr_list': [
+                {'type':'type_0', 'name':'name_0'},
+                {'type':'type_1'},
+            ],
+        }
+
+        service = None
+        api = MarshalAPI()
+
+        with self.assertRaises(ElementMissing) as cm:
+            api.from_dict(service, data, CreateAttrListRequest)
+
+        e = cm.exception # type: ElementMissing
+        self.assertEquals(e.reason, 'Element missing: /attr_list[1]/name')
+
+# ################################################################################################################################
+
+    def test_unmarshall_top_level_list_5(self):
+
+        data = {
+            'attr_list': [
+                {'type':'type_0', 'name':'name_0'},
+                {'type':'type_1', 'name':'name_1'},
+                {'type':'type_2', 'name':'name_2'},
+                {'type':'type_3', 'name':'name_3'},
+                {'type':'type_4', 'name':'name_4'},
+                {'type':'type_5'},
+            ],
+        }
+
+        service = None
+        api = MarshalAPI()
+
+        with self.assertRaises(ElementMissing) as cm:
+            api.from_dict(service, data, CreateAttrListRequest)
+
+        e = cm.exception # type: ElementMissing
+        self.assertEquals(e.reason, 'Element missing: /attr_list[5]/name')
 
 # ################################################################################################################################
 
