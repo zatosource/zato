@@ -124,7 +124,7 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_unmarshall_nested_list_elem_missing_0_0(self):
+    def xtest_unmarshall_nested_list_elem_missing_0_0(self):
 
         data = {
             'phone_list': [
@@ -143,7 +143,7 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_unmarshall_nested_list_elem_missing_3_0(self):
+    def xtest_unmarshall_nested_list_elem_missing_3_0(self):
 
         data = {
             'phone_list': [
@@ -165,7 +165,7 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_unmarshall_top_level_list_is_missing(self):
+    def xtest_unmarshall_top_level_list_is_missing(self):
 
         # There is no input (and attr_list is a list that is missing)
         data = {}
