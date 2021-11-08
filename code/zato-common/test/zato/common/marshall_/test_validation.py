@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main, TestCase
 
 # Zato
-from .base import CreateUserRequest
+from .base import CreatePhoneListRequest, CreateUserRequest
 from zato.common.marshal_.api import ElementMissing, MarshalAPI
 from zato.common.test import rand_int, rand_string
 
@@ -84,7 +84,7 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_unmarshall_top_level_list_elem_missing(self):
+    def xtest_unmarshall_top_level_list_elem_missing(self):
 
         request_id = rand_int()
         user_name  = rand_string()
@@ -121,6 +121,30 @@ class ValidationTestCase(TestCase):
 
         e = cm.exception # type: ElementMissing
         self.assertEquals(e.reason, 'Element missing: /role_list[0]/name')
+
+# ################################################################################################################################
+
+    def test_unmarshall_nested_list_elem_missing(self):
+
+        data = {
+            'phone_list': [
+                {'attr_list': [{'type':'type_0_0', 'name':'name_0_0'}, {'type':'name_0_1', 'name':'name_0_1'}, {'type':'name_0_2', 'name':'name_0_2'}]},
+                {'attr_list': [{'type':'type_1_0', 'name':'name_2_0'}, {'type':'name_2_1', 'name':'name_2_1'}, {'type':'name_2_2', 'name':'name_2_2'}]},
+                {'attr_list': [{'type':'type_2_0', 'name':'name_2_0'}, {'type':'name_2_1', 'name':'name_2_1'}, {'type':'name_2_2', 'name':'name_2_2'}]},
+                {'attr_list': [{'type':'type_2_0', 'name':'name_2_0'}, {'type':'name_2_1', 'name':'name_2_1'}, {'type':'name_2_2', 'name':'name_2_2'}]},
+                {'attr_list': [{'type':'type_2_0', 'name':'name_2_0'}, {'type':'name_2_1', 'name':'name_2_1'}, {'type':'name_2_2', 'name':'name_2_2'}]},
+                {'attr_list': [{'type':'type_2_0', 'name':'name_2_0'}, {'type':'name_2_1', 'name':'name_2_1'}, {'type':'name_2_2'}]},
+            ]
+        }
+
+        service = None
+        api = MarshalAPI()
+
+        with self.assertRaises(ElementMissing) as cm:
+            api.from_dict(service, data, CreatePhoneListRequest)
+
+        e = cm.exception # type: ElementMissing
+        self.assertEquals(e.reason, 'Element missing: /phone_list[5]/attr_list[2]/name')
 
 # ################################################################################################################################
 # ################################################################################################################################
