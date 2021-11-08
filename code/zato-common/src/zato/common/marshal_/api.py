@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from http.client import BAD_REQUEST
 from inspect import isclass
-from typing import _GenericAlias, List as list_
+from typing import _GenericAlias
 
 # typing-utils
 from typing_utils import issubtype
@@ -95,12 +95,14 @@ class MarshalAPI:
         parent_to_elem_sep = '/' if parent_list else ''
         list_depth_sep = '[{}]'.format(list_depth) if list_depth is not None else ''
 
+        """
         print()
         print(111, field)
         print(222, value)
         print(333, parent_list)
         print(444, list_depth)
         print()
+        """
 
         parent_path = '/' + '/'.join(parent_list)
         elem_path   = parent_path + list_depth_sep + parent_to_elem_sep + field.name
@@ -192,15 +194,17 @@ class MarshalAPI:
                 # By default, assume we have no type information (we do not know what model class it is)
                 model_class = None
 
-                # Access the list's arguments ..
+                # The attribute is defined by typing.List but not by list elements,
+                # hence the getattr call ..
                 type_args = getattr(field.type, '__args__', None)
 
-                # .. if there are any ..
+                # .. if there are any arguments found ..
                 if type_args:
 
                     # .. the first one will be our model class.
                     model_class = type_args[0]
 
+                """
                 print()
                 print(111, field)
                 #print(222, issubclass(field.type, list))
@@ -210,6 +214,7 @@ class MarshalAPI:
                 print(666, model_class)
                 print(777, value)
                 print()
+                """
 
                 # If we have a model class the elements of the list are of
                 # we need to visit each one of them now.
