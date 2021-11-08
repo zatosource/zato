@@ -33,7 +33,7 @@ class ValidationTestCase(TestCase):
             api.from_dict(service, data, CreateUserRequest)
 
         e = cm.exception # type: ElementMissing
-        self.assertEquals(e.reason, 'Element missing: /user')
+        self.assertEquals(e.reason, 'Element missing: /request_id')
 
 # ################################################################################################################################
 
@@ -44,6 +44,7 @@ class ValidationTestCase(TestCase):
         # The user element is entirely missing here
         data = {
             'request_id': request_id,
+            'role_list': [],
         }
 
         service = None
@@ -67,7 +68,8 @@ class ValidationTestCase(TestCase):
             'request_id': request_id,
             'user': {
                 'user_name': user_name,
-            }
+            },
+            'role_list': [],
         }
 
         service = None
