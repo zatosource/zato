@@ -83,14 +83,22 @@ class MarshalAPI:
 
 # ################################################################################################################################
 
-    def get_validation_error(self, field, value, parent_list):
-        # type: (Field, object, list) -> ModelValidationError
+    def get_validation_error(self, field, value, parent_list, list_depth=None):
+        # type: (Field, object, list, int) -> ModelValidationError
 
         # This needs to be empty if field is a top-level element
         parent_to_elem_sep = '/' if parent_list else ''
+        list_depth_sep = '[{}]'.format(list_depth) if list_depth is not None else ''
+
+        print()
+        print(111, field)
+        print(222, value)
+        print(333, parent_list)
+        print(444, list_depth)
+        print()
 
         parent_path = '/' + '/'.join(parent_list)
-        elem_path   = parent_path + parent_to_elem_sep + field.name
+        elem_path   = parent_path + list_depth_sep + parent_to_elem_sep + field.name
 
         return ElementMissing(elem_path, parent_list, field, value)
 
@@ -103,10 +111,10 @@ class MarshalAPI:
         out = []
 
         # Visit each element in the list ..
-        for elem in list_:
+        for idx, elem in enumerate(list_):
 
             # .. convert it to a model instance ..
-            instance = self.from_dict(service, elem, DataClass, parent_list)
+            instance = self.from_dict(service, elem, DataClass, parent_list, list_depth=idx)
 
             # .. and append it for our caller ..
             out.append(instance)
@@ -116,8 +124,8 @@ class MarshalAPI:
 
 # ################################################################################################################################
 
-    def from_dict(self, service, data, DataClass, parent_list=None, extra=None):
-        # type: (Service, dict, object, list, dict) -> object
+    def from_dict(self, service, data, DataClass, parent_list=None, extra=None, list_depth=None):
+        # type: (Service, dict, object, list, dict, int) -> object
 
         # This will be None the first time around
         parent_list = parent_list or []
@@ -152,7 +160,7 @@ class MarshalAPI:
 
                 # .. first, we need a dict as value as it is the only container possible for nested values ..
                 if not isinstance(value, dict):
-                    raise self.get_validation_error(field, value, parent_list)
+                    raise self.get_validation_error(field, value, parent_list, list_depth=list_depth)
 
                 # .. if we are here, it means that we can recurse into the nested data structure.
                 else:
@@ -160,7 +168,8 @@ class MarshalAPI:
                     # Note that we do not pass extra data on to nested models because we can only ever
                     # overwrite top-level elements with what extra contains.
                     parent_list.append(field.name)
-                    value = self.from_dict(service, value, field.type, parent_list=parent_list, extra=None)
+                    value = self.from_dict(service, value, field.type, parent_list=parent_list,
+                        extra=None, list_depth=list_depth)
 
             elif is_list:
 
@@ -210,7 +219,7 @@ class MarshalAPI:
             if value != ZatoNotGiven:
                 attrs_container[field.name] = value
             else:
-                raise self.get_validation_error(field, value, parent_list)
+                raise self.get_validation_error(field, value, parent_list, list_depth=list_depth)
 
             # If we have any extra elements, we need to add them as well
             if extra:
