@@ -29,7 +29,7 @@ class User(Model):
 # ################################################################################################################################
 
 @dataclass(init=True, repr=False)
-class MyRequest(Model):
+class CreateUserRequest(Model):
     request_id: int
     user: User
 

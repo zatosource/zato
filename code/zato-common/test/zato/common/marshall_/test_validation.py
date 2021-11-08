@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main, TestCase
 
 # Zato
-from .base import MyRequest
+from .base import CreateUserRequest
 from zato.common.marshal_.api import ElementMissing, MarshalAPI
 from zato.common.test import rand_int, rand_string
 
@@ -30,7 +30,7 @@ class ValidationTestCase(TestCase):
         api = MarshalAPI()
 
         with self.assertRaises(ElementMissing) as cm:
-            api.from_dict(service, data, MyRequest)
+            api.from_dict(service, data, CreateUserRequest)
 
         e = cm.exception # type: ElementMissing
         self.assertEquals(e.reason, 'Element missing: /request_id')
@@ -50,7 +50,7 @@ class ValidationTestCase(TestCase):
         api = MarshalAPI()
 
         with self.assertRaises(ElementMissing) as cm:
-            api.from_dict(service, data, MyRequest)
+            api.from_dict(service, data, CreateUserRequest)
 
         e = cm.exception # type: ElementMissing
         self.assertEquals(e.reason, 'Element missing: /user')
@@ -74,7 +74,7 @@ class ValidationTestCase(TestCase):
         api = MarshalAPI()
 
         with self.assertRaises(ElementMissing) as cm:
-            api.from_dict(service, data, MyRequest)
+            api.from_dict(service, data, CreateUserRequest)
 
         e = cm.exception # type: ElementMissing
         self.assertEquals(e.reason, 'Element missing: /user/address')
