@@ -40,7 +40,7 @@ class JSONToDataclassTestCase(TestCase):
         service = None
         api = MarshalAPI()
 
-        result = api.from_dict(service, data, CreateUserRequest) # type: MyRequest
+        result = api.from_dict(service, data, CreateUserRequest) # type: CreateUserRequest
 
         self.assertIs(type(result), CreateUserRequest)
         self.assertIsInstance(result.user, User)
@@ -73,7 +73,7 @@ class JSONToDataclassTestCase(TestCase):
         service = None
         api = MarshalAPI()
 
-        result = api.from_dict(service, data, CreateAdminRequest) # type: MyRequestWithDefault
+        result = api.from_dict(service, data, CreateAdminRequest) # type: CreateAdminRequest
 
         self.assertIs(type(result), CreateAdminRequest)
         self.assertIsInstance(result.user, User)
