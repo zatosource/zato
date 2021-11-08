@@ -33,7 +33,7 @@ class ValidationTestCase(TestCase):
             api.from_dict(service, data, CreateUserRequest)
 
         e = cm.exception # type: ElementMissing
-        self.assertEquals(e.reason, 'Element missing: /request_id')
+        self.assertEquals(e.reason, 'Element missing: /user')
 
 # ################################################################################################################################
 
