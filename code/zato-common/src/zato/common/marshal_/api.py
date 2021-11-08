@@ -158,13 +158,7 @@ class MarshalAPI:
             is_model = is_class and issubclass(field.type, Model)
 
             # Is this field a list that we can recurse into as well?
-            is_list = (is_class and issubtype(field.type, list)) or isinstance(field.type, _GenericAlias)
-
-            print()
-            print(111, field.type)
-            print(222, is_model)
-            print(333, is_list)
-            print()
+            is_list = isinstance(field.type, _GenericAlias) or (is_class and issubtype(field.type, list))
 
             # Get the value given on input
             value = data.get(field.name, ZatoNotGiven)
