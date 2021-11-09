@@ -133,6 +133,7 @@ class FieldCtx:
         # We get these on input ..
         self.dict_ctx = dict_ctx
         self.field = field
+        self.name = self.field.name # type: str
 
         # .. by default, assume we have no type information (we do not know what model class it is)
         self.model_class = None # type: object
@@ -145,7 +146,7 @@ class FieldCtx:
 
     def init(self):
 
-        self.value = self.dict_ctx.current_dict.get(self.field.name, ZatoNotGiven)
+        self.value = self.dict_ctx.current_dict.get(self.name, ZatoNotGiven)
         self.is_class = isclass(self.field.type)
         self.is_model = self.is_class and issubclass(self.field.type, Model)
         self.is_list = isinstance(self.field.type, _GenericAlias) or (self.is_class and issubtype(self.field.type, list))
@@ -235,12 +236,12 @@ class MarshalAPI:
         dict_ctx = DictCtx(service, current_dict, DataClass, parent_list, list_idx)
         dict_ctx.init()
 
-        for _ignored_name, field in sorted(dict_ctx.fields.items()): # type: (str, Field)
+        for _ignored_name, _field in sorted(dict_ctx.fields.items()): # type: (str, Field)
 
             # Represents a current field in the model in the context of the input dict ..
-            field_ctx = FieldCtx(dict_ctx, field)
+            field_ctx = FieldCtx(dict_ctx, _field)
 
-            # .. this call will populate the initial value of the field as well.
+            # .. this call will populate the initial value of the field as well (field_ctx.value).
             field_ctx.init()
 
             # If this field points to a model ..
@@ -252,7 +253,7 @@ class MarshalAPI:
                 # .. if we are here, it means that we can check the dict and extract its fields ..
 
                 # .. populate our parents ..
-                dict_ctx.parent_list.append(field_ctx.field.name)
+                dict_ctx.parent_list.append(field_ctx.name)
 
                 # .. and extract now, but note that we do not pass extra data on to nested models
                 # because we can only ever overwrite top-level elements with what extra contains.
@@ -267,19 +268,19 @@ class MarshalAPI:
 
                     if field_ctx.value and field_ctx.value != ZatoNotGiven:
 
-                        dict_ctx.parent_list.append(field.name)
+                        dict_ctx.parent_list.append(field_ctx.name)
 
                         field_ctx.value = self._visit_list(field_ctx.value, service, dict_ctx.current_dict,
                             field_ctx.model_class, parent_list=dict_ctx.parent_list)
 
             # If we do not have a value yet, perhaps we will find a default one
             if field_ctx.value == ZatoNotGiven:
-                if field.default and field.default is not MISSING:
-                    field_ctx.value = field.default
+                if field_ctx.field.default and field_ctx.field.default is not MISSING:
+                    field_ctx.value = field_ctx.field.default
 
             # Let's check if found any value
             if field_ctx.value != ZatoNotGiven:
-                dict_ctx.attrs_container[field.name] = field_ctx.value
+                dict_ctx.attrs_container[field_ctx.name] = field_ctx.value
             else:
                 raise self.get_validation_error(field_ctx.field, field_ctx.value,
                     dict_ctx.parent_list, list_idx=dict_ctx.list_idx)
