@@ -102,6 +102,8 @@ class ItemCtx:
         # We can check it once upfront and make it point to either init_attrs or setattr_attrs
         self.attrs_container = None # type: dict
 
+# ################################################################################################################################
+
     def init(self):
 
         # This will be None the first time around
@@ -115,6 +117,50 @@ class ItemCtx:
 
         self.attrs_container = self.init_attrs if self.has_init else self.setattr_attrs
         self.fields = getattr(self.DataClass, _FIELDS) # type: dict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class FieldCtx:
+    def __init__(self, item_ctx, field):
+        # type: (ItemCtx, Field) -> None
+
+        # We get these on input ..
+        self.item_ctx = item_ctx
+        self.field = field
+
+        # .. while these we need to build ourselves in self.init.
+        self.value    = None # type: object
+        self.is_class = None # type: bool
+        self.is_model = None # type: bool
+        self.is_list  = None # type: bool
+
+    def init(self):
+
+        self.value = self.item_ctx.current_item.get(self.field.name, ZatoNotGiven)
+        self.is_class = isclass(self.field.type)
+        self.is_model = self.is_class and issubclass(self.field.type, Model)
+        self.is_list = isinstance(self.field.type, _GenericAlias) or (self.is_class and issubtype(self.field.type, list))
+
+        '''
+        # Local aliases
+        is_class = isclass(field.type)
+
+        # Is this particular field a further dataclass-based model?
+        is_model = is_class and issubclass(field.type, Model)
+
+        # Is this field a list that we can recurse into as well?
+        is_list = isinstance(field.type, _GenericAlias) or (is_class and issubtype(field.type, list))
+
+        # Get the value given on input
+        value = item_ctx.current_item.get(field.name, ZatoNotGiven)
+
+        # path_idx_suffix = '[{}]'.format(0 if list_depth is None else list_depth) if is_list else ''
+        # current_path[-1] = field.name + path_idx_suffix
+
+        #current_path.append(field.name)
+        print(111, field.name, list_depth)
+        '''
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -172,43 +218,39 @@ class MarshalAPI:
 
         for _ignored_name, field in sorted(item_ctx.fields.items()): # type: (str, Field)
 
-            # Local aliases
-            is_class = isclass(field.type)
-
-            # Is this particular field a further dataclass-based model?
-            is_model = is_class and issubclass(field.type, Model)
-
-            # Is this field a list that we can recurse into as well?
-            is_list = isinstance(field.type, _GenericAlias) or (is_class and issubtype(field.type, list))
-
-            # Get the value given on input
-            value = current_item.get(field.name, ZatoNotGiven)
-
-            # path_idx_suffix = '[{}]'.format(0 if list_depth is None else list_depth) if is_list else ''
-            # current_path[-1] = field.name + path_idx_suffix
-
-            #current_path.append(field.name)
-            print(111, field.name, list_depth)
+            field_ctx = FieldCtx(item_ctx, field)
+            field_ctx.init()
 
             # This field points to a model ..
-            if is_model:
+            if field_ctx.is_model:
 
                 # .. first, we need a dict as value as it is the only container possible for nested values ..
-                if not isinstance(value, dict):
-                    raise self.get_validation_error(field, value, item_ctx.parent_list, list_depth=list_depth, current_path=current_path)
+                if not isinstance(field_ctx.value, dict):
+                    raise self.get_validation_error(
+                        field_ctx.field,
+                        field_ctx.value,
+                        item_ctx.parent_list,
+                        list_depth=list_depth,
+                        current_path=current_path)
 
                 # .. if we are here, it means that we can recurse into the nested data structure.
                 else:
 
-                    item_ctx.parent_list.append(field.name)
+                    item_ctx.parent_list.append(field_ctx.field.name)
                     #current_path.append(field.name)
 
                     # Note that we do not pass extra data on to nested models because we can only ever
                     # overwrite top-level elements with what extra contains.
-                    value = self.from_dict(service, value, field.type, parent_list=item_ctx.parent_list,
-                        extra=None, list_depth=list_depth, current_path=current_path)
+                    field_ctx.value = self.from_dict(
+                        service,
+                        field_ctx.value,
+                        field_ctx.field.type,
+                        parent_list=item_ctx.parent_list,
+                        extra=None,
+                        list_depth=list_depth,
+                        current_path=current_path)
 
-            elif is_list:
+            elif field_ctx.is_list:
 
                 #
                 # This is a list and we need to check if its definition
@@ -239,7 +281,7 @@ class MarshalAPI:
 
                 # The attribute is defined by typing.List but not by list elements,
                 # hence the getattr call ..
-                type_args = getattr(field.type, '__args__', None)
+                type_args = getattr(field_ctx.field.type, '__args__', None)
 
                 # .. if there are any arguments found ..
                 if type_args:
@@ -251,7 +293,7 @@ class MarshalAPI:
                 # we need to visit each of them now.
                 if model_class:
 
-                    if value and value != ZatoNotGiven:
+                    if field_ctx.value and field_ctx.value != ZatoNotGiven:
 
                         '''
                         print()
@@ -267,19 +309,19 @@ class MarshalAPI:
                         print(444, 'Appending', field.name, 'to', item_ctx.parent_list)
                         item_ctx.parent_list.append(field.name)
 
-                        value = self._visit_list(value, service, current_item, model_class,
+                        field_ctx.value = self._visit_list(field_ctx.value, service, item_ctx.current_item, model_class,
                             parent_list=item_ctx.parent_list, current_path=current_path)
 
             # If we do not have a value yet, perhaps we will find a default one
-            if value == ZatoNotGiven:
+            if field_ctx.value == ZatoNotGiven:
                 if field.default and field.default is not MISSING:
-                    value = field.default
+                    field_ctx.value = field.default
 
             # Let's check if found any value
-            if value != ZatoNotGiven:
-                item_ctx.attrs_container[field.name] = value
+            if field_ctx.value != ZatoNotGiven:
+                item_ctx.attrs_container[field.name] = field_ctx.value
             else:
-                raise self.get_validation_error(field, value, item_ctx.parent_list, list_depth=list_depth, current_path=current_path)
+                raise self.get_validation_error(field_ctx.field, field_ctx.value, item_ctx.parent_list, list_depth=list_depth, current_path=current_path)
 
             # If we have any extra elements, we need to add them as well
             if extra:
@@ -299,7 +341,7 @@ class MarshalAPI:
 
             ctx = ModelCtx()
             ctx.service = service
-            ctx.data = current_item
+            ctx.data = item_ctx.current_item
             ctx.DataClass = DataClass
 
             instance.after_created(ctx)
