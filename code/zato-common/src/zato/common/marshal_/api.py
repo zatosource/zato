@@ -49,12 +49,9 @@ class ModelCtx:
 class ModelValidationError(Exception):
     """ Base class for model validation errors.
     """
-    def __init__(self, elem_path, parent_list, field, value):
-        # type: (list, list, Field, object)
+    def __init__(self, elem_path):
+        # type: (str)
         self.elem_path   = elem_path
-        self.parent_list = parent_list
-        self.field       = field
-        self.value       = value
         self.reason = self.msg = self.get_reason()
         self.status = BAD_REQUEST
 
@@ -80,18 +77,16 @@ class ElementMissing(ModelValidationError):
 # ################################################################################################################################
 
 class DictCtx:
-    def __init__(self, service, current_dict, DataClass, parent_list, list_idx):
-        # type: (Service, dict, object, list) -> None
+    def __init__(self, service, current_dict, DataClass, list_idx):
+        # type: (Service, dict, object, int) -> None
 
         # We get these on input ..
         self.service      = service
         self.current_dict = current_dict
-        self.parent_list  = parent_list
         self.DataClass    = DataClass
         self.list_idx     = list_idx
 
         # .. while these we need to build ourselves in self.init.
-        self.current_path = []
         self.has_init = None # type: bool
 
         # These are the Field object that we expect this dict will contain,
@@ -111,12 +106,6 @@ class DictCtx:
 
     def init(self):
 
-        # This will be None the first time around
-        self.parent_list = self.parent_list or []
-
-        # This will be None the first time around
-        self.current_path = self.current_path or []
-
         # Whether the dataclass defines the __init__method
         self.has_init = getattr(self.DataClass, _PARAMS).init
 
@@ -127,13 +116,14 @@ class DictCtx:
 # ################################################################################################################################
 
 class FieldCtx:
-    def __init__(self, dict_ctx, field):
-        # type: (DictCtx, Field) -> None
+    def __init__(self, dict_ctx, field, parent):
+        # type: (DictCtx, Field, FieldCtx) -> None
 
         # We get these on input ..
         self.dict_ctx = dict_ctx
-        self.field = field
-        self.name = self.field.name # type: str
+        self.field    = field
+        self.parent   = parent
+        self.name     = self.field.name # type: str
 
         # .. by default, assume we have no type information (we do not know what model class it is)
         self.model_class = None # type: object
@@ -143,6 +133,8 @@ class FieldCtx:
         self.is_class = None # type: bool
         self.is_model = None # type: bool
         self.is_list  = None # type: bool
+
+# ################################################################################################################################
 
     def init(self):
 
@@ -172,6 +164,14 @@ class FieldCtx:
                 self.model_class = type_args[0]
 
 # ################################################################################################################################
+
+    def get_name(self):
+        if self.dict_ctx.list_idx is not None:
+            return '{}[{}]'.format(self.name, self.dict_ctx.list_idx)
+        else:
+            return self.name
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class MarshalAPI:
@@ -181,36 +181,40 @@ class MarshalAPI:
 
 # ################################################################################################################################
 
-    def get_validation_error(self, field, value, parent_list, list_idx=None):
-        # type: (Field, object, list, int) -> ModelValidationError
+    def get_validation_error(self, field_ctx):
+        # type: (FieldCtx) -> ModelValidationError
 
-        # This needs to be empty if field is a top-level element
-        parent_to_elem_sep = '/' if parent_list else ''
-        list_idx_sep = '[{}]'.format(list_idx) if list_idx is not None else ''
+        # This will always exist
+        elem_path = [field_ctx.name]
 
-        parent_path = '/' + '/'.join(parent_list)
-        elem_path   = parent_path + list_idx_sep + parent_to_elem_sep + field.name
+        # Keep checking parent fields as long as they exist
+        while field_ctx.parent:
+            elem_path.append(field_ctx.parent.get_name())
+            field_ctx = field_ctx.parent
 
-        return ElementMissing(elem_path, parent_list, field, value)
+        # We need to reverse it now to present a top-down view
+        elem_path = reversed(elem_path)
+
+        # Now, join it with a elem_path separator
+        elem_path = '/' + '/'.join(elem_path)
+
+        return ElementMissing(elem_path)
 
 # ################################################################################################################################
 
     def _self_require_dict(self, field_ctx):
         # type: (FieldCtx) -> None
         if not isinstance(field_ctx.value, dict):
-            raise self.get_validation_error(field_ctx.field, field_ctx.value, field_ctx.dict_ctx.parent_list,
-                list_idx=field_ctx.dict_ctx.list_idx)
+            raise self.get_validation_error(field_ctx)
 
 # ################################################################################################################################
 
-    #def _visit_list(self, list_, service, data, DataClass, parent_list):
     def _visit_list(self, field_ctx):
         # type: (FieldCtx) -> list
 
         # Local aliases
         service     = field_ctx.dict_ctx.service
         model_class = field_ctx.model_class
-        parent_list = field_ctx.dict_ctx.parent_list
 
         # Respone to produce
         out = []
@@ -218,8 +222,11 @@ class MarshalAPI:
         # Visit each element in the list ..
         for idx, elem in enumerate(field_ctx.value):
 
+            if field_ctx.is_list:
+                field_ctx.dict_ctx.list_idx = idx
+
             # .. convert it to a model instance ..
-            instance = self.from_dict(service, elem, model_class, parent_list, list_idx=idx)
+            instance = self.from_dict(service, elem, model_class, list_idx=idx, parent=field_ctx)
 
             # .. and append it for our caller ..
             out.append(instance)
@@ -232,20 +239,20 @@ class MarshalAPI:
     def from_field_ctx(self, field_ctx):
         # type: (FieldCtx) -> object
         return self.from_dict(field_ctx.dict_ctx.service, field_ctx.value, field_ctx.field.type,
-            parent_list=field_ctx.dict_ctx.parent_list, extra=None, list_idx=field_ctx.dict_ctx.list_idx)
+            extra=None, list_idx=field_ctx.dict_ctx.list_idx, parent=field_ctx)
 
 # ################################################################################################################################
 
-    def from_dict(self, service, current_dict, DataClass, parent_list=None, extra=None, list_idx=None):
+    def from_dict(self, service, current_dict, DataClass, extra=None, list_idx=None, parent=None):
         # type: (Service, dict, object, list, dict, int) -> object
 
-        dict_ctx = DictCtx(service, current_dict, DataClass, parent_list, list_idx)
+        dict_ctx = DictCtx(service, current_dict, DataClass, list_idx)
         dict_ctx.init()
 
         for _ignored_name, _field in sorted(dict_ctx.fields.items()): # type: (str, Field)
 
             # Represents a current field in the model in the context of the input dict ..
-            field_ctx = FieldCtx(dict_ctx, _field)
+            field_ctx = FieldCtx(dict_ctx, _field, parent)
 
             # .. this call will populate the initial value of the field as well (field_ctx..
             field_ctx.init()
@@ -256,12 +263,8 @@ class MarshalAPI:
                 # .. first, we need a dict as value as it is the only container that we can extract model fields from ..
                 self._self_require_dict(field_ctx)
 
-                # .. if we are here, it means that we can check the dict and extract its fields ..
-
-                # .. populate our parents ..
-                dict_ctx.parent_list.append(field_ctx.name)
-
-                # .. and extract now, but note that we do not pass extra data on to nested models
+                # .. if we are here, it means that we can check the dict and extract its fields,
+                # but note that we do not pass extra data on to nested models
                 # because we can only ever overwrite top-level elements with what extra contains.
                 field_ctx.value = self.from_field_ctx(field_ctx)
 
@@ -273,9 +276,6 @@ class MarshalAPI:
                 if field_ctx.model_class:
 
                     if field_ctx.value and field_ctx.value != ZatoNotGiven:
-
-                        dict_ctx.parent_list.append(field_ctx.name)
-
                         field_ctx.value = self._visit_list(field_ctx)
 
             # If we do not have a value yet, perhaps we will find a default one
@@ -287,14 +287,13 @@ class MarshalAPI:
             if field_ctx.value != ZatoNotGiven:
                 dict_ctx.attrs_container[field_ctx.name] = field_ctx.value
             else:
-                raise self.get_validation_error(field_ctx.field, field_ctx.value,
-                    dict_ctx.parent_list, list_idx=dict_ctx.list_idx)
+                raise self.get_validation_error(field_ctx)
 
             # If we have any extra elements, we need to add them as well
             if extra:
                 for param, value in extra.items():
-                    if param not in attrs_container:
-                        attrs_container[param] = value
+                    if param not in dict_ctx.attrs_container:
+                        dict_ctx.attrs_container[param] = value
 
         # Create a new instance, potentially with attributes ..
         instance = DataClass(**dict_ctx.init_attrs) # type: Model

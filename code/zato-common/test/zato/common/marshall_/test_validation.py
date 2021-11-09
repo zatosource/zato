@@ -21,7 +21,7 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_validate_top_simple_elem_missing(self):
+    def test_validate_top_simple_elem_missing(self):
 
         # Input is entirely missing here
         data = {}
@@ -37,7 +37,7 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_validate_top_level_dict_missing(self):
+    def test_validate_top_level_dict_missing(self):
 
         request_id = rand_int()
 
@@ -58,7 +58,7 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_validate_nested_dict_missing(self):
+    def test_validate_nested_dict_missing(self):
 
         request_id = rand_int()
         user_name  = rand_string()
@@ -81,10 +81,9 @@ class ValidationTestCase(TestCase):
         e = cm.exception # type: ElementMissing
         self.assertEquals(e.reason, 'Element missing: /user/address')
 
-
 # ################################################################################################################################
 
-    def xtest_unmarshall_top_level_list_elem_missing(self):
+    def test_unmarshall_top_level_list_elem_missing(self):
 
         request_id = rand_int()
         user_name  = rand_string()
@@ -107,8 +106,7 @@ class ValidationTestCase(TestCase):
             'role_list': [
 
                 # Element name is missing here
-                {'type': role_type1},
-
+                {'type': role_type1, 'ZZZ': role_name1},
                 {'type': role_type2, 'name': role_name2},
             ]
         }
@@ -124,7 +122,7 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_unmarshall_top_level_list_is_missing(self):
+    def test_unmarshall_top_level_list_is_missing(self):
 
         # There is no input (and attr_list is a list that is missing)
         data = {}
@@ -140,7 +138,7 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_unmarshall_top_level_list_dict_empty(self):
+    def test_unmarshall_top_level_list_dict_empty(self):
 
         data = {
             'attr_list': [{}],
@@ -157,7 +155,7 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_unmarshall_top_level_list_dict_missing(self):
+    def test_unmarshall_top_level_list_dict_missing(self):
 
         data = {
             'attr_list': [],
@@ -174,7 +172,7 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_unmarshall_top_level_list_0(self):
+    def test_unmarshall_top_level_list_0(self):
 
         data = {
             'attr_list': [
@@ -193,7 +191,7 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_unmarshall_top_level_list_1(self):
+    def test_unmarshall_top_level_list_1(self):
 
         data = {
             'attr_list': [
@@ -213,7 +211,7 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_unmarshall_top_level_list_5(self):
+    def test_unmarshall_top_level_list_5(self):
 
         data = {
             'attr_list': [
@@ -241,31 +239,31 @@ class ValidationTestCase(TestCase):
 
         data = {
             'phone_list': [
-                {'attr_list': [
+                {'attr_list': [         # noqa: JS101
                     {'type':'type_0'},
-                ]},
+                ]},                     # noqa: JS102
             ]
         }
 
         service = None
         api = MarshalAPI()
 
-        #with self.assertRaises(ElementMissing) as cm:
-        api.from_dict(service, data, CreatePhoneListRequest)
+        with self.assertRaises(ElementMissing) as cm:
+            api.from_dict(service, data, CreatePhoneListRequest)
 
         e = cm.exception # type: ElementMissing
         self.assertEquals(e.reason, 'Element missing: /phone_list[0]/attr_list[0]/name')
 
 # ################################################################################################################################
 
-    def xtest_unmarshall_nested_list_elem_missing_1(self):
+    def test_unmarshall_nested_list_elem_missing_1(self):
 
         data = {
             'phone_list': [
-                {'attr_list': [
+                {'attr_list': [                           # noqa: JS101
                     {'type':'type_0', 'name':'name_0'},
-                    {'type':'type_1'}
-                ]},
+                    {'type':'type_1', 'ZZZZ':'name_1'},
+                ]},                                       # noqa: JS102
             ]
         }
 
@@ -280,13 +278,13 @@ class ValidationTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_unmarshall_nested_list_elem_missing_1_1(self):
+    def test_unmarshall_nested_list_elem_missing_1_1(self):
 
         data = {
             'phone_list': [
-                {'attr_list': [{'type':'type_0_0', 'name':'name_0_1'}]},
-                {'attr_list': [{'type':'type_1_0', 'name':'name_1_1'}]},
-                {'attr_list': [{'type':'type_2_0'}]},
+                {'attr_list': [{'type':'type_0_0', 'name':'name_0_0'}, {'type':'type_0_1', 'name':'name_0_1'},]},
+                {'attr_list': [{'type':'type_1_0', 'name':'name_1_0'}, {'type':'type_1_1', 'name':'name_1_1'}]},
+                {'attr_list': [{'type':'type_2_0', 'name':'name_2_0'}, {'type':'type_2_1', 'ZZZZ':'name_2_1'}]},
             ]
         }
 
@@ -297,7 +295,7 @@ class ValidationTestCase(TestCase):
             api.from_dict(service, data, CreatePhoneListRequest)
 
         e = cm.exception # type: ElementMissing
-        self.assertEquals(e.reason, 'Element missing: /phone_list[0]/attr_list[1]/name')
+        self.assertEquals(e.reason, 'Element missing: /phone_list[2]/attr_list[1]/name')
 
 # ################################################################################################################################
 # ################################################################################################################################
