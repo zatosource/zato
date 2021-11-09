@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from datetime import datetime
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED
+from inspect import isclass
 from traceback import format_exc
 from typing import Optional as optional
 
@@ -886,6 +887,11 @@ class Service(object):
     def invoke(self, name, *args, **kwargs):
         """ Invokes a service synchronously by its name.
         """
+        # The 'name' parameter is actually a service class,
+        # not its name, and we need to extract the name ourselves.
+        if isclass(name) and issubclass(name, Service): # type: Service
+            name = name.get_name()
+
         if self.component_enabled_target_matcher:
             name, target = self.extract_target(name)
             kwargs['target'] = target
