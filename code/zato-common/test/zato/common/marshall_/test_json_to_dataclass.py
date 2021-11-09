@@ -21,7 +21,7 @@ from zato.common.test import BaseSIOTestCase, rand_int, rand_string
 
 class JSONToDataclassTestCase(TestCase):
 
-    def xtest_unmarshall(self):
+    def test_unmarshall(self):
 
         request_id = rand_int()
         user_name  = rand_string()
@@ -75,7 +75,7 @@ class JSONToDataclassTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_unmarshall_default(self):
+    def test_unmarshall_default(self):
 
         request_id = rand_int()
         user_name  = rand_string()
@@ -110,7 +110,7 @@ class JSONToDataclassTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_unmarshall_and_run_after_created(self):
+    def test_unmarshall_and_run_after_created(self):
 
         request_id = 123456789
         user_name  = 'my.user.name'
@@ -160,7 +160,7 @@ class JSONToDataclassTestCase(TestCase):
 
 class SIOAttachTestCase(BaseSIOTestCase):
 
-    def xtest_attach_sio(self):
+    def test_attach_sio(self):
 
         from zato.server.service import Service
 
