@@ -165,7 +165,7 @@ _wsgi_channels = (CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC)
 
 # ################################################################################################################################
 
-_response_raw_types=(basestring, dict, list, tuple, EtreeElement, ObjectifiedElement)
+_response_raw_types=(basestring, dict, list, tuple, EtreeElement, Model, ObjectifiedElement)
 
 # ################################################################################################################################
 
