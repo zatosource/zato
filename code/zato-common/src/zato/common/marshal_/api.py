@@ -178,15 +178,15 @@ class MarshalAPI:
 
 # ################################################################################################################################
 
-    def get_validation_error(self, field, value, parent_list, list_depth=None):
+    def get_validation_error(self, field, value, parent_list, list_idx=None):
         # type: (Field, object, list, int) -> ModelValidationError
 
         # This needs to be empty if field is a top-level element
         parent_to_elem_sep = '/' if parent_list else ''
-        list_depth_sep = '[{}]'.format(list_depth) if list_depth is not None else ''
+        list_idx_sep = '[{}]'.format(list_idx) if list_idx is not None else ''
 
         parent_path = '/' + '/'.join(parent_list)
-        elem_path   = parent_path + list_depth_sep + parent_to_elem_sep + field.name
+        elem_path   = parent_path + list_idx_sep + parent_to_elem_sep + field.name
 
         return ElementMissing(elem_path, parent_list, field, value)
 
@@ -202,7 +202,7 @@ class MarshalAPI:
         for idx, elem in enumerate(list_):
 
             # .. convert it to a model instance ..
-            instance = self.from_dict(service, elem, DataClass, parent_list, list_depth=idx)
+            instance = self.from_dict(service, elem, DataClass, parent_list, list_idx=idx)
 
             # .. and append it for our caller ..
             out.append(instance)
@@ -212,7 +212,7 @@ class MarshalAPI:
 
 # ################################################################################################################################
 
-    def from_dict(self, service, current_dict, DataClass, parent_list=None, extra=None, list_depth=None):
+    def from_dict(self, service, current_dict, DataClass, parent_list=None, extra=None, list_idx=None):
         # type: (Service, dict, object, list, dict, int) -> object
 
         dict_ctx = DictCtx(current_dict, DataClass, parent_list)
@@ -232,7 +232,7 @@ class MarshalAPI:
                         field_ctx.field,
                         field_ctx.value,
                         dict_ctx.parent_list,
-                        list_depth=list_depth)
+                        list_idx=list_idx)
 
                 # .. if we are here, it means that we can recurse into the nested data structure.
                 else:
@@ -247,7 +247,7 @@ class MarshalAPI:
                         field_ctx.field.type,
                         parent_list=dict_ctx.parent_list,
                         extra=None,
-                        list_depth=list_depth)
+                        list_idx=list_idx)
 
             elif field_ctx.is_list:
 
@@ -271,7 +271,7 @@ class MarshalAPI:
             if field_ctx.value != ZatoNotGiven:
                 dict_ctx.attrs_container[field.name] = field_ctx.value
             else:
-                raise self.get_validation_error(field_ctx.field, field_ctx.value, dict_ctx.parent_list, list_depth=list_depth)
+                raise self.get_validation_error(field_ctx.field, field_ctx.value, dict_ctx.parent_list, list_idx=list_idx)
 
             # If we have any extra elements, we need to add them as well
             if extra:
