@@ -203,17 +203,23 @@ class MarshalAPI:
 
 # ################################################################################################################################
 
-    def _visit_list(self, list_, service, data, DataClass, parent_list):
-        # type: (list, Service, dict, object, list) -> list
+    #def _visit_list(self, list_, service, data, DataClass, parent_list):
+    def _visit_list(self, field_ctx):
+        # type: (FieldCtx) -> list
+
+        # Local aliases
+        service     = field_ctx.dict_ctx.service
+        model_class = field_ctx.model_class
+        parent_list = field_ctx.dict_ctx.parent_list
 
         # Respone to produce
         out = []
 
         # Visit each element in the list ..
-        for idx, elem in enumerate(list_):
+        for idx, elem in enumerate(field_ctx.value):
 
             # .. convert it to a model instance ..
-            instance = self.from_dict(service, elem, DataClass, parent_list, list_idx=idx)
+            instance = self.from_dict(service, elem, model_class, parent_list, list_idx=idx)
 
             # .. and append it for our caller ..
             out.append(instance)
@@ -241,7 +247,7 @@ class MarshalAPI:
             # Represents a current field in the model in the context of the input dict ..
             field_ctx = FieldCtx(dict_ctx, _field)
 
-            # .. this call will populate the initial value of the field as well (field_ctx.value).
+            # .. this call will populate the initial value of the field as well (field_ctx..
             field_ctx.init()
 
             # If this field points to a model ..
@@ -270,8 +276,7 @@ class MarshalAPI:
 
                         dict_ctx.parent_list.append(field_ctx.name)
 
-                        field_ctx.value = self._visit_list(field_ctx.value, service, dict_ctx.current_dict,
-                            field_ctx.model_class, parent_list=dict_ctx.parent_list)
+                        field_ctx.value = self._visit_list(field_ctx)
 
             # If we do not have a value yet, perhaps we will find a default one
             if field_ctx.value == ZatoNotGiven:
