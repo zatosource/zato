@@ -80,10 +80,11 @@ class ElementMissing(ModelValidationError):
 # ################################################################################################################################
 
 class DictCtx:
-    def __init__(self, current_dict, DataClass, parent_list, list_idx):
-        # type: (dict, object, list) -> None
+    def __init__(self, service, current_dict, DataClass, parent_list, list_idx):
+        # type: (Service, dict, object, list) -> None
 
         # We get these on input ..
+        self.service      = service
         self.current_dict = current_dict
         self.parent_list  = parent_list
         self.DataClass    = DataClass
@@ -221,10 +222,17 @@ class MarshalAPI:
 
 # ################################################################################################################################
 
+    def from_field_ctx(self, field_ctx):
+        # type: (FieldCtx) -> object
+        return self.from_dict(field_ctx.dict_ctx.service, field_ctx.value, field_ctx.field.type,
+            parent_list=field_ctx.dict_ctx.parent_list, extra=None, list_idx=field_ctx.dict_ctx.list_idx)
+
+# ################################################################################################################################
+
     def from_dict(self, service, current_dict, DataClass, parent_list=None, extra=None, list_idx=None):
         # type: (Service, dict, object, list, dict, int) -> object
 
-        dict_ctx = DictCtx(current_dict, DataClass, parent_list, list_idx)
+        dict_ctx = DictCtx(service, current_dict, DataClass, parent_list, list_idx)
         dict_ctx.init()
 
         for _ignored_name, field in sorted(dict_ctx.fields.items()): # type: (str, Field)
@@ -248,13 +256,7 @@ class MarshalAPI:
 
                 # .. and extract now, but note that we do not pass extra data on to nested models
                 # because we can only ever overwrite top-level elements with what extra contains.
-                field_ctx.value = self.from_dict(
-                    service,
-                    field_ctx.value,
-                    field_ctx.field.type,
-                    parent_list=dict_ctx.parent_list,
-                    extra=None,
-                    list_idx=dict_ctx.list_idx)
+                field_ctx.value = self.from_field_ctx(field_ctx)
 
             # .. if this field points to a list ..
             elif field_ctx.is_list:
