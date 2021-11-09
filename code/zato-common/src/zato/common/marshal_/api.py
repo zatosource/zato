@@ -17,6 +17,9 @@ except ImportError:
         pass
     _ListBaseClass = _Sentinel
 
+# orjson
+from orjson import dumps
+
 # typing-utils
 from typing_utils import issubtype
 
@@ -42,6 +45,9 @@ class Model:
 
     def to_dict(self):
         return asdict(self)
+
+    def to_json(self, default=None, impl_extra=0):
+        return dumps(self, default=default, option=impl_extra)
 
 # ################################################################################################################################
 # ################################################################################################################################
