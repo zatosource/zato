@@ -73,10 +73,48 @@ class ElementMissing(ModelValidationError):
 
     __str__ = __repr__
 
-# ################################################################################################################################
-
     def get_reason(self):
         return 'Element missing: {}'.format(self.elem_path)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ItemCtx:
+    def __init__(self, current_item, DataClass, parent_list):
+        # type: (dict, object, list) -> None
+
+        # We get these on input ..
+        self.current_item = current_item
+        self.parent_list  = parent_list
+        self.DataClass    = DataClass
+
+        # .. while these we need to build ourselves in self.init.
+        self.fields = None # type: dict
+        self.current_path = []
+        self.has_init = None # type: bool
+
+        # This will be populated with parameters to the dataclass's __init__ method, assuming that the class has one.
+        self.init_attrs = {}
+
+        # This will be populated with parameters to be set via setattr, in case the class does not have __init__.
+        self.setattr_attrs = {}
+
+        # We can check it once upfront and make it point to either init_attrs or setattr_attrs
+        self.attrs_container = None # type: dict
+
+    def init(self):
+
+        # This will be None the first time around
+        self.parent_list = self.parent_list or []
+
+        # This will be None the first time around
+        self.current_path = self.current_path or []
+
+        # Whether the dataclass defines the __init__method
+        self.has_init = getattr(self.DataClass, _PARAMS).init
+
+        self.attrs_container = self.init_attrs if self.has_init else self.setattr_attrs
+        self.fields = getattr(self.DataClass, _FIELDS) # type: dict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -126,30 +164,13 @@ class MarshalAPI:
 
 # ################################################################################################################################
 
-    def from_dict(self, service, data, DataClass, parent_list=None, extra=None, list_depth=None, current_path=None):
+    def from_dict(self, service, current_item, DataClass, parent_list=None, extra=None, list_depth=None, current_path=None):
         # type: (Service, dict, object, list, dict, int, list) -> object
 
-        # This will be None the first time around
-        parent_list = parent_list or []
+        item_ctx = ItemCtx(current_item, DataClass, parent_list)
+        item_ctx.init()
 
-        # This will be None the first time around
-        current_path = current_path or []
-
-        # Whether the dataclass defines the __init__method
-        has_init = getattr(DataClass, _PARAMS).init
-
-        # This will be populated with parameters to the dataclass's __init__ method, assuming that the class has one.
-        init_attrs = {}
-
-        # This will be populated with parameters to be set via setattr, in case the class does not have __init__.
-        setattr_attrs = {}
-
-        # We can check it once upfront here
-        attrs_container = init_attrs if has_init else setattr_attrs
-
-        fields = getattr(DataClass, _FIELDS) # type: dict
-
-        for _ignored_name, field in sorted(fields.items()): # type: (str, Field)
+        for _ignored_name, field in sorted(item_ctx.fields.items()): # type: (str, Field)
 
             # Local aliases
             is_class = isclass(field.type)
@@ -161,12 +182,12 @@ class MarshalAPI:
             is_list = isinstance(field.type, _GenericAlias) or (is_class and issubtype(field.type, list))
 
             # Get the value given on input
-            value = data.get(field.name, ZatoNotGiven)
+            value = current_item.get(field.name, ZatoNotGiven)
 
             # path_idx_suffix = '[{}]'.format(0 if list_depth is None else list_depth) if is_list else ''
             # current_path[-1] = field.name + path_idx_suffix
 
-            current_path.append(field.name)
+            #current_path.append(field.name)
             print(111, field.name, list_depth)
 
             # This field points to a model ..
@@ -174,17 +195,17 @@ class MarshalAPI:
 
                 # .. first, we need a dict as value as it is the only container possible for nested values ..
                 if not isinstance(value, dict):
-                    raise self.get_validation_error(field, value, parent_list, list_depth=list_depth, current_path=current_path)
+                    raise self.get_validation_error(field, value, item_ctx.parent_list, list_depth=list_depth, current_path=current_path)
 
                 # .. if we are here, it means that we can recurse into the nested data structure.
                 else:
 
-                    parent_list.append(field.name)
+                    item_ctx.parent_list.append(field.name)
                     #current_path.append(field.name)
 
                     # Note that we do not pass extra data on to nested models because we can only ever
                     # overwrite top-level elements with what extra contains.
-                    value = self.from_dict(service, value, field.type, parent_list=parent_list,
+                    value = self.from_dict(service, value, field.type, parent_list=item_ctx.parent_list,
                         extra=None, list_depth=list_depth, current_path=current_path)
 
             elif is_list:
@@ -243,11 +264,11 @@ class MarshalAPI:
                         #if parent_list:
                         #    parent_list[-1] = '{}[{}]'.format(parent_list[-1], list_depth)
 
-                        print(444, 'Appending', field.name, 'to', parent_list)
-                        parent_list.append(field.name)
+                        print(444, 'Appending', field.name, 'to', item_ctx.parent_list)
+                        item_ctx.parent_list.append(field.name)
 
-                        value = self._visit_list(value, service, data, model_class,
-                            parent_list=parent_list, current_path=current_path)
+                        value = self._visit_list(value, service, current_item, model_class,
+                            parent_list=item_ctx.parent_list, current_path=current_path)
 
             # If we do not have a value yet, perhaps we will find a default one
             if value == ZatoNotGiven:
@@ -256,9 +277,9 @@ class MarshalAPI:
 
             # Let's check if found any value
             if value != ZatoNotGiven:
-                attrs_container[field.name] = value
+                item_ctx.attrs_container[field.name] = value
             else:
-                raise self.get_validation_error(field, value, parent_list, list_depth=list_depth, current_path=current_path)
+                raise self.get_validation_error(field, value, item_ctx.parent_list, list_depth=list_depth, current_path=current_path)
 
             # If we have any extra elements, we need to add them as well
             if extra:
@@ -267,10 +288,10 @@ class MarshalAPI:
                         attrs_container[param] = value
 
         # Create a new instance, potentially with attributes ..
-        instance = DataClass(**init_attrs) # type: Model
+        instance = DataClass(**item_ctx.init_attrs) # type: Model
 
         # .. and add extra ones in case __init__ was not defined ..
-        for k, v in setattr_attrs.items():
+        for k, v in item_ctx.setattr_attrs.items():
             setattr(instance, k, v)
 
         # .. run the post-creation hook ..
@@ -278,7 +299,7 @@ class MarshalAPI:
 
             ctx = ModelCtx()
             ctx.service = service
-            ctx.data = data
+            ctx.data = current_item
             ctx.DataClass = DataClass
 
             instance.after_created(ctx)
