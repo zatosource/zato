@@ -330,8 +330,62 @@ class MarshalAPI:
         # .. and return the new dataclass to our caller.
         return instance
 
-    def to_dict(self):
-        pass
+# ################################################################################################################################
+# ################################################################################################################################
+
+'''
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+
+Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# stdlib
+from shutil import copy as shutil_copy
+
+# Zato
+from api_model import MyRequest, User
+from zato.server.service import Service
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class MyService2(Service):
+
+    class SimpleIO:
+        input = MyRequest
+        outpuy = MyRequest
+
+    def handle(self):
+
+        self.logger.warn('QQQ-1 %s', self.request.input.to_json())
+
+        instance = MyRequest()
+        instance.request_id = 456
+        instance.user = 'qqq'
+
+        self.response.payload = instance
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MyService(Service):
+
+    class SimpleIO:
+        input = MyRequest
+
+    def handle(self):
+
+        instance = MyRequest()
+        instance.request_id = 123
+        instance.user = 'zzz'
+
+        response = self.invoke(MyService2, instance) # type: MyRequest
+
+        self.logger.warn('WWW-1 %r', response)
+
+# ################################################################################################################################
+# ################################################################################################################################
+'''
