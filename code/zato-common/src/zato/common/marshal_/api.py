@@ -80,13 +80,14 @@ class ElementMissing(ModelValidationError):
 # ################################################################################################################################
 
 class DictCtx:
-    def __init__(self, current_dict, DataClass, parent_list):
+    def __init__(self, current_dict, DataClass, parent_list, list_idx):
         # type: (dict, object, list) -> None
 
         # We get these on input ..
         self.current_dict = current_dict
         self.parent_list  = parent_list
         self.DataClass    = DataClass
+        self.list_idx     = list_idx
 
         # .. while these we need to build ourselves in self.init.
         self.current_path = []
@@ -192,6 +193,14 @@ class MarshalAPI:
 
 # ################################################################################################################################
 
+    def _self_require_dict(self, field_ctx):
+        # type: (FieldCtx) -> None
+        if not isinstance(field_ctx.value, dict):
+            raise self.get_validation_error(field_ctx.field, field_ctx.value, field_ctx.dict_ctx.parent_list,
+                list_idx=field_ctx.dict_ctx.list_idx)
+
+# ################################################################################################################################
+
     def _visit_list(self, list_, service, data, DataClass, parent_list):
         # type: (list, Service, dict, object, list) -> list
 
@@ -215,40 +224,39 @@ class MarshalAPI:
     def from_dict(self, service, current_dict, DataClass, parent_list=None, extra=None, list_idx=None):
         # type: (Service, dict, object, list, dict, int) -> object
 
-        dict_ctx = DictCtx(current_dict, DataClass, parent_list)
+        dict_ctx = DictCtx(current_dict, DataClass, parent_list, list_idx)
         dict_ctx.init()
 
         for _ignored_name, field in sorted(dict_ctx.fields.items()): # type: (str, Field)
 
+            # Represents a current field in the model in the context of the input dict ..
             field_ctx = FieldCtx(dict_ctx, field)
+
+            # .. this call will populate the initial value of the field as well.
             field_ctx.init()
 
-            # This field points to a model ..
+            # If this field points to a model ..
             if field_ctx.is_model:
 
-                # .. first, we need a dict as value as it is the only container possible for nested values ..
-                if not isinstance(field_ctx.value, dict):
-                    raise self.get_validation_error(
-                        field_ctx.field,
-                        field_ctx.value,
-                        dict_ctx.parent_list,
-                        list_idx=list_idx)
+                # .. first, we need a dict as value as it is the only container that we can extract model fields from ..
+                self._self_require_dict(field_ctx)
 
-                # .. if we are here, it means that we can recurse into the nested data structure.
-                else:
+                # .. if we are here, it means that we can check the dict and extract its fields ..
 
-                    dict_ctx.parent_list.append(field_ctx.field.name)
+                # .. populate our parents ..
+                dict_ctx.parent_list.append(field_ctx.field.name)
 
-                    # Note that we do not pass extra data on to nested models because we can only ever
-                    # overwrite top-level elements with what extra contains.
-                    field_ctx.value = self.from_dict(
-                        service,
-                        field_ctx.value,
-                        field_ctx.field.type,
-                        parent_list=dict_ctx.parent_list,
-                        extra=None,
-                        list_idx=list_idx)
+                # .. and extract now, but note that we do not pass extra data on to nested models
+                # because we can only ever overwrite top-level elements with what extra contains.
+                field_ctx.value = self.from_dict(
+                    service,
+                    field_ctx.value,
+                    field_ctx.field.type,
+                    parent_list=dict_ctx.parent_list,
+                    extra=None,
+                    list_idx=dict_ctx.list_idx)
 
+            # .. if this field points to a list ..
             elif field_ctx.is_list:
 
                 # If we have a model class the elements of the list are of
@@ -271,7 +279,8 @@ class MarshalAPI:
             if field_ctx.value != ZatoNotGiven:
                 dict_ctx.attrs_container[field.name] = field_ctx.value
             else:
-                raise self.get_validation_error(field_ctx.field, field_ctx.value, dict_ctx.parent_list, list_idx=list_idx)
+                raise self.get_validation_error(field_ctx.field, field_ctx.value,
+                    dict_ctx.parent_list, list_idx=dict_ctx.list_idx)
 
             # If we have any extra elements, we need to add them as well
             if extra:
