@@ -9,7 +9,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from http.client import BAD_REQUEST
 from inspect import isclass
-from typing import _GenericAlias
+
+try:
+    from typing import _GenericAlias as _ListBaseClass
+except ImportError:
+    class _Sentinel:
+        pass
+    _ListBaseClass = _Sentinel
 
 # typing-utils
 from typing_utils import issubtype
@@ -141,7 +147,7 @@ class FieldCtx:
         self.value = self.dict_ctx.current_dict.get(self.name, ZatoNotGiven)
         self.is_class = isclass(self.field.type)
         self.is_model = self.is_class and issubclass(self.field.type, Model)
-        self.is_list = isinstance(self.field.type, _GenericAlias) or (self.is_class and issubtype(self.field.type, list))
+        self.is_list = isinstance(self.field.type, _ListBaseClass) or (self.is_class and issubtype(self.field.type, list))
 
         #
         # This is a list and we need to check if its definition
