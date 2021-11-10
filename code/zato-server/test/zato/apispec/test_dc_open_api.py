@@ -17,15 +17,13 @@ from bunch import bunchify
 from yaml import FullLoader, load as yaml_load
 
 # Zato
-from ..common import CyMyService, service_name, sio_config
+from ..common import service_name, sio_config
 from zato.common.api import APISPEC, URL_TYPE
+from zato.common.marshal_.simpleio import DataClassSimpleIO
 from zato.common.test import BaseSIOTestCase
 from zato.common.util.file_system import fs_safe_name
 from zato.server.apispec import Generator
 from zato.server.apispec.openapi import OpenAPIGenerator
-
-# Zato - Cython
-from zato.simpleio import CySimpleIO
 
 # ################################################################################################################################
 
@@ -42,12 +40,14 @@ class _MatchTestCompiled:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class CyOpenAPITestCase(BaseSIOTestCase):
+class DataClassOpenAPITestCase(BaseSIOTestCase):
 
-    def test_cy_generate_open_api(self):
+    def test_dc_generate_open_api(self):
 
-        MyClass = deepcopy(CyMyService)
-        CySimpleIO.attach_sio(None, self.get_server_config(), MyClass)
+        return
+
+        MyClass = deepcopy(MyService)
+        DataClassSimpleIO.attach_sio(None, self.get_server_config(), MyClass)
 
         service_store_services = {
             'my.impl.name': {

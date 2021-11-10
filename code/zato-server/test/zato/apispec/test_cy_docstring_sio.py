@@ -11,7 +11,7 @@ from copy import deepcopy
 from unittest import main
 
 # Zato
-from ..common import MyService, service_name, sio_config
+from ..common import CyMyService, service_name, sio_config
 from zato.server.apispec import ServiceInfo
 from zato.common.test import BaseSIOTestCase
 
@@ -34,7 +34,7 @@ class APISpecSIODescription(BaseSIOTestCase):
 
     def test_get_sio_desc_multiline_no_separator(self):
 
-        MyClass = deepcopy(MyService)
+        MyClass = deepcopy(CyMyService)
         CySimpleIO.attach_sio(None, self.get_server_config(), MyClass)
 
         info = ServiceInfo(service_name, MyClass, sio_config, 'public')

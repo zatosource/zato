@@ -14,7 +14,7 @@ from unittest import main
 from bunch import bunchify
 
 # Zato
-from ..common import MyService, sio_config
+from ..common import CyMyService, sio_config
 from zato.common.test import BaseSIOTestCase
 from zato.server.apispec import Generator
 
@@ -35,7 +35,7 @@ class GeneratorTestCase(BaseSIOTestCase):
 
     def test_generator_get_info(self):
 
-        MyClass = deepcopy(MyService)
+        MyClass = deepcopy(CyMyService)
         CySimpleIO.attach_sio(None, self.get_server_config(), MyClass)
 
         service_store_services = {
