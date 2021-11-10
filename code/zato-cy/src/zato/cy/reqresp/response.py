@@ -25,7 +25,7 @@ from lxml.objectify import ObjectifiedElement
 from sqlalchemy.util import KeyedTuple
 
 # Zato
-from zato.common.api import simple_types, ZATO_OK
+from zato.common.api import DATA_FORMAT, simple_types, ZATO_OK
 from zato.common.ext.dataclasses import asdict
 from zato.common.marshal_.api import Model
 from zato.cy.reqresp.payload import SimpleIOPayload
@@ -121,7 +121,7 @@ class Response(object):
     def _get_payload(self):
         return self._payload
 
-    def _set_payload(self, value):
+    def _set_payload(self, value, _json=DATA_FORMAT.JSON):
         """ Strings, lists and tuples are assigned as-is. Dicts as well if SIO is not used. However, if SIO is used
         the dicts are matched and transformed according to the SIO definition.
         """
@@ -160,7 +160,10 @@ class Response(object):
                 else:
                     if value:
                         if isinstance(value, Model):
-                            self._payload = asdict(value)
+                            if self.data_format == _json:
+                                self._payload = asdict(value)
+                            else:
+                                self._payload = value
                         else:
                             # .. someone assigned to self.response.payload an object that needs
                             # serialisation but we do not know how to do it.
