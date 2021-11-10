@@ -19,6 +19,7 @@ from yaml import dump as yaml_dump, Dumper as YAMLDumper
 # Zato
 from zato.common.api import URL_TYPE
 from zato.common.util.file_system import fs_safe_name
+from zato.common.util.import_ import import_string
 from zato.server.apispec import FieldInfo
 
 # ################################################################################################################################
@@ -97,6 +98,18 @@ class OpenAPIGenerator(object):
                 # .. for nested models, ref will exist ..
                 if field.ref:
                     property_map['$ref'] = field.ref
+
+                    # .. out of which we can extract a Python class name ..
+                    class_name = field.ref.replace('#/components/schemas/', '')
+
+                    # .. now, a class ..
+                    class_ = import_string(class_name)
+
+                    # .. that we can turn into a schema now ..
+
+                    print()
+                    print(111, class_)
+                    print()
 
                 # .. while for simple types, these two will exist ..
                 else:
