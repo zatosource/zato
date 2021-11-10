@@ -11,7 +11,7 @@ from copy import deepcopy
 from unittest import main
 
 # Zato
-from .common import MyService
+from .common import CyMyService
 from zato.common.test import BaseSIOTestCase
 
 # Zato - Cython
@@ -31,7 +31,7 @@ class SIOEvalTestCase(BaseSIOTestCase):
 
     def test_eval_bool(self):
 
-        MyClass = deepcopy(MyService)
+        MyClass = deepcopy(CyMyService)
         CySimpleIO.attach_sio(None, self.get_server_config(), MyClass)
         sio = MyClass._sio # type: CySimpleIO
 
@@ -65,7 +65,7 @@ class SIOEvalTestCase(BaseSIOTestCase):
 
     def test_eval_int(self):
 
-        MyClass = deepcopy(MyService)
+        MyClass = deepcopy(CyMyService)
         CySimpleIO.attach_sio(None, self.get_server_config(), MyClass)
         sio = MyClass._sio # type: CySimpleIO
 
