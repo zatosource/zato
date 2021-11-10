@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from itertools import chain
@@ -21,6 +19,7 @@ from yaml import dump as yaml_dump, Dumper as YAMLDumper
 # Zato
 from zato.common.api import URL_TYPE
 from zato.common.util.file_system import fs_safe_name
+from zato.server.apispec import FieldInfo
 
 # ################################################################################################################################
 
@@ -84,16 +83,28 @@ class OpenAPIGenerator(object):
             if 'openapi_v3' not in item.simple_io:
                 continue
 
-            elems_required_names = []#elem.name for elem in getattr(item.simple_io.openapi_v3, sio_elems_required_attr)]
-
             sio_elems = getattr(item.simple_io.openapi_v3, sio_elem_attr)
+            elems_required_names = [elem.name for elem in sio_elems if elem.is_required]
 
-            for sio_elem in sio_elems:
-                properties[sio_elem.name] = {
-                    'type': sio_elem.type,
-                    'format': sio_elem.subtype,
-                    'description': sio_elem.description
+            # Go through each SIO element to build an OpenAPI property for it ..
+            for field in sio_elems: # type: FieldInfo
+
+                # .. this key will always exist ..
+                property_map = {
+                    'description': field.description
                 }
+
+                # .. for nested models, ref will exist ..
+                if field.ref:
+                    property_map['$ref'] = field.ref
+
+                # .. while for simple types, these two will exist ..
+                else:
+                    property_map['type'] = field.type
+                    property_map['subtype'] = field.subtype
+
+                # .. now, we can assign the property to its container.
+                properties[field.name] = property_map
 
             if elems_required_names:
                 out[message_name]['required'] = elems_required_names

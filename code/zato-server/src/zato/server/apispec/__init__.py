@@ -26,7 +26,7 @@ from past.builtins import basestring
 
 # Zato
 from zato.common.api import APISPEC
-from zato.common.ext.dataclasses import dataclass
+from zato.common.ext.dataclasses import dataclass, Field, MISSING
 from zato.common.marshal_.api import Model
 from zato.common.marshal_.simpleio import DataClassSimpleIO
 
@@ -36,7 +36,9 @@ from zato.simpleio import AsIs, is_sio_bool, is_sio_int, SIO_TYPE_MAP
 # ################################################################################################################################
 
 if 0:
+    from zato.common.ext.dataclasses import Field
     from zato.server.service import Service
+    Field = Field
     Service = Service
 
 # ################################################################################################################################
@@ -67,8 +69,9 @@ class FieldInfo:
     name: str
     is_required: bool
     description: str = ''
-    type: str
-    subtype: str
+    type: str = ''
+    subtype: str = ''
+    ref: str = ''
 
 @dataclass(init=False)
 class APISpecInfo:
@@ -257,38 +260,32 @@ class ServiceInfo(object):
 
                     _param_list = []
 
+                    # This is SimpleIO.input or SimpleIO.output
                     sio_attr = getattr(sio.user_declaration, sio_attr_name, None) # type: Model
 
+                    # All the fields of this dataclass
                     field_list = sio_attr._zato_get_fields()
 
-                    print()
-                    print(222, field_list)
-                    print()
-
-
-                    for field_name, field in sorted(field_list.items()):
-
-                        # Actual parameter name
-                        field_name = field if isinstance(field, basestring) else field.name # type: str
-
-                        # To look up description based on parameter's name
-                        #desc_dict = sio_desc[sio_attr_name] # type: dict
+                    for _ignored_field_name, field in sorted(field_list.items()): # type: (str, Field)
 
                         # Parameter details object
                         _field_info = FieldInfo()
-                        _field_info.name = field_name
-                        _field_info.is_required = 'required' in sio_attr_name
-                        #_field_info.description = desc_dict.get(field_name) or '' # Always use a string, even if an empty one
+                        _field_info.name = field.name
+                        _field_info.is_required = field.default is MISSING
+                        _field_info.description = field.__doc__ or ''
 
-                        if isinstance(field, AsIs):
-                            type_info = api_spec_info.DEFAULT
-
-                        elif is_sio_bool(field):
+                        if issubclass(field.type, bool):
                             type_info = api_spec_info.BOOLEAN
 
-                        elif is_sio_int(field_name):
+                        elif issubclass(field.type, int):
                             type_info = api_spec_info.INTEGER
 
+                        elif issubclass(field.type, float):
+                            type_info = api_spec_info.FLOAT
+
+                        elif issubclass(field.type, Model):
+                            type_info = None, None
+                            _field_info.ref = '#/components/schemas/{}.{}'.format(field.type.__module__, field.type.__name__)
                         else:
                             try:
                                 type_info = api_spec_info.map[field.__class__]

@@ -887,10 +887,11 @@ class SIO_TYPE_MAP:
 
     class OPEN_API_V3:
 
-        name = APISPEC.OPEN_API_V3
-        STRING = ('string', 'string')
+        name    = APISPEC.OPEN_API_V3
+        STRING  = ('string', 'string')
         DEFAULT = STRING
         INTEGER = ('integer', 'int32')
+        FLOAT   = ('float',   'float')
         BOOLEAN = ('boolean', 'boolean')
 
         map = {
@@ -909,10 +910,11 @@ class SIO_TYPE_MAP:
 
     class SOAP_12:
 
-        name = APISPEC.SOAP_12
-        STRING = ('string', 'xsd:string')
+        name    = APISPEC.SOAP_12
+        STRING  = ('string', 'xsd:string')
         DEFAULT = STRING
         INTEGER = ('integer', 'xsd:integer')
+        FLOAT   = ('float', 'xsd:float')
         BOOLEAN = ('boolean', 'xsd:boolean')
 
         map = {
@@ -933,10 +935,11 @@ class SIO_TYPE_MAP:
 
     class ZATO:
 
-        name = 'zato'
-        STRING = ('string', 'string')
+        name    = 'zato'
+        STRING  = ('string', 'string')
         DEFAULT = STRING
         INTEGER = ('integer', 'integer')
+        FLOAT   = ('float', 'float')
         BOOLEAN = ('boolean', 'boolean')
 
         map = {
