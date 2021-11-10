@@ -62,13 +62,11 @@ class OpenAPIGenerator(object):
         if is_request:
             name_func = self._get_request_name
             msg_name = 'Request'
-            sio_elems_required_attr = 'input_required'
-            sio_elems_optional_attr = 'input_optional'
+            sio_elem_attr = 'input'
         else:
             name_func = self._get_response_name
             msg_name = 'Response'
-            sio_elems_required_attr = 'output_required'
-            sio_elems_optional_attr = 'output_optional'
+            sio_elem_attr = 'output'
 
         out = Bunch()
 
@@ -86,21 +84,19 @@ class OpenAPIGenerator(object):
             if 'openapi_v3' not in item.simple_io:
                 continue
 
-            elems_required_names = [elem.name for elem in getattr(item.simple_io.openapi_v3, sio_elems_required_attr)]
+            elems_required_names = []#elem.name for elem in getattr(item.simple_io.openapi_v3, sio_elems_required_attr)]
 
-            sio_elems_required = getattr(item.simple_io.openapi_v3, sio_elems_required_attr)
-            sio_elems_optional = getattr(item.simple_io.openapi_v3, sio_elems_optional_attr)
+            sio_elems = getattr(item.simple_io.openapi_v3, sio_elem_attr)
 
-            if sio_elems_required or sio_elems_optional:
-                for sio_elem in chain(sio_elems_required, sio_elems_optional):
-                    properties[sio_elem.name] = {
-                        'type': sio_elem.type,
-                        'format': sio_elem.subtype,
-                        'description': sio_elem.description
-                    }
+            for sio_elem in sio_elems:
+                properties[sio_elem.name] = {
+                    'type': sio_elem.type,
+                    'format': sio_elem.subtype,
+                    'description': sio_elem.description
+                }
 
-                if elems_required_names:
-                    out[message_name]['required'] = elems_required_names
+            if elems_required_names:
+                out[message_name]['required'] = elems_required_names
 
         return out
 
