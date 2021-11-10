@@ -17,7 +17,7 @@ from bunch import bunchify
 from yaml import FullLoader, load as yaml_load
 
 # Zato
-from ..common import service_name, sio_config
+from ..common import DataclassMyService, service_name, sio_config
 from zato.common.api import APISPEC, URL_TYPE
 from zato.common.marshal_.simpleio import DataClassSimpleIO
 from zato.common.test import BaseSIOTestCase
@@ -44,9 +44,7 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
 
     def test_dc_generate_open_api(self):
 
-        return
-
-        MyClass = deepcopy(MyService)
+        MyClass = deepcopy(DataclassMyService)
         DataClassSimpleIO.attach_sio(None, self.get_server_config(), MyClass)
 
         service_store_services = {
