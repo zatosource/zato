@@ -82,7 +82,7 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
         #import pprint
         #pprint.pprint(result)
 
-        print(result)
+        #print(result)
 
         return
 
