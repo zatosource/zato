@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from copy import deepcopy
@@ -28,9 +26,10 @@ from past.builtins import basestring
 
 # Zato
 from zato.common.api import APISPEC
+from zato.common.marshal_.api import Model
 
 # Zato - Cython
-from zato.simpleio import AsIs, is_sio_bool, is_sio_int, SIO_TYPE_MAP
+from zato.simpleio import AsIs, CySimpleIO, is_sio_bool, is_sio_int, SIO_TYPE_MAP
 
 # ################################################################################################################################
 
@@ -218,7 +217,7 @@ class ServiceInfo(object):
         # SimpleIO
         sio = getattr(self.service_class, '_sio', None) # type: CySimpleIO
 
-        if sio:
+        if sio and isinstance(sio, CySimpleIO):
 
             # This can be reused across all the output data formats
             sio_desc = self.get_sio_desc(sio)
