@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2020, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from copy import deepcopy
@@ -16,9 +14,9 @@ from unittest import main
 from bunch import bunchify
 
 # Zato
+from ..common import MyService, sio_config
 from zato.common.test import BaseSIOTestCase
 from zato.server.apispec import Generator
-from common import MyService, sio_config
 
 # Zato - Cython
 from zato.simpleio import CySimpleIO
@@ -38,7 +36,7 @@ class GeneratorTestCase(BaseSIOTestCase):
     def test_generator_get_info(self):
 
         MyClass = deepcopy(MyService)
-        CySimpleIO.attach_sio(self.get_server_config(), MyClass)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyClass)
 
         service_store_services = {
             'my.impl.name': {

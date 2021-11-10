@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2020, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from unittest import main, TestCase
 
 # Zato
+from ..common import service_name, sio_config
 from zato.common.api import APISPEC
 from zato.server.apispec import not_public, ServiceInfo
-from common import service_name, sio_config
 
 # ################################################################################################################################
 
