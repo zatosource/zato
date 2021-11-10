@@ -9,14 +9,23 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from http.client import BAD_REQUEST
 from inspect import isclass
-from typing import _GenericAlias
+
+try:
+    from typing import _GenericAlias as _ListBaseClass
+except ImportError:
+    class _Sentinel:
+        pass
+    _ListBaseClass = _Sentinel
+
+# orjson
+from orjson import dumps
 
 # typing-utils
 from typing_utils import issubtype
 
 # Zato
 from zato.common.api import ZatoNotGiven
-from zato.common.ext.dataclasses import _FIELDS, MISSING, _PARAMS
+from zato.common.ext.dataclasses import asdict, _FIELDS, MISSING, _PARAMS
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,6 +42,12 @@ if 0:
 
 class Model:
     after_created = None
+
+    def to_dict(self):
+        return asdict(self)
+
+    def to_json(self, default=None, impl_extra=0):
+        return dumps(self, default=default, option=impl_extra)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -141,7 +156,7 @@ class FieldCtx:
         self.value = self.dict_ctx.current_dict.get(self.name, ZatoNotGiven)
         self.is_class = isclass(self.field.type)
         self.is_model = self.is_class and issubclass(self.field.type, Model)
-        self.is_list = isinstance(self.field.type, _GenericAlias) or (self.is_class and issubtype(self.field.type, list))
+        self.is_list = isinstance(self.field.type, _ListBaseClass) or (self.is_class and issubtype(self.field.type, list))
 
         #
         # This is a list and we need to check if its definition
@@ -315,8 +330,62 @@ class MarshalAPI:
         # .. and return the new dataclass to our caller.
         return instance
 
-    def to_dict(self):
-        pass
+# ################################################################################################################################
+# ################################################################################################################################
+
+'''
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
+
+Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# stdlib
+from shutil import copy as shutil_copy
+
+# Zato
+from api_model import MyRequest, User
+from zato.server.service import Service
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class MyService2(Service):
+
+    class SimpleIO:
+        input = MyRequest
+        outpuy = MyRequest
+
+    def handle(self):
+
+        self.logger.warn('QQQ-1 %s', self.request.input.to_json())
+
+        instance = MyRequest()
+        instance.request_id = 456
+        instance.user = 'qqq'
+
+        self.response.payload = instance
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MyService(Service):
+
+    class SimpleIO:
+        input = MyRequest
+
+    def handle(self):
+
+        instance = MyRequest()
+        instance.request_id = 123
+        instance.user = 'zzz'
+
+        response = self.invoke(MyService2, instance) # type: MyRequest
+
+        self.logger.warn('WWW-1 %r', response)
+
+# ################################################################################################################################
+# ################################################################################################################################
+'''

@@ -10,6 +10,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from logging import getLogger
 from traceback import format_exc
 
+# Zato
+from zato.common.marshal_.api import Model
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -27,12 +30,6 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger('zato')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class Model:
-    after_created = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -83,7 +80,15 @@ class DataClassSimpleIO:
 
     def parse_input(self, data, _ignored_data_format, service, extra):
         # type: (dict, object, Service, object)
+
+        # If we have a SimpleIO input declared ..
         if getattr(self.user_declaration, 'input', None):
+
+            # .. if it already is a model, we give it to the service as-is ..
+            if isinstance(data, Model):
+                return data
+
+            # .. otherwise, it must be a dict and we extract its contents.
             return self.server.marshal_api.from_dict(service, data, self.user_declaration.input, extra)
 
 # ################################################################################################################################
