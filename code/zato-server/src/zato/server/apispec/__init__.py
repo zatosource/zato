@@ -26,7 +26,6 @@ from past.builtins import basestring
 
 # Zato
 from zato.common.api import APISPEC
-from zato.common.marshal_.api import Model
 
 # Zato - Cython
 from zato.simpleio import AsIs, CySimpleIO, is_sio_bool, is_sio_int, SIO_TYPE_MAP
@@ -35,9 +34,6 @@ from zato.simpleio import AsIs, CySimpleIO, is_sio_bool, is_sio_int, SIO_TYPE_MA
 
 if 0:
     from zato.server.service import Service
-    from zato.cy.simpleio import CySimpleIO
-
-    CySimpleIO = CySimpleIO
     Service = Service
 
 # ################################################################################################################################
