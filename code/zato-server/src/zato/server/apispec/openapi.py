@@ -109,6 +109,7 @@ class OpenAPIGenerator(object):
 
                     print()
                     print(111, class_)
+                    print(222, data.keys())
                     print()
 
                 # .. while for simple types, these two will exist ..
