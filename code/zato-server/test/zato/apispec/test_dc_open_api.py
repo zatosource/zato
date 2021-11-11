@@ -76,11 +76,8 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
         open_api_generator = OpenAPIGenerator(info, channel_data, needs_api_invoke, needs_rest_channels, api_invoke_path)
 
         result = open_api_generator.generate()
-        #result = yaml_load(result, FullLoader)
-        #result = bunchify(result)
-
-        #import pprint
-        #pprint.pprint(result)
+        result = yaml_load(result, FullLoader)
+        result = bunchify(result)
 
         print(result)
 
