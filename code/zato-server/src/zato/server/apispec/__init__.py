@@ -36,9 +36,7 @@ from zato.simpleio import AsIs, is_sio_bool, is_sio_int, SIO_TYPE_MAP
 # ################################################################################################################################
 
 if 0:
-    from zato.common.ext.dataclasses import Field
     from zato.server.service import Service
-    Field = Field
     Service = Service
 
 # ################################################################################################################################
@@ -72,6 +70,37 @@ class FieldInfo:
     type: str = ''
     subtype: str = ''
     ref: str = ''
+
+    @staticmethod
+    def from_python_field(field, api_spec_info):
+        # type: (Field, Bunch) -> FieldInfo
+
+        info = FieldInfo()
+        info.name = field.name
+        info.is_required = field.default is MISSING
+        info.description = field.__doc__ or ''
+
+        if issubclass(field.type, bool):
+            type_info = api_spec_info.BOOLEAN
+
+        elif issubclass(field.type, int):
+            type_info = api_spec_info.INTEGER
+
+        elif issubclass(field.type, float):
+            type_info = api_spec_info.FLOAT
+
+        elif issubclass(field.type, Model):
+            type_info = None, None
+            info.ref = '#/components/schemas/{}.{}'.format(field.type.__module__, field.type.__name__)
+        else:
+            try:
+                type_info = api_spec_info.map[field.__class__]
+            except KeyError:
+                type_info = api_spec_info.DEFAULT
+
+        info.type, info.subtype = type_info
+
+        return info
 
 @dataclass(init=False)
 class APISpecInfo:
@@ -269,31 +298,8 @@ class ServiceInfo(object):
                     for _ignored_field_name, field in sorted(field_list.items()): # type: (str, Field)
 
                         # Parameter details object
-                        _field_info = FieldInfo()
-                        _field_info.name = field.name
-                        _field_info.is_required = field.default is MISSING
-                        _field_info.description = field.__doc__ or ''
-
-                        if issubclass(field.type, bool):
-                            type_info = api_spec_info.BOOLEAN
-
-                        elif issubclass(field.type, int):
-                            type_info = api_spec_info.INTEGER
-
-                        elif issubclass(field.type, float):
-                            type_info = api_spec_info.FLOAT
-
-                        elif issubclass(field.type, Model):
-                            type_info = None, None
-                            _field_info.ref = '#/components/schemas/{}.{}'.format(field.type.__module__, field.type.__name__)
-                        else:
-                            try:
-                                type_info = api_spec_info.map[field.__class__]
-                            except KeyError:
-                                type_info = api_spec_info.DEFAULT
-
-                        _field_info.type, _field_info.subtype = type_info
-                        _param_list.append(_field_info)
+                        info = FieldInfo.from_python_field(field, api_spec_info)
+                        _param_list.append(info)
 
                     _api_spec_info.field_list[sio_attr_name] = _param_list
 
