@@ -18,13 +18,21 @@ from yaml import dump as yaml_dump, Dumper as YAMLDumper
 
 # Zato
 from zato.common.api import URL_TYPE
+from zato.common.marshal_.api import Model
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.import_ import import_string
-from zato.server.apispec import FieldInfo
+from zato.server.apispec import build_field_list, FieldInfo
+
+# Zato - Cython
+from zato.simpleio import SIO_TYPE_MAP
 
 # ################################################################################################################################
 
 logger = getLogger('zato')
+
+# ################################################################################################################################
+
+_SIO_TYPE_MAP = SIO_TYPE_MAP()
 
 # ################################################################################################################################
 
@@ -56,6 +64,77 @@ class OpenAPIGenerator(object):
 
 # ################################################################################################################################
 
+    def _add_model_schema(self, model_name, model, out):
+        # type: (Model, dict) -> None
+
+        # Do not visit the model if we have already seen it
+        if model_name in out:
+            return
+        else:
+            out[model_name] = {}
+
+        # Extract elements from the model object ..
+        sio_elems = build_field_list(model, _SIO_TYPE_MAP.OPEN_API_V3)
+
+        # .. and visit each of them, potentially recursing back into our function.
+        self._visit_sio_elems(model_name, sio_elems, out)
+
+# ################################################################################################################################
+
+    def _visit_sio_elems(self, schema_name, sio_elems, out):
+        # type: (str, list, dict) -> None
+
+        properties = {}
+        out[schema_name]['properties'] = properties
+
+        # All the elements of this model that are required
+        elems_required_names = [elem.name for elem in sio_elems if elem.is_required]
+
+        # Go through each SIO element to build an OpenAPI property for it ..
+        for info in sio_elems: # type: FieldInfo
+
+            # .. this key will always exist ..
+            property_map = {
+                'description': info.description
+            }
+
+            # .. for nested models, ref will exist ..
+            if info.ref:
+
+                # .. out of which we can extract a Python class name ..
+                model_name = info.ref.replace('#/components/schemas/', '')
+
+                # .. list elements will have type/items sub-elements ..
+                if info.is_list:
+
+                    property_map['type'] = 'array'
+                    property_map['items'] = {
+                        '$ref': info.ref
+                    }
+
+                # .. while non-list elements get the $ref element directly ..
+                else:
+                    property_map['$ref'] = info.ref
+
+                # .. now, a model (class) ..
+                model = import_string(model_name)
+
+                # .. next, we can append this class's definitions to our dictionary of schemas ..
+                self._add_model_schema(model_name, model, out)
+
+            # .. while for simple types, these two will exist ..
+            else:
+                property_map['type'] = info.type
+                property_map['subtype'] = info.subtype
+
+            # .. now, we can assign the property to its container.
+            properties[info.name] = property_map
+
+        if elems_required_names:
+            out[schema_name]['required'] = elems_required_names
+
+# ################################################################################################################################
+
     def _get_message_schemas(self, data, is_request):
         # type: (Bunch, bool) -> Bunch
 
@@ -68,61 +147,32 @@ class OpenAPIGenerator(object):
             msg_name = 'Response'
             sio_elem_attr = 'output'
 
+        # All schema objects for input request or response
         out = Bunch()
 
+        # Go through all the services ..
         for item in data.services:
 
+            # .. skip it unless we can support OpenAPI ..
+            if 'openapi_v3' not in item.simple_io:
+                continue
+
+            # .. turn its class name into a schema name ..
             message_name = name_func(item.name)
 
+            # .. prepare it upfront here ..
             out[message_name] = {
                 'title': '{} object for {}'.format(msg_name, item.name),
                 'type': 'object',
             }
-            properties = {}
-            out[message_name]['properties'] = properties
 
-            if 'openapi_v3' not in item.simple_io:
-                continue
-
+            # .. get all the elements of the model class ..
             sio_elems = getattr(item.simple_io.openapi_v3, sio_elem_attr)
-            elems_required_names = [elem.name for elem in sio_elems if elem.is_required]
 
-            # Go through each SIO element to build an OpenAPI property for it ..
-            for field in sio_elems: # type: FieldInfo
+            # .. turn them into an OpenAPI schema ..
+            self._visit_sio_elems(message_name, sio_elems, out)
 
-                # .. this key will always exist ..
-                property_map = {
-                    'description': field.description
-                }
-
-                # .. for nested models, ref will exist ..
-                if field.ref:
-                    property_map['$ref'] = field.ref
-
-                    # .. out of which we can extract a Python class name ..
-                    class_name = field.ref.replace('#/components/schemas/', '')
-
-                    # .. now, a class ..
-                    class_ = import_string(class_name)
-
-                    # .. that we can turn into a schema now ..
-
-                    print()
-                    print(111, class_)
-                    print(222, data.keys())
-                    print()
-
-                # .. while for simple types, these two will exist ..
-                else:
-                    property_map['type'] = field.type
-                    property_map['subtype'] = field.subtype
-
-                # .. now, we can assign the property to its container.
-                properties[field.name] = property_map
-
-            if elems_required_names:
-                out[message_name]['required'] = elems_required_names
-
+        # .. and return our result to the caller.
         return out
 
 # ################################################################################################################################
