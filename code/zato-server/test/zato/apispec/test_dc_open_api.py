@@ -77,7 +77,10 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
 
         result = open_api_generator.generate()
         result = yaml_load(result, FullLoader)
-        result = bunchify(result)
+        #result = bunchify(result)
+
+        from json import dumps
+        result = dumps(result)
 
         print(result)
 
@@ -96,7 +99,7 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
         self.assertEqual(result_info.version, '1.0')
         self.assertEqual(result_openapi, '3.0.2')
 
-        self.assertEqual(len(result_components.schemas), 2)
+        self.assertEqual(len(result_components.schemas), 5)
 
         request_my_service_properties = result_components.schemas.request_my_service.properties
         request_my_service_required   = result_components.schemas.request_my_service.required
@@ -113,8 +116,8 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
         self.assertEqual(request_my_service_type, 'object')
         self.assertEqual(response_my_service_type, 'object')
 
-        self.assertListEqual(sorted(request_my_service_required), ['input_req_customer_id', 'input_req_user_id'])
-        self.assertListEqual(sorted(response_my_service_required), ['output_req_address_id', 'output_req_address_name'])
+        self.assertListEqual(sorted(request_my_service_required), ['customer_id', 'user_id'])
+        self.assertListEqual(sorted(response_my_service_required), ['address_id', 'address_name'])
 
         self.assertEqual(request_my_service_properties.input_req_user_id.type, 'integer')
         self.assertEqual(request_my_service_properties.input_req_user_id.format, 'int32')
