@@ -40,12 +40,35 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def is_list(field_type, is_class):
+    # type: (Field, bool) -> bool
+    return isinstance(field_type, _ListBaseClass) or (is_class and issubtype(field_type, list))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def extract_model_class(field_type):
+    # type: (Field) -> Model
+
+    # The attribute is defined by typing.List but not by list elements,
+    # hence the getattr call ..
+    type_args = getattr(field_type, '__args__', None)
+
+    # .. if there are any arguments found ..
+    if type_args:
+
+        # .. the first one will be our model class.
+        return type_args[0]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Model:
     after_created = None
 
     @classmethod
     def _zato_get_fields(class_):
-        # type: (object) -> dict
+        # type: (Field) -> dict
         fields = getattr(class_, _FIELDS) # type: dict
         return fields
 
@@ -162,7 +185,7 @@ class FieldCtx:
         self.value = self.dict_ctx.current_dict.get(self.name, ZatoNotGiven)
         self.is_class = isclass(self.field.type)
         self.is_model = self.is_class and issubclass(self.field.type, Model)
-        self.is_list = isinstance(self.field.type, _ListBaseClass) or (self.is_class and issubtype(self.field.type, list))
+        self.is_list = is_list(self.field.type, self.is_class)
 
         #
         # This is a list and we need to check if its definition
@@ -171,18 +194,8 @@ class FieldCtx:
         # If it does, in runtime, we will be extracting that particular type.
         # Otherwise, we will just pass this list on as it is.
         #
-
         if self.is_list:
-
-            # The attribute is defined by typing.List but not by list elements,
-            # hence the getattr call ..
-            type_args = getattr(self.field.type, '__args__', None)
-
-            # .. if there are any arguments found ..
-            if type_args:
-
-                # .. the first one will be our model class.
-                self.model_class = type_args[0]
+            self.model_class = extract_model_class(self.field.type)
 
 # ################################################################################################################################
 
