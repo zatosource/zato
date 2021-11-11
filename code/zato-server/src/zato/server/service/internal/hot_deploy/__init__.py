@@ -1,24 +1,22 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
-import os, shutil
+import gc
+import os
+import shutil
 from contextlib import closing
 from datetime import datetime
 from errno import ENOENT
+from importlib import import_module
+from inspect import getsourcefile
 from time import sleep
 from traceback import format_exc
-
-# Python 2/3 compatibility
-from future.utils import PY3
-from builtins import bytes
 
 # Zato
 from zato.common.api import DEPLOYMENT_STATUS, KVDB
@@ -27,26 +25,29 @@ from zato.common.json_internal import dumps
 from zato.common.odb.model import DeploymentPackage, DeploymentStatus
 from zato.common.util.api import is_python_file, is_archive_file, new_cid
 from zato.common.util.file_system import fs_safe_now
-from zato.server.service import AsIs
+from zato.server.service import AsIs, dataclass
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
 
-# Type checking
-import typing
+if 0:
 
-if typing.TYPE_CHECKING:
-
-    # Zato
     from zato.server.service.store import InRAMService
-
-    # For pyflakes
     InRAMService = InRAMService
 
 # ################################################################################################################################
 
 MAX_BACKUPS = 1000
 _first_prefix = '0' * (len(str(MAX_BACKUPS)) - 1) # So it runs from, e.g.,  000 to 999
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class DeploymentCtx:
+    model_name_list:   list
+    service_id_list:   list
+    service_name_list: list
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -149,23 +150,69 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def _deploy_file(self, current_work_dir, payload, file_name):
+    def _deploy_models(self, current_work_dir, file_name):
+        # type: (str, str) -> list
 
-        if PY3:
-            f = open(file_name, 'w', encoding='utf-8')
-        else:
-            f = open(file_name, 'w')
+        # This returns names of all the model classes deployed from the file
+        model_name_list = set(self.server.service_store.import_models_from_file(file_name, False, current_work_dir))
 
-        f.write(payload.decode('utf8') if isinstance(payload, bytes) else payload)
-        f.close()
+        # A set of Python objects, each representing a model class (rather than its name)
+        model_classes = set()
 
-        services_deployed = []
+        # All the modules to be reloaded due to changes to the data model
+        to_auto_deploy = set()
+
+        for item in gc.get_objects():
+
+            if isinstance(item, type):
+                item_impl_name = '{}.{}'.format(item.__module__, item.__name__)
+                if item_impl_name in model_name_list:
+                    model_classes.add(item)
+
+        for model_class in model_classes:
+            for ref in gc.get_referrers(model_class):
+
+                if isinstance(ref, dict):
+                    mod_name = ref.get('__module__')
+                    if mod_name:
+
+                        mod = import_module(mod_name)
+                        module_path = getsourcefile(mod)
+
+                        # It is possible that the model class is deployed along
+                        # with a service that uses it. In that case, we do not redeploy
+                        # the service because it will be done anyway in _deploy_services,
+                        # which means that we need to skip this file ..
+                        if file_name != module_path:
+                            to_auto_deploy.add(module_path)
+
+        # If there are any services to be deployed ..
+        if to_auto_deploy:
+
+            # .. format lexicographically for logging ..
+            to_auto_deploy = sorted(to_auto_deploy)
+
+            #  .. nform users that we are to auto-redeploy services and why we are doing it ..
+            self.logger.info('Model class `%s` changed; auto-redeploying `%s`', model_class, to_auto_deploy)
+
+            # .. go through each child service found and hot-deploy it ..
+            for module_path in to_auto_deploy:
+                shutil.copy(module_path, self.server.hot_deploy_config.pickup_dir)
+
+        return model_name_list
+
+# ################################################################################################################################
+
+    def _deploy_services(self, current_work_dir, file_name):
+        # type: (str, str) -> list
+
+        service_id_list = []
         info = self.server.service_store.import_services_from_anywhere(file_name, current_work_dir)
 
         for service in info.to_process: # type: InRAMService
 
             service_id = self.server.service_store.impl_name_to_id[service.impl_name]
-            services_deployed.append(service_id)
+            service_id_list.append(service_id)
 
             msg = {}
             msg['cid'] = new_cid()
@@ -176,7 +223,26 @@ class Create(AdminService):
 
             self.broker_client.publish(msg)
 
-        return services_deployed
+        return service_id_list
+
+# ################################################################################################################################
+
+    def _deploy_file(self, current_work_dir, payload, file_name):
+        # type: (str, object, str) -> DeploymentCtx
+
+        with open(file_name, 'w', encoding='utf-8') as f:
+            payload = payload.decode('utf8') if isinstance(payload, bytes) else payload
+            f.write(payload)
+
+        model_name_list = self._deploy_models(current_work_dir, file_name)
+        service_id_list = self._deploy_services(current_work_dir, file_name)
+
+        ctx = DeploymentCtx()
+        ctx.model_name_list = model_name_list
+        ctx.service_id_list = service_id_list
+        ctx.service_name_list = [self.server.service_store.get_service_name_by_id(elem) for elem in service_id_list]
+
+        return ctx
 
 # ################################################################################################################################
 
@@ -184,18 +250,45 @@ class Create(AdminService):
         """ Deploy a package, either a plain Python file or an archive, and update
         the deployment status.
         """
+        # type: (object, int, str, str)
+
+        # Local objects
         current_work_dir = self.server.hot_deploy_config.current_work_dir
         file_name = os.path.join(current_work_dir, payload_name)
-        services_deployed = self._deploy_file(current_work_dir, payload, file_name)
 
-        if services_deployed:
+        # Deploy some objects of interest from the file ..
+        ctx = self._deploy_file(current_work_dir, payload, file_name)
+
+        # We enter here if there were some models or services that we deployed ..
+        if ctx.model_name_list or ctx.service_name_list:
+
+            # .. no matter what kind of objects we found, the package has been deployed ..
             self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.DEPLOYED)
-            msg = 'Uploaded package id:`%s`, payload_name:`%s`'
-            self.logger.info(msg, package_id, payload_name)
-            return services_deployed
+
+            # .. report any models found ..
+            if ctx.model_name_list:
+                self._report_deployment(file_name, ctx.model_name_list, 'model')
+
+            # .. report any services found ..
+            if ctx.service_name_list:
+                self._report_deployment(file_name, ctx.service_name_list, 'service')
+
+            # .. our callers only need services ..
+            return ctx.service_id_list
+
+        # .. we could not find anything to deploy in the file.
         else:
-            msg = 'No services were deployed from module `%s`'
+            msg = 'No services nor models were deployed from module `%s`'
             self.logger.warn(msg, payload_name)
+
+# ################################################################################################################################
+
+    def _report_deployment(self, file_name, items, noun):
+        # type: (str, list, str)
+        msg = 'Deployed %s {}%sfrom `%s` -> %s'.format(noun)
+        len_items = len(items)
+        suffix = 's ' if len_items > 1 else ' '
+        self.logger.info(msg, len_items, suffix, file_name, sorted(items))
 
 # ################################################################################################################################
 

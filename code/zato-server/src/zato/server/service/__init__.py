@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from datetime import datetime
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED
+from inspect import isclass
 from traceback import format_exc
 from typing import Optional as optional
 
@@ -35,7 +36,6 @@ from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, KVDB, NO_DEFAULT_
      WEB_SOCKET, zato_no_op_marker
 from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL
 from zato.common.exception import Inactive, Reportable, ZatoException
-from zato.common.ext.dataclasses import dataclass
 from zato.common.json_internal import dumps
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException
 from zato.common.nav import DictNav, ListNav
@@ -58,6 +58,8 @@ from zato.cy.reqresp.payload import SimpleIOPayload
 from zato.cy.reqresp.response import Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
+from zato.common.ext.dataclasses import dataclass
+from zato.common.marshal_.api import Model
 from zato.simpleio import AsIs, CSV, Bool, Date, DateTime, Dict, Decimal, DictList, Elem as SIOElem, Float, Int, List, \
      Opaque, Text, UTC, UUID
 
@@ -65,6 +67,7 @@ from zato.simpleio import AsIs, CSV, Bool, Date, DateTime, Dict, Decimal, DictLi
 AsIs = AsIs
 CSV = CSV
 Bool = Bool
+dataclass = dataclass
 Date = Date
 DateTime = DateTime
 Decimal = Decimal
@@ -74,6 +77,7 @@ DictList = DictList
 Float = Float
 Int = Int
 List = List
+Model = Model
 Opaque = Opaque
 Text = Text
 UTC = UTC
@@ -161,7 +165,7 @@ _wsgi_channels = (CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC)
 
 # ################################################################################################################################
 
-_response_raw_types=(basestring, dict, list, tuple, EtreeElement, ObjectifiedElement)
+_response_raw_types=(basestring, dict, list, tuple, EtreeElement, Model, ObjectifiedElement)
 
 # ################################################################################################################################
 
@@ -429,7 +433,7 @@ class Service(object):
         self.wsgi_environ = None # type: dict
         self.job_type = None     # type: str
         self.environ = _Bunch()
-        self.request = _Request(self.logger)
+        self.request = _Request(self)
         self.response = _Response(self.logger)
         self.time = None
         self.patterns = None
@@ -883,6 +887,11 @@ class Service(object):
     def invoke(self, name, *args, **kwargs):
         """ Invokes a service synchronously by its name.
         """
+        # The 'name' parameter is actually a service class,
+        # not its name, and we need to extract the name ourselves.
+        if isclass(name) and issubclass(name, Service): # type: Service
+            name = name.get_name()
+
         if self.component_enabled_target_matcher:
             name, target = self.extract_target(name)
             kwargs['target'] = target
