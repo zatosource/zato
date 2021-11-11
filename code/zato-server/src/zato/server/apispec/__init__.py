@@ -62,6 +62,29 @@ not_public = 'INFORMATION IN THIS SECTION IS NOT PUBLIC'
 # ################################################################################################################################
 # ################################################################################################################################
 
+def build_field_list(object_, sio_attr_name):
+    # type: (object, str) -> list
+
+    # Response to produce
+    out = []
+
+    # This represents SimpleIO.input or SimpleIO.output
+    sio_attr = getattr(sio.user_declaration, sio_attr_name, None) # type: Model
+
+    # All the fields of this dataclass
+    python_field_list = sio_attr._zato_get_fields()
+
+    for _ignored_field_name, field in sorted(python_field_list.items()): # type: (str, Field)
+
+        # Parameter details object
+        info = FieldInfo.from_python_field(field, api_spec_info)
+        out.append(info)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @dataclass(init=False)
 class FieldInfo:
     name: str
@@ -101,6 +124,9 @@ class FieldInfo:
         info.type, info.subtype = type_info
 
         return info
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 @dataclass(init=False)
 class APISpecInfo:
@@ -285,23 +311,27 @@ class ServiceInfo(object):
                 _api_spec_info.request_elem = getattr(sio, 'request_elem', None)
                 _api_spec_info.response_elem = getattr(sio, 'response_elem', None)
 
+                _api_spec_info.field_list['input'] = build_field_list(sio.user_declaration, 'input')
+
+                '''
                 for sio_attr_name in ('input', 'output'): # type: str
 
-                    _param_list = []
+                    field_info_list = []
 
                     # This is SimpleIO.input or SimpleIO.output
                     sio_attr = getattr(sio.user_declaration, sio_attr_name, None) # type: Model
 
                     # All the fields of this dataclass
-                    field_list = sio_attr._zato_get_fields()
+                    python_field_list = sio_attr._zato_get_fields()
 
-                    for _ignored_field_name, field in sorted(field_list.items()): # type: (str, Field)
+                    for _ignored_field_name, field in sorted(python_field_list.items()): # type: (str, Field)
 
                         # Parameter details object
                         info = FieldInfo.from_python_field(field, api_spec_info)
-                        _param_list.append(info)
+                        field_info_list.append(info)
 
-                    _api_spec_info.field_list[sio_attr_name] = _param_list
+                #_api_spec_info.field_list[sio_attr_name] = field_info_list
+                '''
 
                 self.simple_io[_api_spec_info.name] = SimpleIO(_api_spec_info, sio_desc, self.needs_sio_desc).to_bunch()
 
