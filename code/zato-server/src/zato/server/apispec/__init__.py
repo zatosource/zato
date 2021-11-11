@@ -1,17 +1,15 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
 from copy import deepcopy
 from fnmatch import fnmatch
-from inspect import getmodule
+from inspect import isclass, getmodule
 
 # Bunch
 from bunch import Bunch, bunchify
@@ -28,26 +26,24 @@ from past.builtins import basestring
 
 # Zato
 from zato.common.api import APISPEC
+from zato.common.ext.dataclasses import dataclass, Field, MISSING
+from zato.common.marshal_.api import extract_model_class, is_list, Model
+from zato.common.marshal_.simpleio import DataClassSimpleIO
 
 # Zato - Cython
-from zato.simpleio import AsIs, is_sio_bool, is_sio_int, SIO_TYPE_MAP
+from zato.simpleio import SIO_TYPE_MAP
 
 # ################################################################################################################################
 
 if 0:
     from zato.server.service import Service
-    from zato.cy.simpleio import CySimpleIO
-
-    CySimpleIO = CySimpleIO
     Service = Service
 
 # ################################################################################################################################
 
 _sio_attrs = (
-    'input_required',
-    'input_optional',
-    'output_required',
-    'output_optional'
+    'input',
+    'output'
 )
 
 _SIO_TYPE_MAP = SIO_TYPE_MAP()
@@ -64,6 +60,89 @@ tag_html_internal = """
 not_public = 'INFORMATION IN THIS SECTION IS NOT PUBLIC'
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def build_field_list(model, api_spec_info):
+    # type: (Model, object) -> list
+
+    # Response to produce
+    out = []
+
+    # All the fields of this dataclass
+    python_field_list = model._zato_get_fields()
+
+    for _ignored_field_name, field in sorted(python_field_list.items()): # type: (str, Field)
+
+        # Parameter details object
+        info = FieldInfo.from_python_field(field, api_spec_info)
+        out.append(info)
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class FieldInfo:
+    name: str
+    is_required: bool
+    description: str = ''
+    type: str = ''
+    subtype: str = ''
+    ref: str = ''
+    is_list: bool = False
+
+    @staticmethod
+    def from_python_field(field, api_spec_info):
+        # type: (Field, Bunch) -> FieldInfo
+
+        info = FieldInfo()
+        info.name = field.name
+        info.is_required = field.default is MISSING
+        info.description = field.__doc__ or ''
+
+        is_class = isclass(field.type)
+
+        if is_list(field.type, is_class):
+            type_info = None, None
+            ref = extract_model_class(field.type)
+            info.is_list = True
+            info.ref = '#/components/schemas/{}.{}'.format(ref.__module__, ref.__name__)
+
+        elif issubclass(field.type, bool):
+            type_info = api_spec_info.BOOLEAN
+
+        elif issubclass(field.type, int):
+            type_info = api_spec_info.INTEGER
+
+        elif issubclass(field.type, float):
+            type_info = api_spec_info.FLOAT
+
+        elif issubclass(field.type, Model):
+            type_info = None, None
+            info.ref = '#/components/schemas/{}.{}'.format(field.type.__module__, field.type.__name__)
+        else:
+            try:
+                type_info = api_spec_info.map[field.__class__]
+            except KeyError:
+                type_info = api_spec_info.DEFAULT
+
+        info.type, info.subtype = type_info
+
+        return info
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class APISpecInfo:
+    name: str
+    field_list: dict
+    request_elem: str
+    response_elem: str
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class Config(object):
     def __init__(self):
@@ -71,6 +150,7 @@ class Config(object):
         self.ns = ''
         self.services = []
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Docstring(object):
@@ -85,12 +165,14 @@ class Docstring(object):
         self.by_tag = {} # Keys are tags used, values are documentation for key
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Namespace(object):
     def __init__(self):
         self.name = APISPEC.NAMESPACE_NULL
         self.docs = ''
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _DocstringSegment(object):
@@ -111,17 +193,15 @@ class _DocstringSegment(object):
         }
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class SimpleIO(object):
-    __slots__ = 'input_required', 'output_required', 'input_optional', 'output_optional', 'request_elem', 'response_elem', \
-        'spec_name', 'description', 'needs_sio_desc'
+    __slots__ = 'input', 'output', 'request_elem', 'response_elem', 'spec_name', 'description', 'needs_sio_desc'
 
     def __init__(self, api_spec_info, description, needs_sio_desc=True):
         # type: (Bunch, SimpleIODescription)
-        self.input_required = api_spec_info.param_list.input_required
-        self.output_required = api_spec_info.param_list.output_required
-        self.input_optional = api_spec_info.param_list.input_optional
-        self.output_optional = api_spec_info.param_list.output_optional
+        self.input = api_spec_info.field_list['input']
+        self.output = api_spec_info.field_list['output']
         self.request_elem = api_spec_info.request_elem
         self.response_elem = api_spec_info.response_elem
         self.spec_name = api_spec_info.name
@@ -139,6 +219,7 @@ class SimpleIO(object):
         return out
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class SimpleIODescription(object):
     __slots__ = 'input', 'output'
@@ -154,6 +235,7 @@ class SimpleIODescription(object):
 
         return out
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ServiceInfo(object):
@@ -216,62 +298,25 @@ class ServiceInfo(object):
             self.namespace.docs = getattr(mod, 'namespace_docs', '')
 
         # SimpleIO
-        sio = getattr(self.service_class, '_sio', None) # type: CySimpleIO
+        sio = getattr(self.service_class, '_sio', None) # type: DataClassSimpleIO
 
-        if sio:
+        if sio and isinstance(sio, DataClassSimpleIO):
 
             # This can be reused across all the output data formats
             sio_desc = self.get_sio_desc(sio)
 
             for api_spec_info in _SIO_TYPE_MAP:
 
-                _api_spec_info = Bunch()
+                _api_spec_info = APISpecInfo()
                 _api_spec_info.name = api_spec_info.name
-                _api_spec_info.param_list = Bunch()
+                _api_spec_info.field_list = {}
                 _api_spec_info.request_elem = getattr(sio, 'request_elem', None)
                 _api_spec_info.response_elem = getattr(sio, 'response_elem', None)
 
-                for param_list_name in _sio_attrs: # type: str
-
-                    _param_list = []
-
-                    param_func_name = 'get_{}'.format(param_list_name)
-                    param_func = getattr(sio.definition, param_func_name)
-                    param_list = param_func()
-
-                    for param in param_list:
-
-                        # Actual parameter name
-                        param_name = param if isinstance(param, basestring) else param.name # type: str
-
-                        # To look up description based on parameter's name
-                        desc_dict = sio_desc.input if param_list_name.startswith('input') else sio_desc.output # type: dict
-
-                        # Parameter details object
-                        _param_info = Bunch()
-                        _param_info.name = param_name
-                        _param_info.is_required = 'required' in param_list_name
-                        _param_info.description = desc_dict.get(param_name) or '' # Always use a string, even if an empty one
-
-                        if isinstance(param, AsIs):
-                            type_info = api_spec_info.DEFAULT
-
-                        elif is_sio_bool(param):
-                            type_info = api_spec_info.BOOLEAN
-
-                        elif is_sio_int(param_name):
-                            type_info = api_spec_info.INTEGER
-
-                        else:
-                            try:
-                                type_info = api_spec_info.map[param.__class__]
-                            except KeyError:
-                                type_info = api_spec_info.DEFAULT
-
-                        _param_info.type, _param_info.subtype = type_info
-                        _param_list.append(_param_info)
-
-                    _api_spec_info.param_list[param_list_name] = _param_list
+                for sio_attr_name in ('input', 'output'): # type: str
+                    model = getattr(sio.user_declaration, sio_attr_name, None) # type: Model
+                    if model:
+                        _api_spec_info.field_list[sio_attr_name] = build_field_list(model, api_spec_info)
 
                 self.simple_io[_api_spec_info.name] = SimpleIO(_api_spec_info, sio_desc, self.needs_sio_desc).to_bunch()
 
@@ -628,6 +673,7 @@ class ServiceInfo(object):
 
         return out
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Generator(object):

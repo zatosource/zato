@@ -533,7 +533,7 @@ class WorkerStore(_WorkerStoreBase):
                 wrapper.build_client_queue()
             return wrapper
 
-        return HTTPSOAPWrapper(wrapper_config)
+        return HTTPSOAPWrapper(self.server, wrapper_config)
 
 # ################################################################################################################################
 

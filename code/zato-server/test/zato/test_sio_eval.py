@@ -1,19 +1,17 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2020, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from copy import deepcopy
 from unittest import main
 
 # Zato
-from common import MyService
+from .common import CyMyService
 from zato.common.test import BaseSIOTestCase
 
 # Zato - Cython
@@ -33,8 +31,8 @@ class SIOEvalTestCase(BaseSIOTestCase):
 
     def test_eval_bool(self):
 
-        MyClass = deepcopy(MyService)
-        CySimpleIO.attach_sio(self.get_server_config(), MyClass)
+        MyClass = deepcopy(CyMyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyClass)
         sio = MyClass._sio # type: CySimpleIO
 
         elem_name = 'is_abc'
@@ -67,8 +65,8 @@ class SIOEvalTestCase(BaseSIOTestCase):
 
     def test_eval_int(self):
 
-        MyClass = deepcopy(MyService)
-        CySimpleIO.attach_sio(self.get_server_config(), MyClass)
+        MyClass = deepcopy(CyMyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyClass)
         sio = MyClass._sio # type: CySimpleIO
 
         elem_name = 'user_id'
