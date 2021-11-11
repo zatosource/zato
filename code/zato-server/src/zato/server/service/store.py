@@ -44,6 +44,8 @@ from zato.common.json_internal import dumps
 from zato.common.json_schema import get_service_config, ValidationConfig as JSONSchemaValidationConfig, \
      Validator as JSONSchemaValidator
 from zato.common.match import Matcher
+from zato.common.marshal_.api import Model as DataClassModel
+from zato.common.marshal_.simpleio import DataClassSimpleIO
 from zato.common.odb.model.base import Base as ModelBase
 from zato.common.util.api import deployment_info, import_module_from_path, is_func_overridden, is_python_file, visit_py_source
 from zato.common.util.platform_ import is_non_windows
@@ -380,7 +382,18 @@ class ServiceStore(object):
         except AttributeError:
             class_.has_sio = False
         else:
-            CySimpleIO.attach_sio(service_store.server, service_store.server.sio_config, class_)
+            sio_input  = getattr(class_.SimpleIO, 'input',  None)
+            sio_output = getattr(class_.SimpleIO, 'output', None)
+
+            has_input_data_class  = isclass(sio_input)  and issubclass(sio_input,  DataClassModel)
+            has_output_data_class = isclass(sio_output) and issubclass(sio_output, DataClassModel)
+
+            if has_input_data_class or has_output_data_class:
+                SIOClass = DataClassSimpleIO
+            else:
+                SIOClass = CySimpleIO
+
+            SIOClass.attach_sio(service_store.server, service_store.server.sio_config, class_)
 
         # May be None during unit-tests - not every test provides it.
         if service_store:
@@ -695,7 +708,7 @@ class ServiceStore(object):
             len_si = len(dill_items['service_info'])
 
             for _idx, item in enumerate(dill_items['service_info'], 1):
-                class_ = self._visit_class(item['mod'], item['service_class'], item['fs_location'], True)
+                class_ = self._visit_class_for_service(item['mod'], item['service_class'], item['fs_location'], True)
                 to_process.append(class_)
 
             self._store_in_ram(None, to_process)
@@ -1056,8 +1069,8 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def import_services_from_file(self, file_name, is_internal, base_dir):
-        """ Imports all the services from the path to a file.
+    def import_objects_from_file(self, file_name, is_internal, base_dir, visit_func):
+        """ Imports all the services or models from the path to a file.
         """
         to_process = []
 
@@ -1067,15 +1080,33 @@ class ServiceStore(object):
             msg = 'Could not load source, file_name:`%s`, e:`%s`'
             logger.error(msg, file_name, format_exc())
         else:
-            to_process.extend(self._visit_module(mod_info.module, is_internal, mod_info.file_name))
+            to_process.extend(visit_func(mod_info.module, is_internal, mod_info.file_name))
         finally:
             return to_process
+
+# ################################################################################################################################
+
+    def import_models_from_file(self, file_name, is_internal, base_dir):
+        """ Imports all the models from the path to a file.
+        """
+        # type: (str, bool, str) -> list
+        return self.import_objects_from_file(file_name, is_internal, base_dir, self._visit_module_for_models)
+
+# ################################################################################################################################
+
+    def import_services_from_file(self, file_name, is_internal, base_dir):
+        """ Imports all the services from the path to a file.
+        """
+        # type: (str, bool, str) -> list
+        return self.import_objects_from_file(file_name, is_internal, base_dir, self._visit_module_for_services)
 
 # ################################################################################################################################
 
     def import_services_from_directory(self, dir_name, base_dir):
         """ Imports services from a specified directory.
         """
+        # type: (str, str) -> list
+
         to_process = []
 
         for py_path in visit_py_source(dir_name):
@@ -1088,6 +1119,8 @@ class ServiceStore(object):
     def import_services_from_module(self, mod_name, is_internal):
         """ Imports all the services from a module specified by the given name.
         """
+        # type: (str, bool) -> list
+
         try:
             return self.import_services_from_module_object(import_module(mod_name), is_internal)
         except ImportError:
@@ -1099,13 +1132,29 @@ class ServiceStore(object):
     def import_services_from_module_object(self, mod, is_internal):
         """ Imports all the services from a Python module object.
         """
-        return self._visit_module(mod, is_internal, inspect.getfile(mod))
+        # type: (str, bool) -> list
+
+        return self._visit_module_for_services(mod, is_internal, inspect.getfile(mod))
 
 # ################################################################################################################################
 
-    def _should_deploy(self, name, item, current_module):
-        """ Is an object something we can deploy on a server?
+    def _should_deploy_model(self, name, item, current_module):
+        """ Is item a model that we can deploy?
         """
+        # type: (str, object, object) -> bool
+
+        if isclass(item) and hasattr(item, '__mro__'):
+            if issubclass(item, DataClassModel) and (item is not DataClassModel):
+                if item.__module__ == current_module.__name__:
+                    return True
+
+# ################################################################################################################################
+
+    def _should_deploy_service(self, name, item, current_module):
+        """ Is item a service that we can deploy?
+        """
+        # type: (str, object, object) -> bool
+
         if isclass(item) and hasattr(item, '__mro__') and hasattr(item, 'get_name'):
             if item is not Service and item is not AdminService and item is not PubSubHook:
                 if not hasattr(item, DONT_DEPLOY_ATTR_NAME) and not issubclass(item, ModelBase):
@@ -1162,8 +1211,14 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def _visit_class(self, mod, class_, fs_location, is_internal, _utcnow=datetime.utcnow):
-        # type: (Any, Any, str, bool, Any, Any) -> InRAMService
+    def _visit_class_for_model(self, _ignored_mod, class_, _ignored_fs_location, _ignored_is_internal):
+        # type: (object, object, str, bool) -> object
+        return '{}.{}'.format(class_.__module__, class_.__name__)
+
+# ################################################################################################################################
+
+    def _visit_class_for_service(self, mod, class_, fs_location, is_internal, _utcnow=datetime.utcnow):
+        # type: (object, object, str, bool, object, object) -> InRAMService
 
         name = class_.get_name()
         impl_name = class_.get_impl_name()
@@ -1234,29 +1289,38 @@ class ServiceStore(object):
             # Go through each child service found and hot-deploy it
             for item in to_auto_deploy:
                 module_path = getsourcefile(item['service_class'])
-                logger.info('Copying `%s` to `%s`', module_path)
+                logger.debug('Copying `%s` to `%s`', module_path, self.server.hot_deploy_config.pickup_dir)
 
                 shutil_copy(module_path, self.server.hot_deploy_config.pickup_dir)
 
 # ################################################################################################################################
 
-    def _visit_module(self, mod, is_internal, fs_location, needs_odb_deployment=True):
-        """ Actually imports services from a module object.
+    def _visit_module_for_objects(self, mod, is_internal, fs_location, should_deploy_func, visit_class_func,
+        needs_before_add_to_store_result):
+        """ Imports services or models from a module object.
         """
+        # type: (object, bool, str, object, object, bool) -> list
         to_process = []
         try:
             for name in sorted(dir(mod)):
                 with self.update_lock:
                     item = getattr(mod, name)
 
-                    if self._should_deploy(name, item, mod):
-                        if self.is_testing:
-                            before_add_to_store_result = True
+                    if should_deploy_func(name, item, mod):
+
+                        # Only services enter here ..
+                        if needs_before_add_to_store_result:
+                            if self.is_testing:
+                                before_add_to_store_result = True
+                            else:
+                                before_add_to_store_result = item.before_add_to_store(logger)
+
+                        # .. while models go here.
                         else:
-                            before_add_to_store_result = item.before_add_to_store(logger)
+                            before_add_to_store_result = True
 
                         if before_add_to_store_result:
-                            to_process.append(self._visit_class(mod, item, fs_location, is_internal))
+                            to_process.append(visit_class_func(mod, item, fs_location, is_internal))
                         else:
                             logger.info('Skipping `%s` from `%s`', item, fs_location)
 
@@ -1266,5 +1330,25 @@ class ServiceStore(object):
                 mod, is_internal, fs_location, format_exc())
         finally:
             return to_process
+
+# ################################################################################################################################
+
+    def _visit_module_for_models(self, mod, is_internal, fs_location):
+        """ Imports models from a module object.
+        """
+        # type: (object, bool, str) -> list
+        return self._visit_module_for_objects(mod, is_internal, fs_location,
+            self._should_deploy_model, self._visit_class_for_model,
+            needs_before_add_to_store_result=False)
+
+# ################################################################################################################################
+
+    def _visit_module_for_services(self, mod, is_internal, fs_location):
+        """ Imports services from a module object.
+        """
+        # type: (object, bool, str) -> list
+        return self._visit_module_for_objects(mod, is_internal, fs_location,
+            self._should_deploy_service, self._visit_class_for_service,
+            needs_before_add_to_store_result=True)
 
 # ################################################################################################################################
