@@ -77,7 +77,7 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
 
         result = open_api_generator.generate()
         result = yaml_load(result, FullLoader)
-        #result = bunchify(result)
+        # result = bunchify(result)
 
         from json import dumps
         result = dumps(result)
