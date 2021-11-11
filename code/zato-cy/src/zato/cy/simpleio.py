@@ -887,10 +887,11 @@ class SIO_TYPE_MAP:
 
     class OPEN_API_V3:
 
-        name = APISPEC.OPEN_API_V3
-        STRING = ('string', 'string')
+        name    = APISPEC.OPEN_API_V3
+        STRING  = ('string', 'string')
         DEFAULT = STRING
         INTEGER = ('integer', 'int32')
+        FLOAT   = ('float',   'float')
         BOOLEAN = ('boolean', 'boolean')
 
         map = {
@@ -909,10 +910,11 @@ class SIO_TYPE_MAP:
 
     class SOAP_12:
 
-        name = APISPEC.SOAP_12
-        STRING = ('string', 'xsd:string')
+        name    = APISPEC.SOAP_12
+        STRING  = ('string', 'xsd:string')
         DEFAULT = STRING
         INTEGER = ('integer', 'xsd:integer')
+        FLOAT   = ('float', 'xsd:float')
         BOOLEAN = ('boolean', 'xsd:boolean')
 
         map = {
@@ -933,10 +935,11 @@ class SIO_TYPE_MAP:
 
     class ZATO:
 
-        name = 'zato'
-        STRING = ('string', 'string')
+        name    = 'zato'
+        STRING  = ('string', 'string')
         DEFAULT = STRING
         INTEGER = ('integer', 'integer')
+        FLOAT   = ('float', 'float')
         BOOLEAN = ('boolean', 'boolean')
 
         map = {
@@ -1312,6 +1315,10 @@ class CySimpleIO(object):
     """ If a service uses SimpleIO then, during deployment, its class will receive an attribute called _sio
     based on the service's SimpleIO attribute. The _sio one will be an instance of this Cython class.
     """
+
+    # We are not based on dataclasses, unlike DataClassSimpleIO
+    is_dataclass = False
+
     # A parallel server instance
     server = cy.declare(object, visibility='public') # type: ParallelServer
 
@@ -1793,13 +1800,13 @@ class CySimpleIO(object):
                 return
 
             # Attach the Cython object representing the parsed user definition
-            cy_simple_io = CySimpleIO(server, server_config, user_sio)
-            cy_simple_io.service_class = class_
-            cy_simple_io.build(class_)
-            class_._sio = cy_simple_io
+            sio = CySimpleIO(server, server_config, user_sio)
+            sio.service_class = class_
+            sio.build(class_)
+            class_._sio = sio
 
         except Exception:
-            logger.warn('Could not attach SimpleIO to class `%s`, e:`%s`', class_, format_exc())
+            logger.warn('Could not attach CySimpleIO to class `%s`, e:`%s`', class_, format_exc())
             raise
 
 # ################################################################################################################################
@@ -1977,7 +1984,7 @@ class CySimpleIO(object):
 # ################################################################################################################################
 
     @cy.returns(object)
-    def parse_input(self, data:object, data_format:cy.unicode, extra:dict=None) -> object:
+    def parse_input(self, data:object, data_format:cy.unicode, service:object=None, extra:dict=None) -> object:
 
         is_csv:cy.bint = data_format == DATA_FORMAT_CSV and isinstance(data, basestring)
 
