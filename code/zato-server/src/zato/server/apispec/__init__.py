@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from copy import deepcopy
 from fnmatch import fnmatch
-from inspect import getmodule
+from inspect import isclass, getmodule
 
 # Bunch
 from bunch import Bunch, bunchify
@@ -27,7 +27,7 @@ from past.builtins import basestring
 # Zato
 from zato.common.api import APISPEC
 from zato.common.ext.dataclasses import dataclass, Field, MISSING
-from zato.common.marshal_.api import Model
+from zato.common.marshal_.api import extract_model_class, is_list, Model
 from zato.common.marshal_.simpleio import DataClassSimpleIO
 
 # Zato - Cython
@@ -62,17 +62,14 @@ not_public = 'INFORMATION IN THIS SECTION IS NOT PUBLIC'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def build_field_list(object_, sio_attr_name):
-    # type: (object, str) -> list
+def build_field_list(model, api_spec_info):
+    # type: (Model, object) -> list
 
     # Response to produce
     out = []
 
-    # This represents SimpleIO.input or SimpleIO.output
-    sio_attr = getattr(sio.user_declaration, sio_attr_name, None) # type: Model
-
     # All the fields of this dataclass
-    python_field_list = sio_attr._zato_get_fields()
+    python_field_list = model._zato_get_fields()
 
     for _ignored_field_name, field in sorted(python_field_list.items()): # type: (str, Field)
 
@@ -93,6 +90,7 @@ class FieldInfo:
     type: str = ''
     subtype: str = ''
     ref: str = ''
+    is_list: bool = False
 
     @staticmethod
     def from_python_field(field, api_spec_info):
@@ -103,7 +101,15 @@ class FieldInfo:
         info.is_required = field.default is MISSING
         info.description = field.__doc__ or ''
 
-        if issubclass(field.type, bool):
+        is_class = isclass(field.type)
+
+        if is_list(field.type, is_class):
+            type_info = None, None
+            ref = extract_model_class(field.type)
+            info.is_list = True
+            info.ref = '#/components/schemas/{}.{}'.format(ref.__module__, ref.__name__)
+
+        elif issubclass(field.type, bool):
             type_info = api_spec_info.BOOLEAN
 
         elif issubclass(field.type, int):
@@ -299,10 +305,6 @@ class ServiceInfo(object):
             # This can be reused across all the output data formats
             sio_desc = self.get_sio_desc(sio)
 
-            print()
-            print(111, list(_SIO_TYPE_MAP))
-            print()
-
             for api_spec_info in _SIO_TYPE_MAP:
 
                 _api_spec_info = APISpecInfo()
@@ -311,27 +313,10 @@ class ServiceInfo(object):
                 _api_spec_info.request_elem = getattr(sio, 'request_elem', None)
                 _api_spec_info.response_elem = getattr(sio, 'response_elem', None)
 
-                _api_spec_info.field_list['input'] = build_field_list(sio.user_declaration, 'input')
-
-                '''
                 for sio_attr_name in ('input', 'output'): # type: str
-
-                    field_info_list = []
-
-                    # This is SimpleIO.input or SimpleIO.output
-                    sio_attr = getattr(sio.user_declaration, sio_attr_name, None) # type: Model
-
-                    # All the fields of this dataclass
-                    python_field_list = sio_attr._zato_get_fields()
-
-                    for _ignored_field_name, field in sorted(python_field_list.items()): # type: (str, Field)
-
-                        # Parameter details object
-                        info = FieldInfo.from_python_field(field, api_spec_info)
-                        field_info_list.append(info)
-
-                #_api_spec_info.field_list[sio_attr_name] = field_info_list
-                '''
+                    model = getattr(sio.user_declaration, sio_attr_name, None) # type: Model
+                    if model:
+                        _api_spec_info.field_list[sio_attr_name] = build_field_list(model, api_spec_info)
 
                 self.simple_io[_api_spec_info.name] = SimpleIO(_api_spec_info, sio_desc, self.needs_sio_desc).to_bunch()
 
