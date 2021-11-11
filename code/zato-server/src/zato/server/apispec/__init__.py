@@ -31,7 +31,7 @@ from zato.common.marshal_.api import extract_model_class, is_list, Model
 from zato.common.marshal_.simpleio import DataClassSimpleIO
 
 # Zato - Cython
-from zato.simpleio import AsIs, is_sio_bool, is_sio_int, SIO_TYPE_MAP
+from zato.simpleio import SIO_TYPE_MAP
 
 # ################################################################################################################################
 
