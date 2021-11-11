@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -38,6 +36,7 @@ from zato.common.exception import HTTP_RESPONSES
 from zato.common.hl7 import HL7Exception
 from zato.common.json_internal import dumps, loads
 from zato.common.json_schema import DictError as JSONSchemaDictError, ValidationException as JSONSchemaValidationException
+from zato.common.marshal_.api import ModelValidationError
 from zato.common.rate_limiting.common import AddressNotAllowed, BaseException as RateLimitingException, RateLimitReached
 from zato.common.util.api import payload_from_request
 from zato.common.xml_ import zato_namespace
@@ -73,6 +72,7 @@ accept_any_internal = HTTP_SOAP.ACCEPT.ANY_INTERNAL
 
 # ################################################################################################################################
 
+# https://tools.ietf.org/html/rfc6585
 TOO_MANY_REQUESTS = 429
 
 _status_bad_request = '{} {}'.format(BAD_REQUEST, HTTP_RESPONSES[BAD_REQUEST])
@@ -202,7 +202,7 @@ class RequestDispatcher(object):
     """
     def __init__(self, server=None, url_data=None, security=None, request_handler=None, simple_io_config=None,
             return_tracebacks=None, default_error_message=None, http_methods_allowed=None):
-        # type: (ParallelServer, URLData, object, object, dict, bool, unicode, list)
+        # type: (ParallelServer, URLData, object, RequestHandler, dict, bool, unicode, list)
 
         self.server = server
         self.url_data = url_data
@@ -417,7 +417,7 @@ class RequestDispatcher(object):
                 _format_exc = format_exc()
                 status = _status_internal_server_error
 
-                if isinstance(e, ClientHTTPError):
+                if isinstance(e, (ClientHTTPError, ModelValidationError)):
 
                     response = e.msg
                     status_code = e.status
@@ -428,7 +428,7 @@ class RequestDispatcher(object):
                         status = _status_unauthorized
                         wsgi_environ['zato.http.response.headers']['WWW-Authenticate'] = e.challenge
 
-                    elif isinstance(e, BadRequest):
+                    elif isinstance(e, (BadRequest, ModelValidationError)):
                         status = _status_bad_request
 
                     elif isinstance(e, NotFound):
@@ -660,7 +660,7 @@ class RequestHandler(object):
             path_info, soap_action, channel_type=CHANNEL.HTTP_SOAP, _response_404=response_404):
         """ Create a new instance of a service and invoke it.
         """
-        service, is_active = self.server.service_store.new_instance(channel_item.service_impl_name)
+        service, is_active = self.server.service_store.new_instance(channel_item.service_impl_name) # type: (Service, bool)
         if not is_active:
             logger.warn('Could not invoke an inactive service:`%s`, cid:`%s`', service.get_name(), cid)
             raise NotFound(cid, _response_404.format(

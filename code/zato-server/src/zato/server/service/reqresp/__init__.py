@@ -19,11 +19,9 @@ from bunch import Bunch, bunchify
 from lxml.etree import _Element as EtreeElement
 from lxml.objectify import ObjectifiedElement
 
-# Python 2/3 compatibility
-from future.utils import iteritems
-
 # Zato
 from zato.common.api import simple_types
+from zato.common.marshal_.api import Model
 from zato.common.json_internal import loads
 from zato.common.util.api import make_repr
 
@@ -58,7 +56,7 @@ if 0:
     from zato.server.connection.sms import SMSAPI
     from zato.server.connection.vault import VaultConnAPI
     from zato.server.connection.zmq_.outgoing import ZMQFacade
-    from zato.server.service import AMQPFacade
+    from zato.server.service import AMQPFacade, Service
 
     # Zato - Cython
     from zato.simpleio import CySimpleIO
@@ -194,13 +192,14 @@ class HL7RequestData(object):
 class Request(object):
     """ Wraps a service request and adds some useful meta-data.
     """
-    __slots__ = ('logger', 'payload', 'raw_request', 'input', 'cid', 'data_format', 'transport',
+    __slots__ = ('service', 'logger', 'payload', 'raw_request', 'input', 'cid', 'data_format', 'transport',
         'encrypt_func', 'encrypt_secrets', 'bytes_to_str_encoding', '_wsgi_environ', 'channel_params',
         'merge_channel_params', 'http', 'amqp', 'wmq', 'ibm_mq', 'hl7', 'enforce_string_encoding')
 
-    def __init__(self, logger, simple_io_config=None, data_format=None, transport=None):
-        # type: (Logger, object, str, str)
-        self.logger = logger
+    def __init__(self, service, simple_io_config=None, data_format=None, transport=None):
+        # type: (Service, object, str, str)
+        self.service = service
+        self.logger = service.logger # type: Logger
         self.payload = ''
         self.raw_request = ''
         self.input = {} # Will be overwritten in self.init if necessary
@@ -229,14 +228,16 @@ class Request(object):
 
         if is_sio:
 
-            parsed = sio.parse_input(self.payload or {}, data_format, extra=self.channel_params)
+            parsed = sio.parse_input(self.payload or {}, data_format, extra=self.channel_params, service=self.service)
 
-            if isinstance(parsed, dict):
-                self.input.update(parsed)
-
-            for param, value in iteritems(self.channel_params):
-                if param not in self.input:
-                    self.input[param] = value
+            if isinstance(parsed, Model):
+                self.input = parsed
+            else:
+                if isinstance(parsed, dict):
+                    self.input.update(parsed)
+                for param, value in self.channel_params.items():
+                    if param not in self.input:
+                        self.input[param] = value
 
         # We merge channel params in if requested even if it's not SIO
         else:
