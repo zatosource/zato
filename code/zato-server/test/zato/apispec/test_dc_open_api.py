@@ -79,11 +79,6 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
         result = yaml_load(result, FullLoader)
         result = bunchify(result)
 
-        #from json import dumps
-        #result = dumps(result)
-
-        #print(result)
-
         components = result.components # type: Bunch
         info       = result.info       # type: Bunch
         openapi    = result.openapi    # type: Bunch
@@ -218,58 +213,12 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
             }
         })
 
-        return
-
-        '''
-        result_components = result.components # type: Bunch
-        result_info       = result.info       # type: Bunch
-        result_openapi    = result.openapi    # type: Bunch
-        result_paths      = result.paths      # type: Bunch
-        result_servers    = result.servers    # type: Bunch
+        result_openapi    = result.openapi # type: Bunch
+        result_paths      = result.paths   # type: Bunch
+        result_servers    = result.servers # type: Bunch
 
         localhost = result_servers[0]
         self.assertEqual(localhost.url, 'http://127.0.0.1:17010')
-
-        self.assertEqual(result_info.title, 'API spec')
-        self.assertEqual(result_info.version, '1.0')
-        self.assertEqual(result_openapi, '3.0.2')
-
-        self.assertEqual(len(result_components.schemas), 5)
-
-        request_my_service_properties = result_components.schemas.request_my_service.properties
-        request_my_service_required   = result_components.schemas.request_my_service.required
-        request_my_service_title      = result_components.schemas.request_my_service.title
-        request_my_service_type       = result_components.schemas.request_my_service.type
-
-        response_my_service_required   = result_components.schemas.response_my_service.required
-        response_my_service_title      = result_components.schemas.response_my_service.title
-        response_my_service_type       = result_components.schemas.response_my_service.type
-
-        self.assertEqual(request_my_service_title, 'Request object for my.service')
-        self.assertEqual(response_my_service_title, 'Response object for my.service')
-
-        self.assertEqual(request_my_service_type, 'object')
-        self.assertEqual(response_my_service_type, 'object')
-
-        self.assertListEqual(sorted(request_my_service_required), ['customer_id', 'user_id'])
-        self.assertListEqual(sorted(response_my_service_required), ['address_id', 'address_name'])
-
-        self.assertEqual(request_my_service_properties.input_req_user_id.type, 'integer')
-        self.assertEqual(request_my_service_properties.input_req_user_id.format, 'int32')
-        self.assertEqual(request_my_service_properties.input_req_user_id.description,
-            'This is the first line.\nHere is another.\nAnd here are some more lines.')
-
-        self.assertEqual(request_my_service_properties.input_req_customer_id.type, 'integer')
-        self.assertEqual(request_my_service_properties.input_req_customer_id.format, 'int32')
-        self.assertEqual(request_my_service_properties.input_req_customer_id.description, '')
-
-        self.assertEqual(request_my_service_properties.input_opt_user_name.type, 'string')
-        self.assertEqual(request_my_service_properties.input_opt_user_name.format, 'string')
-        self.assertEqual(request_my_service_properties.input_opt_user_name.description, 'b111')
-
-        self.assertEqual(request_my_service_properties.input_opt_customer_name.type, 'string')
-        self.assertEqual(request_my_service_properties.input_opt_customer_name.format, 'string')
-        self.assertEqual(request_my_service_properties.input_opt_customer_name.description, '')
 
         self.assertEqual(len(result_paths), 2)
 
@@ -285,7 +234,6 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
                 post.requestBody.content['application/json'].schema['$ref'], '#/components/schemas/request_my_service')
             self.assertEqual(
                 post.responses['200'].content['application/json'].schema['$ref'], '#/components/schemas/response_my_service')
-        '''
 
 # ################################################################################################################################
 # ################################################################################################################################
