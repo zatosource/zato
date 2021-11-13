@@ -77,15 +77,150 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
 
         result = open_api_generator.generate()
         result = yaml_load(result, FullLoader)
-        # result = bunchify(result)
+        result = bunchify(result)
 
-        from json import dumps
-        result = dumps(result)
+        #from json import dumps
+        #result = dumps(result)
 
-        print(result)
+        #print(result)
+
+        components = result.components # type: Bunch
+        info       = result.info       # type: Bunch
+        openapi    = result.openapi    # type: Bunch
+        paths      = result.paths      # type: Bunch
+        servers    = result.servers    # type: Bunch
+
+        #
+        # Servers
+        #
+        localhost = servers[0]
+        self.assertEqual(localhost.url, 'http://127.0.0.1:17010')
+
+        #
+        # Info
+        #
+        self.assertEqual(info.title, 'API spec')
+        self.assertEqual(info.version, '1.0')
+        self.assertEqual(openapi, '3.0.2')
+
+        #
+        # Schemas
+        #
+        schemas = components.schemas
+
+        self.assertListEqual(sorted(schemas), [
+            'request_my_service',
+            'response_my_service',
+            'test.zato.common.Account',
+            'test.zato.common.AccountList',
+            'test.zato.common.User',
+        ])
+
+        user         = schemas['test.zato.common.User']        # type: Bunch
+        account      = schemas['test.zato.common.Account']     # type: Bunch
+        account_list = schemas['test.zato.common.AccountList'] # type: Bunch
+
+        request_my_service  = schemas['request_my_service']  # type: Bunch
+        response_my_service = schemas['response_my_service'] # type: Bunch
+
+        #
+        # Request my.service
+        #
+        self.assertEqual(request_my_service.title, 'Request object for my.service')
+        self.assertEqual(request_my_service.type,  'object')
+
+        self.assertListEqual(request_my_service.required, ['request_id', 'user'])
+        self.assertDictEqual(request_my_service.properties, {
+            'request_id': {
+                'description': '',
+                'subtype':     'int32',
+                'type':        'integer',
+            },
+            'user': {
+                '$ref':        '#/components/schemas/test.zato.common.User',
+                'description': '',
+            },
+        })
+
+        #
+        # Response my.service
+        #
+        self.assertEqual(response_my_service.title, 'Response object for my.service')
+        self.assertEqual(response_my_service.type,  'object')
+
+        self.assertListEqual(response_my_service.required, ['account_list', 'current_balance', 'pref_account'])
+        self.assertDictEqual(response_my_service.properties, {
+            'account_list': {
+                '$ref':        '#/components/schemas/test.zato.common.AccountList',
+                'description': '',
+            },
+            'current_balance': {
+                'description': '',
+                'subtype':     'int32',
+                'type':        'integer',
+            },
+            'last_account_no': {
+                'description': '',
+                'subtype':     'int32',
+                'type':        'integer',
+            },
+            'pref_account': {
+                '$ref':        '#/components/schemas/test.zato.common.Account',
+                'description': '',
+            },
+        })
+
+        #
+        # Account schema
+        #
+        self.assertListEqual(account.required, ['account_no', 'account_segment', 'account_type'])
+        self.assertDictEqual(account.properties, {
+            'account_no': {
+                'description': '',
+                'subtype':     'int32',
+                'type':        'integer',
+            },
+            'account_segment': {
+                'description': '',
+                'subtype':     'string',
+                'type':        'string',
+            },
+            'account_type': {
+                'description': '',
+                'subtype':     'string',
+                'type':        'string',
+            },
+        })
+
+        #
+        # AccountList schema
+        #
+        self.assertListEqual(account_list.required, ['account_list'])
+        self.assertDictEqual(account_list.properties, {
+            'account_list': {
+                'description': '',
+                'type':        'array',
+                'items': {
+                    '$ref': '#/components/schemas/test.zato.common.Account',
+                }
+            }
+        })
+
+        #
+        # User schema
+        #
+        self.assertListEqual(user.required, ['user_name'])
+        self.assertDictEqual(user.properties, {
+            'user_name': {
+                'description': '',
+                'subtype':     'string',
+                'type':        'string',
+            }
+        })
 
         return
 
+        '''
         result_components = result.components # type: Bunch
         result_info       = result.info       # type: Bunch
         result_openapi    = result.openapi    # type: Bunch
@@ -150,6 +285,7 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
                 post.requestBody.content['application/json'].schema['$ref'], '#/components/schemas/request_my_service')
             self.assertEqual(
                 post.responses['200'].content['application/json'].schema['$ref'], '#/components/schemas/response_my_service')
+        '''
 
 # ################################################################################################################################
 # ################################################################################################################################
