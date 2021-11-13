@@ -213,18 +213,14 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
             }
         })
 
-        result_openapi    = result.openapi # type: Bunch
-        result_paths      = result.paths   # type: Bunch
-        result_servers    = result.servers # type: Bunch
-
-        localhost = result_servers[0]
+        localhost = servers[0]
         self.assertEqual(localhost.url, 'http://127.0.0.1:17010')
 
-        self.assertEqual(len(result_paths), 2)
+        self.assertEqual(len(paths), 2)
 
         for url_path in ['/test/{phone_number}', '/zato/api/invoke/my.service']:
 
-            my_service_path = result_paths[url_path] # type: Bunch
+            my_service_path = paths[url_path] # type: Bunch
             post = my_service_path.post
 
             self.assertListEqual(post.consumes, ['application/json'])
