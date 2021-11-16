@@ -383,7 +383,7 @@ default=sql
 name=
 
 [hash_secret]
-rounds=100000
+rounds=120000
 salt_size=64 # In bytes = 512 bits
 
 [apps]
