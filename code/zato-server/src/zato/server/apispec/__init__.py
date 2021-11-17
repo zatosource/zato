@@ -200,8 +200,8 @@ class SimpleIO(object):
 
     def __init__(self, api_spec_info, description, needs_sio_desc=True):
         # type: (Bunch, SimpleIODescription)
-        self.input = api_spec_info.field_list['input']
-        self.output = api_spec_info.field_list['output']
+        self.input = api_spec_info.field_list.get('input', [])
+        self.output = api_spec_info.field_list.get('output', [])
         self.request_elem = api_spec_info.request_elem
         self.response_elem = api_spec_info.response_elem
         self.spec_name = api_spec_info.name
