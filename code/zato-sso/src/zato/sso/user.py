@@ -680,7 +680,7 @@ class UserAPI(object):
 
                 # Custom attributes
                 out.attr = AttrAPI(cid, current_session.user_id, current_session.is_super_user, current_app, remote_addr,
-                    self.odb_session_func, self.is_sqlite, self.encrypt_func, self.decrypt_func, out.user_id)
+                    self.odb_session_func, self.is_sqlite, self.encrypt_func, self.decrypt_func, info.user_id)
 
                 return out
 
