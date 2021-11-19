@@ -494,7 +494,11 @@ class ZatoCommand(object):
 
             # It is OK if password is an empty string and empty secrets are allowed
             if not password_arg:
-                allow_empty = self.allow_empty_secrets()
+
+                if isinstance(self.allow_empty_secrets, bool):
+                    allow_empty = self.allow_empty_secrets
+                else:
+                    allow_empty = self.allow_empty_secrets()
 
                 if allow_empty:
                     continue
