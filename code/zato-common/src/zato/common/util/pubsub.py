@@ -83,20 +83,22 @@ def get_last_topics(topic_list, as_list=True):
 
     for item in topic_list: # type: (dict)
 
-        # Local alias
-        topic_id = item['topic_id'] # type: int
+        for _ignored_topic_key, topic_data in item.items(): # type: (str, dict)
 
-        # .. we may have visited this topic already ..
-        previous = out.get(topic_id, {}) # type: dict
+            # Local alias
+            topic_id = topic_data['topic_id'] # type: int
 
-        # .. if we have ..
-        if previous:
-            if item['pub_time'] > previous['pub_time']:
-                out[topic_id] = item
+            # .. we may have visited this topic already ..
+            previous = out.get(topic_id, {}) # type: dict
 
-        # .. otherwise, we can just set the current one ..
-        else:
-            out[topic_id] = item
+            # .. if we have ..
+            if previous:
+                if topic_data['pub_time'] > previous['pub_time']:
+                    out[topic_id] = topic_data
+
+            # .. otherwise, we can just set the current one ..
+            else:
+                out[topic_id] = topic_data
 
     if as_list:
         out = sorted(out.values(), key=itemgetter('pub_time'), reverse=True)
@@ -122,7 +124,8 @@ def get_last_pub_metadata(server, topic_id_list):
     topic_id_list = [int(elem) for elem in topic_id_list]
 
     # Look up topic metadata in all the servers ..
-    response = server.rpc.invoke_all('zato.pubsub.topic.get-topic-metadata', {'topic_id_list':topic_id_list})
+    response = server.rpc.invoke_all(
+        'zato.pubsub.topic.get-topic-metadata', {'topic_id_list':topic_id_list}, skip_response_elem=False)
 
     # Produce our response
     out = get_last_topics(response.data, as_list=False)
