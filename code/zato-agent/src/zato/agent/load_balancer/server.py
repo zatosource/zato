@@ -14,7 +14,6 @@ import ssl
 from collections import Counter
 from datetime import datetime
 from http.client import OK
-from logging.config import DictConfigurator
 from traceback import format_exc
 from typing import Callable
 
