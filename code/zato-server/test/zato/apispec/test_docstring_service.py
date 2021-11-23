@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2020, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from unittest import main, TestCase
 
 # Zato
+from ..common import service_name, sio_config
 from zato.common.api import APISPEC
 from zato.server.apispec import not_public, ServiceInfo
-from common import service_name, sio_config
 
 # ################################################################################################################################
 
@@ -36,11 +34,11 @@ class APISpecDocstringParsing(TestCase):
 
     def test_docstring_summary_only(self):
 
-        class MyService:
+        class CyMyService:
             """ This is a one-line summary.
             """
 
-        info = ServiceInfo(service_name, MyService, sio_config, 'public')
+        info = ServiceInfo(service_name, CyMyService, sio_config, 'public')
 
         # This service's docstring has a summary only so it will constitute
         # all of its summary, decsription and full docstring.
@@ -53,7 +51,7 @@ class APISpecDocstringParsing(TestCase):
 
     def test_docstring_multiline(self):
 
-        class MyService:
+        class CyMyService:
             """ This is a one-line summary.
 
             This is public information
@@ -83,10 +81,10 @@ class APISpecDocstringParsing(TestCase):
 
             """
 
-        info = ServiceInfo(service_name, MyService, sio_config, 'public')
+        info = ServiceInfo(service_name, CyMyService, sio_config, 'public')
         self.assertEqual(info.docstring.summary, 'This is a one-line summary.')
 
-        service_docstring_lines = MyService.__doc__.strip().splitlines()
+        service_docstring_lines = CyMyService.__doc__.strip().splitlines()
         docstring_full_lines = info.docstring.full.splitlines()
 
         for idx, line in enumerate(service_docstring_lines):
@@ -100,14 +98,14 @@ class APISpecDocstringParsing(TestCase):
 
     def test_extract_tags_public_only_implicit(self):
 
-        class MyService:
+        class CyMyService:
             """ This is a one-line summary.
 
             This is public information
             It is multiline
             """
 
-        segments = ServiceInfo(service_name, MyService, sio_config, APISPEC.DEFAULT_TAG).extract_segments(MyService.__doc__)
+        segments = ServiceInfo(service_name, CyMyService, sio_config, APISPEC.DEFAULT_TAG).extract_segments(CyMyService.__doc__)
 
         # There should be only one tag, the default, implicit one called 'public'
         expected = {
@@ -131,7 +129,7 @@ class APISpecDocstringParsing(TestCase):
 
     def test_extract_tags_public_only_explicit(self):
 
-        class MyService:
+        class CyMyService:
             """ @public
             This is a one-line summary.
 
@@ -139,7 +137,7 @@ class APISpecDocstringParsing(TestCase):
             It is multiline
             """
 
-        segments = ServiceInfo(service_name, MyService, sio_config, APISPEC.DEFAULT_TAG).extract_segments(MyService.__doc__)
+        segments = ServiceInfo(service_name, CyMyService, sio_config, APISPEC.DEFAULT_TAG).extract_segments(CyMyService.__doc__)
 
         # There should be only one tag, the explicitly named 'public' one.
         expected = {
@@ -163,7 +161,7 @@ class APISpecDocstringParsing(TestCase):
 
     def test_extract_tags_multi_1(self):
 
-        class MyService:
+        class CyMyService:
             """ This is a one-line summary.
 
             This is public information
@@ -179,7 +177,7 @@ class APISpecDocstringParsing(TestCase):
             """
 
         tags = [APISPEC.DEFAULT_TAG, 'internal']
-        segments = ServiceInfo(service_name, MyService, sio_config, tags).extract_segments(MyService.__doc__)
+        segments = ServiceInfo(service_name, CyMyService, sio_config, tags).extract_segments(CyMyService.__doc__)
 
         # There should be only one tag, the default, implicit one called 'public'
         expected_public = {

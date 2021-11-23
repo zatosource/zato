@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from io import StringIO
 from itertools import chain
+from json import dumps
 from operator import attrgetter
 import os
 
@@ -23,10 +24,10 @@ from zato.server.apispec.wsdl import WSDLGenerator
 from zato.server.service import List, Opaque, Service
 
 # Zato
-from zato.common.json_internal import dumps
+from zato.common.ext.dataclasses import asdict
 from zato.common.util.eval_ import as_list
 from zato.common.util.file_system import fs_safe_name
-from zato.server.apispec import Generator
+from zato.server.apispec import Generator, FieldInfo
 from zato.server.service import AsIs, Bool
 
 # Python 2/3 compatibility
@@ -40,6 +41,16 @@ len_col_sep = len(col_sep)
 
 # ################################################################################################################################
 
+def _json_default(value):
+    # type: (object) -> object
+
+    if isinstance(value, FieldInfo):
+        return asdict(value)
+    else:
+        return value
+
+# ################################################################################################################################
+
 class GetAPISpec(Service):
     """ Returns API specifications for all services.
     """
@@ -48,8 +59,6 @@ class GetAPISpec(Service):
             'needs_api_invoke', 'needs_rest_channels', 'api_invoke_path', AsIs('tags'))
 
     def handle(self):
-
-        self.out.plain_http.get
 
         cluster_id = self.request.input.get('cluster_id')
 
@@ -88,7 +97,7 @@ class GetAPISpec(Service):
         else:
             out = data
 
-        self.response.payload = dumps(out)
+        self.response.payload = dumps(out, default=_json_default)
 
 # ################################################################################################################################
 
