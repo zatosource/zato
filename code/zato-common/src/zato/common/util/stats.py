@@ -127,7 +127,7 @@ def collect_current_usage(data):
         else:
             usage_mean = elem[StatsKey.PerKeyMean]
 
-        usage_mean = round(usage_mean, 3)
+        usage_mean = round(usage_mean, 3) if usage_mean else 0
 
     return {
         StatsKey.PerKeyValue: usage,

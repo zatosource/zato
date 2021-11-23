@@ -40,6 +40,7 @@ from zato.common.events.common import Default as EventsDefault
 from zato.common.ipc.api import IPCAPI
 from zato.common.json_internal import dumps, loads
 from zato.common.kv_data import KVDataAPI
+from zato.common.marshal_.api import MarshalAPI
 from zato.common.odb.post_process import ODBPostProcess
 from zato.common.pubsub import SkipDelivery
 from zato.common.rate_limiting import RateLimiting
@@ -198,6 +199,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.work_dir = 'ParallelServer-work_dir'
         self.events_dir = 'ParallelServer-events_dir'
         self.kvdb_dir = 'ParallelServer-kvdb_dir'
+        self.marshal_api = MarshalAPI()
 
         # SQL-based key/value data
         self.kv_data_api = None # type: KVDataAPI
@@ -1076,10 +1078,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def decrypt(self, data, _prefix=SECRETS.PREFIX):
+    def decrypt(self, data, _prefix=SECRETS.PREFIX, _marker=SECRETS.EncryptedMarker):
         """ Returns data decrypted using server's CryptoManager.
         """
-        if data.startswith(_prefix):
+
+        if isinstance(data, bytes):
+            data = data.decode('utf8')
+
+        if data.startswith((_prefix, _marker)):
             return self.decrypt_no_prefix(data.replace(_prefix, '', 1))
         else:
             return data # Already decrypted, return as is

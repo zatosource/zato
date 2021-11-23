@@ -44,7 +44,7 @@ class XMLInputParsing(BaseSIOTestCase):
             class SimpleIO:
                 input = 'aaa', Int('bbb'), Opaque('ccc'), '-ddd', '-eee'
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         aaa = 'aaa-111'
         bbb = '222'
@@ -81,7 +81,7 @@ class XMLInputParsing(BaseSIOTestCase):
                 input = 'aaa', AsIs('bbb'), Bool('ccc'), CSV('ddd'), Date('eee'), DateTime('fff'), Decimal('ggg'), \
                     Float('jjj'), Int('mmm'), Opaque('ooo'), Text('ppp'), UUID('qqq')
 
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
         aaa = 'aaa-111'
         bbb = 'bbb-222-bbb'

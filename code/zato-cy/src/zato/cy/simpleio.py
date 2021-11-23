@@ -46,6 +46,13 @@ from past.builtins import basestring, str as past_str
 
 # ################################################################################################################################
 
+if 0:
+    from zato.server.base.parallel import ParallelServer
+
+    ParallelServer = ParallelServer
+
+# ################################################################################################################################
+
 logger = getLogger('zato')
 
 # ################################################################################################################################
@@ -880,10 +887,11 @@ class SIO_TYPE_MAP:
 
     class OPEN_API_V3:
 
-        name = APISPEC.OPEN_API_V3
-        STRING = ('string', 'string')
+        name    = APISPEC.OPEN_API_V3
+        STRING  = ('string', 'string')
         DEFAULT = STRING
         INTEGER = ('integer', 'int32')
+        FLOAT   = ('float',   'float')
         BOOLEAN = ('boolean', 'boolean')
 
         map = {
@@ -902,10 +910,11 @@ class SIO_TYPE_MAP:
 
     class SOAP_12:
 
-        name = APISPEC.SOAP_12
-        STRING = ('string', 'xsd:string')
+        name    = APISPEC.SOAP_12
+        STRING  = ('string', 'xsd:string')
         DEFAULT = STRING
         INTEGER = ('integer', 'xsd:integer')
+        FLOAT   = ('float', 'xsd:float')
         BOOLEAN = ('boolean', 'xsd:boolean')
 
         map = {
@@ -926,10 +935,11 @@ class SIO_TYPE_MAP:
 
     class ZATO:
 
-        name = 'zato'
-        STRING = ('string', 'string')
+        name    = 'zato'
+        STRING  = ('string', 'string')
         DEFAULT = STRING
         INTEGER = ('integer', 'integer')
+        FLOAT   = ('float', 'float')
         BOOLEAN = ('boolean', 'boolean')
 
         map = {
@@ -1305,6 +1315,13 @@ class CySimpleIO(object):
     """ If a service uses SimpleIO then, during deployment, its class will receive an attribute called _sio
     based on the service's SimpleIO attribute. The _sio one will be an instance of this Cython class.
     """
+
+    # We are not based on dataclasses, unlike DataClassSimpleIO
+    is_dataclass = False
+
+    # A parallel server instance
+    server = cy.declare(object, visibility='public') # type: ParallelServer
+
     # Server-wide configuration
     server_config = cy.declare(SIOServerConfig, visibility='public') # type: SIOServerConfig
 
@@ -1322,7 +1339,7 @@ class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    def __cinit__(self, server_config:SIOServerConfig, user_declaration:object):
+    def __cinit__(self, server:object, server_config:SIOServerConfig, user_declaration:object):
 
         input_value = getattr(user_declaration, 'default_input_value', InternalNotGiven)
         output_value = getattr(user_declaration, 'default_output_value', InternalNotGiven)
@@ -1401,6 +1418,7 @@ class CySimpleIO(object):
             force_empty_output_set, empty_output_value)
 
         self.definition = SIODefinition(sio_default, sio_skip_empty)
+        self.server = server
         self.server_config = server_config
         self.user_declaration = user_declaration
 
@@ -1769,7 +1787,7 @@ class CySimpleIO(object):
 # ################################################################################################################################
 
     @staticmethod
-    def attach_sio(server_config:object, class_:object):
+    def attach_sio(server: object, server_config:object, class_:object):
         """ Given a service class, the method extracts its user-defined SimpleIO definition
         and attaches the Cython-based one to the class's _sio attribute.
         """
@@ -1782,13 +1800,13 @@ class CySimpleIO(object):
                 return
 
             # Attach the Cython object representing the parsed user definition
-            cy_simple_io = CySimpleIO(server_config, user_sio)
-            cy_simple_io.service_class = class_
-            cy_simple_io.build(class_)
-            class_._sio = cy_simple_io
+            sio = CySimpleIO(server, server_config, user_sio)
+            sio.service_class = class_
+            sio.build(class_)
+            class_._sio = sio
 
         except Exception:
-            logger.warn('Could not attach SimpleIO to class `%s`, e:`%s`', class_, format_exc())
+            logger.warn('Could not attach CySimpleIO to class `%s`, e:`%s`', class_, format_exc())
             raise
 
 # ################################################################################################################################
@@ -1928,7 +1946,11 @@ class CySimpleIO(object):
                     if self._should_skip_on_input(self.definition, sio_item, input_value):
                         continue
                     else:
+
                         value = parse_func(input_value)
+                        if getattr(sio_item, 'is_secret', False):
+                            value = self.eval_(sio_item.name, input_value, self.server.encrypt if self.server else None)
+
                 except NotImplementedError:
                     raise NotImplementedError('No parser for input `{}` ({})'.format(input_value, data_format))
 
@@ -1962,7 +1984,7 @@ class CySimpleIO(object):
 # ################################################################################################################################
 
     @cy.returns(object)
-    def parse_input(self, data:object, data_format:cy.unicode, extra:dict=None) -> object:
+    def parse_input(self, data:object, data_format:cy.unicode, service:object=None, extra:dict=None) -> object:
 
         is_csv:cy.bint = data_format == DATA_FORMAT_CSV and isinstance(data, basestring)
 
