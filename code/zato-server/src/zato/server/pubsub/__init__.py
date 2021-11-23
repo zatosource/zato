@@ -1449,7 +1449,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def invoke_service(self, name, msg, *args, **kwargs):
-        # type: () -> SimpleIOPayload
+        # type: (name, object, object, object) -> SimpleIOPayload
         return self.server.invoke(name, msg, *args, **kwargs)
 
 # ################################################################################################################################
@@ -1894,6 +1894,9 @@ class PubSub(object):
         # .. this is a subscription for any client that is not WebSockets-based
         else:
 
+            # We do not use WebSockets here
+            wsx = None
+
             # Non-WSX endpoints always need to be identified by their names
             endpoint_name = kwargs.get('endpoint_name')
             if not endpoint_name:
@@ -1912,7 +1915,8 @@ class PubSub(object):
 
         # If this was a WebSocket caller, we can now update its pub/sub metadata
         if use_current_wsx:
-            wsx.set_last_interaction_data('pubsub.subscribe')
+            if wsx:
+                wsx.set_last_interaction_data('pubsub.subscribe')
 
         return response.sub_key
 

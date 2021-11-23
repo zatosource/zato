@@ -216,18 +216,18 @@ class Endpoint(ToDictBase):
         }
 
         for key, config in iteritems(data):
-            is_topic = key == 'topic'
+            is_topic = key == 'topic' # type: bool
 
             for line in config.splitlines():
                 line = line.strip()
                 if line.startswith('pub=') or line.startswith('sub='):
-                    is_pub = line.startswith('pub=')
+                    is_pub = line.startswith('pub=') # type: bool
 
                     matcher = line[line.find('=')+1:]
                     matcher = globre_compile(matcher)
 
                     source = (is_pub, is_topic)
-                    target = targets[source]
+                    target = targets[source] # pyright: reportGeneralTypeIssues=false
                     target.append([line, matcher])
 
                 else:
@@ -369,7 +369,7 @@ class Subscription(ToDictBase):
 # ################################################################################################################################
 
     def __lt__(self, other):
-        # type: (Subscription)
+        # type: (Subscription) -> bool
         return self.sub_key < other.sub_key
 
 # ################################################################################################################################
