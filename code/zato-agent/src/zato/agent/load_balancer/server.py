@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -16,11 +14,12 @@ import ssl
 from collections import Counter
 from datetime import datetime
 from http.client import OK
+from logging.config import DictConfigurator
 from traceback import format_exc
 from typing import Callable
 
 # pytz
-from pytz import UTC
+from pytz import utc
 
 # YAML
 import yaml
@@ -42,7 +41,7 @@ public_method_prefix = '_lb_agent_'
 config_file = 'zato.config'
 
 logger = logging.getLogger('')
-logging.addLevelName('TRACE1', TRACE1)
+logging.addLevelName(TRACE1, 'TRACE1')
 
 # All known HAProxy commands
 haproxy_commands = {}
@@ -74,11 +73,12 @@ class BaseLoadBalancerAgent(object):
 
         log_config = os.path.abspath(os.path.join(self.repo_dir, self.json_config['log_config']))
         with open(log_config) as f:
-            logging.config.dictConfig(yaml.load(f, yaml.FullLoader))
+            data = yaml.load(f, yaml.FullLoader) # type: dict
+            logging.config.dictConfig(data) # pyright: reportGeneralTypeIssues=false
 
         self.config_path = os.path.join(self.repo_dir, config_file)
         self.config = self._read_config()
-        self.start_time = datetime.utcnow().replace(tzinfo=UTC).isoformat()
+        self.start_time = datetime.utcnow().replace(tzinfo=utc).isoformat()
         self.haproxy_stats = HAProxyStats(self.config.global_['stats_socket'])
 
         RepoManager(self.repo_dir).ensure_repo_consistency()
