@@ -386,7 +386,7 @@ class DeleteMsgDelivered(_BaseCleanup):
     """ Deletes messages from topics that have been already delivered from their queues.
     """
     def _cleanup(self, session):
-        total = delete_msg_delivered(session, self.server.cluster_id, utcnow_as_ms())
+        total = delete_msg_delivered(session, self.server.cluster_id, None)
         return total, 'delivered (from topic)'
 
 # ################################################################################################################################
