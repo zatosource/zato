@@ -17,6 +17,7 @@ from collections import Counter
 from datetime import datetime
 from http.client import OK
 from traceback import format_exc
+from typing import Callable
 
 # pytz
 from pytz import UTC
@@ -52,6 +53,10 @@ for _ignored_version, commands in haproxy_stats.items():
 # ################################################################################################################################
 
 class BaseLoadBalancerAgent(object):
+
+    # This is implemented by children classes
+    register_function: Callable
+
     def init_config(self, repo_dir):
 
         self.repo_dir = os.path.abspath(repo_dir)
@@ -107,15 +112,6 @@ class BaseLoadBalancerAgent(object):
         """
         additional_params = ['-sf', open(self.haproxy_pidfile).read().strip()]
         self._re_start_load_balancer('Could not restart in `{}` seconds. ', 'Failed to restart HAProxy. ', additional_params)
-
-# ################################################################################################################################
-
-    def _dispatch(self, method, params):
-        try:
-            return super(BaseLoadBalancerAgent, self)._dispatch(method, params)
-        except Exception as e:
-            logger.error(format_exc())
-            raise e
 
 # ################################################################################################################################
 
