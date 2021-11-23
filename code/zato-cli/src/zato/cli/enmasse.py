@@ -235,8 +235,8 @@ class ServiceInfo(object):
         if method_sig is None:
             return set()
 
-        input_required = method_sig['simple_io']['zato']['input_required']
-        required = {f['name'] for f in input_required}
+        input_required = method_sig.get('input_required', [])
+        required = {elem['name'] for elem in input_required}
         required.discard('cluster_id')
         return required
 
