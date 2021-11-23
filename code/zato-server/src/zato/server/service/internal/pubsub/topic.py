@@ -66,6 +66,12 @@ _meta_endpoint_key = PUBSUB.REDIS.META_ENDPOINT_PUB_KEY
 
 # ################################################################################################################################
 
+def _format_meta_topic_key(cluster_id, topic_id):
+    # type: (int, int) -> str
+    return _meta_topic_key % (cluster_id, topic_id)
+
+# ################################################################################################################################
+
 def broker_message_hook(self, input, instance, attrs, service_type):
     # type: (Service, Bunch, PubSubTopic, Bunch, str)
 
@@ -205,9 +211,9 @@ class Get(AdminService):
             topic = pubsub_topic(session, self.request.input.cluster_id, topic_id)
             topic['current_depth_gd'] = get_gd_depth_topic(session, self.request.input.cluster_id, topic_id)
 
-        last_data = get_last_pub_metadata(self.server, topic_id)
+        last_data = get_last_pub_metadata(self.server, [topic_id])
         if last_data:
-            topic['last_pub_time'] = last_data['pub_time']
+            topic['last_pub_time'] = last_data[int(topic_id)]['pub_time']
 
         self.response.payload = topic
 
@@ -470,7 +476,7 @@ class GetTopicMetadata(AdminService):
 
         # Construct keys to look up topic metadata for ..
         topic_key_list = (
-            _meta_topic_key % (self.server.cluster_id, topic_id) for topic_id in topic_id_list
+            _format_meta_topic_key(self.server.cluster_id, topic_id) for topic_id in topic_id_list
         )
 
         # .. look up keys in RAM ..
