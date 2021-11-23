@@ -16,3 +16,7 @@ run-tests:
 static-check:
 	echo "Running static checks in zato-server"
 	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
+
+type-check:
+	echo "Running type checks in zato-server pubsub"
+	pyright -p $(CURDIR)/../pyproject.toml ./src/zato/server/pubsub/
