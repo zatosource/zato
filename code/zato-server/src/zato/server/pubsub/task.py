@@ -90,7 +90,7 @@ class DeliveryTask(object):
     """
     def __init__(self, pubsub_tool, pubsub, sub_key, delivery_lock, delivery_list, deliver_pubsub_msg,
             confirm_pubsub_msg_delivered_cb, sub_config):
-        # type: (PubSubTool, PubSub, str, RLock, SortedList, object, object, Bunch)
+        # type: (PubSubTool, PubSub, str, RLock, SortedList, Callable, Callable, Bunch) -> None
         self.keep_running = True
         self.pubsub_tool = pubsub_tool
         self.pubsub = pubsub
@@ -585,6 +585,9 @@ class Message(PubSubMessage):
     """ Wrapper for messages adding __cmp__ which uses a custom comparison protocol,
     by priority, then ext_pub_time, then pub_time.
     """
+
+    pub_time:float
+
     def __init__(self):
         super(Message, self).__init__()
         self.sub_key = None
@@ -594,7 +597,6 @@ class Message(PubSubMessage):
         self.ext_client_id = None
         self.group_id = None
         self.position_in_group = None
-        self.pub_time = None
         self.ext_pub_time = None
         self.data = None
         self.mime_type = None
@@ -602,7 +604,6 @@ class Message(PubSubMessage):
         self.expiration = None
         self.expiration_time = None
         self.has_gd = None
-
         self.pub_time_iso = None
         self.ext_pub_time_iso = None
         self.expiration_time_iso = None

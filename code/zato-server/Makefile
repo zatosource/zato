@@ -19,4 +19,4 @@ static-check:
 
 type-check:
 	echo "Running type checks in zato-server pubsub"
-	pyright -p $(CURDIR)/../pyproject.toml ./src/zato/server/pubsub/
+	pyright -p $(CURDIR)/../pyproject.toml ./src/zato/server/pubsub/__init__.py
