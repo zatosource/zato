@@ -20,7 +20,7 @@ from zato.common.haproxy import http_log, Config
 # ################################################################################################################################
 
 if 0:
-    from pyparsing import ParserElement, Token
+    from pyparsing import ParserElement
     ParserElement = ParserElement
 
 # ################################################################################################################################
