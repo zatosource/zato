@@ -1659,7 +1659,7 @@ class PubSub(object):
         POST /zato/pubsub/topic/{topic_name}
         """
         # For later use
-        from_service = kwargs.get('service') # type: Service
+        from_service:Service = kwargs.get('service') # type: ignore
         ext_client_id = from_service.name if from_service else kwargs.get('ext_client_id')
 
         # The first one is used if name is a service, the other one if it is a regular topic
@@ -1875,7 +1875,7 @@ class PubSub(object):
 
         # This is a subscription for a WebSocket client ..
         if use_current_wsx:
-            service = kwargs.get('service')
+            service:Service = kwargs.get('service') # type: ignore
 
             if use_current_wsx and (not service):
                 raise Exception('Parameter `service` is required if `use_current_wsx` is True')
@@ -1888,7 +1888,9 @@ class PubSub(object):
 
             # All set, we can carry on with other steps now
             sub_service_name = PUBSUB.SUBSCRIBE_CLASS.get(PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id)
-            wsgi_environ = service.wsgi_environ or kwargs.get('wsgi_environ')
+            wsgi_environ = service.wsgi_environ # type: dict
+            kwargs_wsgi_environ = kwargs.get('wsgi_environ') or {} # type: dict
+            wsgi_environ = wsgi_environ or kwargs_wsgi_environ
             wsgi_environ['zato.request_ctx.pubsub.unsub_on_wsx_close'] = kwargs.get('unsub_on_wsx_close')
 
         # .. this is a subscription for any client that is not WebSockets-based
