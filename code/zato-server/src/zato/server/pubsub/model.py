@@ -142,7 +142,8 @@ class EventType:
 # ################################################################################################################################
 
 class ToDictBase(object):
-    _to_dict_keys = None
+    _to_dict_keys:tuple
+    config:dict
 
     def to_dict(self):
         out = {}
@@ -227,7 +228,7 @@ class Endpoint(ToDictBase):
                     matcher = globre_compile(matcher)
 
                     source = (is_pub, is_topic)
-                    target = targets[source] # pyright: reportGeneralTypeIssues=false
+                    target = targets[source] # type: ignore
                     target.append([line, matcher])
 
                 else:
@@ -440,7 +441,7 @@ class DeliveryResultCtx:
     is_ok: bool = False
     status_code: int = 0
     reason_code: int = 0
-    exception_list: list_[Exception] = dc_field(default_factory=list)
+    exception_list: list_[Exception] = dc_field(default_factory=list) # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################
