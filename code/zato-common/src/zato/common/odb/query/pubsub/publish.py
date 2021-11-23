@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -17,6 +17,7 @@ from sqlalchemy.exc import IntegrityError
 from zato.common.api import PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage, PubSubTopic
+from zato.common.pubsub import msg_pub_ignore
 from zato.common.util.sql import sql_op_with_deadlock_retry
 
 # ################################################################################################################################
@@ -110,9 +111,14 @@ def sql_publish_with_retry(*args):
 
 # ################################################################################################################################
 
-def _insert_topic_messages(session, msg_list):
+def _insert_topic_messages(session, msg_list, msg_pub_ignore=msg_pub_ignore):
     """ A low-level implementation for insert_topic_messages.
     """
+    # Delete keys that cannot be inserted in SQL
+    for msg in msg_list: # type: dict
+        for name in msg_pub_ignore:
+            msg.pop(name)
+
     session.execute(MsgInsert().values(msg_list))
 
 # ################################################################################################################################
