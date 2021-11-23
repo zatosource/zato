@@ -45,6 +45,17 @@ msg_pub_attrs = (
     'delivery_count', 'user_ctx', 'zato_ctx'
 )
 
+# These public attributes need to be ignored when the message is published
+msg_pub_ignore = (
+    'delivery_count',
+    'deliver_to_sk',
+    'delivery_status',
+    'recv_time',
+    'reply_to_sk',
+    'sub_pattern_matched',
+    'topic_name',
+)
+
 class MSG_PREFIX:
     GROUP_ID = 'zpsg'
     MSG_ID = 'zpsm'
