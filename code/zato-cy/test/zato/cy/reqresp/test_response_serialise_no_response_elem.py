@@ -42,7 +42,7 @@ class ResponseSerialiseNoResponseElem(BaseSIOTestCase, ODBTestCase):
         # type: (object, str, bool) -> str
 
         MyService = deepcopy(MyODBService)
-        CySimpleIO.attach_sio(self.get_server_config(False), MyService)
+        CySimpleIO.attach_sio(None, self.get_server_config(False), MyService)
 
         response = Response()
         response.init('abc', MyService._sio, data_format)

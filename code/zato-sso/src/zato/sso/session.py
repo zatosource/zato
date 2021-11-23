@@ -232,8 +232,12 @@ class SessionAPI(object):
                 # already validated external credentials.
                 if not is_logged_in_ext:
 
+                    # This may have been encrypted by SIO
+                    ctx.input['password'] = self.decrypt_func(ctx.input['password'])
+
                     # Check credentials first to make sure that attackers do not learn about any sort
                     # of metadata (e.g. is the account locked) if they do not know username and password.
+
                     if not self.user_checker.check_credentials(ctx, user.password if user else _dummy_password):
                         raise ValidationError(status_code.auth.not_allowed, False)
 

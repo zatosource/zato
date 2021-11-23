@@ -32,6 +32,13 @@ from zato.common.util.api import get_current_user, make_repr # pylint: disable=n
 
 # ################################################################################################################################
 
+if 0:
+    from typing import BinaryIO
+
+    BinaryIO = BinaryIO
+
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 has_debug = logger.isEnabledFor(logging.DEBUG)
 
@@ -259,10 +266,11 @@ creation_time_utc={}
 user={}
 """.lstrip()
 
+    tmp_file: ... # type: BinaryIO
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.tmp_file_name = None
-        self.tmp_file = None
 
     def _acquire_impl(self, _flags=LOCK_EX | LOCK_NB, tmp_dir=gettempdir(), _utcnow=datetime.utcnow, _has_debug=has_debug):
 
@@ -391,7 +399,7 @@ class LockManager:
 
             namespace = namespace or self.default_namespace
 
-            logger.info('Acquiring lock class:`%s` -> ns:%s, n:%s, t:%s, b:%s, bi:%s, s:%s',
+            logger.debug('Acquiring lock class:`%s` -> ns:%s, n:%s, t:%s, b:%s, bi:%s, s:%s',
                 self._lock_class, namespace, name, ttl, block, block_interval, self.session)
 
             return self._lock_class(

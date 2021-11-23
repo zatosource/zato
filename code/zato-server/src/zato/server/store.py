@@ -154,9 +154,14 @@ class BaseStore(object):
 
     def change_password(self, password_data):
         with self.lock:
-            new_config = deepcopy(self.items[password_data.name].config_no_sensitive)
-            new_config.password = password_data.password
-            self.edit(password_data.name, new_config)
+
+            # This may not exist if change-password is invoked from enmasse before create finished
+            item = self.items.get(password_data.name)
+
+            if item:
+                new_config = deepcopy(item.config_no_sensitive)
+                new_config.password = password_data.password
+                self.edit(password_data.name, new_config)
 
     def create_impl(self):
         raise NotImplementedError('Should be overridden by subclasses (BaseStore.create_impl)')

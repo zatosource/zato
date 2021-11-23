@@ -25,7 +25,9 @@ from lxml.objectify import ObjectifiedElement
 from sqlalchemy.util import KeyedTuple
 
 # Zato
-from zato.common.api import simple_types, ZATO_OK
+from zato.common.api import DATA_FORMAT, simple_types, ZATO_OK
+from zato.common.ext.dataclasses import asdict
+from zato.common.marshal_.api import Model
 from zato.cy.reqresp.payload import SimpleIOPayload
 
 # Python 2/3 compatibility
@@ -95,9 +97,13 @@ class Response(object):
         self.sio = sio # type: CySimpleIO
         self.data_format = data_format
 
-        if self.sio and cy.cast(cy.bint, self.sio.definition.has_output_declared):
-            self._payload = SimpleIOPayload(self.sio, self.sio.definition.all_output_elem_names, self.cid, self.data_format)
-            self._has_sio_output = True
+        # We get below only if there is an SIO definition, but not a dataclass-based one, and it has output declared
+        if self.sio:
+            if not self.sio.is_dataclass:
+                if cy.cast(cy.bint, self.sio.definition.has_output_declared):
+                    self._payload = SimpleIOPayload(self.sio, self.sio.definition.all_output_elem_names, self.cid,
+                        self.data_format)
+                    self._has_sio_output = True
 
 # ################################################################################################################################
 
@@ -115,7 +121,7 @@ class Response(object):
     def _get_payload(self):
         return self._payload
 
-    def _set_payload(self, value):
+    def _set_payload(self, value, _json=DATA_FORMAT.JSON):
         """ Strings, lists and tuples are assigned as-is. Dicts as well if SIO is not used. However, if SIO is used
         the dicts are matched and transformed according to the SIO definition.
         """
@@ -151,11 +157,17 @@ class Response(object):
                     self._payload.set_payload_attrs(value)
 
                 # 2b2)
-                # .. someone assigns to self.response.payload an object that needs
-                # serialisation but we do not know how to do it.
                 else:
                     if value:
-                        raise Exception('Cannot serialise value without SimpleIO ouput declaration ({})'.format(value))
+                        if isinstance(value, Model):
+                            if self.data_format == _json:
+                                self._payload = asdict(value)
+                            else:
+                                self._payload = value
+                        else:
+                            # .. someone assigned to self.response.payload an object that needs
+                            # serialisation but we do not know how to do it.
+                            raise Exception('Cannot serialise value without SimpleIO ouput declaration ({})'.format(value))
 
     payload = property(_get_payload, _set_payload) # type: object
 

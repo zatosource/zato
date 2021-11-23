@@ -8,7 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-import os
 from datetime import datetime
 from itertools import count
 from unittest import TestCase
@@ -29,28 +28,19 @@ import sh
 from zato.common.util.api import get_odb_session_from_server_dir
 from zato.common.json_internal import dumps, loads
 from zato.common.crypto.totp_ import TOTPManager
+from zato.common.sso import TestConfig
 from zato.sso import const, status_code
 from zato.sso.odb.query import get_user_by_name
 
 # ################################################################################################################################
 
-logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
+logging.basicConfig(level=logging.WARN, format='%(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-class Config:
-    current_app = 'CRM'
-
-    super_user_name = 'zato.unit-test.admin1'
-    super_user_password = 'hQ9nl93UDqGus'
-    super_user_totp_key = 'KMCLCWN4YPMD2WO3'
-
-    username_prefix = 'test.{}+{}'
-    random_prefix = 'rand.{}+{}'
-
-    server_location = os.path.expanduser('~/env/sso.test/server1')
-    server_address  = 'http://localhost:17010{}'
+# Rename for backward compatibility
+Config = TestConfig
 
 class NotGiven:
     pass

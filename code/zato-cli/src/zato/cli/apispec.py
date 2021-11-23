@@ -77,6 +77,7 @@ class APISpec(ZatoCommand):
             'exclude': ','.join(exclude),
             'needs_api_invoke': args.with_api_invoke,
             'needs_rest_channels': args.with_rest_channels,
+            'needs_sphinx': True,
             'tags': tags,
         }
 
@@ -102,6 +103,7 @@ class APISpec(ZatoCommand):
         os.mkdir(out_dir)
 
         response = client.invoke('zato.apispec.get-api-spec', request)
+
         data = response.data['response']['data']
 
         for file_path, contents in data.items():
