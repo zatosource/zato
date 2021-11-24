@@ -6,6 +6,8 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# pytype: off
+
 # stdlib
 from bisect import bisect_left
 from copy import deepcopy
@@ -29,7 +31,7 @@ from future.utils import iteritems
 from zato.common.api import GENERIC, PUBSUB
 from zato.common.json_internal import json_loads
 from zato.common.pubsub import PubSubMessage
-from zato.common.typing_ import dictlist, list_, strlist
+from zato.common.typing_ import dictlist, list_, strlist, tuple_
 from zato.common.util.api import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub.model import DeliveryResultCtx
@@ -37,6 +39,7 @@ from zato.server.pubsub.model import DeliveryResultCtx
 # ################################################################################################################################
 
 if 0:
+    from collections.abc import ValuesView
     from typing import Callable
     from bunch import Bunch
     from zato.server.pubsub import PubSub
@@ -44,6 +47,7 @@ if 0:
     Bunch = Bunch
     Callable = Callable
     PubSub = PubSub
+    ValuesView = ValuesView
 
 # ################################################################################################################################
 
@@ -1171,26 +1175,26 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def get_queue_depth(self, sub_key):
+    def get_queue_depth(self, sub_key:str) -> 'tuple_[int, int]':
         """ Returns the number of GD and non-GD messages queued up for input sub_key.
         """
         return self.delivery_tasks[sub_key].get_queue_depth()
 
 # ################################################################################################################################
 
-    def handles_sub_key(self, sub_key):
+    def handles_sub_key(self, sub_key:str) -> bool:
         with self.lock:
             return sub_key in self.sub_keys
 
 # ################################################################################################################################
 
-    def get_delivery_task(self, sub_key):
+    def get_delivery_task(self, sub_key:str) -> DeliveryTask:
         with self.lock:
             return self.delivery_tasks[sub_key]
 
 # ################################################################################################################################
 
-    def get_delivery_tasks(self):
+    def get_delivery_tasks(self) -> 'ValuesView[DeliveryTask]':
         with self.lock:
             return self.delivery_tasks.values()
 
