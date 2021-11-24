@@ -16,6 +16,7 @@ from logging import DEBUG, getLogger
 from threading import RLock
 from time import time
 from traceback import format_exc
+from typing import overload
 
 # SQLAlchemy
 from sqlalchemy import and_, create_engine, event, select
@@ -46,18 +47,17 @@ from zato.common.util.api import current_host, get_component_name, get_engine_ur
      parse_tls_channel_security_definition, spawn_greenlet
 from zato.common.util.sql import ElemsWithOpaqueMaker, elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
+from zato.common.typing_ import union_
 from zato.sso.odb.query import get_rate_limiting_info as get_sso_user_rate_limiting_info
 
 # ################################################################################################################################
 
-# Type checking
-import typing
-
-if typing.TYPE_CHECKING:
+if 0:
+    from sqlalchemy.orm import Session
     from zato.server.base.parallel import ParallelServer
 
-    # For pyflakes
     ParallelServer = ParallelServer
+    Session = Session
 
 # ################################################################################################################################
 
@@ -81,6 +81,11 @@ ServiceTableInsert = ServiceTable.insert
 DeployedServiceTable = DeployedService.__table__
 DeployedServiceInsert = DeployedServiceTable.insert
 DeployedServiceDelete = DeployedServiceTable.delete
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+anysession = union_[SimpleSession, 'Session']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -128,6 +133,9 @@ class WritableKeyedTuple(object):
 class SessionWrapper(object):
     """ Wraps an SQLAlchemy session.
     """
+
+    _Session:anysession
+
     def __init__(self):
         self.session_initialized = False
         self.pool = None      # type: SQLConnectionPool
@@ -166,7 +174,7 @@ class SessionWrapper(object):
             self.session_initialized = True
             self.is_sqlite = self.pool.engine and self.pool.engine.name == 'sqlite'
 
-    def session(self):
+    def session(self) -> anysession:
         return self._Session()
 
     def close(self):
