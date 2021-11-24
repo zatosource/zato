@@ -1,5 +1,5 @@
 [tool.pyright]
-typeCheckingMode = "basic"
+typeCheckingMode = "strict"
 reportUnusedCallResult = "error"
 reportImplicitStringConcatenation = "error"
 extraPaths = [
