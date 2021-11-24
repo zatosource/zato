@@ -261,7 +261,12 @@ def set_instance_opaque_attrs(instance, input, skip=None, only=None, _zato_skip=
             instance_opaque_attrs = {}
 
         for name in input_opaque_attrs:
-            instance_opaque_attrs[name] = input[name]
+            value = input[name]
+
+            if isinstance(value, bytes):
+                value = value.decode('utf8')
+
+            instance_opaque_attrs[name] = value
 
     # Set generic attributes for instance
     if instance_opaque_attrs is not None:
