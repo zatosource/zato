@@ -139,6 +139,17 @@ class BaseTestCase(TestCase):
         self.client = webdriver.Firefox(options=options)
         self.client.get(self.config.web_admin_address)
 
+        # .. get our form elements ..
+        username = self.client.find_element_by_name('username')
+        password = self.client.find_element_by_name('password')
+
+        # .. fill out the form ..
+        username.send_keys(self.user_name)
+        password.send_keys(self.config.user_password)
+
+        # .. and submit it.
+        password.send_keys(Keys.RETURN)
+
 # ################################################################################################################################
 
     def tearDown(self):
