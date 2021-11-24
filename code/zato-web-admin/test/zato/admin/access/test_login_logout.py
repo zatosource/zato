@@ -6,39 +6,29 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from unittest import main
+
 # Zato
 from .base import BaseTestCase
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class BaseTestCase(BaseTestCase):
+class LoginLogoutTestCase(BaseTestCase):
+
+    needs_auto_login = False
 
 # ################################################################################################################################
 
     def test_login(self):
 
-        # At this point we have:
-        # * user_name -> self.user_name
-        # * password  -> Config.user_password
+        self.run_in_background = False
 
-        print()
-        print(111, self.user_name)
-        print(222, self.config)
-        print()
+        self.login()
 
-# ################################################################################################################################
-
-    def test_logout(self):
-
-        # At this point we have:
-        # * user_name -> self.user_name
-        # * password  -> Config.user_password
-
-        print()
-        print(111, self.user_name)
-        print(222, self.config)
-        print()
+        self.assertEquals(self.client.title, 'Log on - Zato')
+        self.assertEquals(self.client.current_url, self.config.web_admin_address + '/accounts/login/?next=/zato/')
 
 # ################################################################################################################################
 # ################################################################################################################################
