@@ -12,6 +12,7 @@ from copy import deepcopy
 from logging import getLogger
 from threading import current_thread
 from traceback import format_exc, format_exception
+from typing import Iterator as iterator
 
 # gevent
 from gevent import sleep, spawn
@@ -63,6 +64,10 @@ deliv_exc_msg = 'Exception {}/{} in delivery iter #{} for `{}` sk:{} -> {}'
 class SortedList(_SortedList):
     """ A custom subclass that knows how to remove pubsub messages from SortedList instances.
     """
+
+    def __iter__(self) -> iterator['Message']:
+        return super().__iter__()
+
     def remove_pubsub_msg(self, msg):
         """ Removes a pubsub message from a SortedList instance - we cannot use the regular .remove method
         because it may triggger __cmp__ per https://github.com/grantjenks/sorted_containers/issues/81.
@@ -238,10 +243,10 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def get_message(self, msg_id):
+    def get_message(self, msg_id:str) -> 'Message':
         """ Returns a particular message enqueued by this delivery task.
         """
-        for msg in self.delivery_list:
+        for msg in self.delivery_list: # type: Message
             if msg.pub_msg_id == msg_id:
                 return msg
 
@@ -785,7 +790,7 @@ class PubSubTool(object):
         self.delivery_lists = {}
 
         # A pub/sub delivery task for each sub_key
-        self.delivery_tasks = {}
+        self.delivery_tasks = {} # type: dict[str, DeliveryTask]
 
         # Last sync time - updated even if there are no messages in a given synchronization request,
         # which is unlike self.last_sync_time_by_sub_key which updates only if there are messages
@@ -1076,7 +1081,7 @@ class PubSubTool(object):
         count = 0
         msg_ids = []
 
-        for _idx, msg in enumerate(gd_msg_list):
+        for msg in gd_msg_list:
 
             msg_ids.append(msg.pub_msg_id)
             self.delivery_lists[sub_key].add(GDMessage(sub_key, topic_name, msg))
@@ -1205,9 +1210,10 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def get_message(self, sub_key, msg_id):
+    def get_message(self, sub_key:str, msg_id:str) -> Message:
         """ Returns a particular message enqueued for sub_key.
         """
-        return self.delivery_tasks[sub_key].get_message(msg_id)
+        task = self.delivery_tasks[sub_key]
+        return task.get_message(msg_id)
 
 # ################################################################################################################################
