@@ -47,7 +47,11 @@ type-check:
 web-admin-tests:
 	cd $(CURDIR)/code/zato-web-admin && make run-tests
 
+install-test-reqs:
+	$(CURDIR)/code/bin/pip install -r $(CURDIR)/code/test-requirements.txt
+
 run-tests:
+	$(MAKE) install-test-reqs
 	$(MAKE) common-tests
 	$(MAKE) cy-tests
 	$(MAKE) server-tests
