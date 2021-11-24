@@ -17,6 +17,10 @@ from bunch import bunchify
 # Django
 import django
 
+# Selenium
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+
 # Zato
 from zato.admin.zato_settings import update_globals
 from zato.common.util import new_cid
@@ -36,7 +40,7 @@ class Config:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestAccessWebAdmin(TestCase):
+class BaseTestCase(TestCase):
 
     def _set_up_django(self):
 
@@ -98,25 +102,20 @@ class TestAccessWebAdmin(TestCase):
 # ################################################################################################################################
 
     def setUp(self):
+
+        # Set up everything on Django end ..
         self._set_up_django()
         self._set_up_django_auth()
 
-# ################################################################################################################################
+        # .. add a convenience alias for subclasses
+        self.config = Config
 
-    def test_access(self):
+        # .. set up our Selenium client ..
+        self.client = webdriver.Firefox()
+        self.client.get(self.config.web_admin_address)
 
-        # At this point we have:
-        # * user_name -> self.user_name
-        # * password  -> Config.user_password
-
-        '''
-        from zato.admin.urls import urlpatterns
-
-        print()
-        for item in urlpatterns:
-            print(111, item)
-        print()
-        ''' # noqa
+    def tearDown(self):
+        self.client.quit()
 
 # ################################################################################################################################
 # ################################################################################################################################
