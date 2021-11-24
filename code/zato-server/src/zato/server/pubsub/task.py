@@ -134,7 +134,7 @@ class DeliveryTask(object):
 
         # A list of messages that were requested to be deleted while a delivery was in progress,
         # checked before each delivery.
-        self.delete_requested = []
+        self.delete_requested:list_['Message'] = []
 
         # This is a lock used for micro-operations such as changing or consulting the contents of self.delete_requested.
         self.interrupt_lock = RLock()
@@ -153,7 +153,7 @@ class DeliveryTask(object):
         else:
             self.wrap_in_list = True
 
-        spawn_greenlet(self.run)
+        _ = spawn_greenlet(self.run)
 
 # ################################################################################################################################
 
@@ -189,7 +189,8 @@ class DeliveryTask(object):
             to_delete = []
             for msg in self.delivery_list:
                 if msg.pub_msg_id in msg_list:
-                    msg_list.remove(msg.pub_msg_id) # We can trim it since we know it won't appear again
+                    # We can trim it since we know it won't appear again
+                    msg_list.remove(msg.pub_msg_id) # type: ignore 
                     to_delete.append(msg)
 
             # We are a task that sends out notifications
@@ -227,13 +228,13 @@ class DeliveryTask(object):
         """ Implements pull-style delivery - returns messages enqueued for sub_key, deleting them in progress.
         """
         # Output to produce
-        out:dictlist = []
+        out:list_[Message] = []
 
         # A function wrapper that will append to output
         _append_to_out_func = self._append_to_pull_messages(out)
 
         # Runs the delivery with our custom function that handles all messages to be delivered
-        self.run_delivery(_append_to_out_func)
+        _ = self.run_delivery(_append_to_out_func)
 
         # OK, we have the output and can return it
         return [elem.to_dict() for elem in out]
@@ -257,6 +258,9 @@ class DeliveryTask(object):
         for msg in self.delivery_list: # type: Message
             if msg.pub_msg_id == msg_id:
                 return msg
+
+        else:
+            raise ValueError('No such message {}'.format(msg_id))
 
 # ################################################################################################################################
 
@@ -1034,15 +1038,15 @@ class PubSubTool(object):
 
         finally:
             if session:
-                session.commit()
-                session.close()
+                session.commit() # type: ignore
+                session.close()  # type: ignore
 
 # ################################################################################################################################
 
     def handle_new_messages(self, ctx):
         self.msg_handler_counter += 1
         try:
-            spawn(self._handle_new_messages, ctx)
+            _ = spawn(self._handle_new_messages, ctx)
         except Exception:
             e = format_exc()
             logger.warn(e)
@@ -1158,7 +1162,7 @@ class PubSubTool(object):
 
             finally:
                 if session:
-                    session.close()
+                    session.close() # type: ignore
 
 # ################################################################################################################################
 
