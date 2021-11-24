@@ -66,27 +66,26 @@ class SortedList(_SortedList):
     """
 
     def __iter__(self) -> iterator['Message']:
-        return super().__iter__()
+        return super().__iter__() # type: ignore
 
-    def remove_pubsub_msg(self, msg):
+    def remove_pubsub_msg(self, msg:'Message') -> None:
         """ Removes a pubsub message from a SortedList instance - we cannot use the regular .remove method
         because it may triggger __cmp__ per https://github.com/grantjenks/sorted_containers/issues/81.
         """
-        # type (Message)
-        logger.info('In remove_pubsub_msg msg:`%s`, mxs:`%s`', msg.pub_msg_id, self._maxes)
-        pos = bisect_left(self._maxes, msg)
+        logger.info('In remove_pubsub_msg msg:`%s`, mxs:`%s`', msg.pub_msg_id, self._maxes) # type: ignore
+        pos = bisect_left(self._maxes, msg) # type: ignore
 
-        if pos == len(self._maxes):
+        if pos == len(self._maxes): # type: ignore
             raise ValueError('{0!r} not in list'.format(msg))
 
-        for _list_idx, _list_msg in enumerate(self._lists[pos]):
-            if msg.pub_msg_id == _list_msg.pub_msg_id:
+        for _list_idx, _list_msg in enumerate(self._lists[pos]): # type: ignore
+            if msg.pub_msg_id == _list_msg.pub_msg_id: # type: ignore
                 idx = _list_idx
                 break
         else:
             raise ValueError('{0!r} not in list'.format(msg))
 
-        self._delete(pos, idx)
+        self._delete(pos, idx) # type: ignore
 
 # ################################################################################################################################
 
