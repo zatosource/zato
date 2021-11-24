@@ -58,4 +58,4 @@ run-tests:
 	$(MAKE) sso-tests
 	$(MAKE) web-admin-tests
 	$(MAKE) static-check
-	$(MAKE) type-check
+	# $(MAKE) type-check
