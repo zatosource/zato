@@ -29,7 +29,7 @@ from future.utils import iteritems
 from zato.common.api import GENERIC, PUBSUB
 from zato.common.json_internal import json_loads
 from zato.common.pubsub import PubSubMessage
-from zato.common.typing_ import dictlist, strlist
+from zato.common.typing_ import dictlist, list_, strlist
 from zato.common.util.api import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub.model import DeliveryResultCtx
@@ -99,8 +99,8 @@ class DeliveryTask(object):
             sub_key:str,
             delivery_lock:RLock,
             delivery_list:SortedList,
-            deliver_pubsub_msg:Callable,              # pyright: reportMissingTypeArgument=false
-            confirm_pubsub_msg_delivered_cb:Callable, # pyright: reportMissingTypeArgument=false
+            deliver_pubsub_msg:'Callable',
+            confirm_pubsub_msg_delivered_cb:'Callable',
             sub_config:'Bunch'
         ) -> None:
 
@@ -176,7 +176,7 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def delete_messages(self, msg_list:strlist, _notify=PUBSUB.DELIVERY_METHOD.NOTIFY.id:str):
+    def delete_messages(self, msg_list:strlist, _notify:str=PUBSUB.DELIVERY_METHOD.NOTIFY.id):
         """ For notify tasks, requests that all messages from input list be deleted before the next delivery.
         Otherwise, deletes the messages immediately.
         """
@@ -204,7 +204,7 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def get_messages(self, has_gd:bool) -> list['Message']:
+    def get_messages(self, has_gd:bool) -> 'list_[Message]':
         """ Returns all messages enqueued in the delivery list, without deleting them from self.delivery_list.
         """
         if has_gd is None:
@@ -227,7 +227,7 @@ class DeliveryTask(object):
         """ Implements pull-style delivery - returns messages enqueued for sub_key, deleting them in progress.
         """
         # Output to produce
-        out = []
+        out:dictlist = []
 
         # A function wrapper that will append to output
         _append_to_out_func = self._append_to_pull_messages(out)
@@ -264,8 +264,6 @@ class DeliveryTask(object):
         """ Actually attempts to deliver messages. Each time it runs, it gets all the messages
         that are still to be delivered from self.delivery_list.
         """
-        # type: (Callable, run_deliv_sc, reason_code) -> DeliveryResultCtx
-
         # Increase our delivery counter
         self.delivery_iter += 1
 
@@ -414,8 +412,6 @@ class DeliveryTask(object):
         deliv_exc_msg=deliv_exc_msg):
         """ Runs the delivery task's main loop.
         """
-        # type: (float, run_deliv_sc, run_deliv_rc, list, str)
-
         # Fill out Python-level metadata first
         self.py_object = '{}; {}; {}'.format(current_thread().name, getcurrent().name, self.python_id)
 
@@ -1203,7 +1199,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def get_messages(self, sub_key:str, has_gd:bool=False) -> 'list[Message]':
+    def get_messages(self, sub_key:str, has_gd:bool=False) -> 'list_[Message]':
         """ Returns all messages enqueued for sub_key without deleting them from their queue.
         """
         return self.delivery_tasks[sub_key].get_messages(has_gd)
