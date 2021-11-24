@@ -82,6 +82,10 @@ class JWT(object):
         token_data.update(data)
 
         token = jwt.encode(token_data, self.secret, algorithm=self.ALGORITHM)
+
+        if not isinstance(token, bytes):
+            token = token.encode('utf8')
+
         return self.fernet.encrypt(token).decode('utf8')
 
 # ################################################################################################################################
