@@ -29,6 +29,7 @@ from future.utils import iteritems
 from zato.common.api import GENERIC, PUBSUB
 from zato.common.json_internal import json_loads
 from zato.common.pubsub import PubSubMessage
+from zato.common.typing_ import dictlist, strlist
 from zato.common.util.api import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub.model import DeliveryResultCtx
@@ -167,7 +168,7 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def delete_messages(self, msg_list, _notify=PUBSUB.DELIVERY_METHOD.NOTIFY.id):
+    def delete_messages(self, msg_list:strlist, _notify=PUBSUB.DELIVERY_METHOD.NOTIFY.id:str):
         """ For notify tasks, requests that all messages from input list be deleted before the next delivery.
         Otherwise, deletes the messages immediately.
         """
@@ -195,7 +196,7 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def get_messages(self, has_gd):
+    def get_messages(self, has_gd:bool) -> list['Message']:
         """ Returns all messages enqueued in the delivery list, without deleting them from self.delivery_list.
         """
         if has_gd is None:
@@ -203,7 +204,7 @@ class DeliveryTask(object):
             len_out = len(out)
         else:
             out = []
-            for msg in self.delivery_list:
+            for msg in self.delivery_list: # type: Message
                 if msg.has_gd is has_gd:
                     out.append(msg)
             len_out = len(out)
@@ -214,7 +215,7 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def pull_messages(self):
+    def pull_messages(self) -> dictlist:
         """ Implements pull-style delivery - returns messages enqueued for sub_key, deleting them in progress.
         """
         # Output to produce
@@ -1187,21 +1188,21 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def delete_messages(self, sub_key, msg_list):
+    def delete_messages(self, sub_key:str, msg_list:strlist):
         """ Marks one or more to be deleted from the delivery task by the latter's sub_key.
         """
         self.delivery_tasks[sub_key].delete_messages(msg_list)
 
 # ################################################################################################################################
 
-    def get_messages(self, sub_key, has_gd=None):
+    def get_messages(self, sub_key:str, has_gd:bool=False) -> 'list[Message]':
         """ Returns all messages enqueued for sub_key without deleting them from their queue.
         """
         return self.delivery_tasks[sub_key].get_messages(has_gd)
 
 # ################################################################################################################################
 
-    def pull_messages(self, sub_key, has_gd=None):
+    def pull_messages(self, sub_key:str, has_gd:bool=False) -> dictlist:
         """ Implements pull-style delivery - returns messages enqueued for sub_key, deleting them in progress.
         """
         with self.lock:
@@ -1212,7 +1213,6 @@ class PubSubTool(object):
     def get_message(self, sub_key:str, msg_id:str) -> Message:
         """ Returns a particular message enqueued for sub_key.
         """
-        task = self.delivery_tasks[sub_key]
-        return task.get_message(msg_id)
+        return self.delivery_tasks[sub_key].get_message(msg_id)
 
 # ################################################################################################################################
