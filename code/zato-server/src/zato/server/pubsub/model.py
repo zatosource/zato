@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from dataclasses import dataclass, field as dc_field
 from datetime import datetime
 from typing import List as list_
 
@@ -20,7 +21,6 @@ from future.utils import iteritems
 # Zato
 from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
 from zato.common.exception import BadRequest
-from zato.common.ext.dataclasses import dataclass, field as dc_field
 from zato.common.pubsub import dict_keys
 from zato.common.util.api import make_repr
 from zato.common.util.time_ import utcnow_as_ms
@@ -441,7 +441,7 @@ class DeliveryResultCtx:
     is_ok: bool = False
     status_code: int = 0
     reason_code: int = 0
-    exception_list: list_[Exception] = dc_field(default_factory=list) # type: ignore
+    exception_list: list_[Exception] = dc_field(default_factory=list)
 
 # ################################################################################################################################
 # ################################################################################################################################
