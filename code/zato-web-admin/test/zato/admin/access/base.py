@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import os
-from unittest import main, TestCase
+from unittest import TestCase
 
 # Bunch
 from bunch import bunchify
@@ -20,6 +20,7 @@ import django
 # Selenium
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.firefox.options import Options
 
 # Zato
 from zato.admin.zato_settings import update_globals
@@ -41,6 +42,12 @@ class Config:
 # ################################################################################################################################
 
 class BaseTestCase(TestCase):
+
+    # Whether we should automatically log in during setUp
+    needs_auto_login = True
+
+    # This can be set by each test separately
+    run_in_background:bool
 
     def _set_up_django(self):
 
@@ -107,20 +114,38 @@ class BaseTestCase(TestCase):
         self._set_up_django()
         self._set_up_django_auth()
 
-        # .. add a convenience alias for subclasses
+        # .. add a convenience alias for subclasses ..
         self.config = Config
 
+        # .. log in if requested to.
+        if self.needs_auto_login:
+            self.login()
+
+# ################################################################################################################################
+
+    def login(self):
+
+        run_in_background = getattr(self, 'run_in_background', None)
+        run_in_background = True if run_in_background is None else run_in_background
+        self.run_in_background = run_in_background
+
+        # Custom options for the web client ..
+        options = Options()
+
+        if self.run_in_background:
+            options.headless = True
+
         # .. set up our Selenium client ..
-        self.client = webdriver.Firefox()
+        self.client = webdriver.Firefox(options=options)
         self.client.get(self.config.web_admin_address)
 
+# ################################################################################################################################
+
     def tearDown(self):
-        self.client.quit()
+        if self.run_in_background:
+            self.client.quit()
+
+        delattr(self, 'run_in_background')
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-if __name__ == '__main__':
-    main()
-
 # ################################################################################################################################
