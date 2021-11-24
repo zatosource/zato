@@ -1,8 +1,11 @@
 [tool.pyright]
 pythonVersion = "3.8"
-typeCheckingMode = "strict"
-reportUnusedCallResult = "error"
+typeCheckingMode = "basic"
 reportImplicitStringConcatenation = "error"
+#reportMissingParameterType = "error"
+#reportUnknownArgumentType = "error"
+#reportUnknownMemberType = "error"
+reportUnusedCallResult = "error"
 extraPaths = [
     "./eggs",
     "./zato-agent/src",
