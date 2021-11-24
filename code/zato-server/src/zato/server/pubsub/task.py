@@ -93,9 +93,17 @@ class SortedList(_SortedList):
 class DeliveryTask(object):
     """ Runs a greenlet responsible for delivery of messages for a given sub_key.
     """
-    def __init__(self, pubsub_tool, pubsub, sub_key, delivery_lock, delivery_list, deliver_pubsub_msg,
-            confirm_pubsub_msg_delivered_cb, sub_config):
-        # type: (PubSubTool, PubSub, str, RLock, SortedList, Callable, Callable, Bunch) -> None
+    def __init__(self,
+            pubsub_tool:'PubSubTool',
+            pubsub:'PubSub',
+            sub_key:str,
+            delivery_lock:RLock,
+            delivery_list:SortedList,
+            deliver_pubsub_msg:Callable,              # pyright: reportMissingTypeArgument=false
+            confirm_pubsub_msg_delivered_cb:Callable, # pyright: reportMissingTypeArgument=false
+            sub_config:'Bunch'
+        ) -> None:
+
         self.keep_running = True
         self.pubsub_tool = pubsub_tool
         self.pubsub = pubsub
