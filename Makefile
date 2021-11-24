@@ -40,7 +40,7 @@ static-check:
 	echo "Static checks OK"
 
 type-check:
-	#cd $(CURDIR)/code/zato-agent && $(MAKE) type-check
+	cd $(CURDIR)/code/zato-agent && $(MAKE) type-check
 	cd $(CURDIR)/code/zato-server && $(MAKE) type-check
 	echo "Type checks OK"
 
