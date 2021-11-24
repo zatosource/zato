@@ -14,7 +14,7 @@ from copy import deepcopy
 from logging import getLogger
 from threading import current_thread
 from traceback import format_exc, format_exception
-from typing import Iterator as iterator
+from typing import cast, Iterator as iterator
 
 # gevent
 from gevent import sleep, spawn
@@ -31,7 +31,7 @@ from future.utils import iteritems
 from zato.common.api import GENERIC, PUBSUB
 from zato.common.json_internal import json_loads
 from zato.common.pubsub import PubSubMessage
-from zato.common.typing_ import dictlist, list_, strlist, tuple_
+from zato.common.typing_ import any_, dictlist, generator_, list_, strlist, tuple_
 from zato.common.util.api import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub.model import DeliveryResultCtx
@@ -42,11 +42,15 @@ if 0:
     from collections.abc import ValuesView
     from typing import Callable
     from bunch import Bunch
+    from sqlalchemy.orm import Session
+    from zato.common.pubsub import HandleNewMessageCtx
     from zato.server.pubsub import PubSub
 
     Bunch = Bunch
     Callable = Callable
+    HandleNewMessageCtx = HandleNewMessageCtx
     PubSub = PubSub
+    Session = Session
     ValuesView = ValuesView
 
 # ################################################################################################################################
@@ -63,6 +67,12 @@ run_deliv_sc = PUBSUB.RunDeliveryStatus.StatusCode
 run_deliv_rc = PUBSUB.RunDeliveryStatus.ReasonCode
 
 deliv_exc_msg = 'Exception {}/{} in delivery iter #{} for `{}` sk:{} -> {}'
+
+# ################################################################################################################################
+
+msglist = list_['Message']
+gdmsglist = list_['GDMessage']
+msggen = generator_'[Message, any_, any_]'
 
 # ################################################################################################################################
 
@@ -975,7 +985,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def _handle_new_messages(self, ctx, delta=60):
+    def _handle_new_messages(self, ctx:'HandleNewMessageCtx', delta:int=60):
         """ A callback invoked when there is at least one new message to be handled for input sub_keys.
         If has_gd is True, it means that at least one GD message available. If non_gd_msg_list is not empty,
         it is a list of non-GD message for sub_keys.
@@ -983,7 +993,7 @@ class PubSubTool(object):
         session = None
         try:
             if ctx.has_gd:
-                session = self.pubsub.server.odb.session()
+                session = self.pubsub.server.odb.session() # type: ignore
             else:
                 if not ctx.non_gd_msg_list:
                     # This is an unusual situation but not an erroneous one because it is possible
@@ -1004,7 +1014,7 @@ class PubSubTool(object):
                 # Get messages for all sub_keys on input and break them out by each sub_key separately,
                 # provided that we have a flag indicating that there should be some GD messages around in the database.
                 if ctx.has_gd:
-                    for msg in self._fetch_gd_messages_by_sub_key_list(ctx.sub_key_list, ctx.pub_time_max, session):
+                    for msg in self._fetch_gd_messages_by_sub_key_list(ctx.sub_key_list, ctx.pub_time_max, session): # type: ignore
                         _sk_msg_list = gd_msg_list.setdefault(msg.sub_key, [])
                         _sk_msg_list.append(msg)
 
@@ -1047,7 +1057,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def handle_new_messages(self, ctx):
+    def handle_new_messages(self, ctx:'HandleNewMessageCtx'):
         self.msg_handler_counter += 1
         try:
             _ = spawn(self._handle_new_messages, ctx)
@@ -1058,7 +1068,11 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def _fetch_gd_messages_by_sub_key_list(self, sub_key_list, pub_time_max, session=None):
+    def _fetch_gd_messages_by_sub_key_list(self,
+        sub_key_list:strlist,
+        pub_time_max:float,
+        session:'Session'=None
+        ) -> 'msggen':
         """ Part of the low-level implementation of enqueue_gd_messages_by_sub_key, must be called with a lock for input sub_key.
         """
         # These are messages that we have already queued up so if we happen to pick them up
@@ -1087,7 +1101,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def _push_gd_messages_by_sub_key(self, sub_key, topic_name, gd_msg_list):
+    def _push_gd_messages_by_sub_key(self, sub_key:str, topic_name:str, gd_msg_list:msggen):
         """ Pushes all input GD messages to a delivery task for the sub_key.
         """
         count = 0
@@ -1104,7 +1118,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def _enqueue_gd_messages_by_sub_key(self, sub_key, gd_msg_list):
+    def _enqueue_gd_messages_by_sub_key(self, sub_key:str, gd_msg_list:msggen):
         """ Low-level implementation of self.enqueue_gd_messages_by_sub_key which expects the message list on input.
         Must be called with self.sub_key_locks[sub_key] held.
         """
@@ -1113,7 +1127,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def enqueue_gd_messages_by_sub_key(self, sub_key, session=None):
+    def enqueue_gd_messages_by_sub_key(self, sub_key:str, session:'Session'=None):
         """ Fetches GD messages from SQL for sub_key given on input and adds them to local queue of messages to deliver.
         """
         with self.sub_key_locks[sub_key]:
@@ -1122,7 +1136,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def enqueue_initial_messages(self, sub_key, topic_name, endpoint_name, _group_size=20):
+    def enqueue_initial_messages(self, sub_key:str, topic_name:str, endpoint_name:str, _group_size:int=20):
         """ Looks up any messages for input task in the database and pushes them all and enqueues in batches any found.
         """
         with self.sub_key_locks[sub_key]:
@@ -1170,7 +1184,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def confirm_pubsub_msg_delivered(self, sub_key, delivered_list):
+    def confirm_pubsub_msg_delivered(self, sub_key:str, delivered_list:strlist):
         self.pubsub.confirm_pubsub_msg_delivered(sub_key, delivered_list)
 
 # ################################################################################################################################

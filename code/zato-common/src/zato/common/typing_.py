@@ -10,7 +10,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 
 # stdlib
-from typing import Any as any_, Dict as dict_, List as list_, Optional as optional, Tuple as tuple_
+from typing import           \
+    Any as any_,             \
+    Dict as dict_,           \
+    Generator as generator_, \
+    List as list_,           \
+    Optional as optional,    \
+    Tuple as tuple_,         \
+    Union as union_
 
 # dacite
 from dacite import from_dict
@@ -59,7 +66,9 @@ def instance_from_dict(class_, data):
 # ################################################################################################################################
 # ################################################################################################################################
 
-anydict  = dict_[any_, any_]
-dictlist = list_[anydict]
-strlist  = list_[str]
-tuple_   = tuple_
+anydict    = dict_[any_, any_]
+dictlist   = list_[anydict]
+generator_ = generator_
+strlist    = list_[str]
+tuple_     = tuple_
+union_     = union_
