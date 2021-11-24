@@ -1,5 +1,7 @@
 [tool.pyright]
 typeCheckingMode = "basic"
+reportUnusedCallResult = "error"
+reportImplicitStringConcatenation = "error"
 extraPaths = [
     "./eggs",
     "./zato-agent/src",
