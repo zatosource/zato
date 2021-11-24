@@ -1,4 +1,5 @@
 [tool.pyright]
+pythonVersion = "3.8"
 typeCheckingMode = "strict"
 reportUnusedCallResult = "error"
 reportImplicitStringConcatenation = "error"
