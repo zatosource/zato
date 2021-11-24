@@ -30,8 +30,6 @@ class LoginLogoutTestCase(BaseTestCase):
         self.assertEquals(self.client.title, 'Log on - Zato')
         self.assertEquals(self.client.current_url, self.config.web_admin_address + '/accounts/login/?next=/zato/')
 
-        zzz ;sldfksdo 'u2340-r'p3r8i  :a;
-
 # ################################################################################################################################
 # ################################################################################################################################
 
