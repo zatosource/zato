@@ -2,7 +2,7 @@
 pythonVersion = "3.8"
 typeCheckingMode = "basic"
 reportImplicitStringConcatenation = "error"
-#reportMissingParameterType = "error"
+reportMissingParameterType = "error"
 #reportUnknownArgumentType = "error"
 #reportUnknownMemberType = "error"
 reportUnusedCallResult = "error"
