@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 
 # stdlib
-from typing import Optional as optional
+from typing import Any as any_, Dict as dict_, List as list_, Optional as optional
 
 # dacite
 from dacite import from_dict
@@ -58,3 +58,7 @@ def instance_from_dict(class_, data):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+anydict  = dict_[any_, any_]
+dictlist = list_[anydict]
+strlist  = list_[str]
