@@ -1002,7 +1002,7 @@ class PubSubTool(object):
 
         try:
             if ctx.has_gd:
-                session = cast(Session, self.pubsub.server.odb.session())
+                session = cast('Session', self.pubsub.server.odb.session())
             else:
                 if not ctx.non_gd_msg_list:
                     # This is an unusual situation but not an erroneous one because it is possible
