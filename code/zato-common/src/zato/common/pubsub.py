@@ -52,8 +52,6 @@ msg_pub_ignore = (
     'delivery_status',
     'recv_time',
     'reply_to_sk',
-    'sub_pattern_matched',
-    'topic_name',
 )
 
 class MSG_PREFIX:
