@@ -12,7 +12,7 @@ from copy import deepcopy
 from logging import getLogger
 from threading import current_thread
 from traceback import format_exc, format_exception
-from typing import cast, Iterable as iterable_, Iterator as iterator, Type
+from typing import cast, Iterable as iterable_, Iterator as iterator
 
 # gevent
 from gevent import sleep, spawn
@@ -29,7 +29,7 @@ from future.utils import iteritems
 from zato.common.api import GENERIC, PUBSUB
 from zato.common.json_internal import json_loads
 from zato.common.pubsub import PubSubMessage
-from zato.common.typing_ import any_, anylist, anytuple, dict_, dictlist, list_, set_, strlist, strtuple, tuple_
+from zato.common.typing_ import any_, anylist, anytuple, dict_, dictlist, list_, set_, strlist, tuple_
 from zato.common.util.api import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub.model import DeliveryResultCtx
@@ -639,7 +639,6 @@ class Message(PubSubMessage):
         self.ext_pub_time = None
         self.data = None
         self.mime_type = None
-        self.priority = None
         self.expiration = None
         self.expiration_time = None
         self.has_gd = None
