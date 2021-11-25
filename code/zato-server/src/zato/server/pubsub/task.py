@@ -29,7 +29,7 @@ from future.utils import iteritems
 from zato.common.api import GENERIC, PUBSUB
 from zato.common.json_internal import json_loads
 from zato.common.pubsub import PubSubMessage
-from zato.common.typing_ import any_, dict_, dictlist, generator_, list_, set_, strlist, tuple_
+from zato.common.typing_ import any_, dict_, dictlist, list_, set_, strlist, tuple_
 from zato.common.util.api import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub.model import DeliveryResultCtx
@@ -165,7 +165,7 @@ class DeliveryTask(object):
         else:
             self.wrap_in_list = True
 
-        _ignored = spawn_greenlet(self.run)
+        _ignored = spawn_greenlet(self.run) # noqa: F841
 
 # ################################################################################################################################
 
@@ -246,7 +246,7 @@ class DeliveryTask(object):
         _append_to_out_func = self._append_to_pull_messages(out)
 
         # Runs the delivery with our custom function that handles all messages to be delivered
-        _ignored = self.run_delivery(_append_to_out_func)
+        _ignored = self.run_delivery(_append_to_out_func) # noqa: F841
 
         # OK, we have the output and can return it
         return [elem.to_dict() for elem in out]
@@ -1070,7 +1070,7 @@ class PubSubTool(object):
     def handle_new_messages(self, ctx:'HandleNewMessageCtx') -> None:
         self.msg_handler_counter += 1
         try:
-            _ignored = spawn(self._handle_new_messages, ctx)
+            _ignored = spawn(self._handle_new_messages, ctx) # noqa: F841
         except Exception:
             e = format_exc()
             logger.warn(e)
