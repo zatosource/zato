@@ -818,14 +818,6 @@ class PubSubTool(object):
         # A pub/sub delivery task for each sub_key
         self.delivery_tasks = {} # type: dict_[str, DeliveryTask]
 
-        # Last sync time - updated even if there are no messages in a given synchronization request,
-        # which is unlike self.last_sync_time_by_sub_key which updates only if there are messages
-        # for a particular sub_key.
-        self.last_sync_time = None
-
-        # Last sync time for any kind of messages, by sub_key, no matter if they are GD or not
-        self.last_sync_time_by_sub_key = {}
-
         # Last time we tried to pull GD messages from SQL, by sub_key
         self.last_gd_run = {}
 
