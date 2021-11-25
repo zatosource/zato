@@ -15,8 +15,15 @@ run-tests:
 
 static-check:
 	echo "Running static checks in zato-server"
-	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
+	$(PY_DIR)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
+
+pyright:
+	pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/task.py
+
+mypy:
+	$(PY_DIR)/mypy --ignore-missing-imports $(CURDIR)/src/zato/server/pubsub/task.py
 
 type-check:
 	echo "Running type checks in zato-server pubsub"
-	pyright -p $(CURDIR)/../pyproject.toml ./src/zato/server/pubsub/task.py
+	$(MAKE) mypy
+	$(MAKE) pyright
