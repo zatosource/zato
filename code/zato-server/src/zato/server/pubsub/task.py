@@ -14,7 +14,7 @@ from copy import deepcopy
 from logging import getLogger
 from threading import current_thread
 from traceback import format_exc, format_exception
-from typing import cast, Iterator as iterator
+from typing import cast, Iterable as iterable_, Iterator as iterator
 
 # gevent
 from gevent import sleep, spawn
@@ -31,7 +31,7 @@ from future.utils import iteritems
 from zato.common.api import GENERIC, PUBSUB
 from zato.common.json_internal import json_loads
 from zato.common.pubsub import PubSubMessage
-from zato.common.typing_ import any_, dictlist, generator_, list_, strlist, tuple_
+from zato.common.typing_ import any_, dict_, dictlist, generator_, list_, strlist, tuple_
 from zato.common.util.api import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub.model import DeliveryResultCtx
@@ -70,9 +70,9 @@ deliv_exc_msg = 'Exception {}/{} in delivery iter #{} for `{}` sk:{} -> {}'
 
 # ################################################################################################################################
 
-msglist = list_['Message']
+msglist   = list_['Message']
 gdmsglist = list_['GDMessage']
-msggen = generator_'[Message, any_, any_]'
+msgiter   = iterable_['Message']
 
 # ################################################################################################################################
 
@@ -990,7 +990,7 @@ class PubSubTool(object):
         If has_gd is True, it means that at least one GD message available. If non_gd_msg_list is not empty,
         it is a list of non-GD message for sub_keys.
         """
-        session = None
+        session:'Session' = None
         try:
             if ctx.has_gd:
                 session = self.pubsub.server.odb.session() # type: ignore
@@ -1006,7 +1006,7 @@ class PubSubTool(object):
             logger.info('Handle new messages, cid:%s, gd:%d, sub_keys:%s, len_non_gd:%d bg:%d',
                 ctx.cid, int(ctx.has_gd), ctx.sub_key_list, len(ctx.non_gd_msg_list), ctx.is_bg_call)
 
-            gd_msg_list = {}
+            gd_msg_list:dict_[str, msglist] = {}
 
             # We need to have the broad lock first to read in messages for all the sub keys
             with self.lock:
@@ -1072,7 +1072,7 @@ class PubSubTool(object):
         sub_key_list:strlist,
         pub_time_max:float,
         session:'Session'=None
-        ) -> 'msggen':
+        ) -> 'msgiter':
         """ Part of the low-level implementation of enqueue_gd_messages_by_sub_key, must be called with a lock for input sub_key.
         """
         # These are messages that we have already queued up so if we happen to pick them up
@@ -1101,7 +1101,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def _push_gd_messages_by_sub_key(self, sub_key:str, topic_name:str, gd_msg_list:msggen):
+    def _push_gd_messages_by_sub_key(self, sub_key:str, topic_name:str, gd_msg_list:msgiter):
         """ Pushes all input GD messages to a delivery task for the sub_key.
         """
         count = 0
@@ -1118,7 +1118,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def _enqueue_gd_messages_by_sub_key(self, sub_key:str, gd_msg_list:msggen):
+    def _enqueue_gd_messages_by_sub_key(self, sub_key:str, gd_msg_list:msgiter):
         """ Low-level implementation of self.enqueue_gd_messages_by_sub_key which expects the message list on input.
         Must be called with self.sub_key_locks[sub_key] held.
         """
