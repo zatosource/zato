@@ -29,7 +29,7 @@ from future.utils import iteritems
 from zato.common.api import GENERIC, PUBSUB
 from zato.common.json_internal import json_loads
 from zato.common.pubsub import PubSubMessage
-from zato.common.typing_ import any_, anylist, dict_, dictlist, list_, set_, strlist, strtuple, tuple_
+from zato.common.typing_ import any_, anylist, anytuple, dict_, dictlist, list_, set_, strlist, strtuple, tuple_
 from zato.common.util.api import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub.model import DeliveryResultCtx
@@ -437,7 +437,7 @@ class DeliveryTask(object):
             default_sleep_time=0.1,          # type: float
             status_code=run_deliv_sc,        # type: any_
             reason_code=run_deliv_rc,        # type: any_
-            _notify_methods=_notify_methods, # type: strtuple
+            _notify_methods=_notify_methods, # type: anytuple
             deliv_exc_msg=deliv_exc_msg      # type: str
         ) -> None:
         """ Runs the delivery task's main loop.
