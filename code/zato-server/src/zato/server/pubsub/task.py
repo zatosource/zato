@@ -677,8 +677,14 @@ class GDMessage(Message):
     """
     is_gd_message = True
 
-    def __init__(self, sub_key, topic_name, msg, _sk_opaque=PUBSUB.DEFAULT.SK_OPAQUE, _gen_attr=GENERIC.ATTR_NAME,
-        _loads=json_loads, _zato_mime_type=PUBSUB.MIMEType.Zato):
+    def __init__(self,
+            sub_key:str,
+            topic_name:str,
+            msg:dict_,
+            _gen_attr:str=GENERIC.ATTR_NAME,
+            _loads:'Callable'=json_loads,
+            _zato_mime_type:str=PUBSUB.MIMEType.Zato
+        ) -> None:
 
         logger.info('Building task message (gd) from `%s`', msg)
 
@@ -703,7 +709,7 @@ class GDMessage(Message):
         self.published_by_id = msg.published_by_id
         self.sub_pattern_matched = msg.sub_pattern_matched
         self.user_ctx = msg.user_ctx
-        self.zato_ctx = msg.zato_ctx
+        self.zato_ctx = msg.zato_ctx # type: dict
 
         # Assign data but note that we may still need to modify it
         # depending on what zato_ctx contains.
@@ -711,7 +717,7 @@ class GDMessage(Message):
 
         # This is optional ..
         if self.zato_ctx:
-            self.zato_ctx = _loads(self.zato_ctx) # type: dict
+            self.zato_ctx = _loads(self.zato_ctx)
 
         if self.zato_ctx.get('zato_mime_type') == _zato_mime_type:
             self.data = json_loads(self.data)
@@ -735,8 +741,14 @@ class NonGDMessage(Message):
     """
     is_gd_message = False
 
-    def __init__(self, sub_key, server_name, server_pid, msg, _def_priority=PUBSUB.PRIORITY.DEFAULT,
-            _def_mime_type=PUBSUB.DEFAULT.MIME_TYPE):
+    def __init__(self,
+            sub_key:str,
+            server_name:str,
+            server_pid:int,
+            msg:dict,
+            _def_priority:int=PUBSUB.PRIORITY.DEFAULT,
+            _def_mime_type:str=PUBSUB.DEFAULT.MIME_TYPE
+        ) -> None:
 
         logger.info('Building task message (ngd) from `%s`', msg)
 
@@ -783,12 +795,12 @@ class PubSubTool(object):
     """ A utility object for pub/sub-related tasks.
     """
     def __init__(self,
-            pubsub:PubSub,
+            pubsub:'PubSub',
             parent:any_,
             endpoint_type:str,
             is_for_services:bool=False,
-            deliver_pubsub_msg:Callable=None
-        ):
+            deliver_pubsub_msg:'Callable'=None
+        ) -> None:
         self.pubsub = pubsub
         self.parent = parent # This is our parent, e.g. an individual WebSocket on whose behalf we execute
         self.endpoint_type = endpoint_type
@@ -819,7 +831,7 @@ class PubSubTool(object):
         self.delivery_tasks = {} # type: dict_[str, DeliveryTask]
 
         # Last time we tried to pull GD messages from SQL, by sub_key
-        self.last_gd_run = {}
+        self.last_gd_run = {} # type: dict_[str, float]
 
         # Register with this server's pubsub
         self.register_pubsub_tool()
