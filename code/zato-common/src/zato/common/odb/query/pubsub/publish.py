@@ -44,9 +44,39 @@ _initialized=PUBSUB.DELIVERY_STATUS.INITIALIZED
 
 # ################################################################################################################################
 
+sub_only_keys = ('sub_pattern_matched', 'topic_name')
+
+# ################################################################################################################################
+
 def _sql_publish_with_retry(session, cid, cluster_id, topic_id, subscriptions_by_topic, gd_msg_list, now):
     """ A low-level implementation of sql_publish_with_retry.
     """
+
+    #
+    # We need to temporarily remove selected keys from gd_msg_list while we insert the topic
+    # messages only to that these keys later on when inserting the same messages for subscribers.
+    #
+    # The reason is that we want to avoid the "sqlalchemy.exc.CompileError: Unconsumed column names"
+    # condition which is met when insert_topic_messages attempts to use columns that are needed
+    # only by insert_queue_messages.
+    #
+    # An alternative to removing them temporarily would be to have two copies of the messages
+    # but that could be expensive as they would be otherwise 99% the same, differing only
+    # by these few, specific short keys.
+    #
+
+    # These message attributes are needed only by queue subscribers
+    sub_only = {}
+
+    # Go through each message and remove the keys that topics do not use
+    for msg in gd_msg_list: # type: dict
+
+        pub_msg_id = msg['pub_msg_id']
+        sub_attrs = sub_only.setdefault(pub_msg_id, {})
+
+        for name in sub_only_keys:
+            sub_attrs[name] = msg.pop(name)
+
     # Publish messages - INSERT rows, each representing an individual message
     topic_messages_inserted = insert_topic_messages(session, cid, gd_msg_list)
 
@@ -55,12 +85,21 @@ def _sql_publish_with_retry(session, cid, cluster_id, topic_id, subscriptions_by
         logger_zato.info('With topic_messages_inserted `%s` `%s` `%s` `%s` `%s` `%s` `%s`',
                 cid, topic_messages_inserted, cluster_id, topic_id, sub_keys_by_topic, gd_msg_list, now)
 
+    # If any messages were inserted ..
     if topic_messages_inserted:
 
-        # Move messages to each subscriber's queue
+        # .. move references to the messages to each subscriber's queue ..
         if subscriptions_by_topic:
 
             try:
+
+                # .. now, go through each message and add back the keys that topics did not use
+                # .. but queues are going to need.
+                for msg in gd_msg_list: # type: dict
+                    pub_msg_id = msg['pub_msg_id']
+                    for name in sub_only_keys:
+                        msg[name] = sub_only[pub_msg_id][name]
+
                 insert_queue_messages(session, cluster_id, subscriptions_by_topic, gd_msg_list, topic_id, now, cid)
 
                 if has_debug:
@@ -160,6 +199,10 @@ def insert_queue_messages(session, cluster_id, subscriptions_by_topic, msg_list,
 
     for sub in subscriptions_by_topic:
         for msg in msg_list:
+
+            print()
+            print(111, msg)
+            print()
 
             # Enqueues the message for each subscriber
             queue_msgs.append({
