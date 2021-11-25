@@ -17,7 +17,7 @@ from typing import           \
     List as list_,           \
     Optional as optional,    \
     Tuple as tuple_,         \
-    Set as set_,
+    Set as set_,             \
     Union as union_
 
 # dacite
