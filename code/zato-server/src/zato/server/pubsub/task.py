@@ -6,8 +6,6 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# pytype: off
-
 # stdlib
 from bisect import bisect_left
 from copy import deepcopy
@@ -31,7 +29,7 @@ from future.utils import iteritems
 from zato.common.api import GENERIC, PUBSUB
 from zato.common.json_internal import json_loads
 from zato.common.pubsub import PubSubMessage
-from zato.common.typing_ import any_, dict_, dictlist, generator_, list_, strlist, tuple_
+from zato.common.typing_ import any_, dict_, dictlist, generator_, list_, set_, strlist, tuple_
 from zato.common.util.api import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub.model import DeliveryResultCtx
@@ -167,7 +165,7 @@ class DeliveryTask(object):
         else:
             self.wrap_in_list = True
 
-        _ = spawn_greenlet(self.run)
+        _ignored = spawn_greenlet(self.run)
 
 # ################################################################################################################################
 
@@ -204,7 +202,7 @@ class DeliveryTask(object):
             for msg in self.delivery_list:
                 if msg.pub_msg_id in msg_list:
                     # We can trim it since we know it won't appear again
-                    msg_list.remove(msg.pub_msg_id) # type: ignore 
+                    msg_list.remove(msg.pub_msg_id) # type: ignore
                     to_delete.append(msg)
 
             # We are a task that sends out notifications
@@ -248,7 +246,7 @@ class DeliveryTask(object):
         _append_to_out_func = self._append_to_pull_messages(out)
 
         # Runs the delivery with our custom function that handles all messages to be delivered
-        _ = self.run_delivery(_append_to_out_func)
+        _ignored = self.run_delivery(_append_to_out_func)
 
         # OK, we have the output and can return it
         return [elem.to_dict() for elem in out]
@@ -784,8 +782,14 @@ class NonGDMessage(Message):
 class PubSubTool(object):
     """ A utility object for pub/sub-related tasks.
     """
-    def __init__(self, pubsub, parent, endpoint_type, is_for_services=False, deliver_pubsub_msg=None):
-        self.pubsub = pubsub # type: PubSub
+    def __init__(self,
+            pubsub:PubSub,
+            parent:any_,
+            endpoint_type:str,
+            is_for_services:bool=False,
+            deliver_pubsub_msg:Callable=None
+        ):
+        self.pubsub = pubsub
         self.parent = parent # This is our parent, e.g. an individual WebSocket on whose behalf we execute
         self.endpoint_type = endpoint_type
 
@@ -799,20 +803,20 @@ class PubSubTool(object):
         self.lock = RLock()
 
         # Each sub_key will get its own lock for operations related to that key only
-        self.sub_key_locks = {}
+        self.sub_key_locks = {} # type: dict_[str, RLock]
 
         # How many messages to send in a single delivery group,
         # may be set individually for each subscription, defaults to 1
-        self.batch_size = {}
+        self.batch_size = {} # type: dict_[str, int]
 
         # Which sub_keys this pubsub_tool handles
-        self.sub_keys = set()
+        self.sub_keys = set() # type: set_[str]
 
         # A sorted list of message references for each sub_key
-        self.delivery_lists = {}
+        self.delivery_lists = {} # type: dict_[str, SortedList]
 
         # A pub/sub delivery task for each sub_key
-        self.delivery_tasks = {} # type: dict[str, DeliveryTask]
+        self.delivery_tasks = {} # type: dict_[str, DeliveryTask]
 
         # Last sync time - updated even if there are no messages in a given synchronization request,
         # which is unlike self.last_sync_time_by_sub_key which updates only if there are messages
@@ -836,7 +840,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def register_pubsub_tool(self):
+    def register_pubsub_tool(self) -> None:
         """ Registers ourselves with this server's pubsub to let the other control when we should shut down
         our delivery tasks for each sub_key.
         """
@@ -844,7 +848,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def get_sub_keys(self):
+    def get_sub_keys(self) -> strlist:
         """ Returns all sub keys this task handles, as a list.
         """
         with self.lock:
@@ -852,7 +856,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def add_sub_key_no_lock(self, sub_key):
+    def add_sub_key_no_lock(self, sub_key:str) -> None:
         """ Adds metadata about a given sub_key - must be called with self.lock held.
         """
         # Already seen it - can be ignored
@@ -915,7 +919,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def add_sub_key(self, sub_key):
+    def add_sub_key(self, sub_key:str) -> None:
         """ Same as self.add_sub_key_no_lock but holds self.lock.
         """
         with self.lock:
@@ -924,7 +928,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def remove_sub_key(self, sub_key):
+    def remove_sub_key(self, sub_key:str) -> None:
         with self.lock:
             try:
                 self.sub_keys.remove(sub_key)
@@ -940,7 +944,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def has_sub_key(self, sub_key):
+    def has_sub_key(self, sub_key:str) -> bool:
         with self.lock:
             return sub_key in self.sub_keys
 
@@ -953,7 +957,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def _add_non_gd_messages_by_sub_key(self, sub_key, messages):
+    def _add_non_gd_messages_by_sub_key(self, sub_key:str, messages:dictlist) -> None:
         """ Low-level implementation of add_non_gd_messages_by_sub_key, must be called with a lock for input sub_key.
         """
         for msg in messages:
@@ -972,7 +976,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def add_non_gd_messages_by_sub_key(self, sub_key, messages):
+    def add_non_gd_messages_by_sub_key(self, sub_key:str, messages:dictlist) -> None:
         """ Adds to local delivery queue all non-GD messages from input.
         """
         try:
@@ -985,15 +989,16 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def _handle_new_messages(self, ctx:'HandleNewMessageCtx', delta:int=60):
+    def _handle_new_messages(self, ctx:'HandleNewMessageCtx', delta:int=60) -> None:
         """ A callback invoked when there is at least one new message to be handled for input sub_keys.
         If has_gd is True, it means that at least one GD message available. If non_gd_msg_list is not empty,
         it is a list of non-GD message for sub_keys.
         """
-        session:'Session' = None
+        session = None
+
         try:
             if ctx.has_gd:
-                session = self.pubsub.server.odb.session() # type: ignore
+                session = cast(Session, self.pubsub.server.odb.session())
             else:
                 if not ctx.non_gd_msg_list:
                     # This is an unusual situation but not an erroneous one because it is possible
@@ -1014,7 +1019,8 @@ class PubSubTool(object):
                 # Get messages for all sub_keys on input and break them out by each sub_key separately,
                 # provided that we have a flag indicating that there should be some GD messages around in the database.
                 if ctx.has_gd:
-                    for msg in self._fetch_gd_messages_by_sub_key_list(ctx.sub_key_list, ctx.pub_time_max, session): # type: ignore
+                    for msg in self._fetch_gd_messages_by_sk_list(ctx.sub_key_list, ctx.pub_time_max, session):
+                        msg = cast(GDMessage, msg)
                         _sk_msg_list = gd_msg_list.setdefault(msg.sub_key, [])
                         _sk_msg_list.append(msg)
 
@@ -1057,10 +1063,10 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def handle_new_messages(self, ctx:'HandleNewMessageCtx'):
+    def handle_new_messages(self, ctx:'HandleNewMessageCtx') -> None:
         self.msg_handler_counter += 1
         try:
-            _ = spawn(self._handle_new_messages, ctx)
+            _ignored = spawn(self._handle_new_messages, ctx)
         except Exception:
             e = format_exc()
             logger.warn(e)
@@ -1068,7 +1074,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def _fetch_gd_messages_by_sub_key_list(self,
+    def _fetch_gd_messages_by_sk_list(self,
         sub_key_list:strlist,
         pub_time_max:float,
         session:'Session'=None
@@ -1131,7 +1137,7 @@ class PubSubTool(object):
         """ Fetches GD messages from SQL for sub_key given on input and adds them to local queue of messages to deliver.
         """
         with self.sub_key_locks[sub_key]:
-            gd_msg_list = self._fetch_gd_messages_by_sub_key_list([sub_key], utcnow_as_ms(), session)
+            gd_msg_list = self._fetch_gd_messages_by_sk_list([sub_key], utcnow_as_ms(), session)
             self._enqueue_gd_messages_by_sub_key(sub_key, gd_msg_list)
 
 # ################################################################################################################################
