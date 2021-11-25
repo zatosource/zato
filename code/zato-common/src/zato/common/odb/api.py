@@ -16,7 +16,6 @@ from logging import DEBUG, getLogger
 from threading import RLock
 from time import time
 from traceback import format_exc
-from typing import overload
 
 # SQLAlchemy
 from sqlalchemy import and_, create_engine, event, select
