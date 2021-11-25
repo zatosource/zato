@@ -1076,8 +1076,12 @@ class PubSubTool(object):
         # These are messages that we have already queued up so if we happen to pick them up
         # in the database, they should be ignored.
         ignore_list = set()
+
         for sub_key in sub_key_list:
-            ignore_list.update([msg.endp_msg_queue_id for msg in self.delivery_lists[sub_key] if msg.has_gd])
+            for msg in self.delivery_lists[sub_key]:
+                msg = cast(GDMessage, msg)
+                if msg.has_gd:
+                    ignore_list.add(msg.endp_msg_queue_id)
 
         logger.info('Fetching GD messages by sk_list:`%s`, ignore:`%s`', sub_key_list, ignore_list)
 
