@@ -6,7 +6,7 @@ reportMissingParameterType = "error"
 #reportUnknownArgumentType = "error"
 #reportUnknownMemberType = "error"
 reportUnusedCallResult = "error"
-reportGeneralTypeIssues = false
+reportGeneralTypeIssues = "error"
 extraPaths = [
     "./eggs",
     "./zato-agent/src",
