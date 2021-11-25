@@ -12,7 +12,7 @@ from copy import deepcopy
 from logging import getLogger
 from threading import current_thread
 from traceback import format_exc, format_exception
-from typing import cast, Iterable as iterable_, Iterator as iterator
+from typing import cast, Iterable as iterable_, Iterator as iterator, Type
 
 # gevent
 from gevent import sleep, spawn
@@ -29,7 +29,7 @@ from future.utils import iteritems
 from zato.common.api import GENERIC, PUBSUB
 from zato.common.json_internal import json_loads
 from zato.common.pubsub import PubSubMessage
-from zato.common.typing_ import any_, dict_, dictlist, list_, set_, strlist, tuple_
+from zato.common.typing_ import any_, dict_, dictlist, list_, set_, strlist, strtuple, tuple_
 from zato.common.util.api import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub.model import DeliveryResultCtx
@@ -65,6 +65,7 @@ run_deliv_sc = PUBSUB.RunDeliveryStatus.StatusCode
 run_deliv_rc = PUBSUB.RunDeliveryStatus.ReasonCode
 
 deliv_exc_msg = 'Exception {}/{} in delivery iter #{} for `{}` sk:{} -> {}'
+_zato_mime_type = PUBSUB.MIMEType.Zato
 
 # ################################################################################################################################
 
@@ -424,8 +425,13 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def run(self, default_sleep_time=0.1, status_code=run_deliv_sc, reason_code=run_deliv_rc, _notify_methods=_notify_methods,
-        deliv_exc_msg=deliv_exc_msg):
+    def run(self,
+            default_sleep_time=0.1,          # type: float
+            status_code=run_deliv_sc,        # type: any_
+            reason_code=run_deliv_rc,        # type: any_
+            _notify_methods=_notify_methods, # type: strtuple
+            deliv_exc_msg=deliv_exc_msg      # type: str
+        ) -> None:
         """ Runs the delivery task's main loop.
         """
         # Fill out Python-level metadata first
@@ -508,7 +514,7 @@ class DeliveryTask(object):
                                 len_exception_list = len(result.exception_list)
 
                                 # .. log all exceptions reported by the delivery task ..
-                                for idx, e in enumerate(result.exception_list, 1): # type: Exception
+                                for idx, e in enumerate(result.exception_list, 1): # type: (int, Exception)
 
                                     msg_logger = deliv_exc_msg.format(
                                         idx, len_exception_list, result.delivery_iter, self.topic_name, self.sub_key,
@@ -635,7 +641,7 @@ class Message(PubSubMessage):
 
 # ################################################################################################################################
 
-    def __lt__(self, other, max_pri=9):
+    def __lt__(self, other:'Message', max_pri:int=9) -> bool:
 
         self_priority = max_pri - self.priority
         other_priority = max_pri - other.priority
@@ -650,6 +656,9 @@ class Message(PubSubMessage):
 
         elif self.pub_time < other.pub_time:
             return True
+
+        else:
+            raise ValueError('Order coult not be establised {} and {}'.format(self, other))
 
 # ################################################################################################################################
 
@@ -678,12 +687,12 @@ class GDMessage(Message):
     is_gd_message = True
 
     def __init__(self,
-            sub_key:str,
-            topic_name:str,
-            msg:dict_,
-            _gen_attr:str=GENERIC.ATTR_NAME,
-            _loads:'Callable'=json_loads,
-            _zato_mime_type:str=PUBSUB.MIMEType.Zato
+            sub_key,    # type: str
+            topic_name, # type: str
+            msg,        # type: dict_
+            _gen_attr=GENERIC.ATTR_NAME,    # type: str
+            _loads=json_loads,              # type: Callable
+            _zato_mime_type=_zato_mime_type # type: str
         ) -> None:
 
         logger.info('Building task message (gd) from `%s`', msg)
@@ -742,12 +751,12 @@ class NonGDMessage(Message):
     is_gd_message = False
 
     def __init__(self,
-            sub_key:str,
-            server_name:str,
-            server_pid:int,
-            msg:dict,
-            _def_priority:int=PUBSUB.PRIORITY.DEFAULT,
-            _def_mime_type:str=PUBSUB.DEFAULT.MIME_TYPE
+            sub_key,     # type: str
+            server_name, # type: str
+            server_pid,  # type: int
+            msg,         # type: dict
+            _def_priority=PUBSUB.PRIORITY.DEFAULT,  # type: int
+            _def_mime_type=PUBSUB.DEFAULT.MIME_TYPE # type: str
         ) -> None:
 
         logger.info('Building task message (ngd) from `%s`', msg)
@@ -795,11 +804,11 @@ class PubSubTool(object):
     """ A utility object for pub/sub-related tasks.
     """
     def __init__(self,
-            pubsub:'PubSub',
-            parent:any_,
-            endpoint_type:str,
-            is_for_services:bool=False,
-            deliver_pubsub_msg:'Callable'=None
+            pubsub,        # type: PubSub
+            parent,        # type: any_
+            endpoint_type, # type: str
+            is_for_services=False,  # type: bool
+            deliver_pubsub_msg=None # type: Callable
         ) -> None:
         self.pubsub = pubsub
         self.parent = parent # This is our parent, e.g. an individual WebSocket on whose behalf we execute
@@ -1079,9 +1088,9 @@ class PubSubTool(object):
 # ################################################################################################################################
 
     def _fetch_gd_messages_by_sk_list(self,
-        sub_key_list:strlist,
-        pub_time_max:float,
-        session:'Session'=None
+        sub_key_list, # type: strlist
+        pub_time_max, # type: float
+        session=None  # type: Session
         ) -> 'msgiter':
         """ Part of the low-level implementation of enqueue_gd_messages_by_sub_key, must be called with a lock for input sub_key.
         """
