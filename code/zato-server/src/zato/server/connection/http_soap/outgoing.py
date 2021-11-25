@@ -351,7 +351,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         self._enforce_is_active()
 
         # Pop it here for later use because we cannot pass it to the requests module
-        model = kwargs.pop('model')
+        model = kwargs.pop('model', None)
 
         # We never touch strings/unicode because apparently the user already serialized outgoing data
         needs_request_serialize = not isinstance(data, basestring)
