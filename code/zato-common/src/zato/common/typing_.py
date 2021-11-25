@@ -70,6 +70,7 @@ def instance_from_dict(class_, data):
 
 anydict    = dict_[any_, any_]
 anylist    = list_[any_]
+anytuple   = tuple_[any_, ...]
 dictlist   = list_[anydict]
 generator_ = generator_
 noreturn   = noreturn
