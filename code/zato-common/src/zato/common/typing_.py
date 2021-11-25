@@ -44,15 +44,18 @@ else:
 #
 try:
     from typing import TypedDict
+    from typing import Protocol
 except ImportError:
     from zato.common.ext.typing_extensions import TypedDict
+    from zato.common.ext.typing_extensions import Protocol
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 # For flake8
 from_dict = from_dict
-optional = optional
+optional  = optional
+Protocol  = Protocol
 TypedDict = TypedDict
 
 # ################################################################################################################################
@@ -69,7 +72,7 @@ def instance_from_dict(class_, data):
 # ################################################################################################################################
 
 anydict    = dict_[any_, any_]
-anylist    = list_[any_, ...]
+anylist    = list_[any_]
 anytuple   = tuple_[any_, ...]
 dictlist   = list_[anydict]
 generator_ = generator_
