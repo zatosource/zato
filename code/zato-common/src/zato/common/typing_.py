@@ -17,6 +17,7 @@ from typing import           \
     List as list_,           \
     Optional as optional,    \
     Tuple as tuple_,         \
+    Set as set_,
     Union as union_
 
 # dacite
@@ -69,6 +70,8 @@ def instance_from_dict(class_, data):
 anydict    = dict_[any_, any_]
 dictlist   = list_[anydict]
 generator_ = generator_
+set_       = set_
 strlist    = list_[str]
+strintdict = dict_[str, int]
 tuple_     = tuple_
 union_     = union_
