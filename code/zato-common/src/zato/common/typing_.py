@@ -73,5 +73,6 @@ generator_ = generator_
 set_       = set_
 strlist    = list_[str]
 strintdict = dict_[str, int]
+strtuple   = tuple_[str]
 tuple_     = tuple_
 union_     = union_
