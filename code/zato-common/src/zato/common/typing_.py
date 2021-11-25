@@ -14,6 +14,7 @@ from typing import           \
     Any as any_,             \
     Dict as dict_,           \
     Generator as generator_, \
+    NoReturn as noreturn,    \
     List as list_,           \
     Optional as optional,    \
     Tuple as tuple_,         \
@@ -68,8 +69,10 @@ def instance_from_dict(class_, data):
 # ################################################################################################################################
 
 anydict    = dict_[any_, any_]
+anylist    = list_[any_]
 dictlist   = list_[anydict]
 generator_ = generator_
+noreturn   = noreturn
 set_       = set_
 strlist    = list_[str]
 strintdict = dict_[str, int]
