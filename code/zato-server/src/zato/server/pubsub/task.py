@@ -29,7 +29,7 @@ from future.utils import iteritems
 from zato.common.api import GENERIC, PUBSUB
 from zato.common.json_internal import json_loads
 from zato.common.pubsub import PubSubMessage
-from zato.common.typing_ import any_, dict_, dictlist, list_, set_, strlist, strtuple, tuple_
+from zato.common.typing_ import any_, anylist, dict_, dictlist, list_, set_, strlist, strtuple, tuple_
 from zato.common.util.api import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub.model import DeliveryResultCtx
@@ -107,14 +107,14 @@ class DeliveryTask(object):
     """ Runs a greenlet responsible for delivery of messages for a given sub_key.
     """
     def __init__(self,
-            pubsub_tool:'PubSubTool',
-            pubsub:'PubSub',
-            sub_key:str,
-            delivery_lock:RLock,
-            delivery_list:SortedList,
-            deliver_pubsub_msg:'Callable',
-            confirm_pubsub_msg_delivered_cb:'Callable',
-            sub_config:'Bunch'
+            pubsub_tool,   # type: PubSubTool
+            pubsub,        # type: PubSub
+            sub_key,       # type: str
+            delivery_lock, # type: RLock
+            delivery_list, # type: SortedList
+            deliver_pubsub_msg,              # type: Callable
+            confirm_pubsub_msg_delivered_cb, # type: Callable
+            sub_config # type: Bunch
         ) -> None:
 
         self.keep_running = True
@@ -170,12 +170,12 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def is_running(self):
+    def is_running(self) -> bool:
         return self.keep_running
 
 # ################################################################################################################################
 
-    def _delete_messages(self, to_delete):
+    def _delete_messages(self, to_delete:msgiter) -> None:
         """ Actually deletes messages - must be called with self.interrupt_lock held.
         """
         logger.info('Deleting message(s) `%s` from `%s` (%s)', to_delete, self.sub_key, self.topic_name)
@@ -254,8 +254,8 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def _append_to_pull_messages(self, out):
-        def _impl(sub_key, to_deliver):
+    def _append_to_pull_messages(self, out:any_) -> 'Callable':
+        def _impl(sub_key:str, to_deliver:any_) -> None:
             if isinstance(to_deliver, list):
                 out.extend(to_deliver)
             else:
@@ -277,7 +277,11 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def run_delivery(self, deliver_pubsub_msg=None, status_code=run_deliv_sc, reason_code=run_deliv_rc):
+    def run_delivery(self,
+            deliver_pubsub_msg=None,  # type: Callable
+            status_code=run_deliv_sc, # type: any_
+            reason_code=run_deliv_rc  # type: any_
+        ) -> DeliveryResultCtx:
         """ Actually attempts to deliver messages. Each time it runs, it gets all the messages
         that are still to be delivered from self.delivery_list.
         """
@@ -319,8 +323,8 @@ class DeliveryTask(object):
                 if msg.delivery_count >= self.delivery_max_retry:
                     to_delete.append(msg)
 
-            to_deliver = []
-            to_skip = []
+            to_deliver:anylist = []
+            to_skip:anylist    = []
 
             messages = {
                 _hook_action.DELETE: to_delete,
@@ -400,11 +404,12 @@ class DeliveryTask(object):
         if result.status_code not in (status_code.Error, status_code.Warning):
             result.is_ok = True
             result.status_code = status_code.OK
+
         return result
 
 # ################################################################################################################################
 
-    def _should_wake(self, _now=utcnow_as_ms):
+    def _should_wake(self, _now:Callable=utcnow_as_ms) -> bool:
         """ Returns True if the task should be woken up e.g. because its time has come already to process messages,
         assumming there are any waiting for it.
         """
@@ -422,6 +427,9 @@ class DeliveryTask(object):
                 logger.info('Waking task:%s now:%s last:%s diff:%s interval:%s len-list:%d',
                     self.sub_key, now, self.last_iter_run, diff, self.delivery_interval, len(self.delivery_list))
                 return True
+
+        # The above conditions are not met so we explicitly return False
+        return False
 
 # ################################################################################################################################
 
@@ -571,7 +579,7 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def stop(self):
+    def stop(self) -> None:
         if self.keep_running:
             logger.info('Stopping delivery task for sub_key:`%s`', self.sub_key)
             self.keep_running = False
@@ -580,7 +588,7 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def clear(self):
+    def clear(self) -> None:
         gd, non_gd = self.get_queue_depth()
         logger.info('Removing messages from delivery list for sub_key:`%s, gd:%d, ngd:%d `%s`', self.sub_key, gd, non_gd,
             [elem.pub_msg_id for elem in self.delivery_list])
@@ -588,7 +596,7 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def get_queue_depth(self):
+    def get_queue_depth(self) -> 'tuple_[int, int]':
         """ Returns the number of GD and non-GD messages in delivery list.
         """
         gd = 0
@@ -602,12 +610,12 @@ class DeliveryTask(object):
 
         return gd, non_gd
 
-    def get_gd_queue_depth(self):
+    def get_gd_queue_depth(self) -> int:
         return self.get_queue_depth()[0]
 
 # ################################################################################################################################
 
-    def get_non_gd_queue_depth(self):
+    def get_non_gd_queue_depth(self) -> int:
         return self.get_queue_depth()[1]
 
 # ################################################################################################################################
