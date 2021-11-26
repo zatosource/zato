@@ -409,7 +409,7 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def _should_wake(self, _now:Callable=utcnow_as_ms) -> bool:
+    def _should_wake(self, _now:'Callable'=utcnow_as_ms) -> bool:
         """ Returns True if the task should be woken up e.g. because its time has come already to process messages,
         assumming there are any waiting for it.
         """
