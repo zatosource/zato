@@ -21,7 +21,7 @@ from zato.sso import const, status_code
 
 class UserCreateTestCase(BaseTest):
 
-    def test_user_create(self):
+    def xtest_user_create(self):
 
         now = datetime.utcnow()
         username = self._get_random_username()
@@ -39,7 +39,7 @@ class UserCreateTestCase(BaseTest):
 
 # ################################################################################################################################
 
-    def test_user_create_with_auto_approve(self):
+    def xtest_user_create_with_auto_approve(self):
 
         now = datetime.utcnow()
         username = self._get_random_username()
@@ -57,7 +57,7 @@ class UserCreateTestCase(BaseTest):
 # ################################################################################################################################
 
 class UserSignupTestCase(BaseTest):
-    def test_user_signup(self):
+    def xtest_user_signup(self):
         response = self.post('/zato/sso/user/signup', {
             'username': self._get_random_username(),
             'password': self._get_random_data(),
@@ -70,7 +70,7 @@ class UserSignupTestCase(BaseTest):
 # ################################################################################################################################
 
 class UserConfirmSignupTestCase(BaseTest):
-    def test_confirm_signup(self):
+    def xtest_confirm_signup(self):
 
         response = self.post('/zato/sso/user/signup', {
             'username': self._get_random_username(),
@@ -88,7 +88,7 @@ class UserConfirmSignupTestCase(BaseTest):
 # ################################################################################################################################
 
 class UserSearchTestCase(BaseTest):
-    def test_search(self):
+    def xtest_search(self):
 
         username1 = self._get_random_username()
         username2 = self._get_random_username()
@@ -141,7 +141,7 @@ class UserSearchTestCase(BaseTest):
 # ################################################################################################################################
 
 class UserApproveTestCase(BaseTest):
-    def test_approve(self):
+    def xtest_approve(self):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
@@ -167,7 +167,7 @@ class UserApproveTestCase(BaseTest):
 # ################################################################################################################################
 
 class UserRejectTestCase(BaseTest):
-    def test_reject(self):
+    def xtest_reject(self):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
@@ -193,7 +193,7 @@ class UserRejectTestCase(BaseTest):
 
 class UserLoginTestCase(BaseTest):
 
-    def test_user_login(self):
+    def xtest_user_login(self):
 
         self.patch('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
@@ -212,7 +212,7 @@ class UserLoginTestCase(BaseTest):
 
 class UserLogoutTestCase(BaseTest):
 
-    def test_user_logout(self):
+    def xtest_user_logout(self):
 
         self.patch('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
@@ -233,7 +233,7 @@ class UserLogoutTestCase(BaseTest):
 
 class UserGetTestCase(BaseTest):
 
-    def test_user_get_by_user_id(self):
+    def xtest_user_get_by_user_id(self):
 
         username = self._get_random_username()
         password_must_change = True
@@ -284,7 +284,7 @@ class UserGetTestCase(BaseTest):
 
 # ################################################################################################################################
 
-    def test_user_get_by_ust(self):
+    def xtest_user_get_by_ust(self):
 
         now = datetime.utcnow()
         response = self.get('/zato/sso/user', {
@@ -311,7 +311,7 @@ class UserGetTestCase(BaseTest):
 
 class UserUpdateTestCase(BaseTest):
 
-    def test_user_update_self(self):
+    def xtest_user_update_self(self):
 
         username = self._get_random_username()
         password = self._get_random_data()
@@ -375,7 +375,43 @@ class UserUpdateTestCase(BaseTest):
 
 # ################################################################################################################################
 
-    def test_user_update_by_id(self):
+    def test_user_update_self(self):
+
+        username = self._get_random_username()
+        password = self._get_random_data()
+
+        new_username = 'new_username'
+
+        response = self.post('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+            'username': username,
+            'password': password,
+        })
+
+        user_id = response.user_id
+
+        response = self.post('/zato/sso/user/approve', {
+            'ust': self.ctx.super_user_ust,
+            'user_id': user_id
+        })
+
+        self.assertEqual(response.status, status_code.ok)
+
+        response = self.post('/zato/sso/user/login', {
+            'username': username,
+            'password': password
+        })
+
+        ust = response.ust
+
+        response = self.patch('/zato/sso/user', {
+            'ust': ust,
+            'username': new_username,
+        })
+
+# ################################################################################################################################
+
+    def xtest_user_update_by_id(self):
 
         username = self._get_random_username()
         password = self._get_random_data()
@@ -441,7 +477,7 @@ class UserUpdateTestCase(BaseTest):
 
 class UserDeleteTestCase(BaseTest):
 
-    def test_user_delete_by_super_user(self):
+    def xtest_user_delete_by_super_user(self):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
@@ -473,7 +509,7 @@ class UserDeleteTestCase(BaseTest):
 
 # ################################################################################################################################
 
-    def test_user_delete_by_regular_user(self):
+    def xtest_user_delete_by_regular_user(self):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
@@ -529,7 +565,7 @@ class UserDeleteTestCase(BaseTest):
 
 class UserChangePasswordTestCase(BaseTest):
 
-    def test_user_change_password_self(self):
+    def xtest_user_change_password_self(self):
 
         username = self._get_random_username()
         password = self._get_random_data()
@@ -582,7 +618,7 @@ class UserChangePasswordTestCase(BaseTest):
 
 # ################################################################################################################################
 
-    def test_user_change_password_super_user(self):
+    def xtest_user_change_password_super_user(self):
 
         username = self._get_random_username()
         password = self._get_random_data()
