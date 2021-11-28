@@ -375,6 +375,52 @@ class UserUpdateTestCase(BaseTest):
 
 # ################################################################################################################################
 
+    def test_user_update_self_username(self):
+
+        # Test data
+        username1 = self._get_random_username()
+        password1 = self._get_random_data()
+
+        username2 = self._get_random_username()
+        password2 = self._get_random_data()
+
+        new_username = self._get_random_username()
+
+        # Create test users
+        self._create_and_approve_user(username1, password1)
+        self._create_and_approve_user(username2, password2)
+
+        # Log in the first user
+        response1 = self.post('/zato/sso/user/login', {
+            'username': username1,
+            'password': password1
+        })
+
+        # The first user should be able to set the new user name
+        response = self.patch('/zato/sso/user', {
+            'ust': response1.ust,
+            'username': new_username,
+        })
+
+        self.assertEqual(response.status, status_code.ok)
+
+        # Log in the second user
+        response2 = self.post('/zato/sso/user/login', {
+            'username': username2,
+            'password': password2
+        })
+
+        # The second user should be able to use the same username as the first one has already used
+        patch_response2 = self.patch('/zato/sso/user', {
+            'ust': response2.ust,
+            'username': new_username,
+        }, expect_ok=False)
+
+        self.assertEqual(patch_response2.status, status_code.error)
+        self.assertEqual(patch_response2.sub_status, [status_code.username.exists])
+
+# ################################################################################################################################
+
     def test_user_update_by_id(self):
 
         username = self._get_random_username()
