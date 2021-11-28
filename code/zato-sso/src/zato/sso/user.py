@@ -974,7 +974,23 @@ class UserAPI(object):
             self._ensure_no_unknown_update_attrs(attrs_allowed, data)
 
             # If username is to be changed, we need to ensure that such a username is not used by another user
-            username = ctx.data('username') # type: str
+            username = data.get('username') # type: str
+
+            # We have a username in put ..
+            if username:
+
+                # .. now, we can check whether that username is already in use ..
+                existing_user = get_user_by_name(session, username, False) # type: UserModel
+
+                # .. if it does ..
+                if existing_user:
+
+                    # .. and if the other user is not the same that we are editing ..
+                    if existing_user.user_id != _user_id:
+
+                        # .. we need to reject the new username.
+                        logger.warn('Username `%s` already exists (update)',username)
+                        raise ValidationError(status_code.username.exists, False)
 
             # If sign_up_status was given on input, it must be among allowed values
             sign_up_status = data.get('sign_up_status')
@@ -1038,6 +1054,7 @@ class UserAPI(object):
                     values(data).\
                     where(UserModelTable.c.user_id==_user_id)
                 )
+
                 session.commit()
 
 # ################################################################################################################################
