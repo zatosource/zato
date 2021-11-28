@@ -34,7 +34,7 @@ from zato.sso.odb.query import get_user_by_name
 
 # ################################################################################################################################
 
-logging.basicConfig(level=logging.WARN, format='%(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
