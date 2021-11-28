@@ -368,11 +368,12 @@ class UserAPI(object):
         password = make_password_secret(
             ctx.data['password'], self.encrypt_password, self.encrypt_func, self.hash_func)
 
-        # .. while emails are only encrypted, and it is optional.
-        if self.encrypt_email:
-            email = self._get_encrypted_email(ctx.data.get('email'))
-        else:
-            email = None
+        # .. take into account the fact that emails are optional too ..
+        email = ctx.data.get('email')
+
+        #  .. emails are only encrypted, and whether to do it is optional ..
+        if email and self.encrypt_email:
+            email = self._get_encrypted_email(email)
 
         user_model.username = ctx.data['username']
         user_model.email = email
