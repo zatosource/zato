@@ -25,6 +25,7 @@ code/release-info/revision.txt
 code/sec-wall-trunk-src/*
 code/share/*
 code/tests/*
+code/zato_extra_paths
 code/zato-cy/src/zato/cy/*.c
 code/zato-cy/src/zato/cy/*.html
 code/zato-cy/src/zato/cy/reqresp/
@@ -33,12 +34,13 @@ code/zato-cy/src/zato/cy/simpleio/*.html
 code/zato-cy/src/zato/cy/util/
 code/zato-hl7/
 code/zato-web-admin/src/zato/admin/static/css/.sass-cache/
-code/zato_extra_paths/*
+code/zato_extra_paths
 code/zato-exeagent
 code/*/build
 code/*/dist
 hotfixes
 pidfile
+.vscode
 *.egg-info*
 *.geany*
 *.pyc
@@ -46,5 +48,3 @@ pidfile
 *.so
 *.*~
 ~
-
-code/\.vscode/
