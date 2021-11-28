@@ -29,6 +29,7 @@ class UserCreateTestCase(BaseTest):
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
             'username': username,
+            'email': 'myemail@example.com',
             'is_rate_limit_active': True,
             'rate_limit_def': '*=1/d',
         })
