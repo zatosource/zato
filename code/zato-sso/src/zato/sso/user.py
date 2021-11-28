@@ -158,7 +158,8 @@ _no_such_value = object()
 class update:
 
     # Accessible to regular users only
-    regular_attrs = {'email', 'display_name', 'first_name', 'middle_name', 'last_name', 'is_totp_enabled', 'totp_label'}
+    regular_attrs = {'username', 'email', 'display_name', 'first_name', 'middle_name', 'last_name', 'is_totp_enabled',
+        'totp_label'}
 
     # Accessible to super-users only
     super_user_attrs = {'is_locked', 'password_expiry', 'password_must_change', 'sign_up_status', 'approval_status'}
@@ -179,7 +180,7 @@ class update:
     datetime_attrs = ('password_expiry',)
 
     # All attributes that may be set to None / NULL
-    none_allowed = set(regular_attrs)
+    none_allowed = set(regular_attrs) - {'username'}
 
 # ################################################################################################################################
 
@@ -960,17 +961,36 @@ class UserAPI(object):
             else:
 
                 # If current session belongs to a regular user yet a user_id was given on input,
-                # we may not continue because only super-users may update other users.
+                # we may not continue because only super-users may update other users
                 if user_id and user_id != current_session.user_id:
                     logger.warn('Current user `%s` is not a super-user, cannot update user `%s`',
                         current_session.user_id, user_id)
                     raise ValidationError(status_code.common.invalid_input, False)
 
-                # whereas regular users may change only basic attributes.
+                # Regular users may change only basic attributes
                 attrs_allowed = update.regular_attrs
 
             # Make sure current user provided only these attributes that have been explicitly allowed
             self._ensure_no_unknown_update_attrs(attrs_allowed, data)
+
+            # If username is to be changed, we need to ensure that such a username is not used by another user
+            username = data.get('username') # type: str
+
+            # We have a username in put ..
+            if username:
+
+                # .. now, we can check whether that username is already in use ..
+                existing_user = get_user_by_name(session, username, False) # type: UserModel
+
+                # .. if it does ..
+                if existing_user:
+
+                    # .. and if the other user is not the same that we are editing ..
+                    if existing_user.user_id != _user_id:
+
+                        # .. we need to reject the new username.
+                        logger.warn('Username `%s` already exists (update)',username)
+                        raise ValidationError(status_code.username.exists, False)
 
             # If sign_up_status was given on input, it must be among allowed values
             sign_up_status = data.get('sign_up_status')
@@ -1034,6 +1054,7 @@ class UserAPI(object):
                     values(data).\
                     where(UserModelTable.c.user_id==_user_id)
                 )
+
                 session.commit()
 
 # ################################################################################################################################

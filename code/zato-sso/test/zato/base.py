@@ -209,4 +209,26 @@ class BaseTest(TestCase):
         })
 
 # ################################################################################################################################
+
+    def _create_and_approve_user(self, username=None, password=None):
+
+        username = username or self._get_random_username()
+        password = password or self._get_random_data()
+
+        response = self.post('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+            'username': username,
+            'password': password,
+        })
+
+        self.assertEqual(response.status, status_code.ok)
+
+        response = self.post('/zato/sso/user/approve', {
+            'ust': self.ctx.super_user_ust,
+            'user_id': response.user_id
+        })
+
+        self.assertEqual(response.status, status_code.ok)
+
+# ################################################################################################################################
 # ################################################################################################################################
