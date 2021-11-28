@@ -158,7 +158,8 @@ _no_such_value = object()
 class update:
 
     # Accessible to regular users only
-    regular_attrs = {'email', 'display_name', 'first_name', 'middle_name', 'last_name', 'is_totp_enabled', 'totp_label'}
+    regular_attrs = {'username', 'email', 'display_name', 'first_name', 'middle_name', 'last_name', 'is_totp_enabled',
+        'totp_label'}
 
     # Accessible to super-users only
     super_user_attrs = {'is_locked', 'password_expiry', 'password_must_change', 'sign_up_status', 'approval_status'}
@@ -179,7 +180,7 @@ class update:
     datetime_attrs = ('password_expiry',)
 
     # All attributes that may be set to None / NULL
-    none_allowed = set(regular_attrs)
+    none_allowed = set(regular_attrs) - {'username'}
 
 # ################################################################################################################################
 
@@ -960,17 +961,20 @@ class UserAPI(object):
             else:
 
                 # If current session belongs to a regular user yet a user_id was given on input,
-                # we may not continue because only super-users may update other users.
+                # we may not continue because only super-users may update other users
                 if user_id and user_id != current_session.user_id:
                     logger.warn('Current user `%s` is not a super-user, cannot update user `%s`',
                         current_session.user_id, user_id)
                     raise ValidationError(status_code.common.invalid_input, False)
 
-                # whereas regular users may change only basic attributes.
+                # Regular users may change only basic attributes
                 attrs_allowed = update.regular_attrs
 
             # Make sure current user provided only these attributes that have been explicitly allowed
             self._ensure_no_unknown_update_attrs(attrs_allowed, data)
+
+            # If username is to be changed, we need to ensure that such a username is not used by another user
+            username = ctx.data('username') # type: str
 
             # If sign_up_status was given on input, it must be among allowed values
             sign_up_status = data.get('sign_up_status')
