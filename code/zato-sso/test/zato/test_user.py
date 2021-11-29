@@ -57,6 +57,7 @@ class UserCreateTestCase(BaseTest):
 # ################################################################################################################################
 
 class UserSignupTestCase(BaseTest):
+
     def test_user_signup(self):
         response = self.post('/zato/sso/user/signup', {
             'username': self._get_random_username(),
@@ -70,6 +71,7 @@ class UserSignupTestCase(BaseTest):
 # ################################################################################################################################
 
 class UserConfirmSignupTestCase(BaseTest):
+
     def test_confirm_signup(self):
 
         response = self.post('/zato/sso/user/signup', {
@@ -88,6 +90,7 @@ class UserConfirmSignupTestCase(BaseTest):
 # ################################################################################################################################
 
 class UserSearchTestCase(BaseTest):
+
     def test_search(self):
 
         username1 = self._get_random_username()
@@ -141,6 +144,7 @@ class UserSearchTestCase(BaseTest):
 # ################################################################################################################################
 
 class UserApproveTestCase(BaseTest):
+
     def test_approve(self):
 
         response = self.post('/zato/sso/user', {
@@ -167,6 +171,7 @@ class UserApproveTestCase(BaseTest):
 # ################################################################################################################################
 
 class UserRejectTestCase(BaseTest):
+
     def test_reject(self):
 
         response = self.post('/zato/sso/user', {
@@ -191,7 +196,7 @@ class UserRejectTestCase(BaseTest):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class UserLoginTestCase(BaseTest):
+class UserLoginValidTestCase(BaseTest):
 
     def test_user_login(self):
 
@@ -206,6 +211,116 @@ class UserLoginTestCase(BaseTest):
         })
 
         self.assertIsNotNone(response.ust)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class UserLoginInvalidUsernameTestCase(BaseTest):
+
+    def test_user_login_invalid_username(self):
+
+        response = self.post('/zato/sso/user/login', {
+            'username': self._get_random_username(),
+            'password': Config.super_user_password,
+        }, expect_ok=False)
+
+        self.assertEqual(response.status, status_code.error)
+        self.assertListEqual(response.sub_status, [status_code.auth.not_allowed])
+        self.assertNotIn('ust', response)
+
+# ################################################################################################################################
+
+    def test_user_login_empty_username_string(self):
+
+        response = self.post('/zato/sso/user/login', {
+            'username': '',
+            'password': Config.super_user_password,
+        }, expect_ok=False)
+
+        self.assertEqual(response.status, status_code.error)
+        self.assertListEqual(response.sub_status, [status_code.auth.not_allowed])
+        self.assertNotIn('ust', response)
+
+# ################################################################################################################################
+
+    def test_user_login_empty_username_none(self):
+
+        response = self.post('/zato/sso/user/login', {
+            'username': None,
+            'password': Config.super_user_password,
+        }, expect_ok=False)
+
+        self.assertEqual(response.status, status_code.error)
+        self.assertListEqual(response.sub_status, [status_code.auth.not_allowed])
+        self.assertNotIn('ust', response)
+
+# ################################################################################################################################
+
+    def test_user_login_no_username(self):
+
+        response = self.post('/zato/sso/user/login', {
+            'password': Config.super_user_password,
+        }, expect_ok=False)
+
+        self.assertEqual(response.result, 'Error')
+        self.assertEqual(response.details, 'Invalid input')
+        self.assertIn('cid', response)
+        self.assertNotIn('ust', response)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class UserLoginInvalidPasswordTestCase(BaseTest):
+
+    def test_user_login_invalid_password(self):
+
+        response = self.post('/zato/sso/user/login', {
+            'username': Config.super_user_name,
+            'password': self._get_random_data(),
+        }, expect_ok=False)
+
+        self.assertEqual(response.status, status_code.error)
+        self.assertListEqual(response.sub_status, [status_code.auth.not_allowed])
+        self.assertNotIn('ust', response)
+
+# ################################################################################################################################
+
+    def test_user_login_empty_password_string(self):
+
+        response = self.post('/zato/sso/user/login', {
+            'username': Config.super_user_name,
+            'password': '',
+        }, expect_ok=False)
+
+        self.assertEqual(response.status, status_code.error)
+        self.assertListEqual(response.sub_status, [status_code.auth.not_allowed])
+        self.assertNotIn('ust', response)
+
+# ################################################################################################################################
+
+    def test_user_login_empty_username_none(self):
+
+        response = self.post('/zato/sso/user/login', {
+            'username': None,
+            'password': Config.super_user_password,
+        }, expect_ok=False)
+
+        self.assertEqual(response.status, status_code.error)
+        self.assertListEqual(response.sub_status, [status_code.auth.not_allowed])
+        self.assertNotIn('ust', response)
+
+# ################################################################################################################################
+
+    def test_user_login_no_password(self):
+
+        response = self.post('/zato/sso/user/login', {
+            'username': Config.super_user_name,
+        }, expect_ok=False)
+
+        self.assertEqual(response.result, 'Error')
+        self.assertEqual(response.details, 'Invalid input')
+        self.assertIn('cid', response)
+        self.assertNotIn('ust', response)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -372,6 +487,52 @@ class UserUpdateTestCase(BaseTest):
         self.assertEqual(response.last_name, last_name)
         self.assertEqual(response.middle_name, middle_name)
         self.assertEqual(response.username, username)
+
+# ################################################################################################################################
+
+    def test_user_update_self_username(self):
+
+        # Test data
+        username1 = self._get_random_username()
+        password1 = self._get_random_data()
+
+        username2 = self._get_random_username()
+        password2 = self._get_random_data()
+
+        new_username = self._get_random_username()
+
+        # Create test users
+        self._create_and_approve_user(username1, password1)
+        self._create_and_approve_user(username2, password2)
+
+        # Log in the first user
+        response1 = self.post('/zato/sso/user/login', {
+            'username': username1,
+            'password': password1
+        })
+
+        # The first user should be able to set the new user name
+        response = self.patch('/zato/sso/user', {
+            'ust': response1.ust,
+            'username': new_username,
+        })
+
+        self.assertEqual(response.status, status_code.ok)
+
+        # Log in the second user
+        response2 = self.post('/zato/sso/user/login', {
+            'username': username2,
+            'password': password2
+        })
+
+        # The second user should be able to use the same username as the first one has already used
+        patch_response2 = self.patch('/zato/sso/user', {
+            'ust': response2.ust,
+            'username': new_username,
+        }, expect_ok=False)
+
+        self.assertEqual(patch_response2.status, status_code.error)
+        self.assertEqual(patch_response2.sub_status, [status_code.username.exists])
 
 # ################################################################################################################################
 
