@@ -222,7 +222,14 @@ class SessionAPI(object):
             if ctx.input.get('username'):
                 user = get_user_by_name(session, ctx.input['username']) # type: SSOUser
             else:
-                user = get_user_by_id(session, ctx.input['user_id']) # type: SSOUser
+                user = get_user_by_id(session, ctx.input.get('user_id')) # type: SSOUser
+
+            # If we do not have a user object here, it means that the input was invalid and there is no such user
+            if not user:
+                logger.warn('User not found; username:`%s`, user_id:`%s`',
+
+                    ctx.input.get('username'), ctx.input.get('user_id'))
+                raise ValidationError(status_code.auth.not_allowed, False)
 
             if not skip_sec:
 
@@ -231,6 +238,14 @@ class SessionAPI(object):
                 # because they were checked externally and user_id is the SSO user linked to the
                 # already validated external credentials.
                 if not is_logged_in_ext:
+
+                    # Local alias
+                    input_password = ctx.input['password']
+
+                    # Make sure we have a password on input
+                    if not input_password:
+                        logger.warn('Password missing on input; user_id:`%s`', user.user_id)
+                        raise ValidationError(status_code.auth.not_allowed, False)
 
                     # This may have been encrypted by SIO
                     ctx.input['password'] = self.decrypt_func(ctx.input['password'])

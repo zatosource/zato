@@ -34,6 +34,7 @@ from lxml.etree import _Element as EtreeElementClass, Element, SubElement, tostr
 
 # Zato
 from zato.common.api import APISPEC, DATA_FORMAT, ZATO_NONE
+from zato.common.marshal_.api import ElementMissing
 from zato.common.odb.api import WritableKeyedTuple
 from zato.common.pubsub import PubSubMessage
 from zato.util_convert import to_bool
@@ -1929,8 +1930,13 @@ class CySimpleIO(object):
                     elif is_csv:
                         all_elems = elem
 
-                    raise ValueError('{}; No such input elem `{}` among `{}` in `{}`'.format(
+                    # This goes to logs ..
+                    logger.warn('%s; No such input elem `%s` among `%s` in `%s`' % (
                         self.service_class, sio_item_name, all_elems, elem))
+
+                    # .. while this is potentially returned to users.
+                    raise ElementMissing(sio_item_name)
+
                 else:
                     if self._should_skip_on_input(self.definition, sio_item, input_value):
                         continue
