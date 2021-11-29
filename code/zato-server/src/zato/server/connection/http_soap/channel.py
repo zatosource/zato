@@ -430,6 +430,7 @@ class RequestDispatcher(object):
 
                     elif isinstance(e, (BadRequest, ModelValidationError)):
                         status = _status_bad_request
+                        response = 'Invalid input'
 
                     elif isinstance(e, NotFound):
                         status = _status_not_found
