@@ -623,7 +623,7 @@ class UserAPI(object):
 # ################################################################################################################################
 
     def _get_user(self, cid, func, query_criteria, current_ust, current_app, remote_addr, _needs_super_user,
-        queries_current_session, _utcnow=_utcnow):
+        queries_current_session, return_all_attrs, _utcnow=_utcnow):
         """ Returns a user by a specific function and business value.
         """
         with closing(self.odb_session_func()) as session:
@@ -649,15 +649,22 @@ class UserAPI(object):
                 out = UserEntity()
                 out.is_current_super_user = current_session.is_super_user
 
-                if current_session.is_super_user:
+                access_msg = 'Cid:%s. Accessing %s user attrs (s:%d, r:%d).'
+
+                if current_session.is_super_user or return_all_attrs:
+                    logger.info(access_msg, cid, 'all', current_session.is_super_user, return_all_attrs)
                     attrs = _all_super_user_attrs
                     out.is_approval_needed = self.sso_conf.signup.is_approval_needed
                 else:
+                    logger.info(access_msg, cid, 'regular', current_session.is_super_user, return_all_attrs)
                     attrs = regular_attrs
 
                 for key in attrs:
 
                     value = getattr(info, key, None)
+
+                    if key == 'is_approval_needed':
+                        value = value or False
 
                     if isinstance(value, datetime):
                         value = value.isoformat()
@@ -688,29 +695,37 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def get_current_user(self, cid, current_ust, current_app, remote_addr):
+    def get_current_user(self, cid, current_ust, current_app, remote_addr, return_all_attrs=False):
         """ Returns a user object by that person's current UST.
         """
         # PII audit comes first
         audit_pii.info(cid, 'user.get_current_user', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
         return self._get_user(
-            cid, get_user_by_ust, self.decrypt_func(current_ust), current_ust, current_app, remote_addr, False, True)
+            cid, get_user_by_ust, self.decrypt_func(current_ust), current_ust, current_app, remote_addr,
+            _needs_super_user=False,
+            queries_current_session=True,
+            return_all_attrs=return_all_attrs
+        )
 
 # ################################################################################################################################
 
-    def get_user_by_id(self, cid, user_id, current_ust, current_app, remote_addr):
+    def get_user_by_id(self, cid, user_id, current_ust, current_app, remote_addr, return_all_attrs=False):
         """ Returns a user object by that person's ID.
         """
         # PII audit comes first
         audit_pii.info(cid, 'user.get_user_by_id', target_user=user_id,
             extra={'current_app':current_app, 'remote_addr':remote_addr})
 
-        return self._get_user(cid, get_user_by_id, user_id, current_ust, current_app, remote_addr, True, False)
+        return self._get_user(cid, get_user_by_id, user_id, current_ust, current_app, remote_addr,
+            _needs_super_user=True,
+            queries_current_session=False,
+            return_all_attrs=return_all_attrs
+        )
 
 # ################################################################################################################################
 
-    def get_user_by_linked_auth(self, cid, sec_type, sec_username, current_ust, current_app, remote_addr):
+    def get_user_by_linked_auth(self, cid, sec_type, sec_username, current_ust, current_app, remote_addr, return_all_attrs=False):
         """ Returns a user object by that person's linked security name, e.g. maps a Basic Auth username to an SSO user.
         """
         # PII audit comes first
@@ -718,7 +733,11 @@ class UserAPI(object):
             extra={'current_app':current_app, 'remote_addr':remote_addr, 'sec_type': sec_type})
 
         return self._get_user(
-            cid, get_user_by_linked_sec, (sec_type, sec_username), current_ust, current_app, remote_addr, False, True)
+            cid, get_user_by_linked_sec, (sec_type, sec_username), current_ust, current_app, remote_addr,
+            _needs_super_user=False,
+            queries_current_session=True,
+            return_all_attrs=return_all_attrs
+        )
 
 # ################################################################################################################################
 
