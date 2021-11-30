@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -17,9 +15,10 @@ from collections import Counter
 from datetime import datetime
 from http.client import OK
 from traceback import format_exc
+from typing import Callable
 
 # pytz
-from pytz import UTC
+from pytz import utc
 
 # YAML
 import yaml
@@ -41,7 +40,7 @@ public_method_prefix = '_lb_agent_'
 config_file = 'zato.config'
 
 logger = logging.getLogger('')
-logging.addLevelName('TRACE1', TRACE1)
+logging.addLevelName(TRACE1, 'TRACE1')
 
 # All known HAProxy commands
 haproxy_commands = {}
@@ -52,6 +51,10 @@ for _ignored_version, commands in haproxy_stats.items():
 # ################################################################################################################################
 
 class BaseLoadBalancerAgent(object):
+
+    # This is implemented by children classes
+    register_function: Callable
+
     def init_config(self, repo_dir):
 
         self.repo_dir = os.path.abspath(repo_dir)
@@ -69,11 +72,12 @@ class BaseLoadBalancerAgent(object):
 
         log_config = os.path.abspath(os.path.join(self.repo_dir, self.json_config['log_config']))
         with open(log_config) as f:
-            logging.config.dictConfig(yaml.load(f, yaml.FullLoader))
+            data = yaml.load(f, yaml.FullLoader) # type: dict
+            logging.config.dictConfig(data) # pyright: reportGeneralTypeIssues=false
 
         self.config_path = os.path.join(self.repo_dir, config_file)
         self.config = self._read_config()
-        self.start_time = datetime.utcnow().replace(tzinfo=UTC).isoformat()
+        self.start_time = datetime.utcnow().replace(tzinfo=utc).isoformat()
         self.haproxy_stats = HAProxyStats(self.config.global_['stats_socket'])
 
         RepoManager(self.repo_dir).ensure_repo_consistency()
@@ -107,15 +111,6 @@ class BaseLoadBalancerAgent(object):
         """
         additional_params = ['-sf', open(self.haproxy_pidfile).read().strip()]
         self._re_start_load_balancer('Could not restart in `{}` seconds. ', 'Failed to restart HAProxy. ', additional_params)
-
-# ################################################################################################################################
-
-    def _dispatch(self, method, params):
-        try:
-            return super(BaseLoadBalancerAgent, self)._dispatch(method, params)
-        except Exception as e:
-            logger.error(format_exc())
-            raise e
 
 # ################################################################################################################################
 

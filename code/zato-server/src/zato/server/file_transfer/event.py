@@ -139,7 +139,7 @@ class FileTransferEventHandler:
 
             if self.config.is_hot_deploy:
                 spawn_greenlet(hot_deploy, self.manager.server, event.file_name, event.full_path,
-                    self.config.should_delete_after_pickup)
+                    self.config.should_delete_after_pickup, should_deploy_in_place=self.config.should_deploy_in_place)
                 return
 
             if self.config.should_read_on_pickup:

@@ -147,7 +147,7 @@ def get_expiration(cid, input, default_expiration=_default_expiration):
 class PubSub(object):
 
     def __init__(self, cluster_id, server, broker_client=None):
-        # type: (int, ParallelServer, object)
+        # type: (int, ParallelServer, object) -> None
 
         self.cluster_id = cluster_id
         self.server = server
@@ -258,7 +258,6 @@ class PubSub(object):
     def _get_subscription_by_sub_key(self, sub_key):
         """ Low-level implementation of self.get_subscription_by_sub_key, must be called with self.lock held.
         """
-        # type: (str) -> Subscription
         return self.subscriptions_by_sub_key[sub_key]
 
 # ################################################################################################################################
@@ -292,7 +291,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def _write_log_sub_data(self, sub, out):
-        # type: (Subscription, StringIO)
+        # type: (Subscription, StringIO) -> None
         items = sorted(sub.to_dict().items())
 
         out.write('\n')
@@ -305,7 +304,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def _log_subscriptions_dict(self, attr_name, prefix, title):
-        # type: (str, str, str)
+        # type: (str, str, str) -> None
         out = StringIO()
         out.write('\n')
 
@@ -333,28 +332,25 @@ class PubSub(object):
 # ################################################################################################################################
 
     def log_subscriptions_by_sub_key(self, title, prefix='PubSub.subscriptions_by_sub_key'):
-        # type: (str, str)
+        # type: (str, str) -> None
         with self.lock:
             self._log_subscriptions_dict('subscriptions_by_sub_key', prefix, title)
 
 # ################################################################################################################################
 
     def log_subscriptions_by_topic_name(self, title, prefix='PubSub.subscriptions_by_topic'):
-        # type: (str, str)
         with self.lock:
             self._log_subscriptions_dict('subscriptions_by_topic', prefix, title)
 
 # ################################################################################################################################
 
     def has_sub_key(self, sub_key):
-        # type: (str) -> bool
         with self.lock:
             return sub_key in self.subscriptions_by_sub_key
 
 # ################################################################################################################################
 
     def has_messages_in_backlog(self, sub_key):
-        # type: (str) -> bool
         with self.lock:
             return self.sync_backlog.has_messages_by_sub_key(sub_key)
 
@@ -363,7 +359,6 @@ class PubSub(object):
     def _len_subscribers(self, topic_name):
         """ Low-level implementation of self.len_subscribers, must be called with self.lock held.
         """
-        # type: (str) -> int
         return len(self.subscriptions_by_topic[topic_name])
 
 # ################################################################################################################################
@@ -371,7 +366,6 @@ class PubSub(object):
     def len_subscribers(self, topic_name):
         """ Returns the amount of subscribers for a given topic.
         """
-        # type: (str) -> int
         with self.lock:
             return self._len_subscribers(topic_name)
 
@@ -380,7 +374,6 @@ class PubSub(object):
     def has_subscribers(self, topic_name):
         """ Returns True if input topic has at least one subscriber.
         """
-        # type: (str) -> bool
         with self.lock:
             return self._len_subscribers(topic_name) > 0
 
@@ -753,7 +746,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def create_topic_for_service(self, service_name, topic_name):
-        # type: (str, str)
+        # type: (str, str) -> None
         self.create_topic(topic_name, is_internal=True)
         logger.info('Created topic `%s` for service `%s`', topic_name, service_name)
 
@@ -818,7 +811,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def set_config_for_service_subscription(self, sub_key, _endpoint_type=PUBSUB.ENDPOINT_TYPE.SERVICE.id):
-        # type: (str, str)
+        # type: (str, str) -> None
         self.service_pubsub_tool.add_sub_key(sub_key)
         self.set_sub_key_server({
             'sub_key': sub_key,
@@ -1449,7 +1442,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def invoke_service(self, name, msg, *args, **kwargs):
-        # type: () -> SimpleIOPayload
+        # type: (str, object, object, object) -> SimpleIOPayload
         return self.server.invoke(name, msg, *args, **kwargs)
 
 # ################################################################################################################################
@@ -1659,7 +1652,7 @@ class PubSub(object):
         POST /zato/pubsub/topic/{topic_name}
         """
         # For later use
-        from_service = kwargs.get('service') # type: Service
+        from_service:Service = kwargs.get('service') # type: ignore
         ext_client_id = from_service.name if from_service else kwargs.get('ext_client_id')
 
         # The first one is used if name is a service, the other one if it is a regular topic
@@ -1875,7 +1868,7 @@ class PubSub(object):
 
         # This is a subscription for a WebSocket client ..
         if use_current_wsx:
-            service = kwargs.get('service')
+            service:Service = kwargs.get('service') # type: ignore
 
             if use_current_wsx and (not service):
                 raise Exception('Parameter `service` is required if `use_current_wsx` is True')
@@ -1888,11 +1881,16 @@ class PubSub(object):
 
             # All set, we can carry on with other steps now
             sub_service_name = PUBSUB.SUBSCRIBE_CLASS.get(PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id)
-            wsgi_environ = service.wsgi_environ or kwargs.get('wsgi_environ')
+            wsgi_environ = service.wsgi_environ # type: dict
+            kwargs_wsgi_environ = kwargs.get('wsgi_environ') or {} # type: dict
+            wsgi_environ = wsgi_environ or kwargs_wsgi_environ
             wsgi_environ['zato.request_ctx.pubsub.unsub_on_wsx_close'] = kwargs.get('unsub_on_wsx_close')
 
         # .. this is a subscription for any client that is not WebSockets-based
         else:
+
+            # We do not use WebSockets here
+            wsx = None
 
             # Non-WSX endpoints always need to be identified by their names
             endpoint_name = kwargs.get('endpoint_name')
@@ -1912,7 +1910,8 @@ class PubSub(object):
 
         # If this was a WebSocket caller, we can now update its pub/sub metadata
         if use_current_wsx:
-            wsx.set_last_interaction_data('pubsub.subscribe')
+            if wsx:
+                wsx.set_last_interaction_data('pubsub.subscribe')
 
         return response.sub_key
 

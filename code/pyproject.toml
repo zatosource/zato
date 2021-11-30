@@ -1,0 +1,24 @@
+[tool.pyright]
+pythonVersion = "3.8"
+typeCheckingMode = "basic"
+reportImplicitStringConcatenation = "error"
+reportMissingParameterType = "error"
+#reportUnknownArgumentType = "error"
+#reportUnknownMemberType = "error"
+reportUnusedCallResult = "error"
+reportGeneralTypeIssues = "error"
+extraPaths = [
+    "./eggs",
+    "./zato-agent/src",
+    "./zato-cli/src",
+    "./zato-common/src",
+    "./zato-cy/src",
+    "./zato-distlock/src",
+    "./zato-hl7/src",
+    "./zato-scheduler/src",
+    "./zato-server/src",
+    "./zato-sso/src",
+    "./zato-testing/src",
+    "./zato-web-admin/src",
+    "./zato-zmq/src",
+]

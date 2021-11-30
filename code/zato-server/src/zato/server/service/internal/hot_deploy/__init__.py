@@ -15,6 +15,7 @@ from datetime import datetime
 from errno import ENOENT
 from importlib import import_module
 from inspect import getsourcefile
+from json import loads
 from time import sleep
 from traceback import format_exc
 
@@ -227,12 +228,13 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def _deploy_file(self, current_work_dir, payload, file_name):
+    def _deploy_file(self, current_work_dir, payload, file_name, should_deploy_in_place):
         # type: (str, object, str) -> DeploymentCtx
 
-        with open(file_name, 'w', encoding='utf-8') as f:
-            payload = payload.decode('utf8') if isinstance(payload, bytes) else payload
-            f.write(payload)
+        if not should_deploy_in_place:
+            with open(file_name, 'w', encoding='utf-8') as f:
+                payload = payload.decode('utf8') if isinstance(payload, bytes) else payload
+                f.write(payload)
 
         model_name_list = self._deploy_models(current_work_dir, file_name)
         service_id_list = self._deploy_services(current_work_dir, file_name)
@@ -246,18 +248,22 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def _deploy_package(self, session, package_id, payload_name, payload):
+    def _deploy_package(self, session, package_id, payload_name, payload, should_deploy_in_place, in_place_dir_name):
         """ Deploy a package, either a plain Python file or an archive, and update
         the deployment status.
         """
         # type: (object, int, str, str)
 
         # Local objects
-        current_work_dir = self.server.hot_deploy_config.current_work_dir
-        file_name = os.path.join(current_work_dir, payload_name)
+        if should_deploy_in_place:
+            work_dir = in_place_dir_name
+        else:
+            work_dir = self.server.hot_deploy_config.current_work_dir
+
+        file_name = os.path.join(work_dir, payload_name)
 
         # Deploy some objects of interest from the file ..
-        ctx = self._deploy_file(current_work_dir, payload, file_name)
+        ctx = self._deploy_file(work_dir, payload, file_name, should_deploy_in_place)
 
         # We enter here if there were some models or services that we deployed ..
         if ctx.model_name_list or ctx.service_name_list:
@@ -308,8 +314,15 @@ class Create(AdminService):
     def deploy_package(self, package_id, session):
         dp = self.get_package(package_id, session)
 
+        # Load JSON details so that we can find out if we are to hot-deploy in place or not ..
+        details = loads(dp.details)
+
+        should_deploy_in_place = details['should_deploy_in_place']
+        in_place_dir_name = os.path.dirname(details['fs_location'])
+
         if is_archive_file(dp.payload_name) or is_python_file(dp.payload_name):
-            return self._deploy_package(session, package_id, dp.payload_name, dp.payload)
+            return self._deploy_package(session, package_id, dp.payload_name, dp.payload,
+                should_deploy_in_place, in_place_dir_name)
         else:
             # This shouldn't really happen at all because the pickup notifier is to
             # filter such things out but life is full of surprises
