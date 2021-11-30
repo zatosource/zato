@@ -143,12 +143,17 @@ def get_endpoint_metadata(server, endpoint_id):
     # All topics from all PIDs
     topic_list = []
 
+    # Information about a single topic
+    topic_dict = {}
+
     response = server.rpc.invoke_all('zato.pubsub.endpoint.get-endpoint-metadata', {'endpoint_id':endpoint_id})
 
     for pid_response in response.data: # type: dict
         for pid_topic_list in pid_response.values(): # type: list
             for topic_data in pid_topic_list: # type: dict
-                topic_list.append(topic_data)
+                topic_id = topic_data['topic_id']
+                topic_dict[topic_id] = topic_data
+                topic_list.append(topic_dict)
 
     return get_last_topics(topic_list, as_list=True)
 

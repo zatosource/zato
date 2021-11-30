@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from dataclasses import dataclass, field as dc_field
 from datetime import datetime
 from typing import List as list_
 
@@ -20,7 +21,6 @@ from future.utils import iteritems
 # Zato
 from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
 from zato.common.exception import BadRequest
-from zato.common.ext.dataclasses import dataclass, field as dc_field
 from zato.common.pubsub import dict_keys
 from zato.common.util.api import make_repr
 from zato.common.util.time_ import utcnow_as_ms
@@ -142,7 +142,8 @@ class EventType:
 # ################################################################################################################################
 
 class ToDictBase(object):
-    _to_dict_keys = None
+    _to_dict_keys:tuple
+    config:dict
 
     def to_dict(self):
         out = {}
@@ -216,18 +217,18 @@ class Endpoint(ToDictBase):
         }
 
         for key, config in iteritems(data):
-            is_topic = key == 'topic'
+            is_topic = key == 'topic' # type: bool
 
             for line in config.splitlines():
                 line = line.strip()
                 if line.startswith('pub=') or line.startswith('sub='):
-                    is_pub = line.startswith('pub=')
+                    is_pub = line.startswith('pub=') # type: bool
 
                     matcher = line[line.find('=')+1:]
                     matcher = globre_compile(matcher)
 
                     source = (is_pub, is_topic)
-                    target = targets[source]
+                    target = targets[source] # type: ignore
                     target.append([line, matcher])
 
                 else:
@@ -369,7 +370,7 @@ class Subscription(ToDictBase):
 # ################################################################################################################################
 
     def __lt__(self, other):
-        # type: (Subscription)
+        # type: (Subscription) -> bool
         return self.sub_key < other.sub_key
 
 # ################################################################################################################################

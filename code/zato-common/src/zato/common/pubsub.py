@@ -13,7 +13,7 @@ from logging import getLogger
 from past.builtins import unicode
 
 # Zato
-from zato.common.api import GENERIC
+from zato.common.api import GENERIC, PUBSUB
 from zato.common.util.api import new_cid
 from zato.common.util.time_ import utcnow_as_ms
 
@@ -103,7 +103,7 @@ class PubSubMessage(object):
         self.data_prefix = ''
         self.data_prefix_short = ''
         self.mime_type = None
-        self.priority = None
+        self.priority = PUBSUB.PRIORITY.DEFAULT
         self.expiration = None
         self.expiration_time = None
         self.has_gd = None
