@@ -1009,7 +1009,7 @@ class WorkerStore(_WorkerStoreBase):
         topic_list = config.get('topic_list') or []
         topic_list = topic_list if isinstance(topic_list, list) else [topic_list]
 
-        return bunchify({
+        data = {
 
           # Tell the manager to start this channel only
           # if we are very first process among potentially many ones for this server.
@@ -1023,7 +1023,7 @@ class WorkerStore(_WorkerStoreBase):
           'source_type': FILE_TRANSFER.SOURCE_TYPE.LOCAL.id,
           'pickup_from_list': pickup_from_list,
           'is_hot_deploy': config.get('is_hot_deploy'),
-          'should_deploy_in_place': config.get('deploy_in_place'),
+          'should_deploy_in_place': config.get('deploy_in_place', False),
           'service_list': service_list,
           'topic_list': topic_list,
           'move_processed_to': move_processed_to,
@@ -1037,7 +1037,9 @@ class WorkerStore(_WorkerStoreBase):
           'is_recursive': config.get('is_recursive', False),
           'binary_file_patterns': config.get('binary_file_patterns') or [],
           'outconn_rest_list': [],
-        })
+        }
+
+        return bunchify(data)
 
 # ################################################################################################################################
 
@@ -1052,7 +1054,8 @@ class WorkerStore(_WorkerStoreBase):
         for name, config in self.server.pickup_config.items():
             if name.startswith(HotDeploy.UserPrefix):
                 self._add_service_pickup_to_file_transfer(
-                    'hot-deploy-user-prefix', config.pickup_from, False, config.get('deploy_in_place'))
+                    'hot-deploy-user-prefix', config.pickup_from, False,
+                    config.get('deploy_in_place', True))
 
         # Convert all the other pickup entries
         self._convert_pickup_to_file_transfer()

@@ -228,12 +228,13 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def _deploy_file(self, current_work_dir, payload, file_name):
+    def _deploy_file(self, current_work_dir, payload, file_name, should_deploy_in_place):
         # type: (str, object, str) -> DeploymentCtx
 
-        #with open(file_name, 'w', encoding='utf-8') as f:
-        #    payload = payload.decode('utf8') if isinstance(payload, bytes) else payload
-        #    f.write(payload)
+        if not should_deploy_in_place:
+            with open(file_name, 'w', encoding='utf-8') as f:
+                payload = payload.decode('utf8') if isinstance(payload, bytes) else payload
+                f.write(payload)
 
         model_name_list = self._deploy_models(current_work_dir, file_name)
         service_id_list = self._deploy_services(current_work_dir, file_name)
@@ -262,7 +263,7 @@ class Create(AdminService):
         file_name = os.path.join(work_dir, payload_name)
 
         # Deploy some objects of interest from the file ..
-        ctx = self._deploy_file(work_dir, payload, file_name)
+        ctx = self._deploy_file(work_dir, payload, file_name, should_deploy_in_place)
 
         # We enter here if there were some models or services that we deployed ..
         if ctx.model_name_list or ctx.service_name_list:
