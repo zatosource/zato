@@ -241,15 +241,27 @@ class SSOTestService(Service):
         # .. make sure that none of the super-user-only attributes were returned ..
         for name in super_user_attrs:
             value = getattr(sso_user_regular_attrs, name)
-            assert value is None
+            if value:
+                raise Exception('Value of {} should not be given'.format(name))
 
         # .. however, regular attrs should be still available
-        # sso_user.is_current_super_user -> False
-        #username
-        #display_name
-        #totp_label
 
-        # .. get the user back, but without requiring for all the attributes to be returned ..
+        if sso_user_regular_attrs.is_current_super_user is not False:
+            raise Exception('Value of sso_user_regular_attrs.is_current_super_user should be False')
+
+        if sso_user_regular_attrs.username != username:
+            raise Exception('Value of sso_user_regular_attrs.username should be equal to `{}` instead of `{}`'.format(
+                username, sso_user_regular_attrs.username))
+
+        if sso_user_regular_attrs.display_name != display_name:
+            raise Exception('Value of sso_user_regular_attrs.display_name should be equal to `{}` instead of `{}`'.format(
+                display_name, sso_user_regular_attrs.display_name))
+
+        if sso_user_regular_attrs.totp_label != totp_label:
+            raise Exception('Value of sso_user_regular_attrs.totp_label should be equal to `{}` instead of `{}`'.format(
+                totp_label, sso_user_regular_attrs.totp_label))
+
+        # .. now, get the user back but without requiring for all the attributes to be returned ..
         sso_user_all_attrs = self.sso.user.get_current_user(self.cid, user_session.ust,
             config.current_app, remote_addr, return_all_attrs=True)
 
