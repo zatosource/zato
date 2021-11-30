@@ -12,6 +12,7 @@ from copy import deepcopy
 from logging import getLogger
 from threading import current_thread
 from traceback import format_exc, format_exception
+from typing import cast, Iterable as iterable_, Iterator as iterator
 
 # gevent
 from gevent import sleep, spawn
@@ -28,6 +29,7 @@ from future.utils import iteritems
 from zato.common.api import GENERIC, PUBSUB
 from zato.common.json_internal import json_loads
 from zato.common.pubsub import PubSubMessage
+from zato.common.typing_ import any_, anylist, anytuple, dict_, dictlist, list_, set_, strlist, tuple_
 from zato.common.util.api import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub.model import DeliveryResultCtx
@@ -35,13 +37,19 @@ from zato.server.pubsub.model import DeliveryResultCtx
 # ################################################################################################################################
 
 if 0:
+    from collections.abc import ValuesView
     from typing import Callable
     from bunch import Bunch
+    from sqlalchemy.orm import Session
+    from zato.common.pubsub import HandleNewMessageCtx
     from zato.server.pubsub import PubSub
 
     Bunch = Bunch
     Callable = Callable
+    HandleNewMessageCtx = HandleNewMessageCtx
     PubSub = PubSub
+    Session = Session
+    ValuesView = ValuesView
 
 # ################################################################################################################################
 
@@ -57,40 +65,58 @@ run_deliv_sc = PUBSUB.RunDeliveryStatus.StatusCode
 run_deliv_rc = PUBSUB.RunDeliveryStatus.ReasonCode
 
 deliv_exc_msg = 'Exception {}/{} in delivery iter #{} for `{}` sk:{} -> {}'
+_zato_mime_type = PUBSUB.MIMEType.Zato
+
+# ################################################################################################################################
+
+msglist   = list_['Message']
+gdmsglist = list_['GDMessage']
+msgiter   = iterable_['Message']
 
 # ################################################################################################################################
 
 class SortedList(_SortedList):
     """ A custom subclass that knows how to remove pubsub messages from SortedList instances.
     """
-    def remove_pubsub_msg(self, msg):
+
+    def __iter__(self) -> iterator['Message']:
+        return super().__iter__() # type: ignore
+
+    def remove_pubsub_msg(self, msg:'Message') -> None:
         """ Removes a pubsub message from a SortedList instance - we cannot use the regular .remove method
         because it may triggger __cmp__ per https://github.com/grantjenks/sorted_containers/issues/81.
         """
-        # type (Message)
-        logger.info('In remove_pubsub_msg msg:`%s`, mxs:`%s`', msg.pub_msg_id, self._maxes)
-        pos = bisect_left(self._maxes, msg)
+        logger.info('In remove_pubsub_msg msg:`%s`, mxs:`%s`', msg.pub_msg_id, self._maxes) # type: ignore
+        pos = bisect_left(self._maxes, msg) # type: ignore
 
-        if pos == len(self._maxes):
+        if pos == len(self._maxes): # type: ignore
             raise ValueError('{0!r} not in list'.format(msg))
 
-        for _list_idx, _list_msg in enumerate(self._lists[pos]):
-            if msg.pub_msg_id == _list_msg.pub_msg_id:
+        for _list_idx, _list_msg in enumerate(self._lists[pos]): # type: ignore
+            if msg.pub_msg_id == _list_msg.pub_msg_id: # type: ignore
                 idx = _list_idx
                 break
         else:
             raise ValueError('{0!r} not in list'.format(msg))
 
-        self._delete(pos, idx)
+        self._delete(pos, idx) # type: ignore
 
 # ################################################################################################################################
 
 class DeliveryTask(object):
     """ Runs a greenlet responsible for delivery of messages for a given sub_key.
     """
-    def __init__(self, pubsub_tool, pubsub, sub_key, delivery_lock, delivery_list, deliver_pubsub_msg,
-            confirm_pubsub_msg_delivered_cb, sub_config):
-        # type: (PubSubTool, PubSub, str, RLock, SortedList, object, object, Bunch)
+    def __init__(self,
+            pubsub_tool,   # type: PubSubTool
+            pubsub,        # type: PubSub
+            sub_key,       # type: str
+            delivery_lock, # type: RLock
+            delivery_list, # type: SortedList
+            deliver_pubsub_msg,              # type: Callable
+            confirm_pubsub_msg_delivered_cb, # type: Callable
+            sub_config # type: Bunch
+        ) -> None:
+
         self.keep_running = True
         self.pubsub_tool = pubsub_tool
         self.pubsub = pubsub
@@ -121,7 +147,7 @@ class DeliveryTask(object):
 
         # A list of messages that were requested to be deleted while a delivery was in progress,
         # checked before each delivery.
-        self.delete_requested = []
+        self.delete_requested:list_['Message'] = []
 
         # This is a lock used for micro-operations such as changing or consulting the contents of self.delete_requested.
         self.interrupt_lock = RLock()
@@ -140,16 +166,16 @@ class DeliveryTask(object):
         else:
             self.wrap_in_list = True
 
-        spawn_greenlet(self.run)
+        _ignored = spawn_greenlet(self.run) # noqa: F841
 
 # ################################################################################################################################
 
-    def is_running(self):
+    def is_running(self) -> bool:
         return self.keep_running
 
 # ################################################################################################################################
 
-    def _delete_messages(self, to_delete):
+    def _delete_messages(self, to_delete:msgiter) -> None:
         """ Actually deletes messages - must be called with self.interrupt_lock held.
         """
         logger.info('Deleting message(s) `%s` from `%s` (%s)', to_delete, self.sub_key, self.topic_name)
@@ -163,7 +189,7 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def delete_messages(self, msg_list, _notify=PUBSUB.DELIVERY_METHOD.NOTIFY.id):
+    def delete_messages(self, msg_list:strlist, _notify:str=PUBSUB.DELIVERY_METHOD.NOTIFY.id):
         """ For notify tasks, requests that all messages from input list be deleted before the next delivery.
         Otherwise, deletes the messages immediately.
         """
@@ -176,7 +202,8 @@ class DeliveryTask(object):
             to_delete = []
             for msg in self.delivery_list:
                 if msg.pub_msg_id in msg_list:
-                    msg_list.remove(msg.pub_msg_id) # We can trim it since we know it won't appear again
+                    # We can trim it since we know it won't appear again
+                    msg_list.remove(msg.pub_msg_id) # type: ignore
                     to_delete.append(msg)
 
             # We are a task that sends out notifications
@@ -191,7 +218,7 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def get_messages(self, has_gd):
+    def get_messages(self, has_gd:bool) -> 'list_[Message]':
         """ Returns all messages enqueued in the delivery list, without deleting them from self.delivery_list.
         """
         if has_gd is None:
@@ -199,7 +226,7 @@ class DeliveryTask(object):
             len_out = len(out)
         else:
             out = []
-            for msg in self.delivery_list:
+            for msg in self.delivery_list: # type: Message
                 if msg.has_gd is has_gd:
                     out.append(msg)
             len_out = len(out)
@@ -210,25 +237,25 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def pull_messages(self):
+    def pull_messages(self) -> dictlist:
         """ Implements pull-style delivery - returns messages enqueued for sub_key, deleting them in progress.
         """
         # Output to produce
-        out = []
+        out:list_[Message] = []
 
         # A function wrapper that will append to output
         _append_to_out_func = self._append_to_pull_messages(out)
 
         # Runs the delivery with our custom function that handles all messages to be delivered
-        self.run_delivery(_append_to_out_func)
+        _ignored = self.run_delivery(_append_to_out_func) # noqa: F841
 
         # OK, we have the output and can return it
         return [elem.to_dict() for elem in out]
 
 # ################################################################################################################################
 
-    def _append_to_pull_messages(self, out):
-        def _impl(sub_key, to_deliver):
+    def _append_to_pull_messages(self, out:any_) -> 'Callable':
+        def _impl(sub_key:str, to_deliver:any_) -> None:
             if isinstance(to_deliver, list):
                 out.extend(to_deliver)
             else:
@@ -238,21 +265,26 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def get_message(self, msg_id):
+    def get_message(self, msg_id:str) -> 'Message':
         """ Returns a particular message enqueued by this delivery task.
         """
-        for msg in self.delivery_list:
+        for msg in self.delivery_list: # type: Message
             if msg.pub_msg_id == msg_id:
                 return msg
 
+        else:
+            raise ValueError('No such message {}'.format(msg_id))
+
 # ################################################################################################################################
 
-    def run_delivery(self, deliver_pubsub_msg=None, status_code=run_deliv_sc, reason_code=run_deliv_rc):
+    def run_delivery(self,
+            deliver_pubsub_msg=None,  # type: Callable
+            status_code=run_deliv_sc, # type: any_
+            reason_code=run_deliv_rc  # type: any_
+        ) -> DeliveryResultCtx:
         """ Actually attempts to deliver messages. Each time it runs, it gets all the messages
         that are still to be delivered from self.delivery_list.
         """
-        # type: (Callable, run_deliv_sc, reason_code) -> DeliveryResultCtx
-
         # Increase our delivery counter
         self.delivery_iter += 1
 
@@ -291,8 +323,8 @@ class DeliveryTask(object):
                 if msg.delivery_count >= self.delivery_max_retry:
                     to_delete.append(msg)
 
-            to_deliver = []
-            to_skip = []
+            to_deliver:anylist = []
+            to_skip:anylist    = []
 
             messages = {
                 _hook_action.DELETE: to_delete,
@@ -372,11 +404,12 @@ class DeliveryTask(object):
         if result.status_code not in (status_code.Error, status_code.Warning):
             result.is_ok = True
             result.status_code = status_code.OK
+
         return result
 
 # ################################################################################################################################
 
-    def _should_wake(self, _now=utcnow_as_ms):
+    def _should_wake(self, _now:'Callable'=utcnow_as_ms) -> bool:
         """ Returns True if the task should be woken up e.g. because its time has come already to process messages,
         assumming there are any waiting for it.
         """
@@ -395,14 +428,20 @@ class DeliveryTask(object):
                     self.sub_key, now, self.last_iter_run, diff, self.delivery_interval, len(self.delivery_list))
                 return True
 
+        # The above conditions are not met so we explicitly return False
+        return False
+
 # ################################################################################################################################
 
-    def run(self, default_sleep_time=0.1, status_code=run_deliv_sc, reason_code=run_deliv_rc, _notify_methods=_notify_methods,
-        deliv_exc_msg=deliv_exc_msg):
+    def run(self,
+            default_sleep_time=0.1,          # type: float
+            status_code=run_deliv_sc,        # type: any_
+            reason_code=run_deliv_rc,        # type: any_
+            _notify_methods=_notify_methods, # type: anytuple
+            deliv_exc_msg=deliv_exc_msg      # type: str
+        ) -> None:
         """ Runs the delivery task's main loop.
         """
-        # type: (float, run_deliv_sc, run_deliv_rc, list, str)
-
         # Fill out Python-level metadata first
         self.py_object = '{}; {}; {}'.format(current_thread().name, getcurrent().name, self.python_id)
 
@@ -483,7 +522,7 @@ class DeliveryTask(object):
                                 len_exception_list = len(result.exception_list)
 
                                 # .. log all exceptions reported by the delivery task ..
-                                for idx, e in enumerate(result.exception_list, 1): # type: Exception
+                                for idx, e in enumerate(result.exception_list, 1): # type: (int, Exception)
 
                                     msg_logger = deliv_exc_msg.format(
                                         idx, len_exception_list, result.delivery_iter, self.topic_name, self.sub_key,
@@ -540,7 +579,7 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def stop(self):
+    def stop(self) -> None:
         if self.keep_running:
             logger.info('Stopping delivery task for sub_key:`%s`', self.sub_key)
             self.keep_running = False
@@ -549,7 +588,7 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def clear(self):
+    def clear(self) -> None:
         gd, non_gd = self.get_queue_depth()
         logger.info('Removing messages from delivery list for sub_key:`%s, gd:%d, ngd:%d `%s`', self.sub_key, gd, non_gd,
             [elem.pub_msg_id for elem in self.delivery_list])
@@ -557,7 +596,7 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def get_queue_depth(self):
+    def get_queue_depth(self) -> 'tuple_[int, int]':
         """ Returns the number of GD and non-GD messages in delivery list.
         """
         gd = 0
@@ -571,12 +610,12 @@ class DeliveryTask(object):
 
         return gd, non_gd
 
-    def get_gd_queue_depth(self):
+    def get_gd_queue_depth(self) -> int:
         return self.get_queue_depth()[0]
 
 # ################################################################################################################################
 
-    def get_non_gd_queue_depth(self):
+    def get_non_gd_queue_depth(self) -> int:
         return self.get_queue_depth()[1]
 
 # ################################################################################################################################
@@ -585,6 +624,9 @@ class Message(PubSubMessage):
     """ Wrapper for messages adding __cmp__ which uses a custom comparison protocol,
     by priority, then ext_pub_time, then pub_time.
     """
+
+    pub_time:float
+
     def __init__(self):
         super(Message, self).__init__()
         self.sub_key = None
@@ -594,22 +636,19 @@ class Message(PubSubMessage):
         self.ext_client_id = None
         self.group_id = None
         self.position_in_group = None
-        self.pub_time = None
         self.ext_pub_time = None
         self.data = None
         self.mime_type = None
-        self.priority = None
         self.expiration = None
         self.expiration_time = None
         self.has_gd = None
-
         self.pub_time_iso = None
         self.ext_pub_time_iso = None
         self.expiration_time_iso = None
 
 # ################################################################################################################################
 
-    def __lt__(self, other, max_pri=9):
+    def __lt__(self, other:'Message', max_pri:int=9) -> bool:
 
         self_priority = max_pri - self.priority
         other_priority = max_pri - other.priority
@@ -624,6 +663,9 @@ class Message(PubSubMessage):
 
         elif self.pub_time < other.pub_time:
             return True
+
+        else:
+            raise ValueError('Order coult not be establised {} and {}'.format(self, other))
 
 # ################################################################################################################################
 
@@ -651,8 +693,14 @@ class GDMessage(Message):
     """
     is_gd_message = True
 
-    def __init__(self, sub_key, topic_name, msg, _sk_opaque=PUBSUB.DEFAULT.SK_OPAQUE, _gen_attr=GENERIC.ATTR_NAME,
-        _loads=json_loads, _zato_mime_type=PUBSUB.MIMEType.Zato):
+    def __init__(self,
+            sub_key,    # type: str
+            topic_name, # type: str
+            msg,        # type: dict_
+            _gen_attr=GENERIC.ATTR_NAME,    # type: str
+            _loads=json_loads,              # type: Callable
+            _zato_mime_type=_zato_mime_type # type: str
+        ) -> None:
 
         logger.info('Building task message (gd) from `%s`', msg)
 
@@ -677,7 +725,7 @@ class GDMessage(Message):
         self.published_by_id = msg.published_by_id
         self.sub_pattern_matched = msg.sub_pattern_matched
         self.user_ctx = msg.user_ctx
-        self.zato_ctx = msg.zato_ctx
+        self.zato_ctx = msg.zato_ctx # type: dict
 
         # Assign data but note that we may still need to modify it
         # depending on what zato_ctx contains.
@@ -685,7 +733,7 @@ class GDMessage(Message):
 
         # This is optional ..
         if self.zato_ctx:
-            self.zato_ctx = _loads(self.zato_ctx) # type: dict
+            self.zato_ctx = _loads(self.zato_ctx)
 
         if self.zato_ctx.get('zato_mime_type') == _zato_mime_type:
             self.data = json_loads(self.data)
@@ -709,8 +757,14 @@ class NonGDMessage(Message):
     """
     is_gd_message = False
 
-    def __init__(self, sub_key, server_name, server_pid, msg, _def_priority=PUBSUB.PRIORITY.DEFAULT,
-            _def_mime_type=PUBSUB.DEFAULT.MIME_TYPE):
+    def __init__(self,
+            sub_key,     # type: str
+            server_name, # type: str
+            server_pid,  # type: int
+            msg,         # type: dict
+            _def_priority=PUBSUB.PRIORITY.DEFAULT,  # type: int
+            _def_mime_type=PUBSUB.DEFAULT.MIME_TYPE # type: str
+        ) -> None:
 
         logger.info('Building task message (ngd) from `%s`', msg)
 
@@ -756,8 +810,14 @@ class NonGDMessage(Message):
 class PubSubTool(object):
     """ A utility object for pub/sub-related tasks.
     """
-    def __init__(self, pubsub, parent, endpoint_type, is_for_services=False, deliver_pubsub_msg=None):
-        self.pubsub = pubsub # type: PubSub
+    def __init__(self,
+            pubsub,        # type: PubSub
+            parent,        # type: any_
+            endpoint_type, # type: str
+            is_for_services=False,  # type: bool
+            deliver_pubsub_msg=None # type: Callable
+        ) -> None:
+        self.pubsub = pubsub
         self.parent = parent # This is our parent, e.g. an individual WebSocket on whose behalf we execute
         self.endpoint_type = endpoint_type
 
@@ -771,31 +831,23 @@ class PubSubTool(object):
         self.lock = RLock()
 
         # Each sub_key will get its own lock for operations related to that key only
-        self.sub_key_locks = {}
+        self.sub_key_locks = {} # type: dict_[str, RLock]
 
         # How many messages to send in a single delivery group,
         # may be set individually for each subscription, defaults to 1
-        self.batch_size = {}
+        self.batch_size = {} # type: dict_[str, int]
 
         # Which sub_keys this pubsub_tool handles
-        self.sub_keys = set()
+        self.sub_keys = set() # type: set_[str]
 
         # A sorted list of message references for each sub_key
-        self.delivery_lists = {}
+        self.delivery_lists = {} # type: dict_[str, SortedList]
 
         # A pub/sub delivery task for each sub_key
-        self.delivery_tasks = {}
-
-        # Last sync time - updated even if there are no messages in a given synchronization request,
-        # which is unlike self.last_sync_time_by_sub_key which updates only if there are messages
-        # for a particular sub_key.
-        self.last_sync_time = None
-
-        # Last sync time for any kind of messages, by sub_key, no matter if they are GD or not
-        self.last_sync_time_by_sub_key = {}
+        self.delivery_tasks = {} # type: dict_[str, DeliveryTask]
 
         # Last time we tried to pull GD messages from SQL, by sub_key
-        self.last_gd_run = {}
+        self.last_gd_run = {} # type: dict_[str, float]
 
         # Register with this server's pubsub
         self.register_pubsub_tool()
@@ -808,7 +860,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def register_pubsub_tool(self):
+    def register_pubsub_tool(self) -> None:
         """ Registers ourselves with this server's pubsub to let the other control when we should shut down
         our delivery tasks for each sub_key.
         """
@@ -816,7 +868,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def get_sub_keys(self):
+    def get_sub_keys(self) -> strlist:
         """ Returns all sub keys this task handles, as a list.
         """
         with self.lock:
@@ -824,7 +876,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def add_sub_key_no_lock(self, sub_key):
+    def add_sub_key_no_lock(self, sub_key:str) -> None:
         """ Adds metadata about a given sub_key - must be called with self.lock held.
         """
         # Already seen it - can be ignored
@@ -887,7 +939,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def add_sub_key(self, sub_key):
+    def add_sub_key(self, sub_key:str) -> None:
         """ Same as self.add_sub_key_no_lock but holds self.lock.
         """
         with self.lock:
@@ -896,7 +948,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def remove_sub_key(self, sub_key):
+    def remove_sub_key(self, sub_key:str) -> None:
         with self.lock:
             try:
                 self.sub_keys.remove(sub_key)
@@ -912,7 +964,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def has_sub_key(self, sub_key):
+    def has_sub_key(self, sub_key:str) -> bool:
         with self.lock:
             return sub_key in self.sub_keys
 
@@ -925,7 +977,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def _add_non_gd_messages_by_sub_key(self, sub_key, messages):
+    def _add_non_gd_messages_by_sub_key(self, sub_key:str, messages:dictlist) -> None:
         """ Low-level implementation of add_non_gd_messages_by_sub_key, must be called with a lock for input sub_key.
         """
         for msg in messages:
@@ -944,7 +996,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def add_non_gd_messages_by_sub_key(self, sub_key, messages):
+    def add_non_gd_messages_by_sub_key(self, sub_key:str, messages:dictlist) -> None:
         """ Adds to local delivery queue all non-GD messages from input.
         """
         try:
@@ -957,15 +1009,16 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def _handle_new_messages(self, ctx, delta=60):
+    def _handle_new_messages(self, ctx:'HandleNewMessageCtx', delta:int=60) -> None:
         """ A callback invoked when there is at least one new message to be handled for input sub_keys.
         If has_gd is True, it means that at least one GD message available. If non_gd_msg_list is not empty,
         it is a list of non-GD message for sub_keys.
         """
         session = None
+
         try:
             if ctx.has_gd:
-                session = self.pubsub.server.odb.session()
+                session = cast('Session', self.pubsub.server.odb.session())
             else:
                 if not ctx.non_gd_msg_list:
                     # This is an unusual situation but not an erroneous one because it is possible
@@ -978,7 +1031,7 @@ class PubSubTool(object):
             logger.info('Handle new messages, cid:%s, gd:%d, sub_keys:%s, len_non_gd:%d bg:%d',
                 ctx.cid, int(ctx.has_gd), ctx.sub_key_list, len(ctx.non_gd_msg_list), ctx.is_bg_call)
 
-            gd_msg_list = {}
+            gd_msg_list:dict_[str, msglist] = {}
 
             # We need to have the broad lock first to read in messages for all the sub keys
             with self.lock:
@@ -986,7 +1039,8 @@ class PubSubTool(object):
                 # Get messages for all sub_keys on input and break them out by each sub_key separately,
                 # provided that we have a flag indicating that there should be some GD messages around in the database.
                 if ctx.has_gd:
-                    for msg in self._fetch_gd_messages_by_sub_key_list(ctx.sub_key_list, ctx.pub_time_max, session):
+                    for msg in self._fetch_gd_messages_by_sk_list(ctx.sub_key_list, ctx.pub_time_max, session):
+                        msg = cast(GDMessage, msg)
                         _sk_msg_list = gd_msg_list.setdefault(msg.sub_key, [])
                         _sk_msg_list.append(msg)
 
@@ -1024,15 +1078,15 @@ class PubSubTool(object):
 
         finally:
             if session:
-                session.commit()
-                session.close()
+                session.commit() # type: ignore
+                session.close()  # type: ignore
 
 # ################################################################################################################################
 
-    def handle_new_messages(self, ctx):
+    def handle_new_messages(self, ctx:'HandleNewMessageCtx') -> None:
         self.msg_handler_counter += 1
         try:
-            spawn(self._handle_new_messages, ctx)
+            _ignored = spawn(self._handle_new_messages, ctx) # noqa: F841
         except Exception:
             e = format_exc()
             logger.warn(e)
@@ -1040,14 +1094,22 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def _fetch_gd_messages_by_sub_key_list(self, sub_key_list, pub_time_max, session=None):
+    def _fetch_gd_messages_by_sk_list(self,
+        sub_key_list, # type: strlist
+        pub_time_max, # type: float
+        session=None  # type: Session
+        ) -> 'msgiter':
         """ Part of the low-level implementation of enqueue_gd_messages_by_sub_key, must be called with a lock for input sub_key.
         """
         # These are messages that we have already queued up so if we happen to pick them up
         # in the database, they should be ignored.
         ignore_list = set()
+
         for sub_key in sub_key_list:
-            ignore_list.update([msg.endp_msg_queue_id for msg in self.delivery_lists[sub_key] if msg.has_gd])
+            for msg in self.delivery_lists[sub_key]:
+                msg = cast(GDMessage, msg)
+                if msg.has_gd:
+                    ignore_list.add(msg.endp_msg_queue_id)
 
         logger.info('Fetching GD messages by sk_list:`%s`, ignore:`%s`', sub_key_list, ignore_list)
 
@@ -1069,13 +1131,13 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def _push_gd_messages_by_sub_key(self, sub_key, topic_name, gd_msg_list):
+    def _push_gd_messages_by_sub_key(self, sub_key:str, topic_name:str, gd_msg_list:msgiter):
         """ Pushes all input GD messages to a delivery task for the sub_key.
         """
         count = 0
         msg_ids = []
 
-        for _idx, msg in enumerate(gd_msg_list):
+        for msg in gd_msg_list:
 
             msg_ids.append(msg.pub_msg_id)
             self.delivery_lists[sub_key].add(GDMessage(sub_key, topic_name, msg))
@@ -1086,7 +1148,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def _enqueue_gd_messages_by_sub_key(self, sub_key, gd_msg_list):
+    def _enqueue_gd_messages_by_sub_key(self, sub_key:str, gd_msg_list:msgiter):
         """ Low-level implementation of self.enqueue_gd_messages_by_sub_key which expects the message list on input.
         Must be called with self.sub_key_locks[sub_key] held.
         """
@@ -1095,16 +1157,16 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def enqueue_gd_messages_by_sub_key(self, sub_key, session=None):
+    def enqueue_gd_messages_by_sub_key(self, sub_key:str, session:'Session'=None):
         """ Fetches GD messages from SQL for sub_key given on input and adds them to local queue of messages to deliver.
         """
         with self.sub_key_locks[sub_key]:
-            gd_msg_list = self._fetch_gd_messages_by_sub_key_list([sub_key], utcnow_as_ms(), session)
+            gd_msg_list = self._fetch_gd_messages_by_sk_list([sub_key], utcnow_as_ms(), session)
             self._enqueue_gd_messages_by_sub_key(sub_key, gd_msg_list)
 
 # ################################################################################################################################
 
-    def enqueue_initial_messages(self, sub_key, topic_name, endpoint_name, _group_size=20):
+    def enqueue_initial_messages(self, sub_key:str, topic_name:str, endpoint_name:str, _group_size:int=20):
         """ Looks up any messages for input task in the database and pushes them all and enqueues in batches any found.
         """
         with self.sub_key_locks[sub_key]:
@@ -1148,55 +1210,55 @@ class PubSubTool(object):
 
             finally:
                 if session:
-                    session.close()
+                    session.close() # type: ignore
 
 # ################################################################################################################################
 
-    def confirm_pubsub_msg_delivered(self, sub_key, delivered_list):
+    def confirm_pubsub_msg_delivered(self, sub_key:str, delivered_list:strlist):
         self.pubsub.confirm_pubsub_msg_delivered(sub_key, delivered_list)
 
 # ################################################################################################################################
 
-    def get_queue_depth(self, sub_key):
+    def get_queue_depth(self, sub_key:str) -> 'tuple_[int, int]':
         """ Returns the number of GD and non-GD messages queued up for input sub_key.
         """
         return self.delivery_tasks[sub_key].get_queue_depth()
 
 # ################################################################################################################################
 
-    def handles_sub_key(self, sub_key):
+    def handles_sub_key(self, sub_key:str) -> bool:
         with self.lock:
             return sub_key in self.sub_keys
 
 # ################################################################################################################################
 
-    def get_delivery_task(self, sub_key):
+    def get_delivery_task(self, sub_key:str) -> DeliveryTask:
         with self.lock:
             return self.delivery_tasks[sub_key]
 
 # ################################################################################################################################
 
-    def get_delivery_tasks(self):
+    def get_delivery_tasks(self) -> 'ValuesView[DeliveryTask]':
         with self.lock:
             return self.delivery_tasks.values()
 
 # ################################################################################################################################
 
-    def delete_messages(self, sub_key, msg_list):
+    def delete_messages(self, sub_key:str, msg_list:strlist):
         """ Marks one or more to be deleted from the delivery task by the latter's sub_key.
         """
         self.delivery_tasks[sub_key].delete_messages(msg_list)
 
 # ################################################################################################################################
 
-    def get_messages(self, sub_key, has_gd=None):
+    def get_messages(self, sub_key:str, has_gd:bool=False) -> 'list_[Message]':
         """ Returns all messages enqueued for sub_key without deleting them from their queue.
         """
         return self.delivery_tasks[sub_key].get_messages(has_gd)
 
 # ################################################################################################################################
 
-    def pull_messages(self, sub_key, has_gd=None):
+    def pull_messages(self, sub_key:str, has_gd:bool=False) -> dictlist:
         """ Implements pull-style delivery - returns messages enqueued for sub_key, deleting them in progress.
         """
         with self.lock:
@@ -1204,7 +1266,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def get_message(self, sub_key, msg_id):
+    def get_message(self, sub_key:str, msg_id:str) -> Message:
         """ Returns a particular message enqueued for sub_key.
         """
         return self.delivery_tasks[sub_key].get_message(msg_id)

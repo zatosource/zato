@@ -1009,7 +1009,7 @@ class WorkerStore(_WorkerStoreBase):
         topic_list = config.get('topic_list') or []
         topic_list = topic_list if isinstance(topic_list, list) else [topic_list]
 
-        return bunchify({
+        data = {
 
           # Tell the manager to start this channel only
           # if we are very first process among potentially many ones for this server.
@@ -1023,6 +1023,7 @@ class WorkerStore(_WorkerStoreBase):
           'source_type': FILE_TRANSFER.SOURCE_TYPE.LOCAL.id,
           'pickup_from_list': pickup_from_list,
           'is_hot_deploy': config.get('is_hot_deploy'),
+          'should_deploy_in_place': config.get('deploy_in_place', False),
           'service_list': service_list,
           'topic_list': topic_list,
           'move_processed_to': move_processed_to,
@@ -1036,7 +1037,9 @@ class WorkerStore(_WorkerStoreBase):
           'is_recursive': config.get('is_recursive', False),
           'binary_file_patterns': config.get('binary_file_patterns') or [],
           'outconn_rest_list': [],
-        })
+        }
+
+        return bunchify(data)
 
 # ################################################################################################################################
 
@@ -1044,19 +1047,22 @@ class WorkerStore(_WorkerStoreBase):
 
         # Default pickup directory
         self._add_service_pickup_to_file_transfer(
-            'hot-deploy', self.server.hot_deploy_config.pickup_dir, self.server.hot_deploy_config.delete_after_pickup)
+            'hot-deploy', self.server.hot_deploy_config.pickup_dir,
+            self.server.hot_deploy_config.delete_after_pickup, False)
 
         # User-defined pickup directories
         for name, config in self.server.pickup_config.items():
             if name.startswith(HotDeploy.UserPrefix):
-                self._add_service_pickup_to_file_transfer('hot-deploy-user-prefix', config.pickup_from, False)
+                self._add_service_pickup_to_file_transfer(
+                    'hot-deploy-user-prefix', config.pickup_from, False,
+                    config.get('deploy_in_place', True))
 
         # Convert all the other pickup entries
         self._convert_pickup_to_file_transfer()
 
 # ################################################################################################################################
 
-    def _add_service_pickup_to_file_transfer(self, name, pickup_dir, delete_after_pickup):
+    def _add_service_pickup_to_file_transfer(self, name, pickup_dir, delete_after_pickup, deploy_in_place):
 
         # Explicitly create configuration for hot-deployment
         hot_deploy_name = '{}.{}'.format(pickup_conf_item_prefix, name)
@@ -1065,7 +1071,8 @@ class WorkerStore(_WorkerStoreBase):
             'patterns': '*.py',
             'services': 'zato.hot-deploy.create',
             'pickup_from': pickup_dir,
-            'delete_after_pickup': delete_after_pickup
+            'delete_after_pickup': delete_after_pickup,
+            'deploy_in_place': deploy_in_place,
         })
 
         # Add hot-deployment to local file transfer

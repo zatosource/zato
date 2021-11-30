@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,7 +10,16 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 
 # stdlib
-from typing import Optional as optional
+from typing import           \
+    Any as any_,             \
+    Dict as dict_,           \
+    Generator as generator_, \
+    NoReturn as noreturn,    \
+    List as list_,           \
+    Optional as optional,    \
+    Tuple as tuple_,         \
+    Set as set_,             \
+    Union as union_
 
 # dacite
 from dacite import from_dict
@@ -35,15 +44,18 @@ else:
 #
 try:
     from typing import TypedDict
+    from typing import Protocol
 except ImportError:
     from zato.common.ext.typing_extensions import TypedDict
+    from zato.common.ext.typing_extensions import Protocol
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 # For flake8
 from_dict = from_dict
-optional = optional
+optional  = optional
+Protocol  = Protocol
 TypedDict = TypedDict
 
 # ################################################################################################################################
@@ -58,3 +70,16 @@ def instance_from_dict(class_, data):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+anydict    = dict_[any_, any_]
+anylist    = list_[any_]
+anytuple   = tuple_[any_, ...]
+dictlist   = list_[anydict]
+generator_ = generator_
+noreturn   = noreturn
+set_       = set_
+strlist    = list_[str]
+strintdict = dict_[str, int]
+strtuple   = tuple_[str]
+tuple_     = tuple_
+union_     = union_
