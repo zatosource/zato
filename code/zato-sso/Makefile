@@ -2,6 +2,7 @@
 .PHONY: build
 
 run-tests:
+	py $(CURDIR)/test/zato/test_command_line.py && \
 	py $(CURDIR)/test/zato/test_user.py && \
 	py $(CURDIR)/test/zato/test_session.py && \
 	py $(CURDIR)/test/zato/test_user_attr_create.py && \
@@ -19,8 +20,7 @@ run-tests:
 	py $(CURDIR)/test/zato/test_session_list.py &&  \
 	py $(CURDIR)/test/zato/test_linked_auth.py && \
 	py $(CURDIR)/test/zato/test_login_totp.py && \
-	py $(CURDIR)/test/zato/test_password_reset.py && \
-	py $(CURDIR)/test/zato/test_python_login.py
+	py $(CURDIR)/test/zato/test_password_reset.py
 
 static-check:
 	echo "Running static checks in zato-sso"

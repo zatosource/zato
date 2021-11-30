@@ -649,7 +649,7 @@ class UserAPI(object):
                 out = UserEntity()
                 out.is_current_super_user = current_session.is_super_user
 
-                access_msg = 'Cid:%s. Accessing %s user attrs (su:%d, ret:%d).'
+                access_msg = 'Cid:%s. Accessing %s user attrs (s:%d, r:%d).'
 
                 if current_session.is_super_user or return_all_attrs:
                     logger.info(access_msg, cid, 'all', current_session.is_super_user, return_all_attrs)
@@ -662,6 +662,9 @@ class UserAPI(object):
                 for key in attrs:
 
                     value = getattr(info, key, None)
+
+                    if key == 'is_approval_needed':
+                        value = value or False
 
                     if isinstance(value, datetime):
                         value = value.isoformat()
