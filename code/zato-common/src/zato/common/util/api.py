@@ -429,7 +429,7 @@ def service_name_from_impl(impl_name):
 
 # ################################################################################################################################
 
-def deployment_info(method, object_, timestamp, fs_location, remote_host='', remote_user=''):
+def deployment_info(method, object_, timestamp, fs_location, remote_host='', remote_user='', should_deploy_in_place=False):
     """ Returns a JSON document containing information who deployed a service
     onto a server, where from and when it was.
     """
@@ -442,6 +442,7 @@ def deployment_info(method, object_, timestamp, fs_location, remote_host='', rem
         'remote_user': remote_user,
         'current_host': current_host(),
         'current_user': get_current_user(),
+        'should_deploy_in_place': should_deploy_in_place
     }
 
 # ################################################################################################################################
@@ -632,12 +633,12 @@ def _os_remove(path):
 
 # ################################################################################################################################
 
-def hot_deploy(parallel_server, file_name, path, delete_path=True, notify=True):
+def hot_deploy(parallel_server, file_name, path, delete_path=True, notify=True, should_deploy_in_place=False):
     """ Hot-deploys a package if it looks like a Python module or archive.
     """
     logger.debug('About to hot-deploy `%s`', path)
     now = datetime.utcnow()
-    di = dumps(deployment_info('hot-deploy', file_name, now.isoformat(), path))
+    di = dumps(deployment_info('hot-deploy', file_name, now.isoformat(), path, should_deploy_in_place=should_deploy_in_place))
 
     # Insert the package into the DB ..
     package_id = parallel_server.odb.hot_deploy(

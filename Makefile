@@ -39,13 +39,22 @@ static-check:
 	$(CURDIR)/code/bin/flake8 --config=$(CURDIR)/code/tox.ini $(CURDIR)/code/util
 	echo "Static checks OK"
 
+type-check:
+	cd $(CURDIR)/code/zato-server && $(MAKE) type-check
+	echo "Type checks OK"
+
 web-admin-tests:
 	cd $(CURDIR)/code/zato-web-admin && make run-tests
 
+install-test-reqs:
+	$(CURDIR)/code/bin/pip install -r $(CURDIR)/code/test-requirements.txt
+
 run-tests:
+	$(MAKE) install-test-reqs
 	$(MAKE) common-tests
 	$(MAKE) cy-tests
 	$(MAKE) server-tests
 	$(MAKE) sso-tests
 	$(MAKE) web-admin-tests
 	$(MAKE) static-check
+	# $(MAKE) type-check

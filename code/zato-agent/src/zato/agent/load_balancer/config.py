@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -18,7 +16,20 @@ from pyparsing import Or, Word, Literal, nums, alphanums, alphas, restOfLine
 # Zato
 from zato.common.haproxy import http_log, Config
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from pyparsing import ParserElement
+    ParserElement = ParserElement
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 # It's something Zato can understood and treat accordingly if such a token is
 # found on any HAProxy configuration file's line.
@@ -79,8 +90,10 @@ def config_from_string(data):
 
         for token_name in config_tokens_grammar:
             if config_token_name.startswith(token_name):
-                result = config_tokens_grammar[token_name].parseString(value)
-                config.set_value(token_name, result)
+                parser_elem = config_tokens_grammar[token_name] # type: ParserElement|None
+                if parser_elem:
+                    result = parser_elem.parseString(value)
+                    config.set_value(token_name, result)
     return config
 
 def string_from_config(config, config_template):

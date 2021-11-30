@@ -9,13 +9,18 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import os
-from unittest import main, TestCase
+from unittest import TestCase
 
 # Bunch
 from bunch import bunchify
 
 # Django
 import django
+
+# Selenium
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.firefox.options import Options
 
 # Zato
 from zato.admin.zato_settings import update_globals
@@ -36,7 +41,13 @@ class Config:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestAccessWebAdmin(TestCase):
+class BaseTestCase(TestCase):
+
+    # Whether we should automatically log in during setUp
+    needs_auto_login = True
+
+    # This can be set by each test separately
+    run_in_background:bool
 
     def _set_up_django(self):
 
@@ -98,30 +109,54 @@ class TestAccessWebAdmin(TestCase):
 # ################################################################################################################################
 
     def setUp(self):
+
+        # Set up everything on Django end ..
         self._set_up_django()
         self._set_up_django_auth()
 
-# ################################################################################################################################
+        # .. add a convenience alias for subclasses ..
+        self.config = Config
 
-    def test_access(self):
-
-        # At this point we have:
-        # * user_name -> self.user_name
-        # * password  -> Config.user_password
-
-        '''
-        from zato.admin.urls import urlpatterns
-
-        print()
-        for item in urlpatterns:
-            print(111, item)
-        print()
-        ''' # noqa
+        # .. log in if requested to.
+        if self.needs_auto_login:
+            self.login()
 
 # ################################################################################################################################
+
+    def login(self):
+
+        run_in_background = getattr(self, 'run_in_background', None)
+        run_in_background = True if run_in_background is None else run_in_background
+        self.run_in_background = run_in_background
+
+        # Custom options for the web client ..
+        options = Options()
+
+        if self.run_in_background:
+            options.headless = True
+
+        # .. set up our Selenium client ..
+        self.client = webdriver.Firefox(options=options)
+        self.client.get(self.config.web_admin_address)
+
+        # .. get our form elements ..
+        username = self.client.find_element_by_name('username')
+        password = self.client.find_element_by_name('password')
+
+        # .. fill out the form ..
+        username.send_keys(self.user_name)
+        password.send_keys(self.config.user_password)
+
+        # .. and submit it.
+        password.send_keys(Keys.RETURN)
+
 # ################################################################################################################################
 
-if __name__ == '__main__':
-    main()
+    def tearDown(self):
+        if self.run_in_background:
+            self.client.quit()
 
+        delattr(self, 'run_in_background')
+
+# ################################################################################################################################
 # ################################################################################################################################
