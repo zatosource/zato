@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from http.client import FORBIDDEN
@@ -21,9 +19,11 @@ from zato.sso.common import SSOCtx
 # ################################################################################################################################
 
 if 0:
+    from zato.common.crypto.totp_ import TOTPManager
     from zato.common.sso import TestConfig
 
     TestConfig = TestConfig
+    TOTPManager = TOTPManager
 
 # ################################################################################################################################
 
@@ -163,18 +163,17 @@ class SSOTestService(Service):
     def handle(self):
 
         # Zato
+        from zato.common.crypto.totp_ import TOTPManager
         from zato.common.sso import TestConfig
 
         # Run the test suite
-        self._test_login(TestConfig)
+        self._test_login(TestConfig, TOTPManager)
+        self._test_get_user_attrs(TestConfig, TOTPManager)
 
 # ################################################################################################################################
 
-    def _test_login(self, config):
-        # type: (TestConfig) -> None
-
-        # Zato
-        from zato.common.crypto.totp_ import TOTPManager
+    def _test_login(self, config, totp_manager):
+        # type: (TestConfig, TOTPManager) -> None
 
         # We want to ensure that both str and bytes passwords can be used
         password1 = config.super_user_password
@@ -185,13 +184,80 @@ class SSOTestService(Service):
         # Check the str password
         self.sso.user.login(
             self.cid, config.super_user_name, password1, config.current_app,
-            '127.0.0.1', 'Zato', totp_code=TOTPManager.get_current_totp_code(config.super_user_totp_key))
+            '127.0.0.1', 'Zato', totp_code=totp_manager.get_current_totp_code(config.super_user_totp_key))
 
         self.logger.info('SSO login with password2 (bytes)')
 
         # Check the bytes password
         self.sso.user.login(
             self.cid, config.super_user_name, password2, config.current_app,
-            '127.0.0.1', 'Zato', totp_code=TOTPManager.get_current_totp_code(config.super_user_totp_key))
+            '127.0.0.1', 'Zato', totp_code=totp_manager.get_current_totp_code(config.super_user_totp_key))
+
+# ################################################################################################################################
+
+    def _test_get_user_attrs(self, config, totp_manager):
+        # type: (TestConfig, TOTPManager) -> None
+
+        # Zato
+        from zato.common.test import rand_string
+        from zato.sso.user import super_user_attrs
+
+        remote_addr = '127.0.0.1'
+        user_agent = 'My User Agent'
+
+        username = 'test.attrs.{}'.format(rand_string())
+        password = rand_string()
+        display_name = 'My Display Name'
+        totp_label   = 'My TOTP Label'
+
+        # Attributes that can be None for this particular newly created user
+        # even if return_all_attrs=True
+        none_allowed = {'email', 'first_name', 'last_name', 'locked_by',
+            'locked_time', 'middle_name', 'rate_limit_def', 'status'}
+
+        data = {
+          'username': username,
+          'password': password,
+          'display_name': display_name,
+          'totp_label': totp_label
+        }
+
+        # Log in the super user first ..
+        super_user_session = self.sso.user.login(
+            self.cid, config.super_user_name, config.super_user_password, config.current_app,
+            remote_addr, 'Zato', totp_code=totp_manager.get_current_totp_code(config.super_user_totp_key))
+
+        # .. create the new user ..
+        self.sso.user.create_user(self.cid, data, ust=super_user_session.ust,
+            current_app=config.current_app, auto_approve=True)
+
+        # .. log the account in ..
+        user_session = self.sso.user.login(self.cid, username, password, config.current_app, remote_addr, user_agent)
+
+        # .. get the user back, but without requiring for all the attributes to be returned ..
+        sso_user_regular_attrs = self.sso.user.get_current_user(self.cid, user_session.ust,
+            config.current_app, remote_addr, return_all_attrs=False)
+
+        # .. make sure that none of the super-user-only attributes were returned ..
+        for name in super_user_attrs:
+            value = getattr(sso_user_regular_attrs, name)
+            assert value is None
+
+        # .. however, regular attrs should be still available
+        # sso_user.is_current_super_user -> False
+        #username
+        #display_name
+        #totp_label
+
+        # .. get the user back, but without requiring for all the attributes to be returned ..
+        sso_user_all_attrs = self.sso.user.get_current_user(self.cid, user_session.ust,
+            config.current_app, remote_addr, return_all_attrs=True)
+
+        # .. now, all of the super-user-only attributes should have been returned ..
+        for name in super_user_attrs:
+            value = getattr(sso_user_all_attrs, name)
+            if value is None:
+                if name not in none_allowed:
+                    raise Exception('Value of {} should not be None'.format(name))
 
 # ################################################################################################################################
