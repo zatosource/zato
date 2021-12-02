@@ -20,7 +20,7 @@ from future.utils import iterkeys
 from past.builtins import basestring
 
 # Zato
-from zato.common.api import BROKER, StatsKey
+from zato.common.api import BROKER, SCHEDULER, StatsKey
 from zato.common.broker_message import SERVICE
 from zato.common.exception import BadRequest, ZatoException
 from zato.common.ext.validate_ import is_boolean
@@ -397,10 +397,15 @@ class Invoke(AdminService):
 
     def handle(self):
         payload = self.request.input.get('payload')
+
         if payload:
             payload = b64decode(payload)
             payload = payload_from_request(self.server.json_parser, self.cid, payload,
                 self.request.input.data_format, self.request.input.transport)
+
+            if payload and SCHEDULER.EmbeddedIndicator in payload:
+                payload = loads(payload)
+                payload = payload['data']
 
         id = self.request.input.get('id')
         name = self.request.input.get('name')
