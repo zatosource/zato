@@ -37,7 +37,10 @@ _has_debug = logger.isEnabledFor(logging.DEBUG)
 
 def _start_date(job_data):
     if isinstance(job_data.start_date, basestring):
-        return parse_datetime(job_data.start_date)
+        # Remove timezone information as we assume that all times are in UTC
+        start_date = job_data.start_date.split('+')
+        start_date = start_date[0]
+        return parse_datetime(start_date)
     return job_data.start_date
 
 # ################################################################################################################################
