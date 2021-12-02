@@ -522,7 +522,7 @@ class KVDB(Attrs):
 
 class SCHEDULER:
 
-    InitialSleepTime = 5
+    InitialSleepTime = 0.1
     DefaultHost = '127.0.0.1'
     DefaultPort = 31530
 
