@@ -37,7 +37,10 @@ _has_debug = logger.isEnabledFor(logging.DEBUG)
 
 def _start_date(job_data):
     if isinstance(job_data.start_date, basestring):
-        return parse_datetime(job_data.start_date)
+        # Remove timezone information as we assume that all times are in UTC
+        start_date = job_data.start_date.split('+')
+        start_date = start_date[0]
+        return parse_datetime(start_date)
     return job_data.start_date
 
 # ################################################################################################################################
@@ -94,7 +97,7 @@ class SchedulerAPI:
         if extra_data_format != ZATO_NONE:
             msg['data_format'] = extra_data_format
 
-        self.broker_client.invoke_async(msg)
+        self.broker_client.invoke_async(msg, from_scheduler=True)
 
         if _has_debug:
             msg = 'Sent a job execution request, name [{}], service [{}], extra [{}]'.format(
@@ -104,13 +107,14 @@ class SchedulerAPI:
         # Now, if it was a one-time job, it needs to be deactivated.
         if ctx['type'] == SCHEDULER.JOB_TYPE.ONE_TIME:
             msg = {
-                'action': SCHEDULER_MSG.SET_JOB_INACTIVE.value,
+                'action': SCHEDULER_MSG.DELETE.value,
+                'service': 'zato.scheduler.job.delete',
                 'payload': {
                     'id':ctx['id'],
                 },
                 'cid': new_cid(),
             }
-            self.broker_client.publish(msg)
+            self.broker_client.publish(msg, from_scheduler=True)
 
 # ################################################################################################################################
 
@@ -221,7 +225,12 @@ class SchedulerAPI:
     def delete(self, job_data, **kwargs):
         """ Deletes the job from the scheduler.
         """
-        self.sched.unschedule_by_name(job_data.old_name if job_data.get('old_name') else job_data.name, **kwargs)
+        old_name = job_data.get('old_name')
+        name = job_data.old_name if old_name else job_data.name
+
+        logger.info('Deleting job %s (old_name:%s)', name, old_name)
+
+        self.sched.unschedule_by_name(name, **kwargs)
 
 # ################################################################################################################################
 

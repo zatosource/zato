@@ -98,6 +98,7 @@ if 0:
     from zato.common.json_schema import Validator as JSONSchemaValidator
     from zato.common.kvdb.api import KVDB as KVDBAPI
     from zato.common.odb.api import ODBManager
+    from zato.common.util.time_ import TimeUtil
     from zato.server.connection.ftp import FTPStore
     from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
@@ -129,6 +130,7 @@ if 0:
     ServerCryptoManager = ServerCryptoManager
     SSOAPI = SSOAPI
     timedelta = timedelta
+    TimeUtil = TimeUtil
     WorkerStore = WorkerStore
     XPathStore = XPathStore
 
@@ -435,7 +437,7 @@ class Service(object):
         self.environ = _Bunch()
         self.request = _Request(self)
         self.response = _Response(self.logger)
-        self.time = None
+        self.time = None # type: TimeUtil
         self.patterns = None
         self.user_config = None
         self.dictnav = _DictNav
