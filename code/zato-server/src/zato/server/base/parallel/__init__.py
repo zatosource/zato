@@ -30,8 +30,8 @@ from simdjson import Parser as SIMDJSONParser
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common.api import DATA_FORMAT, default_internal_modules, KVDB, RATE_LIMIT, SERVER_STARTUP, SERVER_UP_STATUS, \
-     ZatoKVDB as CommonZatoKVDB, ZATO_ODB_POOL_NAME
+from zato.common.api import DATA_FORMAT, default_internal_modules, HotDeploy, KVDB, RATE_LIMIT, SERVER_STARTUP, \
+    SERVER_UP_STATUS, ZatoKVDB as CommonZatoKVDB, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.audit_log import AuditLog
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE
@@ -128,7 +128,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.plain_xml_content_type = None
         self.json_content_type = None
         self.service_modules = None   # Set programmatically in Spring
-        self.service_sources = None   # Set in a config file
+        self.service_sources = []   # Set in a config file
         self.base_dir = None          # type: unicode
         self.tls_dir = None           # type: unicode
         self.static_dir = None        # type: unicode
@@ -425,6 +425,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def _after_init_common(self, server):
         """ Initializes parts of the server that don't depend on whether the server's been allowed to join the cluster or not.
         """
+        def _normalise_service_source_path(name:str) -> str:
+            if not os.path.isabs(name):
+                name = os.path.normpath(os.path.join(self.base_dir, name))
+            return name
+
         # Patterns to match during deployment
         self.service_store.patterns_matcher.read_config(self.fs_server_config.deploy_patterns_allowed)
 
@@ -456,14 +461,20 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         allow_internal = allow_internal if isinstance(allow_internal, list) else [allow_internal]
         self.fs_server_config.misc.service_invoker_allow_internal = allow_internal
 
-        # Service sources
-        self.service_sources = []
+        # Service sources from server.conf
         for name in open(os.path.join(self.repo_location, self.fs_server_config.main.service_sources)):
             name = name.strip()
             if name and not name.startswith('#'):
-                if not os.path.isabs(name):
-                    name = os.path.normpath(os.path.join(self.base_dir, name))
+                name = _normalise_service_source_path(name)
                 self.service_sources.append(name)
+
+        # Service sources from user-defined hot-deployment configuration
+        for key, value in self.pickup_config.items():
+            if key.startswith(HotDeploy.UserPrefix):
+                pickup_from = value.get('pickup_from')
+                if pickup_from:
+                    pickup_from = _normalise_service_source_path(pickup_from)
+                    self.service_sources.append(pickup_from)
 
         # User-config from ./config/repo/user-config
         for file_name in os.listdir(self.user_conf_location):

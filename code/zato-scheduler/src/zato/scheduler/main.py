@@ -34,6 +34,9 @@ from zato.scheduler.server import Config, SchedulerServer
 
 def main():
 
+    if 'ZATO_SCHEDULER_BASE_DIR' in os.environ:
+        os.chdir(os.environ['ZATO_SCHEDULER_BASE_DIR'])
+
     # Always attempt to store the PID file first
     store_pidfile(os.path.abspath('.'))
 
