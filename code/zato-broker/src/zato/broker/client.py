@@ -56,7 +56,7 @@ to_scheduler_actions = {
 
 from_scheduler_actions = {
     SCHEDULER.JOB_EXECUTED.value,
-    SCHEDULER.SET_JOB_INACTIVE,
+    SCHEDULER.SET_JOB_INACTIVE.value,
 }
 
 # ################################################################################################################################
