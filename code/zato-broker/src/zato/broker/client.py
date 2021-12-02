@@ -56,7 +56,7 @@ to_scheduler_actions = {
 
 from_scheduler_actions = {
     SCHEDULER.JOB_EXECUTED.value,
-    SCHEDULER.SET_JOB_INACTIVE,
+    SCHEDULER.DELETE.value,
 }
 
 # ################################################################################################################################
@@ -99,30 +99,33 @@ class BrokerClient(object):
 # ################################################################################################################################
 
     def _invoke_scheduler_from_server(self, msg):
+        # type: (dict) -> None
         msg = dumps(msg)
         requests_post(self.scheduler_url, msg, verify=False)
 
 # ################################################################################################################################
 
     def _invoke_server_from_scheduler(self, msg):
-        self.zato_client.invoke_async(msg['service'], msg['payload'])
+        # type: (dict) -> None
+        self.zato_client.invoke_async(msg.get('service'), msg['payload'])
 
 # ################################################################################################################################
 
-    def _rpc_invoke(self, msg):
+    def _rpc_invoke(self, msg, from_scheduler=False):
 
         # Local aliases ..
+        from_server = not from_scheduler
         action = msg['action']
 
         try:
 
             # Special cases messages that are actually destined to the scheduler, not to servers ..
-            if action in to_scheduler_actions:
+            if from_server and action in to_scheduler_actions:
                 self._invoke_scheduler_from_server(msg)
                 return
 
             # .. special-case messages from the scheduler to servers ..
-            elif action in from_scheduler_actions:
+            elif from_scheduler and action in from_scheduler_actions:
                 self._invoke_server_from_scheduler(msg)
                 return
 
@@ -138,15 +141,15 @@ class BrokerClient(object):
 
 # ################################################################################################################################
 
-    def publish(self, msg, *ignored_args, **ignored_kwargs):
+    def publish(self, msg, *ignored_args, **kwargs):
         # type: (dict, str, object, object) -> None
-        spawn(self._rpc_invoke, msg)
+        spawn(self._rpc_invoke, msg, **kwargs)
 
 # ################################################################################################################################
 
-    def invoke_async(self, msg, *ignored_args, **ignored_kwargs):
+    def invoke_async(self, msg, *ignored_args, **kwargs):
         # type: (dict, object, object) -> None
-        spawn(self._rpc_invoke, msg)
+        spawn(self._rpc_invoke, msg, **kwargs)
 
 # ################################################################################################################################
 
