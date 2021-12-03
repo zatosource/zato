@@ -1,5 +1,7 @@
+<p align="center">
+  <img alt="" src="https://zato.io/static/img/platform.png" />
+</p>
 
-![Zato](https://zato.io/static/img/platform.png)
 
 
 Zato /zɑːtəʊ/
