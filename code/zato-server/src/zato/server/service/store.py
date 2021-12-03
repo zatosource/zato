@@ -100,6 +100,7 @@ internal_to_ignore.append('stomp')
 # ################################################################################################################################
 
 _unsupported_pickle_protocol_msg = 'unsupported pickle protocol:'
+data_class_model_class_name = 'zato.server.service.Model'
 
 # ################################################################################################################################
 
@@ -367,6 +368,26 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
+    def _has_io_data_class(self, class_, msg_class, msg_type):
+
+        # Dataclasses require class objects ..
+        if isclass(msg_class):
+
+            # .. and it needs to be our own Model subclass ..
+            if not issubclass(msg_class,  DataClassModel):
+                logger.warn('%s definition %s in service %s will be ignored - \'%s\' should be a subclass of %s',
+                msg_type,
+                msg_class,
+                class_,
+                msg_type.lower(),
+                data_class_model_class_name)
+
+            # .. if we are here, it means that this is really a Model-based I/O definition
+            else:
+                return True
+
+# ################################################################################################################################
+
     def set_up_class_attributes(self, class_, service_store=None, name=None):
         # type: (Service, ServiceStore, str)
 
@@ -381,12 +402,13 @@ class ServiceStore(object):
             class_.has_sio = True
         except AttributeError:
             class_.has_sio = False
-        else:
+
+        if class_.has_sio:
             sio_input  = getattr(class_.SimpleIO, 'input',  None)
             sio_output = getattr(class_.SimpleIO, 'output', None)
 
-            has_input_data_class  = isclass(sio_input)  and issubclass(sio_input,  DataClassModel)
-            has_output_data_class = isclass(sio_output) and issubclass(sio_output, DataClassModel)
+            has_input_data_class  = self._has_io_data_class(class_, sio_input,  'Input')
+            has_output_data_class = self._has_io_data_class(class_, sio_output, 'Output')
 
             if has_input_data_class or has_output_data_class:
                 SIOClass = DataClassSimpleIO
