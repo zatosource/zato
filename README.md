@@ -1,5 +1,5 @@
 
-![Zato](https://zato.io/img/gh-banner.png)
+![Zato](https://zato.io/static/img/platform.png)
 
 
 Zato /zɑːtəʊ/
