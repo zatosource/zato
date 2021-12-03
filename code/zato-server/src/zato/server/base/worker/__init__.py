@@ -1054,7 +1054,7 @@ class WorkerStore(_WorkerStoreBase):
         for name, config in self.server.pickup_config.items():
             if name.startswith(HotDeploy.UserPrefix):
                 self._add_service_pickup_to_file_transfer(
-                    'hot-deploy-user-prefix', config.pickup_from, False,
+                    name, config.pickup_from, False,
                     config.get('deploy_in_place', True))
 
         # Convert all the other pickup entries
