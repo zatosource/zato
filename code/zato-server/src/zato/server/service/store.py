@@ -1145,9 +1145,9 @@ class ServiceStore(object):
 
         try:
             return self.import_services_from_module_object(import_module(mod_name), is_internal)
-        except ImportError:
-            logger.warn('Could not import module `%s` (internal:%d)', mod_name, is_internal)
-            raise
+        except Exception as e:
+            logger.warn('Could not import module `%s` (internal:%d) -> `%s`', mod_name, is_internal, e.args)
+            return []
 
 # ################################################################################################################################
 
