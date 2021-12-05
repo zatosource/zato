@@ -50,8 +50,8 @@ from zato.common.odb.model.base import Base as ModelBase
 from zato.common.util.api import deployment_info, import_module_from_path, is_func_overridden, is_python_file, visit_py_source
 from zato.common.util.platform_ import is_non_windows
 from zato.server.config import ConfigDict
-from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, PubSubHook, Service, \
-     WSXFacade
+from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, \
+    PubSubHook, SchedulerFacade, Service, WSXFacade
 from zato.server.service.internal import AdminService
 
 # Zato - Cython
@@ -100,6 +100,7 @@ internal_to_ignore.append('stomp')
 # ################################################################################################################################
 
 _unsupported_pickle_protocol_msg = 'unsupported pickle protocol:'
+data_class_model_class_name = 'zato.server.service.Model'
 
 # ################################################################################################################################
 
@@ -367,6 +368,26 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
+    def _has_io_data_class(self, class_, msg_class, msg_type):
+
+        # Dataclasses require class objects ..
+        if isclass(msg_class):
+
+            # .. and it needs to be our own Model subclass ..
+            if not issubclass(msg_class,  DataClassModel):
+                logger.warn('%s definition %s in service %s will be ignored - \'%s\' should be a subclass of %s',
+                msg_type,
+                msg_class,
+                class_,
+                msg_type.lower(),
+                data_class_model_class_name)
+
+            # .. if we are here, it means that this is really a Model-based I/O definition
+            else:
+                return True
+
+# ################################################################################################################################
+
     def set_up_class_attributes(self, class_, service_store=None, name=None):
         # type: (Service, ServiceStore, str)
 
@@ -381,12 +402,13 @@ class ServiceStore(object):
             class_.has_sio = True
         except AttributeError:
             class_.has_sio = False
-        else:
+
+        if class_.has_sio:
             sio_input  = getattr(class_.SimpleIO, 'input',  None)
             sio_output = getattr(class_.SimpleIO, 'output', None)
 
-            has_input_data_class  = isclass(sio_input)  and issubclass(sio_input,  DataClassModel)
-            has_output_data_class = isclass(sio_output) and issubclass(sio_output, DataClassModel)
+            has_input_data_class  = self._has_io_data_class(class_, sio_input,  'Input')
+            has_output_data_class = self._has_io_data_class(class_, sio_output, 'Output')
 
             if has_input_data_class or has_output_data_class:
                 SIOClass = DataClassSimpleIO
@@ -425,6 +447,7 @@ class ServiceStore(object):
                 class_._worker_store = service_store.server.worker_store
                 class_._enforce_service_invokes = service_store.server.enforce_service_invokes
                 class_.odb = service_store.server.odb
+                class_.schedule = SchedulerFacade(service_store.server)
                 class_.kvdb = service_store.server.worker_store.kvdb
                 class_.pubsub = service_store.server.worker_store.pubsub
                 class_.cloud.aws.s3 = service_store.server.worker_store.worker_config.cloud_aws_s3
@@ -1123,9 +1146,9 @@ class ServiceStore(object):
 
         try:
             return self.import_services_from_module_object(import_module(mod_name), is_internal)
-        except ImportError:
-            logger.warn('Could not import module `%s` (internal:%d)', mod_name, is_internal)
-            raise
+        except Exception as e:
+            logger.warn('Could not import module `%s` (internal:%d) -> `%s`', mod_name, is_internal, e.args)
+            return []
 
 # ################################################################################################################################
 
