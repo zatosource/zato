@@ -66,6 +66,9 @@ def extract_model_class(field_type):
 class Model:
     after_created = None
 
+    def __getitem__(self, name, default=None):
+        return getattr(self, name, default)
+
     @classmethod
     def _zato_get_fields(class_):
         # type: (Field) -> dict
