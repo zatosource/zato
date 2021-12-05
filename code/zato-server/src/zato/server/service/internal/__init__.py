@@ -258,7 +258,7 @@ class ChangePasswordBase(AdminService):
                     for attr in kwargs.get('publish_instance_attrs', []):
                         self.request.input[attr] = getattr(instance, attr, ZATO_NONE)
 
-                    self.broker_client.publish(self.request.input, msg_type=msg_type)
+                    self.broker_client.publish(self.request.input)
 
             except Exception:
                 self.logger.error('Could not update password, e:`%s`', format_exc())
