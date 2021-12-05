@@ -12,13 +12,13 @@ from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED
 from inspect import isclass
 from traceback import format_exc
-from typing import Optional as optional, Type as type_
+from typing import Optional as optional
 
 # Bunch
 from bunch import bunchify
 
 # lxml
-from lxml.etree import _Element as EtreeElement, dump
+from lxml.etree import _Element as EtreeElement
 from lxml.objectify import ObjectifiedElement
 
 # gevent
@@ -26,7 +26,6 @@ from gevent import Timeout, spawn
 from gevent.lock import RLock
 
 # Python 2/3 compatibility
-from past.builtins import basestring
 from future.utils import iterkeys
 from zato.common.py23_ import maxint
 
@@ -39,7 +38,7 @@ from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.json_internal import dumps
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException
 from zato.common.nav import DictNav, ListNav
-from zato.common.util.api import get_response_value, invoke_startup_services, make_repr, new_cid, payload_from_request, service_name_from_impl, \
+from zato.common.util.api import get_response_value, make_repr, new_cid, payload_from_request, service_name_from_impl, \
      spawn_greenlet, uncamelify
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
@@ -88,11 +87,10 @@ UUID = UUID
 if 0:
 
     # stdlib
-    from datetime import timedelta
     from typing import Callable
 
     # Zato
-    from zato.broker.client import BrokerClientAPI
+    from zato.broker.client import BrokerClient
     from zato.common.audit import AuditPII
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.json_schema import Validator as JSONSchemaValidator
@@ -104,7 +102,6 @@ if 0:
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.cassandra import CassandraAPI
-    from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
     from zato.server.query import CassandraQueryAPI
     from zato.sso.api import SSOAPI
 
@@ -113,7 +110,7 @@ if 0:
 
     # For pyflakes
     AuditPII = AuditPII
-    BrokerClientAPI = BrokerClientAPI
+    BrokerClient = BrokerClient
     Callable = Callable
     CassandraAPI = CassandraAPI
     CassandraQueryAPI = CassandraQueryAPI
@@ -121,10 +118,8 @@ if 0:
     ConfigStore = ConfigStore
     CySimpleIO = CySimpleIO
     FTPStore = FTPStore
-    JSONPointerStore = JSONPointerStore
     JSONSchemaValidator = JSONSchemaValidator
     KVDBAPI = KVDBAPI
-    NamespaceStore = NamespaceStore
     ODBManager = ODBManager
     ParallelServer = ParallelServer
     ServerCryptoManager = ServerCryptoManager
@@ -132,7 +127,6 @@ if 0:
     timedelta = timedelta
     TimeUtil = TimeUtil
     WorkerStore = WorkerStore
-    XPathStore = XPathStore
 
 # ################################################################################################################################
 
@@ -167,7 +161,7 @@ _wsgi_channels = (CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC)
 
 # ################################################################################################################################
 
-_response_raw_types=(basestring, dict, list, tuple, EtreeElement, Model, ObjectifiedElement)
+_response_raw_types=(bytes, str, dict, list, tuple, EtreeElement, Model, ObjectifiedElement)
 
 # ################################################################################################################################
 
@@ -430,11 +424,12 @@ class Service(object):
     # For WebSockets
     wsx = None # type: WSXFacade
 
+    _msg_ns_store = None
+    _json_pointer_store = None
+    _xpath_store = None
+
     _worker_store = None  # type: WorkerStore
     _worker_config = None # type: ConfigStore
-    _msg_ns_store = None  # type: NamespaceStore
-    _json_pointer_store = None # type: JSONPointerStore
-    _xpath_store = None   # type: XPathStore
     _out_ftp = None       # type: FTPStore
     _out_plain_http = None # type: ConfigDict
 
@@ -471,7 +466,7 @@ class Service(object):
         self.impl_name = self.__class__.__service_impl_name # Ditto
         self.logger = _get_logger(self.name)
         self.server = None        # type: ParallelServer
-        self.broker_client = None # type: BrokerClientAPI
+        self.broker_client = None # type: BrokerClient
         self.channel = None # type: ChannelInfo
         self.chan = self.channel
         self.cid = None          # type: str
@@ -704,7 +699,7 @@ class Service(object):
         data_format,   # type: str
         transport,     # type: str
         server,        # type: ParallelServer
-        broker_client, # type: BrokerClientAPI
+        broker_client, # type: BrokerClient
         worker_store,  # type: WorkerStore
         cid,           # type: str
         simple_io_config, # type: dict
@@ -1278,7 +1273,7 @@ class Service(object):
         """ Takes a service instance and updates it with the current request's context data.
         """
         service.server = server
-        service.broker_client = broker_client # type: BrokerClientAPI
+        service.broker_client = broker_client # type: BrokerClient
         service.cid = cid
         service.request.payload = payload
         service.request.raw_request = raw_request
