@@ -525,6 +525,7 @@ class SCHEDULER:
     InitialSleepTime = 0.1
     DefaultHost = '127.0.0.1'
     DefaultPort = 31530
+    EmbeddedIndicator = 'zato_embedded'
 
     class JOB_TYPE(Attrs):
         ONE_TIME = 'one_time'
@@ -1795,8 +1796,8 @@ class IDEDeploy:
 
 class IMAPMessage:
     def __init__(self, uid, conn, data):
-        self.uid = uid
-        self.conn = conn
+        self.uid = uid   # type: str
+        self.conn = conn # type: Imbox
         self.data = data
 
     def __repr__(self):

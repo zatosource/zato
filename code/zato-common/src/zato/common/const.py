@@ -18,6 +18,7 @@ class SECRETS:
 
     # Zato secret (Fernet)
     PREFIX = 'zato.secf.'
+    PREFIX_BYTES = b'zato.secf.'
 
     # Encrypted data has this prefix
     EncryptedMarker = 'gAAA'
