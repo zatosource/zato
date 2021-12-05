@@ -8,11 +8,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED
 from inspect import isclass
 from traceback import format_exc
-from typing import Optional as optional
+from typing import Optional as optional, Type as type_
 
 # Bunch
 from bunch import bunchify
@@ -32,14 +32,14 @@ from zato.common.py23_ import maxint
 
 # Zato
 from zato.bunch import Bunch
-from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, PUBSUB, \
+from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, PUBSUB, SCHEDULER, \
      WEB_SOCKET, zato_no_op_marker
 from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL
 from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.json_internal import dumps
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException
 from zato.common.nav import DictNav, ListNav
-from zato.common.util.api import get_response_value, make_repr, new_cid, payload_from_request, service_name_from_impl, \
+from zato.common.util.api import get_response_value, invoke_startup_services, make_repr, new_cid, payload_from_request, service_name_from_impl, \
      spawn_greenlet, uncamelify
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
@@ -330,7 +330,7 @@ class WSXFacade(object):
     __slots__ = 'server', 'channel', 'out'
 
     def __init__(self, server):
-        # type: (ParallelServer)
+        # type: (ParallelServer) -> None
         self.server = server
         self.channel = _WSXChannelContainer(self.server)
 
@@ -350,10 +350,47 @@ class PatternsFacade(object):
     __slots__ = ('invoke_retry', 'fanout', 'parallel')
 
     def __init__(self, invoking_service, cache, lock):
-        # type: (Service) -> None
+        # type: (Service, dict, RLock) -> None
         self.invoke_retry = InvokeRetry(invoking_service)
         self.fanout = FanOut(invoking_service, cache, lock)
         self.parallel = ParallelExec(invoking_service, cache, lock)
+
+################################################################################################################################
+
+class SchedulerFacade(object):
+    """ The API through which jobs can be scheduled.
+    """
+    def __init__(self, server):
+        # type: (ParallelServer) -> None
+        self.server = server
+
+    def onetime(self, invoking_service, target_service, name='', after_seconds=0, after_minutes=0, data=None):
+        # type: (Service, type[Service], str, int, int, object) -> int
+
+        now = self.server.time_util.utcnow(needs_format=False)
+
+        invoking_name = invoking_service.get_name()
+        target_name   = target_service if isinstance(target_service, str) else target_service.get_name()
+
+        name = name or '{} -> {} {} {}'.format(
+            invoking_name,
+            target_name,
+            now.isoformat(),
+            invoking_service.cid,
+        )
+
+        response = self.server.invoke(
+            'zato.scheduler.job.create', {
+                'cluster_id': self.server.cluster_id,
+                'name': name,
+                'is_active': True,
+                'job_type': SCHEDULER.JOB_TYPE.ONE_TIME,
+                'service': target_name,
+                'start_date': now + timedelta(seconds=after_seconds, minutes=after_minutes),
+            }
+        )
+
+        return response['id']
 
 # ################################################################################################################################
 
@@ -362,6 +399,8 @@ class Service(object):
     the transport and protocol, be it plain HTTP, SOAP, IBM MQ or any other,
     regardless whether they're built-in or user-defined ones.
     """
+    schedule: SchedulerFacade
+
     call_hooks = True
     _filter_by = None
     _enforce_service_invokes = None
