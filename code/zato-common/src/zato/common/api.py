@@ -1796,8 +1796,8 @@ class IDEDeploy:
 
 class IMAPMessage:
     def __init__(self, uid, conn, data):
-        self.uid = uid
-        self.conn = conn
+        self.uid = uid   # type: str
+        self.conn = conn # type: Imbox
         self.data = data
 
     def __repr__(self):
