@@ -399,13 +399,13 @@ class Invoke(AdminService):
         payload = self.request.input.get('payload')
 
         if payload:
-            payload = b64decode(payload)
+            payload = b64decode(payload) # type: ignore
             payload = payload_from_request(self.server.json_parser, self.cid, payload,
-                self.request.input.data_format, self.request.input.transport)
+                self.request.input.data_format, self.request.input.transport) # type: ignore
 
-            if payload and SCHEDULER.EmbeddedIndicator in payload:
-                payload = loads(payload)
-                payload = payload['data']
+            if payload and SCHEDULER.EmbeddedIndicator in payload: # type: ignore
+                payload = loads(payload) # type: ignore
+                payload = payload['data'] # type: ignore
 
         id = self.request.input.get('id')
         name = self.request.input.get('name')

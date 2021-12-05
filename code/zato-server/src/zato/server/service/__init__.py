@@ -18,7 +18,7 @@ from typing import Optional as optional, Type as type_
 from bunch import bunchify
 
 # lxml
-from lxml.etree import _Element as EtreeElement
+from lxml.etree import _Element as EtreeElement, dump
 from lxml.objectify import ObjectifiedElement
 
 # gevent
@@ -364,7 +364,7 @@ class SchedulerFacade(object):
         # type: (ParallelServer) -> None
         self.server = server
 
-    def onetime(self, invoking_service, target_service, name='', after_seconds=0, after_minutes=0, data=None):
+    def onetime(self, invoking_service, target_service, name='', after_seconds=0, after_minutes=0, data=''):
         # type: (Service, type[Service], str, int, int, object) -> int
 
         now = self.server.time_util.utcnow(needs_format=False)
@@ -379,6 +379,12 @@ class SchedulerFacade(object):
             invoking_service.cid,
         )
 
+        if data:
+            data = dumps({
+                SCHEDULER.EmbeddedIndicator: True,
+                'data': data
+            })
+
         response = self.server.invoke(
             'zato.scheduler.job.create', {
                 'cluster_id': self.server.cluster_id,
@@ -387,10 +393,11 @@ class SchedulerFacade(object):
                 'job_type': SCHEDULER.JOB_TYPE.ONE_TIME,
                 'service': target_name,
                 'start_date': now + timedelta(seconds=after_seconds, minutes=after_minutes),
+                'extra': data
             }
         )
 
-        return response['id']
+        return response['id'] # type: ignore
 
 # ################################################################################################################################
 
