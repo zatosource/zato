@@ -23,6 +23,7 @@ from cryptography.fernet import Fernet, InvalidToken
 from builtins import bytes
 
 # Zato
+from zato.common.const import SECRETS
 from zato.common.crypto.const import well_known_data, zato_stdin_prefix
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.json_internal import loads
@@ -196,11 +197,14 @@ class CryptoManager(object):
 
 # ################################################################################################################################
 
-    def decrypt(self, encrypted):
+    def decrypt(self, encrypted, _prefix=SECRETS.PREFIX_BYTES):
         """ Returns input data in a clear-text, decrypted, form.
         """
         if not isinstance(encrypted, bytes):
             encrypted = encrypted.encode('utf8')
+
+        if encrypted.startswith(_prefix):
+            encrypted = encrypted.replace(_prefix, b'')
 
         return self.secret_key.decrypt(encrypted).decode('utf8')
 
