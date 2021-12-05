@@ -50,8 +50,8 @@ from zato.common.odb.model.base import Base as ModelBase
 from zato.common.util.api import deployment_info, import_module_from_path, is_func_overridden, is_python_file, visit_py_source
 from zato.common.util.platform_ import is_non_windows
 from zato.server.config import ConfigDict
-from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, PubSubHook, Service, \
-     WSXFacade
+from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, \
+    PubSubHook, SchedulerFacade, Service, WSXFacade
 from zato.server.service.internal import AdminService
 
 # Zato - Cython
@@ -447,6 +447,7 @@ class ServiceStore(object):
                 class_._worker_store = service_store.server.worker_store
                 class_._enforce_service_invokes = service_store.server.enforce_service_invokes
                 class_.odb = service_store.server.odb
+                class_.schedule = SchedulerFacade(service_store.server)
                 class_.kvdb = service_store.server.worker_store.kvdb
                 class_.pubsub = service_store.server.worker_store.pubsub
                 class_.cloud.aws.s3 = service_store.server.worker_store.worker_config.cloud_aws_s3
