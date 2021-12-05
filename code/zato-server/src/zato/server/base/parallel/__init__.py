@@ -15,6 +15,7 @@ from platform import system as platform_system
 from random import seed as random_seed
 from tempfile import mkstemp
 from traceback import format_exc
+from typing import Any as any_
 from uuid import uuid4
 
 # gevent
@@ -1007,6 +1008,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def invoke(self, service, request=None, *args, **kwargs):
         """ Invokes a service either in our own worker or, if PID is given on input, in another process of this server.
         """
+        # type: (...) -> any_
+
         target_pid = kwargs.pop('pid', None)
         if target_pid and target_pid != self.pid:
 
