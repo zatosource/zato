@@ -8,7 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED
 from inspect import isclass
 from traceback import format_exc
@@ -26,13 +26,12 @@ from gevent import Timeout, spawn
 from gevent.lock import RLock
 
 # Python 2/3 compatibility
-from past.builtins import basestring
 from future.utils import iterkeys
 from zato.common.py23_ import maxint
 
 # Zato
 from zato.bunch import Bunch
-from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, PUBSUB, \
+from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HL7, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, PUBSUB, SCHEDULER, \
      WEB_SOCKET, zato_no_op_marker
 from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL
 from zato.common.exception import Inactive, Reportable, ZatoException
@@ -88,11 +87,10 @@ UUID = UUID
 if 0:
 
     # stdlib
-    from datetime import timedelta
     from typing import Callable
 
     # Zato
-    from zato.broker.client import BrokerClientAPI
+    from zato.broker.client import BrokerClient
     from zato.common.audit import AuditPII
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.json_schema import Validator as JSONSchemaValidator
@@ -104,7 +102,6 @@ if 0:
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.cassandra import CassandraAPI
-    from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
     from zato.server.query import CassandraQueryAPI
     from zato.sso.api import SSOAPI
 
@@ -113,7 +110,7 @@ if 0:
 
     # For pyflakes
     AuditPII = AuditPII
-    BrokerClientAPI = BrokerClientAPI
+    BrokerClient = BrokerClient
     Callable = Callable
     CassandraAPI = CassandraAPI
     CassandraQueryAPI = CassandraQueryAPI
@@ -121,10 +118,8 @@ if 0:
     ConfigStore = ConfigStore
     CySimpleIO = CySimpleIO
     FTPStore = FTPStore
-    JSONPointerStore = JSONPointerStore
     JSONSchemaValidator = JSONSchemaValidator
     KVDBAPI = KVDBAPI
-    NamespaceStore = NamespaceStore
     ODBManager = ODBManager
     ParallelServer = ParallelServer
     ServerCryptoManager = ServerCryptoManager
@@ -132,7 +127,6 @@ if 0:
     timedelta = timedelta
     TimeUtil = TimeUtil
     WorkerStore = WorkerStore
-    XPathStore = XPathStore
 
 # ################################################################################################################################
 
@@ -167,7 +161,7 @@ _wsgi_channels = (CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC)
 
 # ################################################################################################################################
 
-_response_raw_types=(basestring, dict, list, tuple, EtreeElement, Model, ObjectifiedElement)
+_response_raw_types=(bytes, str, dict, list, tuple, EtreeElement, Model, ObjectifiedElement)
 
 # ################################################################################################################################
 
@@ -330,7 +324,7 @@ class WSXFacade(object):
     __slots__ = 'server', 'channel', 'out'
 
     def __init__(self, server):
-        # type: (ParallelServer)
+        # type: (ParallelServer) -> None
         self.server = server
         self.channel = _WSXChannelContainer(self.server)
 
@@ -350,10 +344,54 @@ class PatternsFacade(object):
     __slots__ = ('invoke_retry', 'fanout', 'parallel')
 
     def __init__(self, invoking_service, cache, lock):
-        # type: (Service) -> None
+        # type: (Service, dict, RLock) -> None
         self.invoke_retry = InvokeRetry(invoking_service)
         self.fanout = FanOut(invoking_service, cache, lock)
         self.parallel = ParallelExec(invoking_service, cache, lock)
+
+################################################################################################################################
+
+class SchedulerFacade(object):
+    """ The API through which jobs can be scheduled.
+    """
+    def __init__(self, server):
+        # type: (ParallelServer) -> None
+        self.server = server
+
+    def onetime(self, invoking_service, target_service, name='', after_seconds=0, after_minutes=0, data=''):
+        # type: (Service, type[Service], str, int, int, object) -> int
+
+        now = self.server.time_util.utcnow(needs_format=False)
+
+        invoking_name = invoking_service.get_name()
+        target_name   = target_service if isinstance(target_service, str) else target_service.get_name()
+
+        name = name or '{} -> {} {} {}'.format(
+            invoking_name,
+            target_name,
+            now.isoformat(),
+            invoking_service.cid,
+        )
+
+        if data:
+            data = dumps({
+                SCHEDULER.EmbeddedIndicator: True,
+                'data': data
+            })
+
+        response = self.server.invoke(
+            'zato.scheduler.job.create', {
+                'cluster_id': self.server.cluster_id,
+                'name': name,
+                'is_active': True,
+                'job_type': SCHEDULER.JOB_TYPE.ONE_TIME,
+                'service': target_name,
+                'start_date': now + timedelta(seconds=after_seconds, minutes=after_minutes),
+                'extra': data
+            }
+        )
+
+        return response['id'] # type: ignore
 
 # ################################################################################################################################
 
@@ -362,6 +400,8 @@ class Service(object):
     the transport and protocol, be it plain HTTP, SOAP, IBM MQ or any other,
     regardless whether they're built-in or user-defined ones.
     """
+    schedule: SchedulerFacade
+
     call_hooks = True
     _filter_by = None
     _enforce_service_invokes = None
@@ -384,11 +424,12 @@ class Service(object):
     # For WebSockets
     wsx = None # type: WSXFacade
 
+    _msg_ns_store = None
+    _json_pointer_store = None
+    _xpath_store = None
+
     _worker_store = None  # type: WorkerStore
     _worker_config = None # type: ConfigStore
-    _msg_ns_store = None  # type: NamespaceStore
-    _json_pointer_store = None # type: JSONPointerStore
-    _xpath_store = None   # type: XPathStore
     _out_ftp = None       # type: FTPStore
     _out_plain_http = None # type: ConfigDict
 
@@ -425,7 +466,7 @@ class Service(object):
         self.impl_name = self.__class__.__service_impl_name # Ditto
         self.logger = _get_logger(self.name)
         self.server = None        # type: ParallelServer
-        self.broker_client = None # type: BrokerClientAPI
+        self.broker_client = None # type: BrokerClient
         self.channel = None # type: ChannelInfo
         self.chan = self.channel
         self.cid = None          # type: str
@@ -658,7 +699,7 @@ class Service(object):
         data_format,   # type: str
         transport,     # type: str
         server,        # type: ParallelServer
-        broker_client, # type: BrokerClientAPI
+        broker_client, # type: BrokerClient
         worker_store,  # type: WorkerStore
         cid,           # type: str
         simple_io_config, # type: dict
@@ -1232,7 +1273,7 @@ class Service(object):
         """ Takes a service instance and updates it with the current request's context data.
         """
         service.server = server
-        service.broker_client = broker_client # type: BrokerClientAPI
+        service.broker_client = broker_client # type: BrokerClient
         service.cid = cid
         service.request.payload = payload
         service.request.raw_request = raw_request
