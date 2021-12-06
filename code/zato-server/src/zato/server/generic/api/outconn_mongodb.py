@@ -70,7 +70,7 @@ class OutconnMongoDBWrapper(Wrapper):
                 'wtimeout': self.config.write_timeout,
                 'j': self.config.is_write_journal_enabled,
                 'fsync': self.config.is_write_fsync_enabled,
-                'replicaSet': self.config.replica_set,
+                'replicaSet': self.config.replica_set or None,
                 'readPreference': self.config.read_pref_type,
                 'readPreferenceTags': self.config.read_pref_tag_list or '',
                 'maxStalenessSeconds': self.config.read_pref_max_stale,
@@ -79,6 +79,8 @@ class OutconnMongoDBWrapper(Wrapper):
                 'authSource': self.config.auth_source,
                 'authMechanism': self.config.auth_mechanism,
             })
+
+            client_config.password = self.server.decrypt(client_config.password) # type: ignore
 
             if self.config.document_class:
                 client_config.document_class = self.config.document_class
