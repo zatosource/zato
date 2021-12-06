@@ -233,7 +233,7 @@
                         {% comment %} 3 {% endcomment %}
                         <td class='ignore'>{{ item.username|default:"" }}</td>
                         <td class='ignore'>{{ item.app_name|default:"" }}</td>
-                        <td class='ignore'>{{ item.replica_set }}</td>
+                        <td class='ignore'>{{ item.replica_set|default:"" }}</td>
                         <td class='ignore'>{{ item.auth_source }}</td>
 
                         {% comment %} 4 {% endcomment %}
