@@ -8,7 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
-from datetime import datetime
 from logging import DEBUG, getLogger
 from operator import itemgetter
 from traceback import format_exc
