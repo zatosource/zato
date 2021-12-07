@@ -658,19 +658,21 @@ class Message(PubSubMessage):
         self_priority = max_pri - self.priority
         other_priority = max_pri - other.priority
 
+        # If priority is different, that is most important
         if self_priority < other_priority:
             return True
 
-        # Under Python 3, we must ensure these are not None,
-        # because None < None is undefined (TypeError: unorderable types: NoneType() < NoneType())
+        # If we received an external publication time from a publisher,
+        # this has priority over the time that established ourselves (which is checked below)
         elif self.ext_pub_time and other.ext_pub_time:
             return self.ext_pub_time < other.ext_pub_time
 
-        elif self.pub_time < other.pub_time:
-            return True
-
+        # Finally, we need to compare the publication times as assigned
+        # by ourselves. At this point no two messages are to have the same
+        # publication time because if such a condition is of concern then publishers
+        # should sent their own times via ext_pub_time.
         else:
-            raise ValueError('Order could not be establised {} and {}'.format(self, other))
+            return self.pub_time < other.pub_time
 
 # ################################################################################################################################
 
@@ -1146,10 +1148,11 @@ class PubSubTool(object):
 
             msg_ids.append(msg.pub_msg_id)
             gd_msg = GDMessage(sub_key, topic_name, msg)
-            self.delivery_lists[sub_key].add(gd_msg)
+            delivery_list = self.delivery_lists[sub_key]
+            delivery_list.add(gd_msg)
             count += 1
 
-        logger.info('Pushing %d GD message{}to task:%s msg_ids:%s'.format(
+        logger.info('Pushing %d GD message{}to task:%s; msg_ids:%s'.format(
             ' ' if count==1 else 's '), count, sub_key, msg_ids)
 
 # ################################################################################################################################
