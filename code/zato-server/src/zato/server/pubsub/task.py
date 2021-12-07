@@ -387,18 +387,23 @@ class DeliveryTask(object):
                             result.exception_list.append(remove_err)
 
                 # Status of messages is updated in both SQL and RAM so we can now log success
-                len_delivered = len(delivered_msg_id_list)
-                suffix = ' ' if len_delivered == 1 else 's '
-                logger.info('Successfully delivered %s message%s%s to %s (%s -> %s) [lend:%d]',
-                    len_delivered, suffix, delivered_msg_id_list, self.sub_key, self.topic_name, self.sub_config.endpoint_name,
-                    self.len_delivered)
+                # unless, for some reason, we were not able to remove the messages from self.delivery_list.
+                if result.status_code in (status_code.Error, status_code.Warning):
+                    logger.warn('Could not remove delivered messages from self.delivery_list `%s` (%s) -> `%s`',
+                        to_deliver, self.delivery_list, result.exception_list)
+                else:
+                    len_delivered = len(delivered_msg_id_list)
+                    suffix = ' ' if len_delivered == 1 else 's '
+                    logger.info('Successfully delivered %s message%s%s to %s (%s -> %s) [lend:%d]',
+                        len_delivered, suffix, delivered_msg_id_list, self.sub_key, self.topic_name, self.sub_config.endpoint_name,
+                        self.len_delivered)
 
-                self.len_batches += 1
-                self.len_delivered += len_delivered
+                    self.len_batches += 1
+                    self.len_delivered += len_delivered
 
-                # Indicates that we have successfully delivered all messages currently queued up
-                # and our delivery list is currently empty.
-                result.status_code = status_code.OK
+                    # Indicates that we have successfully delivered all messages currently queued up
+                    # and our delivery list is currently empty.
+                    result.status_code = status_code.OK
 
         # No matter what, we always have a result object to return
         if result.status_code not in (status_code.Error, status_code.Warning):
@@ -665,7 +670,7 @@ class Message(PubSubMessage):
             return True
 
         else:
-            raise ValueError('Order coult not be establised {} and {}'.format(self, other))
+            raise ValueError('Order could not be establised {} and {}'.format(self, other))
 
 # ################################################################################################################################
 
@@ -1140,7 +1145,8 @@ class PubSubTool(object):
         for msg in gd_msg_list:
 
             msg_ids.append(msg.pub_msg_id)
-            self.delivery_lists[sub_key].add(GDMessage(sub_key, topic_name, msg))
+            gd_msg = GDMessage(sub_key, topic_name, msg)
+            self.delivery_lists[sub_key].add(gd_msg)
             count += 1
 
         logger.info('Pushing %d GD message{}to task:%s msg_ids:%s'.format(
