@@ -22,10 +22,11 @@ from future.utils import itervalues
 # ################################################################################################################################
 
 if 0:
+    from typing import Callable
     from zato.common.pubsub import PubSubMessage
     from zato.server.pubsub.model import Subscription
 
-    # For pyflakes
+    Callable = Callable
     PubSubMessage = PubSubMessage
     Subscription = Subscription
 
@@ -85,12 +86,12 @@ class DeliverMessage(AdminService):
 # ################################################################################################################################
 
     def handle(self):
-        msg = self.request.input.msg
+        msg = self.request.input.msg # type: list[PubSubMessage]
 
-        subscription = self.request.input.subscription
-        endpoint_impl_getter = self.pubsub.endpoint_impl_getter[subscription.config.endpoint_type]
+        subscription = self.request.input.subscription # type: Subscription
+        endpoint_impl_getter = self.pubsub.endpoint_impl_getter[subscription.config.endpoint_type] # type: Callable
 
-        func = deliver_func[subscription.config.endpoint_type]
+        func = deliver_func[subscription.config.endpoint_type] # type: Callable
         func(self, msg, subscription, endpoint_impl_getter)
 
 # ################################################################################################################################
@@ -109,16 +110,21 @@ class DeliverMessage(AdminService):
 
 # ################################################################################################################################
 
-    def _deliver_rest_soap(self, msg, subscription, impl_getter, _suds=HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id,
-        _rest=URL_TYPE.PLAIN_HTTP):
+    def _deliver_rest_soap(self,
+        msg:'list[PubSubMessage]',
+        subscription:'Subscription',
+        impl_getter:'Callable',
+        _suds:'str'=HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id,
+        _rest:'str'=URL_TYPE.PLAIN_HTTP
+        ):
         if not subscription.config.out_http_soap_id:
             raise ValueError('Missing out_http_soap_id for subscription `{}`'.format(subscription))
         else:
             data = self._get_data_from_message(msg)
-            http_soap = impl_getter(subscription.config.out_http_soap_id)
+            http_soap = impl_getter(subscription.config.out_http_soap_id) # type: dict
 
-            _is_rest = http_soap['config']['transport'] == _rest
-            _has_suds = http_soap['config']['serialization_type'] == _suds
+            _is_rest = http_soap['config']['transport'] == _rest # type: bool
+            _has_suds = http_soap['config']['serialization_type'] == _suds # type: bool
 
             # If it is REST or a suds-based connection, we can just invoke it directly
             if _is_rest or (not _has_suds):

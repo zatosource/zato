@@ -383,22 +383,27 @@ class DeliveryTask(object):
                             msg.delivery_count += 1
                             self.delivery_list.remove_pubsub_msg(msg)
                         except Exception as remove_err:
-                            result.status_code = status_code.Warning
+                            result.status_code = status_code.Error
                             result.exception_list.append(remove_err)
 
                 # Status of messages is updated in both SQL and RAM so we can now log success
-                len_delivered = len(delivered_msg_id_list)
-                suffix = ' ' if len_delivered == 1 else 's '
-                logger.info('Successfully delivered %s message%s%s to %s (%s -> %s) [lend:%d]',
-                    len_delivered, suffix, delivered_msg_id_list, self.sub_key, self.topic_name, self.sub_config.endpoint_name,
-                    self.len_delivered)
+                # unless, for some reason, we were not able to remove the messages from self.delivery_list.
+                if result.status_code in (status_code.Error, status_code.Warning):
+                    logger.warn('Could not remove delivered messages from self.delivery_list `%s` (%s) -> `%s`',
+                        to_deliver, self.delivery_list, result.exception_list)
+                else:
+                    len_delivered = len(delivered_msg_id_list)
+                    suffix = ' ' if len_delivered == 1 else 's '
+                    logger.info('Successfully delivered %s message%s%s to %s (%s -> %s) [lend:%d]',
+                        len_delivered, suffix, delivered_msg_id_list, self.sub_key, self.topic_name, self.sub_config.endpoint_name,
+                        self.len_delivered)
 
-                self.len_batches += 1
-                self.len_delivered += len_delivered
+                    self.len_batches += 1
+                    self.len_delivered += len_delivered
 
-                # Indicates that we have successfully delivered all messages currently queued up
-                # and our delivery list is currently empty.
-                result.status_code = status_code.OK
+                    # Indicates that we have successfully delivered all messages currently queued up
+                    # and our delivery list is currently empty.
+                    result.status_code = status_code.OK
 
         # No matter what, we always have a result object to return
         if result.status_code not in (status_code.Error, status_code.Warning):
@@ -653,19 +658,21 @@ class Message(PubSubMessage):
         self_priority = max_pri - self.priority
         other_priority = max_pri - other.priority
 
+        # If priority is different, that is most important
         if self_priority < other_priority:
             return True
 
-        # Under Python 3, we must ensure these are not None,
-        # because None < None is undefined (TypeError: unorderable types: NoneType() < NoneType())
+        # If we received an external publication time from a publisher,
+        # this has priority over the time that established ourselves (which is checked below)
         elif self.ext_pub_time and other.ext_pub_time:
             return self.ext_pub_time < other.ext_pub_time
 
-        elif self.pub_time < other.pub_time:
-            return True
-
+        # Finally, we need to compare the publication times as assigned
+        # by ourselves. At this point no two messages are to have the same
+        # publication time because if such a condition is of concern then publishers
+        # should sent their own times via ext_pub_time.
         else:
-            raise ValueError('Order coult not be establised {} and {}'.format(self, other))
+            return self.pub_time < other.pub_time
 
 # ################################################################################################################################
 
@@ -1140,10 +1147,12 @@ class PubSubTool(object):
         for msg in gd_msg_list:
 
             msg_ids.append(msg.pub_msg_id)
-            self.delivery_lists[sub_key].add(GDMessage(sub_key, topic_name, msg))
+            gd_msg = GDMessage(sub_key, topic_name, msg)
+            delivery_list = self.delivery_lists[sub_key]
+            delivery_list.add(gd_msg)
             count += 1
 
-        logger.info('Pushing %d GD message{}to task:%s msg_ids:%s'.format(
+        logger.info('Pushing %d GD message{}to task:%s; msg_ids:%s'.format(
             ' ' if count==1 else 's '), count, sub_key, msg_ids)
 
 # ################################################################################################################################
