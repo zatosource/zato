@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
+from datetime import datetime
 from logging import DEBUG, getLogger
 from operator import itemgetter
 from traceback import format_exc
@@ -577,7 +578,9 @@ class Publish(AdminService):
             # This is optional
             ext_pub_time = ctx.last_msg.get('ext_pub_time')
             if ext_pub_time:
-                ext_pub_time = datetime_from_ms(ext_pub_time* 1000)
+                if isinstance(ext_pub_time, str):
+                    ext_pub_time = float(ext_pub_time)
+                ext_pub_time = datetime_from_ms(ext_pub_time * 1000)
 
             # Prepare a document to update the topic's metadata with
             if has_topic:
