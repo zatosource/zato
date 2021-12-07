@@ -383,7 +383,7 @@ class DeliveryTask(object):
                             msg.delivery_count += 1
                             self.delivery_list.remove_pubsub_msg(msg)
                         except Exception as remove_err:
-                            result.status_code = status_code.Warning
+                            result.status_code = status_code.Error
                             result.exception_list.append(remove_err)
 
                 # Status of messages is updated in both SQL and RAM so we can now log success
