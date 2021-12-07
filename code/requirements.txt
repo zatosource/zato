@@ -31,7 +31,7 @@ distro==1.5.0
 Django==1.9.13
 docformatter==0.8
 dropbox==10.10.0
-elasticsearch==7.9.1
+elasticsearch==7.15.2
 ephem==3.7.6.0
 faker==8.12.1
 fastparquet==0.6.1
