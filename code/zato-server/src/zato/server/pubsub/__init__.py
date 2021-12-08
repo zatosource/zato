@@ -791,7 +791,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def delete_topic(self, topic_id):
-        # type: (int) -> list
+        # type: (int) -> None
         with self.lock:
             topic_name = self.topics[topic_id].name
             subscriptions_by_topic = self._delete_topic(topic_id, topic_name) # type: list
