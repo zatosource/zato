@@ -35,8 +35,7 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
      get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
-from zato.common.typing_ import any_, callable_, dict_, intdict, intnone, list_, stranydict, strintbool, strintdict, \
-     strint, strintnone, strnone
+from zato.common.typing_ import anydict, callable_, cast_, dict_, intdict, intnone, list_, strintdict, strintnone
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.hook import HookTool
@@ -1796,7 +1795,7 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def read_messages(self, topic_name:'str', sub_key:'str', has_gd:'bool', *args:'any_', **kwargs:'strintbool'):
+    def read_messages(self, topic_name, sub_key, has_gd, *args, **kwargs):
         """ Looks up messages in subscriber's queue by input criteria without deleting them from the queue.
         """
         service_name = _service_read_messages_gd if has_gd else _service_read_messages_non_gd
@@ -1816,7 +1815,7 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def read_message(self, topic_name:'str', msg_id:'str', has_gd:'bool', *args:'any_', **kwargs:'strint'):
+    def read_message(self, topic_name, msg_id, has_gd, *args, **kwargs):
         """ Returns details of a particular message without deleting it from the subscriber's queue.
         """
         if has_gd:
@@ -1847,10 +1846,6 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-from typing import TypeVar as typevar_
-
-strintnone = typevar_('strintnone', 'int')
-
     def delete_message(self, sub_key:'str', msg_id:'str', has_gd:'bool', *args:'tuple', **kwargs:'strintnone'):
         """ Deletes a message from a subscriber's queue.
         DELETE /zato/pubsub/msg/{msg_id}
@@ -1858,14 +1853,14 @@ strintnone = typevar_('strintnone', 'int')
         service_data = {
             'sub_key': sub_key,
             'msg_id': msg_id,
-        } # type: stranydict
+        } # type: strintdict
 
         if has_gd:
             service_name = _service_delete_message_gd
             service_data['cluster_id'] = self.server.cluster_id
         else:
-            server_name = kwargs.get('server_name') # type: strnone
-            server_pid  = kwargs.get('server_pid')  # type: intnone
+            server_name = cast_(str, kwargs.get('server_name', ''))
+            server_pid  = cast_(int, kwargs.get('server_pid', 0))
 
             if not(sub_key and server_name and server_pid):
                 raise Exception('All of sub_key, server_name and server_pid are required for non-GD messages')
