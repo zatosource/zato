@@ -322,8 +322,6 @@ class Publish(AdminService):
         except KeyError:
             raise NotFound(self.cid, 'No such topic `{}`'.format(input.topic_name))
 
-        pubsub.log_subscriptions_by_topic_name(topic.name)
-
         # Reject the message is topic is not active
         if not topic.is_active:
             raise ServiceUnavailable(self.cid, 'Topic is inactive `{}`'.format(input.topic_name))
