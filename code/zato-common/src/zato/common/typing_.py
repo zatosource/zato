@@ -18,7 +18,9 @@ from typing import           \
     NoReturn as noreturn,    \
     List as list_,           \
     Optional as optional,    \
+    Text as str_,            \
     Tuple as tuple_,         \
+    TypeVar as typevar_,     \
     Set as set_,             \
     Union as union_
 
@@ -81,7 +83,9 @@ generator_ = generator_
 intnone    = optional[int]
 noreturn   = noreturn
 set_       = set_
-strint     = union_[str_, int_]
+strint     = union_[str_, int]
+strintnone = None#typevar_('strintnone', 'strnone', intnone)
+strintbool = union_[str_, int, bool]
 strnone    = optional[str]
 strlist    = list_[str]
 stranydict = dict_[str, any_]
