@@ -35,7 +35,7 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
      get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
-from zato.common.typing_ import dict_, intdict, intnone, list_, strintdict, strnone
+from zato.common.typing_ import callable_, dict_, intdict, intnone, list_, stranydict, strintdict, strint, strnone
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.hook import HookTool
@@ -47,7 +47,6 @@ from zato.server.pubsub.sync import InRAMSync
 # ################################################################################################################################
 
 if 0:
-    from typing import Callable
     from zato.cy.reqresp.payload import SimpleIOPayload
     from zato.server.base.parallel import ParallelServer
     from zato.server.pubsub.task import PubSubTool
@@ -207,7 +206,7 @@ class PubSub(object):
 
         # Getter methods for each endpoint type that return actual endpoints,
         # e.g. REST outgoing connections. Values are set by worker store.
-        self.endpoint_impl_getter = dict.fromkeys(PUBSUB.ENDPOINT_TYPE()) # type: dict_[str, Callable]
+        self.endpoint_impl_getter = dict.fromkeys(PUBSUB.ENDPOINT_TYPE()) # type: dict_[str, callable_]
 
         # How many messages have been published through this server, regardless of which topic they were for
         self.msg_pub_counter = 0
@@ -1847,20 +1846,21 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def delete_message(self, sub_key, msg_id, has_gd, *args, **kwargs):
+    def delete_message(self, sub_key:'str', msg_id:'str', has_gd:'bool', *args:'tuple', **kwargs:'strint'):
         """ Deletes a message from a subscriber's queue.
         DELETE /zato/pubsub/msg/{msg_id}
         """
         service_data = {
             'sub_key': sub_key,
             'msg_id': msg_id,
-        }
+        } # type: stranydict
+
         if has_gd:
             service_name = _service_delete_message_gd
             service_data['cluster_id'] = self.server.cluster_id
         else:
-            server_name = kwargs.get('server_name')
-            server_pid = kwargs.get('server_pid')
+            server_name = kwargs.get('server_name') # type: strnone
+            server_pid  = kwargs.get('server_pid')  # type: intnone
 
             if not(sub_key and server_name and server_pid):
                 raise Exception('All of sub_key, server_name and server_pid are required for non-GD messages')
@@ -1875,7 +1875,11 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def subscribe(self, topic_name, _find_wsx_environ=find_wsx_environ, **kwargs):
+    def subscribe(self,
+        topic_name, # type: str
+        _find_wsx_environ=find_wsx_environ, # type: callable_
+        **kwargs # type: dict
+        ):
 
         # Are we going to subscribe a WSX client?
         use_current_wsx = kwargs.get('use_current_wsx')
@@ -1940,7 +1944,11 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def resume_wsx_subscription(self, sub_key, service, _find_wsx_environ=find_wsx_environ):
+    def resume_wsx_subscription(self,
+        sub_key:'str',     # type: str
+        service:'Service', # type: Service
+        _find_wsx_environ=find_wsx_environ # type: callable_
+        ):
         """ Invoked by WSX clients that want to resume deliveries of their messages after they reconnect.
         """
         # Get metadata and the WebSocket itself
@@ -1948,7 +1956,7 @@ class PubSub(object):
         wsx = wsx_environ['web_socket']
 
         # Actual resume subscription
-        self.invoke_service('zato.pubsub.resume-wsx-subscription', {
+        _ = self.invoke_service('zato.pubsub.resume-wsx-subscription', {
             'sql_ws_client_id': wsx_environ['sql_ws_client_id'],
             'channel_name': wsx_environ['ws_channel_config']['name'],
             'pub_client_id': wsx_environ['pub_client_id'],
@@ -1996,9 +2004,9 @@ class PubSub(object):
             'task_sync_interval': task_sync_interval,
             'task_delivery_interval': task_delivery_interval,
             'depth_check_freq': depth_check_freq,
-            'max_depth_gd': PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_GD,
-            'max_depth_non_gd': PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_NON_GD,
-            'pub_buffer_size_gd': PUBSUB.DEFAULT.PUB_BUFFER_SIZE_GD,
+            'max_depth_gd': max_depth_gd,
+            'max_depth_non_gd': max_depth_non_gd,
+            'pub_buffer_size_gd': pub_buffer_size_gd,
         })
 
 # ################################################################################################################################
