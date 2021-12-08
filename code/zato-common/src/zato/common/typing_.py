@@ -13,6 +13,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from typing import           \
     Any as any_,             \
     Callable as callable_,   \
+    cast as cast_,           \
     Dict as dict_,           \
     Generator as generator_, \
     NoReturn as noreturn,    \
@@ -84,12 +85,12 @@ intnone    = optional[int]
 noreturn   = noreturn
 set_       = set_
 strint     = union_[str_, int]
-strintnone = None#typevar_('strintnone', 'strnone', intnone)
+strintnone = union_[optional[str_], optional[int]]
 strintbool = union_[str_, int, bool]
 strnone    = optional[str]
 strlist    = list_[str]
 stranydict = dict_[str, any_]
-strintdict = dict_[str, int]
+strintdict = dict_[str, strint]
 intdict    = dict_[int, int]
 strtuple   = tuple_[str]
 tuple_     = tuple_
