@@ -35,6 +35,7 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
      get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
+from zato.common.typing_ import dict_, intdict, list_, strintdict
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.hook import HookTool
@@ -61,6 +62,10 @@ if 0:
 logger = logging.getLogger('zato_pubsub.ps')
 logger_zato = logging.getLogger('zato')
 logger_overflow = logging.getLogger('zato_pubsub_overflow')
+
+# ################################################################################################################################
+
+sublist = list_['Subscription']
 
 # ################################################################################################################################
 
@@ -163,17 +168,17 @@ class PubSub(object):
         self.log_if_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_deliv_server_not_found
         self.log_if_wsx_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_wsx_deliv_server_not_found
 
-        self.subscriptions_by_topic = {}       # Topic name     -> List of Subscription objects
-        self._subscriptions_by_sub_key = {}    # Sub key        -> Subscription object
-        self.sub_key_servers = {}              # Sub key        -> Server/PID handling it
+        self.subscriptions_by_topic = {}    # type: dict_[str, sublist]      # Topic name -> List of Subscription objects
+        self._subscriptions_by_sub_key = {} # type: dict_[str, Subscription] # Sub key    -> Subscription object
+        self.sub_key_servers = {}           # type: dict_[str, SubKeyServer] # Sub key    -> SubKeyServer server/PID handling it
 
-        self.endpoints = {}                    # Endpoint ID    -> Endpoint object
-        self.topics = {}                       # Topic ID       -> Topic object
+        self.endpoints = {} # type: dict_[int, Endpoint] # Endpoint ID -> Endpoint object
+        self.topics = {}    # type: dict_[int, Topic]    # Topic ID    -> Topic object
 
-        self.sec_id_to_endpoint_id = {}        # Sec def ID     -> Endpoint ID
-        self.ws_channel_id_to_endpoint_id = {} # WS chan def ID -> Endpoint ID
-        self.service_id_to_endpoint_id = {}    # Service ID     -> Endpoint ID
-        self.topic_name_to_id = {}             # Topic name     -> Topic ID
+        self.sec_id_to_endpoint_id = {}        # type: intdict    # Sec def ID     -> Endpoint ID
+        self.ws_channel_id_to_endpoint_id = {} # type: intdict    # WS chan def ID -> Endpoint ID
+        self.service_id_to_endpoint_id = {}    # type: intdict    # Service ID     -> Endpoint ID
+        self.topic_name_to_id = {}             # type: strintdict # Topic name     -> Topic ID
         self.pub_buffer_gd = {}                # Topic ID       -> GD message buffered for that topic
         self.pub_buffer_non_gd = {}            # Topic ID       -> Non-GD message buffered for that topic
 
@@ -1499,7 +1504,7 @@ class PubSub(object):
 
     def trigger_notify_pubsub_tasks(self):
         """ A background greenlet which periodically lets delivery tasks know that there are perhaps
-        new GD messages for the topic this class represents.
+        new GD messages for the topic that this class represents.
         """
 
         # Local aliases
