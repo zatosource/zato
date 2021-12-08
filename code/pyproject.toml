@@ -8,7 +8,7 @@ reportMissingParameterType = "error"
 reportUnusedCallResult = "error"
 reportGeneralTypeIssues = "error"
 extraPaths = [
-    "./eggs",
+    "./lib/python3.8/site-packages",
     "./zato-agent/src",
     "./zato-cli/src",
     "./zato-common/src",
