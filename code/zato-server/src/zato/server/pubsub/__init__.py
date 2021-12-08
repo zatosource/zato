@@ -47,6 +47,7 @@ from zato.server.pubsub.sync import InRAMSync
 # ################################################################################################################################
 
 if 0:
+    from typing import Callable
     from zato.cy.reqresp.payload import SimpleIOPayload
     from zato.server.base.parallel import ParallelServer
     from zato.server.pubsub.task import PubSubTool
@@ -168,48 +169,64 @@ class PubSub(object):
         self.log_if_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_deliv_server_not_found
         self.log_if_wsx_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_wsx_deliv_server_not_found
 
-        self.subscriptions_by_topic = {}    # type: dict_[str, sublist]      # Topic name -> List of Subscription objects
-        self._subscriptions_by_sub_key = {} # type: dict_[str, Subscription] # Sub key    -> Subscription object
-        self.sub_key_servers = {}           # type: dict_[str, SubKeyServer] # Sub key    -> SubKeyServer server/PID handling it
+        # Topic name -> List of Subscription objects
+        self.subscriptions_by_topic = {} # type: dict_[str, sublist]
 
-        self.endpoints = {} # type: dict_[int, Endpoint] # Endpoint ID -> Endpoint object
-        self.topics = {}    # type: dict_[int, Topic]    # Topic ID    -> Topic object
+        # Sub key -> Subscription object
+        self._subscriptions_by_sub_key = {} # type: dict_[str, Subscription]
 
-        self.sec_id_to_endpoint_id = {}        # type: intdict    # Sec def ID     -> Endpoint ID
-        self.ws_channel_id_to_endpoint_id = {} # type: intdict    # WS chan def ID -> Endpoint ID
-        self.service_id_to_endpoint_id = {}    # type: intdict    # Service ID     -> Endpoint ID
-        self.topic_name_to_id = {}             # type: strintdict # Topic name     -> Topic ID
-        self.pub_buffer_gd = {}                # Topic ID       -> GD message buffered for that topic
-        self.pub_buffer_non_gd = {}            # Topic ID       -> Non-GD message buffered for that topic
+        # Sub key -> SubKeyServer server/PID handling it
+        self.sub_key_servers = {} # type: dict_[str, SubKeyServer]
 
-        self.pubsub_tool_by_sub_key = {}       # Sub key        -> PubSubTool object
-        self.pubsub_tools = []                 # A list of PubSubTool objects, each containing delivery tasks
+        # Endpoint ID -> Endpoint object
+        self.endpoints = {} # type: dict_[int, Endpoint]
+
+        # Topic ID -> Topic object
+        self.topics = {} # type: dict_[int, Topic]
+
+        # Sec def ID -> Endpoint ID
+        self.sec_id_to_endpoint_id = {} # type: intdict
+
+        # WS chan def ID -> Endpoint ID
+        self.ws_channel_id_to_endpoint_id = {} # type: intdict
+
+        # Service ID -> Endpoint ID
+        self.service_id_to_endpoint_id = {} # type: intdict
+
+        # Topic name -> Topic ID
+        self.topic_name_to_id = {} # type: strintdict
+
+        # Sub key -> PubSubTool object
+        self.pubsub_tool_by_sub_key = {} # type: dict_[str, PubSubTool]
+
+        # A list of PubSubTool objects, each containing delivery tasks
+        self.pubsub_tools = [] # type: list_[PubSubTool]
 
         # A backlog of messages that have at least one subscription, i.e. this is what delivery servers use.
         self.sync_backlog = InRAMSync(self)
 
         # Getter methods for each endpoint type that return actual endpoints,
         # e.g. REST outgoing connections. Values are set by worker store.
-        self.endpoint_impl_getter = dict.fromkeys(PUBSUB.ENDPOINT_TYPE())
+        self.endpoint_impl_getter = dict.fromkeys(PUBSUB.ENDPOINT_TYPE()) # type: dict_[str, Callable]
 
         # How many messages have been published through this server, regardless of which topic they were for
         self.msg_pub_counter = 0
 
-        # How many messages a given endpoint published
-        self.endpoint_msg_counter = {}
+        # How many messages a given endpoint published, topic_id -> its message counter.
+        self.endpoint_msg_counter = {} # type: intdict
 
         # How often to update metadata about topics and endpoints, if at all
-        self.has_meta_topic = server.fs_server_config.pubsub_meta_topic.enabled
-        self.topic_meta_store_frequency = server.fs_server_config.pubsub_meta_topic.store_frequency
+        self.has_meta_topic = server.fs_server_config.pubsub_meta_topic.enabled # type: bool
+        self.topic_meta_store_frequency = server.fs_server_config.pubsub_meta_topic.store_frequency # type: int
 
-        self.has_meta_endpoint = server.fs_server_config.pubsub_meta_endpoint_pub.enabled
-        self.endpoint_meta_store_frequency = server.fs_server_config.pubsub_meta_endpoint_pub.store_frequency
-        self.endpoint_meta_data_len = server.fs_server_config.pubsub_meta_endpoint_pub.data_len
-        self.endpoint_meta_max_history = server.fs_server_config.pubsub_meta_endpoint_pub.max_history
+        self.has_meta_endpoint = server.fs_server_config.pubsub_meta_endpoint_pub.enabled # type: bool
+        self.endpoint_meta_store_frequency = server.fs_server_config.pubsub_meta_endpoint_pub.store_frequency # type: int
+        self.endpoint_meta_data_len = server.fs_server_config.pubsub_meta_endpoint_pub.data_len # type:int
+        self.endpoint_meta_max_history = server.fs_server_config.pubsub_meta_endpoint_pub.max_history # type:int
 
         # How many bytes to use for look up purposes when conducting message searches
-        self.data_prefix_len = server.fs_server_config.pubsub.data_prefix_len
-        self.data_prefix_short_len = server.fs_server_config.pubsub.data_prefix_short_len
+        self.data_prefix_len = server.fs_server_config.pubsub.data_prefix_len # type: int
+        self.data_prefix_short_len = server.fs_server_config.pubsub.data_prefix_short_len # type: int
 
         # Manages access to service hooks
         self.hook_tool = HookTool(self.server, HookCtx, hook_type_to_method, self.invoke_service)
@@ -321,7 +338,7 @@ class PubSub(object):
             if isinstance(sub_data, Subscription):
                 self._write_log_sub_data(sub_data, out)
             else:
-                sorted_sub_data = sorted(sub_data)
+                sorted_sub_data = sorted(sub_data) # type: ignore
                 for item in sorted_sub_data:
                     if isinstance(item, Subscription):
                         self._write_log_sub_data(item, out)
