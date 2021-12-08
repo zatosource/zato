@@ -22,10 +22,10 @@ pyright:
 	pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/__init__.py
 
 mypy:
-	#$(PY_DIR)/mypy --ignore-missing-imports $(CURDIR)/src/zato/server/pubsub/task.py
+	$(PY_DIR)/mypy --ignore-missing-imports $(CURDIR)/src/zato/server/pubsub/task.py
 	$(PY_DIR)/mypy --ignore-missing-imports $(CURDIR)/src/zato/server/pubsub/__init__.py
 
 type-check:
 	echo "Running type checks in zato-server pubsub"
-	$(MAKE) mypy
-	#$(MAKE) pyright
+	#$(MAKE) mypy
+	$(MAKE) pyright

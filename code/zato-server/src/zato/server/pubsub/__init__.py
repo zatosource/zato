@@ -35,7 +35,7 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
      get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
-from zato.common.typing_ import dict_, intdict, list_, strintdict
+from zato.common.typing_ import dict_, intdict, intnone, list_, strintdict, strnone
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.hook import HookTool
@@ -1968,14 +1968,23 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def create_topic(self, name, has_gd=False, accept_on_no_sub=True, is_active=True, is_internal=False, is_api_sub_allowed=True,
-        hook_service_id=None, task_sync_interval=_ps_default.TASK_SYNC_INTERVAL,
-        task_delivery_interval=_ps_default.TASK_DELIVERY_INTERVAL, depth_check_freq=_ps_default.DEPTH_CHECK_FREQ,
-        max_depth_gd=_ps_default.TOPIC_MAX_DEPTH_GD, max_depth_non_gd=_ps_default.TOPIC_MAX_DEPTH_NON_GD,
-        pub_buffer_size_gd=_ps_default.PUB_BUFFER_SIZE_GD,
+    def create_topic(self,
+        name,                    # type: str
+        has_gd=False,            # type: bool
+        accept_on_no_sub=True,   # type: bool
+        is_active=True,          # type: bool
+        is_internal=False,       # type: bool
+        is_api_sub_allowed=True, # type: bool
+        hook_service_id=None,    # type: intnone
+        task_sync_interval=_ps_default.TASK_SYNC_INTERVAL,         # type: int
+        task_delivery_interval=_ps_default.TASK_DELIVERY_INTERVAL, # type: int
+        depth_check_freq=_ps_default.DEPTH_CHECK_FREQ,             # type: int
+        max_depth_gd=_ps_default.TOPIC_MAX_DEPTH_GD,               # type: int
+        max_depth_non_gd=_ps_default.TOPIC_MAX_DEPTH_NON_GD,       # type: int
+        pub_buffer_size_gd=_ps_default.PUB_BUFFER_SIZE_GD,         # type: int
         ):
 
-        self.invoke_service('zato.pubsub.topic.create', {
+        _ = self.invoke_service('zato.pubsub.topic.create', {
             'cluster_id': self.server.cluster_id,
             'name': name,
             'is_active': is_active,
