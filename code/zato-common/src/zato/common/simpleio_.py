@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # Zato - Cython
-from zato.simpleio import BoolConfig, IntConfig, SecretConfig, SIOServerConfig
+from zato.simpleio import BoolConfig, Elem, IntConfig, SecretConfig, SIOServerConfig
 
 # Python 2/3 compatibility
 from past.builtins import basestring, unicode
@@ -224,8 +222,11 @@ def get_sio_server_config(sio_fs_config):
 
 def drop_sio_elems(elems, *to_drop):
     out = list(set(elems))
-    for elem in to_drop:
-        out.remove(elem)
+    for out_elem in out:
+        out_name = out_elem.name if isinstance(out_elem, Elem) else out_elem
+        for drop_elem in to_drop:
+            if out_name == drop_elem:
+                out.remove(out_elem)
     return out
 
 # ################################################################################################################################

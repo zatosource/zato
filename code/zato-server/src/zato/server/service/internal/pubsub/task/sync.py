@@ -20,8 +20,8 @@ from zato.server.service import AsIs, Int, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 len_keys = 'subscriptions_by_topic', 'subscriptions_by_sub_key', 'sub_key_servers', 'endpoints', 'topics', \
-    'sec_id_to_endpoint_id', 'ws_channel_id_to_endpoint_id', 'service_id_to_endpoint_id', 'pub_buffer_gd', \
-    'pub_buffer_non_gd', 'pubsub_tool_by_sub_key', 'pubsub_tools'
+    'sec_id_to_endpoint_id', 'ws_channel_id_to_endpoint_id', 'service_id_to_endpoint_id', \
+    'pubsub_tool_by_sub_key', 'pubsub_tools'
 
 # ################################################################################################################################
 
