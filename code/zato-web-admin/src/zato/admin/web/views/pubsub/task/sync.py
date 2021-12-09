@@ -73,8 +73,6 @@ class PubSubTool(object):
         self.ws_channel_id_to_endpoint_id = None
         self.service_id_to_endpoint_id = None
         self.topic_name_to_id = None
-        self.pub_buffer_gd = None
-        self.pub_buffer_non_gd = None
         self.pubsub_tool_by_sub_key = None
         self.pubsub_tools = None
         self.sync_backlog = None

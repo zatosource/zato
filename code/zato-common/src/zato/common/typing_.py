@@ -12,12 +12,16 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from typing import           \
     Any as any_,             \
+    Callable as callable_,   \
+    cast as cast_,           \
     Dict as dict_,           \
     Generator as generator_, \
     NoReturn as noreturn,    \
     List as list_,           \
     Optional as optional,    \
+    Text as str_,            \
     Tuple as tuple_,         \
+    TypeVar as typevar_,     \
     Set as set_,             \
     Union as union_
 
@@ -74,12 +78,22 @@ def instance_from_dict(class_, data):
 anydict    = dict_[any_, any_]
 anylist    = list_[any_]
 anytuple   = tuple_[any_, ...]
+callable_  = callable_
+cast_      = cast_
 dictlist   = list_[anydict]
 generator_ = generator_
+intnone    = optional[int]
 noreturn   = noreturn
 set_       = set_
+strint     = union_[str_, int]
+strintnone = union_[optional[str_], optional[int]]
+strintbool = union_[str_, int, bool]
+strnone    = optional[str]
 strlist    = list_[str]
-strintdict = dict_[str, int]
+stranydict = dict_[str, any_]
+strintdict = dict_[str, strint]
+intdict    = dict_[int, int]
 strtuple   = tuple_[str]
 tuple_     = tuple_
+typevar_   = typevar_
 union_     = union_
