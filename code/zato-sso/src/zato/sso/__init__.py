@@ -73,6 +73,7 @@ class status_code:
         super_user_required   = 'E005005'
         no_such_sign_up_token = 'E005006'
         sign_up_confirmed     = 'E005007'
+        totp_missing          = 'E005008'
 
     class metadata:
         not_allowed = 'E006001'
