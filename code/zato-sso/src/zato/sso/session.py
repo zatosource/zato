@@ -261,7 +261,7 @@ class SessionAPI(object):
                 input_totp_code = ctx.input.get('totp_code')
                 if not input_totp_code:
                     logger.warn('Missing TOTP code; user `%s`', user.username)
-                    if self.sso_conf.login.get('inform_if_totp_missing', True):
+                    if self.sso_conf.login.get('inform_if_totp_missing', False):
                         _code = status_code.auth.totp_missing
                         _return_status = True
                     else:
