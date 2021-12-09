@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import os
+from logging import getLogger, INFO
 from unittest import TestCase
 
 # Bunch
@@ -17,8 +18,8 @@ from bunch import bunchify
 # Django
 import django
 
-# Selenium
-from selenium import webdriver
+# Selenium-Wire
+from seleniumwire import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.support import expected_conditions as conditions
@@ -171,9 +172,13 @@ class BaseTestCase(TestCase):
 
     def tearDown(self):
         if self.run_in_background:
-            self.client.quit()
+            if hasattr(self, 'client'):
+                self.client.quit()
 
-        delattr(self, 'run_in_background')
+        try:
+            delattr(self, 'run_in_background')
+        except AttributeError:
+            pass
 
 # ################################################################################################################################
 # ################################################################################################################################
