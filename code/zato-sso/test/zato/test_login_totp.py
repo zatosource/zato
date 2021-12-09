@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from unittest import main
@@ -65,6 +63,24 @@ class TOTPTestCase(BaseTest):
 
         self.assertEqual(response.status, status_code.error)
         self.assertListEqual(response.sub_status, [status_code.auth.not_allowed])
+
+# ################################################################################################################################
+
+    def test_user_login_totp_missing(self):
+
+        self.patch('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+            'is_totp_enabled': True,
+            'totp_key': self.ctx.config.super_user_totp_key,
+        })
+
+        response = self.post('/zato/sso/user/login', {
+            'username': self.ctx.config.super_user_name,
+            'password': self.ctx.config.super_user_password,
+        }, False)
+
+        self.assertEqual(response.status, status_code.error)
+        self.assertListEqual(response.sub_status, [status_code.auth.totp_missing])
 
 # ################################################################################################################################
 # ################################################################################################################################

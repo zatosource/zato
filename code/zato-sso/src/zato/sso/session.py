@@ -261,7 +261,13 @@ class SessionAPI(object):
                 input_totp_code = ctx.input.get('totp_code')
                 if not input_totp_code:
                     logger.warn('Missing TOTP code; user `%s`', user.username)
-                    raise ValidationError(status_code.auth.not_allowed, False)
+                    if self.sso_conf.login.get('inform_if_totp_missing', True):
+                        _code = status_code.auth.totp_missing
+                        _return_status = True
+                    else:
+                        _code = status_code.auth.not_allowed
+                        _return_status = False
+                    raise ValidationError(_code, _return_status)
                 else:
                     user_totp_key = self.decrypt_func(user.totp_key)
                     if not TOTPManager.verify_totp_code(user_totp_key, input_totp_code):
