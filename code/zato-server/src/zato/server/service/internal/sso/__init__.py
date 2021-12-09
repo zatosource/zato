@@ -56,7 +56,10 @@ class BaseService(Service):
 
         # BaseRESTService._handle_sso may have set it already so we need an if check
         if not self.response.payload.sub_status:
-            self.response.payload.sub_status.append(sub_status)
+            if isinstance(sub_status, list):
+                self.response.payload.sub_status.extend(sub_status)
+            else:
+                self.response.payload.sub_status.append(sub_status)
 
 # ################################################################################################################################
 
@@ -75,7 +78,10 @@ class BaseService(Service):
 
         # If status is an error set in before_handle or _handle_sso and there is no sub_status
         # set yet, return generic information that user is not allowed to access this resource.
-        if self.response.payload.status != status_code.ok and not self.response.payload.sub_status:
+        status     = self.response.payload.status
+        sub_status = self.response.payload.sub_status
+
+        if status != status_code.ok and (not sub_status):
             self.response.payload.sub_status = status_code.auth.not_allowed
 
         # Always returned if any response is produced at all
