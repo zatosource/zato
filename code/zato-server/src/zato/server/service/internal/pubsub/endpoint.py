@@ -331,7 +331,7 @@ class UpdateEndpointQueue(AdminService):
     """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'id', 'sub_key', 'active_status')
-        input_optional = drop_sio_elems(common_sub_data, 'active_status', 'sub_key')
+        input_optional = drop_sio_elems(common_sub_data, 'active_status', 'sub_key', 'creation_time', 'last_interaction_time')
         output_required = ('id', 'name')
 
     def handle(self):

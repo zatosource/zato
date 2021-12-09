@@ -91,7 +91,7 @@ anysession = union_[SimpleSession, 'Session']
 
 # Based on https://bitbucket.org/zzzeek/sqlalchemy/wiki/UsageRecipes/WriteableTuple
 
-class WritableKeyedTuple(object):
+class SQLRow(object):
 
     def __init__(self, elem):
         object.__setattr__(self, '_elem', elem)
@@ -119,12 +119,15 @@ class WritableKeyedTuple(object):
 # ################################################################################################################################
 
     def __repr__(self):
-        return '<WritableKeyedTuple at {}>'.format(hex(id(self)))
+        return '<SQLRow at {}>'.format(hex(id(self)))
 
 # ################################################################################################################################
 
-    def get_value(self):
+    def get_value(self) -> dict:
         return self._elem._asdict()
+
+# For backward compatibility
+WritableKeyedTuple = SQLRow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -198,7 +201,7 @@ class WritableTupleQuery(Query):
 
         # A list of objects, e.g. from .all()
         elif len_columns_desc > 1:
-            return (WritableKeyedTuple(elem) for elem in out)
+            return (SQLRow(elem) for elem in out)
 
         # Anything else
         else:

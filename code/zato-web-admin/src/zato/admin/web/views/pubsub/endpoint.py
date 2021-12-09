@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -378,7 +376,7 @@ def endpoint_queue_edit(req):
 
     service_response.creation_time = from_utc_to_user(service_response.creation_time+'+00:00', req.zato.user_profile)
 
-    if service_response.last_interaction_time:
+    if service_response.get('last_interaction_time'):
         service_response.last_interaction_time = from_utc_to_user(
             service_response.last_interaction_time+'+00:00', req.zato.user_profile)
 

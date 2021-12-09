@@ -42,6 +42,7 @@ code/zato_extra_paths*
 code/zato-exeagent
 code/*/build
 code/*/dist
+geckodriver.log
 hotfixes
 pidfile
 *.egg-info*
