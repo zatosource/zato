@@ -3,12 +3,12 @@ pythonVersion = "3.8"
 typeCheckingMode = "basic"
 reportImplicitStringConcatenation = "error"
 reportMissingParameterType = "error"
-#reportUnknownArgumentType = "error"
+#reportUnknownArgumentType = "error" # This is for level 2, needed before reportUnknownMemberType
 #reportUnknownMemberType = "error"
 reportUnusedCallResult = "error"
 reportGeneralTypeIssues = "error"
 extraPaths = [
-    "./eggs",
+    "./lib/python3.8/site-packages",
     "./zato-agent/src",
     "./zato-cli/src",
     "./zato-common/src",

@@ -35,6 +35,7 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
      get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
+from zato.common.typing_ import callable_, cast_, dict_, intdict, intnone, list_, strintdict, strintnone
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.hook import HookTool
@@ -61,6 +62,10 @@ if 0:
 logger = logging.getLogger('zato_pubsub.ps')
 logger_zato = logging.getLogger('zato')
 logger_overflow = logging.getLogger('zato_pubsub_overflow')
+
+# ################################################################################################################################
+
+sublist = list_['Subscription']
 
 # ################################################################################################################################
 
@@ -163,48 +168,64 @@ class PubSub(object):
         self.log_if_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_deliv_server_not_found
         self.log_if_wsx_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_wsx_deliv_server_not_found
 
-        self.subscriptions_by_topic = {}       # Topic name     -> List of Subscription objects
-        self._subscriptions_by_sub_key = {}    # Sub key        -> Subscription object
-        self.sub_key_servers = {}              # Sub key        -> Server/PID handling it
+        # Topic name -> List of Subscription objects
+        self.subscriptions_by_topic = {} # type: dict_[str, sublist]
 
-        self.endpoints = {}                    # Endpoint ID    -> Endpoint object
-        self.topics = {}                       # Topic ID       -> Topic object
+        # Sub key -> Subscription object
+        self._subscriptions_by_sub_key = {} # type: dict_[str, Subscription]
 
-        self.sec_id_to_endpoint_id = {}        # Sec def ID     -> Endpoint ID
-        self.ws_channel_id_to_endpoint_id = {} # WS chan def ID -> Endpoint ID
-        self.service_id_to_endpoint_id = {}    # Service ID     -> Endpoint ID
-        self.topic_name_to_id = {}             # Topic name     -> Topic ID
-        self.pub_buffer_gd = {}                # Topic ID       -> GD message buffered for that topic
-        self.pub_buffer_non_gd = {}            # Topic ID       -> Non-GD message buffered for that topic
+        # Sub key -> SubKeyServer server/PID handling it
+        self.sub_key_servers = {} # type: dict_[str, SubKeyServer]
 
-        self.pubsub_tool_by_sub_key = {}       # Sub key        -> PubSubTool object
-        self.pubsub_tools = []                 # A list of PubSubTool objects, each containing delivery tasks
+        # Endpoint ID -> Endpoint object
+        self.endpoints = {} # type: dict_[int, Endpoint]
+
+        # Topic ID -> Topic object
+        self.topics = {} # type: dict_[int, Topic]
+
+        # Sec def ID -> Endpoint ID
+        self.sec_id_to_endpoint_id = {} # type: intdict
+
+        # WS chan def ID -> Endpoint ID
+        self.ws_channel_id_to_endpoint_id = {} # type: intdict
+
+        # Service ID -> Endpoint ID
+        self.service_id_to_endpoint_id = {} # type: intdict
+
+        # Topic name -> Topic ID
+        self.topic_name_to_id = {} # type: strintdict
+
+        # Sub key -> PubSubTool object
+        self.pubsub_tool_by_sub_key = {} # type: dict_[str, PubSubTool]
+
+        # A list of PubSubTool objects, each containing delivery tasks
+        self.pubsub_tools = [] # type: list_[PubSubTool]
 
         # A backlog of messages that have at least one subscription, i.e. this is what delivery servers use.
         self.sync_backlog = InRAMSync(self)
 
         # Getter methods for each endpoint type that return actual endpoints,
         # e.g. REST outgoing connections. Values are set by worker store.
-        self.endpoint_impl_getter = dict.fromkeys(PUBSUB.ENDPOINT_TYPE())
+        self.endpoint_impl_getter = dict.fromkeys(PUBSUB.ENDPOINT_TYPE()) # type: dict_[str, callable_]
 
         # How many messages have been published through this server, regardless of which topic they were for
         self.msg_pub_counter = 0
 
-        # How many messages a given endpoint published
-        self.endpoint_msg_counter = {}
+        # How many messages a given endpoint published, topic_id -> its message counter.
+        self.endpoint_msg_counter = {} # type: intdict
 
         # How often to update metadata about topics and endpoints, if at all
-        self.has_meta_topic = server.fs_server_config.pubsub_meta_topic.enabled
-        self.topic_meta_store_frequency = server.fs_server_config.pubsub_meta_topic.store_frequency
+        self.has_meta_topic = server.fs_server_config.pubsub_meta_topic.enabled # type: bool
+        self.topic_meta_store_frequency = server.fs_server_config.pubsub_meta_topic.store_frequency # type: int
 
-        self.has_meta_endpoint = server.fs_server_config.pubsub_meta_endpoint_pub.enabled
-        self.endpoint_meta_store_frequency = server.fs_server_config.pubsub_meta_endpoint_pub.store_frequency
-        self.endpoint_meta_data_len = server.fs_server_config.pubsub_meta_endpoint_pub.data_len
-        self.endpoint_meta_max_history = server.fs_server_config.pubsub_meta_endpoint_pub.max_history
+        self.has_meta_endpoint = server.fs_server_config.pubsub_meta_endpoint_pub.enabled # type: bool
+        self.endpoint_meta_store_frequency = server.fs_server_config.pubsub_meta_endpoint_pub.store_frequency # type: int
+        self.endpoint_meta_data_len = server.fs_server_config.pubsub_meta_endpoint_pub.data_len # type:int
+        self.endpoint_meta_max_history = server.fs_server_config.pubsub_meta_endpoint_pub.max_history # type:int
 
         # How many bytes to use for look up purposes when conducting message searches
-        self.data_prefix_len = server.fs_server_config.pubsub.data_prefix_len
-        self.data_prefix_short_len = server.fs_server_config.pubsub.data_prefix_short_len
+        self.data_prefix_len = server.fs_server_config.pubsub.data_prefix_len # type: int
+        self.data_prefix_short_len = server.fs_server_config.pubsub.data_prefix_short_len # type: int
 
         # Manages access to service hooks
         self.hook_tool = HookTool(self.server, HookCtx, hook_type_to_method, self.invoke_service)
@@ -316,7 +337,7 @@ class PubSub(object):
             if isinstance(sub_data, Subscription):
                 self._write_log_sub_data(sub_data, out)
             else:
-                sorted_sub_data = sorted(sub_data)
+                sorted_sub_data = sorted(sub_data) # type: ignore
                 for item in sorted_sub_data:
                     if isinstance(item, Subscription):
                         self._write_log_sub_data(item, out)
@@ -791,7 +812,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def delete_topic(self, topic_id):
-        # type: (int) -> list
+        # type: (int) -> None
         with self.lock:
             topic_name = self.topics[topic_id].name
             subscriptions_by_topic = self._delete_topic(topic_id, topic_name) # type: list
@@ -1499,7 +1520,7 @@ class PubSub(object):
 
     def trigger_notify_pubsub_tasks(self):
         """ A background greenlet which periodically lets delivery tasks know that there are perhaps
-        new GD messages for the topic this class represents.
+        new GD messages for the topic that this class represents.
         """
 
         # Local aliases
@@ -1825,20 +1846,21 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def delete_message(self, sub_key, msg_id, has_gd, *args, **kwargs):
+    def delete_message(self, sub_key:'str', msg_id:'str', has_gd:'bool', *args:'tuple', **kwargs:'strintnone'):
         """ Deletes a message from a subscriber's queue.
         DELETE /zato/pubsub/msg/{msg_id}
         """
         service_data = {
             'sub_key': sub_key,
             'msg_id': msg_id,
-        }
+        } # type: strintdict
+
         if has_gd:
             service_name = _service_delete_message_gd
             service_data['cluster_id'] = self.server.cluster_id
         else:
-            server_name = kwargs.get('server_name')
-            server_pid = kwargs.get('server_pid')
+            server_name = cast_(str, kwargs.get('server_name', ''))
+            server_pid  = cast_(int, kwargs.get('server_pid', 0))
 
             if not(sub_key and server_name and server_pid):
                 raise Exception('All of sub_key, server_name and server_pid are required for non-GD messages')
@@ -1853,7 +1875,11 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def subscribe(self, topic_name, _find_wsx_environ=find_wsx_environ, **kwargs):
+    def subscribe(self,
+        topic_name, # type: str
+        _find_wsx_environ=find_wsx_environ, # type: callable_
+        **kwargs # type: dict
+        ):
 
         # Are we going to subscribe a WSX client?
         use_current_wsx = kwargs.get('use_current_wsx')
@@ -1918,7 +1944,11 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def resume_wsx_subscription(self, sub_key, service, _find_wsx_environ=find_wsx_environ):
+    def resume_wsx_subscription(self,
+        sub_key:'str',     # type: str
+        service:'Service', # type: Service
+        _find_wsx_environ=find_wsx_environ # type: callable_
+        ):
         """ Invoked by WSX clients that want to resume deliveries of their messages after they reconnect.
         """
         # Get metadata and the WebSocket itself
@@ -1926,7 +1956,7 @@ class PubSub(object):
         wsx = wsx_environ['web_socket']
 
         # Actual resume subscription
-        self.invoke_service('zato.pubsub.resume-wsx-subscription', {
+        _ = self.invoke_service('zato.pubsub.resume-wsx-subscription', {
             'sql_ws_client_id': wsx_environ['sql_ws_client_id'],
             'channel_name': wsx_environ['ws_channel_config']['name'],
             'pub_client_id': wsx_environ['pub_client_id'],
@@ -1946,14 +1976,23 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def create_topic(self, name, has_gd=False, accept_on_no_sub=True, is_active=True, is_internal=False, is_api_sub_allowed=True,
-        hook_service_id=None, task_sync_interval=_ps_default.TASK_SYNC_INTERVAL,
-        task_delivery_interval=_ps_default.TASK_DELIVERY_INTERVAL, depth_check_freq=_ps_default.DEPTH_CHECK_FREQ,
-        max_depth_gd=_ps_default.TOPIC_MAX_DEPTH_GD, max_depth_non_gd=_ps_default.TOPIC_MAX_DEPTH_NON_GD,
-        pub_buffer_size_gd=_ps_default.PUB_BUFFER_SIZE_GD,
+    def create_topic(self,
+        name,                    # type: str
+        has_gd=False,            # type: bool
+        accept_on_no_sub=True,   # type: bool
+        is_active=True,          # type: bool
+        is_internal=False,       # type: bool
+        is_api_sub_allowed=True, # type: bool
+        hook_service_id=None,    # type: intnone
+        task_sync_interval=_ps_default.TASK_SYNC_INTERVAL,         # type: int
+        task_delivery_interval=_ps_default.TASK_DELIVERY_INTERVAL, # type: int
+        depth_check_freq=_ps_default.DEPTH_CHECK_FREQ,             # type: int
+        max_depth_gd=_ps_default.TOPIC_MAX_DEPTH_GD,               # type: int
+        max_depth_non_gd=_ps_default.TOPIC_MAX_DEPTH_NON_GD,       # type: int
+        pub_buffer_size_gd=_ps_default.PUB_BUFFER_SIZE_GD,         # type: int
         ):
 
-        self.invoke_service('zato.pubsub.topic.create', {
+        _ = self.invoke_service('zato.pubsub.topic.create', {
             'cluster_id': self.server.cluster_id,
             'name': name,
             'is_active': is_active,
@@ -1965,9 +2004,9 @@ class PubSub(object):
             'task_sync_interval': task_sync_interval,
             'task_delivery_interval': task_delivery_interval,
             'depth_check_freq': depth_check_freq,
-            'max_depth_gd': PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_GD,
-            'max_depth_non_gd': PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_NON_GD,
-            'pub_buffer_size_gd': PUBSUB.DEFAULT.PUB_BUFFER_SIZE_GD,
+            'max_depth_gd': max_depth_gd,
+            'max_depth_non_gd': max_depth_non_gd,
+            'pub_buffer_size_gd': pub_buffer_size_gd,
         })
 
 # ################################################################################################################################
