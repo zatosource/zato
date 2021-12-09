@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from logging import getLogger
 
@@ -42,6 +43,7 @@ if 0:
     SSOUser = SSOUser
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 logger = getLogger('zato')
 
@@ -56,6 +58,15 @@ FlowPRTModelUpdate = FlowPRTModelTable.update
 # ################################################################################################################################
 
 _unrecognised_locale = object()
+
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass
+class AccessTokenCtx:
+    user: dict
+    reset_key: str
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -186,7 +197,7 @@ class PasswordResetAPI(object):
 # ################################################################################################################################
 
     def access_token(self, cid, token, current_app, remote_addr, user_agent, _utcnow=datetime.utcnow, _timedelta=timedelta):
-        # type: (str, str, str, str, str, object, object) -> str
+        # type: (str, str, str, str, str, object, object) -> AccessTokenCtx
 
         # For later use
         now = _utcnow()
@@ -231,9 +242,14 @@ class PasswordResetAPI(object):
             # .. commit the operation.
             session.commit()
 
-        # Now, outside the SQL block, encrypt the reset key and return it to the caller
+        # Now, outside the SQL block, encrypt the reset key to be returned it to the caller
         # so that the user can provide it in the subsequent call to reset the password.
-        return self.server.encrypt(user_info.reset_key, prefix='')
+        reset_key = self.server.encrypt(user_info.reset_key, prefix='')
+
+        return AccessTokenCtx(
+            user=user_info._asdict(),
+            reset_key=reset_key
+        )
 
 # ################################################################################################################################
 
