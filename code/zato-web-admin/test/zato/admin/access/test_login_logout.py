@@ -15,20 +15,35 @@ from .base import BaseTestCase
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from selenium.webdriver.remote.webelement import WebElement
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class LoginLogoutTestCase(BaseTestCase):
 
     needs_auto_login = False
 
 # ################################################################################################################################
 
-    def test_login(self):
+    def test_login_logout(self):
 
         self.run_in_background = False
 
+        # Log to web admin ..
         self.login()
 
-        self.assertEquals(self.client.title, 'Log on - Zato')
-        self.assertEquals(self.client.current_url, self.config.web_admin_address + '/accounts/login/?next=/zato/')
+        # .. confirm that we are in ..
+        self.assertEquals(self.client.title, 'Hello - Zato')
+        self.assertEquals(self.client.current_url, self.config.web_admin_address + '/zato/')
+
+        # .. now, log us out ..
+        logout = self.client.find_element_by_partial_link_text('Log out') # type: WebElement
+        logout.click()
+
+        # .. confirm that we are truly logged out ..
+        self._confirm_not_logged_in()
 
 # ################################################################################################################################
 # ################################################################################################################################

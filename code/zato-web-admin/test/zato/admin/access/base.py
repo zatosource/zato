@@ -128,6 +128,12 @@ class BaseTestCase(TestCase):
 
 # ################################################################################################################################
 
+    def _confirm_not_logged_in(self):
+        self.assertEquals(self.client.title, 'Log on - Zato')
+        self.assertEquals(self.client.current_url, self.config.web_admin_address + '/accounts/login/?next=/zato/')
+
+# ################################################################################################################################
+
     def login(self):
 
         run_in_background = getattr(self, 'run_in_background', None)
@@ -143,6 +149,9 @@ class BaseTestCase(TestCase):
         # .. set up our Selenium client ..
         self.client = webdriver.Firefox(options=options)
         self.client.get(self.config.web_admin_address)
+
+        # .. confirm that by default we are not logged in ..
+        self._confirm_not_logged_in()
 
         # .. get our form elements ..
         username = self.client.find_element_by_name('username')
