@@ -35,7 +35,7 @@ from lxml.etree import _Element as EtreeElementClass, Element, SubElement, tostr
 # Zato
 from zato.common.api import APISPEC, DATA_FORMAT, ZATO_NONE
 from zato.common.marshal_.api import ElementMissing
-from zato.common.odb.api import WritableKeyedTuple
+from zato.common.odb.api import SQLRow
 from zato.common.pubsub import PubSubMessage
 from zato.util_convert import to_bool
 
@@ -2047,7 +2047,7 @@ class CySimpleIO(object):
             elif hasattr(_input_data_dict, 'to_zato'):
                 input_data_dict = _input_data_dict.to_zato()
 
-            elif isinstance(_input_data_dict, WritableKeyedTuple):
+            elif isinstance(_input_data_dict, SQLRow):
                 input_data_dict = _input_data_dict.get_value()
 
             for is_required, current_elems in all_elems: # type: bool, dict
