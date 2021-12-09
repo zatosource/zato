@@ -17,8 +17,8 @@ from bunch import bunchify
 # Django
 import django
 
-# Selenium
-from selenium import webdriver
+# Selenium-Wire
+from seleniumwire import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.support import expected_conditions as conditions
@@ -128,6 +128,12 @@ class BaseTestCase(TestCase):
 
 # ################################################################################################################################
 
+    def _confirm_not_logged_in(self):
+        self.assertEquals(self.client.title, 'Log on - Zato')
+        self.assertEquals(self.client.current_url, self.config.web_admin_address + '/accounts/login/?next=/zato/')
+
+# ################################################################################################################################
+
     def login(self):
 
         run_in_background = getattr(self, 'run_in_background', None)
@@ -143,6 +149,9 @@ class BaseTestCase(TestCase):
         # .. set up our Selenium client ..
         self.client = webdriver.Firefox(options=options)
         self.client.get(self.config.web_admin_address)
+
+        # .. confirm that by default we are not logged in ..
+        self._confirm_not_logged_in()
 
         # .. get our form elements ..
         username = self.client.find_element_by_name('username')
@@ -162,9 +171,13 @@ class BaseTestCase(TestCase):
 
     def tearDown(self):
         if self.run_in_background:
-            self.client.quit()
+            if hasattr(self, 'client'):
+                self.client.quit()
 
-        delattr(self, 'run_in_background')
+        try:
+            delattr(self, 'run_in_background')
+        except AttributeError:
+            pass
 
 # ################################################################################################################################
 # ################################################################################################################################
