@@ -21,6 +21,8 @@ import django
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.support import expected_conditions as conditions
+from selenium.webdriver.support.ui import WebDriverWait
 
 # Zato
 from zato.admin.zato_settings import update_globals
@@ -31,7 +33,7 @@ from zato.common.util import new_cid
 
 class Config:
 
-    user_name_prefix = 'zato.unit-test.web-admin.'
+    username_prefix = 'zato.unit-test.web-admin.'
     user_password = 'sJNlk8XOQs74E'
     user_email = 'test@example.com'
 
@@ -47,7 +49,10 @@ class BaseTestCase(TestCase):
     needs_auto_login = True
 
     # This can be set by each test separately
-    run_in_background:bool
+    run_in_background:'bool'
+
+    # Selenium client
+    client: 'webdriver.Firefox'
 
     def _set_up_django(self):
 
@@ -72,11 +77,11 @@ class BaseTestCase(TestCase):
         from zato.cli.web_admin_auth import CreateUser, UpdatePassword
 
         # User names are limited to 30 characters
-        self.user_name = (Config.user_name_prefix + new_cid())[:30]
+        self.username = (Config.username_prefix + new_cid())[:30]
 
         create_args = bunchify({
             'path': Config.web_admin_location,
-            'username': self.user_name,
+            'username': self.username,
             'password': Config.user_password, # This is ignored by CreateUser yet we need it so as not to prompt for it
             'email': Config.user_email,
             'verbose': True,
@@ -96,7 +101,7 @@ class BaseTestCase(TestCase):
 
         update_password_args = bunchify({
             'path': Config.web_admin_location,
-            'username': self.user_name,
+            'username': self.username,
             'password': Config.user_password,
             'verbose': True,
             'store_log': False,
@@ -144,11 +149,14 @@ class BaseTestCase(TestCase):
         password = self.client.find_element_by_name('password')
 
         # .. fill out the form ..
-        username.send_keys(self.user_name)
+        username.send_keys(self.username)
         password.send_keys(self.config.user_password)
 
         # .. and submit it.
         password.send_keys(Keys.RETURN)
+
+        wait = WebDriverWait(self.client, 2)
+        wait.until(conditions.title_contains('Hello'))
 
 # ################################################################################################################################
 
