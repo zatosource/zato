@@ -80,8 +80,8 @@ class IndexTestCase(BaseTestCase):
         for item in url_paths:
             address = self.config.web_admin_address + item.path + '?cluster=1'
             logger.info('Accessing %s', address)
-            response = self.client.get(address)
-            response
+            self.client.get(address)
+            self.client
 
 # ################################################################################################################################
 # ################################################################################################################################
