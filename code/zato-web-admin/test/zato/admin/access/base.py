@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import os
-from logging import getLogger, INFO
 from unittest import TestCase
 
 # Bunch
