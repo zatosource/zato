@@ -24,6 +24,7 @@ Cython==3.0a6
 dacite==1.6.0
 dataclasses-jsonschema==2.15.0
 dateparser==0.7.6
+debugpy
 decorator==5.1.0
 dictalchemy==0.1.2.6
 dill==0.2.5
