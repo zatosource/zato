@@ -126,8 +126,8 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_channel_jms_wmq_edit_request'
         response_elem = 'zato_channel_jms_wmq_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 'service')
-        input_optional = ('data_format',)
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'queue', 'service')
+        input_optional = ('data_format', 'def_id', 'def_name')
         output_optional = ('id', 'name')
 
     def handle(self):
@@ -157,11 +157,23 @@ class Edit(AdminService):
                 raise Exception(msg)
 
             try:
+
+                # We will have def_id if the request comes through Dashboard
+                # but not if is coming through enmasse.
+                def_id = input.def_id
+
+                if not def_id:
+                    def_id = session.query(ConnDefWMQ.id).\
+                        filter(ConnDefWMQ.cluster_id==input.cluster_id).\
+                        filter(ConnDefWMQ.name==input.def_name).\
+                        one_or_none()
+                    def_id = def_id[0]
+
                 item = session.query(ChannelWMQ).filter_by(id=input.id).one()
                 item.name = input.name
                 item.is_active = input.is_active
                 item.queue = input.queue
-                item.def_id = input.def_id
+                item.def_id = def_id
                 item.service = service
                 item.data_format = input.data_format
 
