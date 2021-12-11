@@ -96,7 +96,7 @@
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.def_name }}</td>
+                        <td><a href="{% url 'definition-wmq' %}?cluster={{ cluster_id }}&amp;query={{ item.def_name }}">{{ item.def_name }}</a></td>
                         <td>{{ item.delivery_mode_text|default_if_none:'' }}</td>
                         <td>{{ item.priority|default_if_none:'' }}</td>
                         <td>{{ item.expiration|default:'<span class="form_hint">---</span>' }}</td>
