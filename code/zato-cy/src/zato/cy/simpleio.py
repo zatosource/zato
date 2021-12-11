@@ -1850,8 +1850,9 @@ class CySimpleIO(object):
         is_xml:cy.bint  = isinstance(elem, EtreeElementClass)
 
         if not (is_dict or is_xml or is_csv):
-            raise ValueError('Expected a dict, CSV or EtreeElementClass instead of input `{!r}` ({} in {})'.format(
-                elem, type(elem).__name__, self.service_class))
+            logger.info('Ignoring CySimpleIO input `{%r}` (%s in %s) (not a dict, CSV or EtreeElementClass )',
+                elem, type(elem).__name__, self.service_class)
+            return
 
         # This dictionary holds keys that were common to both 'elem' and 'extra'. If extra exists,
         # and some of the extra keys already exist in elem, this dictionary is populated with such
