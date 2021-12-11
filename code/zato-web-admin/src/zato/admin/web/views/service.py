@@ -296,7 +296,7 @@ def source_info(req, service_name):
         'name': service_name
     }
 
-    response = req.zato.client.invoke('zato.service.get-source-info', input_dict)
+    response = req.zato.client.invoke('zato.service.get-source-info', input_dict, needs_exception=False)
 
     if response.has_data:
         service.id = response.data.service_id
