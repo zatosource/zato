@@ -94,6 +94,8 @@ class CleanupWSXPubSub(AdminService):
         # We receive a multi-line list of WSX channel name -> max timeout accepted on input
         config = parse_extra_into_dict(self.request.raw_request)
 
+        self.logger.info('Running %s with config %r', self.get_name(), config)
+
         with closing(self.odb.session()) as session:
 
             # Delete stale connections for each subscriber
@@ -128,10 +130,14 @@ class CleanupWSXPubSub(AdminService):
                 self._run_max_allowed_query(session, SubscriptionDelete(), channel_name, max_allowed)
 
                 # Next, notify processes about deleted subscriptions to allow to update in-RAM structures
-                self.broker_client.publish({
-                    'topic_sub_keys': topic_sub_keys,
-                    'action': PUBSUB.SUBSCRIPTION_DELETE.value,
-                })
+                if topic_sub_keys:
+                    self.broker_client.publish({
+                        'topic_sub_keys': topic_sub_keys,
+                        'action': PUBSUB.SUBSCRIPTION_DELETE.value,
+                    })
+                    logger_pubsub.info('Published a request to delete sub_keys: %s', sorted(topic_sub_keys))
+                else:
+                    logger_pubsub.info('Found no sub_keys required to be deleted (%r)', config)
 
             # Commit all deletions
             session.commit()
