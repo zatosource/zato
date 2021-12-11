@@ -1850,7 +1850,7 @@ class CySimpleIO(object):
         is_xml:cy.bint  = isinstance(elem, EtreeElementClass)
 
         if not (is_dict or is_xml or is_csv):
-            logger.info('Ignoring CySimpleIO input `{%r}` (%s in %s) (not a dict, CSV or EtreeElementClass )',
+            logger.debug('Ignoring CySimpleIO input `{%r}` (%s in %s) (not a dict, CSV or EtreeElementClass )',
                 elem, type(elem).__name__, self.service_class)
             return
 
