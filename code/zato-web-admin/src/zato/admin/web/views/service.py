@@ -266,9 +266,6 @@ def overview(req, service_name):
             for item in req.zato.client.invoke('zato.service.get-deployment-info-list', {'id': service.id}):
                 service.deployment_info.append(DeploymentInfo(item.server_name, item.details))
 
-            # TODO: There needs to be a new service added zato.service.scheduler.job.get-by-service
-            #       or .get-list should start accept a service name. Right now we pull all the
-            #       jobs which is suboptimal.
             response = req.zato.client.invoke('zato.scheduler.job.get-list', {'cluster_id':cluster_id})
             if response.has_data:
                 for item in response.data:
@@ -299,7 +296,7 @@ def source_info(req, service_name):
         'name': service_name
     }
 
-    response = req.zato.client.invoke('zato.service.get-source-info', input_dict)
+    response = req.zato.client.invoke('zato.service.get-source-info', input_dict, needs_exception=False)
 
     if response.has_data:
         service.id = response.data.service_id
