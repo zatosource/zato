@@ -17,7 +17,7 @@ from .base import BaseTestCase
 
 class PubSubTestCase(BaseTestCase):
 
-    run_in_background = False
+    run_in_background = True
 
 # ################################################################################################################################
 

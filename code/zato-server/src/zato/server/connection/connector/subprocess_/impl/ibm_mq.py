@@ -84,14 +84,15 @@ class _MessageCtx(object):
 class IBMMQChannel(object):
     """ A process to listen for messages from IBM MQ queue managers.
     """
-    def __init__(self, conn, channel_id, queue_name, service_name, data_format, on_message_callback, logger):
+    def __init__(self, conn, is_active, channel_id, queue_name, service_name, data_format, on_message_callback, logger):
         self.conn = conn
+        self.is_active = is_active
         self.id = channel_id
         self.queue_name = queue_name
         self.service_name = service_name
         self.data_format = data_format
         self.on_message_callback = on_message_callback
-        self.keep_running = False
+        self.keep_running = True if is_active else False
         self.logger = logger
         self.has_debug = self.logger.isEnabledFor(DEBUG)
 
@@ -109,8 +110,6 @@ class IBMMQChannel(object):
     def start(self, sleep_on_error=3, _connection_closing='zato.connection.closing'):
         """ Runs a background queue listener in its own  thread.
         """
-        self.keep_running = True
-
         def _invoke_callback(msg_ctx):
             try:
                 self.on_message_callback(msg_ctx)
@@ -287,6 +286,22 @@ class IBMMQConnectionContainer(BaseConnectionContainer):
 
 # ################################################################################################################################
 
+    def _on_CHANNEL_WMQ_EDIT(self, msg):
+        """ Updates an IBM MQ MQ channel by stopping it and starting again with a new configuration.
+        """
+        with self.lock:
+            channel = self.channels[msg.id]
+            channel.stop()
+            channel.queue_name = msg.queue.encode('utf8')
+            channel.service_name = msg.service_name
+            channel.data_format = msg.data_format
+            channel.keep_running = True if msg.is_active else False
+            channel.start()
+
+            return Response()
+
+# ################################################################################################################################
+
     def _on_CHANNEL_WMQ_DELETE(self, msg):
         return super().on_channel_delete(msg)
 
@@ -374,24 +389,8 @@ class IBMMQConnectionContainer(BaseConnectionContainer):
 # ################################################################################################################################
 
     def _create_channel_impl(self, conn, msg):
-        return IBMMQChannel(conn, msg.id, msg.queue.encode('utf8'), msg.service_name, msg.data_format,
+        return IBMMQChannel(conn, msg.is_active, msg.id, msg.queue.encode('utf8'), msg.service_name, msg.data_format,
             self.on_mq_message_received, self.logger)
-
-# ################################################################################################################################
-
-    def _on_CHANNEL_WMQ_EDIT(self, msg):
-        """ Updates an IBM MQ MQ channel by stopping it and starting again with a new configuration.
-        """
-        with self.lock:
-            channel = self.channels[msg.id]
-            channel.stop()
-            channel.queue_name = msg.queue.encode('utf8')
-            channel.service_name = msg.service_name
-            channel.data_format = msg.data_format
-            channel.keep_running = True
-            channel.start()
-
-            return Response()
 
 # ################################################################################################################################
 
