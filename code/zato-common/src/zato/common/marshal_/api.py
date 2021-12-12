@@ -75,6 +75,11 @@ class Model:
         fields = getattr(class_, _FIELDS) # type: dict
         return fields
 
+    @classmethod
+    def _zato_from_dict(class_, data):
+        api = MarshalAPI()
+        return api.from_dict(None, data, class_)
+
     def to_dict(self):
         return asdict(self)
 
