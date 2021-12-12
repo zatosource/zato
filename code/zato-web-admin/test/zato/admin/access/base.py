@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import os
+from http.client import FOUND, MOVED_PERMANENTLY, OK
 from unittest import TestCase
 
 # Bunch
@@ -39,6 +40,8 @@ class Config:
 
     web_admin_location = os.path.expanduser('~/env/web-admin.test/web-admin')
     web_admin_address  = 'http://localhost:8183'
+
+    status_ok = {FOUND, MOVED_PERMANENTLY, OK}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -161,11 +164,24 @@ class BaseTestCase(TestCase):
         username.send_keys(self.username)
         password.send_keys(self.config.user_password)
 
-        # .. and submit it.
+        # .. and submit it ..
         password.send_keys(Keys.RETURN)
 
+        # .. wait for the page to load ..
         wait = WebDriverWait(self.client, 2)
         wait.until(conditions.title_contains('Hello'))
+
+        # .. and make sure that everything loaded correctly.
+        self.check_response_statuses()
+
+# ################################################################################################################################
+
+    def check_response_statuses(self):
+        for item in self.client.requests:
+            if item.url.startswith(Config.web_admin_address):
+                if item.response:
+                    if item.response.status_code in Config.status_ok: # type: ignore
+                        self.fail('Unexpected response `{}` to `{}`'.format(item.response, item))
 
 # ################################################################################################################################
 
@@ -173,6 +189,8 @@ class BaseTestCase(TestCase):
         if self.run_in_background:
             if hasattr(self, 'client'):
                 self.client.quit()
+
+        self.client.close()
 
         try:
             delattr(self, 'run_in_background')
