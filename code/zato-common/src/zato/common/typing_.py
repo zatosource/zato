@@ -82,6 +82,7 @@ callable_  = callable_
 cast_      = cast_
 dictlist   = list_[anydict]
 generator_ = generator_
+intlist    = list_[int]
 intnone    = optional[int]
 noreturn   = noreturn
 set_       = set_

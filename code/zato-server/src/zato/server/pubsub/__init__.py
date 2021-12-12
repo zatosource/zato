@@ -31,11 +31,12 @@ from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.odb.model import WebSocketClientPubSubKeys
 from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered as _confirm_pubsub_msg_delivered, \
-     get_delivery_server_for_sub_key, get_sql_messages_by_msg_id_list as _get_sql_messages_by_msg_id_list, \
-     get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
+    get_delivery_server_for_sub_key, get_sql_messages_by_msg_id_list as _get_sql_messages_by_msg_id_list, \
+    get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
-from zato.common.typing_ import any_, callable_, cast_, dict_, intdict, intnone, list_, strintdict, strintnone, tuple_
+from zato.common.typing_ import any_, callable_, cast_, dict_, intdict, intlist, intnone, list_, strintdict, strintnone, \
+    strnone, strlist, tuple_
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.hook import HookTool
@@ -48,8 +49,10 @@ from zato.server.pubsub.sync import InRAMSync
 
 if 0:
     from zato.cy.reqresp.payload import SimpleIOPayload
+    from zato.distlock import Lock
     from zato.server.base.parallel import ParallelServer
-    from zato.server.pubsub.task import PubSubTool
+    from zato.server.pubsub.model import subnone
+    from zato.server.pubsub.task import msgiter, PubSubTool
     from zato.server.service import Service
 
     ParallelServer = ParallelServer
@@ -1408,23 +1411,29 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _invoke_on_sub_unsub_hook(self, hook, topic_id, sub_key=None, sub=None):
+    def _invoke_on_sub_unsub_hook(
+        self,
+        hook,      # type: callable_
+        topic_id,  # type: int
+        sub_key,   # type: strnone
+        sub=None   # type: subnone
+        ):
         sub = sub if sub else self._get_subscription_by_sub_key(sub_key)
         return hook(topic=self._get_topic_by_id(topic_id), sub=sub)
 
 # ################################################################################################################################
 
-    def invoke_on_subscribed_hook(self, hook, topic_id, sub_key):
+    def invoke_on_subscribed_hook(self, hook:'callable_', topic_id:'int', sub_key:'str'):
         return self._invoke_on_sub_unsub_hook(hook, topic_id, sub_key)
 
 # ################################################################################################################################
 
-    def invoke_on_unsubscribed_hook(self, hook, topic_id, sub):
+    def invoke_on_unsubscribed_hook(self, hook:'callable_', topic_id:'int', sub:'Subscription'):
         return self._invoke_on_sub_unsub_hook(hook, topic_id, sub=sub)
 
 # ################################################################################################################################
 
-    def on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(self, services_deployed):
+    def on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(self, services_deployed:'intlist'):
         """ Invoked after a package with one or more services is hot-deployed. Goes over all topics
         and updates hooks that any of these services possibly implements.
         """
@@ -1437,7 +1446,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def deliver_pubsub_msg(self, sub_key, msg):
+    def deliver_pubsub_msg(self, sub_key:'str', msg:'msgiter'):
         """ A callback method invoked by pub/sub delivery tasks for one or more message that is to be delivered.
         """
         return self.invoke_service('zato.pubsub.delivery.deliver-message', {
@@ -1447,28 +1456,33 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def set_to_delete(self, sub_key, msg_list):
+    def set_to_delete(self, sub_key:'str', msg_list:'strlist'):
         """ Marks all input messages as ready to be deleted.
         """
         logger.info('Deleting messages set to be deleted `%s`', msg_list)
 
-        with closing(self.server.odb.session()) as session:
+        with closing(self.server.odb.session()) as session: # type: ignore
             set_to_delete(session, self.cluster_id, sub_key, msg_list, utcnow_as_ms())
 
 # ################################################################################################################################
 
-    def topic_lock(self, topic_name):
-        return self.server.zato_lock_manager('zato.pubsub.publish.%s' % topic_name)
+    def topic_lock(self, topic_name:'str') -> 'Lock':
+        lock = self.server.zato_lock_manager('zato.pubsub.publish.%s' % topic_name)
+        return cast_('Lock', lock)
 
 # ################################################################################################################################
 
-    def invoke_service(self, name, msg, *args, **kwargs):
-        # type: (str, object, object, object) -> SimpleIOPayload
+    def invoke_service(self, name:'str', msg:'any_', *args:'any_', **kwargs:'any_') -> 'any_':
         return self.server.invoke(name, msg, *args, **kwargs)
 
 # ################################################################################################################################
 
-    def after_gd_sync_error(self, topic_id, source, pub_time_max, _float_str=PUBSUB.FLOAT_STRING_CONVERT):
+    def after_gd_sync_error(self,
+        topic_id,     # type: int
+        source,       # type: str
+        pub_time_max, # type: float
+        _float_str=PUBSUB.FLOAT_STRING_CONVERT # type: str
+        ):
         """ Invoked by the after-publish service in case there was an error with letting
         a delivery task know about GD messages it was to handle. Resets the topic's
         sync_has_gd_msg flag to True to make sure the notification will be resent
@@ -1499,7 +1513,13 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _set_sync_has_msg(self, topic_id, is_gd, value, source, gd_pub_time_max=None):
+    def _set_sync_has_msg(self,
+        topic_id,            # type: int
+        is_gd,               # type: bool
+        value,               # type: bool
+        source,              # type: str
+        gd_pub_time_max=0.0  # type: float
+        ):
         """ Updates a given topic's flags indicating that a message has been published since the last sync.
         Must be called with self.lock held.
         """
@@ -1512,7 +1532,13 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def set_sync_has_msg(self, topic_id, is_gd, value, source, gd_pub_time_max):
+    def set_sync_has_msg(self,
+        topic_id,       # type: int
+        is_gd,          # type: bool
+        value,          # type: bool
+        source,         # type: str
+        gd_pub_time_max # type: float
+        ):
         with self.lock:
             self._set_sync_has_msg(topic_id, is_gd, value, source, gd_pub_time_max)
 
@@ -1546,7 +1572,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-        def _cmp_non_gd_msg(elem):
+        def _cmp_non_gd_msg(elem:'dict'):
             return elem['pub_time']
 
 # ################################################################################################################################
@@ -1630,7 +1656,7 @@ class PubSub(object):
                                     topic_name, non_gd_msg_list_msg_id_list, sub_keys, cid))
 
                                 # .. and notify all the tasks in background.
-                                _spawn(_self_invoke_service, 'zato.pubsub.after-publish', {
+                                _ = _spawn(_self_invoke_service, 'zato.pubsub.after-publish', {
                                     'cid': cid,
                                     'topic_id':topic_id,
                                     'topic_name':topic_name,
@@ -1657,7 +1683,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _find_wsx_environ(self, service):
+    def _find_wsx_environ(self, service:'Service'):
         wsx_environ = service.wsgi_environ.get('zato.request_ctx.async_msg', {}).get('environ')
         if not wsx_environ:
             raise Exception('Could not find `[\'zato.request_ctx.async_msg\'][\'environ\']` in WSGI environ `{}`'.format(
@@ -1668,7 +1694,7 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def publish(self, name, *args, **kwargs):
+    def publish(self, name:'str', *args:'any_', **kwargs:'any_'):
         """ Publishes a new message to input name, which may point either to a topic or service.
         POST /zato/pubsub/topic/{topic_name}
         """
@@ -1679,8 +1705,11 @@ class PubSub(object):
         # The first one is used if name is a service, the other one if it is a regular topic
         correl_id = kwargs.get('cid') or kwargs.get('correl_id')
 
-        has_gd = kwargs.get('has_gd')
-        endpoint_id = kwargs.get('endpoint_id') or self.server.default_internal_pubsub_endpoint_id
+        has_gd = kwargs.get('has_gd') # type: ignore
+        has_gd = cast_(bool, has_gd)
+
+        endpoint_id = kwargs.get('endpoint_id') or self.server.default_internal_pubsub_endpoint_id # type: ignore
+        endpoint_id = cast_(int, endpoint_id)
 
         # If input name is a topic, let us just use it
         if self.has_topic_by_name(name):
