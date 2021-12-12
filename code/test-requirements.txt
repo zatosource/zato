@@ -1,3 +1,4 @@
+mypy
 selenium
 selenium-wire
 yapf
