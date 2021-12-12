@@ -45,8 +45,8 @@ class URLPath:
 
 class IndexTestCase(BaseTestCase):
 
-    run_in_background = False
     needs_auto_login = True
+    run_in_background = True
 
 # ################################################################################################################################
 
