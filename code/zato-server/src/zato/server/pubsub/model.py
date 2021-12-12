@@ -22,6 +22,7 @@ from future.utils import iteritems
 from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
 from zato.common.exception import BadRequest
 from zato.common.pubsub import dict_keys
+from zato.common.typing_ import optional
 from zato.common.util.api import make_repr
 from zato.common.util.time_ import utcnow_as_ms
 
@@ -281,7 +282,7 @@ class Topic(ToDictBase):
         self.sync_has_non_gd_msg = False
 
         # The last time a GD message was published to this topic
-        self.gd_pub_time_max = None
+        self.gd_pub_time_max = 0.0 # type: float
 
 # ################################################################################################################################
 
@@ -445,3 +446,5 @@ class DeliveryResultCtx:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+subnone = optional[Subscription]
