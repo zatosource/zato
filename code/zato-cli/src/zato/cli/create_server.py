@@ -45,6 +45,9 @@ gunicorn_group=
 gunicorn_proc_name=
 gunicorn_logger_class=
 gunicorn_graceful_timeout=1
+debugger_enabled=False
+debugger_host=0.0.0.0
+debugger_port=5678
 
 work_dir=../../work
 

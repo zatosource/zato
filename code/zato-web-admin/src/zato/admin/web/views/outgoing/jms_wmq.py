@@ -81,9 +81,17 @@ def index(req):
         data, meta = parse_response_data(req.zato.client.invoke('zato.outgoing.jms-wmq.get-list', request))
 
         for item in data:
-            _item = OutgoingWMQ(item.id, item.name, item.is_active, item.delivery_mode,
-                item.priority, item.expiration, item.def_id, delivery_friendly_name[str(item.delivery_mode)],
-                item.def_name)
+            _item = OutgoingWMQ(
+                item.id,
+                item.name,
+                item.is_active,
+                item.delivery_mode,
+                item.priority,
+                item.expiration,
+                item.def_id,
+                delivery_mode_text=delivery_friendly_name[str(item.delivery_mode)],
+                def_name=item.def_name
+            )
             items.append(_item)
 
     return_data = {'zato_clusters':req.zato.clusters,
