@@ -9,4 +9,6 @@ static-check:
 
 run-tests:
 	echo "Running access checks in zato-web-admin"
+	$(PY_DIR)/nosetests $(CURDIR)/test/zato/admin/access/test_login_logout.py -s --nologcapture
+	$(PY_DIR)/nosetests $(CURDIR)/test/zato/admin/access/test_pubsub.py -s --nologcapture
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/admin/access/test_index.py -s --nologcapture
