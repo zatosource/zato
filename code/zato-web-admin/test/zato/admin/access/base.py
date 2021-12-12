@@ -185,8 +185,7 @@ class BaseTestCase(TestCase):
                 if item.response:
                     if item.response.status_code not in Config.status_ok: # type: ignore
                         if item.path not in Config.to_skip_status:
-                            #self.fail('Unexpected response `{}` to `{}`'.format(item.response, item))
-                            print(item.response.status_code, item.path)
+                            self.fail('Unexpected response `{}` to `{}`'.format(item.response, item))
 
 # ################################################################################################################################
 
