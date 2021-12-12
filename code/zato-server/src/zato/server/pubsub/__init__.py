@@ -35,7 +35,7 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
      get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
-from zato.common.typing_ import any_, callable_, cast_, dict_, intdict, intnone, list_, strintdict, strintnone
+from zato.common.typing_ import any_, callable_, cast_, dict_, intdict, intnone, list_, strintdict, strintnone, tuple_
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.hook import HookTool
@@ -1771,7 +1771,12 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def get_messages(self, topic_name, sub_key, needs_details=False, _skip=skip_to_external):
+    def get_messages(self,
+        topic_name,            # type: str
+        sub_key,               # type: str
+        needs_details=False,   # type: bool
+        _skip=skip_to_external # type: tuple_
+        ):
         """ Returns messages from a subscriber's queue, deleting them from the queue in progress.
         POST /zato/pubsub/topic/{topic_name}?sub_key=...
         """
@@ -1795,7 +1800,13 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def read_messages(self, topic_name, sub_key, has_gd, *args, **kwargs):
+    def read_messages(self,
+        topic_name, # type: str
+        sub_key,    # type: str
+        has_gd,     # type: bool
+        *args,      # type: any_
+        **kwargs    # type: any_
+        ):
         """ Looks up messages in subscriber's queue by input criteria without deleting them from the queue.
         """
         service_name = _service_read_messages_gd if has_gd else _service_read_messages_non_gd
@@ -1815,7 +1826,13 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def read_message(self, topic_name, msg_id, has_gd, *args, **kwargs):
+    def read_message(self,
+        topic_name, # type: str
+        msg_id,     # type: str
+        has_gd,     # type: bool
+        *args,      # type: any_
+        **kwargs    # type: any_
+        ):
         """ Returns details of a particular message without deleting it from the subscriber's queue.
         """
         if has_gd:
@@ -1919,7 +1936,7 @@ class PubSub(object):
             wsx = None
 
             # Non-WSX endpoints always need to be identified by their names
-            endpoint_name = cast_(kwargs.get('endpoint_name'), str)
+            endpoint_name = cast_(str, kwargs.get('endpoint_name'))
             if not endpoint_name:
                 raise Exception('Parameter `endpoint_name` is required for non-WebSockets subscriptions')
             else:
