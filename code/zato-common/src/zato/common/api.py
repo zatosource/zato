@@ -747,6 +747,7 @@ class HTTP_SOAP_SERIALIZATION_TYPE:
 
 class PUBSUB:
 
+    SUBSCRIBE_CLASS: '_PUBSUB_SUBSCRIBE_CLASS'
     SKIPPED_PATTERN_MATCHING = '<skipped>'
 
     # All float values are converted to strings of that precision
