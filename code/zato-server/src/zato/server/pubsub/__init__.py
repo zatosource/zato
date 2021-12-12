@@ -35,7 +35,7 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
      get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
-from zato.common.typing_ import callable_, cast_, dict_, intdict, intnone, list_, strintdict, strintnone
+from zato.common.typing_ import any_, callable_, cast_, dict_, intdict, intnone, list_, strintdict, strintnone
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.hook import HookTool
@@ -1878,7 +1878,7 @@ class PubSub(object):
     def subscribe(self,
         topic_name, # type: str
         _find_wsx_environ=find_wsx_environ, # type: callable_
-        **kwargs # type: dict
+        **kwargs # type: any_
         ):
 
         # Are we going to subscribe a WSX client?
@@ -1919,7 +1919,7 @@ class PubSub(object):
             wsx = None
 
             # Non-WSX endpoints always need to be identified by their names
-            endpoint_name = kwargs.get('endpoint_name')
+            endpoint_name = cast_(kwargs.get('endpoint_name'), str)
             if not endpoint_name:
                 raise Exception('Parameter `endpoint_name` is required for non-WebSockets subscriptions')
             else:
@@ -1944,9 +1944,10 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def resume_wsx_subscription(self,
-        sub_key:'str',     # type: str
-        service:'Service', # type: Service
+    def resume_wsx_subscription(
+        self,
+        sub_key, # type: str
+        service, # type: Service
         _find_wsx_environ=find_wsx_environ # type: callable_
         ):
         """ Invoked by WSX clients that want to resume deliveries of their messages after they reconnect.
