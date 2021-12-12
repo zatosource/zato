@@ -126,6 +126,7 @@ class ZatoGunicornApplication(Application):
 
 def run(base_dir, start_gunicorn_app=True, options=None):
     # type: (str, bool, dict)
+
     options = options or {}
 
     # Store a pidfile before doing anything else
@@ -163,6 +164,11 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     secrets_config = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
     server_config = get_config(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_config)
     pickup_config = get_config(repo_location, 'pickup.conf')
+
+    if server_config.main.get('debugger_enabled'):
+        import debugpy
+        debugpy.listen((server_config.main.debugger_host, server_config.main.debugger_port))
+        debugpy.wait_for_client()
 
     sio_config = get_config(repo_location, 'simple-io.conf', needs_user_config=False)
     sio_config = get_sio_server_config(sio_config)
