@@ -48,6 +48,7 @@ web-admin-tests:
 
 install-test-reqs:
 	$(CURDIR)/code/bin/pip install -r $(CURDIR)/code/test-requirements.txt
+	cp -v $(CURDIR)/code/patches/requests/* $(CURDIR)/code/eggs/requests/
 
 run-tests:
 	$(MAKE) install-test-reqs
