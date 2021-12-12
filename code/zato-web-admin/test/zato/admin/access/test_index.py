@@ -28,6 +28,9 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+selenium_logger = logging.getLogger('seleniumwire.handler')
+selenium_logger.setLevel(logging.WARN)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -42,7 +45,7 @@ class URLPath:
 
 class IndexTestCase(BaseTestCase):
 
-    run_in_background = False
+    run_in_background = True
     needs_auto_login = True
 
 # ################################################################################################################################
@@ -75,13 +78,43 @@ class IndexTestCase(BaseTestCase):
 
             url_paths.add(url_path)
 
+        # All the index-like URL paths found ..
         url_paths = sorted(url_paths)
 
+        # .. the list of patterns that point to URL paths that need to be skipped,
+        # .. e.g. that appear to be index-like but they are not really.
+        to_skip = [
+            'favicon.ico',
+            'generate-totp-key',
+            'basic/save/',
+            'cache/builtin/clear',
+            '/create/',
+            '/edit/',
+            '/change-password/',
+            '/kvdb/data_dict/',
+            '/config-file/',
+        ]
+
+        # Go through all the paths founds ..
         for item in url_paths:
-            address = self.config.web_admin_address + item.path + '?cluster=1'
-            #logger.info('Accessing %s', address)
-            #self.client.get(address)
-            #self.client
+
+            # .. by default, assume that we can continue ..
+            should_continue = True
+
+            # .. check if we should not actually skip this path ..
+            for item_to_skip in to_skip:
+
+                # .. if yes, set the flag accordingly ..
+                if item_to_skip in item.path:
+                    should_continue = False
+
+            # .. if we are here, it means that we can visit the URL
+            # .. and confirm that all of its responses were fine.
+            if should_continue:
+                address = self.config.web_admin_address + item.path + '?cluster=1'
+                #logger.info('Accessing %s', address)
+                self.client.get(address)
+                self.check_response_statuses()
 
 # ################################################################################################################################
 # ################################################################################################################################
