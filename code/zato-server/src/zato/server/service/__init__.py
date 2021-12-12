@@ -97,6 +97,7 @@ if 0:
     from zato.common.kvdb.api import KVDB as KVDBAPI
     from zato.common.odb.api import ODBManager
     from zato.common.util.time_ import TimeUtil
+    from zato.distlock import LockManager
     from zato.server.connection.ftp import FTPStore
     from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
@@ -1087,7 +1088,7 @@ class Service(object):
 
 # ################################################################################################################################
 
-    def lock(self, name=None, *args, **kwargs):
+    def lock(self, name=None, *args, **kwargs) -> 'LockManager':
         """ Creates a distributed lock.
 
         name - defaults to self.name effectively making access to this service serialized
