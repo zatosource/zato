@@ -21,12 +21,18 @@ from typing import           \
     Optional as optional,    \
     Text as str_,            \
     Tuple as tuple_,         \
+    Type as type_,           \
     TypeVar as typevar_,     \
     Set as set_,             \
     Union as union_
 
 # dacite
 from dacite import from_dict
+
+# typing-extensions
+from typing_extensions import \
+    TypeAlias as typealias_
+
 
 # Be explicit about which import error we want to catch
 try:
@@ -98,5 +104,7 @@ strstrdict  = dict_[str, str]
 intdict     = dict_[int, int]
 strtuple    = tuple_[str]
 tuple_      = tuple_
+type_       = type_
+typealias_  = typealias_
 typevar_    = typevar_
 union_      = union_
