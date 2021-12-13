@@ -582,7 +582,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _delete_endpoint(self, endpoint_id):
+    def _delete_endpoint(self, endpoint_id:'int') -> 'None':
         del self.endpoints[endpoint_id]
 
         sec_id = None
@@ -615,42 +615,42 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def delete_endpoint(self, endpoint_id):
+    def delete_endpoint(self, endpoint_id:'int') -> 'None':
         with self.lock:
             self._delete_endpoint(endpoint_id)
 
 # ################################################################################################################################
 
-    def edit_endpoint(self, config):
+    def edit_endpoint(self, config:'stranydict') -> 'None':
         with self.lock:
-            self._delete_endpoint(config.id)
+            self._delete_endpoint(config['id'])
             self._create_endpoint(config)
 
 # ################################################################################################################################
 
-    def edit_subscription(self, config):
+    def edit_subscription(self, config:'stranydict') -> 'None':
         with self.lock:
-            sub = self._get_subscription_by_sub_key(config.sub_key)
+            sub = self._get_subscription_by_sub_key(config['sub_key'])
             for key, value in iteritems(config):
                 sub.config[key] = value
 
 # ################################################################################################################################
 
-    def _add_subscription(self, config):
+    def _add_subscription(self, config:'stranydict') -> 'None':
         """ Low-level implementation of self.add_subscription.
         """
         sub = Subscription(config)
 
-        existing_by_topic = self.subscriptions_by_topic.setdefault(config.topic_name, [])
+        existing_by_topic = self.subscriptions_by_topic.setdefault(config['topic_name'], [])
         existing_by_topic.append(sub)
 
-        logger_zato.info('Added sub `%s` -> `%s`', config.sub_key, config.topic_name)
+        logger_zato.info('Added sub `%s` -> `%s`', config['sub_key'], config['topic_name'])
 
-        self.subscriptions_by_sub_key[config.sub_key] = sub
+        self.subscriptions_by_sub_key[config['sub_key']] = sub
 
 # ################################################################################################################################
 
-    def add_subscription(self, config):
+    def add_subscription(self, config:'stranydict') -> 'None':
         """ Creates a Subscription object and an associated mapping of the subscription to input topic.
         """
         with self.lock:
@@ -659,13 +659,18 @@ class PubSub(object):
             self._add_subscription(config)
 
             # .. triggers a relevant hook, if any is configured.
-            hook = self.get_on_subscribed_hook(config.sub_key)
+            hook = self.get_on_subscribed_hook(config['sub_key'])
             if hook:
-                self.invoke_on_subscribed_hook(hook, config.topic_id, config.sub_key)
+                _ = self.invoke_on_subscribed_hook(hook, config['topic_id'], config['sub_key'])
 
 # ################################################################################################################################
 
-    def _delete_subscription_by_sub_key(self, sub_key, ignore_missing=True, _invalid=object()):
+    def _delete_subscription_by_sub_key(
+        self,
+        sub_key,          # type: str
+        ignore_missing,   # type: bool
+        _invalid=object() # type: any_
+        ) -> 'Subscription':
         """ Deletes a subscription from the list of subscription. By default, it is not an error to call
         the method with an invalid sub_key. Must be invoked with self.lock held.
         """
@@ -819,7 +824,7 @@ class PubSub(object):
             subscriptions_by_topic = self._delete_topic(topic_id, topic_name) # type: list
 
             for sub in subscriptions_by_topic: # type: Subscription
-                _ = self._delete_subscription_by_sub_key(sub.sub_key)
+                _ = self._delete_subscription_by_sub_key(sub.sub_key, ignore_missing=True)
 
 # ################################################################################################################################
 
@@ -1355,7 +1360,7 @@ class PubSub(object):
 
                     # Remove mappings between sub_keys and sub objects but keep the subscription object around
                     # because an unsubscribe hook may need it.
-                    deleted_sub = self._delete_subscription_by_sub_key(sub_key)
+                    deleted_sub = self._delete_subscription_by_sub_key(sub_key, ignore_missing=True)
 
                     # Find and stop all delivery tasks if we are the server that handles them
                     sub_key_server = self.sub_key_servers.get(sub_key)
