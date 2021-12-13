@@ -122,29 +122,29 @@ class EventType:
 
     class Topic:
         set_hooks = 'set_hooks'
-        incr_topic_msg_counter = 'incr_topic_msg_counter'
+        incr_topic_msg_counter       = 'incr_topic_msg_counter'
         update_task_sync_time_before = 'update_task_sync_time_before'
-        update_task_sync_time_after = 'update_task_sync_time_after'
-        needs_task_sync_before = 'needs_task_sync_before'
-        needs_task_sync_after = 'needs_task_sync_after'
+        update_task_sync_time_after  = 'update_task_sync_time_after'
+        needs_task_sync_before       = 'needs_task_sync_before'
+        needs_task_sync_after        = 'needs_task_sync_after'
 
     class PubSub:
-        loop_topic_id_dict = 'loop_topic_id_dict'
-        loop_sub_keys = 'loop_sub_keys'
-        loop_before_has_msg = 'loop_before_has_msg'
-        loop_has_msg = 'loop_has_msg'
-        loop_before_sync = 'loop_before_sync'
-        _set_sync_has_msg = '_set_sync_has_msg'
-        about_to_subscribe = 'about_to_subscribe'
+        loop_topic_id_dict     = 'loop_topic_id_dict'
+        loop_sub_keys          = 'loop_sub_keys'
+        loop_before_has_msg    = 'loop_before_has_msg'
+        loop_has_msg           = 'loop_has_msg'
+        loop_before_sync       = 'loop_before_sync'
+        _set_sync_has_msg      = '_set_sync_has_msg'
+        about_to_subscribe     = 'about_to_subscribe'
         about_to_access_sub_sk = 'about_to_access_sub_sk'
-        in_subscribe_impl = 'in_subscribe_impl'
+        in_subscribe_impl      = 'in_subscribe_impl'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ToDictBase(object):
-    _to_dict_keys:tuple
-    config:dict
+    _to_dict_keys:'tuple'
+    config:'anydict'
 
     def to_dict(self):
         out = {}
