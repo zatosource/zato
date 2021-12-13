@@ -23,7 +23,7 @@ from texttable import Texttable
 
 # Python 2/3 compatibility
 from future.utils import iteritems, itervalues
-from past.builtins import basestring, unicode
+from past.builtins import basestring
 
 # Zato
 from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
@@ -48,6 +48,7 @@ from zato.server.pubsub.sync import InRAMSync
 # ################################################################################################################################
 
 if 0:
+    from zato.broker.client import BrokerClient
     from zato.cy.reqresp.payload import SimpleIOPayload
     from zato.distlock import Lock
     from zato.server.base.parallel import ParallelServer
@@ -154,9 +155,7 @@ def get_expiration(cid, input, default_expiration=_default_expiration):
 
 class PubSub(object):
 
-    def __init__(self, cluster_id, server, broker_client=None):
-        # type: (int, ParallelServer, object) -> None
-
+    def __init__(self, cluster_id:'int', server:'ParallelServer', broker_client:'BrokerClient') -> None:
         self.cluster_id = cluster_id
         self.server = server
         self.broker_client = broker_client
@@ -973,16 +972,16 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def format_sk_servers(self, default='---'):
+    def format_sk_servers(self, default:'str'='---'):
 
         # Prepare the table
         len_columns = len(self.sk_server_table_columns)
 
         table = Texttable()
-        table.set_cols_width(self.sk_server_table_columns)
-        table.set_cols_dtype(['t'] * len_columns)
-        table.set_cols_align(['c'] * len_columns)
-        table.set_cols_valign(['m'] * len_columns)
+        _ = table.set_cols_width(self.sk_server_table_columns)
+        _ = table.set_cols_dtype(['t'] * len_columns)
+        _ = table.set_cols_align(['c'] * len_columns)
+        _ = table.set_cols_valign(['m'] * len_columns)
 
         # Add headers
         rows = [['#', 'created', 'name', 'pid', 'channel_name', 'sub_key']] # type: anylist
@@ -996,10 +995,10 @@ class PubSub(object):
 
             if item.wsx_info:
                 for name in ('swc', 'name', 'pub_client_id', 'peer_fqdn', 'forwarded_for_fqdn'):
-                    name = name if isinstance(name, unicode) else name.decode('utf8')
+                    name = name if isinstance(name, str) else name.decode('utf8')
                     value = item.wsx_info[name]
                     if isinstance(value, basestring):
-                        value = value if isinstance(value, unicode) else value.decode('utf8')
+                        value = value if isinstance(value, str) else value.decode('utf8')
                         value = value.strip()
                     sub_key_info.append('{}: {}'.format(name, value))
 
@@ -1039,7 +1038,8 @@ class PubSub(object):
 
         sks_table = self.format_sk_servers()
         msg = 'Set sk_server{}for sub_key `%(sub_key)s` (wsx/srv:%(wsx)s/%(srv)s) - `%(server_name)s:%(server_pid)s`, ' + \
-            'current sk_servers:\n{}'.format(' ' if config['server_pid'] else ' (no PID) ', sks_table)
+            'current sk_servers:\n{}'
+        msg = msg.format(' ' if config['server_pid'] else ' (no PID) ', sks_table)
 
         logger.info(msg, config)
         logger_zato.info(msg, config)
