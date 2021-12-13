@@ -35,8 +35,8 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
     get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
-from zato.common.typing_ import any_, callable_, cast_, dict_, intdict, intlist, intnone, list_, strintdict, strintnone, \
-    strnone, strlist, tuple_
+from zato.common.typing_ import any_, anydict, callable_, cast_, dict_, dictlist, intdict, intlist, intnone, list_, \
+    stranydict, strintdict, strintnone, strstrdict, strnone, strlist, tuple_
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.hook import HookTool
@@ -52,7 +52,7 @@ if 0:
     from zato.distlock import Lock
     from zato.server.base.parallel import ParallelServer
     from zato.server.pubsub.model import subnone
-    from zato.server.pubsub.task import msgiter, PubSubTool
+    from zato.server.pubsub.task import Message, msgiter, PubSubTool
     from zato.server.service import Service
 
     ParallelServer = ParallelServer
@@ -1116,7 +1116,12 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def add_missing_server_for_sub_key(self, sub_key, is_wsx, _wsx=PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id):
+    def add_missing_server_for_sub_key(
+        self,
+        sub_key, # type: str
+        is_wsx,  # type: bool
+        _wsx=PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id # type: str
+        ):
         """ Adds to self.sub_key_servers information from ODB about which server handles input sub_key.
         Must be called with self.lock held.
         """
@@ -1150,7 +1155,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_task_servers_by_sub_keys(self, sub_key_data):
+    def get_task_servers_by_sub_keys(self, sub_key_data:'dictlist'):
         """ Returns a dictionary keyed by (server_name, server_pid, pub_client_id, channel_name) tuples
         and values being sub_keys that a WSX client pointed to by each key has subscribed to.
         """
@@ -1193,7 +1198,14 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_sql_messages_by_sub_key(self, session, sub_key_list, last_sql_run, pub_time_max, ignore_list):
+    def get_sql_messages_by_sub_key(
+        self,
+        session,      # type: any_
+        sub_key_list, # type: strlist
+        last_sql_run, # type: float
+        pub_time_max, # type: float
+        ignore_list   # type: strlist
+        ):
         """ Returns all SQL messages queued up for all keys from sub_key_list.
         """
         if not session:
@@ -1211,19 +1223,25 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_initial_sql_msg_ids_by_sub_key(self, session, sub_key, pub_time_max):
+    def get_initial_sql_msg_ids_by_sub_key(self, session:'any_', sub_key:'str', pub_time_max:'float'):
         return _get_sql_msg_ids_by_sub_key(session, self.server.cluster_id, sub_key, None, pub_time_max).\
                all()
 
 # ################################################################################################################################
 
-    def get_sql_messages_by_msg_id_list(self, session, sub_key, pub_time_max, msg_id_list):
+    def get_sql_messages_by_msg_id_list(
+        self,
+        session,      # type: any_
+        sub_key,      # type: str
+        pub_time_max, # type: float
+        msg_id_list   # type: strlist
+        ):
         return _get_sql_messages_by_msg_id_list(session, self.server.cluster_id, sub_key, pub_time_max, msg_id_list).\
                all()
 
 # ################################################################################################################################
 
-    def confirm_pubsub_msg_delivered(self, sub_key, delivered_pub_msg_id_list):
+    def confirm_pubsub_msg_delivered(self, sub_key:'str', delivered_pub_msg_id_list:'strlist'):
         """ Sets in SQL delivery status of a given message to True.
         """
         with closing(self.server.odb.session()) as session:
@@ -1232,7 +1250,16 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_error=0, _logger=logger):
+    def store_in_ram(
+        self,
+        cid,        # type: str
+        topic_id,   # type: int
+        topic_name, # type: str
+        sub_keys,   # type: strlist
+        non_gd_msg_list, # type: msgiter
+        from_error=0,    # type: int
+        _logger=logger   # type: logging.Logger
+        ):
         """ Stores in RAM up to input non-GD messages for each sub_key. A backlog queue for each sub_key
         cannot be longer than topic's max_depth_non_gd and overflowed messages are not kept in RAM.
         They are not lost altogether though, because, if enabled by topic's use_overflow_log, all such messages
@@ -1252,7 +1279,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def unsubscribe(self, topic_sub_keys):
+    def unsubscribe(self, topic_sub_keys:'strstrdict'):
         """ Removes subscriptions for all input sub_keys. Input topic_sub_keys is a dictionary keyed by topic_name,
         and each value is a list of sub_keys, possibly one-element long.
         """
@@ -1315,35 +1342,35 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def register_pubsub_tool(self, pubsub_tool):
+    def register_pubsub_tool(self, pubsub_tool:'PubSubTool'):
         """ Registers a new pubsub_tool for this server, i.e. a new delivery task container.
         """
         self.pubsub_tools.append(pubsub_tool)
 
 # ################################################################################################################################
 
-    def set_pubsub_tool_for_sub_key(self, sub_key, pubsub_tool):
+    def set_pubsub_tool_for_sub_key(self, sub_key:'str', pubsub_tool:'PubSubTool'):
         """ Adds a mapping between a sub_key and pubsub_tool handling its messages.
         """
         self.pubsub_tool_by_sub_key[sub_key] = pubsub_tool
 
 # ################################################################################################################################
 
-    def migrate_delivery_server(self, msg):
+    def migrate_delivery_server(self, msg:'anydict'):
         """ Migrates the delivery task for sub_key to a new server given by ID on input,
         including all current in-RAM messages. This method must be invoked in the same worker process that runs
         delivery task for sub_key.
         """
-        self.invoke_service('zato.pubsub.migrate.migrate-delivery-server', {
-            'sub_key': msg.sub_key,
-            'old_delivery_server_id': msg.old_delivery_server_id,
-            'new_delivery_server_name': msg.new_delivery_server_name,
-            'endpoint_type': msg.endpoint_type,
+        _ = self.invoke_service('zato.pubsub.migrate.migrate-delivery-server', {
+            'sub_key': msg['sub_key'],
+            'old_delivery_server_id': msg['old_delivery_server_id'],
+            'new_delivery_server_name': msg['new_delivery_server_name'],
+            'endpoint_type': msg['endpoint_type'],
         })
 
 # ################################################################################################################################
 
-    def get_before_delivery_hook(self, sub_key):
+    def get_before_delivery_hook(self, sub_key:'str') -> 'callable_':
         """ Returns a hook for messages to be invoked right before they are about to be delivered
         or None if such a hook is not defined for sub_key's topic.
         """
@@ -1353,7 +1380,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_on_subscribed_hook(self, sub_key):
+    def get_on_subscribed_hook(self, sub_key:'str') -> 'callable_':
         """ Returns a hook triggered when a new subscription is made to a particular topic.
         """
         with self.lock:
@@ -1362,7 +1389,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_on_unsubscribed_hook(self, sub_key=None, sub=None):
+    def get_on_unsubscribed_hook(self, sub_key:'str'='', sub:'subnone'=None) -> 'callable_':
         """ Returns a hook triggered when a client unsubscribes from a topic.
         """
         with self.lock:
@@ -1371,7 +1398,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_on_outgoing_soap_invoke_hook(self, sub_key):
+    def get_on_outgoing_soap_invoke_hook(self, sub_key:'str') -> 'callable_':
         """ Returns a hook that sends outgoing SOAP Suds connections-based messages or None if there is no such hook
         for sub_key's topic.
         """
@@ -1381,8 +1408,16 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def invoke_before_delivery_hook(self, hook, topic_id, sub_key, batch, messages, actions=tuple(PUBSUB.HOOK_ACTION()),
-        _deliver=PUBSUB.HOOK_ACTION.DELIVER):
+    def invoke_before_delivery_hook(
+        self,
+        hook,     # type: callable_
+        topic_id, # type: int
+        sub_key,  # type: str
+        batch,    # type: list_
+        messages, # type: anydict
+        actions=tuple(PUBSUB.HOOK_ACTION()), # type: tuple_
+        _deliver=PUBSUB.HOOK_ACTION.DELIVER  # type: str
+        ):
         """ Invokes a hook service for each message from a batch of messages possibly to be delivered and arranges
         each one to a specific key in messages dict.
         """
@@ -1397,7 +1432,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def invoke_on_outgoing_soap_invoke_hook(self, batch, sub, http_soap):
+    def invoke_on_outgoing_soap_invoke_hook(self, batch:'list_', sub:'Subscription', http_soap:'any_'):
         hook = self.get_on_outgoing_soap_invoke_hook(sub.sub_key)
         topic = self.get_topic_by_id(sub.config.topic_id)
         if hook:
@@ -1417,19 +1452,19 @@ class PubSub(object):
         topic_id,  # type: int
         sub_key,   # type: strnone
         sub=None   # type: subnone
-        ):
+        ) -> 'any_':
         sub = sub if sub else self._get_subscription_by_sub_key(sub_key)
         return hook(topic=self._get_topic_by_id(topic_id), sub=sub)
 
 # ################################################################################################################################
 
     def invoke_on_subscribed_hook(self, hook:'callable_', topic_id:'int', sub_key:'str'):
-        return self._invoke_on_sub_unsub_hook(hook, topic_id, sub_key)
+        return self._invoke_on_sub_unsub_hook(hook, topic_id, sub_key, sub=None)
 
 # ################################################################################################################################
 
-    def invoke_on_unsubscribed_hook(self, hook:'callable_', topic_id:'int', sub:'Subscription'):
-        return self._invoke_on_sub_unsub_hook(hook, topic_id, sub=sub)
+    def invoke_on_unsubscribed_hook(self, hook:'callable_', topic_id:'int', sub:'Subscription') -> 'any_':
+        return self._invoke_on_sub_unsub_hook(hook, topic_id, sub_key=None, sub=sub)
 
 # ################################################################################################################################
 
@@ -1899,7 +1934,7 @@ class PubSub(object):
         service_data = {
             'sub_key': sub_key,
             'msg_id': msg_id,
-        } # type: strintdict
+        } # type: stranydict
 
         if has_gd:
             service_name = _service_delete_message_gd

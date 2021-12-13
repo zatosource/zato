@@ -39,6 +39,7 @@ from zato.server.pubsub.model import DeliveryResultCtx
 
 if 0:
     from collections.abc import ValuesView
+    from logging import Logger
     from typing import Callable
     from bunch import Bunch
     from sqlalchemy.orm import Session
