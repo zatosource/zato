@@ -92,6 +92,8 @@ _service_read_message_non_gd = 'zato.pubsub.message.get-from-queue-non-gd'
 _service_delete_message_gd = 'zato.pubsub.message.queue-delete-gd'
 _service_delete_message_non_gd = 'zato.pubsub.message.queue-delete-non-gd'
 
+_end_srv_id = PUBSUB.ENDPOINT_TYPE.SERVICE.id
+
 # ################################################################################################################################
 
 _pub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.PUBLISHER.id)
@@ -820,21 +822,24 @@ class PubSub(object):
             subscriptions_by_topic = self._delete_topic(topic_id, topic_name) # type: list
 
             for sub in subscriptions_by_topic: # type: Subscription
-                self._delete_subscription_by_sub_key(sub.sub_key)
+                _ = self._delete_subscription_by_sub_key(sub.sub_key)
 
 # ################################################################################################################################
 
-    def edit_topic(self, del_name, config):
+    def edit_topic(self, del_name:'str', config:'anydict') -> 'None':
         with self.lock:
             subscriptions_by_topic = self.subscriptions_by_topic.pop(del_name, [])
-            self._delete_topic(config.id, del_name)
+            _ = self._delete_topic(config['id'], del_name)
             self._create_topic_object(config)
-            self.subscriptions_by_topic[config.name] = subscriptions_by_topic
+            self.subscriptions_by_topic[config['name']] = subscriptions_by_topic
 
 # ################################################################################################################################
 
-    def set_config_for_service_subscription(self, sub_key, _endpoint_type=PUBSUB.ENDPOINT_TYPE.SERVICE.id):
-        # type: (str, str) -> None
+    def set_config_for_service_subscription(
+        self,
+        sub_key, # type: str
+        _endpoint_type=_end_srv_id # type: str
+        ) -> 'None':
         self.service_pubsub_tool.add_sub_key(sub_key)
         self.set_sub_key_server({
             'sub_key': sub_key,
@@ -846,8 +851,20 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _is_allowed(self, target, name, is_pub, security_id, ws_channel_id, endpoint_id=None,
-        _pub_role=_pub_role, _sub_role=_sub_role):
+    def _is_allowed(
+        self,
+        target,        # type: str
+        name,          # type: str
+        is_pub,        # type: bool
+        security_id,   # type: int
+        ws_channel_id, # type: int
+        endpoint_id=0, # type: int
+        _pub_role=_pub_role, # type: tuple
+        _sub_role=_sub_role  # type: tuple
+        ) -> 'bool':
+        """ An internal function that decides whether an endpoint, a security definition,
+        or a WSX channel are allowed to publish or subscribe to topics.
+        """
 
         if not endpoint_id:
 
@@ -869,35 +886,57 @@ class PubSub(object):
         # .. make sure this endpoint may publish or subscribe, depending on what is needed.
         if is_pub:
             if not endpoint.role in _pub_role:
-                return
+                return False
         else:
             if not endpoint.role in _sub_role:
-                return
+                return False
 
         # Alright, this endpoint has the correct role, but are there are any matching patterns for this topic?
         for orig, matcher in getattr(endpoint, target):
             if matcher.match(name):
                 return orig
+        else:
+            return False
 
 # ################################################################################################################################
 
-    def is_allowed_pub_topic(self, name, security_id=None, ws_channel_id=None):
+    def is_allowed_pub_topic(self, name:'str', security_id:'int'=0, ws_channel_id:'int'=0) -> 'bool':
         return self._is_allowed('pub_topic_patterns', name, True, security_id, ws_channel_id)
 
 # ################################################################################################################################
 
-    def is_allowed_pub_topic_by_endpoint_id(self, name, endpoint_id):
-        return self._is_allowed('pub_topic_patterns', name, True, None, None, endpoint_id)
+    def is_allowed_pub_topic_by_endpoint_id(self, name:'str', endpoint_id:'int') -> 'bool':
+        return self._is_allowed(
+            target='pub_topic_patterns',
+            name=name,
+            is_pub=True,
+            security_id=0,
+            ws_channel_id=0,
+            endpoint_id=0
+        )
 
 # ################################################################################################################################
 
-    def is_allowed_sub_topic(self, name, security_id=None, ws_channel_id=None):
-        return self._is_allowed('sub_topic_patterns', name, False, security_id, ws_channel_id)
+    def is_allowed_sub_topic(self, name:'str', security_id:'int'=0, ws_channel_id:'int'=0) -> 'bool':
+        return self._is_allowed(
+            target='sub_topic_patterns',
+            name=name,
+            is_pub=False,
+            security_id=security_id,
+            ws_channel_id=ws_channel_id
+        )
 
 # ################################################################################################################################
 
-    def is_allowed_sub_topic_by_endpoint_id(self, name, endpoint_id):
-        return self._is_allowed('sub_topic_patterns', name, False, None, None, endpoint_id)
+    def is_allowed_sub_topic_by_endpoint_id(self, name:'str', endpoint_id:'int') -> 'bool':
+        return self._is_allowed(
+            target='sub_topic_patterns',
+            name=name,
+            is_pub=False,
+            security_id=0,
+            ws_channel_id=0,
+            endpoint_id=endpoint_id
+        )
 
 # ################################################################################################################################
 
@@ -909,7 +948,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_sub_topics_for_endpoint(self, endpoint_id):
+    def get_sub_topics_for_endpoint(self, endpoint_id:'int') -> 'list_[Topic]':
         """ Returns all topics to which endpoint_id can subscribe.
         """
         out = []
@@ -922,16 +961,18 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _is_subscribed_to(self, endpoint_id, topic_name):
+    def _is_subscribed_to(self, endpoint_id:'int', topic_name:'str') -> 'bool':
         """ Low-level implementation of self.is_subscribed_to.
         """
         for sub in self.subscriptions_by_topic.get(topic_name, []):
             if sub.endpoint_id == endpoint_id:
                 return True
+        else:
+            return False
 
 # ################################################################################################################################
 
-    def is_subscribed_to(self, endpoint_id, topic_name):
+    def is_subscribed_to(self, endpoint_id:'int', topic_name:'str') -> 'bool':
         """ Returns True if the endpoint is subscribed to the named topic.
         """
         with self.lock:
@@ -939,22 +980,29 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_pubsub_tool_by_sub_key(self, sub_key):
-        # type: (str) -> PubSubTool
+    def get_pubsub_tool_by_sub_key(self, sub_key:'str') -> 'PubSubTool':
         with self.lock:
             return self.pubsub_tool_by_sub_key[sub_key]
 
 # ################################################################################################################################
 
-    def add_wsx_client_pubsub_keys(self, session, sql_ws_client_id, sub_key, channel_name, pub_client_id, wsx_info):
+    def add_wsx_client_pubsub_keys(
+        self,
+        session,          # type: any_
+        sql_ws_client_id, # type: int
+        sub_key,          # type: str
+        channel_name,     # type: str
+        pub_client_id,    # type: str
+        wsx_info          # type: anydict
+        ):
         """ Adds to SQL information that a given WSX client handles messages for sub_key.
         This information is transient - it will be dropped each time a WSX client disconnects
         """
         # Update state in SQL
         ws_sub_key = WebSocketClientPubSubKeys()
-        ws_sub_key.client_id = sql_ws_client_id
-        ws_sub_key.sub_key = sub_key
-        ws_sub_key.cluster_id = self.cluster_id
+        ws_sub_key.client_id = sql_ws_client_id # type: ignore
+        ws_sub_key.sub_key = sub_key            # type: ignore
+        ws_sub_key.cluster_id = self.cluster_id # type: ignore
         session.add(ws_sub_key)
 
         # Update in-RAM state of workers
