@@ -71,14 +71,6 @@ logger_overflow = logging.getLogger('zato_pubsub_overflow')
 
 sublist = list_['Subscription']
 
-from typing_extensions import TypeAlias
-
-TreeMap: TypeAlias = "dict[str, Tree]"
-
-class Tree:
-    def __init__(self, subtrees: TreeMap) -> None:
-        self.subtrees = subtrees
-
 # ################################################################################################################################
 
 hook_type_to_method = {
@@ -193,7 +185,7 @@ class PubSub(object):
         self.endpoints = {} # type: dict_[int, Endpoint]
 
         # Topic ID -> Topic object
-        self.topics = {} # type: topicdict
+        self.topics = {} # type: dict_[int, Topic]
 
         # Sec def ID -> Endpoint ID
         self.sec_id_to_endpoint_id = {} # type: intdict
@@ -945,7 +937,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_topics(self) -> 'topicdict':
+    def get_topics(self) -> 'dict_[int, Topic]':
         """ Returns all topics in existence.
         """
         with self.lock:
