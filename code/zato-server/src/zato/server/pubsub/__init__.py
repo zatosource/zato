@@ -35,7 +35,7 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
     get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
-from zato.common.typing_ import any_, anydict, callable_, cast_, dict_, dictlist, intdict, intlist, intnone, list_, \
+from zato.common.typing_ import any_, anydict, anylist, callable_, cast_, dict_, dictlist, intdict, intlist, intnone, list_, \
     stranydict, strintdict, strintnone, strstrdict, strnone, strlist, tuple_
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.file_system import fs_safe_name
@@ -52,7 +52,7 @@ if 0:
     from zato.distlock import Lock
     from zato.server.base.parallel import ParallelServer
     from zato.server.pubsub.model import subnone
-    from zato.server.pubsub.task import Message, msgiter, PubSubTool
+    from zato.server.pubsub.task import msgiter, PubSubTool
     from zato.server.service import Service
 
     ParallelServer = ParallelServer
@@ -985,7 +985,7 @@ class PubSub(object):
         table.set_cols_valign(['m'] * len_columns)
 
         # Add headers
-        rows = [['#', 'created', 'name', 'pid', 'channel_name', 'sub_key']]
+        rows = [['#', 'created', 'name', 'pid', 'channel_name', 'sub_key']] # type: anylist
 
         servers = list(itervalues(self.sub_key_servers))
         servers.sort(key=attrgetter('creation_time', 'channel_name', 'sub_key'), reverse=True)
@@ -1013,14 +1013,18 @@ class PubSub(object):
             ])
 
         # Add all rows to the table
-        table.add_rows(rows)
+        _ = table.add_rows(rows)
 
         # And return already formatted output
         return table.draw()
 
 # ################################################################################################################################
 
-    def _set_sub_key_server(self, config, _endpoint_type=PUBSUB.ENDPOINT_TYPE):
+    def _set_sub_key_server(
+        self,
+        config, # type: stranydict
+        _endpoint_type=PUBSUB.ENDPOINT_TYPE # type: PUBSUB.ENDPOINT_TYPE
+        ):
         """ Low-level implementation of self.set_sub_key_server - must be called with self.lock held.
         """
         sub = self._get_subscription_by_sub_key(config['sub_key'])
@@ -1034,7 +1038,7 @@ class PubSub(object):
         config['srv'] = int(endpoint_type == _endpoint_type.SERVICE.id)
 
         sks_table = self.format_sk_servers()
-        msg = 'Set sk_server{}for sub_key `%(sub_key)s` (wsx/srv:%(wsx)s/%(srv)s) - `%(server_name)s:%(server_pid)s`, '\
+        msg = 'Set sk_server{}for sub_key `%(sub_key)s` (wsx/srv:%(wsx)s/%(srv)s) - `%(server_name)s:%(server_pid)s`, ' + \
             'current sk_servers:\n{}'.format(' ' if config['server_pid'] else ' (no PID) ', sks_table)
 
         logger.info(msg, config)
@@ -1042,24 +1046,24 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def set_sub_key_server(self, config):
+    def set_sub_key_server(self, config:'anydict'):
         with self.lock:
             self._set_sub_key_server(config)
 
 # ################################################################################################################################
 
-    def _get_sub_key_server(self, sub_key, default=None):
+    def _get_sub_key_server(self, sub_key:'str', default:'any_'=None):
         return self.sub_key_servers.get(sub_key, default)
 
 # ################################################################################################################################
 
-    def get_sub_key_server(self, sub_key, default=None):
+    def get_sub_key_server(self, sub_key:'str', default:'any_'=None):
         with self.lock:
             return self._get_sub_key_server(sub_key, default)
 
 # ################################################################################################################################
 
-    def get_delivery_server_by_sub_key(self, sub_key, needs_lock=True):
+    def get_delivery_server_by_sub_key(self, sub_key:'str', needs_lock:'bool'=True):
         if needs_lock:
             with self.lock:
                 return self._get_sub_key_server(sub_key)
@@ -1068,7 +1072,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def delete_sub_key_server(self, sub_key):
+    def delete_sub_key_server(self, sub_key:'str'):
         with self.lock:
             sub_key_server = self.sub_key_servers.get(sub_key)
             if sub_key_server:
@@ -1084,13 +1088,13 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def remove_ws_sub_key_server(self, config):
+    def remove_ws_sub_key_server(self, config:'stranydict'):
         """ Called after a WSX client disconnects - provides a list of sub_keys that it handled
         which we must remove from our config because without this client they are no longer usable (until the client reconnects).
         """
         with self.lock:
-            for sub_key in config.sub_key_list:
-                self.sub_key_servers.pop(sub_key, None)
+            for sub_key in config['sub_key_list']:
+                _ = self.sub_key_servers.pop(sub_key, None)
                 for server_info in self.sub_key_servers.values():
                     if server_info.sub_key == sub_key:
                         del self.sub_key_servers[sub_key]
@@ -1098,7 +1102,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_server_pid_for_sub_key(self, server_name, sub_key):
+    def get_server_pid_for_sub_key(self, server_name:'str', sub_key:'str'):
         """ Invokes a named server on current cluster and asks it for PID of one its processes that handles sub_key.
         Returns that PID or None if the information could not be obtained.
         """
@@ -1125,7 +1129,7 @@ class PubSub(object):
         """ Adds to self.sub_key_servers information from ODB about which server handles input sub_key.
         Must be called with self.lock held.
         """
-        with closing(self.server.odb.session()) as session:
+        with closing(self.server.odb.session()) as session: # type: ignore
             data = get_delivery_server_for_sub_key(session, self.server.cluster_id, sub_key, is_wsx)
 
         if not data:
@@ -1205,7 +1209,7 @@ class PubSub(object):
         last_sql_run, # type: float
         pub_time_max, # type: float
         ignore_list   # type: strlist
-        ):
+        ) -> 'tuple':
         """ Returns all SQL messages queued up for all keys from sub_key_list.
         """
         if not session:
@@ -1223,7 +1227,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_initial_sql_msg_ids_by_sub_key(self, session:'any_', sub_key:'str', pub_time_max:'float'):
+    def get_initial_sql_msg_ids_by_sub_key(self, session:'any_', sub_key:'str', pub_time_max:'float') -> 'tuple':
         return _get_sql_msg_ids_by_sub_key(session, self.server.cluster_id, sub_key, None, pub_time_max).\
                all()
 
@@ -1235,7 +1239,7 @@ class PubSub(object):
         sub_key,      # type: str
         pub_time_max, # type: float
         msg_id_list   # type: strlist
-        ):
+        ) -> 'tuple':
         return _get_sql_messages_by_msg_id_list(session, self.server.cluster_id, sub_key, pub_time_max, msg_id_list).\
                all()
 
@@ -1244,7 +1248,7 @@ class PubSub(object):
     def confirm_pubsub_msg_delivered(self, sub_key:'str', delivered_pub_msg_id_list:'strlist'):
         """ Sets in SQL delivery status of a given message to True.
         """
-        with closing(self.server.odb.session()) as session:
+        with closing(self.server.odb.session()) as session: # type: ignore
             _confirm_pubsub_msg_delivered(session, self.server.cluster_id, sub_key, delivered_pub_msg_id_list, utcnow_as_ms())
             session.commit()
 
@@ -1256,7 +1260,7 @@ class PubSub(object):
         topic_id,   # type: int
         topic_name, # type: str
         sub_keys,   # type: strlist
-        non_gd_msg_list, # type: msgiter
+        non_gd_msg_list, # type: dictlist
         from_error=0,    # type: int
         _logger=logger   # type: logging.Logger
         ):
