@@ -78,6 +78,7 @@ from zato.server.pubsub.task import PubSubTool
 if 0:
     from zato.common.audit_log import DataEvent
     from zato.common.model.wsx import WSXConnectorConfig
+    from zato.common.typing_ import callable_
     from zato.server.base.parallel import ParallelServer
 
     DataEvent = DataEvent
@@ -143,6 +144,7 @@ _audit_msg_type = WEB_SOCKET.AUDIT_KEY
 # ################################################################################################################################
 
 log_msg_max_size = 1024
+_interact_update_interval = WEB_SOCKET.DEFAULT.INTERACT_interact_update_interval
 
 # ################################################################################################################################
 
@@ -303,7 +305,7 @@ class WebSocket(_WebSocket):
         # point but they are never seen again, which may (theoretically) happen if a peer disconnects
         # in a way that does not allow for Zato to clean up its subscription status in the ODB.
         #
-        self.pubsub_interact_interval = WEB_SOCKET.DEFAULT.INTERACT_UPDATE_INTERVAL
+        self.pubsub_interact_interval = _interact_update_interval
         self.interact_last_updated = None
         self.last_interact_source = None
         self.interact_last_set = None
@@ -413,7 +415,12 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def set_last_interaction_data(self, source, _now=datetime.utcnow, _interval=WEB_SOCKET.DEFAULT.INTERACT_UPDATE_INTERVAL):
+    def set_last_interaction_data(
+        self,
+        source, # type: str
+        _now=datetime.utcnow, # type: callable_
+        _interval=_interact_update_interval # type: int
+        ) -> 'None':
         """ Updates metadata regarding pub/sub about this WSX connection.
         """
         with self.update_lock:
