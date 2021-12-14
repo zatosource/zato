@@ -82,9 +82,10 @@ def instance_from_dict(class_, data):
 # ################################################################################################################################
 
 anydict      = dict_[any_, any_]
-anylist     = list_[any_]
+anylist      = list_[any_]
+anyset       = set_[any_]
 anytuple     = tuple_[any_, ...]
-callable_     = callable_
+callable_    = callable_[..., any_]
 callnone     = optional[callable_]
 cast_        = cast_
 dictlist     = list_[anydict]
@@ -94,7 +95,7 @@ intdict      = dict_[int, int]
 intdictdict  = dict_[int, anydict]
 intlist      = list_[int]
 intnone      = optional[int]
-intsetdict   = dict_[int, set_]
+intsetdict   = dict_[int, anyset]
 intstrdict   = dict_[int, str]
 noreturn     = noreturn
 set_         = set_
@@ -106,7 +107,7 @@ strlist      = list_[str]
 strlistempty = list_[optional[str]]
 strset       = set_[str]
 stranydict   = dict_[str, any_]
-strsetdict   = dict_[str, set_]
+strsetdict   = dict_[str, anyset]
 strintdict   = dict_[str, int]
 strlistdict  = dict_[str, anylist]
 strset       = set_[str]
