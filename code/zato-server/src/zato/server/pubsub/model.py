@@ -10,7 +10,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from dataclasses import dataclass, field as dc_field
 from datetime import datetime
-from typing import List as list_
 
 # globre
 from globre import compile as globre_compile
@@ -22,7 +21,7 @@ from future.utils import iteritems
 from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
 from zato.common.exception import BadRequest
 from zato.common.pubsub import dict_keys
-from zato.common.typing_ import any_, anydict, callable_, cast_, dict_, optional
+from zato.common.typing_ import any_, anydict, anylist, callable_, cast_, dict_, intnone, list_, optional, strlist, strtuple
 from zato.common.util.api import make_repr
 from zato.common.util.time_ import utcnow_as_ms
 
@@ -84,12 +83,22 @@ _PRIORITY=PUBSUB.PRIORITY
 _JSON=DATA_FORMAT.JSON
 _page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE
 
+_pri_min=_PRIORITY.MIN
+_pri_max=_PRIORITY.MAX
+_pri_def=_PRIORITY.DEFAULT
+
 class msg:
     wsx_sub_resumed = 'WSX subscription resumed, sk:`%s`, peer:`%s`'
 
 # ################################################################################################################################
 
-def get_priority(cid, input, _pri_min=_PRIORITY.MIN, _pri_max=_PRIORITY.MAX, _pri_def=_PRIORITY.DEFAULT):
+def get_priority(
+    cid,   # type: str
+    input, # type: anydict
+    _pri_min=_pri_min, # type: int
+    _pri_max=_pri_max, # type: int
+    _pri_def=_pri_def  # type: int
+    ):
     """ Get and validate message priority.
     """
     priority = input.get('priority')
@@ -103,11 +112,11 @@ def get_priority(cid, input, _pri_min=_PRIORITY.MIN, _pri_max=_PRIORITY.MAX, _pr
 
 # ################################################################################################################################
 
-def get_expiration(cid, input, default_expiration=_default_expiration):
+def get_expiration(cid:'str', input:'anydict', default_expiration:'int'=_default_expiration):
     """ Get and validate message expiration.
-    Returns (2 ** 31 - 1) * 1000 milliseconds (around 68 years) if expiration is not set explicitly.
+    Returns (2 ** 31 - 1) * 1000 milliseconds (around 70 years) if expiration is not set explicitly.
     """
-    expiration = input.get('expiration')
+    expiration = input.get('expiration') # type: intnone
     if expiration is not None and expiration < 0:
         raise BadRequest(cid, 'Expiration `{}` must not be negative'.format(expiration))
 
@@ -145,11 +154,12 @@ class ToDictBase(object):
     _to_dict_keys:'tuple'
     config:'anydict'
 
-    def to_dict(self):
+    def to_dict(self) -> 'anydict':
         out = {}
 
-        for name in self._to_dict_keys:
-            value = getattr(self, name, _does_not_exist)
+        for name in self._to_dict_keys: # type: ignore
+            name = cast_('str', name)
+            value = getattr(self, name, _does_not_exist) # type: any_
             if value is _does_not_exist:
                 value = self.config[name]
             out[name] = value
@@ -164,16 +174,32 @@ class Endpoint(ToDictBase):
     """
     _to_dict_keys = dict_keys.endpoint
 
-    def __init__(self, config):
-        self.config = config
-        self.id = config.id
-        self.name = config.name
-        self.endpoint_type = config.endpoint_type
-        self.role = config.role
-        self.is_active = config.is_active
-        self.is_internal = config.is_internal
+    config: 'anydict'
+    id: 'int'
+    name: 'str'
+    endpoint_type: 'str'
+    role: 'str'
+    is_active: 'bool'
+    is_internal: 'bool'
 
-        self.topic_patterns = config.topic_patterns or ''
+    topic_patterns: 'str'
+
+    pub_topic_patterns: 'strlist'
+    sub_topic_patterns: 'strlist'
+
+    pub_topics: 'anydict'
+    sub_topics: 'anydict'
+
+    def __init__(self, config:'anydict') -> 'None':
+        self.config = config
+        self.id = config['id']
+        self.name = config['name']
+        self.endpoint_type = config['endpoint_type']
+        self.role = config['role']
+        self.is_active = config['is_active']
+        self.is_internal = config['is_internal']
+
+        self.topic_patterns = config.get('topic_patterns', '')
 
         self.pub_topic_patterns = []
         self.sub_topic_patterns = []
@@ -185,17 +211,17 @@ class Endpoint(ToDictBase):
 
 # ################################################################################################################################
 
-    def __repr__(self):
+    def __repr__(self) -> 'str':
         return make_repr(self)
 
 # ################################################################################################################################
 
-    def get_id(self):
+    def get_id(self) -> 'str':
         return '{};{};{}'.format(self.id, self.endpoint_type, self.name)
 
 # ################################################################################################################################
 
-    def to_dict(self, _replace=('pub_topic_patterns', 'sub_topic_patterns')):
+    def to_dict(self, _replace:'strtuple'=('pub_topic_patterns', 'sub_topic_patterns')) -> 'anydict':
         out = super(Endpoint, self).to_dict()
         for key, value in out.items():
             if key in _replace:
@@ -205,7 +231,7 @@ class Endpoint(ToDictBase):
 
 # ################################################################################################################################
 
-    def set_up_patterns(self):
+    def set_up_patterns(self) -> 'None':
         data = {
             'topic': self.topic_patterns,
         }
@@ -214,7 +240,7 @@ class Endpoint(ToDictBase):
         targets = {
             (True, True): self.pub_topic_patterns,
             (False, True): self.sub_topic_patterns,
-        }
+        } # type: anydict
 
         for key, config in iteritems(data):
             is_topic = key == 'topic' # type: bool
@@ -228,12 +254,12 @@ class Endpoint(ToDictBase):
                     matcher = globre_compile(matcher)
 
                     source = (is_pub, is_topic)
-                    target = targets[source] # type: ignore
+                    target = targets[source] # type: anylist
                     target.append([line, matcher])
 
                 else:
-                    logger.warn('Ignoring invalid {} pattern `{}` for `{}` (role:{}) (reason: no pub=/sub= prefix found)'.format(
-                        key, line, self.name, self.role))
+                    msg = 'Ignoring invalid %s pattern `%s` for `%s` (role:%s) (reason: no pub=/sub= prefix found)'
+                    logger.warn(msg, key, line, self.name, self.role)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -251,8 +277,8 @@ class Topic(ToDictBase):
     is_internal: 'bool'
     has_gd:      'bool'
 
-    server_name:  'str'
-    server_pid:   'int'
+    server_name: 'str'
+    server_pid:  'int'
 
     max_depth_gd:     'int'
     max_depth_non_gd: 'int'
@@ -273,7 +299,7 @@ class Topic(ToDictBase):
     meta_store_frequency:   'int'
     task_delivery_interval: 'int'
 
-    def __init__(self, config:'anydict', server_name:'str', server_pid:'int'):
+    def __init__(self, config:'anydict', server_name:'str', server_pid:'int') -> 'None':
         self.config = config
         self.server_name = server_name
         self.server_pid = server_pid
@@ -467,6 +493,7 @@ class SubKeyServer(ToDictBase):
     server_name:   'str'
     server_pid:    'int'
     endpoint_type: 'str'
+    creation_time: 'datetime'
 
     # Attributes below are only for WebSockets
     channel_name:  'str'
@@ -488,7 +515,7 @@ class SubKeyServer(ToDictBase):
         self.ext_client_id = config.get('ext_client_id', '')
         self.wsx_info = config.get('wsx_info', {})
 
-        # When this object was created - we have both
+        # When this object was created
         self.creation_time = _utcnow()
 
 # ################################################################################################################################
