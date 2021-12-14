@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # Zato
 from zato.common.util.api import is_func_overridden
+
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import callable_
 
 # ################################################################################################################################
 
@@ -32,7 +35,7 @@ class HookTool(object):
 
 # ################################################################################################################################
 
-    def get_hook_service_invoker(self, service_name, hook_type):
+    def get_hook_service_invoker(self, service_name:'str', hook_type:'str') -> 'callable_':
         """ Returns a function that will invoke ooks or None if a given service does not implement input hook_type.
         """
         # Do not continue if we already know that user did not override the hook method

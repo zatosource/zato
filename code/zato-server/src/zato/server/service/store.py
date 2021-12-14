@@ -64,17 +64,12 @@ from past.builtins import basestring
 
 if 0:
 
-    # stdlib
     from inspect import ArgSpec
-
-    # Zato
     from zato.common.odb.api import ODBManager
+    from zato.common.typing_ import anydict
     from zato.server.base.parallel import ParallelServer
 
-    # For pyflakes
-    ArgSpec = ArgSpec
-    ConfigDict = ConfigDict
-    ODBManager = ODBManager
+    ODBManager     = ODBManager
     ParallelServer = ParallelServer
 
 # ################################################################################################################################
@@ -529,7 +524,7 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def get_service_info_by_id(self, service_id):
+    def get_service_info_by_id(self, service_id:'int'):
         if not isinstance(service_id, int):
             service_id = int(service_id)
 
@@ -556,18 +551,17 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def get_service_name_by_id(self, service_id):
+    def get_service_name_by_id(self, service_id:'int') -> 'str':
         return self.get_service_info_by_id(service_id)['name']
 
 # ################################################################################################################################
 
-    def get_deployment_info(self, impl_name):
-        # type: (str) -> dict
+    def get_deployment_info(self, impl_name:'str') -> 'anydict':
         return self.deployment_info[impl_name]
 
 # ################################################################################################################################
 
-    def has_service(self, service_name):
+    def has_service(self, service_name:'str') -> 'bool':
         return service_name in self.name_to_impl_name
 
 # ################################################################################################################################
