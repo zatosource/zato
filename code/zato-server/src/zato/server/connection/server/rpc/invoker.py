@@ -28,6 +28,7 @@ if 0:
     from requests import Response
     from typing import Callable
     from zato.client import ServiceInvokeResponse
+    from zato.common.typing_ import any_
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.server.rpc.config import RemoteServerInvocationCtx
 
@@ -65,8 +66,7 @@ class PerPIDResponse:
 class ServerInvoker:
     """ A base class for local and remote server invocations.
     """
-    def __init__(self, parallel_server, cluster_name, server_name):
-        # type: (ParallelServer) -> None
+    def __init__(self, parallel_server:'ParallelServer', cluster_name:'str', server_name:'str'):
 
         # This parameter is used for local invocations only
         # to have access to self.parallel_server.invoke/.invoke_async/.invoke_all_pids
@@ -75,13 +75,13 @@ class ServerInvoker:
         self.cluster_name = cluster_name
         self.server_name = server_name
 
-    def invoke(self, *args, **kwargs):
+    def invoke(self, *args:'any_', **kwargs:'any_'):
         raise NotImplementedError(self.__class__)
 
-    def invoke_async(self, *args, **kwargs):
+    def invoke_async(self, *args:'any_', **kwargs:'any_'):
         raise NotImplementedError(self.__class__)
 
-    def invoke_all_pids(self, *args, **kwargs):
+    def invoke_all_pids(self, *args:'any_', **kwargs:'any_'):
         # type: () -> ServerInvocationResult
         raise NotImplementedError(self.__class__)
 

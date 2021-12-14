@@ -931,7 +931,7 @@ class _PUBSUB_SUBSCRIBE_CLASS:
     }
 
     @staticmethod
-    def get(name):
+    def get(name:'str'):
         return _PUBSUB_SUBSCRIBE_CLASS.classes[name]
 
 # ################################################################################################################################
