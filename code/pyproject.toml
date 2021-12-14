@@ -2,9 +2,9 @@
 pythonVersion = "3.8"
 typeCheckingMode = "basic"
 reportImplicitStringConcatenation = "error"
-reportMissingParameterType = "error"
-#reportUnknownArgumentType = "error" # This is for level 2, needed before reportUnknownMemberType
-#reportUnknownMemberType = "error"
+reportMissingParameterType = "error"  # This is level 2
+reportUnknownArgumentType = "error"   # This is level 3, needed before reportUnknownMemberType
+#reportUnknownMemberType = "error"    # This is level 4
 reportUnusedCallResult = "error"
 reportGeneralTypeIssues = "error"
 extraPaths = [
