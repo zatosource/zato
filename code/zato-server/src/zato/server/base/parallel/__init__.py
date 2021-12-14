@@ -144,8 +144,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.sio_config = None # type: SIOServerConfig
         self.sso_config = None
         self.connector_server_grace_time = None
-        self.id = None # type: int
-        self.name = None # type: unicode
+        self.id = 0    # type: int
+        self.name = '' # type: str
         self.worker_id = None # type: int
         self.worker_pid = None # type: int
         self.cluster = None # type: ClusterModel
