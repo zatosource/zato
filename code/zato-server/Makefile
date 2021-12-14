@@ -18,7 +18,7 @@ static-check:
 	$(PY_DIR)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
 
 pyright:
-	#pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/__init__.py
+	pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/__init__.py
 	pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/model.py
 	#pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/task.py
 
