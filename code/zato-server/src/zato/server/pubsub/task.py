@@ -30,7 +30,7 @@ from zato.common.api import GENERIC, PUBSUB
 from zato.common.json_internal import json_loads
 from zato.common.odb.api import SQLRow
 from zato.common.pubsub import PubSubMessage
-from zato.common.typing_ import any_, anylist, anytuple, dict_, dictlist, list_, set_, strlist, tuple_
+from zato.common.typing_ import any_, anylist, anytuple, cast_, dict_, dictlist, list_, set_, strlist, tuple_
 from zato.common.util.api import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub.model import DeliveryResultCtx
@@ -935,9 +935,19 @@ class PubSubTool(object):
 
         sub = self.pubsub.get_subscription_by_sub_key(sub_key)
 
-        self.delivery_tasks[sub_key] = DeliveryTask(
-            self, self.pubsub, sub_key, delivery_lock, delivery_list, self.deliver_pubsub_msg,
-            self.confirm_pubsub_msg_delivered, sub.config)
+        if not sub:
+            all_subs = self.pubsub.get_all_subscriptions()
+            msg = 'Sub key `%s` not found among `%s`'
+            logger.warn(msg, sub_key, all_subs)
+            logger_zato.warn(msg, sub_key, all_subs)
+
+            # Return explicitly
+            return
+
+        else:
+            self.delivery_tasks[sub_key] = DeliveryTask(
+                self, self.pubsub, sub_key, delivery_lock, delivery_list, self.deliver_pubsub_msg,
+                self.confirm_pubsub_msg_delivered, sub.config)
 
 # ################################################################################################################################
 
@@ -1123,7 +1133,10 @@ class PubSubTool(object):
             else:
                 min_last_gd_run = min(value for key, value in iteritems(self.last_gd_run) if key in sub_key_list)
         else:
-            min_last_gd_run = None
+            min_last_gd_run = 0.0
+
+        # Tell type-checkers that we really have a float here now
+        min_last_gd_run = cast_(float, min_last_gd_run)
 
         logger.info('Using min last_gd_run `%r`', min_last_gd_run)
 
