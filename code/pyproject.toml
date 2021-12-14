@@ -29,7 +29,6 @@ reportMissingParameterType = "error"
 reportUnknownArgumentType  = "error"
 
 # This is level 4
-reportMissingTypeArgument  = "error"
 reportUnknownLambdaType    = "error"
 reportUnknownMemberType    = "error"
 reportUnknownParameterType = "error"
