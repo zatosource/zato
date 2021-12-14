@@ -31,9 +31,6 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
     get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
-from zato.common.typing_ import any_, anydict, anylist, callable_, callnone, cast_, dict_, dictlist, intdict, intanydict, \
-    intlist, intnone, list_, optional, stranydict, strintdict, strintnone, strstrdict, strlist, strlistempty, strset, tuple_, \
-    type_
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.hook import HookTool
@@ -46,10 +43,13 @@ from zato.server.pubsub.sync import InRAMSync
 
 if 0:
     from zato.broker.client import BrokerClient # type: ignore
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, callnone, cast_, dict_, dictlist, intdict, \
+        intanydict, intlist, intnone, list_, optional, stranydict, strintdict, strintnone, strstrdict, strlist, strlistdict, \
+        strlistempty, strset, tuple_, type_
     from zato.distlock import Lock
     from zato.server.connection.web_socket import WebSocket
     from zato.server.base.parallel import ParallelServer
-    from zato.server.pubsub.model import subnone
+    from zato.server.pubsub.model import topiclist, subnone
     from zato.server.pubsub.task import msgiter, PubSubTool
     from zato.server.service import Service
 
@@ -161,17 +161,20 @@ class PubSub(object):
     def __init__(self, cluster_id:'int', server:'ParallelServer', broker_client:'BrokerClient') -> None:
         self.cluster_id = cluster_id
         self.server = server
-        self.broker_client = broker_client
+        self.broker_client = broker_client # type: ignore
         self.lock = RLock()
         self.keep_running = True
         self.sk_server_table_columns = self.server.fs_server_config.pubsub.get('sk_server_table_columns') or \
-            default_sk_server_table_columns
+            default_sk_server_table_columns # type: anytuple
 
         # This is a pub/sub tool for delivery of Zato services within this server
         self.service_pubsub_tool = None # type: optional[PubSubTool]
 
-        self.log_if_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_deliv_server_not_found
-        self.log_if_wsx_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_wsx_deliv_server_not_found
+        self.log_if_deliv_server_not_found = \
+            self.server.fs_server_config.pubsub.log_if_deliv_server_not_found # type: bool
+
+        self.log_if_wsx_deliv_server_not_found = \
+            self.server.fs_server_config.pubsub.log_if_wsx_deliv_server_not_found # type: bool
 
         # Topic name -> List of Subscription objects
         self.subscriptions_by_topic = {} # type: dict_[str, sublist]
@@ -270,7 +273,7 @@ class PubSub(object):
             subs = self.subscriptions_by_topic.get(topic_name, [])
             subs = subs[:]
             if require_backlog_messages:
-                out = []
+                out = [] # type: anylist
                 for item in subs:
                     if self.sync_backlog.has_messages_by_sub_key(item.sub_key):
                         out.append(item)
@@ -336,9 +339,10 @@ class PubSub(object):
         out = StringIO()
         _ = out.write('\n')
 
-        attr = getattr(self, attr_name) # type: dict
+        attr = getattr(self, attr_name) # type: anydict
 
-        for sub_key, sub_data in sorted(attr.items()): # type: (str, object)
+        for sub_key, sub_data in sorted(attr.items()):
+            sub_key = cast_('str', sub_key)
             _ = out.write('* {}\n'.format(sub_key))
 
             if isinstance(sub_data, Subscription):
@@ -349,6 +353,7 @@ class PubSub(object):
                     if isinstance(item, Subscription):
                         self._write_log_sub_data(item, out)
                     else:
+                        item = cast_('any_', item)
                         _ = out.write(' - {}'.format(item))
                         _ = out.write('\n')
 
@@ -801,7 +806,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _delete_topic(self, topic_id:'int', topic_name:'str') -> 'list':
+    def _delete_topic(self, topic_id:'int', topic_name:'str') -> 'anylist':
         del self.topic_name_to_id[topic_name]
         subscriptions_by_topic = self.subscriptions_by_topic.pop(topic_name, [])
         del self.topics[topic_id]
@@ -818,7 +823,8 @@ class PubSub(object):
             topic_name = self.topics[topic_id].name
             subscriptions_by_topic = self._delete_topic(topic_id, topic_name) # type: list
 
-            for sub in subscriptions_by_topic: # type: Subscription
+            for sub in subscriptions_by_topic:
+                sub = cast_('Subscription', sub)
                 _ = self._delete_subscription_by_sub_key(sub.sub_key, ignore_missing=True)
 
 # ################################################################################################################################
@@ -863,8 +869,8 @@ class PubSub(object):
         security_id,   # type: int
         ws_channel_id, # type: int
         endpoint_id=0, # type: int
-        _pub_role=_pub_role, # type: tuple
-        _sub_role=_sub_role  # type: tuple
+        _pub_role=_pub_role, # type: anytuple
+        _sub_role=_sub_role  # type: anytuple
         ) -> 'bool':
         """ An internal function that decides whether an endpoint, a security definition,
         or a WSX channel are allowed to publish or subscribe to topics.
@@ -952,10 +958,10 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_sub_topics_for_endpoint(self, endpoint_id:'int') -> 'list_[Topic]':
+    def get_sub_topics_for_endpoint(self, endpoint_id:'int') -> 'topiclist':
         """ Returns all topics to which endpoint_id can subscribe.
         """
-        out = []
+        out = [] # type: topiclist
         with self.lock:
             for topic in self.topics.values():
                 if self.is_allowed_sub_topic_by_endpoint_id(topic.name, endpoint_id):
@@ -1010,7 +1016,7 @@ class PubSub(object):
         session.add(ws_sub_key)
 
         # Update in-RAM state of workers
-        self.broker_client.publish({
+        self.broker_client.publish({ # type: ignore
             'action': BROKER_MSG_PUBSUB.SUB_KEY_SERVER_SET.value,
             'cluster_id': self.cluster_id,
             'server_name': self.server.name,
@@ -1030,10 +1036,10 @@ class PubSub(object):
         len_columns = len(self.sk_server_table_columns)
 
         table = Texttable()
-        _ = table.set_cols_width(self.sk_server_table_columns)
-        _ = table.set_cols_dtype(['t'] * len_columns)
-        _ = table.set_cols_align(['c'] * len_columns)
-        _ = table.set_cols_valign(['m'] * len_columns)
+        _ = table.set_cols_width(self.sk_server_table_columns) # type: ignore
+        _ = table.set_cols_dtype(['t'] * len_columns)  # type: ignore
+        _ = table.set_cols_align(['c'] * len_columns)  # type: ignore
+        _ = table.set_cols_valign(['m'] * len_columns) # type: ignore
 
         # Add headers
         rows = [['#', 'created', 'name', 'pid', 'channel_name', 'sub_key']] # type: anylist
@@ -1069,7 +1075,7 @@ class PubSub(object):
             ])
 
         # Add all rows to the table
-        _ = table.add_rows(rows)
+        _ = table.add_rows(rows) # type: ignore
 
         # And return already formatted output
         return cast_('str', table.draw())
@@ -1206,7 +1212,7 @@ class PubSub(object):
                 'cluster_id': data.cluster_id,
                 'server_name': data.server_name,
                 'endpoint_type': endpoint_type,
-            }
+            } # type: anydict
 
             # Guaranteed to either set PID or None
             config['server_pid'] = self.get_server_pid_for_sub_key(data.server_name, sub_key)
@@ -1222,7 +1228,7 @@ class PubSub(object):
         """
         with self.lock:
             found = {}     # type: anydict
-            not_found = []
+            not_found = [] # type: anylist
 
             for elem in sub_key_data:
 
@@ -1284,8 +1290,13 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_initial_sql_msg_ids_by_sub_key(self, session:'any_', sub_key:'str', pub_time_max:'float') -> 'tuple':
-        return _get_sql_msg_ids_by_sub_key(session, self.server.cluster_id, sub_key, None, pub_time_max).\
+    def get_initial_sql_msg_ids_by_sub_key(
+        self,
+        session:'any_',
+        sub_key:'str',
+        pub_time_max:'float'
+        ) -> 'tuple':
+        return _get_sql_msg_ids_by_sub_key(session, self.server.cluster_id, sub_key, 0.0, pub_time_max).\
                all()
 
 # ################################################################################################################################
@@ -1296,18 +1307,22 @@ class PubSub(object):
         sub_key,      # type: str
         pub_time_max, # type: float
         msg_id_list   # type: strlist
-        ) -> 'tuple':
+        ) -> 'anytuple':
         return _get_sql_messages_by_msg_id_list(session, self.server.cluster_id, sub_key, pub_time_max, msg_id_list).\
                all()
 
 # ################################################################################################################################
 
-    def confirm_pubsub_msg_delivered(self, sub_key:'str', delivered_pub_msg_id_list:'strlist') -> 'None':
+    def confirm_pubsub_msg_delivered(
+        self,
+        sub_key,                  # type: str
+        delivered_pub_msg_id_list # type: strlist
+        ) -> 'None':
         """ Sets in SQL delivery status of a given message to True.
         """
         with closing(self.server.odb.session()) as session: # type: ignore
             _confirm_pubsub_msg_delivered(session, self.server.cluster_id, sub_key, delivered_pub_msg_id_list, utcnow_as_ms())
-            session.commit()
+            session.commit() # type: ignore
 
 # ################################################################################################################################
 
@@ -1340,7 +1355,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def unsubscribe(self, topic_sub_keys:'strstrdict') -> 'None':
+    def unsubscribe(self, topic_sub_keys:'strlistdict') -> 'None':
         """ Removes subscriptions for all input sub_keys. Input topic_sub_keys is a dictionary keyed by topic_name,
         and each value is a list of sub_keys, possibly one-element long.
         """
@@ -1478,7 +1493,7 @@ class PubSub(object):
         hook,     # type: callable_
         topic_id, # type: int
         sub_key,  # type: str
-        batch,    # type: list_
+        batch,    # type: msgiter
         messages, # type: anydict
         actions=tuple(PUBSUB.HOOK_ACTION()), # type: tuple_
         _deliver=PUBSUB.HOOK_ACTION.DELIVER  # type: str
@@ -1488,7 +1503,7 @@ class PubSub(object):
         """
         for msg in batch:
             response = hook(self.topics[topic_id], msg)
-            hook_action = response.get('hook_action') or _deliver
+            hook_action = response.get('hook_action', _deliver) # type: str
 
             if hook_action not in actions:
                 raise ValueError('Invalid action returned `{}` for msg `{}`'.format(hook_action, msg))
@@ -1505,7 +1520,7 @@ class PubSub(object):
         else:
             # We know that this service exists, it just does not implement the expected method
             service_info = self.server.service_store.get_service_info_by_id(topic.config['hook_service_id'])
-            service_class = service_info['service_class']
+            service_class = service_info['service_class'] # type: Service
             service_name = service_class.get_name()
             raise Exception('Hook service `{}` does not implement `on_outgoing_soap_invoke` method'.format(service_name))
 
@@ -1672,7 +1687,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-        def _cmp_non_gd_msg(elem:'dict') -> 'float':
+        def _cmp_non_gd_msg(elem:'anydict') -> 'float':
             return elem['pub_time']
 
 # ################################################################################################################################
@@ -1705,7 +1720,7 @@ class PubSub(object):
                         continue
 
                     # There are some messages, let's see if there are subscribers ..
-                    subs = []
+                    subs = [] # type: sublist
                     _subs = _self_get_subscriptions_by_topic(_topic.name)
 
                     # Filter out subscriptions for whom we have no subscription servers
@@ -1919,7 +1934,7 @@ class PubSub(object):
             return response
 
         # .. otherwise, we need to make sure they are not returned
-        out = []
+        out = [] # type: anylist
         for item in response:
             for name in _skip:
                 item.pop(name, None)

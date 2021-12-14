@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 from traceback import format_exc
-from typing import cast
 
 # gevent
 from gevent import sleep

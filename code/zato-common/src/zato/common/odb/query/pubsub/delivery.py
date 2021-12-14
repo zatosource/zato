@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from logging import getLogger
@@ -18,6 +16,13 @@ from sqlalchemy import update
 from zato.common.api import PUBSUB
 from zato.common.odb.model import PubSubEndpoint, PubSubMessage, PubSubEndpointEnqueuedMessage, PubSubSubscription, Server, \
      WebSocketClient, WebSocketClientPubSubKeys
+
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, strlist, strset
+
+# ################################################################################################################################
 
 logger = getLogger('zato_pubsub.sql')
 
@@ -101,26 +106,52 @@ def _get_sql_msg_data_by_sub_key(session, cluster_id, sub_key_list, last_sql_run
 
 # ################################################################################################################################
 
-def get_sql_messages_by_sub_key(session, cluster_id, sub_key_list, last_sql_run, pub_time_max, ignore_list):
+def get_sql_messages_by_sub_key(
+    session,      # type: any_
+    cluster_id,   # type: int
+    sub_key_list, # type: strlist
+    last_sql_run, # type: float
+    pub_time_max, # type: float
+    ignore_list   # type: strset
+    ) -> 'any_':
     return _get_sql_msg_data_by_sub_key(session, cluster_id, sub_key_list, last_sql_run, pub_time_max,
         sql_messages_columns, ignore_list)
 
 # ################################################################################################################################
 
-def get_sql_messages_by_msg_id_list(session, cluster_id, sub_key, pub_time_max, msg_id_list):
+def get_sql_messages_by_msg_id_list(
+    session,      # type: any_
+    cluster_id,   # type: int
+    sub_key,      # type: str
+    pub_time_max, # type: float
+    msg_id_list,  # type: strlist
+    ) -> 'any_':
     query = _get_base_sql_msg_query(session, sql_messages_columns, [sub_key], pub_time_max, cluster_id)
     return query.\
         filter(PubSubEndpointEnqueuedMessage.pub_msg_id.in_(msg_id_list))
 
 # ################################################################################################################################
 
-def get_sql_msg_ids_by_sub_key(session, cluster_id, sub_key, last_sql_run, pub_time_max):
+def get_sql_msg_ids_by_sub_key(
+    session,      # type: any_
+    cluster_id,   # type: int
+    sub_key,      # type: str
+    last_sql_run, # type: float
+    pub_time_max  # type: float
+    ) -> 'any_':
     return _get_sql_msg_data_by_sub_key(session, cluster_id, [sub_key], last_sql_run, pub_time_max, sql_msg_id_columns,
         needs_result=False)
 
 # ################################################################################################################################
 
-def confirm_pubsub_msg_delivered(session, cluster_id, sub_key, delivered_pub_msg_id_list, now, _delivered=_delivered):
+def confirm_pubsub_msg_delivered(
+    session,    # type: any_
+    cluster_id, # type: int
+    sub_key,    # type: str
+    delivered_pub_msg_id_list, # type: strlist
+    now,                       # type: float
+    _delivered=_delivered      # type: int
+    ) -> 'None':
     """ Returns all SQL messages queued up for a given sub_key.
     """
     session.execute(
@@ -135,7 +166,12 @@ def confirm_pubsub_msg_delivered(session, cluster_id, sub_key, delivered_pub_msg
 
 # ################################################################################################################################
 
-def get_delivery_server_for_sub_key(session, cluster_id, sub_key, is_wsx):
+def get_delivery_server_for_sub_key(
+    session,    # type: any_
+    cluster_id, # type: int
+    sub_key,    # type: str
+    is_wsx      # type: bool
+    ) -> 'any_':
     """ Returns information about which server handles delivery tasks for input sub_key, the latter must exist in DB.
     Assumes that sub_key belongs to a non-WSX endpoint and then checks WebSockets in case the former query founds
     no matching server.
