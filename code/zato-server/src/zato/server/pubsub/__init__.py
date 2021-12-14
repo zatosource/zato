@@ -21,9 +21,6 @@ from gevent.lock import RLock
 # Texttable
 from texttable import Texttable
 
-# Python 2/3 compatibility
-from future.utils import iteritems, itervalues
-
 # Zato
 from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
@@ -47,8 +44,7 @@ from zato.server.pubsub.sync import InRAMSync
 # ################################################################################################################################
 
 if 0:
-    from zato.broker.client import BrokerClient
-    from zato.cy.reqresp.payload import SimpleIOPayload
+    from zato.broker.client import BrokerClient # type: ignore
     from zato.distlock import Lock
     from zato.server.base.parallel import ParallelServer
     from zato.server.pubsub.model import subnone
@@ -301,7 +297,7 @@ class PubSub(object):
 
     def get_subscription_by_id(self, sub_id:'int') -> 'subnone':
         with self.lock:
-            for sub in itervalues(self.subscriptions_by_sub_key):
+            for sub in self.subscriptions_by_sub_key.values():
                 if sub.id == sub_id:
                     return sub
 
@@ -309,7 +305,7 @@ class PubSub(object):
 
     def get_subscription_by_ext_client_id(self, ext_client_id:'str') -> 'subnone':
         with self.lock:
-            for sub in itervalues(self.subscriptions_by_sub_key):
+            for sub in self.subscriptions_by_sub_key.values():
                 if sub.ext_client_id == ext_client_id:
                     return sub
 
@@ -582,17 +578,17 @@ class PubSub(object):
         ws_chan_id = None
         service_id = None
 
-        for key, value in iteritems(self.sec_id_to_endpoint_id):
+        for key, value in self.sec_id_to_endpoint_id.items():
             if value == endpoint_id:
                 sec_id = key
                 break
 
-        for key, value in iteritems(self.ws_channel_id_to_endpoint_id):
+        for key, value in self.ws_channel_id_to_endpoint_id.items():
             if value == endpoint_id:
                 ws_chan_id = key
                 break
 
-        for key, value in iteritems(self.service_id_to_endpoint_id):
+        for key, value in self.service_id_to_endpoint_id.items():
             if value == endpoint_id:
                 service_id = key
                 break
@@ -624,7 +620,7 @@ class PubSub(object):
     def edit_subscription(self, config:'stranydict') -> 'None':
         with self.lock:
             sub = self._get_subscription_by_sub_key(config['sub_key'])
-            for key, value in iteritems(config):
+            for key, value in config.items():
                 sub.config[key] = value
 
 # ################################################################################################################################
@@ -1036,7 +1032,7 @@ class PubSub(object):
         # Add headers
         rows = [['#', 'created', 'name', 'pid', 'channel_name', 'sub_key']] # type: anylist
 
-        servers = list(itervalues(self.sub_key_servers))
+        servers = list(self.sub_key_servers.values())
         servers.sort(key=attrgetter('creation_time', 'channel_name', 'sub_key'), reverse=True)
 
         for idx, item in enumerate(servers, 1):
@@ -1502,7 +1498,7 @@ class PubSub(object):
             hook(topic, batch, http_soap=http_soap)
         else:
             # We know that this service exists, it just does not implement the expected method
-            service_info = self.server.service_store.get_service_info_by_id(topic.config.hook_service_id)
+            service_info = self.server.service_store.get_service_info_by_id(topic.config['hook_service_id'])
             service_class = service_info['service_class']
             service_name = service_class.get_name()
             raise Exception('Hook service `{}` does not implement `on_outgoing_soap_invoke` method'.format(service_name))
