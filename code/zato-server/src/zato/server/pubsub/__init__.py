@@ -1108,18 +1108,18 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _get_sub_key_server(self, sub_key:'str', default:'any_'=None) -> 'SubKeyServer':
+    def _get_sub_key_server(self, sub_key:'str', default:'any_'=None) -> 'sksnone': # type: ignore[valid-type]
         return self.sub_key_servers.get(sub_key, default)
 
 # ################################################################################################################################
 
-    def get_sub_key_server(self, sub_key:'str', default:'any_'=None) -> 'SubKeyServer':
+    def get_sub_key_server(self, sub_key:'str', default:'any_'=None) -> 'sksnone': # type: ignore[valid-type]
         with self.lock:
             return self._get_sub_key_server(sub_key, default)
 
 # ################################################################################################################################
 
-    def get_delivery_server_by_sub_key(self, sub_key:'str', needs_lock:'bool'=True) -> 'SubKeyServer':
+    def get_delivery_server_by_sub_key(self, sub_key:'str', needs_lock:'bool'=True) -> 'sksnone': # type: ignore[valid-type]
         if needs_lock:
             with self.lock:
                 return self._get_sub_key_server(sub_key)
@@ -1498,7 +1498,7 @@ class PubSub(object):
 
     def invoke_on_outgoing_soap_invoke_hook(self, batch:'list_', sub:'Subscription', http_soap:'any_') -> 'None':
         hook = self.get_on_outgoing_soap_invoke_hook(sub.sub_key)
-        topic = self.get_topic_by_id(sub.config.topic_id)
+        topic = self.get_topic_by_id(sub.config['topic_id'])
         if hook:
             hook(topic, batch, http_soap=http_soap)
         else:
@@ -2158,6 +2158,7 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
+sksnone      = optional[SubKeyServer]
 strtopicdict = dict_[str, Topic]
 inttopicdict = dict_[int, Topic]
 
