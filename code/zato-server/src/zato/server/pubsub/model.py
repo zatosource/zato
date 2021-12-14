@@ -22,7 +22,7 @@ from future.utils import iteritems
 from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
 from zato.common.exception import BadRequest
 from zato.common.pubsub import dict_keys
-from zato.common.typing_ import dict_, optional
+from zato.common.typing_ import anydict, dict_, optional
 from zato.common.util.api import make_repr
 from zato.common.util.time_ import utcnow_as_ms
 
@@ -143,6 +143,7 @@ class EventType:
 # ################################################################################################################################
 
 class ToDictBase(object):
+
     _to_dict_keys:'tuple'
     config:'anydict'
 
