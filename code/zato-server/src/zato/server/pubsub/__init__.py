@@ -31,6 +31,7 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
     get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
+from zato.common.typing_ import cast_, dict_, optional
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.hook import HookTool
@@ -43,8 +44,8 @@ from zato.server.pubsub.sync import InRAMSync
 
 if 0:
     from zato.broker.client import BrokerClient # type: ignore
-    from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, callnone, cast_, dict_, dictlist, intdict, \
-        intanydict, intlist, intnone, list_, optional, stranydict, strintdict, strintnone, strstrdict, strlist, strlistdict, \
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, callnone, dictlist, intdict, \
+        intanydict, intlist, intnone, list_, stranydict, strintdict, strintnone, strstrdict, strlist, strlistdict, \
         strlistempty, strset, tuple_, type_
     from zato.distlock import Lock
     from zato.server.connection.web_socket import WebSocket
@@ -158,7 +159,7 @@ def get_expiration(cid:'str', input:'anydict', default_expiration:'int'=_default
 
 class PubSub(object):
 
-    def __init__(self, cluster_id:'int', server:'ParallelServer', broker_client:'BrokerClient') -> None:
+    def __init__(self, cluster_id:'int', server:'ParallelServer', broker_client:'optional[BrokerClient]'=None) -> None:
         self.cluster_id = cluster_id
         self.server = server
         self.broker_client = broker_client # type: ignore

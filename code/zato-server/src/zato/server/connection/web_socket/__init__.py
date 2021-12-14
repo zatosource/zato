@@ -144,7 +144,7 @@ _audit_msg_type = WEB_SOCKET.AUDIT_KEY
 # ################################################################################################################################
 
 log_msg_max_size = 1024
-_interact_update_interval = WEB_SOCKET.DEFAULT.INTERACT_interact_update_interval
+_interact_update_interval = WEB_SOCKET.DEFAULT.INTERACT_UPDATE_INTERVAL
 
 # ################################################################################################################################
 
