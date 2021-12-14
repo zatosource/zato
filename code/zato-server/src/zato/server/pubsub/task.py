@@ -30,7 +30,8 @@ from zato.common.api import GENERIC, PUBSUB
 from zato.common.json_internal import json_loads
 from zato.common.odb.api import SQLRow
 from zato.common.pubsub import PubSubMessage
-from zato.common.typing_ import any_, anylist, anytuple, cast_, dict_, dictlist, list_, optional, set_, strlist, tuple_
+from zato.common.typing_ import any_, anydict, anylist, anytuple, cast_, dict_, dictlist, list_, optional, \
+     set_, strlist, tuple_
 from zato.common.util.api import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub.model import DeliveryResultCtx
@@ -40,7 +41,6 @@ from zato.server.pubsub.model import DeliveryResultCtx
 if 0:
     from collections.abc import ValuesView
     from typing import Callable
-    from bunch import Bunch
     from sqlalchemy.orm import Session
     from zato.common.pubsub import HandleNewMessageCtx
     from zato.server.pubsub import PubSub
@@ -109,7 +109,7 @@ class DeliveryTask(object):
             delivery_list, # type: SortedList
             deliver_pubsub_msg,              # type: Callable
             confirm_pubsub_msg_delivered_cb, # type: Callable
-            sub_config # type: Bunch
+            sub_config # type: anydict
         ) -> None:
 
         self.keep_running = True
@@ -121,13 +121,13 @@ class DeliveryTask(object):
         self.deliver_pubsub_msg = deliver_pubsub_msg
         self.confirm_pubsub_msg_delivered_cb = confirm_pubsub_msg_delivered_cb
         self.sub_config = sub_config
-        self.topic_name = sub_config.topic_name
-        self.wait_sock_err = float(self.sub_config.wait_sock_err)
-        self.wait_non_sock_err = float(self.sub_config.wait_non_sock_err)
+        self.topic_name = sub_config['topic_name']
+        self.wait_sock_err = float(self.sub_config['wait_sock_err'])
+        self.wait_non_sock_err = float(self.sub_config['wait_non_sock_err'])
         self.last_iter_run = utcnow_as_ms()
-        self.delivery_interval = self.sub_config.task_delivery_interval / 1000.0
-        self.delivery_max_retry = self.sub_config.delivery_max_retry
-        self.previous_delivery_method = self.sub_config.delivery_method
+        self.delivery_interval = self.sub_config['task_delivery_interval'] / 1000.0
+        self.delivery_max_retry = self.sub_config['delivery_max_retry']
+        self.previous_delivery_method = self.sub_config['delivery_method']
         self.python_id = str(hex(id(self)))
         self.py_object = '<empty>'
 
@@ -151,8 +151,8 @@ class DeliveryTask(object):
         # even if there is only one message to send. Note that self.wrap_in_list will be False
         # only if both batch_size is 1 and wrap_one_msg_in_list is True.
 
-        if self.sub_config.delivery_batch_size == 1:
-            if self.sub_config.wrap_one_msg_in_list:
+        if self.sub_config['delivery_batch_size'] == 1:
+            if self.sub_config['wrap_one_msg_in_list']:
                 self.wrap_in_list = True
             else:
                 self.wrap_in_list = False
@@ -161,7 +161,7 @@ class DeliveryTask(object):
         else:
             self.wrap_in_list = True
 
-        _ignored = spawn_greenlet(self.run) # noqa: F841
+        _ = spawn_greenlet(self.run) # noqa: F841
 
 # ################################################################################################################################
 
@@ -202,7 +202,7 @@ class DeliveryTask(object):
                     to_delete.append(msg)
 
             # We are a task that sends out notifications
-            if self.sub_config.delivery_method == _notify:
+            if self.sub_config['delivery_method'] == _notify:
 
                 logger.info('Marking message(s) to be deleted `%s` from `%s` (%s)', msg_list, self.sub_key, self.topic_name)
                 self.delete_requested.extend(to_delete)
@@ -295,7 +295,7 @@ class DeliveryTask(object):
             deliver_pubsub_msg = deliver_pubsub_msg if deliver_pubsub_msg else self.deliver_pubsub_msg
 
             # Deliver up to that many messages in one batch
-            current_batch = self.delivery_list[:self.sub_config.delivery_batch_size]
+            current_batch = self.delivery_list[:self.sub_config['delivery_batch_size']]
 
             # For each message from batch we invoke a hook, if there is any, which will decide
             # whether the message should be delivered, skipped in this iteration or perhaps deleted altogether
@@ -333,7 +333,7 @@ class DeliveryTask(object):
             else:
                 # There is a hook so we can invoke it - it will update the 'messages' dict in place
                 self.pubsub.invoke_before_delivery_hook(
-                    hook, self.sub_config.topic_id, self.sub_key, current_batch, messages)
+                    hook, self.sub_config['topic_id'], self.sub_key, current_batch, messages)
 
             # Delete these messages first, before starting any delivery, either because the hooks told us to
             # or because self.delete_requested was not empty before this iteration.
@@ -390,8 +390,8 @@ class DeliveryTask(object):
                     len_delivered = len(delivered_msg_id_list)
                     suffix = ' ' if len_delivered == 1 else 's '
                     logger.info('Successfully delivered %s message%s%s to %s (%s -> %s) [lend:%d]',
-                        len_delivered, suffix, delivered_msg_id_list, self.sub_key, self.topic_name, self.sub_config.endpoint_name,
-                        self.len_delivered)
+                        len_delivered, suffix, delivered_msg_id_list, self.sub_key, self.topic_name,
+                        self.sub_config['endpoint_name'], self.len_delivered)
 
                     self.len_batches += 1
                     self.len_delivered += len_delivered
@@ -446,7 +446,7 @@ class DeliveryTask(object):
         self.py_object = '{}; {}; {}'.format(current_thread().name, getcurrent().name, self.python_id)
 
         logger.info('Starting delivery task for sub_key:`%s` (%s, %s, %s)',
-            self.sub_key, self.topic_name, self.sub_config.delivery_method, self.py_object)
+            self.sub_key, self.topic_name, self.sub_config['delivery_method'], self.py_object)
 
         #
         # Before starting anything, check if there are any messages already queued up in the database for this task.
@@ -460,7 +460,7 @@ class DeliveryTask(object):
         #
         # Since this is about messages taken from the database, by definition, all of them they must be GD ones.
         #
-        self.pubsub_tool.enqueue_initial_messages(self.sub_key, self.topic_name, self.sub_config.endpoint_name)
+        self.pubsub_tool.enqueue_initial_messages(self.sub_key, self.topic_name, self.sub_config['endpoint_name'])
 
         try:
             while self.keep_running:
@@ -473,15 +473,15 @@ class DeliveryTask(object):
 
                 # Apparently, our delivery method has changed since the last time our self.sub_config
                 # was modified, so we can log this fact and store it for later use.
-                if self.sub_config.delivery_method != self.previous_delivery_method:
+                if self.sub_config['delivery_method'] != self.previous_delivery_method:
                     logger.info('Changed delivery_method from `%s` to `%s` for `%s` (%s -> %s)`',
-                        self.previous_delivery_method, self.sub_config.delivery_method, self.sub_key,
-                        self.topic_name, self.sub_config.endpoint_name)
+                        self.previous_delivery_method, self.sub_config['delivery_method'], self.sub_key,
+                        self.topic_name, self.sub_config['endpoint_name'])
 
                     # Our new value is now the last value too until potentially overridden at one point
-                    self.previous_delivery_method = self.sub_config.delivery_method
+                    self.previous_delivery_method = self.sub_config['delivery_method']
 
-                if self.sub_config.delivery_method not in _notify_methods:
+                if self.sub_config['delivery_method'] not in _notify_methods:
                     sleep(5)
                     continue
 
