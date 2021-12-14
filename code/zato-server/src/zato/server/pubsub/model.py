@@ -243,26 +243,56 @@ class Topic(ToDictBase):
     """
     _to_dict_keys = dict_keys.topic
 
-    def __init__(self, config, server_name, server_pid):
+    config: 'anydict'
+
+    id:          'int'
+    name:        'str'
+    is_active:   'bool'
+    is_internal: 'bool'
+    has_gd:      'bool'
+
+    server_name:  'str'
+    server_pid:   'int'
+
+    max_depth_gd:     'int'
+    max_depth_non_gd: 'int'
+
+    last_synced:         'float'
+    gd_pub_time_max:     'float'
+    sync_has_gd_msg:     'bool'
+    sync_has_non_gd_msg: 'bool'
+
+    depth_check_freq:   'int'
+    pub_buffer_size_gd: 'int'
+
+    msg_pub_counter:        'int'
+    msg_pub_counter_gd:     'int'
+    msg_pub_counter_non_gd: 'int'
+
+    task_sync_interval:     'float'
+    meta_store_frequency:   'int'
+    task_delivery_interval: 'int'
+
+    def __init__(self, config:'anydict', server_name:'str', server_pid:'int'):
         self.config = config
         self.server_name = server_name
         self.server_pid = server_pid
-        self.id = config.id
-        self.name = config.name
-        self.is_active = config.is_active
-        self.is_internal = config.is_internal
-        self.max_depth_gd = config.max_depth_gd
-        self.max_depth_non_gd = config.max_depth_non_gd
-        self.has_gd = config.has_gd
-        self.depth_check_freq = config.depth_check_freq
-        self.pub_buffer_size_gd = config.pub_buffer_size_gd
-        self.task_delivery_interval = config.task_delivery_interval
-        self.meta_store_frequency = config.meta_store_frequency
+        self.id = config['id']
+        self.name = config['name']
+        self.is_active = config['is_active']
+        self.is_internal = config['is_internal']
+        self.max_depth_gd = config['max_depth_gd']
+        self.max_depth_non_gd = config['max_depth_non_gd']
+        self.has_gd = config['has_gd']
+        self.depth_check_freq = config['depth_check_freq']
+        self.pub_buffer_size_gd = config['pub_buffer_size_gd']
+        self.task_delivery_interval = config['task_delivery_interval']
+        self.meta_store_frequency = config['meta_store_frequency']
         self.set_hooks()
 
         # For now, task sync interval is the same for GD and non-GD messages
         # so we can arbitrarily pick the former to serve for both types of messages.
-        self.task_sync_interval = config.task_sync_interval / 1000.0
+        self.task_sync_interval = config['task_sync_interval'] / 1000.0
 
         # How many messages have been published to this topic from current server,
         # i.e. this is not a global counter.
