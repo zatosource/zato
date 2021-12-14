@@ -31,6 +31,7 @@ from zato.common.util.platform_ import is_non_windows
 
 if 0:
     from zato.client import AnyServiceInvoker
+    from zato.common.typing_ import any_, anydict
     from zato.server.connection.server.rpc.api import ServerRPC
 
     AnyServiceInvoker = AnyServiceInvoker
@@ -141,8 +142,7 @@ class BrokerClient(object):
 
 # ################################################################################################################################
 
-    def publish(self, msg, *ignored_args, **kwargs):
-        # type: (dict, str, object, object) -> None
+    def publish(self, msg:'anydict', *ignored_args:'any_', **kwargs:'any_') -> 'None':
         spawn(self._rpc_invoke, msg, **kwargs)
 
 # ################################################################################################################################
