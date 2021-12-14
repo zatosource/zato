@@ -21,12 +21,18 @@ from typing import           \
     Optional as optional,    \
     Text as str_,            \
     Tuple as tuple_,         \
+    Type as type_,           \
     TypeVar as typevar_,     \
     Set as set_,             \
     Union as union_
 
 # dacite
 from dacite import from_dict
+
+# typing-extensions
+from typing_extensions import \
+    TypeAlias as typealias_
+
 
 # Be explicit about which import error we want to catch
 try:
@@ -75,25 +81,34 @@ def instance_from_dict(class_, data):
 # ################################################################################################################################
 # ################################################################################################################################
 
-anydict    = dict_[any_, any_]
-anylist    = list_[any_]
-anytuple   = tuple_[any_, ...]
-callable_  = callable_
-cast_      = cast_
-dictlist   = list_[anydict]
-generator_ = generator_
-intnone    = optional[int]
-noreturn   = noreturn
-set_       = set_
-strint     = union_[str_, int]
-strintnone = union_[optional[str_], optional[int]]
-strintbool = union_[str_, int, bool]
-strnone    = optional[str]
-strlist    = list_[str]
-stranydict = dict_[str, any_]
-strintdict = dict_[str, strint]
-intdict    = dict_[int, int]
-strtuple   = tuple_[str]
-tuple_     = tuple_
-typevar_   = typevar_
-union_     = union_
+anydict      = dict_[any_, any_]
+anylist     = list_[any_]
+anytuple     = tuple_[any_, ...]
+callable_     = callable_
+callnone     = optional[callable_]
+cast_        = cast_
+dictlist     = list_[anydict]
+generator_   = generator_
+intlist      = list_[int]
+intnone      = optional[int]
+noreturn     = noreturn
+set_         = set_
+strint       = union_[str_, int]
+strintnone   = union_[optional[str_], optional[int]]
+strintbool   = union_[str_, int, bool]
+strnone      = optional[str]
+strlist      = list_[str]
+strlistempty = list_[optional[str]]
+stranydict   = dict_[str, any_]
+strintdict   = dict_[str, int]
+strlistdict  = dict_[str, anylist]
+strset       = set_[str]
+strstrdict   = dict_[str, str]
+intanydict   = dict_[int, any_]
+intdict      = dict_[int, int]
+strtuple     = tuple_[str, ...]
+tuple_       = tuple_
+type_        = type_
+typealias_   = typealias_
+typevar_     = typevar_
+union_       = union_
