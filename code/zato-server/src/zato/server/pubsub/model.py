@@ -22,16 +22,14 @@ from future.utils import iteritems
 from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
 from zato.common.exception import BadRequest
 from zato.common.pubsub import dict_keys
-from zato.common.typing_ import anydict, dict_, optional
+from zato.common.typing_ import any_, anydict, callable_, cast_, dict_, optional
 from zato.common.util.api import make_repr
 from zato.common.util.time_ import utcnow_as_ms
 
 # ################################################################################################################################
 
 if 0:
-    from bunch import Bunch
-
-    Bunch = Bunch
+    from zato.server.pubsub.task import msgnone
 
 # ################################################################################################################################
 
@@ -287,12 +285,12 @@ class Topic(ToDictBase):
 
 # ################################################################################################################################
 
-    def get_id(self):
+    def get_id(self) -> 'str':
         return '{};{}'.format(self.name, self.id)
 
 # ################################################################################################################################
 
-    def set_hooks(self):
+    def set_hooks(self) -> 'None':
         self.on_subscribed_service_invoker = self.config.get('on_subscribed_service_invoker')
         self.on_unsubscribed_service_invoker = self.config.get('on_unsubscribed_service_invoker')
         self.before_publish_hook_service_invoker = self.config.get('before_publish_hook_service_invoker')
@@ -301,7 +299,7 @@ class Topic(ToDictBase):
 
 # ################################################################################################################################
 
-    def incr_topic_msg_counter(self, has_gd, has_non_gd):
+    def incr_topic_msg_counter(self, has_gd:'bool', has_non_gd:'bool') -> 'None':
         """ Increases counter of messages published to this topic from current server.
         """
         self.msg_pub_counter += 1
@@ -314,14 +312,14 @@ class Topic(ToDictBase):
 
 # ################################################################################################################################
 
-    def update_task_sync_time(self, _utcnow_as_ms=utcnow_as_ms):
+    def update_task_sync_time(self, _utcnow_as_ms:'callable_'=utcnow_as_ms) -> 'None':
         """ Increases counter of messages published to this topic from current server.
         """
         self.last_synced = _utcnow_as_ms()
 
 # ################################################################################################################################
 
-    def needs_task_sync(self, _utcnow_as_ms=utcnow_as_ms):
+    def needs_task_sync(self, _utcnow_as_ms:'callable_'=utcnow_as_ms) -> 'bool':
 
         now = _utcnow_as_ms()
         needs_sync = now - self.last_synced >= self.task_sync_interval
@@ -330,17 +328,17 @@ class Topic(ToDictBase):
 
 # ################################################################################################################################
 
-    def needs_msg_cleanup(self):
+    def needs_msg_cleanup(self) -> 'bool':
         return self.msg_pub_counter_gd % 10000 == 0
 
 # ################################################################################################################################
 
-    def needs_depth_check(self):
+    def needs_depth_check(self) -> 'bool':
         return self.msg_pub_counter_gd % self.depth_check_freq == 0
 
 # ################################################################################################################################
 
-    def needs_meta_update(self):
+    def needs_meta_update(self) -> 'bool':
         return self.msg_pub_counter % self.meta_store_frequency == 0
 
 # ################################################################################################################################
@@ -352,37 +350,48 @@ class Subscription(ToDictBase):
     """
     _to_dict_keys = dict_keys.subscription
 
-    def __init__(self, config):
-        self.config = config # type: Bunch
-        self.id = config.id  # type: int
-        self.creation_time = config.creation_time * 1000.0 # type: float
-        self.sub_key = config.sub_key # type: str
-        self.endpoint_id = config.endpoint_id # type: int
-        self.topic_id = config.topic_id # type: int
-        self.topic_name = config.topic_name # type: str
-        self.sub_pattern_matched = config.sub_pattern_matched # type: str
-        self.task_delivery_interval = config.task_delivery_interval # type: int
-        self.unsub_on_wsx_close = config.get('unsub_on_wsx_close') # type: bool
-        self.ext_client_id = config.ext_client_id # type: str
+    config: 'anydict'
+    id: 'int'
+    creation_time: 'float'
+    sub_key: 'str'
+    endpoint_id: 'int'
+    topic_id: 'int'
+    topic_name: 'str'
+    sub_pattern_matched: 'str'
+    task_delivery_interval: 'int'
+    unsub_on_wsx_close: 'bool'
+    ext_client_id: 'str'
+
+    def __init__(self, config:'anydict') -> 'None':
+        self.config = config
+        self.id = config['id']
+        self.creation_time = config['creation_time'] * 1000.0
+        self.sub_key = config['sub_key']
+        self.endpoint_id = config['endpoint_id']
+        self.topic_id = config['topic_id']
+        self.topic_name = config['topic_name']
+        self.sub_pattern_matched = config['sub_pattern_matched']
+        self.task_delivery_interval = config['task_delivery_interval']
+        self.unsub_on_wsx_close = config.get('unsub_on_wsx_close', PUBSUB.DEFAULT.UnsubOnWSXClose)
+        self.ext_client_id = config['ext_client_id']
 
         # Object ws_channel_id is an ID of a WSX channel this subscription potentially belongs to,
         # otherwise it is None.
-        self.is_wsx = bool(self.config.ws_channel_id)
+        self.is_wsx = bool(self.config['ws_channel_id'])
 
 # ################################################################################################################################
 
-    def __lt__(self, other):
-        # type: (Subscription) -> bool
+    def __lt__(self, other:'Subscription') -> 'bool':
         return self.sub_key < other.sub_key
 
 # ################################################################################################################################
 
-    def __repr__(self):
+    def __repr__(self) -> 'str':
         return make_repr(self)
 
 # ################################################################################################################################
 
-    def get_id(self):
+    def get_id(self) -> 'str':
         return self.sub_key
 
 # ################################################################################################################################
@@ -391,13 +400,28 @@ class Subscription(ToDictBase):
 class HookCtx(object):
     __slots__ = ('hook_type', 'msg', 'topic', 'sub', 'http_soap', 'outconn_name')
 
-    def __init__(self, hook_type, topic=None, msg=None, *args, **kwargs):
+    msg:          'msgnone'
+    sub:          'subnone'   # type: ignore[valid-type]
+    topic:        'topicnone' # type: ignore[valid-type]
+    hook_type:    'str'
+    http_soap:    'anydict'
+    outconn_name: 'str'
+
+    def __init__(
+        self,
+        hook_type,      # type: str
+        topic=None,     # type: ignore[valid-type]
+        msg=None,       # type: msgnone
+        *_ignored_args, # type: any_
+        **kwargs        # type: any_
+        ) -> 'None':
+
         self.hook_type = hook_type
         self.msg = msg
-        self.topic = topic
+        self.topic = cast_(Topic, topic)
         self.sub = kwargs.get('sub')
         self.http_soap = kwargs.get('http_soap', {})
-        self.outconn_name = self.http_soap.get('config', {}).get('name')
+        self.outconn_name = self.http_soap.get('config', {}).get('name', '')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -407,7 +431,20 @@ class SubKeyServer(ToDictBase):
     """
     _to_dict_keys = dict_keys.sks
 
-    def __init__(self, config, _utcnow=datetime.utcnow):
+    config:        'anydict'
+    sub_key:       'str'
+    cluster_id:    'int'
+    server_name:   'str'
+    server_pid:    'int'
+    endpoint_type: 'str'
+
+    # Attributes below are only for WebSockets
+    channel_name:  'str'
+    pub_client_id: 'str'
+    ext_client_id: 'str'
+    wsx_info:      'anydict'
+
+    def __init__(self, config:'anydict', _utcnow:'callable_'=datetime.utcnow) -> 'None':
         self.config = config
         self.sub_key = config['sub_key']
         self.cluster_id = config['cluster_id']
@@ -419,19 +456,19 @@ class SubKeyServer(ToDictBase):
         self.channel_name = config.get('channel_name', '')
         self.pub_client_id = config.get('pub_client_id', '')
         self.ext_client_id = config.get('ext_client_id', '')
-        self.wsx_info = config.get('wsx_info')
+        self.wsx_info = config.get('wsx_info', {})
 
         # When this object was created - we have both
         self.creation_time = _utcnow()
 
 # ################################################################################################################################
 
-    def __repr__(self):
+    def __repr__(self) -> 'str':
         return make_repr(self)
 
 # ################################################################################################################################
 
-    def get_id(self):
+    def get_id(self) -> 'str':
         return '{};{};{}'.format(self.server_name, self.server_pid, self.sub_key)
 
 # ################################################################################################################################
@@ -451,6 +488,7 @@ class DeliveryResultCtx:
 subnone = optional[Subscription]
 sublist = list_[Subscription]
 strsubdict = dict_[str, Subscription]
+topicnone = optional[Topic]
 
 # ################################################################################################################################
 # ################################################################################################################################

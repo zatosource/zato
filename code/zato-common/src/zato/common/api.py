@@ -811,6 +811,7 @@ class PUBSUB:
         INTERNAL_ENDPOINT_NAME = 'zato.pubsub.default.internal.endpoint'
         ON_NO_SUBS_PUB = 'accept'
         SK_OPAQUE = ('deliver_to_sk', 'reply_to_sk')
+        UnsubOnWSXClose = True
 
     class SERVICE_SUBSCRIBER:
         NAME = 'zato.pubsub.service.endpoint'

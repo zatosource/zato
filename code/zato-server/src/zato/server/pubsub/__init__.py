@@ -46,6 +46,7 @@ from zato.server.pubsub.sync import InRAMSync
 if 0:
     from zato.broker.client import BrokerClient # type: ignore
     from zato.distlock import Lock
+    from zato.server.connection.web_socket import WebSocket
     from zato.server.base.parallel import ParallelServer
     from zato.server.pubsub.model import subnone
     from zato.server.pubsub.task import msgiter, PubSubTool
@@ -2098,7 +2099,7 @@ class PubSub(object):
         """
         # Get metadata and the WebSocket itself
         wsx_environ = _find_wsx_environ(service)
-        wsx = wsx_environ['web_socket']
+        wsx = wsx_environ['web_socket'] # type: WebSocket
 
         # Actual resume subscription
         _ = self.invoke_service('zato.pubsub.resume-wsx-subscription', {
