@@ -32,7 +32,7 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
 from zato.common.typing_ import any_, anydict, anylist, callable_, callnone, cast_, dict_, dictlist, intdict, intlist, \
-    intnone, list_, optional, stranydict, strintdict, strintnone, strstrdict, strlist, tuple_, type_
+    intnone, list_, optional, stranydict, strintdict, strintnone, strstrdict, strlist, strlistempty, strset, tuple_, type_
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.hook import HookTool
@@ -275,6 +275,14 @@ class PubSub(object):
                 return out
             else:
                 return subs
+
+# ################################################################################################################################
+
+    def get_all_subscriptions(self) -> 'strsubdict':
+        """ Low-level method to return all the subscriptions by sub_key,
+        must be called with self.lock held.
+        """
+        return self.subscriptions_by_sub_key
 
 # ################################################################################################################################
 
@@ -1255,7 +1263,7 @@ class PubSub(object):
         sub_key_list, # type: strlist
         last_sql_run, # type: float
         pub_time_max, # type: float
-        ignore_list   # type: strlist
+        ignore_list   # type: strset
         ) -> 'tuple':
         """ Returns all SQL messages queued up for all keys from sub_key_list.
         """
@@ -1546,7 +1554,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def set_to_delete(self, sub_key:'str', msg_list:'strlist') -> 'None':
+    def set_to_delete(self, sub_key:'str', msg_list:'strlistempty') -> 'None':
         """ Marks all input messages as ready to be deleted.
         """
         logger.info('Deleting messages set to be deleted `%s`', msg_list)
