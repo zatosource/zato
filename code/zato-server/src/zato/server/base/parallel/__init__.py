@@ -15,7 +15,6 @@ from platform import system as platform_system
 from random import seed as random_seed
 from tempfile import mkstemp
 from traceback import format_exc
-from typing import Any as any_
 from uuid import uuid4
 
 # gevent
@@ -82,6 +81,7 @@ if 0:
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
+    from zato.common.typing_ import any_
     from zato.server.connection.connector.subprocess_.ipc import SubprocessIPC
     from zato.server.service.store import ServiceStore
     from zato.simpleio import SIOServerConfig
@@ -136,7 +136,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.json_schema_dir = None   # type: unicode
         self.sftp_channel_dir = None  # type: unicode
         self.hot_deploy_config = None # type: Bunch
-        self.fs_server_config = None # type: Bunch
+        self.fs_server_config = None # type: any_
         self.fs_sql_config = None # type: Bunch
         self.pickup_config = None # type: Bunch
         self.logging_config = None # type: Bunch
@@ -144,8 +144,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.sio_config = None # type: SIOServerConfig
         self.sso_config = None
         self.connector_server_grace_time = None
-        self.id = None # type: int
-        self.name = None # type: unicode
+        self.id = 0    # type: int
+        self.name = '' # type: str
         self.worker_id = None # type: int
         self.worker_pid = None # type: int
         self.cluster = None # type: ClusterModel
@@ -1005,7 +1005,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def invoke(self, service, request=None, *args, **kwargs):
+    def invoke(self, service:'str', request:'any_'=None, *args:'any_', **kwargs:'any_'):
         """ Invokes a service either in our own worker or, if PID is given on input, in another process of this server.
         """
         # type: (...) -> any_
