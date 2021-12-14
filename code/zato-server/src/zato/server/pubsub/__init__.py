@@ -184,7 +184,7 @@ class PubSub(object):
         self.endpoints = {} # type: dict_[int, Endpoint]
 
         # Topic ID -> Topic object
-        self.topics = {} # type: inttopicdict
+        self.topics = cast_('inttopicdict', {})
 
         # Sec def ID -> Endpoint ID
         self.sec_id_to_endpoint_id = {} # type: intdict
@@ -286,7 +286,6 @@ class PubSub(object):
 # ################################################################################################################################
 
     def get_subscription_by_sub_key(self, sub_key:'str') -> 'subnone':
-        # type: (str) -> Subscription
         with self.lock:
             try:
                 return self._get_subscription_by_sub_key(sub_key)
@@ -351,7 +350,6 @@ class PubSub(object):
 # ################################################################################################################################
 
     def log_subscriptions_by_sub_key(self, title:'str', prefix:'str'='PubSub.subscriptions_by_sub_key') -> 'None':
-        # type: (str, str) -> None
         with self.lock:
             self._log_subscriptions_dict('subscriptions_by_sub_key', prefix, title)
 
@@ -409,8 +407,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def has_topic_by_id(self, topic_id):
-        # type: (int) -> bool
+    def has_topic_by_id(self, topic_id:'int') -> 'bool':
         with self.lock:
             try:
                 self.topics[topic_id]
@@ -438,7 +435,6 @@ class PubSub(object):
 # ################################################################################################################################
 
     def get_endpoint_id_by_sec_id(self, sec_id:'int') -> 'int':
-        # type: (int) -> int
         with self.lock:
             return self.sec_id_to_endpoint_id[sec_id]
 
@@ -542,8 +538,8 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_topic_list_by_sub_key_list(self, sk_list:'strlist') -> 'strtopicdict':
-        out = {}
+    def get_topic_list_by_sub_key_list(self, sk_list:'strlist') -> 'strtopicdict': # type: ignore [valid-type]
+        out = cast_('strtopicdict', {})
         with self.lock:
             for sub_key in sk_list:
                 out[sub_key] = self._get_topic_by_sub_key(sub_key)
@@ -938,7 +934,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_topics(self) -> 'inttopicdict':
+    def get_topics(self) -> 'inttopicdict': # type: ignore [valid-type]
         """ Returns all topics in existence.
         """
         with self.lock:
