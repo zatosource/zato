@@ -316,7 +316,7 @@ class MSG_SOURCE:
 class NameId:
     """ Wraps both an attribute's name and its ID.
     """
-    def __init__(self, name:str, id:str=None):
+    def __init__(self, name:'str', id:'str'=None):
         self.name = name
         self.id = id or name
 
@@ -747,6 +747,7 @@ class HTTP_SOAP_SERIALIZATION_TYPE:
 
 class PUBSUB:
 
+    SUBSCRIBE_CLASS: '_PUBSUB_SUBSCRIBE_CLASS'
     SKIPPED_PATTERN_MATCHING = '<skipped>'
 
     # All float values are converted to strings of that precision
@@ -810,6 +811,7 @@ class PUBSUB:
         INTERNAL_ENDPOINT_NAME = 'zato.pubsub.default.internal.endpoint'
         ON_NO_SUBS_PUB = 'accept'
         SK_OPAQUE = ('deliver_to_sk', 'reply_to_sk')
+        UnsubOnWSXClose = True
 
     class SERVICE_SUBSCRIBER:
         NAME = 'zato.pubsub.service.endpoint'
