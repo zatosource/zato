@@ -30,7 +30,7 @@ from zato.common.api import GENERIC, PUBSUB
 from zato.common.json_internal import json_loads
 from zato.common.odb.api import SQLRow
 from zato.common.pubsub import PubSubMessage
-from zato.common.typing_ import any_, anylist, anytuple, cast_, dict_, dictlist, list_, set_, strlist, tuple_
+from zato.common.typing_ import any_, anylist, anytuple, cast_, dict_, dictlist, list_, optional, set_, strlist, tuple_
 from zato.common.util.api import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub.model import DeliveryResultCtx
@@ -1287,4 +1287,10 @@ class PubSubTool(object):
         """
         return self.delivery_tasks[sub_key].get_message(msg_id)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+msgnone = optional[Message]
+
+# ################################################################################################################################
 # ################################################################################################################################
