@@ -39,19 +39,11 @@ from zato.server.pubsub.model import DeliveryResultCtx
 
 if 0:
     from collections.abc import ValuesView
-    from logging import Logger
     from typing import Callable
     from bunch import Bunch
     from sqlalchemy.orm import Session
     from zato.common.pubsub import HandleNewMessageCtx
     from zato.server.pubsub import PubSub
-
-    Bunch = Bunch
-    Callable = Callable
-    HandleNewMessageCtx = HandleNewMessageCtx
-    PubSub = PubSub
-    Session = Session
-    ValuesView = ValuesView
 
 # ################################################################################################################################
 
