@@ -19,7 +19,7 @@ static-check:
 
 pyright:
 	pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/__init__.py
-	pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/model.py
+	#pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/model.py
 	#pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/task.py
 
 mypy:
