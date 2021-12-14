@@ -534,7 +534,7 @@ class Service(object):
 # ################################################################################################################################
 
     @classmethod
-    def get_name(class_):
+    def get_name(class_) -> 'str':
         """ Returns a service's name, settings its .name attribute along. This will
         be called once while the service is being deployed.
         """
