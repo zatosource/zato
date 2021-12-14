@@ -23,7 +23,6 @@ from texttable import Texttable
 
 # Python 2/3 compatibility
 from future.utils import iteritems, itervalues
-from past.builtins import basestring
 
 # Zato
 from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
@@ -36,13 +35,13 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
 from zato.common.typing_ import any_, anydict, anylist, callable_, callnone, cast_, dict_, dictlist, intdict, intlist, \
-    intnone, list_, stranydict, strintdict, strintnone, strstrdict, strnone, strlist, tuple_, type_
+    intnone, list_, optional, stranydict, strintdict, strintnone, strstrdict, strlist, tuple_, type_
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.hook import HookTool
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.common.util.wsx import find_wsx_environ
-from zato.server.pubsub.model import Endpoint, HookCtx, strsubdict, Subscription, SubKeyServer, Topic
+from zato.server.pubsub.model import Endpoint, HookCtx, strsubdict, sublist, Subscription, SubKeyServer, Topic
 from zato.server.pubsub.sync import InRAMSync
 
 # ################################################################################################################################
@@ -56,20 +55,11 @@ if 0:
     from zato.server.pubsub.task import msgiter, PubSubTool
     from zato.server.service import Service
 
-    ParallelServer = ParallelServer
-    PubSubTool = PubSubTool
-    Service = Service
-    SimpleIOPayload = SimpleIOPayload
-
 # ################################################################################################################################
 
 logger = logging.getLogger('zato_pubsub.ps')
 logger_zato = logging.getLogger('zato')
 logger_overflow = logging.getLogger('zato_pubsub_overflow')
-
-# ################################################################################################################################
-
-sublist = list_['Subscription']
 
 # ################################################################################################################################
 
@@ -93,6 +83,14 @@ _service_delete_message_gd = 'zato.pubsub.message.queue-delete-gd'
 _service_delete_message_non_gd = 'zato.pubsub.message.queue-delete-non-gd'
 
 _end_srv_id = PUBSUB.ENDPOINT_TYPE.SERVICE.id
+
+# ################################################################################################################################
+
+_PRIORITY=PUBSUB.PRIORITY
+
+_pri_min=_PRIORITY.MIN
+_pri_max=_PRIORITY.MAX
+_pri_def=_PRIORITY.DEFAULT
 
 # ################################################################################################################################
 
@@ -120,7 +118,6 @@ default_sk_server_table_columns = 6, 15, 8, 6, 17, 80
 
 # ################################################################################################################################
 
-_PRIORITY=PUBSUB.PRIORITY
 _JSON=DATA_FORMAT.JSON
 _page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE
 
@@ -129,7 +126,13 @@ class msg:
 
 # ################################################################################################################################
 
-def get_priority(cid, input, _pri_min=_PRIORITY.MIN, _pri_max=_PRIORITY.MAX, _pri_def=_PRIORITY.DEFAULT):
+def get_priority(
+    cid,   # type: str
+    input, # type: anydict
+    _pri_min=_pri_min, # type: int
+    _pri_max=_pri_max, # type: int
+    _pri_def=_pri_def  # type: int
+    ) -> 'int':
     """ Get and validate message priority.
     """
     priority = input.get('priority')
@@ -143,7 +146,7 @@ def get_priority(cid, input, _pri_min=_PRIORITY.MIN, _pri_max=_PRIORITY.MAX, _pr
 
 # ################################################################################################################################
 
-def get_expiration(cid, input, default_expiration=_default_expiration):
+def get_expiration(cid:'str', input:'anydict', default_expiration:'int'=_default_expiration) -> 'int':
     """ Get and validate message expiration.
     Returns (2 ** 31 - 1) * 1000 milliseconds (around 68 years) if expiration is not set explicitly.
     """
@@ -167,7 +170,7 @@ class PubSub(object):
             default_sk_server_table_columns
 
         # This is a pub/sub tool for delivery of Zato services within this server
-        self.service_pubsub_tool = None # type: PubSubTool
+        self.service_pubsub_tool = None # type: optional[PubSubTool]
 
         self.log_if_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_deliv_server_not_found
         self.log_if_wsx_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_wsx_deliv_server_not_found
@@ -210,7 +213,7 @@ class PubSub(object):
 
         # Getter methods for each endpoint type that return actual endpoints,
         # e.g. REST outgoing connections. Values are set by worker store.
-        self.endpoint_impl_getter = dict.fromkeys(PUBSUB.ENDPOINT_TYPE()) # type: dict_[str, callable_]
+        self.endpoint_impl_getter = dict.fromkeys(PUBSUB.ENDPOINT_TYPE()) # type: anydict
 
         # How many messages have been published through this server, regardless of which topic they were for
         self.msg_pub_counter = 0
@@ -234,18 +237,17 @@ class PubSub(object):
         # Manages access to service hooks
         self.hook_tool = HookTool(self.server, HookCtx, hook_type_to_method, self.invoke_service)
 
-        spawn_greenlet(self.trigger_notify_pubsub_tasks)
+        _ = spawn_greenlet(self.trigger_notify_pubsub_tasks)
 
 # ################################################################################################################################
 
     @property
-    def subscriptions_by_sub_key(self):
-        # type: () -> dict
+    def subscriptions_by_sub_key(self) -> 'strsubdict':
         return self._subscriptions_by_sub_key
 
 # ################################################################################################################################
 
-    def incr_pubsub_msg_counter(self, endpoint_id):
+    def incr_pubsub_msg_counter(self, endpoint_id:'int') -> 'None':
         with self.lock:
 
             # Update the overall counter
@@ -259,13 +261,13 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def needs_endpoint_meta_update(self, endpoint_id):
+    def needs_endpoint_meta_update(self, endpoint_id:'int') -> 'bool':
         with self.lock:
             return self.endpoint_msg_counter[endpoint_id] % self.endpoint_meta_store_frequency == 0
 
 # ################################################################################################################################
 
-    def get_subscriptions_by_topic(self, topic_name, require_backlog_messages=False):
+    def get_subscriptions_by_topic(self, topic_name:'str', require_backlog_messages:'bool'=False) -> 'sublist':
         with self.lock:
             subs = self.subscriptions_by_topic.get(topic_name, [])
             subs = subs[:]
@@ -833,7 +835,14 @@ class PubSub(object):
         sub_key, # type: str
         _endpoint_type=_end_srv_id # type: str
         ) -> 'None':
-        self.service_pubsub_tool.add_sub_key(sub_key)
+
+        if self.service_pubsub_tool:
+            self.service_pubsub_tool.add_sub_key(sub_key)
+        else:
+            msg = 'No self.service_pubsub_tool to add sub key to (%s)'
+            logger.warn(msg, sub_key)
+            logger_zato.warn(msg, sub_key)
+
         self.set_sub_key_server({
             'sub_key': sub_key,
             'cluster_id': self.server.cluster_id,
@@ -1039,9 +1048,13 @@ class PubSub(object):
                     if isinstance(name, bytes):
                         name = name.decode('utf8')
                     value = item.wsx_info[name]
-                    if isinstance(value, basestring):
-                        value = value if isinstance(value, str) else value.decode('utf8')
+
+                    if isinstance(value, bytes):
+                        value = value.decode('utf8')
+
+                    if isinstance(value, str):
                         value = value.strip()
+
                     sub_key_info.append('{}: {}'.format(name, value))
 
             rows.append([
