@@ -107,7 +107,7 @@ def get_priority(cid, input, _pri_min=_PRIORITY.MIN, _pri_max=_PRIORITY.MAX, _pr
 
 def get_expiration(cid, input, default_expiration=_default_expiration):
     """ Get and validate message expiration.
-    Returns (2 ** 31 - 1) * 1000 milliseconds (around 68 years) if expiration is not set explicitly.
+    Returns (2 ** 31 - 1) * 1000 milliseconds (around 70 years) if expiration is not set explicitly.
     """
     expiration = input.get('expiration')
     if expiration is not None and expiration < 0:
