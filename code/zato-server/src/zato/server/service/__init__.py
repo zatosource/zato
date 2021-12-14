@@ -38,6 +38,7 @@ from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.json_internal import dumps
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException
 from zato.common.nav import DictNav, ListNav
+from zato.common.typing_ import anydict
 from zato.common.util.api import get_response_value, make_repr, new_cid, payload_from_request, service_name_from_impl, \
      spawn_greenlet, uncamelify
 from zato.server.connection.email import EMailAPI
@@ -474,7 +475,7 @@ class Service(object):
         self.in_reply_to = None  # type: str
         self.data_format = None  # type: str
         self.transport = None    # type: str
-        self.wsgi_environ = None # type: dict
+        self.wsgi_environ = None # type: anydict
         self.job_type = None     # type: str
         self.environ = _Bunch()
         self.request = _Request(self)
