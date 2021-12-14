@@ -85,6 +85,7 @@ anydict     = dict_[any_, any_]
 anylist     = list_[any_]
 anytuple    = tuple_[any_, ...]
 callable_   = callable_
+callnone    = optional[callable_]
 cast_       = cast_
 dictlist    = list_[anydict]
 generator_  = generator_
