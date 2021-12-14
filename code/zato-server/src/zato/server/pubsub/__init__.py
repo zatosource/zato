@@ -31,8 +31,9 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
     get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
-from zato.common.typing_ import any_, anydict, anylist, callable_, callnone, cast_, dict_, dictlist, intdict, intlist, \
-    intnone, list_, optional, stranydict, strintdict, strintnone, strstrdict, strlist, strlistempty, strset, tuple_, type_
+from zato.common.typing_ import any_, anydict, anylist, callable_, callnone, cast_, dict_, dictlist, intdict, intanydict, \
+    intlist, intnone, list_, optional, stranydict, strintdict, strintnone, strstrdict, strlist, strlistempty, strset, tuple_, \
+    type_
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.hook import HookTool
@@ -1687,7 +1688,7 @@ class PubSub(object):
             with _self_lock:
 
                 # Will map a few temporary objects down below
-                topic_id_dict = {}
+                topic_id_dict = {} # type: intanydict
 
                 # Get all topics ..
                 for _topic in _self_topics.values(): # type: Topic
