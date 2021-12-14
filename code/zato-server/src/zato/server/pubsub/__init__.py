@@ -35,14 +35,14 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
     get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
-from zato.common.typing_ import any_, anydict, anylist, callable_, cast_, dict_, dictlist, intdict, intlist, intnone, list_, \
-    stranydict, strintdict, strintnone, strstrdict, strnone, strlist, tuple_, type_
+from zato.common.typing_ import any_, anydict, anylist, callable_, callnone, cast_, dict_, dictlist, intdict, intlist, \
+    intnone, list_, stranydict, strintdict, strintnone, strstrdict, strnone, strlist, tuple_, type_
 from zato.common.util.api import new_cid, spawn_greenlet
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.hook import HookTool
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.common.util.wsx import find_wsx_environ
-from zato.server.pubsub.model import Endpoint, HookCtx, Subscription, SubKeyServer, Topic
+from zato.server.pubsub.model import Endpoint, HookCtx, strsubdict, Subscription, SubKeyServer, Topic
 from zato.server.pubsub.sync import InRAMSync
 
 # ################################################################################################################################
@@ -176,7 +176,7 @@ class PubSub(object):
         self.subscriptions_by_topic = {} # type: dict_[str, sublist]
 
         # Sub key -> Subscription object
-        self._subscriptions_by_sub_key = {} # type: dict_[str, Subscription]
+        self._subscriptions_by_sub_key = {} # type: strsubdict
 
         # Sub key -> SubKeyServer server/PID handling it
         self.sub_key_servers = {} # type: dict_[str, SubKeyServer]
@@ -185,7 +185,7 @@ class PubSub(object):
         self.endpoints = {} # type: dict_[int, Endpoint]
 
         # Topic ID -> Topic object
-        self.topics = {} # type: dict_[int, Topic]
+        self.topics = {} # type: inttopicdict
 
         # Sec def ID -> Endpoint ID
         self.sec_id_to_endpoint_id = {} # type: intdict
@@ -280,14 +280,14 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _get_subscription_by_sub_key(self, sub_key):
+    def _get_subscription_by_sub_key(self, sub_key:'str') -> 'Subscription':
         """ Low-level implementation of self.get_subscription_by_sub_key, must be called with self.lock held.
         """
         return self.subscriptions_by_sub_key[sub_key]
 
 # ################################################################################################################################
 
-    def get_subscription_by_sub_key(self, sub_key):
+    def get_subscription_by_sub_key(self, sub_key:'str') -> 'subnone':
         # type: (str) -> Subscription
         with self.lock:
             try:
@@ -297,8 +297,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_subscription_by_id(self, sub_id):
-        # type: (str) -> Subscription
+    def get_subscription_by_id(self, sub_id:'int') -> 'subnone':
         with self.lock:
             for sub in itervalues(self.subscriptions_by_sub_key):
                 if sub.id == sub_id:
@@ -306,8 +305,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_subscription_by_ext_client_id(self, ext_client_id):
-        # type: (str) -> Subscription
+    def get_subscription_by_ext_client_id(self, ext_client_id:'str') -> 'subnone':
         with self.lock:
             for sub in itervalues(self.subscriptions_by_sub_key):
                 if sub.ext_client_id == ext_client_id:
@@ -315,28 +313,26 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _write_log_sub_data(self, sub, out):
-        # type: (Subscription, StringIO) -> None
+    def _write_log_sub_data(self, sub:'Subscription', out:'StringIO') -> 'None':
         items = sorted(sub.to_dict().items())
 
-        out.write('\n')
+        _ = out.write('\n')
         for key, value in items:
-            out.write(' - {} {}'.format(key, value))
+            _ = out.write(' - {} {}'.format(key, value))
             if key == 'creation_time':
-                out.write('\n - creation_time_utc {}'.format(datetime_from_ms(value)))
-            out.write('\n')
+                _ = out.write('\n - creation_time_utc {}'.format(datetime_from_ms(value)))
+            _ = out.write('\n')
 
 # ################################################################################################################################
 
-    def _log_subscriptions_dict(self, attr_name, prefix, title):
-        # type: (str, str, str) -> None
+    def _log_subscriptions_dict(self, attr_name:'str', prefix:'str', title:'str') -> 'None':
         out = StringIO()
-        out.write('\n')
+        _ = out.write('\n')
 
         attr = getattr(self, attr_name) # type: dict
 
         for sub_key, sub_data in sorted(attr.items()): # type: (str, object)
-            out.write('* {}\n'.format(sub_key))
+            _ = out.write('* {}\n'.format(sub_key))
 
             if isinstance(sub_data, Subscription):
                 self._write_log_sub_data(sub_data, out)
@@ -346,49 +342,49 @@ class PubSub(object):
                     if isinstance(item, Subscription):
                         self._write_log_sub_data(item, out)
                     else:
-                        out.write(' - {}'.format(item))
-                        out.write('\n')
+                        _ = out.write(' - {}'.format(item))
+                        _ = out.write('\n')
 
-            out.write('\n')
+            _ = out.write('\n')
 
         logger_zato.info('\n === %s (%s) ===\n %s', prefix, title, out.getvalue())
         out.close()
 
 # ################################################################################################################################
 
-    def log_subscriptions_by_sub_key(self, title, prefix='PubSub.subscriptions_by_sub_key'):
+    def log_subscriptions_by_sub_key(self, title:'str', prefix:'str'='PubSub.subscriptions_by_sub_key') -> 'None':
         # type: (str, str) -> None
         with self.lock:
             self._log_subscriptions_dict('subscriptions_by_sub_key', prefix, title)
 
 # ################################################################################################################################
 
-    def log_subscriptions_by_topic_name(self, title, prefix='PubSub.subscriptions_by_topic'):
+    def log_subscriptions_by_topic_name(self, title:'str', prefix:'str'='PubSub.subscriptions_by_topic') -> 'None':
         with self.lock:
             self._log_subscriptions_dict('subscriptions_by_topic', prefix, title)
 
 # ################################################################################################################################
 
-    def has_sub_key(self, sub_key):
+    def has_sub_key(self, sub_key:'str') -> 'bool':
         with self.lock:
             return sub_key in self.subscriptions_by_sub_key
 
 # ################################################################################################################################
 
-    def has_messages_in_backlog(self, sub_key):
+    def has_messages_in_backlog(self, sub_key:'str') -> 'bool':
         with self.lock:
             return self.sync_backlog.has_messages_by_sub_key(sub_key)
 
 # ################################################################################################################################
 
-    def _len_subscribers(self, topic_name):
+    def _len_subscribers(self, topic_name:'str') -> 'int':
         """ Low-level implementation of self.len_subscribers, must be called with self.lock held.
         """
         return len(self.subscriptions_by_topic[topic_name])
 
 # ################################################################################################################################
 
-    def len_subscribers(self, topic_name):
+    def len_subscribers(self, topic_name:'str') -> 'int':
         """ Returns the amount of subscribers for a given topic.
         """
         with self.lock:
@@ -396,7 +392,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def has_subscribers(self, topic_name):
+    def has_subscribers(self, topic_name:'str') -> 'bool':
         """ Returns True if input topic has at least one subscriber.
         """
         with self.lock:
@@ -404,11 +400,10 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def has_topic_by_name(self, topic_name):
-        # type: (str) -> bool
+    def has_topic_by_name(self, topic_name:'str') -> 'bool':
         with self.lock:
             try:
-                self._get_topic_by_name(topic_name)
+                _ = self._get_topic_by_name(topic_name)
             except KeyError:
                 return False
             else:
@@ -428,15 +423,13 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_endpoint_by_id(self, endpoint_id):
-        # type: (int) -> Endpoint
+    def get_endpoint_by_id(self, endpoint_id:'int') -> 'Endpoint':
         with self.lock:
             return self.endpoints[endpoint_id]
 
 # ################################################################################################################################
 
-    def get_endpoint_by_name(self, endpoint_name):
-        # type: (str) -> Endpoint
+    def get_endpoint_by_name(self, endpoint_name:'str') -> 'Endpoint':
         with self.lock:
             for endpoint in self.endpoints.values():
                 if endpoint.name == endpoint_name:
@@ -446,44 +439,44 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_endpoint_id_by_sec_id(self, sec_id):
+    def get_endpoint_id_by_sec_id(self, sec_id:'int') -> 'int':
         # type: (int) -> int
         with self.lock:
             return self.sec_id_to_endpoint_id[sec_id]
 
 # ################################################################################################################################
 
-    def get_endpoint_id_by_ws_channel_id(self, ws_channel_id):
+    def get_endpoint_id_by_ws_channel_id(self, ws_channel_id:'int') -> 'int':
         with self.lock:
             return self.ws_channel_id_to_endpoint_id[ws_channel_id]
 
 # ################################################################################################################################
 
-    def get_endpoint_by_ws_channel_id(self, ws_channel_id):
+    def get_endpoint_by_ws_channel_id(self, ws_channel_id:'int') -> 'Endpoint':
         with self.lock:
             endpoint_id = self.ws_channel_id_to_endpoint_id[ws_channel_id]
             return self.endpoints[endpoint_id]
 
 # ################################################################################################################################
 
-    def get_endpoint_id_by_service_id(self, service_id):
+    def get_endpoint_id_by_service_id(self, service_id:'int') -> 'int':
         with self.lock:
             return self.service_id_to_endpoint_id[service_id]
 
 # ################################################################################################################################
 
-    def _get_topic_id_by_name(self, topic_name):
+    def _get_topic_id_by_name(self, topic_name:'str') -> 'int':
         return self.topic_name_to_id[topic_name]
 
 # ################################################################################################################################
 
-    def get_topic_id_by_name(self, topic_name):
+    def get_topic_id_by_name(self, topic_name:'str') -> 'int':
         with self.lock:
             return self._get_topic_id_by_name(topic_name)
 
 # ################################################################################################################################
 
-    def get_non_gd_topic_depth(self, topic_name):
+    def get_non_gd_topic_depth(self, topic_name:'str') -> 'int':
         """ Returns of non-GD messages for a given topic by its name.
         """
         with self.lock:
@@ -491,46 +484,46 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _get_topic_by_name(self, topic_name):
+    def _get_topic_by_name(self, topic_name:'str') -> 'Topic':
         """ Low-level implementation of self.get_topic_by_name.
         """
         return self.topics[self._get_topic_id_by_name(topic_name)]
 
 # ################################################################################################################################
 
-    def get_topic_by_name(self, topic_name):
+    def get_topic_by_name(self, topic_name:'str') -> 'Topic':
         with self.lock:
             return self._get_topic_by_name(topic_name)
 
 # ################################################################################################################################
 
-    def _get_topic_by_id(self, topic_id):
+    def _get_topic_by_id(self, topic_id:'int') -> 'Topic':
         """ Low-level implementation of self.get_topic_by_id, must be called with self.lock held.
         """
         return self.topics[topic_id]
 
 # ################################################################################################################################
 
-    def get_topic_by_id(self, topic_id):
+    def get_topic_by_id(self, topic_id:'int') -> 'Topic':
         with self.lock:
             return self._get_topic_by_id(topic_id)
 
 # ################################################################################################################################
 
-    def get_topic_name_by_sub_key(self, sub_key):
+    def get_topic_name_by_sub_key(self, sub_key:'str') -> 'str':
         with self.lock:
             return self._get_subscription_by_sub_key(sub_key).topic_name
 
 # ################################################################################################################################
 
-    def _get_endpoint_by_id(self, endpoint_id):
+    def _get_endpoint_by_id(self, endpoint_id:'int') -> 'Endpoint':
         """ Returns an endpoint by ID, must be called with self.lock held.
         """
         return self.endpoints[endpoint_id]
 
 # ################################################################################################################################
 
-    def get_sub_key_to_topic_name_dict(self, sub_key_list):
+    def get_sub_key_to_topic_name_dict(self, sub_key_list:'strlist') -> 'strstrdict':
         out = {}
         with self.lock:
             for sub_key in sub_key_list:
@@ -540,20 +533,18 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _get_topic_by_sub_key(self, sub_key):
-        # type: (str) -> Topic
+    def _get_topic_by_sub_key(self, sub_key:'str') -> 'Topic':
         return self._get_topic_by_name(self._get_subscription_by_sub_key(sub_key).topic_name)
 
 # ################################################################################################################################
 
-    def get_topic_by_sub_key(self, sub_key):
-        # type: (str) -> Topic
+    def get_topic_by_sub_key(self, sub_key:'str') -> 'Topic':
         with self.lock:
             return self._get_topic_by_sub_key(sub_key)
 
 # ################################################################################################################################
 
-    def get_topic_list_by_sub_key_list(self, sk_list):
+    def get_topic_list_by_sub_key_list(self, sk_list:'strlist') -> 'strtopicdict':
         out = {}
         with self.lock:
             for sub_key in sk_list:
@@ -562,21 +553,21 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _create_endpoint(self, config):
-        self.endpoints[config.id] = Endpoint(config)
+    def _create_endpoint(self, config:'anydict'):
+        self.endpoints[config['id']] = Endpoint(config)
 
         if config['security_id']:
-            self.sec_id_to_endpoint_id[config['security_id']] = config.id
+            self.sec_id_to_endpoint_id[config['security_id']] = config['id']
 
         if config.get('ws_channel_id'):
-            self.ws_channel_id_to_endpoint_id[config['ws_channel_id']] = config.id
+            self.ws_channel_id_to_endpoint_id[config['ws_channel_id']] = config['id']
 
         if config.get('service_id'):
-            self.service_id_to_endpoint_id[config['service_id']] = config.id
+            self.service_id_to_endpoint_id[config['service_id']] = config['id']
 
 # ################################################################################################################################
 
-    def create_endpoint(self, config):
+    def create_endpoint(self, config:'anydict') -> 'None':
         with self.lock:
             self._create_endpoint(config)
 
@@ -942,7 +933,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_topics(self) -> 'dict_[int, Topic]':
+    def get_topics(self) -> 'inttopicdict':
         """ Returns all topics in existence.
         """
         with self.lock:
@@ -1425,41 +1416,45 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_before_delivery_hook(self, sub_key:'str') -> 'callable_':
+    def get_before_delivery_hook(self, sub_key:'str') -> 'callnone':
         """ Returns a hook for messages to be invoked right before they are about to be delivered
         or None if such a hook is not defined for sub_key's topic.
         """
         with self.lock:
             sub = self.get_subscription_by_sub_key(sub_key)
-            return self._get_topic_by_name(sub.topic_name).before_delivery_hook_service_invoker
+            if sub:
+                return self._get_topic_by_name(sub.topic_name).before_delivery_hook_service_invoker
 
 # ################################################################################################################################
 
-    def get_on_subscribed_hook(self, sub_key:'str') -> 'callable_':
+    def get_on_subscribed_hook(self, sub_key:'str') -> 'callnone':
         """ Returns a hook triggered when a new subscription is made to a particular topic.
         """
         with self.lock:
             sub = self.get_subscription_by_sub_key(sub_key)
-            return self._get_topic_by_name(sub.topic_name).on_subscribed_service_invoker
+            if sub:
+                return self._get_topic_by_name(sub.topic_name).on_subscribed_service_invoker
 
 # ################################################################################################################################
 
-    def get_on_unsubscribed_hook(self, sub_key:'str'='', sub:'subnone'=None) -> 'callable_':
+    def get_on_unsubscribed_hook(self, sub_key:'str'='', sub:'subnone'=None) -> 'callnone':
         """ Returns a hook triggered when a client unsubscribes from a topic.
         """
         with self.lock:
             sub = sub or self.get_subscription_by_sub_key(sub_key)
-            return self._get_topic_by_name(sub.topic_name).on_unsubscribed_service_invoker
+            if sub:
+                return self._get_topic_by_name(sub.topic_name).on_unsubscribed_service_invoker
 
 # ################################################################################################################################
 
-    def get_on_outgoing_soap_invoke_hook(self, sub_key:'str') -> 'callable_':
+    def get_on_outgoing_soap_invoke_hook(self, sub_key:'str') -> 'callnone':
         """ Returns a hook that sends outgoing SOAP Suds connections-based messages or None if there is no such hook
         for sub_key's topic.
         """
         with self.lock:
             sub = self.get_subscription_by_sub_key(sub_key)
-            return self._get_topic_by_name(sub.topic_name).on_outgoing_soap_invoke_invoker
+            if sub:
+                return self._get_topic_by_name(sub.topic_name).on_outgoing_soap_invoke_invoker
 
 # ################################################################################################################################
 
@@ -1503,10 +1498,10 @@ class PubSub(object):
 
     def _invoke_on_sub_unsub_hook(
         self,
-        hook,      # type: callable_
-        topic_id,  # type: int
-        sub_key,   # type: strnone
-        sub=None   # type: subnone
+        hook,       # type: callable_
+        topic_id,   # type: int
+        sub_key='', # type: str
+        sub=None    # type: subnone
         ) -> 'any_':
         sub = sub if sub else self._get_subscription_by_sub_key(sub_key)
         return hook(topic=self._get_topic_by_id(topic_id), sub=sub)
@@ -1519,7 +1514,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def invoke_on_unsubscribed_hook(self, hook:'callable_', topic_id:'int', sub:'Subscription') -> 'any_':
-        return self._invoke_on_sub_unsub_hook(hook, topic_id, sub_key=None, sub=sub)
+        return self._invoke_on_sub_unsub_hook(hook, topic_id, sub_key='', sub=sub)
 
 # ################################################################################################################################
 
@@ -2145,6 +2140,12 @@ class PubSub(object):
             'max_depth_non_gd': max_depth_non_gd,
             'pub_buffer_size_gd': pub_buffer_size_gd,
         })
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+strtopicdict = dict_[str, Topic]
+inttopicdict = dict_[int, Topic]
 
 # ################################################################################################################################
 # ################################################################################################################################
