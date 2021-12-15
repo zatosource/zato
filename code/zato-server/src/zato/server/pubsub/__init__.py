@@ -43,10 +43,9 @@ from zato.server.pubsub.sync import InRAMSync
 # ################################################################################################################################
 
 if 0:
-    from zato.broker.client import BrokerClient # type: ignore
-    from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, callnone, dictlist, intdict, \
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, callnone, commondict, dictlist, intdict, \
         intanydict, intlist, intnone, list_, stranydict, strintdict, strintnone, strstrdict, strlist, strlistdict, \
-        strlistempty, strset, tuple_, type_
+        strlistempty, strset, strtuple, type_
     from zato.distlock import Lock
     from zato.server.connection.web_socket import WebSocket
     from zato.server.base.parallel import ParallelServer
@@ -159,7 +158,13 @@ def get_expiration(cid:'str', input:'anydict', default_expiration:'int'=_default
 
 class PubSub(object):
 
-    def __init__(self, cluster_id:'int', server:'ParallelServer', broker_client:'optional[BrokerClient]'=None) -> None:
+    def __init__(
+        self,
+        cluster_id,        # type: int
+        server,            # type: ParallelServer
+        broker_client=None # type: any_
+        ) -> 'None':
+
         self.cluster_id = cluster_id
         self.server = server
         self.broker_client = broker_client # type: ignore
@@ -534,7 +539,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def get_sub_key_to_topic_name_dict(self, sub_key_list:'strlist') -> 'strstrdict':
-        out = {}
+        out = {} # type: strstrdict
         with self.lock:
             for sub_key in sub_key_list:
                 out[sub_key] = self._get_subscription_by_sub_key(sub_key).topic_name
@@ -822,10 +827,9 @@ class PubSub(object):
     def delete_topic(self, topic_id:'int') -> 'None':
         with self.lock:
             topic_name = self.topics[topic_id].name
-            subscriptions_by_topic = self._delete_topic(topic_id, topic_name) # type: list
+            subscriptions_by_topic = self._delete_topic(topic_id, topic_name) # type: sublist
 
             for sub in subscriptions_by_topic:
-                sub = cast_('Subscription', sub)
                 _ = self._delete_subscription_by_sub_key(sub.sub_key, ignore_missing=True)
 
 # ################################################################################################################################
@@ -1173,7 +1177,7 @@ class PubSub(object):
         try:
             response = self.server.rpc[server_name].invoke('zato.pubsub.delivery.get-server-pid-for-sub-key', {
                 'sub_key': sub_key,
-            })
+            }) # type: anydict
         except Exception:
             msg = 'Could not invoke server `%s` to get PID for sub_key `%s`, e:`%s`'
             exc_formatted = format_exc()
@@ -1223,7 +1227,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_task_servers_by_sub_keys(self, sub_key_data:'dictlist') -> 'tuple_':
+    def get_task_servers_by_sub_keys(self, sub_key_data:'dictlist') -> 'anytuple':
         """ Returns a dictionary keyed by (server_name, server_pid, pub_client_id, channel_name) tuples
         and values being sub_keys that a WSX client pointed to by each key has subscribed to.
         """
@@ -1273,7 +1277,7 @@ class PubSub(object):
         last_sql_run, # type: float
         pub_time_max, # type: float
         ignore_list   # type: strset
-        ) -> 'tuple':
+        ) -> 'anytuple':
         """ Returns all SQL messages queued up for all keys from sub_key_list.
         """
         if not session:
@@ -1296,7 +1300,7 @@ class PubSub(object):
         session:'any_',
         sub_key:'str',
         pub_time_max:'float'
-        ) -> 'tuple':
+        ) -> 'anytuple':
         return _get_sql_msg_ids_by_sub_key(session, self.server.cluster_id, sub_key, 0.0, pub_time_max).\
                all()
 
@@ -1496,7 +1500,7 @@ class PubSub(object):
         sub_key,  # type: str
         batch,    # type: msgiter
         messages, # type: anydict
-        actions=tuple(PUBSUB.HOOK_ACTION()), # type: tuple_
+        actions=tuple(PUBSUB.HOOK_ACTION()), # type: strtuple
         _deliver=PUBSUB.HOOK_ACTION.DELIVER  # type: str
         ) -> 'None':
         """ Invokes a hook service for each message from a batch of messages possibly to be delivered and arranges
@@ -1513,7 +1517,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def invoke_on_outgoing_soap_invoke_hook(self, batch:'list_', sub:'Subscription', http_soap:'any_') -> 'None':
+    def invoke_on_outgoing_soap_invoke_hook(self, batch:'anylist', sub:'Subscription', http_soap:'any_') -> 'None':
         hook = self.get_on_outgoing_soap_invoke_hook(sub.sub_key)
         topic = self.get_topic_by_id(sub.config['topic_id'])
         if hook:
@@ -1583,8 +1587,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def topic_lock(self, topic_name:'str') -> 'Lock':
-        lock = self.server.zato_lock_manager('zato.pubsub.publish.%s' % topic_name)
-        return cast_('Lock', lock)
+        return self.server.zato_lock_manager('zato.pubsub.publish.%s' % topic_name)
 
 # ################################################################################################################################
 
@@ -1668,8 +1671,8 @@ class PubSub(object):
         # Local aliases
 
         _new_cid      = new_cid
-        _spawn        = spawn
-        _sleep        = sleep
+        _spawn        = spawn # type: ignore
+        _sleep        = sleep # type: ignore
         _self_lock    = self.lock
         _self_topics  = self.topics
         _keep_running = self.keep_running
@@ -1684,7 +1687,7 @@ class PubSub(object):
         _self_get_subscriptions_by_topic     = self.get_subscriptions_by_topic
         _self_get_delivery_server_by_sub_key = self.get_delivery_server_by_sub_key
 
-        _sync_backlog_get_delete_messages_by_sub_keys = self.sync_backlog._get_delete_messages_by_sub_keys
+        _sync_backlog_get_delete_messages_by_sub_keys = self.sync_backlog.get_delete_messages_by_sub_keys
 
 # ################################################################################################################################
 
@@ -1906,7 +1909,7 @@ class PubSub(object):
             'deliver_to_sk': deliver_to_sk,
             'user_ctx': user_ctx,
             'zato_ctx': zato_ctx,
-        }
+        } # type: commondict
 
         response = self.invoke_service('zato.pubsub.publish.publish', request, serialize=False)
 
@@ -1920,7 +1923,7 @@ class PubSub(object):
         topic_name,            # type: str
         sub_key,               # type: str
         needs_details=False,   # type: bool
-        _skip=skip_to_external # type: tuple_
+        _skip=skip_to_external # type: strtuple
         ) -> 'anylist':
         """ Returns messages from a subscriber's queue, deleting them from the queue in progress.
         POST /zato/pubsub/topic/{topic_name}?sub_key=...
@@ -1980,12 +1983,15 @@ class PubSub(object):
         ) -> 'any_':
         """ Returns details of a particular message without deleting it from the subscriber's queue.
         """
+        # Forward reference
+        service_data = {} # type: commondict
+
         if has_gd:
             service_name = _service_read_message_gd
             service_data = {
                 'cluster_id': self.server.cluster_id,
                 'msg_id': msg_id
-            }
+            } # type: ignore[no-redef]
         else:
             sub_key = kwargs.get('sub_key')
             server_name = kwargs.get('server_name')
@@ -2001,14 +2007,14 @@ class PubSub(object):
                 'sub_key': sub_key,
                 'server_name': server_name,
                 'server_pid': server_pid,
-            }
+            } # type: ignore[no-redef]
 
         return self.invoke_service(service_name, service_data, serialize=False).response
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def delete_message(self, sub_key:'str', msg_id:'str', has_gd:'bool', *args:'tuple', **kwargs:'strintnone') -> 'any_':
+    def delete_message(self, sub_key:'str', msg_id:'str', has_gd:'bool', *args:'anytuple', **kwargs:'strintnone') -> 'any_':
         """ Deletes a message from a subscriber's queue.
         DELETE /zato/pubsub/msg/{msg_id}
         """
@@ -2043,6 +2049,9 @@ class PubSub(object):
         **kwargs # type: any_
         ) -> 'str':
 
+        # Forward reference
+        wsgi_environ = {} # type: stranydict
+
         # Are we going to subscribe a WSX client?
         use_current_wsx = kwargs.get('use_current_wsx')
 
@@ -2052,7 +2061,7 @@ class PubSub(object):
             'is_internal': kwargs.get('is_internal') or False,
             'wrap_one_msg_in_list': kwargs.get('wrap_one_msg_in_list', True),
             'delivery_batch_size': kwargs.get('delivery_batch_size', PUBSUB.DEFAULT.DELIVERY_BATCH_SIZE),
-        }
+        } # type: stranydict
 
         # This is a subscription for a WebSocket client ..
         if use_current_wsx:
@@ -2069,8 +2078,8 @@ class PubSub(object):
 
             # All set, we can carry on with other steps now
             sub_service_name = PUBSUB.SUBSCRIBE_CLASS.get(PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id)
-            wsgi_environ = service.wsgi_environ # type: dict
-            kwargs_wsgi_environ = kwargs.get('wsgi_environ') or {} # type: dict
+            wsgi_environ = service.wsgi_environ # type: ignore[no-redef]
+            kwargs_wsgi_environ = kwargs.get('wsgi_environ') or {}
             wsgi_environ = wsgi_environ or kwargs_wsgi_environ
             wsgi_environ['zato.request_ctx.pubsub.unsub_on_wsx_close'] = kwargs.get('unsub_on_wsx_close')
 
@@ -2091,7 +2100,7 @@ class PubSub(object):
             request['endpoint_id'] = endpoint.id
 
             sub_service_name = PUBSUB.SUBSCRIBE_CLASS.get(endpoint.endpoint_type)
-            wsgi_environ = {}
+            wsgi_environ = {} # # type: ignore[no-redef]
 
         # Actually subscribe the caller
         response = self.invoke_service(sub_service_name, request, wsgi_environ=wsgi_environ, serialize=False)
