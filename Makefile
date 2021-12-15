@@ -14,7 +14,7 @@ pylint:
 	echo Running pylint in $(CURDIR)/code/server/src
 	$(CURDIR)/code/bin/pylint --verbose \
 	--rcfile $(CURDIR)/code/pylint.ini \
-	$(CURDIR)/code/zato-server/src/zato/server/pubsub/__init__.py
+	$(CURDIR)/code/zato-server/src/zato/server/pubsub/task.py
 
 server-tests:
 	cd $(CURDIR)/code/zato-server && make run-tests
