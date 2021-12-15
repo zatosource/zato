@@ -367,8 +367,6 @@ def get_config(repo_location, config_name, bunchified=True, needs_user_config=Tr
     raise_on_error=False, log_exception=True):
     """ Returns the configuration object. Will load additional user-defined config files, if any are available.
     """
-    # type: (str, str, bool, bool, object, object) -> Bunch
-
     # Default output to produce
     result = Bunch()
 
@@ -391,7 +389,6 @@ def get_config(repo_location, config_name, bunchified=True, needs_user_config=Tr
 def get_config_from_string(data):
     """ A simplified version of get_config which creates a config object from string, skipping any user-defined config files.
     """
-    # type: (str) -> Bunch
     buff = StringIO()
     buff.write(data)
     buff.seek(0)
@@ -465,7 +462,6 @@ def get_body_payload(body):
 def payload_from_request(json_parser, cid, request, data_format, transport, channel_item=None):
     """ Converts a raw request to a payload suitable for usage with SimpleIO.
     """
-    # type: (SIMDJSONParser, str, object, str, str, object)
     if request is not None:
 
         #
@@ -790,8 +786,6 @@ def dotted_getattr(o, path):
 # ################################################################################################################################
 
 def wait_for_odb_service(session, cluster_id, service_name):
-    # type: (object, int, str) -> Service
-
     # Assume we do not have it
     service = None
 
