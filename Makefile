@@ -47,16 +47,16 @@ type-check:
 web-admin-tests:
 	cd $(CURDIR)/code/zato-web-admin && make run-tests
 
-install-test-reqs:
-	$(CURDIR)/code/bin/pip install -r $(CURDIR)/code/test-requirements.txt
+install-qa-reqs:
+	$(CURDIR)/code/bin/pip install -r $(CURDIR)/code/qa-requirements.txt
 	cp -v $(CURDIR)/code/patches/requests/* $(CURDIR)/code/eggs/requests/
 
 run-tests:
-	$(MAKE) install-test-reqs
+	$(MAKE) install-qa-reqs
 	$(MAKE) common-tests
 	$(MAKE) cy-tests
 	$(MAKE) server-tests
 	$(MAKE) sso-tests
 	$(MAKE) web-admin-tests
 	$(MAKE) static-check
-	# $(MAKE) type-check
+	$(MAKE) type-check
