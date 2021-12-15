@@ -1005,11 +1005,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def invoke(self, service:'str', request:'any_'=None, *args:'any_', **kwargs:'any_'):
+    def invoke(self, service:'str', request:'any_'=None, *args:'any_', **kwargs:'any_') -> 'any_':
         """ Invokes a service either in our own worker or, if PID is given on input, in another process of this server.
         """
-        # type: (...) -> any_
-
         target_pid = kwargs.pop('pid', None)
         if target_pid and target_pid != self.pid:
 

@@ -511,11 +511,9 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def has_sio(self, service_name):
+    def has_sio(self, service_name:'str') -> 'bool':
         """ Returns True if service indicated by service_name has a SimpleIO definition.
         """
-        # type: (str) -> bool
-
         with self.update_lock:
             service_id = self.get_service_id_by_name(service_name)
             service_info = self.get_service_info_by_id(service_id) # type: Service
@@ -524,7 +522,7 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def get_service_info_by_id(self, service_id:'int'):
+    def get_service_info_by_id(self, service_id:'int') -> 'anydict':
         if not isinstance(service_id, int):
             service_id = int(service_id)
 
@@ -545,7 +543,7 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def get_service_id_by_name(self, service_name):
+    def get_service_id_by_name(self, service_name:'str') -> 'int':
         impl_name = self.name_to_impl_name[service_name]
         return self.impl_name_to_id[impl_name]
 

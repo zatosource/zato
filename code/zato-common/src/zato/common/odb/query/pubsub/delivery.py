@@ -20,7 +20,7 @@ from zato.common.odb.model import PubSubEndpoint, PubSubMessage, PubSubEndpointE
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, strlist, strset
+    from zato.common.typing_ import any_, intset, strlist
 
 # ################################################################################################################################
 
@@ -112,7 +112,7 @@ def get_sql_messages_by_sub_key(
     sub_key_list, # type: strlist
     last_sql_run, # type: float
     pub_time_max, # type: float
-    ignore_list   # type: strset
+    ignore_list   # type: intset
     ) -> 'any_':
     return _get_sql_msg_data_by_sub_key(session, cluster_id, sub_key_list, last_sql_run, pub_time_max,
         sql_messages_columns, ignore_list)
