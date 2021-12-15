@@ -30,8 +30,7 @@ from zato.common.api import GENERIC, PUBSUB
 from zato.common.json_internal import json_loads
 from zato.common.odb.api import SQLRow
 from zato.common.pubsub import PubSubMessage
-from zato.common.typing_ import any_, anydict, anylist, anytuple, cast_, dict_, dictlist, list_, optional, \
-     set_, strlist, tuple_
+from zato.common.typing_ import cast_
 from zato.common.util.api import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub.model import DeliveryResultCtx
@@ -43,6 +42,8 @@ if 0:
     from typing import Callable
     from sqlalchemy.orm import Session
     from zato.common.pubsub import HandleNewMessageCtx
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, dict_, dictlist, intset, \
+        list_, optional, set_, strlist, tuple_
     from zato.server.pubsub import PubSub
 
 # ################################################################################################################################
@@ -698,7 +699,7 @@ class GDMessage(Message):
     def __init__(self,
             sub_key,    # type: str
             topic_name, # type: str
-            msg,        # type: dict_
+            msg,        # type: anydict
             _gen_attr=GENERIC.ATTR_NAME,    # type: str
             _loads=json_loads,              # type: Callable
             _zato_mime_type=_zato_mime_type # type: str
@@ -763,7 +764,7 @@ class NonGDMessage(Message):
             sub_key,     # type: str
             server_name, # type: str
             server_pid,  # type: int
-            msg,         # type: dict
+            msg,         # type: anydict
             _def_priority=PUBSUB.PRIORITY.DEFAULT,  # type: int
             _def_mime_type=PUBSUB.DEFAULT.MIME_TYPE # type: str
         ) -> 'None':
@@ -800,7 +801,8 @@ class NonGDMessage(Message):
         # msg.sub_pattern_matched is a shared dictionary of patterns for each subscriber - we .pop from it
         # so as not to keep this dictionary's contents for no particular reason. Since there can be only
         # one delivery task for each sub_key, we can .pop rightaway.
-        self.sub_pattern_matched = msg['sub_pattern_matched'].pop(self.sub_key)
+        sub_pattern_matched = msg['sub_pattern_matched'] # type: anydict
+        self.sub_pattern_matched = sub_pattern_matched.pop(self.sub_key)
 
         # Add times in ISO-8601 for external subscribers
         self.add_iso_times()
@@ -817,7 +819,7 @@ class PubSubTool(object):
             parent,        # type: any_
             endpoint_type, # type: str
             is_for_services=False,  # type: bool
-            deliver_pubsub_msg=None # type: Callable
+            deliver_pubsub_msg=None # type: callable_
         ) -> 'None':
         self.pubsub = pubsub
         self.parent = parent # This is our parent, e.g. an individual WebSocket on whose behalf we execute
@@ -827,7 +829,7 @@ class PubSubTool(object):
         self.server_pid = self.pubsub.server.pid
 
         # WSX connections will have their own callback but other connections use the default one
-        self.deliver_pubsub_msg = deliver_pubsub_msg or self.pubsub.deliver_pubsub_msg
+        self.deliver_pubsub_msg = deliver_pubsub_msg or self.pubsub.deliver_pubsub_msg # type: callable_
 
         # A broad lock for generic pub/sub matters
         self.lock = RLock()
@@ -1004,7 +1006,8 @@ class PubSubTool(object):
                 if sub_key not in msg['deliver_to_sk']:
                     continue
 
-            self.delivery_lists[sub_key].add(NonGDMessage(sub_key, self.server_name, self.server_pid, msg))
+            add = self.delivery_lists[sub_key].add # type: ignore
+            add(NonGDMessage(sub_key, self.server_name, self.server_pid, msg))
 
 # ################################################################################################################################
 
@@ -1043,7 +1046,7 @@ class PubSubTool(object):
             logger.info('Handle new messages, cid:%s, gd:%d, sub_keys:%s, len_non_gd:%d bg:%d',
                 ctx.cid, int(ctx.has_gd), ctx.sub_key_list, len(ctx.non_gd_msg_list), ctx.is_bg_call)
 
-            gd_msg_list:dict_[str, sqlmsglist] = {}
+            gd_msg_list = {} # type: dict_[str, sqlmsglist]
 
             # We need to have the broad lock first to read in messages for all the sub keys
             with self.lock:
@@ -1112,9 +1115,10 @@ class PubSubTool(object):
         ) -> 'sqlmsgiter':
         """ Part of the low-level implementation of enqueue_gd_messages_by_sub_key, must be called with a lock for input sub_key.
         """
-        # These are messages that we have already queued up so if we happen to pick them up
-        # in the database, they should be ignored.
-        ignore_list = set()
+
+        # These are messages that we have already queued up and,
+        # if we happen to pick them up in the database, they should be ignored.
+        ignore_list = set() # type: intset
 
         for sub_key in sub_key_list:
             for msg in self.delivery_lists[sub_key]:
@@ -1156,7 +1160,7 @@ class PubSubTool(object):
             msg_ids.append(msg.pub_msg_id)
             gd_msg = GDMessage(sub_key, topic_name, msg.get_value())
             delivery_list = self.delivery_lists[sub_key]
-            delivery_list.add(gd_msg)
+            delivery_list.add(gd_msg) # type: ignore
             count += 1
 
         logger.info('Pushing %d GD message{}to task:%s; msg_ids:%s'.format(
