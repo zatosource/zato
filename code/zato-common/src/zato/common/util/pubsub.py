@@ -11,6 +11,7 @@ from operator import itemgetter
 
 # Zato
 from zato.common.odb.query import pubsub_endpoint_queue_list_by_sub_keys
+from zato.common.typing_ import anydict
 
 # ################################################################################################################################
 
@@ -23,7 +24,7 @@ if 0:
 
 # ################################################################################################################################
 
-def make_short_msg_copy_from_dict(msg, data_prefix_len, data_prefix_short_len):
+def make_short_msg_copy_from_dict(msg, data_prefix_len:'int', data_prefix_short_len:'int') -> 'anydict':
     out_msg = {}
     out_msg['msg_id'] = msg['pub_msg_id']
     out_msg['in_reply_to'] = msg.get('in_reply_to')
