@@ -46,11 +46,14 @@ def utcnow_as_ms(_time=time):
 
 # ################################################################################################################################
 
-def datetime_from_ms(ms, isoformat=True):
+def datetime_from_ms(ms:'float', isoformat:'bool'=True) -> 'str | datetime':
     """ Converts a number of milliseconds since UNIX epoch to a datetime object.
     """
     value = _epoch + timedelta(milliseconds=ms)
-    return value.isoformat() if isoformat else value
+    if isoformat:
+        return value.isoformat()
+    else:
+        return value
 
 # ################################################################################################################################
 
