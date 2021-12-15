@@ -9,27 +9,45 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from logging import getLogger
 
-# Python 2/3 compatibility
-from past.builtins import unicode
-
 # Zato
 from zato.common.api import GENERIC, PUBSUB
 from zato.common.util.api import new_cid
 from zato.common.util.time_ import utcnow_as_ms
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, commondict, strlist
+    from zato.common.typing_ import any_, anylist, callable_, commondict, floatnone, optional, stranydict, \
+        strlist, strtuple
+    from zato.server.connection.http_soap.outgoing import SudsSOAPWrapper
+    from zato.server.pubsub.model import Topic
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger('zato_pubsub.msg')
 logger_zato = getLogger('zato')
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+class MSG_PREFIX:
+    GROUP_ID = 'zpsg'
+    MSG_ID = 'zpsm'
+    SUB_KEY = 'zpsk'
+    SERVICE_SK = 'zpsk.srv'
+
+prefix_group_id = MSG_PREFIX.GROUP_ID
+prefix_msg_id   = MSG_PREFIX.MSG_ID
+prefix_sk       = MSG_PREFIX.SUB_KEY
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 sk_lists = ('reply_to_sk', 'deliver_to_sk')
+
+# ################################################################################################################################
 
 skip_to_external = (
     'delivery_status', 'topic_id', 'cluster_id', 'pub_pattern_matched', 'sub_pattern_matched',
@@ -37,9 +55,13 @@ skip_to_external = (
     'pub_msg_id', 'pub_correl_id', 'zato_ctx'
 ) + sk_lists
 
+# ################################################################################################################################
+
 _data_keys = (
     'data', 'data_prefix', 'data_prefix_short'
 )
+
+# ################################################################################################################################
 
 msg_pub_attrs = (
     'topic', 'sub_key', 'pub_msg_id', 'pub_correl_id', 'in_reply_to', 'ext_client_id', 'group_id',
@@ -50,6 +72,8 @@ msg_pub_attrs = (
     'delivery_count', 'user_ctx', 'zato_ctx'
 )
 
+# ################################################################################################################################
+
 # These public attributes need to be ignored when the message is published
 msg_pub_ignore = (
     'delivery_count',
@@ -59,28 +83,28 @@ msg_pub_ignore = (
     'reply_to_sk',
 )
 
-class MSG_PREFIX:
-    GROUP_ID = 'zpsg'
-    MSG_ID = 'zpsm'
-    SUB_KEY = 'zpsk'
-    SERVICE_SK = 'zpsk.srv'
-
 # ################################################################################################################################
 
-def new_msg_id(_new_cid=new_cid, _prefix=MSG_PREFIX.MSG_ID):
+def new_msg_id(_new_cid:'callable_'=new_cid, _prefix:'str'=prefix_msg_id) -> 'str':
     return '%s%s' % (_prefix, _new_cid())
 
 # ################################################################################################################################
 
-def new_sub_key(endpoint_type, ext_client_id='', _new_cid=new_cid, _prefix=MSG_PREFIX.SUB_KEY):
+def new_sub_key(
+    endpoint_type,    # type: str
+    ext_client_id='', # type: str
+    _new_cid=new_cid, # type: callable_
+    _prefix=prefix_sk # type: str
+    ) -> 'str':
     _ext_client_id = '.%s' % (ext_client_id,) if ext_client_id else (ext_client_id or '')
     return '%s.%s%s.%s' % (_prefix, endpoint_type, _ext_client_id, _new_cid(3))
 
 # ################################################################################################################################
 
-def new_group_id(_new_cid=new_cid, _prefix=MSG_PREFIX.GROUP_ID):
+def new_group_id(_new_cid:'callable_'=new_cid, _prefix:'str'=prefix_group_id) -> 'str':
     return '%s%s' % (_prefix, _new_cid())
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class PubSubMessage(object):
@@ -89,84 +113,87 @@ class PubSubMessage(object):
     # We are not using __slots__ because they can't be inherited by subclasses
     # and this class, as well as its subclasses, will be rewritten in Cython anyway.
     pub_attrs = msg_pub_attrs + sk_lists
-    '''
-        self.recv_time = utcnow_as_ms()
-        self.server_name = None
-        self.server_pid = None
-        self.topic = None
-        self.sub_key = None
-        self.pub_msg_id = None
-        self.pub_correl_id = None
-        self.in_reply_to = None
-        self.ext_client_id = None
-        self.group_id = None
-        self.position_in_group = None
-        self.pub_time = None
-        self.ext_pub_time = None
-        self.data = ''
-        self.data_prefix = ''
-        self.data_prefix_short = ''
-        self.mime_type = None
-        self.priority = PUBSUB.PRIORITY.DEFAULT
-        self.expiration = None
-        self.expiration_time = None
-        self.has_gd = None
-        self.delivery_status = None
-        self.pub_pattern_matched = None
-        self.sub_pattern_matched = {}
-        self.size = None
-        self.published_by_id = None
-        self.topic_id = None
-        self.is_in_sub_queue = None
-        self.topic_name = None
-        self.cluster_id = None
-        self.delivery_count = 0
-        self.pub_time_iso = None
-        self.ext_pub_time_iso = None
-        self.expiration_time_iso = None
-        self.reply_to_sk = []
-        self.deliver_to_sk = []
-        self.user_ctx = None
-        self.zato_ctx = None
-        self.serialized = None # May be set by hooks to provide an explicitly serialized output for this message
-        opaque1: 'any_'
-        '''
 
-    def __init__(self):
+    recv_time:     'float'
+    server_name:   'str'
+    server_pid:    'int'
+    topic:         'optional[Topic]'
+    sub_key:       'str'
+    pub_msg_id:    'str'
+    pub_correl_id: 'str'
+    in_reply_to:   'str'
+    ext_client_id: 'str'
+
+    group_id:          'str'
+    position_in_group: 'int'
+    pub_time:          'float'
+    ext_pub_time:      'floatnone'
+    data:              'any_'
+    data_prefix:       'str'
+    data_prefix_short: 'str'
+    mime_type:         'str'
+    priority:          'int'
+    expiration:        'int'
+    expiration_time:   'float'
+    has_gd:            'bool'
+    delivery_status:   'str'
+
+    pub_pattern_matched: 'stranydict'
+    sub_pattern_matched: 'stranydict'
+
+    size:             'int'
+    published_by_id:  'int'
+    topic_id:         'int'
+    is_in_sub_queue:  'bool'
+    topic_name:       'str'
+    cluster_id:       'int'
+    delivery_count:   'int'
+    pub_time_iso:     'str'
+    ext_pub_time_iso: 'str'
+    expiration_time_iso: 'str'
+
+    reply_to_sk:   'strlist'
+    deliver_to_sk: 'strlist'
+    user_ctx:      'any_'
+    zato_ctx:      'any_'
+    serialized:    'any_'
+    opaque1:       'any_'
+
+    def __init__(self) -> 'None':
         self.recv_time = utcnow_as_ms()
-        self.server_name = None
-        self.server_pid = None
+        self.server_name = ''
+        self.server_pid = 0
         self.topic = None
-        self.sub_key = None
-        self.pub_msg_id = None
-        self.pub_correl_id = None
-        self.in_reply_to = None
-        self.ext_client_id = None
-        self.group_id = None
-        self.position_in_group = None
-        self.pub_time = None
-        self.ext_pub_time = None
+        self.sub_key = ''
+        self.pub_msg_id = ''
+        self.pub_correl_id = ''
+        self.in_reply_to = ''
+        self.ext_client_id = ''
+        self.group_id = ''
+        self.position_in_group = -1
+        self.pub_time = 0.0
+        self.ext_pub_time = 0.0
         self.data = ''
         self.data_prefix = ''
         self.data_prefix_short = ''
-        self.mime_type = None
+        self.mime_type = ''
         self.priority = PUBSUB.PRIORITY.DEFAULT
-        self.expiration = None
-        self.expiration_time = None
-        self.has_gd = None
-        self.delivery_status = None
-        self.pub_pattern_matched = None
+        self.expiration = -1
+        self.expiration_time = 0.0
+        self.has_gd = False
+        self.delivery_status = ''
+        self.pub_pattern_matched = {}
         self.sub_pattern_matched = {}
-        self.size = None
-        self.published_by_id = None
-        self.topic_id = None
-        self.is_in_sub_queue = None
-        self.topic_name = None
-        self.cluster_id = None
+        self.size = -1
+        self.published_by_id = 0
+        self.topic_id = 0
+        self.is_in_sub_queue = False
+        self.topic_name = ''
+        self.cluster_id = 0
         self.delivery_count = 0
-        self.pub_time_iso = None
-        self.ext_pub_time_iso = None
-        self.expiration_time_iso = None
+        self.pub_time_iso = ''
+        self.ext_pub_time_iso = ''
+        self.expiration_time_iso = ''
         self.reply_to_sk = []
         self.deliver_to_sk = []
         self.user_ctx = None
@@ -174,18 +201,20 @@ class PubSubMessage(object):
         self.serialized = None # May be set by hooks to provide an explicitly serialized output for this message
         setattr(self, GENERIC.ATTR_NAME, None) # To make this class look more like an SQLAlchemy one
 
+# ################################################################################################################################
+
     def to_dict(
         self,
-        skip=None,               # type: strlist
+        skip=None,               # type: strtuple
         needs_utf8_encode=False, # type: bool
         add_id_attrs=False,      # type: bool
-        _data_keys=_data_keys    # type: strlist
+        _data_keys=_data_keys    # type: strtuple
         ) -> 'commondict':
         """ Returns a dict representation of self.
         """
 
-        skip = skip or []
-        out = {}
+        skip = skip or ()
+        out = {} # type: stranydict
 
         for key in sorted(PubSubMessage.pub_attrs):
             if key != 'topic' and key not in skip:
@@ -209,13 +238,17 @@ class PubSubMessage(object):
 
         return out
 
+# ################################################################################################################################
+
     # For compatibility with code that already expects dictalchemy objects with their .asdict method
-    def asdict(self):
+    def asdict(self) -> 'commondict':
         out = self.to_dict()
         out[GENERIC.ATTR_NAME] = getattr(self, GENERIC.ATTR_NAME)
         return out
 
-    def to_external_dict(self, skip=skip_to_external, needs_utf8_encode=False):
+# ################################################################################################################################
+
+    def to_external_dict(self, skip:'strtuple'=skip_to_external, needs_utf8_encode:'bool'=False) -> 'commondict':
         """ Returns a dict representation of self ready to be delivered to external systems,
         i.e. without internal attributes on output.
         """
@@ -227,12 +260,14 @@ class PubSubMessage(object):
         return out
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class SkipDelivery(Exception):
     """ Raised to indicate to delivery tasks that a given message should be skipped - but not deleted altogether,
     the delivery will be attempted in the next iteration of the task.
     """
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class HandleNewMessageCtx(object):
@@ -245,9 +280,17 @@ class HandleNewMessageCtx(object):
     sub_key_list:    'strlist'
     non_gd_msg_list: 'anylist'
     is_bg_call:      'bool'
-    pub_time_max:    'float'
+    pub_time_max:    'floatnone'
 
-    def __init__(self, cid, has_gd, sub_key_list, non_gd_msg_list, is_bg_call, pub_time_max=None):
+    def __init__(
+        self,
+        cid,               # type: str
+        has_gd,            # type: bool
+        sub_key_list,      # type: strlist
+        non_gd_msg_list,   # type: anylist
+        is_bg_call,        # type: bool
+        pub_time_max=None  # type: floatnone
+        ) -> 'None':
         self.cid = cid
         self.has_gd = has_gd
         self.sub_key_list = sub_key_list
@@ -256,15 +299,20 @@ class HandleNewMessageCtx(object):
         self.pub_time_max = pub_time_max
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class HookCtx(object):
     """ Data and metadata that pub/sub hooks receive on input to their methods.
     """
     __slots__ = ('msg', 'response', 'soap_suds_client')
 
-    def __init__(self, msg, soap_suds_client=None):
+    msg: 'any_'
+    soap_suds_client: 'optional[SudsSOAPWrapper]'
+    response: 'any_'
+
+    def __init__(self, msg:'any_', soap_suds_client:'SudsSOAPWrapper'=None) -> 'None':
         self.msg = msg
-        self.soap_suds_client
+        self.soap_suds_client = soap_suds_client
         self.response = None
 
 # ################################################################################################################################
@@ -294,8 +342,11 @@ class dict_keys:
     sks = 'sub_key', 'cluster_id', 'server_name', 'server_pid', 'endpoint_type', 'channel_name', 'pub_client_id', \
         'ext_client_id', 'wsx_info', 'creation_time', 'endpoint_id'
 
-_all_combined = dict_keys.endpoint + dict_keys.subscription + dict_keys.topic + dict_keys.sks
-_all_set = set(_all_combined)
-all_dict_keys = list(_all_set)
+# ################################################################################################################################
 
+all_dict_keys = dict_keys.endpoint + dict_keys.subscription + dict_keys.topic + dict_keys.sks
+all_dict_keys = set(all_dict_keys)  # type: ignore[assignment]
+all_dict_keys = list(all_dict_keys) # type: ignore[assignment]
+
+# ################################################################################################################################
 # ################################################################################################################################
