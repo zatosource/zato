@@ -18,10 +18,10 @@ static-check:
 	$(PY_DIR)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
 
 pyright:
-	pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/__init__.py
-	#pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/model.py
+	#pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/__init__.py
+	pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/model.py
 	#pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/task.py
-	#pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/sync.py
+	pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/server/pubsub/sync.py
 
 mypy:
 	$(PY_DIR)/mypy --show-error-codes --ignore-missing-imports $(CURDIR)/src/zato/server/pubsub/__init__.py
