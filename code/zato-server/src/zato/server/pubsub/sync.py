@@ -20,7 +20,7 @@ from future.utils import iteritems, itervalues
 # Zato
 from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
 from zato.common.exception import BadRequest
-from zato.common.typing_ import any_, anydict, anylist, anyset, anytuple, callable_, dictlist, intsetdict, strlist, \
+from zato.common.typing_ import any_, anydict, anylist, anyset, anytuple, callable_, dict_, dictlist, intsetdict, strlist, \
      strdictdict, strset, strsetdict
 from zato.common.util.api import spawn_greenlet
 from zato.common.util.pubsub import make_short_msg_copy_from_dict
@@ -538,7 +538,7 @@ class InRAMSync(object):
                 with self.lock:
 
                     # Local alias
-                    publishers = {}
+                    publishers = {} # type: dict_[int, Endpoint]
 
                     # We keep them separate so as not to modify any objects during iteration.
                     expired_msg = [] # type: anylist
