@@ -25,6 +25,12 @@ from zato.common.json_internal import dumps, loads
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 logger = getLogger('zato')
 
 # ################################################################################################################################
@@ -204,13 +210,13 @@ class ServerStartupIPC(SharedMemoryIPC):
     """
     key_name = '/pubsub/pid'
 
-    def create(self, deployment_key, size, needs_create=True):
+    def create(self, deployment_key:'str', size:int, needs_create:'bool'=True) -> 'None':
         super(ServerStartupIPC, self).create('server-{}'.format(deployment_key), size, needs_create)
 
-    def set_pubsub_pid(self, pid):
+    def set_pubsub_pid(self, pid:'int') -> 'None':
         self.set_key(self.key_name, 'current', pid)
 
-    def get_pubsub_pid(self, timeout=60):
+    def get_pubsub_pid(self, timeout:'int'=60) -> 'any_':
         return self.get_key(self.key_name, 'current', timeout)
 
 # ################################################################################################################################

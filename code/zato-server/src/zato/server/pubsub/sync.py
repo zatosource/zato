@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -22,6 +20,8 @@ from future.utils import iteritems, itervalues
 # Zato
 from zato.common.api import DATA_FORMAT, PUBSUB, SEARCH
 from zato.common.exception import BadRequest
+from zato.common.typing_ import any_, anydict, anylist, anyset, anytuple, callable_, dictlist, intsetdict, strlist, \
+     strdictdict, strset, strsetdict
 from zato.common.util.api import spawn_greenlet
 from zato.common.util.pubsub import make_short_msg_copy_from_dict
 from zato.common.util.time_ import utcnow_as_ms
@@ -30,8 +30,7 @@ from zato.common.util.time_ import utcnow_as_ms
 
 if 0:
     from zato.server.pubsub import PubSub
-
-    PubSub = PubSub
+    from zato.server.pubsub.model import Endpoint
 
 # ################################################################################################################################
 
@@ -50,6 +49,10 @@ hook_type_to_method = {
 }
 
 # ################################################################################################################################
+
+_default_pri=PUBSUB.PRIORITY.DEFAULT
+_pri_min=PUBSUB.PRIORITY.MIN
+_pri_max=PUBSUB.PRIORITY.MAX
 
 _service_read_messages_gd = 'zato.pubsub.endpoint.get-endpoint-queue-messages-gd'
 _service_read_messages_non_gd = 'zato.pubsub.endpoint.get-endpoint-queue-messages-non-gd'
@@ -82,7 +85,6 @@ default_sk_server_table_columns = 6, 15, 8, 6, 17, 80
 
 # ################################################################################################################################
 
-_PRIORITY=PUBSUB.PRIORITY
 _JSON=DATA_FORMAT.JSON
 _page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE
 
@@ -91,7 +93,13 @@ class msg:
 
 # ################################################################################################################################
 
-def get_priority(cid, input, _pri_min=_PRIORITY.MIN, _pri_max=_PRIORITY.MAX, _pri_def=_PRIORITY.DEFAULT):
+def get_priority(
+    cid,   # type: str
+    input, # type: anydict
+    _pri_min=_pri_min,    # type: int
+    _pri_max=_pri_max,    # type: int
+    _pri_def=_default_pri # type: int
+    ):
     """ Get and validate message priority.
     """
     priority = input.get('priority')
@@ -105,7 +113,11 @@ def get_priority(cid, input, _pri_min=_PRIORITY.MIN, _pri_max=_PRIORITY.MAX, _pr
 
 # ################################################################################################################################
 
-def get_expiration(cid, input, default_expiration=_default_expiration):
+def get_expiration(
+    cid,   # type: str
+    input, # type: anydict
+    default_expiration=_default_expiration # type: int
+    ):
     """ Get and validate message expiration.
     Returns (2 ** 31 - 1) * 1000 milliseconds (around 70 years) if expiration is not set explicitly.
     """
@@ -122,20 +134,47 @@ class InRAMSync(object):
     and will be ultimately delivered to them. Stores a list of sub_keys and all messages that a sub_key points to.
     It acts as a multi-key dict and keeps only a single copy of message for each sub_key.
     """
-    def __init__(self, pubsub):
-        self.pubsub = pubsub        # type: PubSub
-        self.sub_key_to_msg_id = {} # Sub key  -> Msg ID set --- What messages are available for a given subcriber
-        self.msg_id_to_sub_key = {} # Msg ID   -> Sub key set  - What subscribers are interested in a given message
-        self.msg_id_to_msg = {}     # Msg ID   -> Message data - What is the actual contents of each message
-        self.topic_msg_id = {}      # Topic ID -> Msg ID set --- What messages are available for each topic (no matter sub_key)
+
+    lock: 'RLock'
+    pubsub: 'PubSub'
+
+    msg_id_to_msg:     'strdictdict'
+    topic_id_msg_id:   'intsetdict'
+    sub_key_to_msg_id: 'strsetdict'
+    msg_id_to_sub_key: 'strsetdict'
+
+    def __init__(self, pubsub:'PubSub') -> 'None':
+
         self.lock = RLock()
+        self.pubsub = pubsub
+
+        # Msg ID   -> Message data - What is the actual contents of each message
+        self.msg_id_to_msg = {}
+
+        # Topic ID -> Msg ID set --- What messages are available for each topic (no matter sub_key)
+        self.topic_id_msg_id = {}
+
+        # Sub key  -> Msg ID set --- What messages are available for a given subcriber
+        self.sub_key_to_msg_id = {}
+
+        # Msg ID   -> Sub key set  - What subscribers are interested in a given message
+        self.msg_id_to_sub_key = {}
 
         # Start in background a cleanup task that deletes all expired and removed messages
-        spawn_greenlet(self.run_cleanup_task)
+        _ = spawn_greenlet(self.run_cleanup_task)
 
 # ################################################################################################################################
 
-    def add_messages(self, cid, topic_id, topic_name, max_depth, sub_keys, messages, _default_pri=PUBSUB.PRIORITY.DEFAULT):
+    def add_messages(
+        self,
+        cid,        # type: str
+        topic_id,   # type: int
+        topic_name, # type: str
+        max_depth,  # type: int
+        sub_keys,   # type: strlist
+        messages,   # type: dictlist
+        _default_pri=_default_pri # type: int
+        ):
         """ Adds all input messages to sub_keys for the topic.
         """
         with self.lock:
@@ -143,7 +182,7 @@ class InRAMSync(object):
             # Local aliases
             msg_ids = [msg['pub_msg_id'] for msg in messages]
             len_messages = len(messages)
-            topic_messages = self.topic_msg_id.setdefault(topic_id, set())
+            topic_messages = self.topic_id_msg_id.setdefault(topic_id, set())
 
             # Try to append the messages for each of their subscribers ..
             for sub_key in sub_keys:
@@ -187,7 +226,13 @@ class InRAMSync(object):
 
 # ################################################################################################################################
 
-    def update_msg(self, msg, _update_attrs=_update_attrs, _warn='No such message in sync backlog `%s`'):
+    def update_msg(
+        self,
+        msg, # type: anydict
+        _update_attrs=_update_attrs,                 # type: anytuple
+        _warn='No such message in sync backlog `%s`' # type: str
+        ) -> 'bool':
+
         with self.lock:
             _msg = self.msg_id_to_msg.get(msg['msg_id'])
             if not _msg:
@@ -203,14 +248,14 @@ class InRAMSync(object):
 
 # ################################################################################################################################
 
-    def delete_msg_by_id(self, msg_id):
+    def delete_msg_by_id(self, msg_id:'str') -> 'None':
         """ Deletes a message by its ID.
         """
-        return self.delete_messages([msg_id])
+        self.delete_messages([msg_id])
 
 # ################################################################################################################################
 
-    def _delete_messages(self, msg_list):
+    def _delete_messages(self, msg_list:'strlist') -> 'None':
         """ Low-level implementation of self.delete_messages - must be called with self.lock held.
         """
         logger.info('Deleting non-GD messages `%s`', msg_list)
@@ -223,9 +268,9 @@ class InRAMSync(object):
             _has_topic_msg = False # Was the ID found for at least one topic
             _has_sk_msg = False     # Ditto but for sub_keys
 
-            for _topic_msg_set in itervalues(self.topic_msg_id):
+            for _topic_msg_set in itervalues(self.topic_id_msg_id):
                 try:
-                    _topic_msg_set.remove(msg_id)
+                    _ = _topic_msg_set.remove(msg_id)
                 except KeyError:
                     pass # This is fine, msg_id did not belong to this topic
                 else:
@@ -233,7 +278,7 @@ class InRAMSync(object):
 
             for _sk_msg_set in itervalues(self.sub_key_to_msg_id):
                 try:
-                    _sk_msg_set.remove(msg_id)
+                    _ = _sk_msg_set.remove(msg_id)
                 except KeyError:
                     pass # This is fine, msg_id did not belong to this topic
                 else:
@@ -257,7 +302,7 @@ class InRAMSync(object):
 
 # ################################################################################################################################
 
-    def delete_messages(self, msg_list):
+    def delete_messages(self, msg_list:'strlist') -> 'None':
         """ Deletes all messages from input msg_list.
         """
         with self.lock:
@@ -265,33 +310,55 @@ class InRAMSync(object):
 
 # ################################################################################################################################
 
-    def has_messages_by_sub_key(self, sub_key):
+    def has_messages_by_sub_key(self, sub_key:'str') -> 'bool':
         with self.lock:
-            return len(self.sub_key_to_msg_id.get(sub_key, [])) > 0
+            msg_id_set = self.sub_key_to_msg_id.get(sub_key) or set()
+            return len(msg_id_set) > 0
 
 # ################################################################################################################################
 
-    def clear_topic(self, topic_id):
+    def clear_topic(self, topic_id:'int') -> 'None':
         logger.info('Clearing topic `%s` (id:%s)', self.pubsub.get_topic_by_id(topic_id).name, topic_id)
 
         with self.lock:
+
             # Not all servers will have messages for the topic, hence .get
-            messages = self.topic_msg_id.get(topic_id) or []
+            messages = self.topic_id_msg_id.get(topic_id, set())
+
             if messages:
                 messages = list(messages) # We need a copy so as not to change the input set during iteration later on
-            self._delete_messages(messages)
+                self._delete_messages(messages)
+            else:
+                logger.info(
+                    'Did not find any non-GD messages to delete for topic `%s`',
+                    self.pubsub.get_topic_by_id(topic_id))
 
 # ################################################################################################################################
 
-    def _get_delete_messages_by_sub_keys(self, topic_id, sub_keys, delete_msg=True, delete_sub=False):
+    def _get_delete_messages_by_sub_keys(
+        self,
+        topic_id, # type: int
+        sub_keys, # type: strlist
+        delete_msg=True, # type: bool
+        delete_sub=False # type: bool
+        ) -> 'dictlist':
         """ Low-level implementation of retrieve_messages_by_sub_keys which must be called with self.lock held.
         """
-        now = utcnow_as_ms() # We cannot return expired messages
-        msg_seen = set() # We cannot have duplicates on output
-        out = []
+
+        # Forward declaration
+        msg_id: 'str'
+
+        # We cannot return expired messages
+        now = utcnow_as_ms()
+
+        # We cannot have duplicates on output
+        msg_seen = set() # type: strset
+
+        # Response to product
+        out = [] # type: dictlist
 
         # A list of messages that will be optionally deleted before they are returned
-        to_delete_msg = set()
+        to_delete_msg = set() # type: anyset
 
         # First, collect data for all sub_keys ..
         for sub_key in sub_keys:
@@ -325,14 +392,14 @@ class InRAMSync(object):
         for msg_id in to_delete_msg:
 
             # .. first, direct mappings ..
-            self.msg_id_to_msg.pop(msg_id, None)
+            _ = self.msg_id_to_msg.pop(msg_id, None)
 
             logger.info('Deleting msg from mapping dict `%s`, before:`%s`', msg_id, self.msg_id_to_msg)
 
             # .. now, remove the message from topic ..
-            self.topic_msg_id[topic_id].remove(msg_id)
+            self.topic_id_msg_id[topic_id].remove(msg_id)
 
-            logger.info('Deleting msg from mapping topic `%s`, after:`%s`', msg_id, self.topic_msg_id)
+            logger.info('Deleting msg from mapping topic `%s`, after:`%s`', msg_id, self.topic_id_msg_id)
 
             # .. now, find the message for each sub_key ..
             for sub_key in sub_keys:
@@ -361,7 +428,7 @@ class InRAMSync(object):
 
 # ################################################################################################################################
 
-    def retrieve_messages_by_sub_keys(self, topic_id, sub_keys):
+    def retrieve_messages_by_sub_keys(self, topic_id:'int', sub_keys:'strlist') -> 'dictlist':
         """ Retrieves and returns all messages matching input - messages are deleted from RAM.
         """
         with self.lock:
@@ -369,17 +436,26 @@ class InRAMSync(object):
 
 # ################################################################################################################################
 
-    def get_messages_by_topic_id(self, topic_id, needs_short_copy, query=None):
+    def get_messages_by_topic_id(
+        self,
+        topic_id,         # type: int
+        needs_short_copy, # type: bool
+        query=''          # type: str
+        ) -> 'anylist':
         """ Returns messages for topic by its ID, optionally with pagination and filtering by input query.
         """
+
+        # Forward declaration
+        msg_id: 'str'
+
         with self.lock:
-            msg_id_list = self.topic_msg_id.get(topic_id, [])
+            msg_id_list = self.topic_id_msg_id.get(topic_id, [])
             if not msg_id_list:
                 return []
 
             # A list of messages to be returned - we actually need to build a whole list instead of using
             # generators because the underlying container is an unsorted set and we need a sorted result on output.
-            msg_list = []
+            msg_list = [] # type: dictlist
 
             for msg_id in msg_id_list:
                 msg = self.msg_id_to_msg[msg_id]
@@ -398,15 +474,26 @@ class InRAMSync(object):
 
 # ################################################################################################################################
 
-    def get_message_by_id(self, msg_id):
+    def get_message_by_id(self, msg_id:'str') -> 'anydict':
         with self.lock:
             return self.msg_id_to_msg[msg_id]
 
 # ################################################################################################################################
 
-    def unsubscribe(self, topic_id, topic_name, sub_keys, pattern='Removing subscription info for `%s` from topic `%s`'):
+    def unsubscribe(
+        self,
+        topic_id,   # type: int
+        topic_name, # type: str
+        sub_keys,   # type: strlist
+        pattern='Removing subscription info for `%s` from topic `%s`' # type: str
+        ) -> 'None':
         """ Unsubscribes all the sub_keys from the input topic.
         """
+
+        # Forward declarations
+        msg_id:  'str'
+        sub_key: 'str'
+
         # Always acquire a lock for this kind of operation
         with self.lock:
 
@@ -429,7 +516,7 @@ class InRAMSync(object):
                     # in which case we may deleted references to this message from other look-up structures.
                     if not current_subs:
                         del self.msg_id_to_msg[msg_id]
-                        topic_msg = self.topic_msg_id[topic_id]
+                        topic_msg = self.topic_id_msg_id[topic_id]
                         topic_msg.remove(msg_id)
 
         logger.info(pattern, sub_keys, topic_name)
@@ -437,9 +524,15 @@ class InRAMSync(object):
 
 # ################################################################################################################################
 
-    def run_cleanup_task(self, _utcnow=utcnow_as_ms, _sleep=sleep):
+    def run_cleanup_task(self, _utcnow:'callable_'=utcnow_as_ms, _sleep:'callable_'=sleep) -> 'None':
         """ A background task waking up periodically to remove all expired and retrieved messages from backlog.
         """
+
+        # Forward declarations
+        msg_id:   'str'
+        sub_key:  'str'
+        topic_id: 'int'
+
         while True:
             try:
                 with self.lock:
@@ -448,12 +541,12 @@ class InRAMSync(object):
                     publishers = {}
 
                     # We keep them separate so as not to modify any objects during iteration.
-                    expired_msg = []
+                    expired_msg = [] # type: anylist
 
                     # Calling it once will suffice.
                     now = _utcnow()
 
-                    for _ignored_msg_id, msg in iteritems(self.msg_id_to_msg):
+                    for _, msg in iteritems(self.msg_id_to_msg):
 
                         if now >= msg['expiration_time']:
 
@@ -463,7 +556,7 @@ class InRAMSync(object):
                                 publishers[msg['published_by_id']] = self.pubsub.get_endpoint_by_id(msg['published_by_id'])
 
                             # We can be sure that it is always found
-                            publisher = publishers[msg['published_by_id']]
+                            publisher = publishers[msg['published_by_id']] # type: Endpoint
 
                             # Log the message to make sure the expiration event is always logged ..
                             logger_zato.info('Found an expired msg:`%s`, topic:`%s`, publisher:`%s`, pub_time:`%s`, exp:`%s`',
@@ -481,11 +574,11 @@ class InRAMSync(object):
                         # Get all sub_keys waiting for these messages and delete the message from each one,
                         # but note that there may be possibly no subscribers at all if the message was published
                         # to a topic without any subscribers.
-                        for sub_key in self.msg_id_to_sub_key.pop(msg_id):
+                        for sub_key in self.msg_id_to_sub_key.pop(msg_id): # type: ignore[no-redef]
                             self.sub_key_to_msg_id[sub_key].remove(msg_id)
 
                         # Remove all references to the message from topic
-                        self.topic_msg_id[topic_id].remove(msg_id)
+                        self.topic_id_msg_id[topic_id].remove(msg_id)
 
                         # And finally, remove the message's contents
                         del self.msg_id_to_msg[msg_id]
@@ -507,7 +600,14 @@ class InRAMSync(object):
 
 # ################################################################################################################################
 
-    def log_messages_to_store(self, cid, topic_name, max_depth, sub_key, messages):
+    def log_messages_to_store(
+        self,
+        cid,        # type: str
+        topic_name, # type: str
+        max_depth,  # type: int
+        sub_key,    # type: str
+        messages    # type: any_
+        ) -> 'None':
         # Used by both loggers
         msg = 'Reached max in-RAM delivery depth of %r for topic `%r` (cid:%r). Extra messages will be stored in logs.'
         args = (max_depth, topic_name, cid)
@@ -521,12 +621,11 @@ class InRAMSync(object):
 
 # ################################################################################################################################
 
-    def get_topic_depth(self, topic_id, _default=None):
+    def get_topic_depth(self, topic_id:'int') -> 'int':
         """ Returns depth of a given in-RAM queue for the topic.
         """
-        _default = _default or set()
         with self.lock:
-            return len(self.topic_msg_id.get(topic_id, _default))
+            return len(self.topic_id_msg_id.get(topic_id, set()))
 
 # ################################################################################################################################
 # ################################################################################################################################
