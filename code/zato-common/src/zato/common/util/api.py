@@ -115,6 +115,7 @@ from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_req
 if 0:
     from typing import Iterable as iterable
     from simdjson import Parser as SIMDJSONParser
+    from zato.common.typing_ import callable_
 
     iterable = iterable
     SIMDJSONParser = SIMDJSONParser
@@ -324,7 +325,7 @@ def tech_account_password(password_clear, salt):
 
 # ################################################################################################################################
 
-def new_cid(bytes=12, _random=random.getrandbits):
+def new_cid(bytes:'int'=12, _random:'callable_'=random.getrandbits) -> 'str':
     """ Returns a new 96-bit correlation identifier. It is *not* safe to use the ID
     for any cryptographical purposes; it is only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.

@@ -335,7 +335,7 @@ class InRAMSync(object):
 
 # ################################################################################################################################
 
-    def _get_delete_messages_by_sub_keys(
+    def get_delete_messages_by_sub_keys(
         self,
         topic_id, # type: int
         sub_keys, # type: strlist
@@ -432,7 +432,7 @@ class InRAMSync(object):
         """ Retrieves and returns all messages matching input - messages are deleted from RAM.
         """
         with self.lock:
-            return self._get_delete_messages_by_sub_keys(topic_id, sub_keys)
+            return self.get_delete_messages_by_sub_keys(topic_id, sub_keys)
 
 # ################################################################################################################################
 
