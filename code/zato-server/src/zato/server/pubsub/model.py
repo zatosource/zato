@@ -155,7 +155,7 @@ class ToDictBase(object):
     config:'anydict'
 
     def to_dict(self) -> 'anydict':
-        out = {}
+        out = {} # type: anydict
 
         for name in self._to_dict_keys: # type: ignore
             name = cast_('str', name)
@@ -251,7 +251,7 @@ class Endpoint(ToDictBase):
                     is_pub = line.startswith('pub=') # type: bool
 
                     matcher = line[line.find('=')+1:]
-                    matcher = globre_compile(matcher)
+                    matcher = globre_compile(matcher) # type: ignore
 
                     source = (is_pub, is_topic)
                     target = targets[source] # type: anylist
