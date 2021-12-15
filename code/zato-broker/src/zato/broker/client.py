@@ -67,7 +67,7 @@ class BrokerClient(object):
     """ Simulates previous Redis-based RPC.
     """
     def __init__(self, server_rpc=None, scheduler_config=None, zato_client=None):
-        # type: (ServerRPC, Bunch) -> None
+        # type: (ServerRPC, Bunch, object) -> None
 
         # This is used to invoke services
         self.server_rpc = server_rpc

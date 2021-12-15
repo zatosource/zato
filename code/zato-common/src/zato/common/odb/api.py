@@ -53,6 +53,7 @@ from zato.sso.odb.query import get_rate_limiting_info as get_sso_user_rate_limit
 
 if 0:
     from sqlalchemy.orm import Session
+    from zato.common.typing_ import commondict
     from zato.server.base.parallel import ParallelServer
 
     ParallelServer = ParallelServer
@@ -123,7 +124,7 @@ class SQLRow(object):
 
 # ################################################################################################################################
 
-    def get_value(self) -> dict:
+    def get_value(self) -> 'commondict':
         return self._elem._asdict()
 
 # For backward compatibility
