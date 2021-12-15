@@ -115,7 +115,7 @@ from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_req
 if 0:
     from typing import Iterable as iterable
     from simdjson import Parser as SIMDJSONParser
-    from zato.common.typing_ import callable_
+    from zato.common.typing_ import any_, callable_
 
     iterable = iterable
     SIMDJSONParser = SIMDJSONParser
@@ -676,7 +676,7 @@ def multikeysort(items, columns):
 # ################################################################################################################################
 
 # From http://docs.python.org/release/2.7/library/itertools.html#recipes
-def grouper(n, iterable, fillvalue=None):
+def grouper(n, iterable, fillvalue=None) -> 'any_':
     """ grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx
     """
     args = [iter(iterable)] * n
