@@ -29,7 +29,7 @@ from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
     from zato.server.pubsub.task import PubSubTool
 
     PubSubTool = PubSubTool

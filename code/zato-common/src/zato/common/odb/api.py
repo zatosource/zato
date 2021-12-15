@@ -51,12 +51,11 @@ from zato.sso.odb.query import get_rate_limiting_info as get_sso_user_rate_limit
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
     from sqlalchemy.orm import Session
     from zato.common.typing_ import commondict
     from zato.server.base.parallel import ParallelServer
 
-    ParallelServer = ParallelServer
     Session = Session
 
 # ################################################################################################################################

@@ -42,7 +42,7 @@ from zato.server.pubsub.sync import InRAMSync
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
     from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, callnone, commondict, dictlist, intdict, \
         intanydict, intlist, intnone, intset, list_, stranydict, strintdict, strintnone, strstrdict, strlist, strlistdict, \
         strlistempty, strtuple, type_

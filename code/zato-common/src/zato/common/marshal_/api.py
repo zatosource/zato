@@ -30,7 +30,7 @@ from zato.common.ext.dataclasses import asdict, _FIELDS, MISSING, _PARAMS
 # ################################################################################################################################
 # ################################################################################################################################
 
-if 0:
+if _ := False:
     from dataclasses import Field
     from zato.server.service import Service
 

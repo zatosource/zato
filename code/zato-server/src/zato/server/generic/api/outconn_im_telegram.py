@@ -26,7 +26,7 @@ from zato.server.connection.wrapper import Wrapper
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
     from requests import Response
 
     Response = Response

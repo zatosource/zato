@@ -13,7 +13,7 @@ from zato.common.exception import ConnectorClosedException, IBMMQException
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
     from zato.server.service import Service
 
     Service = Service

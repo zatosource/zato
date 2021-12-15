@@ -18,7 +18,7 @@ from zato.sso.common import SSOCtx
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
     from zato.common.crypto.totp_ import TOTPManager
     from zato.common.sso import TestConfig
 

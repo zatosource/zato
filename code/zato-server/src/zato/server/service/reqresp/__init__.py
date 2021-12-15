@@ -30,7 +30,7 @@ from zato.simpleio import ServiceInput
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
 
     # stdlib
     from logging import Logger

@@ -30,7 +30,7 @@ from zato.scheduler.api import SchedulerAPI
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
     from zato.client import AnyServiceInvoker
     AnyServiceInvoker = AnyServiceInvoker
 

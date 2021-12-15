@@ -112,7 +112,7 @@ from zato.hl7.parser import get_payload_from_request as hl7_get_payload_from_req
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
     from typing import Iterable as iterable
     from simdjson import Parser as SIMDJSONParser
     from zato.common.typing_ import any_, callable_

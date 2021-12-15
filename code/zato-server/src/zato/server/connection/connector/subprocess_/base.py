@@ -42,7 +42,7 @@ from zato.common.util.posix_ipc_ import ConnectorConfigIPC
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
     from bunch import Bunch
     from logging import Logger
 

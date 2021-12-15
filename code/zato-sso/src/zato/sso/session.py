@@ -33,7 +33,7 @@ from zato.sso.util import new_user_session_token, set_password, UserChecker, val
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
 
     # stdlib
     from typing import Callable

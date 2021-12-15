@@ -33,7 +33,7 @@ from zato.server.service.internal import AdminSIO, GetListAdminSIO
 # ################################################################################################################################
 
 # Type checking
-if 0:
+if _ := False:
     from zato.server.service import Service
 
     # For pyflakes

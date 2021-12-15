@@ -28,7 +28,7 @@ from zato.common.util.proc import start_python_process
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
 
     # requests
     from requests import Response

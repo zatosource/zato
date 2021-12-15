@@ -35,7 +35,7 @@ from zato.sso.common import LoginCtx
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
     from typing import Callable
     from zato.common.odb.model import SSOUser
 

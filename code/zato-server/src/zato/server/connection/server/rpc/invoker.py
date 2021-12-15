@@ -24,7 +24,7 @@ from zato.common.typing_ import from_dict
 # ################################################################################################################################
 # ################################################################################################################################
 
-if 0:
+if _ := False:
     from requests import Response
     from typing import Callable
     from zato.client import ServiceInvokeResponse
