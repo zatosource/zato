@@ -17,7 +17,7 @@ from zato.common.util.time_ import utcnow_as_ms
 # ################################################################################################################################
 # ################################################################################################################################
 
-if 0:
+if _ := False:
     from zato.common.typing_ import any_, anydict, anylist, callable_, commondict, floatnone, optional, stranydict, \
         strlist, strtuple
     from zato.server.connection.http_soap.outgoing import SudsSOAPWrapper

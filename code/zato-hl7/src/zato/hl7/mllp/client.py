@@ -17,7 +17,7 @@ from zato.common.util.tcp import parse_address, read_from_socket, SocketReaderCt
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
     from bunch import Bunch
 
     Bunch = Bunch

@@ -38,7 +38,7 @@ from zato.server.file_transfer.snapshot import FTPSnapshotMaker, LocalSnapshotMa
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
     from bunch import Bunch
     from requests import Response
     from zato.server.base.parallel import ParallelServer
