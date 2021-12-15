@@ -361,7 +361,7 @@ class LockManager:
 
     # pylint: disable-next=inconsistent-return-statements
     def __call__(self, name, namespace='', ttl=DEFAULT.TTL, block=DEFAULT.BLOCK, block_interval=DEFAULT.BLOCK_INTERVAL,
-            max_len_ns=MAX.LEN_NS, max_len_name=MAX.LEN_NAME, max_chars=31):
+            max_len_ns=MAX.LEN_NS, max_len_name=MAX.LEN_NAME, max_chars=31) -> 'Lock':
 
         try:
             if len(namespace) > max_len_ns:
