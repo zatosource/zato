@@ -280,22 +280,22 @@ pubsub_main_data = 'cluster_id', 'server_name', 'server_pid', 'server_api_addres
 # ################################################################################################################################
 
 class dict_keys:
-    endpoint = ['id', 'name', 'endpoint_type', 'role', 'is_active', 'is_internal', 'topic_patterns', \
-        'pub_topic_patterns', 'sub_topic_patterns']
+    endpoint = 'id', 'name', 'endpoint_type', 'role', 'is_active', 'is_internal', 'topic_patterns', \
+        'pub_topic_patterns', 'sub_topic_patterns'
 
-    subscription = ['id', 'creation_time', 'sub_key', 'endpoint_id', 'endpoint_name', 'topic_id', 'topic_name', \
-        'sub_pattern_matched', 'task_delivery_interval', 'unsub_on_wsx_close', 'ext_client_id']
+    subscription = 'id', 'creation_time', 'sub_key', 'endpoint_id', 'endpoint_name', 'topic_id', 'topic_name', \
+        'sub_pattern_matched', 'task_delivery_interval', 'unsub_on_wsx_close', 'ext_client_id'
 
-    topic = ['id', 'name', 'is_active', 'is_internal', 'max_depth_gd', 'max_depth_non_gd', 'has_gd', 'depth_check_freq',\
+    topic = 'id', 'name', 'is_active', 'is_internal', 'max_depth_gd', 'max_depth_non_gd', 'has_gd', 'depth_check_freq',\
         'pub_buffer_size_gd', 'task_delivery_interval', 'meta_store_frequency', 'task_sync_interval', 'msg_pub_counter', \
         'msg_pub_counter_gd', 'msg_pub_counter_non_gd', 'last_synced', 'sync_has_gd_msg', 'sync_has_non_gd_msg', \
-        'gd_pub_time_max']
+        'gd_pub_time_max'
 
-    sks = ['sub_key', 'cluster_id', 'server_name', 'server_pid', 'endpoint_type', 'channel_name', 'pub_client_id', \
-        'ext_client_id', 'wsx_info', 'creation_time', 'endpoint_id']
+    sks = 'sub_key', 'cluster_id', 'server_name', 'server_pid', 'endpoint_type', 'channel_name', 'pub_client_id', \
+        'ext_client_id', 'wsx_info', 'creation_time', 'endpoint_id'
 
-_all_dict_keys1 = dict_keys.endpoint + dict_keys.subscription + dict_keys.topic + dict_keys.sks
-_all_dict_keys2 = set(_all_dict_keys1)
-all_dict_keys = list(_all_dict_keys2)
+_all_combined = dict_keys.endpoint + dict_keys.subscription + dict_keys.topic + dict_keys.sks
+_all_set = set(_all_combined)
+all_dict_keys = list(_all_set)
 
 # ################################################################################################################################
