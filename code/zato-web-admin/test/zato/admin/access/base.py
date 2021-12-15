@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import os
-from http.client import FOUND, MOVED_PERMANENTLY, OK
+from http.client import FOUND, MOVED_PERMANENTLY, NOT_MODIFIED, OK
 from unittest import TestCase
 
 # Bunch
@@ -41,7 +41,7 @@ class Config:
     web_admin_location = os.path.expanduser('~/env/web-admin.test/web-admin')
     web_admin_address  = 'http://localhost:8183'
 
-    status_ok = {FOUND, MOVED_PERMANENTLY, OK}
+    status_ok = {FOUND, MOVED_PERMANENTLY, NOT_MODIFIED, OK}
     to_skip_status = {
         '/favicon.ico'
     }
