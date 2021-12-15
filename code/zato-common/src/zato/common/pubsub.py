@@ -18,7 +18,7 @@ from zato.common.util.time_ import utcnow_as_ms
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, callable_, commondict, floatnone, optional, stranydict, \
+    from zato.common.typing_ import any_, anydict, anylist, callable_, commondict, floatnone, optional, stranydict, \
         strlist, strtuple
     from zato.server.connection.http_soap.outgoing import SudsSOAPWrapper
     from zato.server.pubsub.model import Topic
@@ -155,7 +155,7 @@ class PubSubMessage(object):
     reply_to_sk:   'strlist'
     deliver_to_sk: 'strlist'
     user_ctx:      'any_'
-    zato_ctx:      'any_'
+    zato_ctx:      'anydict'
     serialized:    'any_'
     opaque1:       'any_'
 
@@ -197,7 +197,7 @@ class PubSubMessage(object):
         self.reply_to_sk = []
         self.deliver_to_sk = []
         self.user_ctx = None
-        self.zato_ctx = None
+        self.zato_ctx = {}
         self.serialized = None # May be set by hooks to provide an explicitly serialized output for this message
         setattr(self, GENERIC.ATTR_NAME, None) # To make this class look more like an SQLAlchemy one
 
@@ -280,7 +280,7 @@ class HandleNewMessageCtx(object):
     sub_key_list:    'strlist'
     non_gd_msg_list: 'anylist'
     is_bg_call:      'bool'
-    pub_time_max:    'floatnone'
+    pub_time_max:    'float'
 
     def __init__(
         self,
@@ -289,7 +289,7 @@ class HandleNewMessageCtx(object):
         sub_key_list,      # type: strlist
         non_gd_msg_list,   # type: anylist
         is_bg_call,        # type: bool
-        pub_time_max=None  # type: floatnone
+        pub_time_max=0.0   # type: float
         ) -> 'None':
         self.cid = cid
         self.has_gd = has_gd

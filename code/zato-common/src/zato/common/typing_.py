@@ -85,6 +85,7 @@ anydict      = dict_[any_, any_]
 anylist      = list_[any_]
 anyset       = set_[any_]
 anytuple     = tuple_[any_, ...]
+boolnone     = optional[bool]
 callable_    = callable_[..., any_]
 callnone     = optional[callable_]
 cast_        = cast_
