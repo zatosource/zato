@@ -30,7 +30,7 @@ from zato.server.connection.connector.subprocess_.impl.events.database import Ev
 # ################################################################################################################################
 # ################################################################################################################################
 
-if 0:
+if _ := False:
     from pandas import DataFrame
     from pandas.core.groupby.generic import SeriesGroupBy
 

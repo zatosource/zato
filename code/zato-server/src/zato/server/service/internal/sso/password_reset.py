@@ -15,7 +15,7 @@ from zato.server.service.internal.sso import BaseRESTService, BaseSIO
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
     from zato.sso.common import SSOCtx
 
     SSOCtx = SSOCtx

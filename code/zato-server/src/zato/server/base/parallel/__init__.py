@@ -75,7 +75,7 @@ from past.builtins import unicode
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
 
     # Zato
     from zato.common.crypto.api import ServerCryptoManager

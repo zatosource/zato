@@ -14,7 +14,7 @@ from zato.server.base.worker.common import WorkerImpl
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
     from zato.server.pubsub import PubSub
     PubSub = PubSub
 

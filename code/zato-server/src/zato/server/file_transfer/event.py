@@ -15,7 +15,7 @@ from traceback import format_exc
 # Zato
 from zato.common.util.api import hot_deploy, spawn_greenlet
 
-if 0:
+if _ := False:
     from bunch import Bunch
 
     from zato.server.file_transfer.api import FileTransferAPI

@@ -27,7 +27,7 @@ from zato.server.connection.connector.subprocess_.base import BaseConnectionCont
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
     from bunch import Bunch
 
     Bunch = Bunch

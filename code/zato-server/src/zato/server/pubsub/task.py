@@ -37,7 +37,7 @@ from zato.server.pubsub.model import DeliveryResultCtx
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
     from collections.abc import ValuesView
     from sqlalchemy.orm import Session
     from zato.common.pubsub import HandleNewMessageCtx

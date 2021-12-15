@@ -15,7 +15,7 @@ from traceback import format_exc
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
     from bunch import Bunch
 
     Bunch = Bunch

@@ -29,7 +29,7 @@ from future.utils import iterkeys
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
 
     # stdlib
     from typing import Callable

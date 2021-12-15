@@ -16,7 +16,7 @@ from .base import BaseObserver
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
     from zato.server.file_transfer.event import FileTransferEvent
     from zato.server.file_transfer.snapshot import BaseRemoteSnapshotMaker
 

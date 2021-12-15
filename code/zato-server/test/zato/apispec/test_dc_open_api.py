@@ -27,7 +27,7 @@ from zato.server.apispec.openapi import OpenAPIGenerator
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
     from bunch import Bunch
 
     Bunch = Bunch

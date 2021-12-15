@@ -28,7 +28,7 @@ from zato.common.util.time_ import utcnow_as_ms
 
 # ################################################################################################################################
 
-if 0:
+if _ := False:
     from zato.server.pubsub import PubSub
     from zato.server.pubsub.model import Endpoint
 

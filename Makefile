@@ -44,6 +44,9 @@ type-check:
 	cd $(CURDIR)/code/zato-server && $(MAKE) type-check
 	echo "Type checks OK"
 
+vulture:
+	#cd $(CURDIR) && $(CURDIR)/code/bin/vulture $(CURDIR)/code/zato-*
+
 web-admin-tests:
 	cd $(CURDIR)/code/zato-web-admin && make run-tests
 
@@ -53,10 +56,11 @@ install-qa-reqs:
 
 run-tests:
 	$(MAKE) install-qa-reqs
+	$(MAKE) vulture
+	$(MAKE) static-check
+	$(MAKE) type-check
 	$(MAKE) common-tests
-	$(MAKE) cy-tests
 	$(MAKE) server-tests
 	$(MAKE) sso-tests
 	$(MAKE) web-admin-tests
-	$(MAKE) static-check
-	$(MAKE) type-check
+	$(MAKE) cy-tests
