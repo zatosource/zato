@@ -82,9 +82,9 @@ def instance_from_dict(class_, data):
 # ################################################################################################################################
 
 anydict      = dict_[any_, any_]
-anylist     = list_[any_]
+anylist      = list_[any_]
 anytuple     = tuple_[any_, ...]
-callable_     = callable_
+callable_    = callable_
 callnone     = optional[callable_]
 cast_        = cast_
 dictlist     = list_[anydict]
