@@ -146,6 +146,7 @@ stevedore==3.5.0
 texttable==1.6.1
 twilio==6.50.1
 typing==3.5.3.0
+typing-extensions==4.0.1
 typing-utils==0.1.0
 tzlocal==2.1
 ujson==3.2.0
