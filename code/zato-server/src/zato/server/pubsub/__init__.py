@@ -44,8 +44,8 @@ from zato.server.pubsub.sync import InRAMSync
 
 if 0:
     from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, callnone, commondict, dictlist, intdict, \
-        intanydict, intlist, intnone, list_, stranydict, strintdict, strintnone, strstrdict, strlist, strlistdict, \
-        strlistempty, strset, strtuple, type_
+        intanydict, intlist, intnone, intset, list_, stranydict, strintdict, strintnone, strstrdict, strlist, strlistdict, \
+        strlistempty, strtuple, type_
     from zato.distlock import Lock
     from zato.server.connection.web_socket import WebSocket
     from zato.server.base.parallel import ParallelServer
@@ -1276,7 +1276,7 @@ class PubSub(object):
         sub_key_list, # type: strlist
         last_sql_run, # type: float
         pub_time_max, # type: float
-        ignore_list   # type: strset
+        ignore_list   # type: intset
         ) -> 'anytuple':
         """ Returns all SQL messages queued up for all keys from sub_key_list.
         """

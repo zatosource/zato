@@ -14,3 +14,14 @@ run-tests:
 static-check:
 	echo "Running static checks in zato-common"
 	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
+
+pyright:
+	pyright -p $(CURDIR)/../pyproject.toml $(CURDIR)/src/zato/common/pubsub.py
+
+mypy:
+	$(PY_DIR)/mypy --show-error-codes --ignore-missing-imports $(CURDIR)/src/zato/common/pubsub.py
+
+type-check:
+	echo "Running type checks (zato-common)"
+	$(MAKE) mypy
+	$(MAKE) pyright

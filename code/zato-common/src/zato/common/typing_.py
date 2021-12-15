@@ -96,6 +96,7 @@ intdict      = dict_[int, int]
 intdictdict  = dict_[int, anydict]
 intlist      = list_[int]
 intnone      = optional[int]
+intset       = set_[int]
 intsetdict   = dict_[int, anyset]
 intstrdict   = dict_[int, str]
 noreturn     = noreturn
