@@ -66,7 +66,7 @@ class PerPIDResponse:
 class ServerInvoker:
     """ A base class for local and remote server invocations.
     """
-    def __init__(self, parallel_server:'ParallelServer', cluster_name:'str', server_name:'str'):
+    def __init__(self, parallel_server:'ParallelServer', cluster_name:'str', server_name:'str') -> 'None':
 
         # This parameter is used for local invocations only
         # to have access to self.parallel_server.invoke/.invoke_async/.invoke_all_pids
@@ -75,13 +75,13 @@ class ServerInvoker:
         self.cluster_name = cluster_name
         self.server_name = server_name
 
-    def invoke(self, *args:'any_', **kwargs:'any_'):
+    def invoke(self, *args:'any_', **kwargs:'any_') -> 'any_':
         raise NotImplementedError(self.__class__)
 
-    def invoke_async(self, *args:'any_', **kwargs:'any_'):
+    def invoke_async(self, *args:'any_', **kwargs:'any_') -> 'any_':
         raise NotImplementedError(self.__class__)
 
-    def invoke_all_pids(self, *args:'any_', **kwargs:'any_'):
+    def invoke_all_pids(self, *args:'any_', **kwargs:'any_') -> 'any_':
         # type: () -> ServerInvocationResult
         raise NotImplementedError(self.__class__)
 
