@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Zato
 from zato.cli import ZatoCommand
+from zato.common.util.open_ import open_w
 
 # ################################################################################################################################
 
@@ -115,7 +116,7 @@ class APISpec(ZatoCommand):
                 pass # Must have been already created
             finally:
                 if contents:
-                    f = open(full_file_path, 'w', encoding='utf8')
+                    f = open_w(full_file_path)
                     f.write(contents)
                     f.close()
 

@@ -32,6 +32,7 @@ from texttable import Texttable
 from zato.common.api import INFO_FORMAT, MISC, ZATO_INFO_FILE
 from zato.common.json_internal import dumps as json_dumps, loads as json_loads
 from zato.common.util.api import current_host
+from zato.common.util.open_ import open_r
 
 def format_connections(conns, format):
     """ Formats a list of connections according to the output format.
@@ -68,11 +69,11 @@ def format_connections(conns, format):
 def get_worker_pids(component_path):
     """ Returns PIDs of all workers of a given server, which must be already started.
     """
-    master_proc_pid = int(open(os.path.join(component_path, MISC.PIDFILE), encoding='utf8').read())
+    master_proc_pid = int(open_r(os.path.join(component_path, MISC.PIDFILE)).read())
     return sorted(elem.pid for elem in Process(master_proc_pid).children())
 
 def get_info(component_path, format, _now=datetime.utcnow):
-    component_details = open(os.path.join(component_path, ZATO_INFO_FILE), encoding='utf8').read()
+    component_details = open_r(os.path.join(component_path, ZATO_INFO_FILE)).read()
 
     out = {
         'component_details': component_details,
@@ -93,7 +94,7 @@ def get_info(component_path, format, _now=datetime.utcnow):
 
     master_proc_pid = None
     try:
-        master_proc_pid = int(open(os.path.join(component_path, MISC.PIDFILE), encoding='utf8').read())
+        master_proc_pid = int(open_r(os.path.join(component_path, MISC.PIDFILE)).read())
     except(IOError, ValueError):
         # Ok, no such file or it's empty
         pass

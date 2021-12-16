@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Zato
 from zato.cli import common_totp_opts, ManageCommand
+from zato.common.util.open_ import open_r, open_w
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,7 +30,7 @@ class _WebAdminAuthCommand(ManageCommand):
 
         os.chdir(os.path.abspath(args.path))
         base_dir = os.path.join(self.original_dir, args.path)
-        config = loads(open(os.path.join(base_dir, '.', 'config/repo/web-admin.conf'), encoding='utf8').read())
+        config = loads(open_r(os.path.join(base_dir, '.', 'config/repo/web-admin.conf')).read())
         config['config_dir'] = os.path.abspath(args.path)
         update_globals(config, base_dir)
 
@@ -247,7 +248,7 @@ class SetAdminInvokePassword(_WebAdminAuthCommand):
 
         # Read config in
         config_path = os.path.join(repo_dir, 'web-admin.conf')
-        config_data = open(config_path, encoding='utf8').read()
+        config_data = open_r(config_path).read()
 
         # Encrypted the provided password
         cm = WebAdminCryptoManager(repo_dir=repo_dir)
@@ -263,7 +264,7 @@ class SetAdminInvokePassword(_WebAdminAuthCommand):
 
         # Save config with the updated password
         new_config = '\n'.join(new_config)
-        open(config_path, 'w', encoding='utf8').write(new_config)
+        open_w(config_path).write(new_config)
 
 # ################################################################################################################################
 # ################################################################################################################################

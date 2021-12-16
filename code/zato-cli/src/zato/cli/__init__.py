@@ -8,6 +8,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # ################################################################################################################################
 
+# Zato
+from zato.common.util.open_ import open_r, open_w
+
+# ################################################################################################################################
+
 # Some objects are re-defined here to avoid importing them from zato.common = improves CLI performance.
 class MS_SQL:
     ZATO_DIRECT = 'zato+mssql1'
@@ -425,7 +430,7 @@ class ZatoCommand(object):
                 'created_ts': datetime.utcnow().isoformat(), # noqa
                 'component': component
                 }
-        open(os.path.join(target_dir, ZATO_INFO_FILE), 'w', encoding='utf8').write(dumps(info))
+        open_w(os.path.join(target_dir, ZATO_INFO_FILE)).write(dumps(info))
 
 # ################################################################################################################################
 
@@ -450,7 +455,7 @@ class ZatoCommand(object):
 
         body = '# {} - {}\n{}'.format(now, self._get_user_host(), file_args.getvalue())
 
-        open(file_name, 'w', encoding='utf8').write(body)
+        open_w(file_name).write(body)
         file_args.close()
 
         self.logger.debug('Options saved in file {file_name}'.format(
@@ -680,7 +685,7 @@ class FromConfig(ZatoCommand):
     def execute(self, args):
         """ Runs the command with arguments read from a config file.
         """
-        f = open(args.path, encoding='utf8')
+        f = open_r(args.path)
         for line in f:
             if line.lstrip().startswith('#'):
                 continue
@@ -725,7 +730,7 @@ class CACreateCommand(ZatoCommand):
         import tempfile
 
         now = self._get_now()
-        openssl_template = open(os.path.join(self.target_dir, 'ca-material', 'openssl-template.conf'), encoding='utf8').read()
+        openssl_template = open_r(os.path.join(self.target_dir, 'ca-material', 'openssl-template.conf')).read()
 
         ou_attrs = ('organizational_unit', 'organizational-unit')
         template_args = {}
@@ -810,14 +815,14 @@ class CACreateCommand(ZatoCommand):
         # the public key from the CSR.
 
         split_line = '-----END PUBLIC KEY-----'
-        csr_pub = open(csr_name, encoding='utf8').read()
+        csr_pub = open_r(csr_name).read()
         csr_pub = csr_pub.split(split_line)
 
         pub = csr_pub[0] + split_line
         csr = csr_pub[1].lstrip()
 
-        open(csr_name, 'w', encoding='utf8').write(csr)
-        open(pub_key_name, 'w', encoding='utf8').write(pub)
+        open_w(csr_name).write(csr)
+        open_w(pub_key_name).write(pub)
 
         # Generate the certificate
         cmd = """openssl ca -batch -passin file:{ca_password} -config {config} \
@@ -830,7 +835,7 @@ class CACreateCommand(ZatoCommand):
 
         # Now delete the default certificate stored in '.\', we don't really
         # need it because we have its copy in '.\out-cert' anyway.
-        last_serial = open(os.path.join(self.target_dir, 'ca-material', 'ca-serial.old'), encoding='utf8').read().strip()
+        last_serial = open_r(os.path.join(self.target_dir, 'ca-material', 'ca-serial.old')).read().strip()
         os.remove(os.path.join(self.target_dir, last_serial + '.pem'))
 
         msg = """Crypto material generated and saved in:
@@ -903,7 +908,7 @@ class ManageCommand(ZatoCommand):
             sys.exit(self.SYS_ERROR.NOT_A_ZATO_COMPONENT) # noqa
 
         found = list(found)[0]
-        json_data = load(open(os.path.join(self.component_dir, found), encoding='utf8'))
+        json_data = load(open_r(os.path.join(self.component_dir, found)))
 
         os.chdir(self.component_dir)
 

@@ -12,6 +12,7 @@ import os, uuid
 # Zato
 from zato.cli import is_arg_given, ZatoCommand
 from zato.common.defaults import http_plain_server_port
+from zato.common.util.open_ import open_w
 
 config_template = """{{
   "haproxy_command": "haproxy",
@@ -136,8 +137,8 @@ class Create(ZatoCommand):
 
         logging_conf_contents = get_logging_conf_contents()
 
-        open(os.path.join(repo_dir, 'lb-agent.conf'), 'w', encoding='utf8').write(config) # noqa
-        open(os.path.join(repo_dir, 'logging.conf'), 'w', encoding='utf8').write(logging_conf_contents) # noqa
+        open_w(os.path.join(repo_dir, 'lb-agent.conf')).write(config) # noqa
+        open_w(os.path.join(repo_dir, 'logging.conf')).write(logging_conf_contents) # noqa
 
         if use_default_backend:
             backend = default_backend.format(server01_port=http_plain_server_port, server02_port=server02_port)
@@ -150,8 +151,8 @@ class Create(ZatoCommand):
             default_backend=backend,
             http_503_path=os.path.join(repo_dir, '503.http')) # noqa
 
-        open(os.path.join(repo_dir, 'zato.config'), 'w', encoding='utf8').write(zato_config) # noqa
-        open(os.path.join(repo_dir, '503.http'), 'w', encoding='utf8').write(http_503) # noqa
+        open_w(os.path.join(repo_dir, 'zato.config')).write(zato_config) # noqa
+        open_w(os.path.join(repo_dir, '503.http')).write(http_503) # noqa
 
         self.copy_lb_crypto(repo_dir, args)
 

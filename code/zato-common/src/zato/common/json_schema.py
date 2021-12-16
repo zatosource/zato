@@ -21,6 +21,7 @@ from jsonschema.validators import validator_for
 from zato.common.api import CHANNEL, NotGiven
 from zato.common.json_internal import dumps, loads
 from zato.common.json_rpc import ErrorCtx, JSONRPCBadRequest, ItemResponse
+from zato.common.util.open_ import open_r
 
 # ################################################################################################################################
 
@@ -230,7 +231,7 @@ class Validator(object):
             raise ValidationException('JSON schema not found `{}` ({})'.format(self.config.schema_path, self.config.object_name))
 
         # The file is sure to exist
-        with open(self.config.schema_path, encoding='utf8') as f:
+        with open_r(self.config.schema_path) as f:
             schema = f.read()
 
         # Parse the contents as JSON
