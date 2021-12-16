@@ -115,7 +115,7 @@ class APISpec(ZatoCommand):
                 pass # Must have been already created
             finally:
                 if contents:
-                    f = open(full_file_path, 'w')
+                    f = open(full_file_path, 'w', encoding='utf8')
                     f.write(contents)
                     f.close()
 

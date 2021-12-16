@@ -1,5 +1,5 @@
 mypy
+pylint
 selenium
 selenium-wire
-vulture
 yapf

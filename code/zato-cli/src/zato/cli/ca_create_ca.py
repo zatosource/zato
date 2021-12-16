@@ -105,11 +105,11 @@ class Create(ZatoCommand):
         self.logger.info('Create CA execute')
         # Prepare the directory layout
         os.mkdir(os.path.join(self.target_dir, 'ca-material'))
-        open(os.path.join(self.target_dir, 'ca-material', 'ca-serial'), 'w').write('01')
-        open(os.path.join(self.target_dir, 'ca-material', 'ca-password'), 'w').write(uuid.uuid4().hex)
-        open(os.path.join(self.target_dir, 'ca-material', 'ca-certindex'), 'w')
-        open(os.path.join(self.target_dir, 'ca-material', 'ca-certindex.attr'), 'w').write('unique_subject = no')
-        open(os.path.join(self.target_dir, 'ca-material', 'openssl-template.conf'), 'w').write(openssl_template)
+        open(os.path.join(self.target_dir, 'ca-material', 'ca-serial'), 'w', encoding='utf8').write('01')
+        open(os.path.join(self.target_dir, 'ca-material', 'ca-password'), 'w', encoding='utf8').write(uuid.uuid4().hex)
+        open(os.path.join(self.target_dir, 'ca-material', 'ca-certindex'), 'w', encoding='utf8')
+        open(os.path.join(self.target_dir, 'ca-material', 'ca-certindex.attr'), 'w', encoding='utf8').write('unique_subject = no')
+        open(os.path.join(self.target_dir, 'ca-material', 'openssl-template.conf'), 'w', encoding='utf8').write(openssl_template)
 
         # Create the CA's cert and the private key
 
@@ -166,7 +166,7 @@ class Create(ZatoCommand):
             os.mkdir(os.path.join(self.target_dir, 'out-{}'.format(name)))
 
         # Mark the directory being a Zato CA one.
-        open(os.path.join(self.target_dir, '.zato-ca-dir'), 'w')
+        open(os.path.join(self.target_dir, '.zato-ca-dir'), 'w', encoding='utf8')
 
         # Initial info
         self.store_initial_info(self.target_dir, self.COMPONENTS.CA.code)

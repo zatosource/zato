@@ -13,6 +13,12 @@ run-tests:
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/stats/test_*.py -s
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/test_*.py -s
 
+pylint:
+	echo Running pylint in zato-server
+	$(CURDIR)/../bin/pylint --verbose \
+		--rcfile $(CURDIR)/../pylint.ini \
+				 $(CURDIR)/../zato-server/src/zato/server
+
 static-check:
 	echo "Running static checks in zato-server"
 	$(PY_DIR)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/

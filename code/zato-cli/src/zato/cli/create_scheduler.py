@@ -220,10 +220,10 @@ class Create(ZatoCommand):
 
         logging_conf_contents = get_logging_conf_contents()
 
-        open(os.path.join(repo_dir, 'logging.conf'), 'w').write(logging_conf_contents)
-        open(conf_path, 'w').write(config_template.format(**config))
-        open(startup_jobs_conf_path, 'w').write(startup_jobs)
-        open(sql_conf_path, 'w').write(sql_conf_contents)
+        open(os.path.join(repo_dir, 'logging.conf'), 'w', encoding='utf8').write(logging_conf_contents)
+        open(conf_path, 'w', encoding='utf8').write(config_template.format(**config))
+        open(startup_jobs_conf_path, 'w', encoding='utf8').write(startup_jobs)
+        open(sql_conf_path, 'w', encoding='utf8').write(sql_conf_contents)
 
         # Initial info
         self.store_initial_info(self.target_dir, self.COMPONENTS.SCHEDULER.code)
