@@ -1,7 +1,3 @@
-[tool.vulture]
-min_confidence = 100
-ignore_names = ["if 0:"]
-
 [tool.pyright]
 pythonVersion = "3.8"
 typeCheckingMode = "basic"
