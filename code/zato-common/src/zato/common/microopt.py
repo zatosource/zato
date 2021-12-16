@@ -15,6 +15,8 @@ from sys import exc_info
 def logging_Logger_log(self, level, msg, args, exc_info=None, extra=None, _LogRecord=LogRecord, _exc_info=exc_info):
     """ Overrides logging.Logger._log to gain a tiny but tangible performance boost (1%-3%).
     """
+    # pylint: disable=redefined-outer-name (for exc_info)
+
     try:
         fn, lno, func = self.findCaller()
     except ValueError:
