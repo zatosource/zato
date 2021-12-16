@@ -199,9 +199,8 @@ class Edit(CreateEdit):
     service_name = 'zato.service.edit'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'id', 'is_active', 'slow_threshold'
-        input_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_active', \
-            'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def'
+        input_required = 'id', 'is_active', 'slow_threshold', 'is_json_schema_enabled', 'needs_json_schema_err_details', \
+            'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def'
         output_required = 'id', 'name', 'impl_name', 'is_internal', 'usage', 'may_be_deleted'
 
     def success_message(self, item):
