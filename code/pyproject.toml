@@ -1,10 +1,11 @@
 [tool.pyright]
 pythonVersion = "3.8"
-typeCheckingMode = "basic"
+typeCheckingMode = "off" # "basic"
 
 #
 # This is level 1
 #
+reportOptionalOperand       = "none"
 reportGeneralTypeIssues     = "none"
 reportOptionalMemberAccess  = "none"
 reportPrivateUsage        = "error"
@@ -28,6 +29,7 @@ reportImplicitStringConcatenation = "error"
 #
 # This is level 2
 #
+#reportMissingImports       = "error"
 #reportGeneralTypeIssues    = "error"
 #reportOptionalMemberAccess = "error"
 
