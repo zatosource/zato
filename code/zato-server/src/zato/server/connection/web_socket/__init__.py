@@ -1621,6 +1621,8 @@ class ChannelWebSocket(Connector):
 
 if __name__ == '__main__':
 
+    # noqa
+
     # stdlib
     import os
     from logging import basicConfig, INFO, WARN

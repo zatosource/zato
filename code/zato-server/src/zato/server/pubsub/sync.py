@@ -6,6 +6,8 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# pylint: disable=unused-import, unused-variable
+
 # stdlib
 import logging
 from traceback import format_exc
@@ -87,9 +89,6 @@ default_sk_server_table_columns = 6, 15, 8, 6, 17, 80
 
 _JSON=DATA_FORMAT.JSON
 _page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE
-
-class msg:
-    wsx_sub_resumed = 'WSX subscription resumed, sk:`%s`, peer:`%s`'
 
 # ################################################################################################################################
 

@@ -248,7 +248,7 @@ class BaseConnectionContainer(object):
         self.server_address = self.server_address.format(self.server_port, self.server_path)
 
         if self.options['zato_subprocess_mode']:
-            with open(config.logging_conf_path) as f:
+            with open(config.logging_conf_path, encoding='utf8') as f:
                 logging_config = yaml.load(f, yaml.FullLoader)
 
             if not 'zato_{}'.format(self.conn_type) in logging_config['loggers']:
@@ -306,7 +306,7 @@ class BaseConnectionContainer(object):
 
     def store_pidfile(self, suffix):
         pidfile = os.path.join(self.base_dir, '{}-{}'.format(MISC.PIDFILE, suffix))
-        with open(pidfile, 'w') as f:
+        with open(pidfile, 'w', encoding='utf8') as f:
             f.write(str(os.getpid()))
 
 # ################################################################################################################################

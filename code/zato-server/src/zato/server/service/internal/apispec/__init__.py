@@ -124,7 +124,7 @@ class GetSphinx(Service):
             for file_name in file_names:
                 relative_path = os.path.join(base_dir, file_name)
 
-                f = open(os.path.join(dir_path, file_name))
+                f = open(os.path.join(dir_path, file_name), encoding='utf8')
                 contents = f.read()
                 f.close()
 

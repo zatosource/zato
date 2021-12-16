@@ -68,11 +68,11 @@ def format_connections(conns, format):
 def get_worker_pids(component_path):
     """ Returns PIDs of all workers of a given server, which must be already started.
     """
-    master_proc_pid = int(open(os.path.join(component_path, MISC.PIDFILE)).read())
+    master_proc_pid = int(open(os.path.join(component_path, MISC.PIDFILE), encoding='utf8').read())
     return sorted(elem.pid for elem in Process(master_proc_pid).children())
 
 def get_info(component_path, format, _now=datetime.utcnow):
-    component_details = open(os.path.join(component_path, ZATO_INFO_FILE)).read()
+    component_details = open(os.path.join(component_path, ZATO_INFO_FILE), encoding='utf8').read()
 
     out = {
         'component_details': component_details,
@@ -93,7 +93,7 @@ def get_info(component_path, format, _now=datetime.utcnow):
 
     master_proc_pid = None
     try:
-        master_proc_pid = int(open(os.path.join(component_path, MISC.PIDFILE)).read())
+        master_proc_pid = int(open(os.path.join(component_path, MISC.PIDFILE), encoding='utf8').read())
     except(IOError, ValueError):
         # Ok, no such file or it's empty
         pass

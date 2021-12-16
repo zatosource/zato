@@ -29,7 +29,7 @@ class _WebAdminAuthCommand(ManageCommand):
 
         os.chdir(os.path.abspath(args.path))
         base_dir = os.path.join(self.original_dir, args.path)
-        config = loads(open(os.path.join(base_dir, '.', 'config/repo/web-admin.conf')).read())
+        config = loads(open(os.path.join(base_dir, '.', 'config/repo/web-admin.conf'), encoding='utf8').read())
         config['config_dir'] = os.path.abspath(args.path)
         update_globals(config, base_dir)
 
@@ -247,7 +247,7 @@ class SetAdminInvokePassword(_WebAdminAuthCommand):
 
         # Read config in
         config_path = os.path.join(repo_dir, 'web-admin.conf')
-        config_data = open(config_path).read()
+        config_data = open(config_path, encoding='utf8').read()
 
         # Encrypted the provided password
         cm = WebAdminCryptoManager(repo_dir=repo_dir)
@@ -263,7 +263,7 @@ class SetAdminInvokePassword(_WebAdminAuthCommand):
 
         # Save config with the updated password
         new_config = '\n'.join(new_config)
-        open(config_path, 'w').write(new_config)
+        open(config_path, 'w', encoding='utf8').write(new_config)
 
 # ################################################################################################################################
 # ################################################################################################################################
