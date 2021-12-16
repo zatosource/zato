@@ -16,7 +16,7 @@ from zato.common.marshal_.api import Model
 # ################################################################################################################################
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from dataclasses import Field
     from zato.cy.simpleio import SIOServerConfig
     from zato.server.base.parallel import ParallelServer

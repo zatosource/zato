@@ -23,7 +23,7 @@ from zato.common.util.api import spawn_greenlet
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from typing import Any, Callable, Dict as dict_
     from zato.common.model.connector import ConnectorConfig
 

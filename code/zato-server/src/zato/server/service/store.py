@@ -62,7 +62,7 @@ from past.builtins import basestring
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
 
     from inspect import ArgSpec
     from zato.common.odb.api import ODBManager

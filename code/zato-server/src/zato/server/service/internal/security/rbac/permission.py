@@ -20,7 +20,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from bunch import Bunch
     from zato.server.service import Service
 

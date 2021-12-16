@@ -52,7 +52,7 @@ from past.builtins import basestring, cmp, unicode, xrange
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from zato.common.util.search import SearchResults
     SearchResults = SearchResults
 

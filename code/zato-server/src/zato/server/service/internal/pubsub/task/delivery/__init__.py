@@ -17,7 +17,7 @@ from zato.server.service.internal import AdminService, GetListAdminSIO
 # ################################################################################################################################
 
 # Type checking
-if _ := False:
+if 0:
     from zato.server.pubsub.task import DeliveryTask, PubSubTool
 
     DeliveryTask = DeliveryTask

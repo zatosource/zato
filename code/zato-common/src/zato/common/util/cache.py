@@ -20,7 +20,7 @@ from zato.common.odb.model import Cluster, HTTPBasicAuth, Server
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from requests import Response as RequestsResponse
 
     RequestsResponse = RequestsResponse

@@ -104,7 +104,7 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 # Type hints
-if _ := False:
+if 0:
 
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigStore

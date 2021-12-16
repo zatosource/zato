@@ -17,7 +17,7 @@ from zato.server.service.internal import AdminService, ChangePasswordBase
 # ################################################################################################################################
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from bunch import Bunch
     from zato.common.ext.configobj_ import ConfigObj
 

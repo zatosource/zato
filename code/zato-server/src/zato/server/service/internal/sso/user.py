@@ -27,7 +27,7 @@ from zato.sso.user import super_user_attrs, update
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from zato.sso import User as UserEntity
 
     UserEntity = UserEntity

@@ -14,7 +14,7 @@ from past.builtins import basestring, unicode
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from zato.cy.simpleio import BoolConfig as PyBoolConfig
     from zato.cy.simpleio import IntConfig as PyIntConfig
     from zato.cy.simpleio import SecretConfig as PySecretConfig

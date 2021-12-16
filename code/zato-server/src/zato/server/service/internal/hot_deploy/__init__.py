@@ -31,7 +31,7 @@ from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
 
     from zato.server.service.store import InRAMService
     InRAMService = InRAMService

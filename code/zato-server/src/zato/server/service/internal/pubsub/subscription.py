@@ -37,7 +37,7 @@ from zato.server.service.internal.pubsub import common_sub_data
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from zato.common.model.wsx import WSXConnectorConfig
 
     WSXConnectorConfig = WSXConnectorConfig

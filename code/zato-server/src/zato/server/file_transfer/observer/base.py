@@ -24,7 +24,7 @@ from zato.server.file_transfer.snapshot import default_interval, DirSnapshotDiff
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from bunch import Bunch
     from zato.server.file_transfer.api import FileTransferAPI
     from zato.server.file_transfer.snapshot import BaseRemoteSnapshotMaker
