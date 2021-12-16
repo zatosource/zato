@@ -180,14 +180,14 @@ class Create(ZatoCommand):
 
         logging_conf_contents = get_logging_conf_contents()
 
-        open(os.path.join(repo_dir, 'logging.conf'), 'w').write(logging_conf_contents)
-        open(web_admin_conf_path, 'w').write(config_template.format(**config))
-        open(initial_data_json_path, 'w').write(initial_data_json.format(**config))
+        open(os.path.join(repo_dir, 'logging.conf'), 'w', encoding='utf8').write(logging_conf_contents)
+        open(web_admin_conf_path, 'w', encoding='utf8').write(config_template.format(**config))
+        open(initial_data_json_path, 'w', encoding='utf8').write(initial_data_json.format(**config))
 
         # Initial info
         self.store_initial_info(self.target_dir, self.COMPONENTS.WEB_ADMIN.code)
 
-        config = json.loads(open(os.path.join(repo_dir, 'web-admin.conf')).read())
+        config = json.loads(open(os.path.join(repo_dir, 'web-admin.conf'), encoding='utf8').read())
         config['config_dir'] = self.target_dir
         update_globals(config, self.target_dir)
 

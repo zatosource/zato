@@ -47,7 +47,7 @@ def main():
     repo_location = os.path.join('.', 'config', 'repo')
 
     # Logging configuration
-    with open(os.path.join(repo_location, 'logging.conf')) as f:
+    with open(os.path.join(repo_location, 'logging.conf'), encoding='utf8') as f:
         dictConfig(yaml.load(f, yaml.FullLoader))
 
     # Read config in and extend it with ODB-specific information

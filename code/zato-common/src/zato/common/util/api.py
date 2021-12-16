@@ -1087,11 +1087,13 @@ def validate_xpath(expr):
 # ################################################################################################################################
 
 def get_haproxy_agent_pidfile(component_dir):
-    json_config = loads(open(os.path.join(component_dir, 'config', 'repo', 'lb-agent.conf')).read())
+    json_config = loads(
+        open(os.path.join(component_dir, 'config', 'repo', 'lb-agent.conf'), encoding='utf8').read()
+        )
     return os.path.abspath(os.path.join(component_dir, json_config['pid_file']))
 
 def store_pidfile(component_dir, pidfile=MISC.PIDFILE):
-    open(os.path.join(component_dir, pidfile), 'w').write('{}'.format(os.getpid()))
+    open(os.path.join(component_dir, pidfile), 'w', encoding='utf8').write('{}'.format(os.getpid()))
 
 # ################################################################################################################################
 
@@ -1109,7 +1111,7 @@ def validate_tls_from_payload(payload, is_key=False):
         tf.write(payload)
         tf.flush()
 
-        pem = open(tf.name).read()
+        pem = open(tf.name, encoding='utf8').read()
 
         cert_info = crypto.load_certificate(crypto.FILETYPE_PEM, pem)
         cert_info = sorted(cert_info.get_subject().get_components())
@@ -1147,7 +1149,7 @@ def store_tls(root_dir, payload, is_key=False):
     info = get_tls_from_payload(payload, is_key)
 
     pem_file_path = get_tls_full_path(root_dir, TLS.DIR_KEYS_CERTS if is_key else TLS.DIR_CA_CERTS, info)
-    pem_file = open(pem_file_path, 'w')
+    pem_file = open(pem_file_path, 'w', encoding='utf8')
 
     try:
         portalocker.lock(pem_file, portalocker.LOCK_EX)
@@ -1219,7 +1221,7 @@ class StaticConfig(Bunch):
 
     def read_file(self, full_path, file_name):
         # type: (str, str) -> None
-        f = open(full_path)
+        f = open(full_path, encoding='utf8')
         file_contents = f.read()
         f.close()
 
@@ -1548,7 +1550,7 @@ def startup_service_payload_from_path(name, value, repo_location):
         path = orig_path
 
     try:
-        payload = open(path).read()
+        payload = open(path, encoding='utf8').read()
     except Exception:
         logger.warn(
             'Could not open payload path:`%s` `%s`, skipping startup service:`%s`, e:`%s`', orig_path, path, name, format_exc())
@@ -1713,7 +1715,7 @@ def get_response_value(response):
 # ################################################################################################################################
 
 def get_lb_agent_json_config(repo_dir):
-    return loads(open(os.path.join(repo_dir, 'lb-agent.conf')).read())
+    return loads(open(os.path.join(repo_dir, 'lb-agent.conf'), encoding='utf8').read())
 
 # ################################################################################################################################
 

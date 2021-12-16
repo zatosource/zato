@@ -425,7 +425,7 @@ class ZatoCommand(object):
                 'created_ts': datetime.utcnow().isoformat(), # noqa
                 'component': component
                 }
-        open(os.path.join(target_dir, ZATO_INFO_FILE), 'w').write(dumps(info))
+        open(os.path.join(target_dir, ZATO_INFO_FILE), 'w', encoding='utf8').write(dumps(info))
 
 # ################################################################################################################################
 
@@ -450,7 +450,7 @@ class ZatoCommand(object):
 
         body = '# {} - {}\n{}'.format(now, self._get_user_host(), file_args.getvalue())
 
-        open(file_name, 'w').write(body)
+        open(file_name, 'w', encoding='utf8').write(body)
         file_args.close()
 
         self.logger.debug('Options saved in file {file_name}'.format(
@@ -680,7 +680,7 @@ class FromConfig(ZatoCommand):
     def execute(self, args):
         """ Runs the command with arguments read from a config file.
         """
-        f = open(args.path)
+        f = open(args.path, encoding='utf8')
         for line in f:
             if line.lstrip().startswith('#'):
                 continue
@@ -725,7 +725,7 @@ class CACreateCommand(ZatoCommand):
         import tempfile
 
         now = self._get_now()
-        openssl_template = open(os.path.join(self.target_dir, 'ca-material', 'openssl-template.conf')).read()
+        openssl_template = open(os.path.join(self.target_dir, 'ca-material', 'openssl-template.conf'), encoding='utf8').read()
 
         ou_attrs = ('organizational_unit', 'organizational-unit')
         template_args = {}
@@ -810,14 +810,14 @@ class CACreateCommand(ZatoCommand):
         # the public key from the CSR.
 
         split_line = '-----END PUBLIC KEY-----'
-        csr_pub = open(csr_name).read()
+        csr_pub = open(csr_name, encoding='utf8').read()
         csr_pub = csr_pub.split(split_line)
 
         pub = csr_pub[0] + split_line
         csr = csr_pub[1].lstrip()
 
-        open(csr_name, 'w').write(csr)
-        open(pub_key_name, 'w').write(pub)
+        open(csr_name, 'w', encoding='utf8').write(csr)
+        open(pub_key_name, 'w', encoding='utf8').write(pub)
 
         # Generate the certificate
         cmd = """openssl ca -batch -passin file:{ca_password} -config {config} \
@@ -830,7 +830,7 @@ class CACreateCommand(ZatoCommand):
 
         # Now delete the default certificate stored in '.\', we don't really
         # need it because we have its copy in '.\out-cert' anyway.
-        last_serial = open(os.path.join(self.target_dir, 'ca-material', 'ca-serial.old')).read().strip()
+        last_serial = open(os.path.join(self.target_dir, 'ca-material', 'ca-serial.old'), encoding='utf8').read().strip()
         os.remove(os.path.join(self.target_dir, last_serial + '.pem'))
 
         msg = """Crypto material generated and saved in:
@@ -903,7 +903,7 @@ class ManageCommand(ZatoCommand):
             sys.exit(self.SYS_ERROR.NOT_A_ZATO_COMPONENT) # noqa
 
         found = list(found)[0]
-        json_data = load(open(os.path.join(self.component_dir, found)))
+        json_data = load(open(os.path.join(self.component_dir, found), encoding='utf8'))
 
         os.chdir(self.component_dir)
 
