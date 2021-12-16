@@ -36,6 +36,7 @@ class Request(object):
         self.reply_to_tag = ''
         self.reply_to_fifo = ''
         self.in_reply_to = ''
+        self.socket = None
         self.creation_time_utc = datetime.utcnow()
 
     @property
@@ -59,6 +60,7 @@ class IPCBase(object):
         self.name = name
         self.pid = pid
         self.ctx = zmq.Context()
+        self.socket = None
         spawn_greenlet(self.set_up_sockets)
         self.keep_running = True
         self.logger = get_logger_for_class(self.__class__)

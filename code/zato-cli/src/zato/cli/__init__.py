@@ -887,6 +887,8 @@ class ManageCommand(ZatoCommand):
 
     def execute(self, args):
 
+        # pylint: disable=attribute-defined-outside-init
+
         # stdlib
         import os
         import sys

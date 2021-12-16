@@ -280,6 +280,9 @@ class _BaseView(object):
     def __init__(self):
         self.req = None
         self.cluster_id = None
+        self.clear_user_message()
+        self.user_message = None
+        self.user_message_class = 'failure'
 
     def __call__(self, req, *args, **kwargs):
         self.req = req
