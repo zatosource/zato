@@ -13,7 +13,7 @@ from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 
 # ################################################################################################################################
 
-class ConfigFile(object):
+class ConfigFile:
     def __init__(self):
         self.id = None
         self.name = None

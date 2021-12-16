@@ -39,7 +39,7 @@ generic_attrs = ('is_audit_log_sent_active', 'is_audit_log_received_active', 'ma
 
 # ################################################################################################################################
 
-class WSXConnection(object):
+class WSXConnection:
     def __init__(self):
         self.id = None
         self.local_address = None
@@ -56,7 +56,7 @@ class WSXConnection(object):
 
 # ################################################################################################################################
 
-class WSXSubKeyData(object):
+class WSXSubKeyData:
     def __init__(self):
         self.sub_key = None
         self.creation_time = None

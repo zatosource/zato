@@ -57,7 +57,7 @@ class Inactive(Exception):
 
 # ################################################################################################################################
 
-class EventLogger(object):
+class EventLogger:
     def __init__(self, enter_verb, exit_verb, enter_func, exit_func, predicate_func=None):
 
         self.enter_verb = enter_verb
@@ -75,7 +75,7 @@ class EventLogger(object):
 
 # ################################################################################################################################
 
-class Connector(object):
+class Connector:
     """ A connector for long running background connections, such as WebSockets or AMQP. Includes means to run channels
     and outgoing connections.
     """
@@ -149,7 +149,7 @@ class Connector(object):
                         if not self.keep_connecting:
                             return
 
-                        logger.warn('Caught %s exception `%s` (id:%s) (`%s` %s)',
+                        logger.warning('Caught %s exception `%s` (id:%s) (`%s` %s)',
                             self.type, format_exc(), self.id_self, self.name, self.get_log_details())
                         sleep(2)
 
@@ -158,7 +158,7 @@ class Connector(object):
                     if not self.is_connected:
                         attempts += 1
                         if attempts % log_each == 0:
-                            logger.warn('Could not connect to %s (%s) after %s attempts, time spent so far: %s (id:%s)',
+                            logger.warning('Could not connect to %s (%s) after %s attempts, time spent so far: %s (id:%s)',
                                 self.get_log_details(), self.name, attempts, datetime.utcnow() - start, self.id_self)
 
                 # Ok, break from the outermost loop
@@ -266,7 +266,7 @@ class Connector(object):
 
     def start(self, needs_log=True):
         if self.is_inactive:
-            logger.warn('Skipped creation of an inactive connector `%s` (%s)', self.name, self.type)
+            logger.warning('Skipped creation of an inactive connector `%s` (%s)', self.name, self.type)
             return
 
         with self._start_stop_logger('Starting', 'Started', self._wait_until_connected):
@@ -279,7 +279,7 @@ class Connector(object):
                 else:
                     self._start_loop()
             except Exception:
-                logger.warn(format_exc())
+                logger.warning(format_exc())
 
 # ################################################################################################################################
 
@@ -302,7 +302,7 @@ class Connector(object):
 
 # ################################################################################################################################
 
-class ConnectorStore(object):
+class ConnectorStore:
     """ Base container for all connectors.
     """
     def __init__(self, type, connector_class, parallel_server=None):

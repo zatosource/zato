@@ -39,7 +39,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ConnectionWrapper(object):
+class ConnectionWrapper:
     def __init__(self, client):
         # type: (LDAPClient) -> None
         self.client = client
@@ -49,7 +49,7 @@ class ConnectionWrapper(object):
         try:
             self.conn = self.client.connect()
         except Exception:
-            logger.warn('Could not obtain a connection to `%s` (%s)', self.client.config.server_list, self.client.config.name)
+            logger.warning('Could not obtain a connection to `%s` (%s)', self.client.config.server_list, self.client.config.name)
             raise
         else:
             return self.conn
@@ -61,7 +61,7 @@ class ConnectionWrapper(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class LDAPClient(object):
+class LDAPClient:
     """ A client through which outgoing LDAP messages can be sent.
     """
     def __init__(self, config):
@@ -242,7 +242,7 @@ class OutconnLDAPWrapper(Wrapper):
         try:
             conn = LDAPClient(self.config)
         except Exception:
-            logger.warn('LDAP client could not be built `%s`', format_exc())
+            logger.warning('LDAP client could not be built `%s`', format_exc())
         else:
             self.client.put_client(conn)
 

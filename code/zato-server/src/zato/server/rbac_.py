@@ -77,7 +77,7 @@ class Registry(_Registry):
 
 # ################################################################################################################################
 
-class RBAC(object):
+class RBAC:
     def __init__(self):
         self.registry = Registry(self._delete_callback)
         self.update_lock = RLock()

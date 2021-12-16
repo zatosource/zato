@@ -27,7 +27,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _S3Connection(object):
+class _S3Connection:
     def __init__(self, **kwargs):
         self.zato_default_bucket = kwargs.pop('bucket')
         self.zato_content_type = kwargs.pop('content_type')

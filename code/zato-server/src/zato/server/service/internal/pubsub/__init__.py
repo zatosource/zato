@@ -51,7 +51,6 @@ endpoint_type_service = {
     PUBSUB.ENDPOINT_TYPE.FILES.id:       'zato.pubsub.delivery.notify-pub-sub-message',
     PUBSUB.ENDPOINT_TYPE.FTP.id:         'zato.pubsub.delivery.notify-pub-sub-message',
     PUBSUB.ENDPOINT_TYPE.REST.id:        'zato.pubsub.delivery.notify-pub-sub-message',
-    PUBSUB.ENDPOINT_TYPE.REST.id:        'zato.pubsub.delivery.notify-pub-sub-message',
     PUBSUB.ENDPOINT_TYPE.SERVICE.id:     'zato.pubsub.delivery.notify-pub-sub-message',
     PUBSUB.ENDPOINT_TYPE.SMS_TWILIO.id:  'zato.pubsub.delivery.notify-pub-sub-message',
     PUBSUB.ENDPOINT_TYPE.SMTP.id:        'zato.pubsub.delivery.notify-pub-sub-message',
@@ -177,7 +176,7 @@ class AfterPublish(AdminService):
                         self.pubsub.after_gd_sync_error(topic_id, 'AfterPublish.gd_notif_error_sub_keys', pub_time_max)
 
         except Exception:
-            self.logger.warn('Error in after_publish callback, e:`%s`', format_exc())
+            self.logger.warning('Error in after_publish callback, e:`%s`', format_exc())
 
 # ################################################################################################################################
 
@@ -218,7 +217,7 @@ class AfterPublish(AdminService):
             except Exception:
 
                 for logger in (self.logger, logger_pubsub):
-                    logger.warn('Error in pub/sub notification, service:`%s` req:`%s` pid:`%s` e:`%s`',
+                    logger.warning('Error in pub/sub notification, service:`%s` req:`%s` pid:`%s` e:`%s`',
                         service_name, full_request, server_pid, format_exc())
 
                 notif_error_sub_keys.extend(sub_key_list)
@@ -264,13 +263,13 @@ class ResumeWSXSubscription(AdminService):
             sub = self.pubsub.get_subscription_by_sub_key(sub_key)
 
             if sub.config.endpoint_type != _expected_endpoint_type:
-                self.logger.warn('Subscription `%s` endpoint_type:`%s` did not match `%s`',
+                self.logger.warning('Subscription `%s` endpoint_type:`%s` did not match `%s`',
                     sub_key, sub.config.endpoint_type, _expected_endpoint_type)
                 raise Forbidden(self.cid)
 
             if wsx_endpoint.name != sub.config.endpoint_name:
                 expected_endpoint = self.pubsub.get_endpoint_by_id(sub.config.endpoint_id)
-                self.logger.warn('Current WSX endpoint did not match sub_key `%s` endpoint, current:%s (%s) vs. expected:%s (%s)',
+                self.logger.warning('Current WSX endpoint did not match sub_key `%s` endpoint, current:%s (%s) vs. expected:%s (%s)',
                     sub_key, wsx_endpoint.name, wsx_endpoint.id, expected_endpoint.name, expected_endpoint.id)
 
                 raise Forbidden(self.cid)
@@ -313,7 +312,7 @@ class ResumeWSXSubscription(AdminService):
                     session.commit()
 
         except Exception:
-            self.logger.warn('Error while resuming WSX pub/sub for keys `%s`, e:`%s`', sub_key_list, format_exc())
+            self.logger.warning('Error while resuming WSX pub/sub for keys `%s`, e:`%s`', sub_key_list, format_exc())
             raise
         else:
             # No exception = all good and we can register this pubsub_tool with self.pubsub now
@@ -372,7 +371,7 @@ class _BaseCleanup(AdminService):
                 session.commit()
 
         except Exception:
-            self.logger.warn('Error in cleanup: `%s`', format_exc())
+            self.logger.warning('Error in cleanup: `%s`', format_exc())
 
 # ################################################################################################################################
 

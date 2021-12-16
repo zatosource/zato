@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# flake8: noqa
+# pylint: disable=all
+
 """
 Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
@@ -50,7 +53,7 @@ class const:
 
 # ################################################################################################################################
 
-class BaseZMQConnection(object):
+class BaseZMQConnection:
     """ A base class for both client and worker ZeroMQ connections.
     """
     def __init__(self, broker_address='tcp://localhost:47047', linger=0, poll_interval=100, log_details=False):
@@ -85,7 +88,7 @@ class BaseZMQConnection(object):
 
 # ################################################################################################################################
 
-class Service(object):
+class Service:
     """ A service offered by an MDP broker along with all the workers registered to handle it.
     """
     def __init__(self, name=None, workers=None):
@@ -106,7 +109,7 @@ class Service(object):
 
 # ################################################################################################################################
 
-class WorkerData(object):
+class WorkerData:
     """ An MDP worker registered to handle a given service.
     """
     prefix = 'mdp.worker.'
@@ -135,7 +138,7 @@ class WorkerData(object):
 
 # ################################################################################################################################
 
-class EventReady(object):
+class EventReady:
     """ An MDP ready sent by workers to broker.
     """
     type = const.v01.ready
@@ -148,7 +151,7 @@ class EventReady(object):
 
 # ################################################################################################################################
 
-class EventWorkerHeartbeat(object):
+class EventWorkerHeartbeat:
     """ A heartbeat sent from a worker to its broker.
     """
     type = const.v01.heartbeat_worker_to_broker
@@ -158,7 +161,7 @@ class EventWorkerHeartbeat(object):
 
 # ################################################################################################################################
 
-class EventBrokerHeartbeat(object):
+class EventBrokerHeartbeat:
     """ A heartbeat sent from a broker to its worker.
     """
     type = const.v01.heartbeat_broker_to_worker
@@ -171,7 +174,7 @@ class EventBrokerHeartbeat(object):
 
 # ################################################################################################################################
 
-class EventClientRequest(object):
+class EventClientRequest:
     """ An MDP request sent from a client to broker.
     """
     type = const.v01.request_from_client
@@ -187,7 +190,7 @@ class EventClientRequest(object):
 
 # ################################################################################################################################
 
-class EventWorkerRequest(object):
+class EventWorkerRequest:
     """ An MDP request sent from a broker to worker.
     """
     type = const.v01.request_to_worker
@@ -203,7 +206,7 @@ class EventWorkerRequest(object):
 
 # ################################################################################################################################
 
-class EventClientReply(object):
+class EventClientReply:
     """ An MDP reply sent from a broker to a given client by the latter's ID.
     """
     type = const.v01.reply_to_client
@@ -220,7 +223,7 @@ class EventClientReply(object):
 
 # ################################################################################################################################
 
-class EventWorkerReply(object):
+class EventWorkerReply:
     """ An MDP reply sent from a worker to broker.
     """
     type = const.v01.reply_from_worker
@@ -236,7 +239,7 @@ class EventWorkerReply(object):
 
 # ################################################################################################################################
 
-class EventWorkerDisconnect(object):
+class EventWorkerDisconnect:
     """ A disconnect event sent from a worker to its broker.
     """
     type = const.v01.disconnect
@@ -246,7 +249,7 @@ class EventWorkerDisconnect(object):
 
 # ################################################################################################################################
 
-class EventBrokerDisconnect(object):
+class EventBrokerDisconnect:
     """ A disconnect event sent from a broker to a specific worker.
     """
     type = const.v01.disconnect

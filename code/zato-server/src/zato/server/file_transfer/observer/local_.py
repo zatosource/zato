@@ -95,7 +95,7 @@ class LocalObserver(BaseObserver):
                 wd_to_path_map[wd] = path
 
         except Exception:
-            logger.warn("Exception in inotify observer's main loop `%s`", format_exc())
+            logger.warning("Exception in inotify observer's main loop `%s`", format_exc())
 
 # ################################################################################################################################
 

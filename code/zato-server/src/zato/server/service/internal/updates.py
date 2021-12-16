@@ -96,7 +96,7 @@ class CheckUpdates(Service):
                 sleep(day)
 
         except Exception:
-            self.logger.warn(format_exc())
+            self.logger.warning(format_exc())
 
 # ################################################################################################################################
 
@@ -130,7 +130,7 @@ class CheckUpdates(Service):
 # ################################################################################################################################
 
     def _notify(self, self_version, current, type, url, delta):
-        self.logger.warn(msg, self.server.cluster.name, self_version, type, url, current, delta)
+        self.logger.warning(msg, self.server.cluster.name, self_version, type, url, current, delta)
 
 # ################################################################################################################################
 

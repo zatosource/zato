@@ -144,7 +144,7 @@ class ValidationError(Exception):
 
 # ################################################################################################################################
 
-class SearchCtx(object):
+class SearchCtx:
     """ A container for SSO user search parameters.
     """
     __slots__ = ('user_id', 'username', 'email', 'display_name', 'first_name', 'middle_name', 'last_name', 'sign_up_status',
@@ -172,7 +172,7 @@ class SearchCtx(object):
 
 # ################################################################################################################################
 
-class SignupCtx(object):
+class SignupCtx:
     """ A container for SSO user signup parameters.
     """
     __slots__ = ('username', 'email', 'password', 'current_app', 'app_list', 'sign_up_status')
@@ -197,7 +197,7 @@ class SignupCtx(object):
 
 # ################################################################################################################################
 
-class User(object):
+class User:
     """ Represents a user managed by SSO.
     """
     __slots__ = ('approval_status', 'approval_status_mod_by', 'approval_status_mod_time','attr', 'creation_ctx', 'display_name',
@@ -249,7 +249,7 @@ class User(object):
 
 # ################################################################################################################################
 
-class Session(object):
+class Session:
     """ Represents a session opened by a particular SSO user.
     """
     __slots__ = ('attr', 'creation_time', 'expiration_time', 'remote_addr', 'user_agent')

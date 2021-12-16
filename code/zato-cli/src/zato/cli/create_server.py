@@ -14,6 +14,7 @@ from zato.cli import common_odb_opts, kvdb_opts, sql_conf_contents, ZatoCommand
 from zato.common.api import CONTENT_TYPE, default_internal_modules, SCHEDULER, SSO as CommonSSO
 from zato.common.simpleio_ import simple_io_conf_contents
 from zato.common.util import as_bool
+from zato.common.util.open_ import open_r, open_w
 from zato.common.events.common import Default as EventsDefault
 
 # ################################################################################################################################
@@ -779,14 +780,14 @@ class Create(ZatoCommand):
                 file_name = os.path.join(self.target_dir, file_name)
                 if show_output:
                     self.logger.debug('Creating {}'.format(file_name))
-                f = open(file_name, 'w')
+                f = open_w(file_name)
                 f.write(contents)
                 f.close()
 
             logging_conf_loc = os.path.join(self.target_dir, 'config/repo/logging.conf')
 
-            logging_conf = open(logging_conf_loc).read()
-            open(logging_conf_loc, 'w').write(logging_conf.format(
+            logging_conf = open_r(logging_conf_loc).read()
+            open_w(logging_conf_loc).write(logging_conf.format(
                 log_path=os.path.join(self.target_dir, 'logs', 'zato.log')))
 
             if show_output:
@@ -801,7 +802,7 @@ class Create(ZatoCommand):
             scheduler_use_tls = as_bool(scheduler_use_tls)
 
             server_conf_loc = os.path.join(self.target_dir, 'config/repo/server.conf')
-            server_conf = open(server_conf_loc, 'w')
+            server_conf = open_w(server_conf_loc)
             server_conf.write(
                 server_conf_template.format(
                     port=getattr(args, 'http_port', None) or default_http_port,
@@ -826,17 +827,17 @@ class Create(ZatoCommand):
             server_conf.close()
 
             pickup_conf_loc = os.path.join(self.target_dir, 'config/repo/pickup.conf')
-            pickup_conf_file = open(pickup_conf_loc, 'w')
+            pickup_conf_file = open_w(pickup_conf_loc)
             pickup_conf_file.write(pickup_conf)
             pickup_conf_file.close()
 
             user_conf_loc = os.path.join(self.target_dir, 'config/repo/user.conf')
-            user_conf = open(user_conf_loc, 'w')
+            user_conf = open_w(user_conf_loc)
             user_conf.write(user_conf_contents)
             user_conf.close()
 
             sso_conf_loc = os.path.join(self.target_dir, 'config/repo/sso.conf')
-            sso_conf = open(sso_conf_loc, 'w')
+            sso_conf = open_w(sso_conf_loc)
             sso_conf.write(sso_conf_contents)
             sso_conf.close()
 
@@ -845,7 +846,7 @@ class Create(ZatoCommand):
             fernet1 = Fernet(key1)
 
             secrets_conf_loc = os.path.join(self.target_dir, 'config/repo/secrets.conf')
-            secrets_conf = open(secrets_conf_loc, 'w')
+            secrets_conf = open_w(secrets_conf_loc)
 
             kvdb_password = self.get_arg('kvdb_password') or ''
             kvdb_password = kvdb_password.encode('utf8')
@@ -891,7 +892,7 @@ class Create(ZatoCommand):
             bytes_to_str_encoding = 'utf8' if PY3 else ''
 
             simple_io_conf_loc = os.path.join(self.target_dir, 'config/repo/simple-io.conf')
-            simple_io_conf = open(simple_io_conf_loc, 'w')
+            simple_io_conf = open_w(simple_io_conf_loc)
             simple_io_conf.write(simple_io_conf_contents.format(
                 bytes_to_str_encoding=bytes_to_str_encoding
             ))
@@ -910,7 +911,7 @@ class Create(ZatoCommand):
                     # That is fine, the directory must have already created in one of previous iterations
                     pass
                 finally:
-                    api_file = open(full_path, 'w')
+                    api_file = open_w(full_path)
                     api_file.write(contents)
                     api_file.close()
 

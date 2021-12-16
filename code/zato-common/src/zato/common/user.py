@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # ################################################################################################################################
 
-class User(object):
+class User:
     """ A business-level user, e.g. a person on whose behalf a given service runs.
     """
 

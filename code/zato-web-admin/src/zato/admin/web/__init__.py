@@ -23,7 +23,7 @@ from zato.common.util.api import from_local_to_utc as _from_local_to_utc, from_u
 
 logger = logging.getLogger(__name__)
 
-class _Format(object):
+class _Format:
     def __init__(self, frontend, python):
         self.frontend = frontend
         self.python = python

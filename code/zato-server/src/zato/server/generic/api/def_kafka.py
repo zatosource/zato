@@ -107,7 +107,7 @@ class DefKafkaWrapper(Wrapper):
         try:
             self._init_client()
         except Exception:
-            logger.warn('Could not build `%s` client to `%s`; e:`%s`', self.wrapper_type, self.config.name, format_exc())
+            logger.warning('Could not build `%s` client to `%s`; e:`%s`', self.wrapper_type, self.config.name, format_exc())
             raise
 # ################################################################################################################################
 
@@ -116,7 +116,7 @@ class DefKafkaWrapper(Wrapper):
             try:
                 elem._connection.disconnect()
             except Exception:
-                logger.warn('Could not disconnect `%s` from `%r`, e:`%s`', elem, self.config, format_exc())
+                logger.warning('Could not disconnect `%s` from `%r`, e:`%s`', elem, self.config, format_exc())
 
 # ################################################################################################################################
 

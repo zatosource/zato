@@ -60,7 +60,7 @@ from zato.server.ext.zunicorn.http.wsgi import default_environ, Response
 from zato.server.ext.zunicorn.six import MAXSIZE
 
 
-class Worker(object):
+class Worker:
 
     if is_posix:
         SIGNALS = [getattr(signal, "SIG%s" % x)for x in "ABRT HUP QUIT INT TERM USR1 USR2 WINCH CHLD".split()]

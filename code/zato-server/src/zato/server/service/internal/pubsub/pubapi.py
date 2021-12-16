@@ -85,7 +85,7 @@ class _PubSubService(Service):
         try:
             endpoint_id = self.pubsub.get_endpoint_id_by_sec_id(security_id)
         except KeyError:
-            self.logger.warn('Client credentials are valid but there is no pub/sub endpoint using them, sec_id:`%s`, e:`%s`',
+            self.logger.warning('Client credentials are valid but there is no pub/sub endpoint using them, sec_id:`%s`, e:`%s`',
                 security_id, format_exc())
             raise Forbidden(self.cid)
         else:
@@ -138,7 +138,7 @@ class TopicService(_PubSubService):
         try:
             self.pubsub.get_subscription_by_sub_key(sub_key)
         except KeyError:
-            self.logger.warn('Could not find sub_key:`%s`, e:`%s`', sub_key, format_exc())
+            self.logger.warning('Could not find sub_key:`%s`, e:`%s`', sub_key, format_exc())
             raise Forbidden(self.cid)
         else:
             return self.pubsub.get_messages(self.request.input.topic_name, sub_key)
@@ -174,13 +174,13 @@ class SubscribeService(_PubSubService):
         try:
             topic = self.pubsub.get_topic_by_name(self.request.input.topic_name)
         except KeyError:
-            self.logger.warn(format_exc())
+            self.logger.warning(format_exc())
             raise Forbidden(self.cid)
 
         # We know the topic exists but we also need to make sure the endpoint can subscribe to it
         if not self.pubsub.is_allowed_sub_topic_by_endpoint_id(topic.name, endpoint_id):
             endpoint = self.pubsub.get_endpoint_by_id(endpoint_id)
-            self.logger.warn('Endpoint `%s` is not allowed to subscribe to `%s`', endpoint.name, self.request.input.topic_name)
+            self.logger.warning('Endpoint `%s` is not allowed to subscribe to `%s`', endpoint.name, self.request.input.topic_name)
             raise Forbidden(self.cid)
 
 # ################################################################################################################################
@@ -203,7 +203,7 @@ class SubscribeService(_PubSubService):
                 'server_id': self.server.id,
             })['response']
         except PubSubSubscriptionExists:
-            self.logger.warn(format_exc())
+            self.logger.warning(format_exc())
             raise BadRequest(self.cid, 'Subscription to topic `{}` already exists'.format(self.request.input.topic_name))
         else:
             self.response.payload.sub_key = response['sub_key']
@@ -227,7 +227,7 @@ class SubscribeService(_PubSubService):
         try:
             sub = self.pubsub.get_subscription_by_sub_key(sub_key)
         except KeyError:
-            self.logger.warn('Could not find subscription by sub_key:`%s`, endpoint:`%s`',
+            self.logger.warning('Could not find subscription by sub_key:`%s`, endpoint:`%s`',
                 sub_key, self.pubsub.get_endpoint_by_id(endpoint_id).name)
             raise Forbidden(self.cid)
         else:
@@ -243,7 +243,7 @@ class SubscribeService(_PubSubService):
                 if endpoint_id != self.server.default_internal_pubsub_endpoint_id:
                     sub_endpoint = self.pubsub.get_endpoint_by_id(sub.endpoint_id)
                     self_endpoint = self.pubsub.get_endpoint_by_id(endpoint_id)
-                    self.logger.warn('Endpoint `%s` cannot unsubscribe sk:`%s` (%s) created by `%s`',
+                    self.logger.warning('Endpoint `%s` cannot unsubscribe sk:`%s` (%s) created by `%s`',
                         self_endpoint.name, sub_key, self.pubsub.get_topic_by_sub_key(sub_key).name, sub_endpoint.name)
                     raise Forbidden(self.cid)
 

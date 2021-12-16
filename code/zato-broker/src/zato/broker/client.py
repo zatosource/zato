@@ -63,7 +63,7 @@ from_scheduler_actions = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-class BrokerClient(object):
+class BrokerClient:
     """ Simulates previous Redis-based RPC.
     """
     def __init__(self, server_rpc=None, scheduler_config=None, zato_client=None):
@@ -138,7 +138,7 @@ class BrokerClient(object):
             self.server_rpc.invoke_all('zato.service.rpc-service-invoker', msg, ping_timeout=10)
 
         except Exception:
-            logger.warn(format_exc())
+            logger.warning(format_exc())
 
 # ################################################################################################################################
 

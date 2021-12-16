@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from zato.admin.web.forms.kvdb.data_dict.dictionary import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 
-class DictItem(object):
+class DictItem:
     pass
 
 class Index(_Index):
