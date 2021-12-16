@@ -6,6 +6,8 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# pylint: disable=attribute-defined-outside-init
+
 # stdlib
 import logging
 from base64 import b64encode
@@ -281,8 +283,6 @@ class _BaseView(object):
         self.req = None
         self.cluster_id = None
         self.clear_user_message()
-        self.user_message = None
-        self.user_message_class = 'failure'
 
     def __call__(self, req, *args, **kwargs):
         self.req = req

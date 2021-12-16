@@ -8,6 +8,8 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# pylint: disable=attribute-defined-outside-init
+
 """
    Copyright 2006-2008 SpringSource (http://springsource.com), All Rights Reserved
 
