@@ -28,11 +28,11 @@ class AttachSIOTestCase(BaseSIOTestCase):
 
         CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
-        self.assertEquals(MyService._sio.definition._input_required.get_elem_names(), ['aaa', 'bbb', 'ccc'])
-        self.assertEquals(MyService._sio.definition._input_optional.get_elem_names(), ['ddd', 'eee'])
+        self.assertEqual(MyService._sio.definition._input_required.get_elem_names(), ['aaa', 'bbb', 'ccc'])
+        self.assertEqual(MyService._sio.definition._input_optional.get_elem_names(), ['ddd', 'eee'])
 
-        self.assertEquals(MyService._sio.definition._output_required.get_elem_names(), ['qqq', 'www'])
-        self.assertEquals(MyService._sio.definition._output_optional.get_elem_names(), ['eee', 'fff'])
+        self.assertEqual(MyService._sio.definition._output_required.get_elem_names(), ['qqq', 'www'])
+        self.assertEqual(MyService._sio.definition._output_optional.get_elem_names(), ['eee', 'fff'])
 
         self.assertTrue(MyService._sio.definition.has_input_required)
         self.assertTrue(MyService._sio.definition.has_input_optional)
