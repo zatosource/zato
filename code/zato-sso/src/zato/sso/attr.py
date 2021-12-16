@@ -193,7 +193,7 @@ class AttrAPI(object):
             try:
                 return self._create(session, name, value, expiration, encrypt, user_id)
             except IntegrityError:
-                logger.warn(format_exc())
+                logger.warning(format_exc())
                 raise ValidationError(status_code.attr.already_exists)
 
 # ################################################################################################################################
@@ -573,7 +573,7 @@ class AttrAPI(object):
             try:
                 session.commit()
             except IntegrityError:
-                logger.warn(format_exc())
+                logger.warning(format_exc())
                 raise ValidationError(status_code.attr.already_exists)
 
 # ################################################################################################################################

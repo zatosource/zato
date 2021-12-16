@@ -205,7 +205,7 @@ class Wrapper(object):
                 try:
                     self.client.build_queue()
                 except Exception:
-                    logger.warn('Could not build client queue `%s`', format_exc())
+                    logger.warning('Could not build client queue `%s`', format_exc())
             else:
                 logger.info('Skipped building an inactive connection queue for `%s` (%s)',
                     self.client.conn_name, self.client.conn_type)
@@ -227,7 +227,7 @@ class Wrapper(object):
                     delete_func = getattr(item, 'delete', None)
                 delete_func(reason) if reason else delete_func()
             except Exception:
-                logger.warn('Could not delete connection from queue for `%s`, e:`%s`', self.config.name, format_exc())
+                logger.warning('Could not delete connection from queue for `%s`, e:`%s`', self.config.name, format_exc())
 
 # ################################################################################################################################
 

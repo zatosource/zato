@@ -182,7 +182,7 @@ class IPCAPI(object):
                         now = datetime.utcnow()
 
             except Exception:
-                logger.warn('Exception in IPC FIFO, e:`%s`', format_exc())
+                logger.warning('Exception in IPC FIFO, e:`%s`', format_exc())
 
             finally:
                 os.close(fifo_fd)
@@ -190,7 +190,7 @@ class IPCAPI(object):
             return is_success, response
 
         except Exception:
-            logger.warn(format_exc())
+            logger.warning(format_exc())
         finally:
             os.remove(fifo_path)
 

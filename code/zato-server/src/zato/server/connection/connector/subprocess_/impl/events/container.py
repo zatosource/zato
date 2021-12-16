@@ -92,7 +92,7 @@ class EventsConnectionContainer(BaseConnectionContainer):
             self.events_db = EventsDatabase(logger, fs_data_path, sync_threshold, sync_interval)
 
         except Exception:
-            logger.warn('Exception in post_init -> `%s`', format_exc())
+            logger.warning('Exception in post_init -> `%s`', format_exc())
 
 # ################################################################################################################################
 
@@ -155,7 +155,7 @@ class EventsConnectionContainer(BaseConnectionContainer):
 
                 # .. no such handler = disconnect the client ..
                 if not func:
-                    logger.warn('No handler for `%r` found. Disconnecting stream client (%s)', action, address_str)
+                    logger.warning('No handler for `%r` found. Disconnecting stream client (%s)', action, address_str)
                     break
 
                 # .. otherwise, handle the action ..
@@ -173,7 +173,7 @@ class EventsConnectionContainer(BaseConnectionContainer):
             socket_file.close()
 
         except Exception:
-            logger.warn('Exception in _on_new_connection (%s) -> `%s`', address_str, format_exc())
+            logger.warning('Exception in _on_new_connection (%s) -> `%s`', address_str, format_exc())
 
 # ################################################################################################################################
 

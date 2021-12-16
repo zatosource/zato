@@ -208,7 +208,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
 
     if not preferred_address and not server_config.server_to_server.boot_if_preferred_not_found:
         msg = 'Unable to start the server. Could not obtain a preferred address, please configure [bind_options] in server.conf'
-        logger.warn(msg)
+        logger.warning(msg)
         raise Exception(msg)
 
     # Create the startup callable tool as soon as practical

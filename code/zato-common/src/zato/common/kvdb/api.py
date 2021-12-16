@@ -216,7 +216,7 @@ class KVDB(object):
         try:
             spawn_greenlet(self.conn.ping)
         except Exception as e:
-            logger.warn('Could not ping %s due to `%s`', self.conn, e.args[0])
+            logger.warning('Could not ping %s due to `%s`', self.conn, e.args[0])
         else:
             logger.info('Redis ping OK -> %s', self.conn)
 

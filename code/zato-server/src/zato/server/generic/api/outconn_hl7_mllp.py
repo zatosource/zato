@@ -46,7 +46,7 @@ class OutconnHL7MLLPWrapper(Wrapper):
             conn = _HL7MLLPConnection(self.config)
             self.client.put_client(conn)
         except Exception:
-            logger.warn('Caught an exception while adding an HL7 MLLP client (%s); e:`%s`',
+            logger.warning('Caught an exception while adding an HL7 MLLP client (%s); e:`%s`',
                 self.config.name, format_exc())
 
     def delete(self, ignored_reason=None):

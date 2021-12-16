@@ -1200,7 +1200,7 @@ class ObjectManager(object):
         })
 
         if not response.ok:
-            self.logger.warning('Could not fetch objects of type {}: {}'.format(service_info.name, response.details))
+            self.logger.warninging('Could not fetch objects of type {}: {}'.format(service_info.name, response.details))
             return
 
         self.objects[service_info.name] = []
@@ -1528,7 +1528,7 @@ class Enmasse(ManageCommand):
         initial_wait_time = os.environ.get('ZATO_ENMASSE_INITIAL_WAIT_TIME')
         if initial_wait_time:
             initial_wait_time = int(initial_wait_time)
-            self.logger.warn('Sleeping for %s s', initial_wait_time)
+            self.logger.warning('Sleeping for %s s', initial_wait_time)
             sleep(initial_wait_time)
 
         self.object_mgr = ObjectManager(self.client, self.logger)

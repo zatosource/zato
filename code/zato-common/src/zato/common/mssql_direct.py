@@ -138,7 +138,7 @@ class MSSQLDirectAPI(object):
 
         except Exception:
             has_exception = True
-            logger.warn(format_exc())
+            logger.warning(format_exc())
             raise
 
         finally:
@@ -172,7 +172,7 @@ class MSSQLDirectAPI(object):
                     break
 
         except Exception:
-            logger.warn(format_exc())
+            logger.warning(format_exc())
             raise
 
         finally:

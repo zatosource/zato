@@ -254,7 +254,7 @@ class Start(Service):
     def handle(self):
         input = self.request.input
         if input.bind_port and is_port_taken(input.bind_port):
-            self.logger.warn('Cannot bind Zero MQ channel `%s` to TCP port %s (already taken)', input.name, input.bind_port)
+            self.logger.warning('Cannot bind Zero MQ channel `%s` to TCP port %s (already taken)', input.name, input.bind_port)
         else:
             self.server.worker_store.zmq_channel_create(self.request.input)
 

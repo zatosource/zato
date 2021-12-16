@@ -57,7 +57,7 @@ class GetInfo(Service):
                         response = loads(response)['response']
                         server_info['info'] = loads(response['info'])
                     else:
-                        self.logger.warn(response)
+                        self.logger.warning(response)
 
         self.response.content_type = 'application/json'
         self.response.payload = dumps(out)

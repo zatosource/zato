@@ -301,7 +301,7 @@ class Client(object):
         response = self._wait_for_response(request_id)
 
         if not response:
-            logger.warn('No response to authentication request `%s`', request_id)
+            logger.warning('No response to authentication request `%s`', request_id)
         else:
             self.auth_token = response.data['token']
             self.is_authenticated = True
@@ -342,7 +342,7 @@ class Client(object):
     def on_error(self, error):
         """ Invoked for each unhandled error in the lower-level ws4py library.
         """
-        logger.warn('Caught error %s', error)
+        logger.warning('Caught error %s', error)
 
 # ################################################################################################################################
 
@@ -368,10 +368,10 @@ class Client(object):
             except Exception as e:
 
                 if use_warn:
-                    log_func = logger.warn
+                    log_func = logger.warning
                 else:
                     if now >= warn_from:
-                        log_func = logger.warn
+                        log_func = logger.warning
                         use_warn = True
                     else:
                         log_func = logger.debug
@@ -416,7 +416,7 @@ class Client(object):
         response = self._wait_for_response(request_id, wait_time=timeout)
 
         if not response:
-            logger.warn('No response to invocation request `%s`', request_id)
+            logger.warning('No response to invocation request `%s`', request_id)
         else:
             return response
 

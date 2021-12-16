@@ -26,7 +26,7 @@ class CassandraQueryStore(BaseStore):
     def create_impl(self, config, config_no_sensitive, **extra):
         conn = extra['def_'].conn
         if not conn:
-            logger.warn('Could not create a Cassandra query `%s`, conn is None`', config_no_sensitive)
+            logger.warning('Could not create a Cassandra query `%s`, conn is None`', config_no_sensitive)
         else:
             return conn.prepare(config.value)
 

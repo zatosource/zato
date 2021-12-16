@@ -250,10 +250,10 @@ class Ping(AdminService):
                 log_msg = 'SQL connection `{}` could not be pinged, e:`{}`'
 
                 if self.request.input.should_raise_on_error:
-                    self.logger.warn(log_msg.format(item.name, format_exc()))
+                    self.logger.warning(log_msg.format(item.name, format_exc()))
                     raise e
                 else:
-                    self.logger.warn(log_msg.format(item.name, e.args[0]))
+                    self.logger.warning(log_msg.format(item.name, e.args[0]))
 
 class AutoPing(AdminService):
     """ Invoked periodically from the scheduler - pings all the existing SQL connections.
@@ -262,7 +262,7 @@ class AutoPing(AdminService):
         try:
             self.server.sql_pool_store[ZATO_ODB_POOL_NAME].pool.ping(self.server.fs_sql_config)
         except Exception:
-            self.logger.warn('Could not ping ODB, e:`%s`', format_exc())
+            self.logger.warning('Could not ping ODB, e:`%s`', format_exc())
 
         response = self.invoke(GetList.get_name(), {'cluster_id':self.server.cluster_id})
         response = response['zato_outgoing_sql_get_list_response']
@@ -274,7 +274,7 @@ class AutoPing(AdminService):
                     'should_raise_on_error': False,
                 })
             except Exception:
-                self.logger.warn('Could not auto-ping SQL pool `%s`, config:`%s`, e:`%s`', item['name'], item, format_exc())
+                self.logger.warning('Could not auto-ping SQL pool `%s`, config:`%s`, e:`%s`', item['name'], item, format_exc())
 
 class GetEngineList(AdminService):
     """ Returns a list of all engines defined in sql.conf.

@@ -114,7 +114,7 @@ class IBMMQChannel(object):
             try:
                 self.on_message_callback(msg_ctx)
             except Exception:
-                self.logger.warn('Could not invoke message callback %s', format_exc())
+                self.logger.warning('Could not invoke message callback %s', format_exc())
 
         def _impl():
             while self.keep_running:
@@ -140,9 +140,9 @@ class IBMMQChannel(object):
 
                 except self.pymqi.MQMIError as e:
                     if e.reason == self.pymqi.CMQC.MQRC_UNKNOWN_OBJECT_NAME:
-                        self.logger.warn('No such queue `%s` found for %s', self.queue_name, self.conn.get_connection_info())
+                        self.logger.warning('No such queue `%s` found for %s', self.queue_name, self.conn.get_connection_info())
                     else:
-                        self.logger.warn('%s in run, reason_code:`%s`, comp_code:`%s`' % (
+                        self.logger.warning('%s in run, reason_code:`%s`, comp_code:`%s`' % (
                             e.__class__.__name__, e.reason, e.comp))
 
                     # In case of any low-level PyMQI error, sleep for some time
@@ -158,7 +158,7 @@ class IBMMQChannel(object):
                     # Try to reconnect if the reason code points to one that is of a transient nature
                     while self.keep_running and e.completion_code == _cc_failed and e.reason_code in _rc_reconnect_list:
                         try:
-                            self.logger.warn('Reconnecting channel `%s` due to MQRC `%s` and MQCC `%s`',
+                            self.logger.warning('Reconnecting channel `%s` due to MQRC `%s` and MQCC `%s`',
                                 conn_info, e.reason_code, e.completion_code)
                             self.conn.reconnect()
                             self.conn.ping()
@@ -366,7 +366,7 @@ class IBMMQConnectionContainer(BaseConnectionContainer):
 
                 # Try to reconnect if the connection is broken but only if we have not tried to already
                 if (not is_reconnect) and cc_code == _cc_failed and reason_code == _rc_conn_broken:
-                    self.logger.warn('Caught MQRC_CONNECTION_BROKEN in send, will try to reconnect connection to %s ',
+                    self.logger.warning('Caught MQRC_CONNECTION_BROKEN in send, will try to reconnect connection to %s ',
                         conn.get_connection_info())
 
                     # Sleep for a while before reconnecting

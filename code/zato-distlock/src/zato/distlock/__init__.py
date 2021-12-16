@@ -160,7 +160,7 @@ class Lock:
 
             if not acquired:
                 msg = 'Could not obtain lock for `{}` `{}` within {}s'.format(self.namespace, self.name, _block)
-                logger.warning(msg)
+                logger.warninging(msg)
                 raise LockTimeout(msg)
 
         if _has_debug:
@@ -365,7 +365,7 @@ class LockManager:
         try:
             if len(namespace) > max_len_ns:
                 msg = 'Lock operation rejected. Namespace `{}` exceeds the limit of {} characters.'.format(namespace, max_len_ns)
-                logger.warning(msg)
+                logger.warninging(msg)
                 raise ValueError(msg)
 
             if len(name) > max_len_name:
@@ -388,11 +388,11 @@ class LockManager:
             if len(name) > max_len_name:
 
                 msg = 'Lock operation rejected. Name `{}` exceeds the limit of {} characters.'.format(name, max_len_name)
-                logger.warning(msg)
+                logger.warninging(msg)
                 raise ValueError(msg)
 
         except Exception:
-            logger.warning('Lock could not be acquired, e:`%s`', format_exc())
+            logger.warninging('Lock could not be acquired, e:`%s`', format_exc())
 
         else:
 

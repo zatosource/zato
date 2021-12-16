@@ -199,7 +199,7 @@ class ResetTOTPKey(_WebAdminAuthCommand):
         try:
             user = User.objects.get(username=args.username)
         except User.DoesNotExist:
-            self.logger.warn('No such user `%s` found in `%s`', args.username, args.path)
+            self.logger.warning('No such user `%s` found in `%s`', args.username, args.path)
             return
 
         # Here we know we have the user and key for sure, now we need to get the person's profile

@@ -235,7 +235,7 @@ class InRAMSync(object):
         with self.lock:
             _msg = self.msg_id_to_msg.get(msg['msg_id'])
             if not _msg:
-                logger.warn(_warn, msg['msg_id'])
+                logger.warning(_warn, msg['msg_id'])
                 logger_zato.warn(_warn, msg['msg_id'])
                 return False # No such message
             else:
@@ -284,19 +284,19 @@ class InRAMSync(object):
                     _has_sk_msg = True
 
             if not found_to_sub_key:
-                logger.warn('Message not found (msg_id_to_sub_key) %s', msg_id)
+                logger.warning('Message not found (msg_id_to_sub_key) %s', msg_id)
                 logger_zato.warn('Message not found (msg_id_to_sub_key) %s', msg_id)
 
             if not found_to_msg:
-                logger.warn('Message not found (msg_id_to_msg) %s', msg_id)
+                logger.warning('Message not found (msg_id_to_msg) %s', msg_id)
                 logger_zato.warn('Message not found (msg_id_to_msg) %s', msg_id)
 
             if not _has_topic_msg:
-                logger.warn('Message not found (_has_topic_msg) %s', msg_id)
+                logger.warning('Message not found (_has_topic_msg) %s', msg_id)
                 logger_zato.warn('Message not found (_has_topic_msg) %s', msg_id)
 
             if not _has_sk_msg:
-                logger.warn('Message not found (_has_sk_msg) %s', msg_id)
+                logger.warning('Message not found (_has_sk_msg) %s', msg_id)
                 logger_zato.warn('Message not found (_has_sk_msg) %s', msg_id)
 
 # ################################################################################################################################
@@ -374,7 +374,7 @@ class InRAMSync(object):
                     # Filter out expired messages
                     msg = self.msg_id_to_msg.get(msg_id)
                     if not msg:
-                        logger.warn('Msg `%s` not found in self.msg_id_to_msg', msg_id)
+                        logger.warning('Msg `%s` not found in self.msg_id_to_msg', msg_id)
                         continue
                     if now >= msg['expiration_time']:
                         continue
@@ -593,7 +593,7 @@ class InRAMSync(object):
             except Exception:
                 e = format_exc()
                 log_msg = 'Could not remove messages from in-RAM backlog, e:`%s`'
-                logger.warn(log_msg, e)
+                logger.warning(log_msg, e)
                 logger_zato.warn(log_msg, e)
                 _sleep(0.1)
 
@@ -612,7 +612,7 @@ class InRAMSync(object):
         args = (max_depth, topic_name, cid)
 
         # Log in pub/sub log and the main one as well, just to make sure it will be easily found
-        logger.warn(msg, *args)
+        logger.warning(msg, *args)
         logger_zato.warn(msg, *args)
 
         # Store messages in logger - by default will go to disk

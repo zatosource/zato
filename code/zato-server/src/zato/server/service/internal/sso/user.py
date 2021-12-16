@@ -110,7 +110,7 @@ class Logout(BaseService):
         try:
             self.sso.user.logout(self.cid, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
         except Exception:
-            self.logger.warn('CID: `%s`, e:`%s`', self.cid, format_exc())
+            self.logger.warning('CID: `%s`, e:`%s`', self.cid, format_exc())
         finally:
             self.response.payload.status = status_code.ok
 
@@ -341,7 +341,7 @@ class Password(BaseRESTService):
 # ################################################################################################################################
 
     def _log_invalid_password_expiry(self, value):
-        self.logger.warn('CID: `%s`, invalid password_expiry `%r`, forcing default of `%s`',
+        self.logger.warning('CID: `%s`, invalid password_expiry `%r`, forcing default of `%s`',
             self.cid, value, self.sso.password.expiry)
 
 # ################################################################################################################################

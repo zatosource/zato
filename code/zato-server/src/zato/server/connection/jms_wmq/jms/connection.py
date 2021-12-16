@@ -393,7 +393,7 @@ class WebSphereMQConnection(object):
             message.JMS_IBM_PutDate = md.PutDate.strip()
             message.JMS_IBM_PutTime = md.PutTime.strip()
         else:
-            logger.warn('No md.PutDate and md.PutTime found, md:`%r`' % repr(md))
+            logger.warning('No md.PutDate and md.PutTime found, md:`%r`' % repr(md))
 
         # queue.put has succeeded, so overwrite expiration time as well
         if message.jms_expiration:
@@ -851,7 +851,7 @@ class MQRFH2JMS(object):
         if root_name in root_names:
             self.folders[root_name] = folder
         else:
-            logger.warn('Ignoring unrecognized JMS folder `%s`=`%s`' % (root_name, raw_folder))
+            logger.warning('Ignoring unrecognized JMS folder `%s`=`%s`' % (root_name, raw_folder))
 
 # ################################################################################################################################
 

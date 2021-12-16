@@ -642,7 +642,7 @@ class SFTPIPCFacade(object):
                 self.upload(local_path.name, remote_path, False, overwrite, log_level, False)
 
             except Exception:
-                logger.warn('Exception in SFTP write method `%s`', format_exc())
+                logger.warning('Exception in SFTP write method `%s`', format_exc())
 
             finally:
                 # Now we can close the file too

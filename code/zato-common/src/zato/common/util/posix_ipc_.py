@@ -196,7 +196,7 @@ class SharedMemoryIPC(object):
 
                 # Same message for logger and exception
                 msg = 'Could not get parent/key `{}` `{}` after {}s'.format(parent, key, timeout)
-                logger.warn(msg)
+                logger.warning(msg)
                 raise KeyError(msg)
 
             # No exception = re-raise exception immediately

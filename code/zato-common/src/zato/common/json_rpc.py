@@ -295,10 +295,10 @@ class JSONRPCHandler(object):
                     err_message = 'Message could not be handled'
 
             if is_schema_error:
-                logger.warn('JSON Schema validation error in JSON-RPC channel `%s` (%s); msg:`%s`, e:`%s`, details:`%s`',
+                logger.warning('JSON Schema validation error in JSON-RPC channel `%s` (%s); msg:`%s`, e:`%s`, details:`%s`',
                     self.config.name, cid, orig_message, format_exc(), e.error_msg_details)
             else:
-                logger.warn('JSON-RPC exception in `%s` (%s); msg:`%s`, e:`%s`',
+                logger.warning('JSON-RPC exception in `%s` (%s); msg:`%s`, e:`%s`',
                     self.config.name, cid, orig_message, format_exc())
 
             error_ctx.code = err_code

@@ -70,7 +70,7 @@ class _AttrBase(object):
             entity = self.sso.user.session.get(self.cid, ctx.input.target_ust, ctx.input.current_ust,
                 ctx.input.current_app, ctx.remote_addr, user_agent=None)
         else:
-            logger.warn('Could not establish API entity to use out of `%s`', self._api_entity)
+            logger.warning('Could not establish API entity to use out of `%s`', self._api_entity)
             raise ValidationError(status_code.common.internal_error)
 
         func = getattr(entity.attr, func_name)
@@ -105,7 +105,7 @@ class _AttrBase(object):
         try:
             result = call_data.func(**(kwargs if needs_input else {}))
         except Exception as e:
-            self.logger.warn(format_exc())
+            self.logger.warning(format_exc())
             if isinstance(e, ValidationError):
                 raise
             else:
@@ -166,7 +166,7 @@ class _Attr(_AttrBase, BaseRESTService):
         try:
             result = call_data.func(**kwargs)
         except Exception:
-            self.logger.warn(format_exc())
+            self.logger.warning(format_exc())
             raise ValidationError(status_code.common.invalid_input)
         else:
             if result:

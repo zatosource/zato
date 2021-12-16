@@ -84,7 +84,7 @@ class SFTPServer(object):
 # ################################################################################################################################
 
     def serve_forever(self):
-        logger.warn('CCC %s', self.command)
+        logger.warning('CCC %s', self.command)
 
         self.command()
 
