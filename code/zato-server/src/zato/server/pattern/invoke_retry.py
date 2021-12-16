@@ -75,7 +75,7 @@ class RetryFailed(ZatoException):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class InvokeRetry(object):
+class InvokeRetry:
     """ Provides the invoke-retry pattern that lets one invoke a service with parametrized retries.
     """
     def __init__(self, invoking_service):
@@ -173,7 +173,7 @@ class InvokeRetry(object):
             result = self.invoking_service.invoke(target, *args, **kwargs)
         except Exception:
 
-            logger.warn('Could not invoke:`%s`, cid:`%s`, e:`%s`', target, self.invoking_service.cid, format_exc())
+            logger.warning('Could not invoke:`%s`, cid:`%s`, e:`%s`', target, self.invoking_service.cid, format_exc())
 
             # How we handle the exception depends on whether the caller wants us
             # to block or prefers if we retry in background.

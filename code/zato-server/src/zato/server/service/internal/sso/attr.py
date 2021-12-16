@@ -21,7 +21,7 @@ _invalid = 'invalid.{}'.format(uuid4().hex)
 
 # ################################################################################################################################
 
-class _DataElem(object):
+class _DataElem:
     def __init__(self, func, elem_name, elem_value):
         self.func = func
         self.elem_name = elem_name
@@ -29,7 +29,7 @@ class _DataElem(object):
 
 # ################################################################################################################################
 
-class _AttrBase(object):
+class _AttrBase:
     """ Utility base class for attribute-related services.
     """
     _api_entity = None
@@ -70,7 +70,7 @@ class _AttrBase(object):
             entity = self.sso.user.session.get(self.cid, ctx.input.target_ust, ctx.input.current_ust,
                 ctx.input.current_app, ctx.remote_addr, user_agent=None)
         else:
-            logger.warn('Could not establish API entity to use out of `%s`', self._api_entity)
+            logger.warning('Could not establish API entity to use out of `%s`', self._api_entity)
             raise ValidationError(status_code.common.internal_error)
 
         func = getattr(entity.attr, func_name)
@@ -105,7 +105,7 @@ class _AttrBase(object):
         try:
             result = call_data.func(**(kwargs if needs_input else {}))
         except Exception as e:
-            self.logger.warn(format_exc())
+            self.logger.warning(format_exc())
             if isinstance(e, ValidationError):
                 raise
             else:
@@ -166,7 +166,7 @@ class _Attr(_AttrBase, BaseRESTService):
         try:
             result = call_data.func(**kwargs)
         except Exception:
-            self.logger.warn(format_exc())
+            self.logger.warning(format_exc())
             raise ValidationError(status_code.common.invalid_input)
         else:
             if result:

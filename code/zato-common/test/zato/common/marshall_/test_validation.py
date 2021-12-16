@@ -33,7 +33,7 @@ class ValidationTestCase(TestCase):
             api.from_dict(service, data, CreateUserRequest)
 
         e = cm.exception # type: ElementMissing
-        self.assertEquals(e.reason, 'Element missing: /request_id')
+        self.assertEqual(e.reason, 'Element missing: /request_id')
 
 # ################################################################################################################################
 
@@ -54,7 +54,7 @@ class ValidationTestCase(TestCase):
             api.from_dict(service, data, CreateUserRequest)
 
         e = cm.exception # type: ElementMissing
-        self.assertEquals(e.reason, 'Element missing: /user')
+        self.assertEqual(e.reason, 'Element missing: /user')
 
 # ################################################################################################################################
 
@@ -79,7 +79,7 @@ class ValidationTestCase(TestCase):
             api.from_dict(service, data, CreateUserRequest)
 
         e = cm.exception # type: ElementMissing
-        self.assertEquals(e.reason, 'Element missing: /user/address')
+        self.assertEqual(e.reason, 'Element missing: /user/address')
 
 # ################################################################################################################################
 
@@ -118,7 +118,7 @@ class ValidationTestCase(TestCase):
             api.from_dict(service, data, CreateUserRequest)
 
         e = cm.exception # type: ElementMissing
-        self.assertEquals(e.reason, 'Element missing: /role_list[0]/name')
+        self.assertEqual(e.reason, 'Element missing: /role_list[0]/name')
 
 # ################################################################################################################################
 
@@ -134,7 +134,7 @@ class ValidationTestCase(TestCase):
             api.from_dict(service, data, CreateAttrListRequest)
 
         e = cm.exception # type: ElementMissing
-        self.assertEquals(e.reason, 'Element missing: /attr_list')
+        self.assertEqual(e.reason, 'Element missing: /attr_list')
 
 # ################################################################################################################################
 
@@ -151,7 +151,7 @@ class ValidationTestCase(TestCase):
             api.from_dict(service, data, CreateAttrListRequest)
 
         e = cm.exception # type: ElementMissing
-        self.assertEquals(e.reason, 'Element missing: /attr_list[0]/name')
+        self.assertEqual(e.reason, 'Element missing: /attr_list[0]/name')
 
 # ################################################################################################################################
 
@@ -187,7 +187,7 @@ class ValidationTestCase(TestCase):
             api.from_dict(service, data, CreateAttrListRequest)
 
         e = cm.exception # type: ElementMissing
-        self.assertEquals(e.reason, 'Element missing: /attr_list[0]/name')
+        self.assertEqual(e.reason, 'Element missing: /attr_list[0]/name')
 
 # ################################################################################################################################
 
@@ -207,7 +207,7 @@ class ValidationTestCase(TestCase):
             api.from_dict(service, data, CreateAttrListRequest)
 
         e = cm.exception # type: ElementMissing
-        self.assertEquals(e.reason, 'Element missing: /attr_list[1]/name')
+        self.assertEqual(e.reason, 'Element missing: /attr_list[1]/name')
 
 # ################################################################################################################################
 
@@ -231,7 +231,7 @@ class ValidationTestCase(TestCase):
             api.from_dict(service, data, CreateAttrListRequest)
 
         e = cm.exception # type: ElementMissing
-        self.assertEquals(e.reason, 'Element missing: /attr_list[5]/name')
+        self.assertEqual(e.reason, 'Element missing: /attr_list[5]/name')
 
 # ################################################################################################################################
 
@@ -252,7 +252,7 @@ class ValidationTestCase(TestCase):
             api.from_dict(service, data, CreatePhoneListRequest)
 
         e = cm.exception # type: ElementMissing
-        self.assertEquals(e.reason, 'Element missing: /phone_list[0]/attr_list[0]/name')
+        self.assertEqual(e.reason, 'Element missing: /phone_list[0]/attr_list[0]/name')
 
 # ################################################################################################################################
 
@@ -274,7 +274,7 @@ class ValidationTestCase(TestCase):
             api.from_dict(service, data, CreatePhoneListRequest)
 
         e = cm.exception # type: ElementMissing
-        self.assertEquals(e.reason, 'Element missing: /phone_list[0]/attr_list[1]/name')
+        self.assertEqual(e.reason, 'Element missing: /phone_list[0]/attr_list[1]/name')
 
 # ################################################################################################################################
 
@@ -295,7 +295,7 @@ class ValidationTestCase(TestCase):
             api.from_dict(service, data, CreatePhoneListRequest)
 
         e = cm.exception # type: ElementMissing
-        self.assertEquals(e.reason, 'Element missing: /phone_list[2]/attr_list[1]/name')
+        self.assertEqual(e.reason, 'Element missing: /phone_list[2]/attr_list[1]/name')
 
 # ################################################################################################################################
 # ################################################################################################################################

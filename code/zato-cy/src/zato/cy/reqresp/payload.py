@@ -23,9 +23,7 @@ from zato.simpleio import CySimpleIO
 # ################################################################################################################################
 
 if 0:
-    # Python 2/3 compatibility
     from past.builtins import unicode as past_unicode
-
     past_unicode = past_unicode
 
 # ################################################################################################################################
@@ -41,7 +39,7 @@ _not_given:object = object()
 # ################################################################################################################################
 
 @cy.cclass
-class SimpleIOPayload(object):
+class SimpleIOPayload:
     """ Represents a payload, i.e. individual response elements, set via SimpleIO.
     """
     sio = cy.declare(cy.object, visibility='public')              # type: CySimpleIO

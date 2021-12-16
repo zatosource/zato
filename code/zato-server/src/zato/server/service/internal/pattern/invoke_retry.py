@@ -8,6 +8,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# pylint: disable=attribute-defined-outside-init
+
 # Arrow
 from arrow import utcnow
 
@@ -80,7 +82,7 @@ class InvokeRetry(Service):
             else:
                 msg = retry_limit_reached_msg(self.req_bunch.retry_repeats,
                     self.req_bunch.target, self.req_bunch.retry_seconds, self.req_bunch.orig_cid)
-                self.logger.warn(msg)
+                self.logger.warning(msg)
                 self._notify_callback(False, None)
 
         # Let the callback know it's all good

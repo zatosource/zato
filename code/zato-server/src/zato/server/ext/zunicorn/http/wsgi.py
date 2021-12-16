@@ -63,7 +63,7 @@ HEADER_VALUE_RE = re.compile(r'[\x00-\x1F\x7F]')
 log = logging.getLogger(__name__)
 
 
-class FileWrapper(object):
+class FileWrapper:
 
     def __init__(self, filelike, blksize=8192):
         self.filelike = filelike
@@ -116,7 +116,7 @@ def proxy_environ(req):
     }
 
 
-class Response(object):
+class Response:
 
     def __init__(self, req, sock, cfg):
         self.req = req

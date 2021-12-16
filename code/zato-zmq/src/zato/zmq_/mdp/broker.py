@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# flake8: noqa
+# pylint: disable=all
+
 """
 Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
@@ -38,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-class Broker(object):
+class Broker:
     """ Implements a broker part of the ZeroMQ Majordomo Protocol 0.1 http://rfc.zeromq.org/spec:7
     """
     def __init__(self, config, on_message_callback):
@@ -105,7 +108,7 @@ class Broker(object):
 
         # Wait at most 10 seconds until the port is released
         if not wait_until_port_free(self.tcp_port, 10):
-            logger.warn('Port `%s` was not released within 10s', self.tcp_port)
+            logger.warning('Port `%s` was not released within 10s', self.tcp_port)
 
 # ################################################################################################################################
 
@@ -123,7 +126,7 @@ class Broker(object):
             logger.info('Starting ZMQ MDP 0.1 broker at %s', self.address)
 
         except Exception:
-            logger.warn('Could not bind to `%s`, e:`%s`', self.address, format_exc())
+            logger.warning('Could not bind to `%s`, e:`%s`', self.address, format_exc())
 
         # Main loop
         while self.keep_running:
@@ -150,7 +153,7 @@ class Broker(object):
                 break
 
             except Exception:
-                logger.warn(format_exc())
+                logger.warning(format_exc())
 
 # ################################################################################################################################
 
@@ -229,7 +232,7 @@ class Broker(object):
             func(sender_id, *payload)
 
         except Exception:
-            logger.warn(format_exc())
+            logger.warning(format_exc())
 
 # ################################################################################################################################
 
@@ -286,7 +289,7 @@ class Broker(object):
 
             if service.has_max_workers:
                 msg = 'ZeroMQ MDP channel `%s` cannot add more workers for service `%s` (reached max=%s)'
-                logger.warn(msg, self.config.name, service_name, self.workers_pool_max)
+                logger.warning(msg, self.config.name, service_name, self.workers_pool_max)
                 return
 
             self.add_workers(service)
@@ -364,7 +367,7 @@ class Broker(object):
                 self._reply(request.client, response)
 
             else:
-                logger.warn('Client `%r` is not allowed to invoke `%s` through `%s`', request.client, service, self.zato_service_name)
+                logger.warning('Client `%r` is not allowed to invoke `%s` through `%s`', request.client, service, self.zato_service_name)
 
         finally:
             # Whether the service was invoked or not we need to add this worker back to the pool
@@ -431,7 +434,7 @@ class Broker(object):
             worker = self.workers.get(wrapped_id)
 
             if not worker:
-                logger.warn('No worker found for HB `%s`', wrapped_id)
+                logger.warning('No worker found for HB `%s`', wrapped_id)
                 return
 
             now = datetime.utcnow()

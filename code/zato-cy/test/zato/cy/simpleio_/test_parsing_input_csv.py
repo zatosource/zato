@@ -49,11 +49,11 @@ class CSVInputParsing(BaseSIOTestCase):
         self.assertIsInstance(input, list)
 
         input = input[0]
-        self.assertEquals(input.aaa, aaa)
-        self.assertEquals(input.bbb, int(bbb))
-        self.assertEquals(input.ccc, ccc)
-        self.assertEquals(input.ddd, backward_compat_default_value)
-        self.assertEquals(input.eee, eee)
+        self.assertEqual(input.aaa, aaa)
+        self.assertEqual(input.bbb, int(bbb))
+        self.assertEqual(input.ccc, ccc)
+        self.assertEqual(input.ddd, backward_compat_default_value)
+        self.assertEqual(input.eee, eee)
 
 # ################################################################################################################################
 
@@ -78,11 +78,11 @@ class CSVInputParsing(BaseSIOTestCase):
         self.assertIsInstance(input, list)
 
         input = input[0]
-        self.assertEquals(input.aaa, aaa)
-        self.assertEquals(input.bbb, int(bbb))
-        self.assertEquals(input.ccc, ccc)
-        self.assertEquals(input.ddd, backward_compat_default_value)
-        self.assertEquals(input.eee, eee)
+        self.assertEqual(input.aaa, aaa)
+        self.assertEqual(input.bbb, int(bbb))
+        self.assertEqual(input.ccc, ccc)
+        self.assertEqual(input.ddd, backward_compat_default_value)
+        self.assertEqual(input.eee, eee)
 
 # ################################################################################################################################
 
@@ -115,17 +115,17 @@ class CSVInputParsing(BaseSIOTestCase):
         input1 = input[0]
         input2 = input[1]
 
-        self.assertEquals(input1.aaa, aaa1)
-        self.assertEquals(input1.bbb, int(bbb1))
-        self.assertEquals(input1.ccc, ccc1)
-        self.assertEquals(input1.ddd, backward_compat_default_value)
-        self.assertEquals(input1.eee, eee1)
+        self.assertEqual(input1.aaa, aaa1)
+        self.assertEqual(input1.bbb, int(bbb1))
+        self.assertEqual(input1.ccc, ccc1)
+        self.assertEqual(input1.ddd, backward_compat_default_value)
+        self.assertEqual(input1.eee, eee1)
 
-        self.assertEquals(input2.aaa, aaa2)
-        self.assertEquals(input2.bbb, int(bbb2))
-        self.assertEquals(input2.ccc, ccc2)
-        self.assertEquals(input2.ddd, backward_compat_default_value)
-        self.assertEquals(input2.eee, eee2)
+        self.assertEqual(input2.aaa, aaa2)
+        self.assertEqual(input2.bbb, int(bbb2))
+        self.assertEqual(input2.ccc, ccc2)
+        self.assertEqual(input2.ddd, backward_compat_default_value)
+        self.assertEqual(input2.eee, eee2)
 
 # ################################################################################################################################
 
@@ -162,27 +162,27 @@ class CSVInputParsing(BaseSIOTestCase):
         self.assertIsInstance(input, list)
         input = input[0]
 
-        self.assertEquals(input.aaa, aaa)
-        self.assertEquals(input.bbb, bbb)
+        self.assertEqual(input.aaa, aaa)
+        self.assertEqual(input.bbb, bbb)
         self.assertTrue(input.ccc)
-        self.assertEquals(input.ddd, '')
+        self.assertEqual(input.ddd, '')
 
         self.assertIsInstance(input.eee, datetime)
-        self.assertEquals(input.eee.year, 1999)
-        self.assertEquals(input.eee.month, 12)
-        self.assertEquals(input.eee.day, 31)
+        self.assertEqual(input.eee.year, 1999)
+        self.assertEqual(input.eee.month, 12)
+        self.assertEqual(input.eee.day, 31)
 
         self.assertIsInstance(input.fff, datetime)
-        self.assertEquals(input.fff.year, 1988)
-        self.assertEquals(input.fff.month, 1)
-        self.assertEquals(input.fff.day, 29)
+        self.assertEqual(input.fff.year, 1988)
+        self.assertEqual(input.fff.month, 1)
+        self.assertEqual(input.fff.day, 29)
 
-        self.assertEquals(input.ggg, decimal_Decimal(ggg))
-        self.assertEquals(input.jjj, float(jjj))
-        self.assertEquals(input.mmm, int(mmm))
-        self.assertEquals(input.ooo, ooo)
-        self.assertEquals(input.ppp, ppp)
-        self.assertEquals(input.qqq, uuid_UUID(qqq))
+        self.assertEqual(input.ggg, decimal_Decimal(ggg))
+        self.assertEqual(input.jjj, float(jjj))
+        self.assertEqual(input.mmm, int(mmm))
+        self.assertEqual(input.ooo, ooo)
+        self.assertEqual(input.ppp, ppp)
+        self.assertEqual(input.qqq, uuid_UUID(qqq))
 
 # ################################################################################################################################
 
@@ -205,7 +205,7 @@ class CSVInputParsing(BaseSIOTestCase):
             MyService._sio.parse_input(data, DATA_FORMAT.CSV)
 
         e = ctx.exception # type: ValueError
-        self.assertEquals(e.args[0], "Could not find input value at index `1` in `['aaa-111^222^333']` (dialect:excel, config:{})")
+        self.assertEqual(e.args[0], "Could not find input value at index `1` in `['aaa-111^222^333']` (dialect:excel, config:{})")
 
 # ################################################################################################################################
 # ################################################################################################################################

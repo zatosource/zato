@@ -53,7 +53,7 @@ RateLimitStateDelete = RateLimitStateTable.delete
 # ################################################################################################################################
 # ################################################################################################################################
 
-class BaseLimiter(object):
+class BaseLimiter:
     """ A per-server, approximate, rate limiter object. It is approximate because it does not keep track
     of what current rate limits in other servers are.
     """

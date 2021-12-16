@@ -6,6 +6,8 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# pylint: disable=attribute-defined-outside-init
+
 # stdlib
 from datetime import datetime, timedelta
 from logging import getLogger
@@ -66,7 +68,7 @@ def _is_tls_config(config):
 
 # ################################################################################################################################
 
-class _AMQPMessage(object):
+class _AMQPMessage:
     __slots__ = ('body', 'impl')
 
     def __init__(self, body, impl):
@@ -75,7 +77,7 @@ class _AMQPMessage(object):
 
 # ################################################################################################################################
 
-class _AMQPProducers(object):
+class _AMQPProducers:
     """ Encapsulates information about producers used by outgoing AMQP connection to send messages to a broker.
     Each outgoing connection has one _AMQPProducers object assigned.
     """
@@ -109,7 +111,7 @@ class _AMQPProducers(object):
 
 # ################################################################################################################################
 
-class Consumer(object):
+class Consumer:
     """ Consumes messages from AMQP queues. There is one Consumer object for each Zato AMQP channel.
     """
     def __init__(self, config, on_amqp_message):
@@ -127,7 +129,7 @@ class Consumer(object):
         try:
             return self.on_amqp_message(body, msg, self.name, self.config)
         except Exception:
-            logger.warn(format_exc())
+            logger.warning(format_exc())
 
 # ################################################################################################################################
 
@@ -203,7 +205,7 @@ class Consumer(object):
 
                 # Special-case AMQP-level connection errors and recreate the connection if any is caught.
                 except AMQPConnectionError:
-                    logger.warn('Caught AMQP connection error in mainloop e:`%s`', format_exc())
+                    logger.warning('Caught AMQP connection error in mainloop e:`%s`', format_exc())
                     if connection:
                         connection.close()
                         consumer = self._get_consumer()
@@ -217,7 +219,7 @@ class Consumer(object):
                     except Exception:
                         hb_errors_so_far += 1
                         if hb_errors_so_far % log_every == 0:
-                            logger.warn('Exception in heartbeat (%s so far), e:`%s`', hb_errors_so_far, format_exc())
+                            logger.warning('Exception in heartbeat (%s so far), e:`%s`', hb_errors_so_far, format_exc())
 
                         # Ok, we've lost the connection, set the flag to False and sleep for some time then.
                         if not connection:
@@ -243,7 +245,7 @@ class Consumer(object):
             self.is_stopped = True # Set to True if we break out of the main loop.
 
         except Exception:
-            logger.warn('Unrecoverable exception in consumer, e:`%s`', format_exc())
+            logger.warning('Unrecoverable exception in consumer, e:`%s`', format_exc())
 
 # ################################################################################################################################
 
@@ -444,7 +446,7 @@ class ConnectorAMQP(Connector):
             try:
                 producer.stop()
             except Exception:
-                logger.warn('Could not stop AMQP producer `%s`, e:`%s`', producer.name, format_exc())
+                logger.warning('Could not stop AMQP producer `%s`, e:`%s`', producer.name, format_exc())
             else:
                 logger.info('Stopped producer for outconn `%s` in AMQP connector `%s`', producer.name, self.config.name)
 

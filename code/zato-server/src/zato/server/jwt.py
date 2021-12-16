@@ -33,7 +33,7 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
-class AuthInfo(object):
+class AuthInfo:
     __slots__ = 'sec_def_id', 'sec_def_username', 'token'
 
     def __init__(self, sec_def_id, sec_def_username, token):
@@ -44,7 +44,7 @@ class AuthInfo(object):
 
 # ################################################################################################################################
 
-class JWT(object):
+class JWT:
     """ JWT authentication backend.
     """
     ALGORITHM = 'HS256'

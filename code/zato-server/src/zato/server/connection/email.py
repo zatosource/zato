@@ -88,14 +88,14 @@ class ImapTransport(_ImapTransport):
 
 # ################################################################################################################################
 
-class EMailAPI(object):
+class EMailAPI:
     def __init__(self, smtp, imap):
         self.smtp = smtp
         self.imap = imap
 
 # ################################################################################################################################
 
-class _Connection(object):
+class _Connection:
 
     def __repr__(self):
         return '<{} at {}, config:`{}`>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
@@ -155,7 +155,7 @@ class SMTPConnection(_Connection):
             with self.conn_class(*self.conn_args) as conn:
                 conn.send(email, atts, from_ or msg.from_)
         except Exception:
-            logger.warn('Could not send an SMTP message to `%s`, e:`%s`', self.config_no_sensitive, format_exc())
+            logger.warning('Could not send an SMTP message to `%s`, e:`%s`', self.config_no_sensitive, format_exc())
         else:
             if logger.isEnabledFor(INFO):
                 atts_info = ', '.join(att.name for att in atts) if atts else None

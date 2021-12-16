@@ -611,7 +611,7 @@ class ServiceInvoker(AdminService):
         # that our channel can be used for such invocations.
         if is_internal:
             if self.channel.name not in self.server.fs_server_config.misc.service_invoker_allow_internal:
-                self.logger.warn('Service `%s` could not be invoked; channel `%s` not among `%s` (service_invoker_allow_internal)',
+                self.logger.warning('Service `%s` could not be invoked; channel `%s` not among `%s` (service_invoker_allow_internal)',
                     service_name, self.channel.name, self.server.fs_server_config.misc.service_invoker_allow_internal)
                 self.response.data_format = 'text/plain'
                 raise BadRequest(self.cid, 'No such service `{}`'.format(service_name))

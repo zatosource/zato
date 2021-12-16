@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-class JSONRPC(object):
+class JSONRPC:
     def __init__(self):
         self.id = None
         self.name = None

@@ -34,13 +34,13 @@ class CacheTestCace(TestCase):
         c.set(key3, expected3, 1.0, None)
 
         returned1 = c.get(key1, None, False)
-        self.assertEquals(returned1, expected1)
+        self.assertEqual(returned1, expected1)
 
         returned2 = c.get(key2, None, False)
-        self.assertEquals(returned2, expected2)
+        self.assertEqual(returned2, expected2)
 
         returned3 = c.get(key3, None, False)
-        self.assertEquals(returned3, expected3)
+        self.assertEqual(returned3, expected3)
 
 # ################################################################################################################################
 
@@ -57,26 +57,26 @@ class CacheTestCace(TestCase):
         returned1 = c.get(key1, None, True)
         sleep(0.01)
 
-        self.assertEquals(returned1.value, expected1)
-        self.assertEquals(returned1.expiry, 0.0)
-        self.assertEquals(returned1.expires_at, 0.0)
-        self.assertEquals(returned1.hits, 1)
-        self.assertEquals(returned1.prev_read, 0.0)
-        self.assertEquals(returned1.prev_write, 0.0)
+        self.assertEqual(returned1.value, expected1)
+        self.assertEqual(returned1.expiry, 0.0)
+        self.assertEqual(returned1.expires_at, 0.0)
+        self.assertEqual(returned1.hits, 1)
+        self.assertEqual(returned1.prev_read, 0.0)
+        self.assertEqual(returned1.prev_write, 0.0)
         self.assertLess(returned1.last_read, c.get_timestamp())
         self.assertLess(returned1.last_write, c.get_timestamp())
 
         returned2 = c.get(key2, None, True)
         sleep(0.01)
 
-        self.assertEquals(returned2.value, expected2)
-        self.assertEquals(returned2.expiry, key2_expiry)
+        self.assertEqual(returned2.value, expected2)
+        self.assertEqual(returned2.expiry, key2_expiry)
         self.assertLess(c.get_timestamp() - returned2.expires_at, key2_expiry)
-        self.assertEquals(returned2.hits, 1)
+        self.assertEqual(returned2.hits, 1)
         self.assertLess(returned2.last_read, c.get_timestamp())
         self.assertLess(returned2.last_write, c.get_timestamp())
-        self.assertEquals(returned2.prev_read, 0.0)
-        self.assertEquals(returned2.prev_write, 0.0)
+        self.assertEqual(returned2.prev_read, 0.0)
+        self.assertEqual(returned2.prev_write, 0.0)
 
 # ################################################################################################################################
 
@@ -95,24 +95,24 @@ class CacheTestCace(TestCase):
         now = c.get_timestamp() + 1
 
         returned1 = c.get(key1, None, True)
-        self.assertEquals(returned1.value, expected1)
-        self.assertEquals(returned1.position, 2)
+        self.assertEqual(returned1.value, expected1)
+        self.assertEqual(returned1.position, 2)
         self.assertLess(returned1.last_read, now)
         self.assertLess(returned1.last_write, now)
         self.assertLess(returned1.prev_read, now)
         self.assertLess(returned1.prev_write, now)
 
         returned2 = c.get(key2, None, True)
-        self.assertEquals(returned2.value, expected2)
-        self.assertEquals(returned2.position, 2)
+        self.assertEqual(returned2.value, expected2)
+        self.assertEqual(returned2.position, 2)
         self.assertLess(returned2.last_read, now)
         self.assertLess(returned2.last_write, now)
         self.assertLess(returned2.prev_read, now)
         self.assertLess(returned2.prev_write, now)
 
         returned3 = c.get(key3, None, True)
-        self.assertEquals(returned3.value, expected3)
-        self.assertEquals(returned3.position, 2)
+        self.assertEqual(returned3.value, expected3)
+        self.assertEqual(returned3.position, 2)
         self.assertLess(returned3.last_read, now)
         self.assertLess(returned3.last_write, now)
         self.assertLess(returned3.prev_read, now)
@@ -135,12 +135,12 @@ class CacheTestCace(TestCase):
         # The value of max_size is 2 but we added 3 keys and there were no .get in between .set calls,
         # so we now expect that the first key will have been evicted and only key2 and key3 still exist.
 
-        self.assertEquals(len(c), 2)
-        self.assertEquals(c.max_size, 2)
-        self.assertEquals(c.set_ops, 3)
-        self.assertEquals(c.get_ops, 0)
-        self.assertEquals(c.index(key3), 0)
-        self.assertEquals(c.index(key2), 1)
+        self.assertEqual(len(c), 2)
+        self.assertEqual(c.max_size, 2)
+        self.assertEqual(c.set_ops, 3)
+        self.assertEqual(c.get_ops, 0)
+        self.assertEqual(c.index(key3), 0)
+        self.assertEqual(c.index(key2), 1)
         self.assertIsNone(c.index(key1))
 
 # ################################################################################################################################
@@ -157,9 +157,9 @@ class CacheTestCace(TestCase):
         returned1_a = c.get(key1, None, False)
         returned1_b = c.get(key1, None, True)
 
-        self.assertEquals(len(c), 1)
-        self.assertEquals(returned1_a, expected1_new)
-        self.assertEquals(returned1_b.value, expected1_new)
+        self.assertEqual(len(c), 1)
+        self.assertEqual(returned1_a, expected1_new)
+        self.assertEqual(returned1_b.value, expected1_new)
 
 # ################################################################################################################################
 
@@ -182,18 +182,18 @@ class CacheTestCace(TestCase):
         returned1_a = c.get(key1, None, False)
         returned1_b = c.get(key1, None, True)
 
-        self.assertEquals(returned1_a, expected1)
-        self.assertEquals(len(c), 1)
-        self.assertEquals(returned1_b.value, expected1)
+        self.assertEqual(returned1_a, expected1)
+        self.assertEqual(len(c), 1)
+        self.assertEqual(returned1_b.value, expected1)
 
         sleep(sleep_time)
 
         returned1_a = c.get(key1, None, False)
         returned1_b = c.get(key1, None, True)
 
-        self.assertEquals(returned1_a, expected1)
-        self.assertEquals(len(c), 1)
-        self.assertEquals(returned1_b.value, expected1)
+        self.assertEqual(returned1_a, expected1)
+        self.assertEqual(len(c), 1)
+        self.assertEqual(returned1_b.value, expected1)
 
 # ################################################################################################################################
 
@@ -215,9 +215,9 @@ class CacheTestCace(TestCase):
         returned1_a = c.get(key1, None, False)
         returned1_b = c.get(key1, None, True)
 
-        self.assertEquals(returned1_a, expected1)
-        self.assertEquals(len(c), 1)
-        self.assertEquals(returned1_b.value, expected1)
+        self.assertEqual(returned1_a, expected1)
+        self.assertEqual(len(c), 1)
+        self.assertEqual(returned1_b.value, expected1)
 
         sleep(sleep_time)
 
@@ -242,9 +242,9 @@ class CacheTestCace(TestCase):
         returned1_a = c.get(key1, None, False)
         returned1_b = c.get(key1, None, True)
 
-        self.assertEquals(len(c), 1)
-        self.assertEquals(returned1_a, expected1_new)
-        self.assertEquals(returned1_b.value, expected1_new)
+        self.assertEqual(len(c), 1)
+        self.assertEqual(returned1_a, expected1_new)
+        self.assertEqual(returned1_b.value, expected1_new)
 
 # ################################################################################################################################
 
@@ -258,11 +258,11 @@ class CacheTestCace(TestCase):
         sleep(0.11)
 
         self.assertRaises(KeyExpiredError, c.set, key1, expected1_new, 0.0, None)
-        self.assertEquals(len(c), 0)
+        self.assertEqual(len(c), 0)
         self.assertListEqual(c._expired_on_op, [key1])
 
         deleted = c.delete_expired()
-        self.assertEquals(sorted(deleted), [key1])
+        self.assertEqual(sorted(deleted), [key1])
         self.assertListEqual(c._expired_on_op, [])
 
 # ################################################################################################################################
@@ -279,31 +279,31 @@ class CacheTestCace(TestCase):
         c.set(key2, expected2, 5.0, None)
         c.set(key3, expected3, 5.0, None)
 
-        self.assertEquals(len(c.hits_per_position), 2)
-        self.assertEquals(c.hits_per_position[0], 0)
-        self.assertEquals(c.hits_per_position[1], 0)
+        self.assertEqual(len(c.hits_per_position), 2)
+        self.assertEqual(c.hits_per_position[0], 0)
+        self.assertEqual(c.hits_per_position[1], 0)
 
         # Right now index0 is key3, so when we look up this key 3 times, we always find it at index0
 
         c.get('key3', None, False)
         c.get('key3', None, False)
         c.get('key3', None, False)
-        self.assertEquals(c.hits_per_position[0], 3)
+        self.assertEqual(c.hits_per_position[0], 3)
 
         # Now get key2 which will be found at index1 and getting it will move it to index0
 
         c.get('key2', None, False)
-        self.assertEquals(c.hits_per_position[1], 1)
+        self.assertEqual(c.hits_per_position[1], 1)
 
         # Now key2 is at index0 so getting this key will increase index0's counter
 
         c.get('key2', None, False)
         c.get('key2', None, False)
         c.get('key2', None, False)
-        self.assertEquals(c.hits_per_position[0], 6)
+        self.assertEqual(c.hits_per_position[0], 6)
 
         # Make sure index1's counter is still the same as it was
-        self.assertEquals(c.hits_per_position[1], 1)
+        self.assertEqual(c.hits_per_position[1], 1)
 
         # Looking up unknown keys should not increase any counters
         try:
@@ -311,9 +311,9 @@ class CacheTestCace(TestCase):
         except KeyError:
             pass
 
-        self.assertEquals(len(c.hits_per_position), 2)
-        self.assertEquals(c.hits_per_position[0], 6)
-        self.assertEquals(c.hits_per_position[1], 1)
+        self.assertEqual(len(c.hits_per_position), 2)
+        self.assertEqual(c.hits_per_position[0], 6)
+        self.assertEqual(c.hits_per_position[1], 1)
 
 # ################################################################################################################################
 
@@ -330,7 +330,7 @@ class CacheTestCace(TestCase):
 
         c.delete(key1)
 
-        self.assertEquals(len(c), 2)
+        self.assertEqual(len(c), 2)
         self.assertNotIn(key1, c)
         self.assertIn(key2, c)
         self.assertIn(key3, c)
@@ -351,9 +351,9 @@ class CacheTestCace(TestCase):
         sleep(0.12)
 
         deleted = c.delete_expired()
-        self.assertEquals(sorted(deleted), [key1, key3])
+        self.assertEqual(sorted(deleted), [key1, key3])
 
-        self.assertEquals(len(c), 1)
+        self.assertEqual(len(c), 1)
         self.assertNotIn(key1, c)
         self.assertIn(key2, c)
         self.assertNotIn(key3, c)
@@ -376,7 +376,7 @@ class CacheTestCace(TestCase):
         self.assertRaises(KeyExpiredError, c.get, key1, None, False)
         self.assertRaises(KeyExpiredError, c.get, key3, None, False)
 
-        self.assertEquals(len(c), 1)
+        self.assertEqual(len(c), 1)
         self.assertNotIn(key1, c)
         self.assertIn(key2, c)
         self.assertNotIn(key3, c)
@@ -385,7 +385,7 @@ class CacheTestCace(TestCase):
         self.assertListEqual(c._expired_on_op, [key1, key3])
 
         deleted = c.delete_expired()
-        self.assertEquals(sorted(deleted), [key1, key3])
+        self.assertEqual(sorted(deleted), [key1, key3])
         self.assertListEqual(c._expired_on_op, [])
 
 # ################################################################################################################################
@@ -421,7 +421,7 @@ class CacheTestCace(TestCase):
         try:
             c.set(key3, expected3, 0.0, None)
         except ValueError as e:
-            self.assertEquals(e.message, 'Value too long 7 > 6')
+            self.assertEqual(e.message, 'Value too long 7 > 6')
         else:
             self.fail('Expected aValueError to be raised')
 
@@ -444,22 +444,22 @@ class CacheTestCace(TestCase):
         c.set(key4, expected4, 0.0, None)
 
         returned1 = c.get(key1, None, False)
-        self.assertEquals(returned1, expected1)
+        self.assertEqual(returned1, expected1)
 
         returned2 = c.get(key2, None, False)
-        self.assertEquals(returned2, expected2)
+        self.assertEqual(returned2, expected2)
 
         returned3 = c.get(key3, None, False)
-        self.assertEquals(returned3, expected3)
+        self.assertEqual(returned3, expected3)
 
         returned4 = c.get(key4, None, False)
-        self.assertEquals(returned4, expected4)
+        self.assertEqual(returned4, expected4)
 
 # ################################################################################################################################
 
     def test_max_item_size_python_object(self):
 
-        class MyClass(object):
+        class MyClass:
             a = '1' * 10000
             b = 2.0 ** 20
 

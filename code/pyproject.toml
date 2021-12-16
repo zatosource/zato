@@ -2,14 +2,17 @@
 pythonVersion = "3.8"
 typeCheckingMode = "basic"
 
+#
 # This is level 1
+#
+reportGeneralTypeIssues     = "none"
+reportOptionalMemberAccess  = "none"
 reportPrivateUsage        = "error"
 reportAssertAlwaysTrue    = "error"
 reportUnusedImport        = "error"
 reportUnusedFunction      = "error"
 reportUnusedCallResult    = "error"
 reportUnusedVariable      = "error"
-reportGeneralTypeIssues   = "error"
 reportInvalidTypeVarUse   = "error"
 reportOverlappingOverload = "error"
 reportPropertyTypeMismatch  = "error"
@@ -22,17 +25,29 @@ reportUntypedFunctionDecorator    = "error"
 reportWildcardImportFromLibrary   = "error"
 reportImplicitStringConcatenation = "error"
 
+#
 # This is level 2
-reportMissingParameterType = "error"
+#
+#reportGeneralTypeIssues    = "error"
+#reportOptionalMemberAccess = "error"
 
-# This is level 3, needed before reportUnknownMemberType
-reportUnknownArgumentType  = "error"
+#
+# This is level 3
+#
+#reportMissingParameterType = "error"
 
-# This is level 4
-reportUnknownLambdaType    = "error"
-reportUnknownMemberType    = "error"
-reportUnknownParameterType = "error"
-reportUnknownVariableType  = "error"
+#
+# This is level 4, needed before reportUnknownMemberType
+#
+#reportUnknownArgumentType  = "error"
+
+#
+# This is level 5
+#
+#reportUnknownLambdaType    = "error"
+#reportUnknownMemberType    = "error"
+#reportUnknownParameterType = "error"
+#reportUnknownVariableType  = "error"
 
 extraPaths = [
     "./lib/python3.8/site-packages",

@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-class DeliveryTask(object):
+class DeliveryTask:
     def __init__(self):
         self.id = None
         self.is_active = None

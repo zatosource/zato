@@ -43,7 +43,7 @@ if typing.TYPE_CHECKING:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Wrapper(object):
+class Wrapper:
     """ Base class for non-queue based connections wrappers.
     """
     needs_self_client = False
@@ -79,7 +79,7 @@ class Wrapper(object):
 
         if self.required_secret_attr:
             if not self.config[self.required_secret_attr]:
-                logger.warn('Skipped building a %s without %s defined (%s)', self.wrapper_type,
+                logger.warning('Skipped building a %s without %s defined (%s)', self.wrapper_type,
                     self.required_secret_label, self.config.name)
                 return
 
@@ -104,7 +104,7 @@ class Wrapper(object):
         try:
             spawn_greenlet(self._init_impl, timeout=45)
         except Exception:
-            logger.warn('Could not initialize %s `%s`, e:`%s`', self.wrapper_type, self.config.name, format_exc())
+            logger.warning('Could not initialize %s `%s`, e:`%s`', self.wrapper_type, self.config.name, format_exc())
 
 # ################################################################################################################################
 

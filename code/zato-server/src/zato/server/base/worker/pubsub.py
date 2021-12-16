@@ -15,8 +15,8 @@ from zato.server.base.worker.common import WorkerImpl
 # ################################################################################################################################
 
 if 0:
-    from zato.server.pubsub import PubSub
-    PubSub = PubSub
+    from zato.server.pubsub import PubSub as ServerPubSub
+    ServerPubSub = ServerPubSub
 
 # ################################################################################################################################
 
@@ -29,7 +29,7 @@ class PubSub(WorkerImpl):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.pubsub = self.pubsub # type: PubSub
+        self.pubsub = self.pubsub # type: ServerPubSub
 
 # ################################################################################################################################
 

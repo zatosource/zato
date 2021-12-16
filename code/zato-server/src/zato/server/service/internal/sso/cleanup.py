@@ -52,7 +52,7 @@ class Cleanup(Service):
                     session.commit()
 
             except Exception:
-                self.logger.warn('Error in SSO cleanup: `%s`', format_exc())
+                self.logger.warning('Error in SSO cleanup: `%s`', format_exc())
                 sleep(sleep_time)
             else:
                 self.logger.debug('SSO cleanup completed successfully')

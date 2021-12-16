@@ -65,7 +65,7 @@ def default_json_handler(value):
 
 # ################################################################################################################################
 
-class _APIResponse(object):
+class _APIResponse:
     """ A class to represent data returned by API services.
     """
     def __init__(self, inner, _OK=OK):
@@ -82,7 +82,7 @@ class _APIResponse(object):
 
 # ################################################################################################################################
 
-class APIClient(object):
+class APIClient:
     def __init__(self, address, username, password, path='/zato/api/invoke/{}', tls_verify=None, tls_cert=None):
         self.address = address
         self.username = username
@@ -133,7 +133,7 @@ class APIClient(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _Response(object):
+class _Response:
     """ A base class for all specific response types client may return.
     """
     def __init__(self, inner, to_bunch, max_response_repr, max_cid_repr, logger, output_repeated=False):
@@ -378,7 +378,7 @@ class RawDataResponse(_Response):
 
 # ################################################################################################################################
 
-class _Client(object):
+class _Client:
     """ A base class of convenience clients for invoking Zato services from other Python applications.
     """
     def __init__(self, address, path, auth=None, session=None, to_bunch=False,

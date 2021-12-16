@@ -61,7 +61,7 @@ _inserting_gd_msg = 'Inserting GD messages for topic `%s` `%s` published by `%s`
 
 # ################################################################################################################################
 
-class PubCtx(object):
+class PubCtx:
     """ A container for information describing a single publication.
     """
     __slots__ = ('cluster_id', 'pubsub', 'topic', 'endpoint_id', 'endpoint_name', 'subscriptions_by_topic', 'msg_id_list',
@@ -299,7 +299,7 @@ class Publish(AdminService):
 
         # Not allowed, raise an exception in that case
         if not pub_pattern_matched:
-            self.logger.warn('No pub pattern matched topic `%s` and endpoint `%s` (#2)',
+            self.logger.warning('No pub pattern matched topic `%s` and endpoint `%s` (#2)',
                 input.topic_name, self.pubsub.get_endpoint_by_id(endpoint_id).name)
             raise Forbidden(self.cid)
 
@@ -650,6 +650,6 @@ class Publish(AdminService):
                 self.server.pub_sub_metadata.set(endpoint_key, endpoint_topic_list)
 
         except Exception:
-            self.logger.warn('Error while updating pub metadata `%s`', format_exc())
+            self.logger.warning('Error while updating pub metadata `%s`', format_exc())
 
 # ################################################################################################################################

@@ -195,7 +195,7 @@ cdef class Entry:
 
 # ################################################################################################################################
 
-cdef class Cache(object):
+cdef class Cache:
     """ An LRU cache that optionally rejects entries bigger than N bytes. Entries can have a TTL assigned - periodic processes
     will clean up entries older than allowed.
     """

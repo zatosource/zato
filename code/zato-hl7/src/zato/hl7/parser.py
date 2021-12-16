@@ -53,7 +53,7 @@ def get_payload_from_request(data, data_encoding, hl7_version, json_path, should
 
     except Exception as e:
         msg = 'Caught an HL7 exception while handling data:`%s` (%s); e:`%s`'
-        logger.warn(msg, repr(data), repr(data_encoding), format_exc())
+        logger.warning(msg, repr(data), repr(data_encoding), format_exc())
         raise HL7Exception('HL7 exception', data, e)
 
 # ################################################################################################################################

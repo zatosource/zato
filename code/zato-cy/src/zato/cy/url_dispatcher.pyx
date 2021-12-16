@@ -42,7 +42,7 @@ _internal_url_path_indicator = '{}/zato/'.format(target_separator)
 # ################################################################################################################################
 # ################################################################################################################################
 
-cdef class Matcher(object):
+cdef class Matcher:
     """ Matches incoming URL paths in requests received against the pattern it's configured to react to.
     For instance, '/permission/user/{user_id}/group/{group_id}' gets translated and compiled to the regex
     of '/permission/user/(?P<user_id>\\w+)/group/(?P<group_id>\\w+)$' which in runtime is used for matching.
@@ -132,7 +132,7 @@ cdef class Matcher(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-cdef class CyURLData(object):
+cdef class CyURLData:
 
     cdef:
         public list channel_data

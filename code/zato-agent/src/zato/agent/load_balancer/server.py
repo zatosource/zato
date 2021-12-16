@@ -35,6 +35,7 @@ from zato.common.haproxy import haproxy_stats, validate_haproxy_config
 from zato.common.py23_.spring_ import RequestHandler, SimpleXMLRPCServer, SSLServer
 from zato.common.repo import RepoManager
 from zato.common.util.api import get_lb_agent_json_config, timeouting_popen
+from zato.common.util.open_ import open_r
 
 public_method_prefix = '_lb_agent_'
 config_file = 'zato.config'
@@ -50,7 +51,7 @@ for _ignored_version, commands in haproxy_stats.items():
 # ################################################################################################################################
 # ################################################################################################################################
 
-class BaseLoadBalancerAgent(object):
+class BaseLoadBalancerAgent:
 
     # This is implemented by children classes
     register_function: Callable
@@ -71,7 +72,7 @@ class BaseLoadBalancerAgent(object):
         self.haproxy_pidfile = os.path.abspath(os.path.join(self.repo_dir, '../', '../', MISC.PIDFILE))
 
         log_config = os.path.abspath(os.path.join(self.repo_dir, self.json_config['log_config']))
-        with open(log_config) as f:
+        with open_r(log_config) as f:
             data = yaml.load(f, yaml.FullLoader) # type: dict
             logging.config.dictConfig(data) # pyright: reportGeneralTypeIssues=false
 
@@ -109,7 +110,10 @@ class BaseLoadBalancerAgent(object):
     def restart_load_balancer(self):
         """ Restarts the HAProxy load balancer without disrupting existing connections.
         """
-        additional_params = ['-sf', open(self.haproxy_pidfile).read().strip()]
+        additional_params = [
+            '-sf',
+            open_r(self.haproxy_pidfile).read().strip()
+        ]
         self._re_start_load_balancer('Could not restart in `{}` seconds. ', 'Failed to restart HAProxy. ', additional_params)
 
 # ################################################################################################################################
@@ -125,7 +129,7 @@ class BaseLoadBalancerAgent(object):
                 public_name = item.split(public_method_prefix)[1]
                 attr = getattr(self, item)
                 msg = 'Registering `{attr}` under public name `{public_name}`'
-                logger.info(msg.format(attr=attr, public_name=public_name))  # TODO: Add logging config
+                logger.info(msg.format(attr=attr, public_name=public_name))
                 self.register_function(attr, public_name)
 
 # ################################################################################################################################
@@ -133,7 +137,7 @@ class BaseLoadBalancerAgent(object):
     def _read_config_string(self):
         """ Returns the HAProxy config as a string.
         """
-        return open(self.config_path).read()
+        return open_r(self.config_path).read()
 
 # ################################################################################################################################
 
@@ -153,8 +157,7 @@ class BaseLoadBalancerAgent(object):
         """ Save a new HAProxy config file on disk. It is assumed the file
         has already been validated.
         """
-        # TODO: Use local git repo here
-        f = open(self.config_path, 'wb')
+        f = open_r(self.config_path, 'wb')
         f.write(config_string.encode('utf8'))
         f.close()
 
@@ -212,7 +215,7 @@ class BaseLoadBalancerAgent(object):
         """ Validate or validates /and/ saves (if 'save' flag is True) an HAProxy
         configuration. Note that the validation step is always performed.
         """
-        config_string = string_from_config(lb_config, open(self.config_path).readlines())
+        config_string = string_from_config(lb_config, open_r(self.config_path).readlines())
         return self._validate_save_config_string(config_string, save)
 
 # ################################################################################################################################
@@ -279,7 +282,7 @@ class BaseLoadBalancerAgent(object):
         """
         if old_name == new_name:
             msg = 'Skipped renaming, old_name:[{}] is the same as new_name:[{}]'.format(old_name, new_name)
-            self.logger.warn(msg)
+            self.logger.warning(msg)
             return True
 
         new_config = []

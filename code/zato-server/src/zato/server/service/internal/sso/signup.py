@@ -171,7 +171,7 @@ class Validate(Service):
                     self._validate_email(session, sso_conf, email)
 
             except ValidationError as e:
-                self.logger.warn('Could not validate user `%s`, sub_status `%s`', input.username, e.sub_status)
+                self.logger.warning('Could not validate user `%s`, sub_status `%s`', input.username, e.sub_status)
                 self.response.payload.is_valid = False
                 if e.return_status:
                     self.response.payload.sub_status = e.sub_status

@@ -138,7 +138,7 @@ wsdl_op_body_template = """
 
 # ################################################################################################################################
 
-class WSDLGenerator(object):
+class WSDLGenerator:
     """ Generates WSDL 1.1 output in document/literal style for input services
     based on their SimpleIO definitions extracted from API spec.
     """

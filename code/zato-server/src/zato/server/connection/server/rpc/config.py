@@ -135,14 +135,14 @@ class ODBConfigSource(ConfigSource):
 
         if not result:
             msg = 'No such server or cluster {}@{}'.format(server_name, cluster_name)
-            logger.warn(msg)
+            logger.warning(msg)
             raise ValueError(msg)
 
         # Multiple matches - naturally, should not happen
         elif len(result) > 1:
             msg = 'Unexpected output for {}@{} len:`{}`, result:`{}`'.format(
                 server_name, cluster_name, len(result), '\n' + '\n'.join(str(elem) for elem in result))
-            logger.warn(msg)
+            logger.warning(msg)
             raise ValueError(msg)
 
         else:
