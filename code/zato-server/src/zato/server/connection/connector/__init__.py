@@ -132,7 +132,7 @@ class Connector:
         start = datetime.utcnow()
 
         if not self.is_active:
-            logger.warning(('Skipped creation of an inactive connection `%s` (%s)', self.name, self.type)
+            logger.warning('Skipped creation of an inactive connection `%s` (%s)', self.name, self.type)
             return
 
         try:
