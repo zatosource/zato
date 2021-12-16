@@ -57,7 +57,7 @@ class Inactive(Exception):
 
 # ################################################################################################################################
 
-class EventLogger(object):
+class EventLogger:
     def __init__(self, enter_verb, exit_verb, enter_func, exit_func, predicate_func=None):
 
         self.enter_verb = enter_verb
@@ -75,7 +75,7 @@ class EventLogger(object):
 
 # ################################################################################################################################
 
-class Connector(object):
+class Connector:
     """ A connector for long running background connections, such as WebSockets or AMQP. Includes means to run channels
     and outgoing connections.
     """
@@ -302,7 +302,7 @@ class Connector(object):
 
 # ################################################################################################################################
 
-class ConnectorStore(object):
+class ConnectorStore:
     """ Base container for all connectors.
     """
     def __init__(self, type, connector_class, parallel_server=None):

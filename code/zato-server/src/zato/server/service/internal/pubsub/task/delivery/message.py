@@ -32,7 +32,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _GetMessageSIO(object):
+class _GetMessageSIO:
     output_required = (AsIs('msg_id'), 'published_by_id', Int('delivery_count'), 'recv_time')
     output_optional = (AsIs('ext_client_id'), 'data_prefix_short', 'published_by_name')
     response_elem = None

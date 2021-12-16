@@ -52,7 +52,7 @@ direct_payload:tuple = simple_types + (EtreeElement, ObjectifiedElement)
 # ################################################################################################################################
 
 @cy.cclass
-class Response(object):
+class Response:
     """ A response from a service's invocation.
     """
     # Public attributes

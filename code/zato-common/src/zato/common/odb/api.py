@@ -91,7 +91,7 @@ anysession = union_[SimpleSession, 'Session']
 
 # Based on https://bitbucket.org/zzzeek/sqlalchemy/wiki/UsageRecipes/WriteableTuple
 
-class SQLRow(object):
+class SQLRow:
 
     def __init__(self, elem):
         object.__setattr__(self, '_elem', elem)
@@ -132,7 +132,7 @@ WritableKeyedTuple = SQLRow
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SessionWrapper(object):
+class SessionWrapper:
     """ Wraps an SQLAlchemy session.
     """
 
@@ -210,7 +210,7 @@ class WritableTupleQuery(Query):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SQLConnectionPool(object):
+class SQLConnectionPool:
     """ A pool of SQL connections wrapping an SQLAlchemy engine.
     """
     def __init__(self, name, config, config_no_sensitive, should_init=True):
@@ -406,7 +406,7 @@ class SQLConnectionPool(object):
 
 # ################################################################################################################################
 
-class PoolStore(object):
+class PoolStore:
     """ A main class for accessing all of the SQL connection pools. Each server
     thread has its own store.
     """
@@ -521,7 +521,7 @@ class PoolStore(object):
 
 # ################################################################################################################################
 
-class _Server(object):
+class _Server:
     """ A plain Python object which is used instead of an SQLAlchemy model so the latter is not tied to a session
     for as long a server is up.
     """

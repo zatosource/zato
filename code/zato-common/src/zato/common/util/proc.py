@@ -57,7 +57,7 @@ def get_executable():
 
 # ################################################################################################################################
 
-class _StdErr(object):
+class _StdErr:
 
     # Some log messages (like the ones produced by PyKafka) go to stderr but they are not really errors,
     # in which case we need to ignore them.

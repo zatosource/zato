@@ -55,7 +55,7 @@ _F_SETPIPE_SZ = 1031
 
 # ################################################################################################################################
 
-class IPCAPI(object):
+class IPCAPI:
     """ API through which IPC is performed.
     """
     def __init__(self, name=None, on_message_callback=None, pid=None):

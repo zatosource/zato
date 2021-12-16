@@ -48,7 +48,7 @@ from zato.server.ext.zunicorn import util
 from zato.server.ext.zunicorn.six import string_types
 
 
-class BaseSocket(object):
+class BaseSocket:
 
     def __init__(self, address, conf, log, fd=None):
         self.log = log

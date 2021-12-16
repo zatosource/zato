@@ -16,7 +16,7 @@ from zato.server.generic import attrs_gen_conn
 
 # ################################################################################################################################
 
-class GenericConnection(object):
+class GenericConnection:
     """ An individual business-level (not SQL one) representation of a generic connection.
     """
     __slots__ = attrs_gen_conn

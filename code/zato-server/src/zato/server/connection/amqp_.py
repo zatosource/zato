@@ -68,7 +68,7 @@ def _is_tls_config(config):
 
 # ################################################################################################################################
 
-class _AMQPMessage(object):
+class _AMQPMessage:
     __slots__ = ('body', 'impl')
 
     def __init__(self, body, impl):
@@ -77,7 +77,7 @@ class _AMQPMessage(object):
 
 # ################################################################################################################################
 
-class _AMQPProducers(object):
+class _AMQPProducers:
     """ Encapsulates information about producers used by outgoing AMQP connection to send messages to a broker.
     Each outgoing connection has one _AMQPProducers object assigned.
     """
@@ -111,7 +111,7 @@ class _AMQPProducers(object):
 
 # ################################################################################################################################
 
-class Consumer(object):
+class Consumer:
     """ Consumes messages from AMQP queues. There is one Consumer object for each Zato AMQP channel.
     """
     def __init__(self, config, on_amqp_message):

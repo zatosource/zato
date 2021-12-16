@@ -34,7 +34,7 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
-class OdooWrapper(object):
+class OdooWrapper:
     """ Wraps a queue of connections to Odoo.
     """
     def __init__(self, config, server):

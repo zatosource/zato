@@ -459,7 +459,7 @@ class CacheTestCace(TestCase):
 
     def test_max_item_size_python_object(self):
 
-        class MyClass(object):
+        class MyClass:
             a = '1' * 10000
             b = 2.0 ** 20
 

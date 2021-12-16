@@ -41,7 +41,7 @@ from zato.server.ext.zunicorn.http.errors import (NoMoreData, ChunkMissingTermin
 from zato.server.ext.zunicorn import six
 
 
-class ChunkedReader(object):
+class ChunkedReader:
     def __init__(self, req, unreader, BytesIO=BytesIO):
         self.req = req
         self.parser = self.parse_chunked(unreader)
@@ -147,7 +147,7 @@ class ChunkedReader(object):
         buf_write(data)
 
 
-class LengthReader(object):
+class LengthReader:
     def __init__(self, unreader, length):
         self.unreader = unreader
         self.length = length
@@ -183,7 +183,7 @@ class LengthReader(object):
         return ret
 
 
-class EOFReader(object):
+class EOFReader:
     def __init__(self, unreader):
         self.unreader = unreader
         self.buf = six.BytesIO()
@@ -221,7 +221,7 @@ class EOFReader(object):
         return ret
 
 
-class Body(object):
+class Body:
     def __init__(self, reader, BytesIO=BytesIO):
         self.reader = reader
         self.buf = BytesIO()

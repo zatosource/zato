@@ -37,7 +37,7 @@ _max_data_stored_per_message = AuditLog.Default.max_data_stored_per_message
 
 # ################################################################################################################################
 
-class _HTTPSOAPService(object):
+class _HTTPSOAPService:
     """ A common class for various HTTP/SOAP-related services.
     """
     def notify_worker_threads(self, params, action):

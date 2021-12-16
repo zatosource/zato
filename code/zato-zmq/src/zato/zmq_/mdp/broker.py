@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-class Broker(object):
+class Broker:
     """ Implements a broker part of the ZeroMQ Majordomo Protocol 0.1 http://rfc.zeromq.org/spec:7
     """
     def __init__(self, config, on_message_callback):

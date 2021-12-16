@@ -62,7 +62,7 @@ class HTTPSAdapter(requests.adapters.HTTPAdapter):
 
 # ################################################################################################################################
 
-class BaseHTTPSOAPWrapper(object):
+class BaseHTTPSOAPWrapper:
     """ Base class for HTTP/SOAP connection wrappers.
     """
     def __init__(self, config, _requests_session=None):

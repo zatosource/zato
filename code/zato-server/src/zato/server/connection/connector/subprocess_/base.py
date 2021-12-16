@@ -130,7 +130,7 @@ def ensure_prereqs_ready(func):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Response(object):
+class Response:
     def __init__(self, status=_http_200, data=b'', content_type='text/json'):
         self.status = status
         self.data = data
@@ -139,7 +139,7 @@ class Response(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class BaseConnectionContainer(object):
+class BaseConnectionContainer:
 
     # Subclasses may indicate that they have their specific prerequisites
     # that need to be fulfilled before connections can be used,

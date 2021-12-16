@@ -50,7 +50,7 @@ if PY2:
     from oauth.oauth import OAuthDataStore, OAuthConsumer, OAuthRequest, OAuthServer, OAuthSignatureMethod_HMAC_SHA1, \
          OAuthSignatureMethod_PLAINTEXT, OAuthToken
 else:
-    class _Placeholder(object):
+    class _Placeholder:
         def __init__(self, *ignored_args, **ignored_kwargs):
             pass
 
@@ -73,7 +73,7 @@ _internal_url_path_indicator = '{}/zato/'.format(MISC.SEPARATOR)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class OAuthStore(object):
+class OAuthStore:
     def __init__(self, oauth_config):
         self.oauth_config = oauth_config
 

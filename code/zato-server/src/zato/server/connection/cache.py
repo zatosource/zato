@@ -76,7 +76,7 @@ _no_value = 'zato-no-value'
 
 # ################################################################################################################################
 
-class Cache(object):
+class Cache:
     """ The cache API through which services access the built-in self.cache objects.
     Attribute self.impl is the actual Cython-based cache implementation.
     """
@@ -807,14 +807,14 @@ class Cache(object):
 
 # ################################################################################################################################
 
-class _NotConfiguredAPI(object):
+class _NotConfiguredAPI:
     def set(self, *args, **kwargs):
         raise Exception('Default cache is not configured')
     get = set
 
 # ################################################################################################################################
 
-class CacheAPI(object):
+class CacheAPI:
     """ Base class for all cache objects.
     """
     def __init__(self, server):

@@ -31,7 +31,7 @@ msg_closing_superfluous = 'Closing superfluous connection (Zato queue)'
 
 # ################################################################################################################################
 
-class WSXCtx(object):
+class WSXCtx:
     """ Details of a message received from a WebSocket outgoing connection.
     """
     type = None
@@ -66,7 +66,7 @@ class Close(WSXCtx):
 
 # ################################################################################################################################
 
-class _BaseWSXClient(object):
+class _BaseWSXClient:
     def __init__(self, config, on_connected_cb, on_message_cb, on_close_cb, *ignored_args, **ignored_kwargs):
         self.config = config
         self.on_connected_cb = on_connected_cb
@@ -169,7 +169,7 @@ class ZatoWSXClient(_BaseWSXClient):
 
 # ################################################################################################################################
 
-class WSXClient(object):
+class WSXClient:
     """ A client through which outgoing WebSocket messages can be sent.
     """
     def __init__(self, config):

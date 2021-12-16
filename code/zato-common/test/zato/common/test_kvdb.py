@@ -26,7 +26,7 @@ from zato.common.test import rand_string, rand_int
 class KVDBTestCase(TestCase):
     def test_parse_config(self):
 
-        class FakeSentinel(object):
+        class FakeSentinel:
             def __init__(self, sentinels, password, socket_timeout):
                 self.sentinels = sentinels
                 self.password = password
@@ -37,7 +37,7 @@ class KVDBTestCase(TestCase):
                 self.master_for_called_with = master_name
                 return self
 
-        class FakeStrictRedis(object):
+        class FakeStrictRedis:
             def __init__(self, **config):
                 self.config = config
 

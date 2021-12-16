@@ -230,7 +230,7 @@ class GeventWorker(AsyncWorker):
         super(GeventWorker, self).init_process()
 
 
-class GeventResponse(object):
+class GeventResponse:
 
     status = None
     headers = None

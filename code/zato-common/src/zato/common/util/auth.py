@@ -64,7 +64,7 @@ except ImportError:                      # pragma: no cover
 # ################################################################################################################################
 # ################################################################################################################################
 
-class AuthResult(object):
+class AuthResult:
     """ Represents the result of validating a URL against the config. 'status' is the main boolean flag indicating
     whether the successful was successful or not. 'code' equal to '0' means success and any other value is a failure,
     note that 'code' may be a multi-character string including punctuation. 'description' is an optional attribute holding
@@ -224,7 +224,7 @@ wsse_nonce_xpath = etree.XPath(wsse_nonce_path, namespaces=wss_namespaces)
 wsu_username_created_path = '/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsu:Created'
 wsu_username_created_xpath = etree.XPath(wsu_username_created_path, namespaces=wss_namespaces)
 
-class WSSE(object):
+class WSSE:
     """ Implements authentication using WS-Security.
     """
 

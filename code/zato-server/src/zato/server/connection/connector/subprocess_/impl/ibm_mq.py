@@ -69,7 +69,7 @@ _rc_reconnect_list = [_rc_conn_broken, _rc_q_mgr_quiescing, _rc_host_not_availab
 
 # ################################################################################################################################
 
-class _MessageCtx(object):
+class _MessageCtx:
     __slots__ = ('mq_msg', 'channel_id', 'queue_name', 'service_name', 'data_format')
 
     def __init__(self, mq_msg, channel_id, queue_name, service_name, data_format):
@@ -81,7 +81,7 @@ class _MessageCtx(object):
 
 # ################################################################################################################################
 
-class IBMMQChannel(object):
+class IBMMQChannel:
     """ A process to listen for messages from IBM MQ queue managers.
     """
     def __init__(self, conn, is_active, channel_id, queue_name, service_name, data_format, on_message_callback, logger):

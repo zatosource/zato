@@ -273,7 +273,7 @@ class MatcherTestCase(TestCase):
 
     def test_is_allowed_cache_is_used(self):
 
-        class FakeCache(object):
+        class FakeCache:
             def __init__(self):
                 self.impl = {}
                 self.getitem_used = 0

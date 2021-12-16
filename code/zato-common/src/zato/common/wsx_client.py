@@ -48,7 +48,7 @@ _invalid = '_invalid.' + uuid4().hex
 
 # ################################################################################################################################
 
-class Config(object):
+class Config:
     def __init__(self, client_name=None, client_id=None, address=None, username=None, secret=None, on_request_callback=None,
                  wait_time=5):
         self.client_name = client_name
@@ -62,7 +62,7 @@ class Config(object):
 
 # ################################################################################################################################
 
-class MessageToZato(object):
+class MessageToZato:
     """ An individual message from a WebSocket client to Zato, either request or response to a previous request from Zato.
     """
     action = _invalid
@@ -119,7 +119,7 @@ class ServiceInvokeRequest(MessageToZato):
 
 # ################################################################################################################################
 
-class ResponseFromZato(object):
+class ResponseFromZato:
     """ A response from Zato to a previous request by this client.
     """
     __slots__ = ('id', 'timestamp', 'in_reply_to', 'status', 'is_ok', 'data', 'msg_impl')
@@ -149,7 +149,7 @@ class ResponseFromZato(object):
 
 # ################################################################################################################################
 
-class RequestFromZato(object):
+class RequestFromZato:
     """ A request from Zato to this client.
     """
     __slots__ = ('id', 'timestamp', 'data', 'msg_impl')
@@ -214,7 +214,7 @@ class _WSClient(WebSocketClient):
 
 # ################################################################################################################################
 
-class Client(object):
+class Client:
     """ A WebSocket client that knows how to invoke Zato services.
     """
     def __init__(self, config):

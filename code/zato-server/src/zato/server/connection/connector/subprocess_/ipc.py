@@ -56,7 +56,7 @@ _closed_status_code = (NOT_ACCEPTABLE, SERVICE_UNAVAILABLE)
 
 # ################################################################################################################################
 
-class SubprocessIPC(object):
+class SubprocessIPC:
     """ Base class for IPC with subprocess-based connectors.
     """
     check_enabled = None

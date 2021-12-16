@@ -38,7 +38,7 @@ seed()
 
 DEFAULT_CRON_DEFINITION = '* * * * *'
 
-class RLock(object):
+class RLock:
     def __init__(self):
         self.called = 0
 
@@ -658,7 +658,7 @@ class SchedulerTestCase(TestCase):
 
         data = {'spawned':[], 'stopped': []}
 
-        class FakeGreenlet(object):
+        class FakeGreenlet:
             def __init__(_self, run):
                 _self.run = _self._run = run
 

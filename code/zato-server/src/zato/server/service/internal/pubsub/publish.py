@@ -61,7 +61,7 @@ _inserting_gd_msg = 'Inserting GD messages for topic `%s` `%s` published by `%s`
 
 # ################################################################################################################################
 
-class PubCtx(object):
+class PubCtx:
     """ A container for information describing a single publication.
     """
     __slots__ = ('cluster_id', 'pubsub', 'topic', 'endpoint_id', 'endpoint_name', 'subscriptions_by_topic', 'msg_id_list',

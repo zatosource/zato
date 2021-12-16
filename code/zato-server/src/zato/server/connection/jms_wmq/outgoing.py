@@ -20,7 +20,7 @@ if 0:
 
 # ################################################################################################################################
 
-class WMQFacade(object):
+class WMQFacade:
     """ A IBM MQ facade for services so they aren't aware that sending WMQ
     messages actually requires us to use the Zato broker underneath.
     """

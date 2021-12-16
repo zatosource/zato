@@ -36,7 +36,7 @@ name_op_sa = {
 
 # ################################################################################################################################
 
-class OrderBy(object):
+class OrderBy:
     """ Defaults for the SQL ORDER BY clause.
     """
     def __init__(self):
@@ -59,7 +59,7 @@ class OrderBy(object):
 
 # ################################################################################################################################
 
-class SSOSearch(object):
+class SSOSearch:
     """ SSO search functions, constants and defaults.
     """
     # Maps publicly visible column names to SQL ones
