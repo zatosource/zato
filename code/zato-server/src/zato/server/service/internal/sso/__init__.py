@@ -234,7 +234,7 @@ class SSOTestService(Service):
             remote_addr, 'Zato', totp_code=totp_manager.get_current_totp_code(config.super_user_totp_key))
 
         # .. create the new user ..
-        self.sso.user.create_user(self.cid, data, ust=super_user_session.ust,
+        _ = self.sso.user.create_user(self.cid, data, ust=super_user_session.ust,
             current_app=config.current_app, auto_approve=True)
 
         # .. log the account in ..
