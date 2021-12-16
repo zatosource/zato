@@ -7,7 +7,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 import sys
 from copy import deepcopy
 
@@ -201,6 +200,10 @@ class CryptoMaterialLocation(object):
     """ Locates and remembers location of various crypto material for Zato components.
     """
     def __init__(self, ca_dir, component_pattern):
+
+        # stdlib
+        import os
+
         self.ca_dir = ca_dir
         self.component_pattern = component_pattern
         self.ca_certs_path = os.path.join(self.ca_dir, 'ca-material', 'ca-cert.pem')
@@ -210,6 +213,10 @@ class CryptoMaterialLocation(object):
         self.locate()
 
     def locate(self):
+
+        # stdlib
+        import os
+
         for crypto_name in('cert', 'priv', 'pub'):
             path = os.path.join(self.ca_dir, 'out-{}'.format(crypto_name))
             for name in os.listdir(path):
@@ -295,6 +302,7 @@ class Create(ZatoCommand):
         7) Scheduler
         8) Scripts
         """
+        # pylint: disable=redefined-outer-name (for os and )
 
         # stdlib
         import os
@@ -302,7 +310,6 @@ class Create(ZatoCommand):
         import stat
         from collections import OrderedDict
         from contextlib import closing
-        from copy import deepcopy
         from itertools import count
         from uuid import uuid4
 

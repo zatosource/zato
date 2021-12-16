@@ -80,7 +80,6 @@ from sqlalchemy import orm
 from texttable import Texttable
 
 # Python 2/3 compatibility
-from builtins import bytes
 from future.moves.itertools import zip_longest
 from future.utils import iteritems, raise_
 from past.builtins import basestring, cmp, reduce, unicode
@@ -330,6 +329,8 @@ def new_cid(bytes:'int'=12, _random:'callable_'=random.getrandbits) -> 'str':
     for any cryptographical purposes; it is only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.
     """
+    # pylint: disable=redefined-outer-name (for exc_info)
+
     # Note that we need to convert bytes to bits here.
     return hex(_random(bytes * 8))[2:]
 
@@ -633,6 +634,8 @@ def _os_remove(path):
 def hot_deploy(parallel_server, file_name, path, delete_path=True, notify=True, should_deploy_in_place=False):
     """ Hot-deploys a package if it looks like a Python module or archive.
     """
+    # pylint: disable=redefined-outer-name (for now)
+
     logger.debug('About to hot-deploy `%s`', path)
     now = datetime.utcnow()
     di = dumps(deployment_info('hot-deploy', file_name, now.isoformat(), path, should_deploy_in_place=should_deploy_in_place))
@@ -675,6 +678,8 @@ def multikeysort(items, columns):
 def grouper(n, iterable, fillvalue=None) -> 'any_':
     """ grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx
     """
+    # pylint: disable=redefined-outer-name (for iterable)
+
     args = [iter(iterable)] * n
     return zip_longest(fillvalue=fillvalue, *args)
 
@@ -694,6 +699,8 @@ def dict_item_name(system, key, value):
 def pairwise(iterable):
     """ s -> (s0,s1), (s1,s2), (s2, s3), ...
     """
+    # pylint: disable=redefined-outer-name (for iterable)
+
     a, b = tee(iterable)
     next(b, None)
     return izip(a, b)
@@ -812,6 +819,8 @@ def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
     directly to the scheduler because we want users to be able to fine-tune the job's
     settings.
     """
+    # pylint: disable=redefined-outer-name (for now)
+
     with closing(odb.session()) as session:
         now = datetime.utcnow()
         for item in jobs:
@@ -1069,6 +1078,7 @@ def parse_extra_into_dict(lines, convert_bool=True):
 
 class LoggerWriter:
     def __init__(self, logger, level):
+        # pylint: disable=redefined-outer-name (for logger)
         self.logger = logger
         self.level = level
 
@@ -1272,6 +1282,8 @@ class StaticConfig(Bunch):
 # ################################################################################################################################
 
 def add_scheduler_jobs(api, odb, cluster_id, spawn=True):
+    # pylint: disable=redefined-outer-name (for spawn)
+
     for(id, name, is_active, job_type, start_date, extra, service_name, _,
         _, weeks, days, hours, minutes, seconds, repeats, cron_definition)\
             in odb.get_job_list(cluster_id):

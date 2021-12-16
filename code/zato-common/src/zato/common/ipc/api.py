@@ -112,6 +112,7 @@ class IPCAPI(object):
 # ################################################################################################################################
 
     def _get_response(self, fifo, buffer_size, read_size=21, fifo_ignore_err=fifo_ignore_err, empty=('', b'', None)):
+        # pylint: disable=redefined-outer-name (for fifo_ignore_err)
 
         try:
             buff = StringIO()

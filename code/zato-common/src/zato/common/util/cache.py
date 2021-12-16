@@ -154,7 +154,7 @@ class Client(object):
 # ################################################################################################################################
 
     def _request(self, op, key, value=NotGiven, pattern='/zato/cache/{}', op_verb_map=op_verb_map):
-        # type: (str, str, str) -> str
+        # pylint: disable=redefined-outer-name (for op_verb_map)
 
         # Build a full address
         path = pattern.format(key)
