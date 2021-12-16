@@ -24,7 +24,7 @@ if typing.TYPE_CHECKING:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class WorkerImpl(object):
+class WorkerImpl:
     """ Base class for objects that implement worker functionality. Does not implement anything itself,
     instead serving as a common marker for all derived subclasses.
     """

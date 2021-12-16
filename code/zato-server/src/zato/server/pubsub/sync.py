@@ -128,7 +128,7 @@ def get_expiration(
 
 # ################################################################################################################################
 
-class InRAMSync(object):
+class InRAMSync:
     """ A backlog of messages kept in RAM for whom there are subscriptions - that is, they are known to have subscribers
     and will be ultimately delivered to them. Stores a list of sub_keys and all messages that a sub_key points to.
     It acts as a multi-key dict and keeps only a single copy of message for each sub_key.

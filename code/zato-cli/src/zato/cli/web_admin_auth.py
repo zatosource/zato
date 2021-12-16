@@ -61,14 +61,14 @@ class CreateUser(_WebAdminAuthCommand):
 
     # Class django.contrib.auth.management.commands.createsuperuser.Command needs self.stding and self.stdout
     # so we fake them here.
-    class _FakeStdout(object):
+    class _FakeStdout:
         def __init__(self, logger):
             self.logger = logger
 
         def write(self, msg):
             self.logger.info(msg.strip())
 
-    class _FakeStdin(object):
+    class _FakeStdin:
         def isatty(self):
             return True
 

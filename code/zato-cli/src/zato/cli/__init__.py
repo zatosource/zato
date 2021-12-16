@@ -194,7 +194,7 @@ def run_command(args):
 
 # ################################################################################################################################
 
-class ZatoCommand(object):
+class ZatoCommand:
     """ A base class for all Zato CLI commands. Handles common things like parsing
     the arguments, checking whether a config file or command line switches should
     be used, asks for passwords etc.
@@ -209,7 +209,7 @@ class ZatoCommand(object):
 
 # ################################################################################################################################
 
-    class SYS_ERROR(object):
+    class SYS_ERROR:
         """ All non-zero sys.exit return codes the commands may use.
         """
         ODB_EXISTS = 1
@@ -245,9 +245,9 @@ class ZatoCommand(object):
 
 # ################################################################################################################################
 
-    class COMPONENTS(object):
+    class COMPONENTS:
 
-        class _ComponentName(object):
+        class _ComponentName:
             def __init__(self, code, name):
                 self.code = code
                 self.name = name

@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-class HAProxyStats(object):
+class HAProxyStats:
     """ Used for communicating with HAProxy through its local UNIX socket interface.
     """
     socket_name: str

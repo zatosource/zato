@@ -489,7 +489,7 @@ class DeleteEndpointQueue(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _GetMessagesBase(object):
+class _GetMessagesBase:
     def _get_sub_by_sub_input(self):
         if self.request.input.get('sub_id'):
             return self.pubsub.get_subscription_by_id(self.request.input.sub_id)

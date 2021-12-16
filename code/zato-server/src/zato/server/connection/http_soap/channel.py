@@ -173,7 +173,7 @@ def get_client_error_wrapper(transport, data_format):
 
 # ################################################################################################################################
 
-class _CachedResponse(object):
+class _CachedResponse:
     """ A wrapper for responses served from caches.
     """
     __slots__ = ('payload', 'content_type', 'headers', 'status_code')
@@ -186,7 +186,7 @@ class _CachedResponse(object):
 
 # ################################################################################################################################
 
-class _HashCtx(object):
+class _HashCtx:
     """ Encapsulates information needed to compute a hash value of an incoming request.
     """
     def __init__(self, raw_request, channel_item, channel_params, wsgi_environ):
@@ -197,7 +197,7 @@ class _HashCtx(object):
 
 # ################################################################################################################################
 
-class RequestDispatcher(object):
+class RequestDispatcher:
     """ Dispatches all the incoming HTTP/SOAP requests to appropriate handlers.
     """
     def __init__(self, server=None, url_data=None, security=None, request_handler=None, simple_io_config=None,
@@ -533,7 +533,7 @@ class RequestDispatcher(object):
 
 # ################################################################################################################################
 
-class RequestHandler(object):
+class RequestHandler:
     """ Handles individual HTTP requests to a given service.
     """
     def __init__(self, server=None):

@@ -22,7 +22,7 @@ ValidationError = ValidationError
 
 # ################################################################################################################################
 
-class SSOAPI(object):
+class SSOAPI:
     """ An object through which user management and SSO-related functionality is accessed.
     """
     def __init__(self, server, sso_conf, odb_session_func, encrypt_func, decrypt_func, hash_func, verify_hash_func,

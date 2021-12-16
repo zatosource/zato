@@ -88,14 +88,14 @@ class ImapTransport(_ImapTransport):
 
 # ################################################################################################################################
 
-class EMailAPI(object):
+class EMailAPI:
     def __init__(self, smtp, imap):
         self.smtp = smtp
         self.imap = imap
 
 # ################################################################################################################################
 
-class _Connection(object):
+class _Connection:
 
     def __repr__(self):
         return '<{} at {}, config:`{}`>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)

@@ -22,7 +22,7 @@ from zato.common.api import FALSE_TRUE, TRUE_FALSE
 
 logger = logging.getLogger(__name__)
 
-class Matcher(object):
+class Matcher:
     def __init__(self):
         self.config = None
         self.items = {True:[], False:[]}

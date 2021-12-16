@@ -186,7 +186,7 @@ def test_item(item, cond):
             return False
     return True
 
-class ServiceInfo(object):
+class ServiceInfo:
     def __init__(self, prefix=None, name=None, object_dependencies=None, service_dependencies=None, export_filter=None):
         assert name or prefix
 
@@ -413,13 +413,13 @@ HTTP_SOAP_KINDS = (
 )
 HTTP_SOAP_ITEM_TYPES = {tup[0] for tup in HTTP_SOAP_KINDS}
 
-class _DummyLink(object):
+class _DummyLink:
     """ Pip requires URLs to have a .url attribute.
     """
     def __init__(self, url):
         self.url = url
 
-class Notice(object):
+class Notice:
     def __init__(self, value_raw, value, code):
         self.value_raw = value_raw
         self.value = value
@@ -432,7 +432,7 @@ class Notice(object):
             self.__class__.__name__, hex(id(self)), self.value_raw,
             self.value, self.code)
 
-class Results(object):
+class Results:
     def __init__(self, warnings=None, errors=None, service=None):
 
         # List of Warning instances
@@ -463,7 +463,7 @@ class Results(object):
     def ok(self):
         return not (self.warnings or self.errors)
 
-class InputValidator(object):
+class InputValidator:
     def __init__(self, json):
         #: Validation result.
         self.results = Results()
@@ -501,7 +501,7 @@ class InputValidator(object):
                 raw = (req_key, required_keys, item_dict, item_type)
                 self.results.add_error(raw, ERROR_KEYS_MISSING, "Key '{}' must exist in {}: {}", req_key, item_type, item_dict)
 
-class DependencyScanner(object):
+class DependencyScanner:
     def __init__(self, json, ignore_missing=False):
         self.json = json
         self.ignore_missing = ignore_missing
@@ -580,7 +580,7 @@ class DependencyScanner(object):
 
         return results
 
-class ObjectImporter(object):
+class ObjectImporter:
     def __init__(self, client, logger, object_mgr, json, ignore_missing, args):
         # type: (APIClient, Logger, ObjectManager, dict, bool, object)
 
@@ -986,7 +986,7 @@ class ObjectImporter(object):
 
         return response
 
-class ObjectManager(object):
+class ObjectManager:
     def __init__(self, client, logger):
         self.client = client # type: APIClient
         self.logger = logger # type: Logger
@@ -1244,7 +1244,7 @@ class ObjectManager(object):
             for item in items:
                 self.fix_up_odb_object(item_type, item)
 
-class JsonCodec(object):
+class JsonCodec:
     extension = '.json'
 
 # ################################################################################################################################
@@ -1265,7 +1265,7 @@ class JsonCodec(object):
 
         file_.write(dumps(object_, indent=1, sort_keys=True))
 
-class YamlCodec(object):
+class YamlCodec:
     extension = '.yml'
 
 # ################################################################################################################################
@@ -1286,7 +1286,7 @@ class YamlCodec(object):
 
         file_.write(pyaml.dump(object_, vspacing=True))
 
-class InputParser(object):
+class InputParser:
     def __init__(self, path, logger, codec):
 
         # stdlib

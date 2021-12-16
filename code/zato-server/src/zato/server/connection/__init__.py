@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-class BasePoolAPI(object):
+class BasePoolAPI:
     """ API for pool-based outgoing connections.
     """
     def __init__(self, conn_store):
@@ -70,7 +70,7 @@ class BasePoolAPI(object):
 
 # ################################################################################################################################
 
-class BaseConnPoolStore(object):
+class BaseConnPoolStore:
     """ Base connection store for pool-based outgoing connections.
     """
     conn_name = None

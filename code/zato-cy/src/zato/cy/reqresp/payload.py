@@ -39,7 +39,7 @@ _not_given:object = object()
 # ################################################################################################################################
 
 @cy.cclass
-class SimpleIOPayload(object):
+class SimpleIOPayload:
     """ Represents a payload, i.e. individual response elements, set via SimpleIO.
     """
     sio = cy.declare(cy.object, visibility='public')              # type: CySimpleIO

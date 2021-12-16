@@ -107,7 +107,7 @@ def new_group_id(_new_cid:'callable_'=new_cid, _prefix:'str'=prefix_group_id) ->
 # ################################################################################################################################
 # ################################################################################################################################
 
-class PubSubMessage(object):
+class PubSubMessage:
     """ Base container class for pub/sub message wrappers.
     """
     # We are not using __slots__ because they can't be inherited by subclasses
@@ -270,7 +270,7 @@ class SkipDelivery(Exception):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class HandleNewMessageCtx(object):
+class HandleNewMessageCtx:
     """ Encapsulates information on new messages that a pubsub tool is about to process.
     """
     __slots__ = ('cid', 'has_gd', 'sub_key_list', 'non_gd_msg_list', 'is_bg_call', 'pub_time_max')
@@ -301,7 +301,7 @@ class HandleNewMessageCtx(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class HookCtx(object):
+class HookCtx:
     """ Data and metadata that pub/sub hooks receive on input to their methods.
     """
     __slots__ = ('msg', 'response', 'soap_suds_client')

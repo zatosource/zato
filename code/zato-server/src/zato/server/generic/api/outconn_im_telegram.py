@@ -40,7 +40,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 
-class TelegramClient(object):
+class TelegramClient:
     def __init__(self, address, token, connect_timeout, invoke_timeout, proxies):
         # type: (str, str, int, int, dict)
 

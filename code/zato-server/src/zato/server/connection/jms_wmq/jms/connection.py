@@ -92,7 +92,7 @@ del(_msd, _msgbody)
 
 # ################################################################################################################################
 
-class WebSphereMQConnection(object):
+class WebSphereMQConnection:
 
     def __init__(self, _ignored_logger, queue_manager=None, channel=None, host=None, port=None, username=None,
         password=None, cache_open_send_queues=True, cache_open_receive_queues=True, use_shared_connections=True,
@@ -748,7 +748,7 @@ class WebSphereMQConnection(object):
 
 # ################################################################################################################################
 
-class DummyMQRFH2JMS(object):
+class DummyMQRFH2JMS:
     """ Dummy MQRFH2 container used when the message read from queues aren't actually JMS.
     """
     def __init__(self, *ignored_args, **ignored_kwargs):
@@ -760,7 +760,7 @@ class DummyMQRFH2JMS(object):
 
 # ################################################################################################################################
 
-class MQRFH2JMS(object):
+class MQRFH2JMS:
     """ A class for representing a subset of MQRFH2, suitable for passing IBM MQ JMS headers around.
     """
     # 4 bytes - MQRFH_STRUC_ID

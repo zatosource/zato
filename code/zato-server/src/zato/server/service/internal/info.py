@@ -67,7 +67,7 @@ class GetInfo(Service):
 class GetServerInfo(Service):
     """ Collects information about a server it's invoked on.
     """
-    class SimpleIO(object):
+    class SimpleIO:
         output_required = ('info',)
 
     def handle(self):
@@ -79,7 +79,7 @@ class GetServerInfo(Service):
 class GetWorkerPids(Service):
     """ Returns PIDs of all workers of current server.
     """
-    class SimpleIO(object):
+    class SimpleIO:
         output_required = (List('pids'),)
 
     def handle(self):

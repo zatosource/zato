@@ -81,7 +81,7 @@ user_search_by_map = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-class PasswordResetAPI(object):
+class PasswordResetAPI:
     """ Message flow around password-reset tokens (PRT).
     """
     def __init__(self, server, sso_conf, odb_session_func, decrypt_func, verify_hash_func):

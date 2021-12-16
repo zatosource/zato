@@ -60,7 +60,7 @@ METHOD_RE = re.compile(r"[A-Z0-9$-_.]{3,20}")
 VERSION_RE = re.compile(r"HTTP/(\d+)\.(\d+)")
 
 
-class Message(object):
+class Message:
     def __init__(self, cfg, unreader, MAX_HEADERS=MAX_HEADERS,
             DEFAULT_MAX_HEADERFIELD_SIZE=DEFAULT_MAX_HEADERFIELD_SIZE):
         self.cfg = cfg

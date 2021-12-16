@@ -63,7 +63,7 @@ from_scheduler_actions = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-class BrokerClient(object):
+class BrokerClient:
     """ Simulates previous Redis-based RPC.
     """
     def __init__(self, server_rpc=None, scheduler_config=None, zato_client=None):

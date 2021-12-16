@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SFTPOutput(object):
+class SFTPOutput:
     """ Represents output resulting from execution of SFTP command(s).
     """
     __slots__ = 'is_ok', 'cid', 'command', 'command_no', 'stdout', 'stderr', 'details', 'response_time'

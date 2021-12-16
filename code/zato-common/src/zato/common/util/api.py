@@ -573,7 +573,7 @@ def is_python_file(name):
 
 # ################################################################################################################################
 
-class _DummyLink(object):
+class _DummyLink:
     """ A dummy class for staying consistent with pip's API in certain places
     below.
     """
@@ -582,7 +582,7 @@ class _DummyLink(object):
 
 # ################################################################################################################################
 
-class ModuleInfo(object):
+class ModuleInfo:
     def __init__(self, file_name, module):
         self.file_name = file_name
         self.module = module

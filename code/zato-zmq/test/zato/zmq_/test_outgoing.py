@@ -37,7 +37,7 @@ out_client_socket_method = {
 
 # ################################################################################################################################
 
-class ZMQClient(object):
+class ZMQClient:
 
     def __init__(self, socket_type, socket_method, port, data=None):
         self.ctx = zmq.Context()

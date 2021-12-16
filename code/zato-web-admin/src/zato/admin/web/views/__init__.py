@@ -273,7 +273,7 @@ def build_sec_def_link_by_input(req, cluster_id, input_data):
 
 # ################################################################################################################################
 
-class _BaseView(object):
+class _BaseView:
     method_allowed = 'method_allowed-must-be-defined-in-a-subclass'
     service_name = None
     async_invoke = False
@@ -667,7 +667,7 @@ class Delete(BaseCallView):
 
 # ################################################################################################################################
 
-class SecurityList(object):
+class SecurityList:
     def __init__(self):
         self.def_items = []
 

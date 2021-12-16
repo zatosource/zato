@@ -16,7 +16,7 @@ if 0:
 
 # ################################################################################################################################
 
-class HookTool(object):
+class HookTool:
     def __init__(self, server, hook_ctx_class, hook_type_to_method, invoke_func):
         self.server = server
         self.hook_ctx_class = hook_ctx_class

@@ -21,7 +21,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ODBPostProcess(object):
+class ODBPostProcess:
     """ SQL post-processing functionality, e.g. creation of objects only after  aserver has started.
     """
     def __init__(self, session, cluster, cluster_id):

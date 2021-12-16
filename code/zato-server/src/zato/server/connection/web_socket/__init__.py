@@ -148,7 +148,7 @@ _interact_update_interval = WEB_SOCKET.DEFAULT.INTERACT_UPDATE_INTERVAL
 
 # ################################################################################################################################
 
-class HookCtx(object):
+class HookCtx:
     __slots__ = (
         'hook_type', 'config', 'pub_client_id', 'ext_client_id', 'ext_client_name', 'connection_time', 'user_data',
         'forwarded_for', 'forwarded_for_fqdn', 'peer_address', 'peer_host', 'peer_fqdn', 'peer_conn_info_pretty', 'msg'
@@ -162,7 +162,7 @@ class HookCtx(object):
 
 # ################################################################################################################################
 
-class TokenInfo(object):
+class TokenInfo:
     def __init__(self, value, ttl, _now=datetime.utcnow):
         self.value = value
         self.ttl = ttl

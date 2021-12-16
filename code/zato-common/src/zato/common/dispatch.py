@@ -20,7 +20,7 @@ logger = getLogger(__name__)
 
 UPDATES = 'CREATE', 'EDIT', 'DELETE', 'CHANGE_PASSWORD'
 
-class Dispatcher(object):
+class Dispatcher:
 
     def __init__(self):
         self.lock = RLock()

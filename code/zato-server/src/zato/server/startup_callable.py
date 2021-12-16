@@ -26,7 +26,7 @@ logger = getLogger('zato')
 
 # ################################################################################################################################
 
-class PhaseCtx(object):
+class PhaseCtx:
     """ Describes a particular phase of a server startup process.
     """
     def __init__(self, phase, args, kwargs):
@@ -37,7 +37,7 @@ class PhaseCtx(object):
 
 # ################################################################################################################################
 
-class StartupCallableTool(object):
+class StartupCallableTool:
     """ Handles logic related to server startup callables.
     """
     def __init__(self, server_config):

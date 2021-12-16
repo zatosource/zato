@@ -21,7 +21,7 @@ has_debug = logger.isEnabledFor(logging.DEBUG)
 
 # ################################################################################################################################
 
-class BrokerMessageReceiver(object):
+class BrokerMessageReceiver:
     """ A class that knows how to handle messages received from other worker processes.
     """
     def __init__(self):

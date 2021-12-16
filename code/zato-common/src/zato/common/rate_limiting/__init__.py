@@ -54,7 +54,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class DefinitionParser(object):
+class DefinitionParser:
     """ Parser for user-provided rate limiting definitions.
     """
 
@@ -139,7 +139,7 @@ class DefinitionParser(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class RateLimiting(object):
+class RateLimiting:
     """ Main API for the management of rate limiting functionality.
     """
     __slots__ = 'parser', 'config_store', 'lock', 'sql_session_func', 'global_lock_func', 'cluster_id'
