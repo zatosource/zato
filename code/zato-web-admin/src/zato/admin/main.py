@@ -42,7 +42,7 @@ def main():
     repo_dir = os.path.join('.', 'config', 'repo')
 
     # Update Django settings
-    config = loads(open(os.path.join(repo_dir, 'web-admin.conf')).read())
+    config = loads(open(os.path.join(repo_dir, 'web-admin.conf'), encoding='utf8').read())
     config['config_dir'] = os.path.abspath('.')
     update_globals(config)
 

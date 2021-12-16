@@ -75,7 +75,7 @@ class _StdErr(object):
 
         while time() - now < self.timeout:
             sleep(0.1)
-            _stderr = open(self.path)
+            _stderr = open(self.path, encoding='utf8')
             _err = _stderr.read()
             if _err and (not self.should_ignore(_err)):
                 return _err

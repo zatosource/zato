@@ -15,7 +15,7 @@ pylint:
 	echo Running pylint in zato-common
 	$(CURDIR)/../bin/pylint --verbose \
 		--rcfile $(CURDIR)/../pylint.ini \
-				 $(CURDIR)/../zato-common/src/zato/common
+				 $(CURDIR)/../zato-common/src/zato/common/
 
 static-check:
 	echo "Running static checks in zato-common"

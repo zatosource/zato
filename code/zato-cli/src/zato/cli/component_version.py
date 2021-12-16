@@ -23,5 +23,5 @@ class ComponentVersion(ZatoCommand):
         # Zato
         from zato.common.json_internal import load
 
-        info = load(open(os.path.join(args.path, self.file_needed))) # noqa
+        info = load(open(os.path.join(args.path, self.file_needed), encoding='utf8')) # noqa
         self.logger.info(info['version'])

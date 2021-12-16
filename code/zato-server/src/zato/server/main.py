@@ -153,7 +153,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     logging.addLevelName('TRACE1', TRACE1)
     logging_conf_path = os.path.join(repo_location, 'logging.conf')
 
-    with open(logging_conf_path) as f:
+    with open(logging_conf_path, encoding='utf8') as f:
         logging_config = yaml.load(f, yaml.FullLoader)
         dictConfig(logging_config)
 
