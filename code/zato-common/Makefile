@@ -11,6 +11,12 @@ run-tests:
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/common/marshall_/test_json_to_dataclass.py -s
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/common/marshall_/test_validation.py -s
 
+pylint:
+	echo Running pylint in zato-common
+	$(CURDIR)/../bin/pylint --verbose \
+		--rcfile $(CURDIR)/../pylint.ini \
+				 $(CURDIR)/../zato-common/src/zato/common
+
 static-check:
 	echo "Running static checks in zato-common"
 	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
