@@ -84,7 +84,7 @@ class IntervalTestCase(TestCase):
 
         in_seconds = rand_int()
         interval = Interval(in_seconds=in_seconds)
-        self.assertEquals(interval.in_seconds, in_seconds)
+        self.assertEqual(interval.in_seconds, in_seconds)
 
     def test_interval_compute_in_seconds(self):
 
@@ -99,7 +99,7 @@ class IntervalTestCase(TestCase):
             (0, 0, 0, 32, 32.0)): # noqa
 
             interval = Interval(days, hours, minutes, seconds)
-            self.assertEquals(interval.in_seconds, expected)
+            self.assertEqual(interval.in_seconds, expected)
 
 class JobTestCase(TestCase):
 
@@ -121,17 +121,17 @@ class JobTestCase(TestCase):
     def check_ctx(self, ctx, job, interval_in_seconds, max_repeats, idx, cb_kwargs,
             len_runs_ctx, job_type=SCHEDULER.JOB_TYPE.INTERVAL_BASED):
 
-        self.assertEquals(ctx['name'], job.name)
-        self.assertEquals(ctx['max_repeats'], job.max_repeats)
+        self.assertEqual(ctx['name'], job.name)
+        self.assertEqual(ctx['max_repeats'], job.max_repeats)
         self.assertDictEqual(ctx['cb_kwargs'], job.cb_kwargs)
 
         if job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
-            self.assertEquals(ctx['interval_in_seconds'], interval_in_seconds)
+            self.assertEqual(ctx['interval_in_seconds'], interval_in_seconds)
         else:
-            self.assertEquals(ctx['cron_definition'], DEFAULT_CRON_DEFINITION)
+            self.assertEqual(ctx['cron_definition'], DEFAULT_CRON_DEFINITION)
 
-        self.assertEquals(ctx['max_repeats'], max_repeats)
-        self.assertEquals(ctx['current_run'], idx)
+        self.assertEqual(ctx['max_repeats'], max_repeats)
+        self.assertEqual(ctx['current_run'], idx)
         self.assertDictEqual(ctx['cb_kwargs'], cb_kwargs)
 
         func = self.assertFalse if idx < len_runs_ctx else self.assertTrue
@@ -165,9 +165,9 @@ class JobTestCase(TestCase):
         for name in 'name', 'interval', 'cb_kwargs', 'max_repeats', 'is_active':
             expected = getattr(job, name)
             given = getattr(clone, name)
-            self.assertEquals(expected, given, '{} != {} ({})'.format(expected, given, name))
+            self.assertEqual(expected, given, '{} != {} ({})'.format(expected, given, name))
 
-        self.assertEquals(job.start_time, clone.start_time)
+        self.assertEqual(job.start_time, clone.start_time)
 
         self.assertIs(job.callback, clone.callback)
         self.assertIs(job.on_max_repeats_reached_cb, clone.on_max_repeats_reached_cb)
@@ -228,7 +228,7 @@ class JobTestCase(TestCase):
         self.assertFalse(job.keep_running)
         self.assertFalse(job.max_repeats_reached)
 
-        self.assertEquals(job.current_run, 0)
+        self.assertEqual(job.current_run, 0)
 
     def test_main_loop_max_repeats_reached(self):
 
@@ -253,7 +253,7 @@ class JobTestCase(TestCase):
         sleep(0.2)
 
         len_runs_ctx = len(runs_ctx)
-        self.assertEquals(len_runs_ctx, max_repeats)
+        self.assertEqual(len_runs_ctx, max_repeats)
 
         self.assertFalse(job.keep_running)
         self.assertIs(job.callback, callback)
@@ -313,14 +313,14 @@ class JobTestCase(TestCase):
                                 self.assertTrue(job.main_loop())
                                 time.sleep(0.5)
 
-                                self.assertEquals(max_repeats, len(sleep_history))
-                                self.assertEquals(max_repeats, len(spawn_history))
+                                self.assertEqual(max_repeats, len(sleep_history))
+                                self.assertEqual(max_repeats, len(spawn_history))
 
                                 for item in sleep_history:
-                                    self.assertEquals(sleep_time, item)
+                                    self.assertEqual(sleep_time, item)
 
                                 for idx, (callback, ctx_dict) in enumerate(spawn_history, 1):
-                                    self.assertEquals(2, len(callback))
+                                    self.assertEqual(2, len(callback))
                                     callback = callback[1]
                                     self.check_ctx(
                                         ctx_dict['ctx'], job, sleep_time, max_repeats, idx, cb_kwargs, len(spawn_history), job_type)
@@ -330,7 +330,7 @@ class JobTestCase(TestCase):
                                 del spawn_history[:]
 
                             for item in sleep_time_history:
-                                self.assertEquals(item, now)
+                                self.assertEqual(item, now)
 
                             del sleep_time_history[:]
 
@@ -355,29 +355,29 @@ class JobTestCase(TestCase):
             job.run()
 
             self.assertTrue(data['main_loop_called'])
-            self.assertEquals(data['sleep'], 1)
+            self.assertEqual(data['sleep'], 1)
 
     def test_hash_eq(self):
         job1 = get_job(name='a')
         job2 = get_job(name='a')
         job3 = get_job(name='b')
 
-        self.assertEquals(job1, job2)
+        self.assertEqual(job1, job2)
         self.assertNotEquals(job1, job3)
         self.assertNotEquals(job2, job3)
 
-        self.assertEquals(hash(job1), hash('a'))
-        self.assertEquals(hash(job2), hash('a'))
-        self.assertEquals(hash(job3), hash('b'))
+        self.assertEqual(hash(job1), hash('a'))
+        self.assertEqual(hash(job2), hash('a'))
+        self.assertEqual(hash(job3), hash('b'))
 
     def test_get_sleep_time(self):
         now = parse_datetime('2015-11-27 19:13:37.274')
 
         job1 = Job(1, 'a', SCHEDULER.JOB_TYPE.INTERVAL_BASED, Interval(seconds=5), now)
-        self.assertEquals(job1.get_sleep_time(now), 5)
+        self.assertEqual(job1.get_sleep_time(now), 5)
 
         job2 = Job(2, 'b', SCHEDULER.JOB_TYPE.CRON_STYLE, CronTab(DEFAULT_CRON_DEFINITION), now)
-        self.assertEquals(job2.get_sleep_time(now), 22.726)
+        self.assertEqual(job2.get_sleep_time(now), 22.726)
 
 class JobStartTimeTestCase(TestCase):
     def setUp(self):
@@ -415,7 +415,7 @@ class JobStartTimeTestCase(TestCase):
             job.wait_iter_cb = wait_iter_cb
             job.wait_sleep_time = 0.1
 
-            self.assertEquals(job.start_time, expected)
+            self.assertEqual(job.start_time, expected)
             self.assertTrue(job.keep_running)
             self.assertFalse(job.max_repeats_reached)
             self.assertIs(job.max_repeats_reached_at, None)
@@ -430,10 +430,10 @@ class JobStartTimeTestCase(TestCase):
             self.assertNotEquals(len_now, 0)
 
             for item in data['start_time']:
-                self.assertEquals(expected, item)
+                self.assertEqual(expected, item)
 
             for item in data['now']:
-                self.assertEquals(self.now, item)
+                self.assertEqual(self.now, item)
 
     def test_get_start_time_result_in_future(self):
         self.check_get_start_time('2017-03-20 19:11:37', '2017-03-21 15:11:37', '2017-03-21 19:11:37')
@@ -453,7 +453,7 @@ class JobStartTimeTestCase(TestCase):
 
             self.assertFalse(job.keep_running)
             self.assertTrue(job.max_repeats_reached)
-            self.assertEquals(job.max_repeats_reached_at, expected)
+            self.assertEqual(job.max_repeats_reached_at, expected)
             self.assertFalse(job.start_time)
 
 class SchedulerTestCase(TestCase):
@@ -507,8 +507,8 @@ class SchedulerTestCase(TestCase):
             # Won't be added anywhere nor spawned because it's inactive.
             scheduler.create(job6)
 
-            self.assertEquals(scheduler.lock.called, 7)
-            self.assertEquals(len(scheduler.jobs), 5)
+            self.assertEqual(scheduler.lock.called, 7)
+            self.assertEqual(len(scheduler.jobs), 5)
 
             self.assertIn(job1, scheduler.jobs)
             self.assertIn(job2, scheduler.jobs)
@@ -516,7 +516,7 @@ class SchedulerTestCase(TestCase):
             self.assertIs(job1.callback, scheduler.on_job_executed)
             self.assertIs(job2.callback, scheduler.on_job_executed)
 
-            self.assertEquals(data['spawned_jobs'], 4)
+            self.assertEqual(data['spawned_jobs'], 4)
 
     def test_run(self):
 
@@ -568,11 +568,11 @@ class SchedulerTestCase(TestCase):
 
         scheduler.run()
 
-        self.assertEquals(3, len(data['jobs']))
+        self.assertEqual(3, len(data['jobs']))
         self.assertTrue(scheduler.lock.called)
 
         for item in data['sleep']:
-            self.assertEquals(sched_sleep_time, item)
+            self.assertEqual(sched_sleep_time, item)
 
         for job in job1, job2, job3:
             self.assertIn(job, data['jobs'])
@@ -612,7 +612,7 @@ class SchedulerTestCase(TestCase):
 
         # Now the job should have reached the max_repeats limit within the now - test_wait_time period.
         self.assertIs(job, data['job'])
-        self.assertEquals(1, data['called'])
+        self.assertEqual(1, data['called'])
         self.assertTrue(job.max_repeats_reached)
         self.assertFalse(job.keep_running)
         self.assertTrue(job.max_repeats_reached_at < now)
@@ -652,7 +652,7 @@ class SchedulerTestCase(TestCase):
         # delete - 1
         # on_max_repeats_reached - 0 (because of how long it takes to run job_max_repeats with test_wait_time)
         # 1+2+1 = 4
-        self.assertEquals(scheduler.lock.called, 4)
+        self.assertEqual(scheduler.lock.called, 4)
 
     def test_job_greenlets(self):
 
@@ -691,8 +691,8 @@ class SchedulerTestCase(TestCase):
             scheduler.create(job2)
             scheduler.run()
 
-            self.assertEquals(scheduler.job_greenlets[job1.name]._run, job1.run)
-            self.assertEquals(scheduler.job_greenlets[job2.name]._run, job2.run)
+            self.assertEqual(scheduler.job_greenlets[job1.name]._run, job1.run)
+            self.assertEqual(scheduler.job_greenlets[job2.name]._run, job2.run)
 
             self.assertTrue(job1.keep_running)
             self.assertTrue(job2.keep_running)
@@ -703,9 +703,9 @@ class SchedulerTestCase(TestCase):
             self.assertTrue(job2.keep_running)
 
             self.assertNotIn(job1.name, scheduler.job_greenlets)
-            self.assertEquals(scheduler.job_greenlets[job2.name]._run, job2.run)
+            self.assertEqual(scheduler.job_greenlets[job2.name]._run, job2.run)
 
-            self.assertEquals(len(data['stopped']), 1)
+            self.assertEqual(len(data['stopped']), 1)
             g, args, kwargs = data['stopped'][0]
             self.assertIs(g.run.im_func, job1.run.im_func) # That's how we know it was job1 deleted not job2
             self.assertIs(args, ())
@@ -734,8 +734,8 @@ class SchedulerTestCase(TestCase):
             self.assertIn(job.name, scheduler.job_greenlets)
             self.assertIn(job, scheduler.jobs)
 
-            self.assertEquals(1, len(scheduler.job_greenlets))
-            self.assertEquals(1, len(scheduler.jobs))
+            self.assertEqual(1, len(scheduler.job_greenlets))
+            self.assertEqual(1, len(scheduler.jobs))
 
             self.assertIs(job.run.im_func, scheduler.job_greenlets.values()[0]._run.im_func)
 
@@ -744,7 +744,7 @@ class SchedulerTestCase(TestCase):
             for name in 'name', 'interval', 'cb_kwargs', 'max_repeats', 'is_active':
                 expected = getattr(job, name)
                 given = getattr(clone, name)
-                self.assertEquals(expected, given, '{} != {} ({})'.format(expected, given, name))
+                self.assertEqual(expected, given, '{} != {} ({})'.format(expected, given, name))
 
             job_cb = job.callback
             clone_cb = clone.callback
@@ -753,12 +753,12 @@ class SchedulerTestCase(TestCase):
             clone_on_max_cb = clone.on_max_repeats_reached_cb
 
             if label == 'first':
-                self.assertEquals(job.start_time, clone.start_time)
+                self.assertEqual(job.start_time, clone.start_time)
                 self.assertIs(job_cb.im_func, clone_cb.im_func)
                 self.assertIs(job_on_max_cb.im_func, clone_on_max_cb.im_func)
 
             else:
-                self.assertEquals(job.start_time, clone.start_time)
+                self.assertEqual(job.start_time, clone.start_time)
                 self.assertIs(clone_cb.im_func, scheduler.on_job_executed.im_func)
                 self.assertIs(clone_on_max_cb.im_func, scheduler.on_max_repeats_reached.im_func)
 
@@ -815,7 +815,7 @@ class SchedulerTestCase(TestCase):
         scheduler.create(job, spawn=False)
         scheduler.run()
 
-        self.assertEquals(len(data['runs']), len(data['ctx']))
+        self.assertEqual(len(data['runs']), len(data['ctx']))
 
         for idx, item in enumerate(data['runs']):
-            self.assertEquals(data['ctx'][idx], item)
+            self.assertEqual(data['ctx'][idx], item)
