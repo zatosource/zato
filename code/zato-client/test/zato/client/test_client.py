@@ -256,7 +256,7 @@ class SOAPSIOClientTestCase(_Base):
             expected = xpath(etree.fromstring(text))[0].text
             actual = xpath(response.data)[0]
 
-            self.assertEquals(expected, actual)
+            self.assertEqual(expected, actual)
 
     def test_client_soap_fault(self):
 

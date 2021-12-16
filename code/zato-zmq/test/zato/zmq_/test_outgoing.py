@@ -87,7 +87,7 @@ class TestOutgoingZMQ(TestCase):
         outgoing.send(expected)
         sleep(0.1)
 
-        self.assertEquals(expected, client.data)
+        self.assertEqual(expected, client.data)
 
 # ################################################################################################################################
 

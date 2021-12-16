@@ -38,9 +38,9 @@ class MatcherTestCase(TestCase):
         m = Matcher()
         m.read_config(default_config)
 
-        self.assertEquals(m.config, default_config)
-        self.assertEquals(m.order1, False)
-        self.assertEquals(m.order2, True)
+        self.assertEqual(m.config, default_config)
+        self.assertEqual(m.order1, False)
+        self.assertEqual(m.order2, True)
         self.assertIsNone(m.special_case)
 
         # Note that it's reversed because we match from narrowest
@@ -55,9 +55,9 @@ class MatcherTestCase(TestCase):
         m = Matcher()
         m.read_config(default_config)
 
-        self.assertEquals(m.config, default_config)
-        self.assertEquals(m.order1, False)
-        self.assertEquals(m.order2, True)
+        self.assertEqual(m.config, default_config)
+        self.assertEqual(m.order1, False)
+        self.assertEqual(m.order2, True)
         self.assertIsNone(m.special_case)
 
         # ###########################################################################################
@@ -108,9 +108,9 @@ class MatcherTestCase(TestCase):
         m = Matcher()
         m.read_config(config)
 
-        self.assertEquals(m.config, config)
-        self.assertEquals(m.order1, True)
-        self.assertEquals(m.order2, False)
+        self.assertEqual(m.config, config)
+        self.assertEqual(m.order1, True)
+        self.assertEqual(m.order2, False)
         self.assertIsNone(m.special_case)
 
         # ###########################################################################################
@@ -149,9 +149,9 @@ class MatcherTestCase(TestCase):
         m2 = Matcher()
         m2.read_config(config2)
 
-        self.assertEquals(m2.config, config2)
-        self.assertEquals(m2.order1, True)
-        self.assertEquals(m2.order2, False)
+        self.assertEqual(m2.config, config2)
+        self.assertEqual(m2.order1, True)
+        self.assertEqual(m2.order2, False)
 
         # ###########################################################################################
         #
@@ -246,9 +246,9 @@ class MatcherTestCase(TestCase):
         m.read_config(config)
         self.assertIsNone(m.special_case)
 
-        self.assertEquals(m.config, config)
-        self.assertEquals(m.order1, False)
-        self.assertEquals(m.order2, True)
+        self.assertEqual(m.config, config)
+        self.assertEqual(m.order1, False)
+        self.assertEqual(m.order2, True)
 
         is_allowed = m.is_allowed('abc')
         self.assertIs(is_allowed, False)
@@ -265,9 +265,9 @@ class MatcherTestCase(TestCase):
         m.read_config(config)
         self.assertIsNone(m.special_case)
 
-        self.assertEquals(m.config, config)
-        self.assertEquals(m.order1, False)
-        self.assertEquals(m.order2, True)
+        self.assertEqual(m.config, config)
+        self.assertEqual(m.order1, False)
+        self.assertEqual(m.order2, True)
 
 # ################################################################################################################################
 
@@ -292,16 +292,16 @@ class MatcherTestCase(TestCase):
         m.read_config(default_config)
         self.assertIsNone(m.special_case)
 
-        self.assertEquals(m.config, default_config)
-        self.assertEquals(m.order1, False)
-        self.assertEquals(m.order2, True)
+        self.assertEqual(m.config, default_config)
+        self.assertEqual(m.order1, False)
+        self.assertEqual(m.order2, True)
 
         m.is_allowed('aaa.zxc')
         m.is_allowed('aaa.zxc')
         m.is_allowed('aaa.zxc')
 
-        self.assertEquals(m.is_allowed_cache.setitem_used, 1)
-        self.assertEquals(m.is_allowed_cache.getitem_used, 3) # It is 3 because the first time we attempted to return the key
+        self.assertEqual(m.is_allowed_cache.setitem_used, 1)
+        self.assertEqual(m.is_allowed_cache.getitem_used, 3) # It is 3 because the first time we attempted to return the key
 
     def test_is_allowed_special_case(self):
 
@@ -314,7 +314,7 @@ class MatcherTestCase(TestCase):
         self.assertIs(m.special_case, False)
 
         m.is_allowed('aaa.zxc')
-        self.assertEquals(m.is_allowed_cache, {})
+        self.assertEqual(m.is_allowed_cache, {})
 
         # ##################################################################################
 
@@ -325,6 +325,6 @@ class MatcherTestCase(TestCase):
         self.assertIs(m.special_case, True)
 
         m.is_allowed('aaa.zxc')
-        self.assertEquals(m.is_allowed_cache, {})
+        self.assertEqual(m.is_allowed_cache, {})
 
 # ################################################################################################################################

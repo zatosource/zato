@@ -135,8 +135,8 @@ class BaseTestCase(TestCase):
 # ################################################################################################################################
 
     def _confirm_not_logged_in(self):
-        self.assertEquals(self.client.title, 'Log on - Zato')
-        self.assertEquals(self.client.current_url, self.config.web_admin_address + '/accounts/login/?next=/zato/')
+        self.assertEqual(self.client.title, 'Log on - Zato')
+        self.assertEqual(self.client.current_url, self.config.web_admin_address + '/accounts/login/?next=/zato/')
 
 # ################################################################################################################################
 

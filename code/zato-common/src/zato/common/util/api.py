@@ -897,7 +897,7 @@ def validate_input_dict(cid, *validation_info):
 # Code below taken from tripod https://github.com/shayne/tripod/blob/master/tripod/sampler.py and slightly modified
 # under the terms of LGPL (see LICENSE.txt file for details).
 
-class SafePrettyPrinter(PrettyPrinter, object):
+class SafePrettyPrinter(PrettyPrinter):
     def format(self, obj, context, maxlevels, level):
         try:
             return super(SafePrettyPrinter, self).format(

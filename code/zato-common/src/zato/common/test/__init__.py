@@ -409,7 +409,7 @@ class ServiceTestCase(TestCase):
 
     def _check_sio_request_input(self, instance, request_data):
         for k, v in request_data.items():
-            self.assertEquals(getattr(instance.request.input, k), v)
+            self.assertEqual(getattr(instance.request.input, k), v)
 
         sio_keys = set(getattr(instance.SimpleIO, 'input_required', []))
         sio_keys.update(set(getattr(instance.SimpleIO, 'input_optional', [])))

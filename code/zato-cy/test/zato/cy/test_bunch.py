@@ -63,5 +63,5 @@ class BunchTestCase(TestCase):
         b = bunch.Bunch()
         b.a = value
 
-        self.assertEquals(b.a, value)
-        self.assertEquals(b['a'], value)
+        self.assertEqual(b.a, value)
+        self.assertEqual(b['a'], value)
