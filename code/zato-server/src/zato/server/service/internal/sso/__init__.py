@@ -7,6 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from copy import deepcopy
 from http.client import FORBIDDEN
 from traceback import format_exc
 
@@ -208,6 +209,9 @@ class SSOTestService(Service):
         from zato.common.test import rand_string
         from zato.sso.user import super_user_attrs
 
+        all_attrs = deepcopy(super_user_attrs)
+        all_attrs['totp_key'] = None
+
         remote_addr = '127.0.0.1'
         user_agent = 'My User Agent'
 
@@ -245,7 +249,7 @@ class SSOTestService(Service):
             config.current_app, remote_addr, return_all_attrs=False)
 
         # .. make sure that none of the super-user-only attributes were returned ..
-        for name in super_user_attrs:
+        for name in all_attrs:
             value = getattr(sso_user_regular_attrs, name)
             if value:
                 raise Exception('Value of {} should not be given'.format(name))
@@ -272,7 +276,7 @@ class SSOTestService(Service):
             config.current_app, remote_addr, return_all_attrs=True)
 
         # .. now, all of the super-user-only attributes should have been returned ..
-        for name in super_user_attrs:
+        for name in all_attrs:
             value = getattr(sso_user_all_attrs, name)
             if value is None:
                 if name not in none_allowed:
