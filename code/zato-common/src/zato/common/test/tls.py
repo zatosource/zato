@@ -53,6 +53,8 @@ class _TLSServer(HTTPServer):
         self.port = get_free_port()
         self.cert_reqs = cert_reqs
         self.ca_cert=None
+        self.socket = None
+        self.server_address = None
         HTTPServer.__init__(self, ('0.0.0.0', self.port), _HTTPHandler)
 
     def server_bind(self):

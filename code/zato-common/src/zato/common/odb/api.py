@@ -551,6 +551,8 @@ class ODBManager(SessionWrapper):
         self.cluster_id = cluster_id
         self.pool = pool
         self.decrypt_func = decrypt_func
+        self.server = None
+        self.cluster = None
 
 # ################################################################################################################################
 

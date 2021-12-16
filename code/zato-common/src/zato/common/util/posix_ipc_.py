@@ -53,6 +53,7 @@ class SharedMemoryIPC(object):
         self.size = -1
         self._mmap = None
         self.running = False
+        self._mem = None
 
 # ################################################################################################################################
 
