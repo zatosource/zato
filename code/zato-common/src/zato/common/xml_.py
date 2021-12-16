@@ -87,8 +87,8 @@ zato_details_xpath = etree.XPath(zato_details_path, namespaces=common_namespaces
 # ################################################################################################################################
 
 class path(object):
-    def __init__(self, _path, raise_on_not_found=False, ns='', text_only=False):
-        self._path = _path
+    def __init__(self, path, raise_on_not_found=False, ns='', text_only=False):
+        self.path = path
         self.ns = ns
         self.raise_on_not_found = raise_on_not_found
         self.text_only = text_only
@@ -99,7 +99,7 @@ class path(object):
         if self.ns:
             _path = '{{{}}}{}'.format(self.ns, self.path)
         else:
-            _path = self._path
+            _path = self.path
         try:
             if self.children_only:
                 elem = elem.getchildren()[self.children_only_idx]
@@ -117,8 +117,8 @@ class path(object):
 # ################################################################################################################################
 
 class zato_path(path):
-    def __init__(self, _path, raise_on_not_found=False, text_only=False):
-        super(zato_path, self).__init__(_path, raise_on_not_found, zato_namespace, text_only)
+    def __init__(self, path, raise_on_not_found=False, text_only=False):
+        super(zato_path, self).__init__(path, raise_on_not_found, zato_namespace, text_only)
         self.children_only = True
         self.children_only_idx = 1 # 0 is zato_env
 
