@@ -99,7 +99,7 @@ class Client:
                 self.socket.sendall(action + data + b'\n')
             except Exception as e:
                 self.is_connected = False
-                logger.warninging('Socket send error `%s` -> %s', e.args, self.remote_addr_str)
+                logger.warning(('Socket send error `%s` -> %s', e.args, self.remote_addr_str)
                 self.close()
                 self.connect()
 

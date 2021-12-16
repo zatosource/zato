@@ -71,7 +71,7 @@ class _TLSServer(HTTPServer):
                     ca_cert_tf.write(ca_cert)
                     ca_cert_tf.flush()
 
-                    self.socket = ssl.wrap_socket(
+                    self.socket = ssl.wrap_socket( # pylint: disable=deprecated-method
                         self.socket, server1_key_tf.name, server1_cert_tf.name, True, self.cert_reqs, ca_certs=ca_cert_tf.name)
 
                     if self.allow_reuse_address:

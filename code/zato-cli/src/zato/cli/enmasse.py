@@ -1200,7 +1200,7 @@ class ObjectManager:
         })
 
         if not response.ok:
-            self.logger.warninging('Could not fetch objects of type {}: {}'.format(service_info.name, response.details))
+            self.logger.warning(('Could not fetch objects of type {}: {}'.format(service_info.name, response.details))
             return
 
         self.objects[service_info.name] = []
