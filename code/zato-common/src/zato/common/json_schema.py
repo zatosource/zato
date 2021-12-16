@@ -230,7 +230,7 @@ class Validator(object):
             raise ValidationException('JSON schema not found `{}` ({})'.format(self.config.schema_path, self.config.object_name))
 
         # The file is sure to exist
-        with open(self.config.schema_path) as f:
+        with open(self.config.schema_path, encoding='utf8') as f:
             schema = f.read()
 
         # Parse the contents as JSON

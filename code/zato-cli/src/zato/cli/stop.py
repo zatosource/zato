@@ -38,7 +38,7 @@ class Stop(ManageCommand):
             self.logger.error('No pidfile found in `%s`', pidfile)
             sys.exit(self.SYS_ERROR.FILE_MISSING)
 
-        pid = open(pidfile).read().strip()
+        pid = open(pidfile, encoding='utf8').read().strip()
         if not pid:
             self.logger.error('Empty pidfile `%s`, did not attempt to stop `%s`', pidfile, component_dir)
             sys.exit(self.SYS_ERROR.NO_PID_FOUND)
