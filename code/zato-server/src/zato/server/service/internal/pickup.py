@@ -20,6 +20,7 @@ from bunch import Bunch
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE
 from zato.common.typing_ import dataclass, from_dict
 from zato.common.util.api import get_config, get_user_config_name
+from zato.common.util.open_ import open_r
 from zato.server.service import Service
 
 # ################################################################################################################################
@@ -64,7 +65,7 @@ class LogCSV(Service):
     """ Picks up CSV files and logs their contents.
     """
     def handle(self):
-        with open(self.request.raw_request['full_path'], 'r', encoding='utf8') as f:
+        with open_r(self.request.raw_request['full_path']) as f:
             reader = csv.reader(f)
             for idx, line in enumerate(reader, 1):
                 self.logger.info('CSV line #%s `%s`', idx, line)

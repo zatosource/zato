@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.cli import ManageCommand
+from zato.common.util.open_ import open_r
 
 # ################################################################################################################################
 
@@ -26,7 +27,7 @@ class CheckConfig(ManageCommand):
         from zato.common.json_internal import loads
 
         repo_dir = repo_dir or join(self.config_dir, 'repo')
-        return loads(open(join(repo_dir, conf_name), encoding='utf8').read())
+        return loads(open_r(join(repo_dir, conf_name)).read())
 
 # ################################################################################################################################
 
@@ -154,7 +155,7 @@ class CheckConfig(ManageCommand):
             # .. but raise an error only if the PID it points to belongs
             # to an already running component. Otherwise, it must be a stale pidfile
             # that we can safely delete.
-            pid = open(pidfile, encoding='utf8').read().strip()
+            pid = open_r(pidfile).read().strip()
             try:
                 if pid:
                     pid = int(pid)
@@ -293,7 +294,7 @@ class CheckConfig(ManageCommand):
         repo_dir = join(self.config_dir, 'repo')
 
         lba_conf = self.get_json_conf('lb-agent.conf')
-        lb_conf_string = open(join(repo_dir, 'zato.config'), encoding='utf8').read()
+        lb_conf_string = open_r(join(repo_dir, 'zato.config')).read()
 
         # Load-balancer's agent
         self.ensure_json_config_port_free('Load balancer\'s agent', None, lba_conf)

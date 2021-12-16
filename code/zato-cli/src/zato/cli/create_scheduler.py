@@ -16,6 +16,7 @@ from zato.common.crypto.api import SchedulerCryptoManager
 from zato.common.crypto.const import well_known_data
 from zato.common.odb.model import Cluster
 from zato.common.scheduler import startup_jobs
+from zato.common.util.open_ import open_w
 
 # ################################################################################################################################
 
@@ -220,10 +221,10 @@ class Create(ZatoCommand):
 
         logging_conf_contents = get_logging_conf_contents()
 
-        open(os.path.join(repo_dir, 'logging.conf'), 'w', encoding='utf8').write(logging_conf_contents)
-        open(conf_path, 'w', encoding='utf8').write(config_template.format(**config))
-        open(startup_jobs_conf_path, 'w', encoding='utf8').write(startup_jobs)
-        open(sql_conf_path, 'w', encoding='utf8').write(sql_conf_contents)
+        open_w(os.path.join(repo_dir, 'logging.conf')).write(logging_conf_contents)
+        open_w(conf_path).write(config_template.format(**config))
+        open_w(startup_jobs_conf_path).write(startup_jobs)
+        open_w(sql_conf_path).write(sql_conf_contents)
 
         # Initial info
         self.store_initial_info(self.target_dir, self.COMPONENTS.SCHEDULER.code)

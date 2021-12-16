@@ -23,6 +23,7 @@ from six import PY2
 
 # Zato
 from zato.common.api import CLI_ARG_SEP
+from zato.common.util.open_ import open_r
 
 # ################################################################################################################################
 
@@ -75,7 +76,7 @@ class _StdErr(object):
 
         while time() - now < self.timeout:
             sleep(0.1)
-            _stderr = open(self.path, encoding='utf8')
+            _stderr = open_r(self.path)
             _err = _stderr.read()
             if _err and (not self.should_ignore(_err)):
                 return _err

@@ -28,6 +28,7 @@ from future.utils import iteritems
 
 # Zato
 from zato.common.util.api import as_bool, absjoin, get_config, store_pidfile
+from zato.common.util.open_ import open_r
 from zato.scheduler.server import Config, SchedulerServer
 
 # ################################################################################################################################
@@ -47,7 +48,7 @@ def main():
     repo_location = os.path.join('.', 'config', 'repo')
 
     # Logging configuration
-    with open(os.path.join(repo_location, 'logging.conf'), encoding='utf8') as f:
+    with open_r(os.path.join(repo_location, 'logging.conf')) as f:
         dictConfig(yaml.load(f, yaml.FullLoader))
 
     # Read config in and extend it with ODB-specific information
