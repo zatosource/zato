@@ -96,8 +96,6 @@ def start_process(component_name, executable, run_in_fg, cli_options, extra_cli_
         failed_to_start_err=-100, extra_options=None, stderr_path=None, stdin_data=None, async_keyword=async_keyword):
     """ Starts a new process from a given Python path, either in background or foreground (run_in_fg).
     """
-    # pylint: disable=redefined-outer-name (for async_keyword)
-
     stderr_path = stderr_path or mkstemp('-zato-start-{}.txt'.format(component_name.replace(' ','')))[1]
 
     stdout_redirect = ''

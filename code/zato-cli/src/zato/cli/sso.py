@@ -76,7 +76,6 @@ class SSOCommand(ZatoCommand):
 
     def _get_sso_config(self, args, repo_location, secrets_conf):
         # type: (Namespace, unicode, Bunch) -> UserAPI
-        # pylint: disable=redefined-outer-name (for UserAPI)
 
         # Zato
         from zato.common.crypto.api import CryptoManager
@@ -162,8 +161,7 @@ class _CreateUser(SSOCommand):
 # ################################################################################################################################
 
     def _on_sso_command(self, args, user, user_api):
-        # type: (Namespace, SSOUser, UserAPI) -> None
-        # pylint: disable=redefined-outer-name (for Bunch)
+        # type: (Namespace, SSOUser, UserAPI)
 
         # Bunch
         from bunch import Bunch
@@ -228,7 +226,7 @@ class DeleteUser(SSOCommand):
     ]
 
     def _on_sso_command(self, args, user, user_api):
-        # type: (Namespace, SSOUser, UserAPI) -> None
+        # type: (Namespace, SSOUser, UserAPI)
 
         if not args.yes:
             template = 'Delete user? `{}`'.format(user.username)
@@ -250,7 +248,7 @@ class LockUser(SSOCommand):
     ]
 
     def _on_sso_command(self, args, user, user_api):
-        # type: (Namespace, SSOUser, UserAPI) -> None
+        # type: (Namespace, SSOUser, UserAPI)
 
         user_api.lock_user(
             self._get_cid(), user.user_id, None, self._get_current_app(), self._get_current_host(), False, self._get_user())
@@ -266,7 +264,7 @@ class UnlockUser(SSOCommand):
     ]
 
     def _on_sso_command(self, args, user, user_api):
-        # type: (Namespace, SSOUser, UserAPI) -> None
+        # type: (Namespace, SSOUser, UserAPI)
 
         user_api.unlock_user(
             self._get_cid(), user.user_id, None, self._get_current_app(), self._get_current_host(), False, self._get_user())
@@ -282,7 +280,7 @@ class Login(SSOCommand):
     ]
 
     def _on_sso_command(self, args, user, user_api):
-        # type: (Namespace, SSOUser, UserAPI) -> None
+        # type: (Namespace, SSOUser, UserAPI)
 
         # Zato
         from zato.common.util.api import current_host
@@ -304,8 +302,7 @@ class Logout(SSOCommand):
     ]
 
     def _on_sso_command(self, args, user, user_api):
-        # type: (Namespace, SSOUser, UserAPI) -> None
-
+        # type: (Namespace, SSOUser, UserAPI)
         user_api.logout(self._get_cid(), args.ust, None, '127.0.0.1', skip_sec=True)
         self.logger.info('User logged out by UST')
 
@@ -322,7 +319,7 @@ class ChangeUserPassword(SSOCommand):
     ]
 
     def _on_sso_command(self, args, user, user_api):
-        # type: (Namespace, SSOUser, UserAPI) -> None
+        # type: (Namespace, SSOUser, UserAPI)
 
         # Zato
         from zato.sso import ValidationError
@@ -349,7 +346,7 @@ class ResetUserPassword(SSOCommand):
     ]
 
     def _on_sso_command(self, args, user, user_api):
-        # type: (Namespace, SSOUser, UserAPI) -> None
+        # type: (Namespace, SSOUser, UserAPI)
 
         # Zato
         from zato.common.crypto.api import CryptoManager
@@ -371,7 +368,7 @@ class ResetTOTPKey(SSOCommand):
     opts = common_totp_opts
 
     def _on_sso_command(self, args, user, user_api):
-        # type: (Namespace, SSOUser, UserAPI) -> None
+        # type: (Namespace, SSOUser, UserAPI)
 
         # Zato
         from zato.cli.util import get_totp_info_from_args
@@ -392,7 +389,7 @@ class CreateODB(ZatoCommand):
     opts = common_odb_opts
 
     def execute(self, args, show_output=True):
-        # type: (Namespace, bool) -> None
+        # type: (Namespace)
 
         # Zato
         from zato.common.odb.model.sso import \

@@ -107,8 +107,6 @@ def query_wrapper(func):
     or a column list retrieved in addition to the result. This is useful because some callers prefer the former
     and some need the latter. Also, paginates the results if requested to by the caller.
     """
-    # pylint: disable=redefined-outer-name (for func)
-
     @wraps(func)
     def inner(*args, **kwargs):
 
@@ -136,8 +134,6 @@ def query_wrapper(func):
 def bunch_maker(func):
     """ Turns SQLAlchemy rows into bunch instances, taking opaque elements into account.
     """
-    # pylint: disable=redefined-outer-name (for func)
-
     @wraps(func)
     def inner(*args, **kwargs):
 
