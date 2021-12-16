@@ -11,21 +11,21 @@ cy-tests:
 	cd $(CURDIR)/code/zato-cy && make run-tests
 
 pylint:
-	#cd $(CURDIR)/code/zato-agent     && $(MAKE) pylint
-	#cd $(CURDIR)/code/zato-broker    && $(MAKE) pylint
-	#cd $(CURDIR)/code/zato-cli       && $(MAKE) pylint
-	#cd $(CURDIR)/code/zato-client    && $(MAKE) pylint
-	#cd $(CURDIR)/code/zato-common    && $(MAKE) pylint
-	#cd $(CURDIR)/code/zato-distlock  && $(MAKE) pylint
-	#cd $(CURDIR)/code/zato-cy        && $(MAKE) pylint
-	#cd $(CURDIR)/code/zato-hl7       && $(MAKE) pylint
-	#cd $(CURDIR)/code/zato-lib       && $(MAKE) pylint
-	#cd $(CURDIR)/code/zato-scheduler && $(MAKE) pylint
-	#cd $(CURDIR)/code/zato-server    && $(MAKE) pylint
-	#cd $(CURDIR)/code/zato-sso       && $(MAKE) pylint
-	#cd $(CURDIR)/code/zato-testing   && $(MAKE) pylint
-	#cd $(CURDIR)/code/zato-web-admin && $(MAKE) pylint
-	#cd $(CURDIR)/code/zato-zmq       && $(MAKE) pylint
+	cd $(CURDIR)/code/zato-agent     && $(MAKE) pylint || true
+	cd $(CURDIR)/code/zato-broker    && $(MAKE) pylint || true
+	cd $(CURDIR)/code/zato-cli       && $(MAKE) pylint || true
+	cd $(CURDIR)/code/zato-client    && $(MAKE) pylint || true
+	cd $(CURDIR)/code/zato-common    && $(MAKE) pylint || true
+	cd $(CURDIR)/code/zato-distlock  && $(MAKE) pylint || true
+	cd $(CURDIR)/code/zato-cy        && $(MAKE) pylint || true
+	cd $(CURDIR)/code/zato-hl7       && $(MAKE) pylint || true
+	cd $(CURDIR)/code/zato-lib       && $(MAKE) pylint || true
+	cd $(CURDIR)/code/zato-scheduler && $(MAKE) pylint || true
+	cd $(CURDIR)/code/zato-server    && $(MAKE) pylint || true
+	cd $(CURDIR)/code/zato-sso       && $(MAKE) pylint || true
+	cd $(CURDIR)/code/zato-testing   && $(MAKE) pylint || true
+	cd $(CURDIR)/code/zato-web-admin && $(MAKE) pylint || true
+	cd $(CURDIR)/code/zato-zmq       && $(MAKE) pylint || true
 
 server-tests:
 	cd $(CURDIR)/code/zato-server && make run-tests

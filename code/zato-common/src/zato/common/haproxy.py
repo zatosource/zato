@@ -140,7 +140,7 @@ def validate_haproxy_config(config_data, haproxy_command):
             tf.flush()
 
             common_msg = 'config_file:`{}`'
-            common_msg = common_msg.format(open(tf.name).read())
+            common_msg = common_msg.format(open(tf.name, encoding='utf8').read())
 
             timeout_msg = 'HAProxy didn\'t respond in `{}` seconds. '
             rc_non_zero_msg = 'Failed to validate the config file using HAProxy. '

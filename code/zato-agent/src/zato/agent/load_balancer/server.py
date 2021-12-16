@@ -71,7 +71,7 @@ class BaseLoadBalancerAgent(object):
         self.haproxy_pidfile = os.path.abspath(os.path.join(self.repo_dir, '../', '../', MISC.PIDFILE))
 
         log_config = os.path.abspath(os.path.join(self.repo_dir, self.json_config['log_config']))
-        with open(log_config) as f:
+        with open(log_config, encoding='utf8') as f:
             data = yaml.load(f, yaml.FullLoader) # type: dict
             logging.config.dictConfig(data) # pyright: reportGeneralTypeIssues=false
 
@@ -109,7 +109,10 @@ class BaseLoadBalancerAgent(object):
     def restart_load_balancer(self):
         """ Restarts the HAProxy load balancer without disrupting existing connections.
         """
-        additional_params = ['-sf', open(self.haproxy_pidfile).read().strip()]
+        additional_params = [
+            '-sf',
+            open(self.haproxy_pidfile, encoding='utf8').read().strip()
+        ]
         self._re_start_load_balancer('Could not restart in `{}` seconds. ', 'Failed to restart HAProxy. ', additional_params)
 
 # ################################################################################################################################
@@ -125,7 +128,7 @@ class BaseLoadBalancerAgent(object):
                 public_name = item.split(public_method_prefix)[1]
                 attr = getattr(self, item)
                 msg = 'Registering `{attr}` under public name `{public_name}`'
-                logger.info(msg.format(attr=attr, public_name=public_name))  # TODO: Add logging config
+                logger.info(msg.format(attr=attr, public_name=public_name))
                 self.register_function(attr, public_name)
 
 # ################################################################################################################################
@@ -133,7 +136,7 @@ class BaseLoadBalancerAgent(object):
     def _read_config_string(self):
         """ Returns the HAProxy config as a string.
         """
-        return open(self.config_path).read()
+        return open(self.config_path, encoding='utf8').read()
 
 # ################################################################################################################################
 
@@ -153,7 +156,6 @@ class BaseLoadBalancerAgent(object):
         """ Save a new HAProxy config file on disk. It is assumed the file
         has already been validated.
         """
-        # TODO: Use local git repo here
         f = open(self.config_path, 'wb')
         f.write(config_string.encode('utf8'))
         f.close()
@@ -212,7 +214,7 @@ class BaseLoadBalancerAgent(object):
         """ Validate or validates /and/ saves (if 'save' flag is True) an HAProxy
         configuration. Note that the validation step is always performed.
         """
-        config_string = string_from_config(lb_config, open(self.config_path).readlines())
+        config_string = string_from_config(lb_config, open(self.config_path, encoding='utf8').readlines())
         return self._validate_save_config_string(config_string, save)
 
 # ################################################################################################################################
