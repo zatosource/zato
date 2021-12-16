@@ -22,6 +22,12 @@ run-tests:
 	py $(CURDIR)/test/zato/test_login_totp.py && \
 	py $(CURDIR)/test/zato/test_password_reset.py
 
+pylint:
+	echo Running pylint in zato-sso
+	$(CURDIR)/../bin/pylint --verbose \
+		--rcfile $(CURDIR)/../pylint.ini \
+				 $(CURDIR)/../zato-sso/src/zato/sso
+
 static-check:
 	echo "Running static checks in zato-sso"
 	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
