@@ -21,7 +21,7 @@ pylint:
 	cd $(CURDIR)/code/zato-hl7       && $(MAKE) pylint || true
 	cd $(CURDIR)/code/zato-lib       && $(MAKE) pylint || true
 	cd $(CURDIR)/code/zato-scheduler && $(MAKE) pylint || true
-	#cd $(CURDIR)/code/zato-server    && $(MAKE) pylint || true
+	cd $(CURDIR)/code/zato-server    && $(MAKE) pylint || true
 	cd $(CURDIR)/code/zato-sso       && $(MAKE) pylint || true
 	cd $(CURDIR)/code/zato-testing   && $(MAKE) pylint || true
 	cd $(CURDIR)/code/zato-web-admin && $(MAKE) pylint || true
