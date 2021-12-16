@@ -6,6 +6,8 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# pylint: disable=attribute-defined-outside-init
+
 # stdlib
 from contextlib import closing
 from logging import getLogger

@@ -6,6 +6,8 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# pylint: disable=attribute-defined-outside-init
+
 # stdlib
 from datetime import datetime, timedelta
 from logging import getLogger
