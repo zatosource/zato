@@ -54,11 +54,12 @@ from zato.common.ipaddress_ import get_preferred_ip
 from zato.common.kvdb.api import KVDB
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.repo import RepoManager
+from zato.common.simpleio_ import get_sio_server_config
 from zato.common.util.api import absjoin, asbool, get_config, get_kvdb_config_for_log, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
 from zato.common.util.cli import read_stdin_data
 from zato.common.util.platform_ import is_linux
-from zato.common.simpleio_ import get_sio_server_config
+from zato.common.util.open_ import open_r
 from zato.server.base.parallel import ParallelServer
 from zato.server.ext import zunicorn
 from zato.server.ext.zunicorn.app.base import Application
@@ -153,7 +154,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     logging.addLevelName('TRACE1', TRACE1)
     logging_conf_path = os.path.join(repo_location, 'logging.conf')
 
-    with open(logging_conf_path, encoding='utf8') as f:
+    with open_r(logging_conf_path) as f:
         logging_config = yaml.load(f, yaml.FullLoader)
         dictConfig(logging_config)
 

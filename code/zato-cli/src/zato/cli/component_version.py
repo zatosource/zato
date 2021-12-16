@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Zato
 from zato.cli import ZatoCommand
 from zato.common.api import ZATO_INFO_FILE
+from zato.common.util.open_ import open_r
 
 class ComponentVersion(ZatoCommand):
     file_needed = ZATO_INFO_FILE
@@ -23,5 +24,5 @@ class ComponentVersion(ZatoCommand):
         # Zato
         from zato.common.json_internal import load
 
-        info = load(open(os.path.join(args.path, self.file_needed), encoding='utf8')) # noqa
+        info = load(open_r(os.path.join(args.path, self.file_needed))) # noqa
         self.logger.info(info['version'])

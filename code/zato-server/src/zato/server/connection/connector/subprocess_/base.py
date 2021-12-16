@@ -38,6 +38,7 @@ from zato.common.broker_message import code_to_name
 from zato.common.json_internal import dumps, loads
 from zato.common.util.api import parse_cmd_line_options
 from zato.common.util.auth import parse_basic_auth
+from zato.common.util.open_ import open_r, open_w
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC
 
 # ################################################################################################################################
@@ -248,7 +249,7 @@ class BaseConnectionContainer(object):
         self.server_address = self.server_address.format(self.server_port, self.server_path)
 
         if self.options['zato_subprocess_mode']:
-            with open(config.logging_conf_path, encoding='utf8') as f:
+            with open_r(config.logging_conf_path) as f:
                 logging_config = yaml.load(f, yaml.FullLoader)
 
             if not 'zato_{}'.format(self.conn_type) in logging_config['loggers']:
@@ -306,7 +307,7 @@ class BaseConnectionContainer(object):
 
     def store_pidfile(self, suffix):
         pidfile = os.path.join(self.base_dir, '{}-{}'.format(MISC.PIDFILE, suffix))
-        with open(pidfile, 'w', encoding='utf8') as f:
+        with open_w(pidfile) as f:
             f.write(str(os.getpid()))
 
 # ################################################################################################################################
