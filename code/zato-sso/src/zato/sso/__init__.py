@@ -204,8 +204,8 @@ class User:
         'email', 'first_name', 'is_active', 'is_approval_needed', 'is_internal', 'is_locked', 'is_super_user',
         'last_name', 'locked_by', 'locked_time', 'middle_name', 'password_expiry', 'password_is_set', 'password_last_set',
         'password_must_change', 'sign_up_status', 'sign_up_time', 'user_id', 'username', 'is_rate_limit_active',
-        'rate_limit_def', 'rate_limit_type', 'rate_limit_check_parent_def', 'is_totp_enabled', 'totp_label', 'status',
-        'is_current_super_user')
+        'rate_limit_def', 'rate_limit_type', 'rate_limit_check_parent_def', 'is_totp_enabled', 'totp_key', 'totp_label',
+        'status', 'is_current_super_user')
 
     def __init__(self):
         self.approval_status = None
@@ -238,6 +238,7 @@ class User:
         self.rate_limit_type = None
         self.rate_limit_check_parent_def = None
         self.is_totp_enabled = None
+        self.totp_key = None
         self.totp_label = None
         self.status = None
 

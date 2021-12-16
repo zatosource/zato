@@ -127,6 +127,7 @@ super_user_attrs = {
     'rate_limit_def': None,
     'rate_limit_type': None,
     'rate_limit_check_parent_def': None,
+    'totp_key': None,
 }
 
 # This can be only changed but never read
@@ -673,7 +674,7 @@ class UserAPI:
                     elif key in ('totp_key', 'totp_label'):
                         value = self.decrypt_func(value)
 
-                        # .. do not return our internal constant  if not label has been assign to TOTP.
+                        # .. do not return our internal constant if no label has been assign to TOTP.
                         if key == 'totp_label':
                             if value == TOTP.default_label:
                                 value = ''
