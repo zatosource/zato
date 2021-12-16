@@ -50,7 +50,7 @@ class SAPWrapper(Wrapper):
         try:
             ping_sap(conn)
         except Exception:
-            self.logger.warn('Could not ping SAP (%s), e:`%s`', self.config.name, format_exc())
+            self.logger.warning('Could not ping SAP (%s), e:`%s`', self.config.name, format_exc())
 
         self.client.put_client(conn)
 

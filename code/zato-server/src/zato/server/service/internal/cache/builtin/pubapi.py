@@ -158,7 +158,7 @@ class _Multi(_BaseService):
         # Must be extended if more commands are added in the future
         else:
             # Do not return too much information to the caller - but store it in logs nevertheless.
-            self.logger.warn('Invalid internal action found `%s` in `%s` (%s)', self.action, self.name, self.cid)
+            self.logger.warning('Invalid internal action found `%s` in `%s` (%s)', self.action, self.name, self.cid)
             raise InternalServerError(self.cid, 'Invalid internal action found')
 
         result = self._get_cache_func(cache)(*args)

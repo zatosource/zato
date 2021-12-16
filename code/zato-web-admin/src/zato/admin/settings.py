@@ -12,6 +12,9 @@ import logging.config
 import os
 from uuid import uuid4
 
+# Zato
+from zato.common.util.open_ import open_r
+
 # SQLAlchemy
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy import create_engine
@@ -37,7 +40,7 @@ from zato.admin.zato_settings import *  # NOQA
 
 logging.addLevelName('TRACE1', TRACE1)
 if log_config:
-    with open(log_config) as f:
+    with open_r(log_config) as f:
         try:
             logging.config.dictConfig(yaml.load(f, yaml.FullLoader))
         except ValueError:

@@ -36,7 +36,7 @@ success = '<error_code>{}</error_code>'.format(success_code)
 
 # ################################################################################################################################
 
-class SearchTool(object):
+class SearchTool:
     """ Optionally attached to each internal service returning a list of results responsible for extraction
     and serialization of search criteria.
     """
@@ -54,12 +54,12 @@ class SearchTool(object):
 
 # ################################################################################################################################
 
-class AdminSIO(object):
+class AdminSIO:
     namespace = zato_namespace
 
 # ################################################################################################################################
 
-class GetListAdminSIO(object):
+class GetListAdminSIO:
     namespace = zato_namespace
     input_optional = (Int('cur_page'), Bool('paginate'), 'query')
 

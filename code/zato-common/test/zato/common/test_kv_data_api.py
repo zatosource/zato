@@ -21,7 +21,6 @@ from zato.common.test import ODBTestCase, rand_datetime, rand_string
 
 if 0:
     from datetime import datetime
-
     datetime = datetime
 
 # ################################################################################################################################

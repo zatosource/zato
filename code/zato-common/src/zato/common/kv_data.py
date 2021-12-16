@@ -16,7 +16,6 @@ from zato.common.typing_ import dataclass, optional
 
 if 0:
     from zato.common.odb.api import SessionWrapper
-
     SessionWrapper = SessionWrapper
 
 # ################################################################################################################################

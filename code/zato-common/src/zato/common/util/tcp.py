@@ -123,7 +123,7 @@ def wait_for_zato(address, url_path, timeout=60, interval=0.1):
         try:
             requests_get(url, timeout=interval)
         except Exception as e:
-            logger.warn('Waiting for `%s` (%s)', url, e)
+            logger.warning('Waiting for `%s` (%s)', url, e)
         else:
             return True
 
@@ -158,7 +158,7 @@ def get_fqdn_by_ip(ip_address, default, log_msg_prefix):
         host = socket.gethostbyaddr(ip_address)[0]
         return socket.getfqdn(host)
     except Exception:
-        logger.warn('%s exception in FQDN lookup `%s`', log_msg_prefix, format_exc())
+        logger.warning('%s exception in FQDN lookup `%s`', log_msg_prefix, format_exc())
         return '(unknown-{}-fqdn)'.format(default)
 
 # ################################################################################################################################
@@ -171,8 +171,8 @@ def read_from_socket(ctx, _utcnow=datetime.utcnow, _timedelta=timedelta):
     # Local aliases
     _should_log_messages = ctx.should_log_messages
 
-    _log_info = logger.warn
-    _log_debug = logger.warn
+    _log_info = logger.warning
+    _log_debug = logger.warning
 
     _conn_id          = ctx.conn_id
     _max_msg_size     = ctx.max_msg_size

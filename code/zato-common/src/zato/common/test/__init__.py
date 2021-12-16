@@ -54,7 +54,6 @@ from past.builtins import basestring, cmp, unicode, xrange
 
 if 0:
     from zato.common.util.search import SearchResults
-
     SearchResults = SearchResults
 
 # ################################################################################################################################
@@ -221,7 +220,7 @@ def enrich_with_static_config(object_):
 
 # ################################################################################################################################
 
-class Expected(object):
+class Expected:
     """ A container for the data a test expects the service to return.
     """
     def __init__(self):
@@ -238,7 +237,7 @@ class Expected(object):
 
 # ################################################################################################################################
 
-class FakeBrokerClient(object):
+class FakeBrokerClient:
 
     def __init__(self):
         self.publish_args = []
@@ -255,9 +254,9 @@ class FakeBrokerClient(object):
 
 # ################################################################################################################################
 
-class FakeKVDB(object):
+class FakeKVDB:
 
-    class FakeConn(object):
+    class FakeConn:
         def __init__(self):
             self.setnx_args = None
             self.setnx_return_value = True
@@ -287,13 +286,13 @@ class FakeKVDB(object):
 
 # ################################################################################################################################
 
-class FakeServices(object):
+class FakeServices:
     def __getitem__(self, ignored):
         return {'slow_threshold': 1234}
 
 # ################################################################################################################################
 
-class FakeServiceStore(object):
+class FakeServiceStore:
     def __init__(self, name_to_impl_name=None, impl_name_to_service=None):
         self.services = FakeServices()
         self.name_to_impl_name = name_to_impl_name or {}
@@ -304,7 +303,7 @@ class FakeServiceStore(object):
 
 # ################################################################################################################################
 
-class FakeServer(object):
+class FakeServer:
     """ A fake mock server used in test cases.
     """
     def __init__(self, service_store_name_to_impl_name=None, service_store_impl_name_to_service=None, worker_store=None):
@@ -326,7 +325,7 @@ class FakeServer(object):
 
 # ################################################################################################################################
 
-class SIOElemWrapper(object):
+class SIOElemWrapper:
     """ Makes comparison between two SIOElem elements use their names.
     """
     def __init__(self, value):
@@ -410,7 +409,7 @@ class ServiceTestCase(TestCase):
 
     def _check_sio_request_input(self, instance, request_data):
         for k, v in request_data.items():
-            self.assertEquals(getattr(instance.request.input, k), v)
+            self.assertEqual(getattr(instance.request.input, k), v)
 
         sio_keys = set(getattr(instance.SimpleIO, 'input_required', []))
         sio_keys.update(set(getattr(instance.SimpleIO, 'input_optional', [])))

@@ -62,7 +62,7 @@ class HTTPSAdapter(requests.adapters.HTTPAdapter):
 
 # ################################################################################################################################
 
-class BaseHTTPSOAPWrapper(object):
+class BaseHTTPSOAPWrapper:
     """ Base class for HTTP/SOAP connection wrappers.
     """
     def __init__(self, config, _requests_session=None):
@@ -133,7 +133,7 @@ class BaseHTTPSOAPWrapper(object):
         verbose.close()
 
         if log_verbose:
-            func = logger.info if response.status_code == OK else logger.warn
+            func = logger.info if response.status_code == OK else logger.warning
             func(value)
 
         return response if return_response else value
@@ -285,7 +285,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         """
 
         if not params:
-            logger.warn('CID:`%s` No parameters given for URL path:`%r`', cid, self.config['address_url_path'])
+            logger.warning('CID:`%s` No parameters given for URL path:`%r`', cid, self.config['address_url_path'])
             raise ValueError('CID:`{}` No parameters given for URL path'.format(cid))
 
         path_params = {}
@@ -295,7 +295,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
             return (self.address.format(**path_params), dict(params))
         except(KeyError, ValueError):
-            logger.warn('CID:`%s` Could not build URL address `%r` path:`%r` with params:`%r`, e:`%s`',
+            logger.warning('CID:`%s` Could not build URL address `%r` path:`%r` with params:`%r`, e:`%s`',
                 cid, self.address, self.config['address_url_path'], params, format_exc())
 
             raise ValueError('CID:`{}` Could not build URL path'.format(cid))
@@ -489,7 +489,7 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
             self.client.put_client(client)
 
         except Exception:
-            logger.warn('Error while adding a SOAP client to `%s` (%s) e:`%s`', self.address, self.conn_type, format_exc())
+            logger.warning('Error while adding a SOAP client to `%s` (%s) e:`%s`', self.address, self.conn_type, format_exc())
 
     def build_client_queue(self):
 

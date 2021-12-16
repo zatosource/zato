@@ -33,7 +33,7 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
-class VaultResponse(object):
+class VaultResponse:
     """ A convenience class to hold individual attributes of responses from Vault.
     """
     __slots__ = ('action', 'client_token', 'lease_duration', 'accessor', 'policies')
@@ -106,7 +106,7 @@ class _Client(Client):
 
 # ################################################################################################################################
 
-class _VaultConn(object):
+class _VaultConn:
     def __init__(self, name, url, token, service_name, tls_verify, timeout, allow_redirects, client_class=_Client,
             requests_adapter=None):
         self.name = name
@@ -121,7 +121,7 @@ class _VaultConn(object):
 
 # ################################################################################################################################
 
-class VaultConnAPI(object):
+class VaultConnAPI:
     """ An API through which connections to Vault are established and managed.
     """
     def __init__(self, config_list=None, requests_adapter=None):
@@ -153,7 +153,7 @@ class VaultConnAPI(object):
         try:
             self.config[name].client.ping()
         except Exception:
-            logger.warn('Could not ping Vault connection `%s`, e:`%s`', name, format_exc())
+            logger.warning('Could not ping Vault connection `%s`, e:`%s`', name, format_exc())
         else:
             logger.info('Ping OK, Vault connection `%s`', name)
 
@@ -183,7 +183,7 @@ class VaultConnAPI(object):
         try:
             self.config[name].client.close()
         except Exception:
-            logger.warn(format_exc())
+            logger.warning(format_exc())
         finally:
             del self.config[name]
 

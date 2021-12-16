@@ -40,7 +40,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 
-class TelegramClient(object):
+class TelegramClient:
     def __init__(self, address, token, connect_timeout, invoke_timeout, proxies):
         # type: (str, str, int, int, dict)
 
@@ -73,7 +73,7 @@ class TelegramClient(object):
         try:
             return self._invoke(*args, **kwargs)
         except Exception:
-            logger.warn('Could not invoke Telegram API, e:`%s`', format_exc())
+            logger.warning('Could not invoke Telegram API, e:`%s`', format_exc())
             raise
 
 # ################################################################################################################################

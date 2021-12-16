@@ -95,7 +95,7 @@ class HL7MLLPClient:
                 return response
 
         except Exception:
-            logger.warn('Client caught an exception while sending HL7 MLLP data to `%s (%s)`; e:`%s`',
+            logger.warning('Client caught an exception while sending HL7 MLLP data to `%s (%s)`; e:`%s`',
                 self.name, self.address, format_exc())
             raise
 

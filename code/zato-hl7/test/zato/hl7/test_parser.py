@@ -45,28 +45,28 @@ PV1||I|W^389^1^UABH^^^^3||||12345^MORGAN^REX^J^^^MD^0010^UAMC^L||67890^GRAINGER^
         #
 
         msh = result.MSH
-        self.assertEquals(msh.field_separator.value, '|')
+        self.assertEqual(msh.field_separator.value, '|')
 
         #
         # Check EVN
         #
 
         evn = result.EVN
-        self.assertEquals(evn.recorded_date_time.value, '200605290901')
+        self.assertEqual(evn.recorded_date_time.value, '200605290901')
 
         #
         # Check PID
         #
 
         pid = result.PID
-        self.assertEquals(pid.patient_address.city.value, 'BIRMINGHAM')
+        self.assertEqual(pid.patient_address.city.value, 'BIRMINGHAM')
 
         #
         # Check PV1
         #
 
         pv1 = result.PV1
-        self.assertEquals(pv1.assigned_patient_location.facility.value, 'UABH')
+        self.assertEqual(pv1.assigned_patient_location.facility.value, 'UABH')
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -139,7 +139,7 @@ class AMQP(WorkerImpl):
         try:
             self.amqp_invoke(*args, **kwargs)
         except Exception:
-            logger.warn(format_exc())
+            logger.warning(format_exc())
 
     def amqp_invoke_async(self, *args, **kwargs):
         spawn_greenlet(self._amqp_invoke_async, *args, **kwargs)

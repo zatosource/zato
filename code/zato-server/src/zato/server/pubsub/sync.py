@@ -6,6 +6,8 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# pylint: disable=unused-import, unused-variable
+
 # stdlib
 import logging
 from traceback import format_exc
@@ -88,9 +90,6 @@ default_sk_server_table_columns = 6, 15, 8, 6, 17, 80
 _JSON=DATA_FORMAT.JSON
 _page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE
 
-class msg:
-    wsx_sub_resumed = 'WSX subscription resumed, sk:`%s`, peer:`%s`'
-
 # ################################################################################################################################
 
 def get_priority(
@@ -129,7 +128,7 @@ def get_expiration(
 
 # ################################################################################################################################
 
-class InRAMSync(object):
+class InRAMSync:
     """ A backlog of messages kept in RAM for whom there are subscriptions - that is, they are known to have subscribers
     and will be ultimately delivered to them. Stores a list of sub_keys and all messages that a sub_key points to.
     It acts as a multi-key dict and keeps only a single copy of message for each sub_key.
@@ -236,8 +235,8 @@ class InRAMSync(object):
         with self.lock:
             _msg = self.msg_id_to_msg.get(msg['msg_id'])
             if not _msg:
-                logger.warn(_warn, msg['msg_id'])
-                logger_zato.warn(_warn, msg['msg_id'])
+                logger.warning(_warn, msg['msg_id'])
+                logger_zato.warning(_warn, msg['msg_id'])
                 return False # No such message
             else:
                 for attr in _update_attrs:
@@ -285,20 +284,20 @@ class InRAMSync(object):
                     _has_sk_msg = True
 
             if not found_to_sub_key:
-                logger.warn('Message not found (msg_id_to_sub_key) %s', msg_id)
-                logger_zato.warn('Message not found (msg_id_to_sub_key) %s', msg_id)
+                logger.warning('Message not found (msg_id_to_sub_key) %s', msg_id)
+                logger_zato.warning('Message not found (msg_id_to_sub_key) %s', msg_id)
 
             if not found_to_msg:
-                logger.warn('Message not found (msg_id_to_msg) %s', msg_id)
-                logger_zato.warn('Message not found (msg_id_to_msg) %s', msg_id)
+                logger.warning('Message not found (msg_id_to_msg) %s', msg_id)
+                logger_zato.warning('Message not found (msg_id_to_msg) %s', msg_id)
 
             if not _has_topic_msg:
-                logger.warn('Message not found (_has_topic_msg) %s', msg_id)
-                logger_zato.warn('Message not found (_has_topic_msg) %s', msg_id)
+                logger.warning('Message not found (_has_topic_msg) %s', msg_id)
+                logger_zato.warning('Message not found (_has_topic_msg) %s', msg_id)
 
             if not _has_sk_msg:
-                logger.warn('Message not found (_has_sk_msg) %s', msg_id)
-                logger_zato.warn('Message not found (_has_sk_msg) %s', msg_id)
+                logger.warning('Message not found (_has_sk_msg) %s', msg_id)
+                logger_zato.warning('Message not found (_has_sk_msg) %s', msg_id)
 
 # ################################################################################################################################
 
@@ -375,7 +374,7 @@ class InRAMSync(object):
                     # Filter out expired messages
                     msg = self.msg_id_to_msg.get(msg_id)
                     if not msg:
-                        logger.warn('Msg `%s` not found in self.msg_id_to_msg', msg_id)
+                        logger.warning('Msg `%s` not found in self.msg_id_to_msg', msg_id)
                         continue
                     if now >= msg['expiration_time']:
                         continue
@@ -594,8 +593,8 @@ class InRAMSync(object):
             except Exception:
                 e = format_exc()
                 log_msg = 'Could not remove messages from in-RAM backlog, e:`%s`'
-                logger.warn(log_msg, e)
-                logger_zato.warn(log_msg, e)
+                logger.warning(log_msg, e)
+                logger_zato.warning(log_msg, e)
                 _sleep(0.1)
 
 # ################################################################################################################################
@@ -613,8 +612,8 @@ class InRAMSync(object):
         args = (max_depth, topic_name, cid)
 
         # Log in pub/sub log and the main one as well, just to make sure it will be easily found
-        logger.warn(msg, *args)
-        logger_zato.warn(msg, *args)
+        logger.warning(msg, *args)
+        logger_zato.warning(msg, *args)
 
         # Store messages in logger - by default will go to disk
         logger_overflow.info('CID:%s, topic:`%s`, sub_key:%s, messages:%s', cid, topic_name, sub_key, messages)

@@ -113,7 +113,7 @@ def _interval_based_job_def(user_profile, start_date, repeats, weeks, days, hour
             try:
                 value = int(value)
             except ValueError:
-                logger.warn('Cannot convert `%s` `%s` to an int, `%s` `%s` `%s` `%s` `%s` `%s` `%s`',
+                logger.warning('Cannot convert `%s` `%s` to an int, `%s` `%s` `%s` `%s` `%s` `%s` `%s`',
                     name, value, start_date, repeats, weeks, days, hours, minutes, seconds)
             else:
                 interval.append('{} {}{}'.format(value, name, 's' if value > 1 else ''))
@@ -519,7 +519,7 @@ def execute(req, job_id, cluster_id):
 def get_definition(req, start_date, repeats, weeks, days, hours, minutes, seconds):
     start_date = _get_start_date(start_date)
 
-    definition = _interval_based_job_def(start_date, repeats, weeks, days, hours, minutes, seconds)
+    definition = _interval_based_job_def(req.user_profile, start_date, repeats, weeks, days, hours, minutes, seconds)
     logger.log(TRACE1, 'definition:[{}]'.format(definition))
 
     return HttpResponse(definition)

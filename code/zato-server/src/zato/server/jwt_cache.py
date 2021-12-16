@@ -28,7 +28,7 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
-class JWTCache(object):
+class JWTCache:
     """ A previous-generation, JWT-only, cache that uses ODB.
     """
 

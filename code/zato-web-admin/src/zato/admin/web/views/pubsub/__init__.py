@@ -125,7 +125,7 @@ def get_message(req, cluster_id, object_type, object_id, msg_id):
     try:
         msg_service_response = req.zato.client.invoke(msg_service_name, input_dict).data.response
     except Exception:
-        logger.warn(format_exc())
+        logger.warning(format_exc())
         return_data.has_msg = False
     else:
         if not msg_service_response['msg_id']:

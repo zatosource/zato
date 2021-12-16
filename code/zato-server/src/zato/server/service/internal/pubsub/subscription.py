@@ -63,7 +63,7 @@ sub_impl_input_optional.remove('topic_name')
 
 # ################################################################################################################################
 
-class SubCtx(object):
+class SubCtx:
     """ A container for information pertaining to a given subscription request.
     """
     def __init__(self, cluster_id, pubsub):
@@ -542,7 +542,7 @@ class Create(_Subscribe):
                     # but for the time being, this is fine.
                     self.request.raw_request['sub_pattern_matched'] = self._is_subscription_allowed(topic_name, *check_input)
                 except Forbidden:
-                    self.logger.warn('Could not subscribe to `%r` using `%r`', topic_name, check_input)
+                    self.logger.warning('Could not subscribe to `%r` using `%r`', topic_name, check_input)
                     raise
 
             sub_service = 'zato.pubsub.subscription.subscribe-{}'.format(self.request.raw_request['endpoint_type'])
@@ -626,7 +626,7 @@ class CreateWSXSubscription(AdminService):
         try:
             self.pubsub.get_endpoint_id_by_ws_channel_id(ws_channel_id)
         except KeyError:
-            self.logger.warn('There is no endpoint for WSX channel ID `%s`', ws_channel_id)
+            self.logger.warning('There is no endpoint for WSX channel ID `%s`', ws_channel_id)
             raise Forbidden(self.cid)
 
         # Either an exact topic name or a list thereof is needed ..

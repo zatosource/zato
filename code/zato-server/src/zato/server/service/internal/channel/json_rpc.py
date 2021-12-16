@@ -188,7 +188,7 @@ class JSONRPCGateway(AdminService):
 
         except Exception as e:
 
-            self.logger.warn('JSON-RPC error in `%s` (%s), e:`%s`', self.channel.name, self.cid, format_exc())
+            self.logger.warning('JSON-RPC error in `%s` (%s), e:`%s`', self.channel.name, self.cid, format_exc())
 
             error_ctx = ErrorCtx()
             error_ctx.cid = self.cid

@@ -55,7 +55,7 @@ DeploymentInfo = namedtuple('DeploymentInfo', ['server_name', 'details'])
 
 # ################################################################################################################################
 
-class SlowResponse(object):
+class SlowResponse:
     def __init__(self, cid=None, service_name=None, threshold=None, req_ts=None,
             resp_ts=None, proc_time=None, req=None, resp=None, req_html=None, resp_html=None):
         self.cid = cid

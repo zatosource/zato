@@ -95,7 +95,7 @@ class SessionInsertCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class VerifyCtx(object):
+class VerifyCtx:
     """ Wraps information about a verification request.
     """
     __slots__ = ('ust', 'remote_addr', 'input', 'has_remote_addr', 'has_user_agent')

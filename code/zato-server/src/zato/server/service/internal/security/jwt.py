@@ -253,7 +253,7 @@ class LogIn(Service):
                 self._raise_unathorized()
 
         except Exception:
-            self.logger.warn(format_exc())
+            self.logger.warning(format_exc())
             self._raise_unathorized()
 
 # ################################################################################################################################
@@ -278,7 +278,7 @@ class LogOut(Service):
         try:
             JWTBackend(self.odb, self.server.decrypt, self.server.jwt_secret).delete(token)
         except Exception:
-            self.logger.warn(format_exc())
+            self.logger.warning(format_exc())
             self.response.status_code = BAD_REQUEST
             self.response.payload.result = 'Token could not be deleted'
 

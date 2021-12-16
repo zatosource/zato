@@ -76,7 +76,7 @@ _no_value = 'zato-no-value'
 
 # ################################################################################################################################
 
-class Cache(object):
+class Cache:
     """ The cache API through which services access the built-in self.cache objects.
     Attribute self.impl is the actual Cython-based cache implementation.
     """
@@ -647,13 +647,13 @@ class Cache(object):
                     _sleep(interval)
                     deleted = self.impl.delete_expired()
                 except Exception:
-                    logger.warn('Exception while deleting expired keys %s', format_exc())
+                    logger.warning('Exception while deleting expired keys %s', format_exc())
                     _sleep(2)
                 else:
                     if deleted:
                         logger.info('Cache `%s` deleted keys expired in the last %ss - %s', self.config.name, interval, deleted)
         except Exception:
-            logger.warn('Exception in _delete_expired loop %s', format_exc())
+            logger.warning('Exception in _delete_expired loop %s', format_exc())
 
 # ################################################################################################################################
 
@@ -807,14 +807,14 @@ class Cache(object):
 
 # ################################################################################################################################
 
-class _NotConfiguredAPI(object):
+class _NotConfiguredAPI:
     def set(self, *args, **kwargs):
         raise Exception('Default cache is not configured')
     get = set
 
 # ################################################################################################################################
 
-class CacheAPI(object):
+class CacheAPI:
     """ Base class for all cache objects.
     """
     def __init__(self, server):
@@ -865,7 +865,7 @@ class CacheAPI(object):
 
             self.server.broker_client.publish(data)
         except Exception:
-            logger.warn('Could not run `%s` after_state_changed in cache `%s`, data:`%s`, e:`%s`',
+            logger.warning('Could not run `%s` after_state_changed in cache `%s`, data:`%s`, e:`%s`',
                 op, cache_name, data, format_exc())
 
 # ################################################################################################################################
@@ -887,7 +887,7 @@ class CacheAPI(object):
                 cache = _MemcachedClient(servers, asbool(config.is_debug), **parse_extra_into_dict(config.extra))
                 self._add_cache(config, cache)
             except Exception:
-                logger.warn(format_exc())
+                logger.warning(format_exc())
 
         spawn(impl)
 

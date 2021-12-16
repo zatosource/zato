@@ -14,6 +14,7 @@ from copy import deepcopy
 # Zato
 from zato.cli import common_odb_opts, kvdb_opts, ZatoCommand
 from zato.common.util.platform_ import is_windows, is_non_windows
+from zato.common.util.open_ import open_w
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -196,7 +197,7 @@ $BASE_DIR/zato-qs-start.sh
 # ################################################################################################################################
 # ################################################################################################################################
 
-class CryptoMaterialLocation(object):
+class CryptoMaterialLocation:
     """ Locates and remembers location of various crypto material for Zato components.
     """
     def __init__(self, ca_dir, component_pattern):
@@ -601,12 +602,12 @@ class Create(ZatoCommand):
                 zato_cmd=zato_cmd,
                 env_dir=args_path)
 
-            open(zato_qs_start_path, 'w').write(windows_qs_start)
+            open_w(zato_qs_start_path).write(windows_qs_start)
 
         else:
-            open(zato_qs_start_path, 'w').write(zato_qs_start)
-            open(zato_qs_stop_path, 'w').write(zato_qs_stop)
-            open(zato_qs_restart_path, 'w').write(zato_qs_restart.format(script_dir=script_dir, cluster_name=cluster_name))
+            open_w(zato_qs_start_path).write(zato_qs_start)
+            open_w(zato_qs_stop_path).write(zato_qs_stop)
+            open_w(zato_qs_restart_path).write(zato_qs_restart.format(script_dir=script_dir, cluster_name=cluster_name))
 
             file_mod = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP
 

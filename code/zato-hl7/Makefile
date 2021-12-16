@@ -23,6 +23,12 @@ run-tests:
 	$(MAKE) static-check
 	echo
 
+pylint:
+	echo Running pylint in zato-hl7
+	$(CURDIR)/../bin/pylint --verbose \
+		--rcfile $(CURDIR)/../pylint.ini \
+				 $(CURDIR)/../zato-hl7/src/zato/hl7
+
 static-check:
 	echo "Running static checks in zato-hl7"
 	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/

@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -24,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-class HAProxyStats(object):
+class HAProxyStats:
     """ Used for communicating with HAProxy through its local UNIX socket interface.
     """
     socket_name: str
@@ -59,6 +57,7 @@ class HAProxyStats(object):
             raise
         finally:
             client.close()
-            return buff.getvalue()
+
+        return buff.getvalue()
 
 # ################################################################################################################################

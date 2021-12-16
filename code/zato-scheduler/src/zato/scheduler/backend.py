@@ -40,7 +40,7 @@ initial_sleep = 0.1
 
 # ################################################################################################################################
 
-class Interval(object):
+class Interval:
     def __init__(self, days=0, hours=0, minutes=0, seconds=0, in_seconds=0):
         self.days = days
         self.hours = hours
@@ -58,7 +58,7 @@ class Interval(object):
 
 # ################################################################################################################################
 
-class Job(object):
+class Job:
     def __init__(self, id, name, type, interval, start_time=None, callback=None, cb_kwargs=None, max_repeats=None,
             on_max_repeats_reached_cb=None, is_active=True, clone_start_time=False, cron_definition=None, service=None,
             extra=None, old_name=None):
@@ -185,7 +185,7 @@ class Job(object):
                 self.max_repeats_reached_at = next_run_time
                 self.keep_running = False
 
-                logger.warn(
+                logger.warning(
                     'Cannot compute start_time. Job `%s` max repeats reached at `%s` (UTC)',
                     self.name, self.max_repeats_reached_at)
 
@@ -247,9 +247,11 @@ class Job(object):
                     self._spawn(self.callback, **{'ctx':self.get_context()})
 
                 except Exception:
-                    logger.warn(format_exc())
+                    logger.warning(format_exc())
 
                 finally:
+                    # pylint: disable=lost-exception
+
                     # Pause the greenlet for however long is needed if it is not a one-off job
                     if self.type == SCHEDULER.JOB_TYPE.ONE_TIME:
                         return True
@@ -259,7 +261,7 @@ class Job(object):
             logger.info('Job leaving main loop `%s` after %d iterations', self, self.current_run)
 
         except Exception:
-            logger.warn(format_exc())
+            logger.warning(format_exc())
 
         return True
 
@@ -271,11 +273,11 @@ class Job(object):
             # If we are a job that triggers file transfer channels we do not start
             # unless our extra data is filled in. Otherwise, we would not trigger any transfer anyway.
             if self.service == FILE_TRANSFER.SCHEDULER_SERVICE and (not self.extra):
-                logger.warn('Skipped file transfer job `%s` without extra set `%s` (%s)', self.name, self.extra, self.service)
+                logger.warning('Skipped file transfer job `%s` without extra set `%s` (%s)', self.name, self.extra, self.service)
                 return
 
             if not self.start_time:
-                logger.warn('Job `%s` cannot start without start_time set', self.name)
+                logger.warning('Job `%s` cannot start without start_time set', self.name)
                 return
 
             logger.info('Job starting `%s`', self)
@@ -297,11 +299,11 @@ class Job(object):
             self.main_loop()
 
         except Exception:
-            logger.warn(format_exc())
+            logger.warning(format_exc())
 
 # ################################################################################################################################
 
-class Scheduler(object):
+class Scheduler:
     def __init__(self, config, api):
         self.config = config
         self.api = api
@@ -337,7 +339,7 @@ class Scheduler(object):
             else:
                 logger.info('Skipping inactive job `%s`', job)
         except Exception:
-            logger.warn(format_exc())
+            logger.warning(format_exc())
 
     def create(self, *args, **kwargs):
         with self.lock:
@@ -428,7 +430,7 @@ class Scheduler(object):
                     self.on_job_executed(job.get_context(), False)
                     break
             else:
-                logger.warn('No such job `%s` in `%s`', name, [elem.get_context() for elem in itervalues(self.jobs)])
+                logger.warning('No such job `%s` in `%s`', name, [elem.get_context() for elem in itervalues(self.jobs)])
 
     def on_job_executed(self, ctx, unschedule_one_time=True):
         logger.info('Executing `%s`, `%s`', ctx['name'], ctx)
@@ -498,4 +500,4 @@ class Scheduler(object):
                     self.iter_cb(*self.iter_cb_args)
 
         except Exception:
-            logger.warn(format_exc())
+            logger.warning(format_exc())
