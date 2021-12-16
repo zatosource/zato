@@ -234,7 +234,7 @@ class TextMessage:
             buff.write(text_to_show)
 
             if len(text_to_show) < len(self.text):
-                omitted = locale.format('%d', (len(self.text) - len(text_to_show)), True)
+                omitted = locale.format_string('%d', (len(self.text) - len(text_to_show)), True)
                 buff.write('\nAnother ')
                 buff.write(omitted)
                 buff.write(' character(s) omitted')

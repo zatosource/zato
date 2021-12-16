@@ -856,7 +856,7 @@ class PubSub:
         else:
             msg = 'No self.service_pubsub_tool to add sub key to (%s)'
             logger.warning(msg, sub_key)
-            logger_zato.warn(msg, sub_key)
+            logger_zato.warning(msg, sub_key)
 
         self.set_sub_key_server({
             'sub_key': sub_key,
@@ -1184,7 +1184,7 @@ class PubSub:
             msg = 'Could not invoke server `%s` to get PID for sub_key `%s`, e:`%s`'
             exc_formatted = format_exc()
             logger.warning(msg, server_name, sub_key, exc_formatted)
-            logger_zato.warn(msg, server_name, sub_key, exc_formatted)
+            logger_zato.warning(msg, server_name, sub_key, exc_formatted)
         else:
             return response['response']['server_pid']
 
@@ -1681,7 +1681,7 @@ class PubSub:
 
         _logger_info      = logger.info
         _logger_warn      = logger.warning
-        _logger_zato_warn = logger_zato.warn
+        _logger_zato_warn = logger_zato.warning
 
         _self_invoke_service   = self.invoke_service
         _self_set_sync_has_msg = self._set_sync_has_msg

@@ -250,6 +250,8 @@ class Job:
                     logger.warning(format_exc())
 
                 finally:
+                    # pylint: disable=lost-exception
+
                     # Pause the greenlet for however long is needed if it is not a one-off job
                     if self.type == SCHEDULER.JOB_TYPE.ONE_TIME:
                         return True

@@ -236,7 +236,7 @@ class InRAMSync:
             _msg = self.msg_id_to_msg.get(msg['msg_id'])
             if not _msg:
                 logger.warning(_warn, msg['msg_id'])
-                logger_zato.warn(_warn, msg['msg_id'])
+                logger_zato.warning(_warn, msg['msg_id'])
                 return False # No such message
             else:
                 for attr in _update_attrs:
@@ -285,19 +285,19 @@ class InRAMSync:
 
             if not found_to_sub_key:
                 logger.warning('Message not found (msg_id_to_sub_key) %s', msg_id)
-                logger_zato.warn('Message not found (msg_id_to_sub_key) %s', msg_id)
+                logger_zato.warning('Message not found (msg_id_to_sub_key) %s', msg_id)
 
             if not found_to_msg:
                 logger.warning('Message not found (msg_id_to_msg) %s', msg_id)
-                logger_zato.warn('Message not found (msg_id_to_msg) %s', msg_id)
+                logger_zato.warning('Message not found (msg_id_to_msg) %s', msg_id)
 
             if not _has_topic_msg:
                 logger.warning('Message not found (_has_topic_msg) %s', msg_id)
-                logger_zato.warn('Message not found (_has_topic_msg) %s', msg_id)
+                logger_zato.warning('Message not found (_has_topic_msg) %s', msg_id)
 
             if not _has_sk_msg:
                 logger.warning('Message not found (_has_sk_msg) %s', msg_id)
-                logger_zato.warn('Message not found (_has_sk_msg) %s', msg_id)
+                logger_zato.warning('Message not found (_has_sk_msg) %s', msg_id)
 
 # ################################################################################################################################
 
@@ -594,7 +594,7 @@ class InRAMSync:
                 e = format_exc()
                 log_msg = 'Could not remove messages from in-RAM backlog, e:`%s`'
                 logger.warning(log_msg, e)
-                logger_zato.warn(log_msg, e)
+                logger_zato.warning(log_msg, e)
                 _sleep(0.1)
 
 # ################################################################################################################################
@@ -613,7 +613,7 @@ class InRAMSync:
 
         # Log in pub/sub log and the main one as well, just to make sure it will be easily found
         logger.warning(msg, *args)
-        logger_zato.warn(msg, *args)
+        logger_zato.warning(msg, *args)
 
         # Store messages in logger - by default will go to disk
         logger_overflow.info('CID:%s, topic:`%s`, sub_key:%s, messages:%s', cid, topic_name, sub_key, messages)

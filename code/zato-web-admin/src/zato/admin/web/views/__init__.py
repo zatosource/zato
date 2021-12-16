@@ -407,7 +407,7 @@ class Index(_BaseView):
     def before_invoke_admin_service(self):
         pass
 
-    def get_service_name(self, req):
+    def get_service_name(self, _req):
         raise NotImplementedError('May be implemented in subclasses')
 
     def get_initial_input(self):
@@ -420,7 +420,7 @@ class Index(_BaseView):
     def invoke_admin_service(self):
         if self.req.zato.get('cluster'):
             func = self.req.zato.client.invoke_async if self.async_invoke else self.req.zato.client.invoke
-            service_name = self.service_name if self.service_name else self.get_service_name()
+            service_name = self.service_name if self.service_name else self.get_service_name(self.req)
             request = self.get_initial_input()
             request.update(self.input)
 

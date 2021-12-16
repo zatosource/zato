@@ -519,7 +519,7 @@ def execute(req, job_id, cluster_id):
 def get_definition(req, start_date, repeats, weeks, days, hours, minutes, seconds):
     start_date = _get_start_date(start_date)
 
-    definition = _interval_based_job_def(start_date, repeats, weeks, days, hours, minutes, seconds)
+    definition = _interval_based_job_def(req.user_profile, start_date, repeats, weeks, days, hours, minutes, seconds)
     logger.log(TRACE1, 'definition:[{}]'.format(definition))
 
     return HttpResponse(definition)
