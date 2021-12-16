@@ -127,7 +127,6 @@ super_user_attrs = {
     'rate_limit_def': None,
     'rate_limit_type': None,
     'rate_limit_check_parent_def': None,
-    'totp_key': None,
 }
 
 # This can be only changed but never read
@@ -654,7 +653,15 @@ class UserAPI:
 
                 if current_session.is_super_user or return_all_attrs:
                     logger.info(access_msg, cid, 'all', current_session.is_super_user, return_all_attrs)
+
+                    # This will suffice for 99% of purposes ..
                     attrs = _all_super_user_attrs
+
+                    # .. but to return this, it does not suffice to be a super-user,
+                    # .. we need to be requested to do it explicitly via this flag.
+                    if return_all_attrs:
+                        attrs['totp_key'] = None
+
                     out.is_approval_needed = self.sso_conf.signup.is_approval_needed
                 else:
                     logger.info(access_msg, cid, 'regular', current_session.is_super_user, return_all_attrs)
