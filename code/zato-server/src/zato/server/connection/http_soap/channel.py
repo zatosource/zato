@@ -48,7 +48,7 @@ stack_format = None
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from zato.server.service import Service
     from zato.server.service.reqresp import Response
     from zato.server.base.parallel import ParallelServer

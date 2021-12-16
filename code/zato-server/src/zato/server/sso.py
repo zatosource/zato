@@ -17,7 +17,7 @@ from zato.common.api import RATE_LIMIT, SEC_DEF_TYPE
 # ################################################################################################################################
 
 # Type checking
-if _ := False:
+if 0:
     from bunch import Bunch
     from zato.server.base.parallel import ParallelServer
 

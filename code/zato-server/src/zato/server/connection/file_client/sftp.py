@@ -16,7 +16,7 @@ from zato.server.connection.file_client.base import BaseFileClient, PathAccessEx
 # ################################################################################################################################
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from zato.server.connection.sftp import SFTPIPCFacade, SFTPInfo
 
     SFTPIPCFacade = SFTPIPCFacade

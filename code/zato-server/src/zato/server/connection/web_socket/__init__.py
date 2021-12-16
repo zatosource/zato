@@ -8,7 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # Make sure we are gevent-friendly - this is needed if we run
 # the code from the __main__ block.
-if _ := False:
+if 0:
     from gevent.monkey import patch_all
     patch_all()
 
@@ -75,7 +75,7 @@ from zato.server.pubsub.task import PubSubTool
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from zato.common.audit_log import DataEvent
     from zato.common.model.wsx import WSXConnectorConfig
     from zato.common.typing_ import callable_

@@ -22,7 +22,7 @@ from zato.server.service.internal.pubsub.task.delivery import GetTaskSIO
 # ################################################################################################################################
 
 # Type checking
-if _ := False:
+if 0:
     from zato.server.pubsub.task import DeliveryTask, Message, PubSubTool
 
     DeliveryTask = DeliveryTask

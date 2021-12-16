@@ -32,7 +32,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 # ################################################################################################################################
 
 # Type checking
-if _ := False:
+if 0:
 
     # Zato
     from zato.server.connection.web_socket import ChannelWebSocket as ChannelWebSocketImpl

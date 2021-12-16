@@ -31,7 +31,7 @@ from six import add_metaclass
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from bunch import Bunch
     from zato.server.service import Service
 

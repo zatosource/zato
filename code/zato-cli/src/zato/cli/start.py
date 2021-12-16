@@ -15,7 +15,7 @@ from zato.cli import ManageCommand
 
 # During development, it is convenient to configure it here to catch information that should be logged
 # even prior to setting up main loggers in each of components.
-if _ := False:
+if 0:
 
     # stdlib
     import logging

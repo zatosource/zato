@@ -39,7 +39,7 @@ from past.builtins import basestring
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from zato.common.odb.unittest_ import QueryCtx
     from zato.server.service import Service
 

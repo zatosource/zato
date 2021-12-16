@@ -13,7 +13,7 @@ from zato.server.connection.server.rpc.invoker import LocalServerInvoker, Remote
 # ################################################################################################################################
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.server.rpc.config import ConfigSource, RemoteServerInvocationCtx
     from zato.server.connection.server.rpc.invoker import PerPIDResponse, ServerInvoker

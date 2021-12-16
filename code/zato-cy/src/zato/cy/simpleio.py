@@ -47,7 +47,7 @@ from past.builtins import basestring, str as past_str
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from zato.server.base.parallel import ParallelServer
     ParallelServer = ParallelServer
 
