@@ -46,7 +46,7 @@ SSOSessionTable = SSOSession.__table__
 
 # ################################################################################################################################
 
-class AttrEntity(object):
+class AttrEntity:
     """ Holds information about a particular attribute.
     """
     __slots__ = ('name', 'value', 'creation_time', 'last_modified', 'expiration_time', 'is_encrypted', '_is_session_attr')
@@ -90,7 +90,7 @@ class AttrEntity(object):
 
 # ################################################################################################################################
 
-class AttrAPI(object):
+class AttrAPI:
     """ A base class for both user and session SSO attributes.
     """
     def __init__(self, cid, current_user_id, is_super_user, current_app, remote_addr, odb_session_func, is_sqlite, encrypt_func,

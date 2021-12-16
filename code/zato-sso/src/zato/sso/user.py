@@ -206,7 +206,7 @@ class Forbidden(Exception):
 
 # ################################################################################################################################
 
-class User(object):
+class User:
     """ A user entity representing a person in SSO.
     """
     __slots__ = _all_attrs.keys()
@@ -221,7 +221,7 @@ class User(object):
 
 # ################################################################################################################################
 
-class CreateUserCtx(object):
+class CreateUserCtx:
     """ A business object to carry user creation configuration around.
     """
     __slots__ = ('data', 'is_active', 'is_internal', 'is_super_user', 'password_expiry', 'encrypt_password', 'encrypt_email',
@@ -241,7 +241,7 @@ class CreateUserCtx(object):
 
 # ################################################################################################################################
 
-class UserAPI(object):
+class UserAPI:
     """ The main object through SSO users are managed.
     """
     def __init__(self, server, sso_conf, odb_session_func, encrypt_func, decrypt_func, hash_func, verify_hash_func,

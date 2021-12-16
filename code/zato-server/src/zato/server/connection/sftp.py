@@ -72,7 +72,7 @@ _other_types_check = EntryType.file, EntryType.directory, EntryType.symlink
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SFTPInfo(object):
+class SFTPInfo:
     __slots__ = 'type', 'name', 'owner', 'group', 'size', 'permissions', 'permissions_oct', 'last_modified'
 
     def __init__(self):
@@ -162,7 +162,7 @@ class SFTPInfo(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SFTPIPCFacade(object):
+class SFTPIPCFacade:
     """ Provides servers and services with access to SFTP resources.
     """
     def __init__(self, server, config):

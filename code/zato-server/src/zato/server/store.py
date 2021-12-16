@@ -23,7 +23,7 @@ from zato.common.exception import Inactive
 
 logger = getLogger(__name__)
 
-class BaseAPI(object):
+class BaseAPI:
     """ A base class for connection/query APIs.
     """
     def __init__(self, conn_store):
@@ -60,7 +60,7 @@ class BaseAPI(object):
 
 # ################################################################################################################################
 
-class BaseStore(object):
+class BaseStore:
     """ A base class for connection/query stores.
     """
     def __init__(self):

@@ -76,7 +76,7 @@ class MSG_TYPE:
 
 # ################################################################################################################################
 
-class ClientMessage(object):
+class ClientMessage:
     """ An individual message received from a WebSocket client.
     """
     def __init__(self):
@@ -108,7 +108,7 @@ class ClientMessage(object):
 
 # ################################################################################################################################
 
-class ServerMessage(object):
+class ServerMessage:
     """ A message sent from a WebSocket server to a client.
     """
     is_response = True

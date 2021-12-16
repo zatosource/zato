@@ -21,7 +21,7 @@ _search_attrs = 'num_pages', 'cur_page', 'prev_page', 'next_page', 'has_prev_pag
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SearchResults(object):
+class SearchResults:
     def __init__(self, q, result, columns, total):
         # type: (object, object, object, int) -> None
         self.q = q

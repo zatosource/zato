@@ -103,7 +103,7 @@ class SortedList(_SortedList):
 
 # ################################################################################################################################
 
-class DeliveryTask(object):
+class DeliveryTask:
     """ Runs a greenlet responsible for delivery of messages for a given sub_key.
     """
     def __init__(self,
@@ -824,7 +824,7 @@ class NonGDMessage(Message):
 
 # ################################################################################################################################
 
-class PubSubTool(object):
+class PubSubTool:
     """ A utility object for pub/sub-related tasks.
     """
     def __init__(self,

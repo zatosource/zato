@@ -41,7 +41,7 @@ _shmem_pattern = '/zato-shmem-{}'
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SharedMemoryIPC(object):
+class SharedMemoryIPC:
     """ An IPC object which Zato processes use to communicate with each other using mmap files
     backed by shared memory. All data in shared memory is kept as a dictionary and serialized as JSON
     each time any read or write is needed.

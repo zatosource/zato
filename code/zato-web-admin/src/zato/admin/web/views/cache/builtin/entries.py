@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-class CacheEntry(object):
+class CacheEntry:
     def __init__(self, cache_id=None, key=None, value=None, last_read=None, prev_read=None, prev_write=None, expiry_op=None,
             expires_at=None, hits=None, position=None, server=None):
         self.cache_id = cache_id

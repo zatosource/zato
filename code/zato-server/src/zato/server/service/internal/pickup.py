@@ -114,7 +114,7 @@ class _OnUpdate(Service):
     """
     update_type = '<update-type-_OnUpdate>'
 
-    class SimpleIO(object):
+    class SimpleIO:
         input_required = ('data', 'full_path', 'file_name', 'relative_dir')
 
     def handle(self):

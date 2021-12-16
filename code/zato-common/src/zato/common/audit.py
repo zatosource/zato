@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-class AuditPII(object):
+class AuditPII:
     """ Audit log for personally identifiable information (PII).
     """
     def __init__(self):

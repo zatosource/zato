@@ -204,7 +204,7 @@ class AsyncCtx:
 
 # ################################################################################################################################
 
-class ChannelInfo(object):
+class ChannelInfo:
     """ Conveys information abouts the channel that a service is invoked through.
     Available in services as self.channel or self.chan.
     """
@@ -226,7 +226,7 @@ class ChannelInfo(object):
 
 # ################################################################################################################################
 
-class ChannelSecurityInfo(object):
+class ChannelSecurityInfo:
     """ Contains information about a security definition assigned to a channel, if any.
     Available in services as:
 
@@ -262,7 +262,7 @@ class ChannelSecurityInfo(object):
 
 # ################################################################################################################################
 
-class _WSXChannel(object):
+class _WSXChannel:
     """ Provides communication with WebSocket channels.
     """
     def __init__(self, server, channel_name):
@@ -287,7 +287,7 @@ class _WSXChannel(object):
 
 # ################################################################################################################################
 
-class _WSXChannelContainer(object):
+class _WSXChannelContainer:
     """ A thin wrapper to mediate access to WebSocket channels.
     """
     def __init__(self, server):
@@ -320,7 +320,7 @@ class _WSXChannelContainer(object):
 
 # ################################################################################################################################
 
-class WSXFacade(object):
+class WSXFacade:
     """ An object via which WebSocket channels and outgoing connections may be invoked or send broadcasts to.
     """
     __slots__ = 'server', 'channel', 'out'
@@ -332,7 +332,7 @@ class WSXFacade(object):
 
 # ################################################################################################################################
 
-class AMQPFacade(object):
+class AMQPFacade:
     """ Introduced solely to let service access outgoing connections through self.amqp.invoke/_async
     rather than self.out.amqp_invoke/_async. The .send method is kept for pre-3.0 backward-compatibility.
     """
@@ -340,7 +340,7 @@ class AMQPFacade(object):
 
 # ################################################################################################################################
 
-class PatternsFacade(object):
+class PatternsFacade:
     """ The API through which services make use of integration patterns.
     """
     __slots__ = ('invoke_retry', 'fanout', 'parallel')
@@ -353,7 +353,7 @@ class PatternsFacade(object):
 
 ################################################################################################################################
 
-class SchedulerFacade(object):
+class SchedulerFacade:
     """ The API through which jobs can be scheduled.
     """
     def __init__(self, server):
@@ -397,7 +397,7 @@ class SchedulerFacade(object):
 
 # ################################################################################################################################
 
-class Service(object):
+class Service:
     """ A base class for all services deployed on Zato servers, no matter
     the transport and protocol, be it plain HTTP, SOAP, IBM MQ or any other,
     regardless whether they're built-in or user-defined ones.

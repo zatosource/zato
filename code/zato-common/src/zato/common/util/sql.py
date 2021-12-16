@@ -135,7 +135,7 @@ def sql_op_with_deadlock_retry(cid, name, func, *args, **kwargs):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ElemsWithOpaqueMaker(object):
+class ElemsWithOpaqueMaker:
     def __init__(self, elems):
         self.elems = elems
 

@@ -35,7 +35,7 @@ _SIO_TYPE_MAP = SIO_TYPE_MAP()
 
 # ################################################################################################################################
 
-class OpenAPIGenerator(object):
+class OpenAPIGenerator:
     """ Generates OpenAPI specifications.
     """
     def __init__(self, data, channel_data, needs_api_invoke, needs_rest_channels, api_invoke_path):

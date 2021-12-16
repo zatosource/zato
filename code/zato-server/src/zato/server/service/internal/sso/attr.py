@@ -21,7 +21,7 @@ _invalid = 'invalid.{}'.format(uuid4().hex)
 
 # ################################################################################################################################
 
-class _DataElem(object):
+class _DataElem:
     def __init__(self, func, elem_name, elem_value):
         self.func = func
         self.elem_name = elem_name
@@ -29,7 +29,7 @@ class _DataElem(object):
 
 # ################################################################################################################################
 
-class _AttrBase(object):
+class _AttrBase:
     """ Utility base class for attribute-related services.
     """
     _api_entity = None

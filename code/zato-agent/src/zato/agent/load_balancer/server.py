@@ -51,7 +51,7 @@ for _ignored_version, commands in haproxy_stats.items():
 # ################################################################################################################################
 # ################################################################################################################################
 
-class BaseLoadBalancerAgent(object):
+class BaseLoadBalancerAgent:
 
     # This is implemented by children classes
     register_function: Callable

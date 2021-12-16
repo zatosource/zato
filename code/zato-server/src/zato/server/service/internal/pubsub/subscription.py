@@ -63,7 +63,7 @@ sub_impl_input_optional.remove('topic_name')
 
 # ################################################################################################################################
 
-class SubCtx(object):
+class SubCtx:
     """ A container for information pertaining to a given subscription request.
     """
     def __init__(self, cluster_id, pubsub):

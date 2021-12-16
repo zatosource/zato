@@ -25,7 +25,7 @@ from zato.common.util.api import get_sql_engine_display_name
 from zato.server.service import AsIs, Integer
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
-class _SQLService(object):
+class _SQLService:
     """ A common class for various SQL-related services.
     """
     def notify_worker_threads(self, params, action=OUTGOING.SQL_CREATE_EDIT.value):

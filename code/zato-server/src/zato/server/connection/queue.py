@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _Connection(object):
+class _Connection:
     """ Meant to be used as a part of a 'with' block - returns a connection from its queue each time 'with' is entered
     assuming the queue isn't empty.
     """
@@ -59,7 +59,7 @@ class _Connection(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ConnectionQueue(object):
+class ConnectionQueue:
     """ Holds connections to resources. Each time it's called a connection is fetched from its underlying queue
     assuming any connection is still available.
     """
@@ -180,7 +180,7 @@ class ConnectionQueue(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Wrapper(object):
+class Wrapper:
     """ Base class for queue-based connections wrappers.
     """
     def __init__(self, config, conn_type, server=None):

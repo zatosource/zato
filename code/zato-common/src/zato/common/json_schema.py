@@ -85,7 +85,7 @@ class ValidationException(Exception):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ValidationError(object):
+class ValidationError:
     """ Base class for validation error-related classes.
     """
     __slots__ = 'cid', 'needs_err_details', 'error_msg', 'error_extra', 'needs_prefix'
@@ -163,7 +163,7 @@ channel_type_to_error_class = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ValidationConfig(object):
+class ValidationConfig:
     """ An individual set of configuration options - each object requiring validation (e.g. each channel)
     will have its own instance of this class assigned to its validator.
     """
@@ -185,7 +185,7 @@ class ValidationConfig(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Result(object):
+class Result:
     __slots__ = 'is_ok', 'cid', 'needs_err_details', 'error_msg', 'error_extra', 'object_type'
 
     def __init__(self):
@@ -210,7 +210,7 @@ class Result(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Validator(object):
+class Validator:
     """ Validates JSON requests against a previously assigned schema and serializes errors according to the caller's type,
     e.g. using REST or JSON-RPC.
     """

@@ -40,7 +40,7 @@ initial_sleep = 0.1
 
 # ################################################################################################################################
 
-class Interval(object):
+class Interval:
     def __init__(self, days=0, hours=0, minutes=0, seconds=0, in_seconds=0):
         self.days = days
         self.hours = hours
@@ -58,7 +58,7 @@ class Interval(object):
 
 # ################################################################################################################################
 
-class Job(object):
+class Job:
     def __init__(self, id, name, type, interval, start_time=None, callback=None, cb_kwargs=None, max_repeats=None,
             on_max_repeats_reached_cb=None, is_active=True, clone_start_time=False, cron_definition=None, service=None,
             extra=None, old_name=None):
@@ -301,7 +301,7 @@ class Job(object):
 
 # ################################################################################################################################
 
-class Scheduler(object):
+class Scheduler:
     def __init__(self, config, api):
         self.config = config
         self.api = api

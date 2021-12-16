@@ -35,14 +35,14 @@ from zato.client import AnyServiceInvoker, CID_NO_CLIP, _Client, JSONClient, JSO
 
 # ##############################################################################
 
-class FakeInnerResponse(object):
+class FakeInnerResponse:
     def __init__(self, headers, ok, text, status_code):
         self.headers = headers
         self.ok = ok
         self.text = text
         self.status_code = status_code
 
-class FakeSession(object):
+class FakeSession:
     def __init__(self, response=None, auth=None):
         self.response = response
         self.auth = auth
@@ -426,7 +426,7 @@ class TestSettingSessionAuth(TestCase):
 class TestHeaders(TestCase):
     """ GH #221 - Clients don't always properly pass headers on to super classes.
     """
-    class InnerInvokeResponse(object):
+    class InnerInvokeResponse:
         def __init__(self, request, response_class, is_async, headers):
             self.request = request
             self.response_class = response_class

@@ -68,7 +68,7 @@ _ext_sec_type_supported = SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.JWT
 
 # ################################################################################################################################
 
-class SessionInfo(object):
+class SessionInfo:
     """ Details about an individual session.
     """
     __slots__ = ('username', 'user_id', 'ust', 'creation_time', 'expiration_time', 'has_w_about_to_exp')
@@ -94,7 +94,7 @@ class SessionInfo(object):
 
 # ################################################################################################################################
 
-class SessionAPI(object):
+class SessionAPI:
     """ Logs a user in or out, provided that all authentication and authorization checks succeed,
     or returns details about already existing sessions.
     """

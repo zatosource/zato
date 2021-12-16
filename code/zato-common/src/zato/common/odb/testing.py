@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-class UnittestCursor(object):
+class UnittestCursor:
 
     def __init__(self, result=None):
         self.result = result
@@ -36,7 +36,7 @@ class UnittestCursor(object):
 
 # ################################################################################################################################
 
-class UnittestSession(object):
+class UnittestSession:
 
     def __init__(self, engine):
         # type: (UnittestEngine)
@@ -53,7 +53,7 @@ class UnittestSession(object):
 
 # ################################################################################################################################
 
-class UnittestEngine(object):
+class UnittestEngine:
     """ An SQL engine used only in unittests, one that does not actually connect to any database.
     """
     name = UNITTEST.SQL_ENGINE

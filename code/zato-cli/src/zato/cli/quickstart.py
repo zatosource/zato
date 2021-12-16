@@ -197,7 +197,7 @@ $BASE_DIR/zato-qs-start.sh
 # ################################################################################################################################
 # ################################################################################################################################
 
-class CryptoMaterialLocation(object):
+class CryptoMaterialLocation:
     """ Locates and remembers location of various crypto material for Zato components.
     """
     def __init__(self, ca_dir, component_pattern):

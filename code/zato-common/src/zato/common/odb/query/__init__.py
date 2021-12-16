@@ -65,7 +65,7 @@ class _QueryConfig:
 
 # ################################################################################################################################
 
-class _SearchWrapper(object):
+class _SearchWrapper:
     """ Wraps results in pagination and/or filters out objects by their name or other attributes.
     """
     def __init__(self, q, default_page_size=_no_page_limit, **config):

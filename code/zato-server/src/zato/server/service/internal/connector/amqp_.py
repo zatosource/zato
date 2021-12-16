@@ -19,7 +19,7 @@ class Start(Service):
     # We assign the name explicitly because otherwise it is turned into zato.connector.amqp-.start (note - instead of _).
     name = 'zato.connector.amqp_.start'
 
-    class SimpleIO(object):
+    class SimpleIO:
         input_required = ('cluster_id', 'frame_max', 'heartbeat', 'host', 'id', 'name', 'port', 'username', 'vhost', 'password')
         input_optional = ('old_name',)
         request_elem = 'zato_connector_amqp_start_request'

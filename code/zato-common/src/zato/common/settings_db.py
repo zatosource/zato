@@ -52,7 +52,7 @@ data_type_handler = {
 
 # ################################################################################################################################
 
-class SettingsDB(object):
+class SettingsDB:
     """ Keeps simple settings in an SQLite database. It's new in 3.0 so to ease in migration from pre-3.0 releases
     the class takes care itself of making sure that its underlying database actually exists - a future Zato version
     will simply assume that it does.

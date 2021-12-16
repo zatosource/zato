@@ -117,13 +117,13 @@ class SIOJSONEncoder(JSONEncoder):
 # ################################################################################################################################
 
 @cy.cclass
-class _ForceEmptyKeyMarker(object):
+class _ForceEmptyKeyMarker:
     pass
 
 # ################################################################################################################################
 
 @cy.cclass
-class _NotGiven(object):
+class _NotGiven:
     """ Indicates that a particular value was not provided on input or output.
     """
     def __str__(self):
@@ -163,7 +163,7 @@ class ServiceInput(Bunch):
 # ################################################################################################################################
 
 @cy.cclass
-class SIODefault(object):
+class SIODefault:
 
     input_value = cy.declare(object, visibility='public') # type: object
     output_value = cy.declare(object, visibility='public') # type: object
@@ -182,7 +182,7 @@ class SIODefault(object):
 # ################################################################################################################################
 
 @cy.cclass
-class SIOSkipEmpty(object):
+class SIOSkipEmpty:
 
     empty_output_value     = cy.declare(object, visibility='public') # type: object
     skip_input_set         = cy.declare(set, visibility='public')    # type: set
@@ -277,7 +277,7 @@ sio_text_type:int = ElemType.text
 # ################################################################################################################################
 
 @cy.cclass
-class Elem(object):
+class Elem:
     """ An individual input or output element. May be a ForceType instance or not.
     """
     _type  = cy.declare(cy.int, visibility='public')     # type: int
@@ -964,7 +964,7 @@ class SIO_TYPE_MAP:
 # ################################################################################################################################
 
 @cy.cclass
-class ConfigItem(object):
+class ConfigItem:
     """ An individual instance of server-wide SimpleIO configuration. Each subclass covers
     a particular set of exact values, prefixes or suffixes.
     """
@@ -1000,7 +1000,7 @@ class SecretConfig(ConfigItem):
 # ################################################################################################################################
 
 @cy.cclass
-class SIOServerConfig(object):
+class SIOServerConfig:
     """ Contains global SIO configuration. Each service's _sio attribute
     will refer to this object so as to have only one place where all the global configuration is kept.
     """
@@ -1066,7 +1066,7 @@ class SIOServerConfig(object):
 # ################################################################################################################################
 
 @cy.cclass
-class SIOList(object):
+class SIOList:
     """ Represents one of input/output required/optional.
     """
     elems         = cy.declare(list, visibility='public') # type: list
@@ -1097,7 +1097,7 @@ class SIOList(object):
 # ################################################################################################################################
 
 @cy.cclass
-class CSVConfig(object):
+class CSVConfig:
     """ Represents CSV configuration that a particular SimpleIO definition uses.
     """
     dialect             = cy.declare(cy.unicode, visibility='public') # type: str
@@ -1114,7 +1114,7 @@ class CSVConfig(object):
 # ################################################################################################################################
 
 @cy.cclass
-class XMLConfig(object):
+class XMLConfig:
     """ Represents XML configuration that a particular SimpleIO definition uses.
     """
     namespace    = cy.declare(object, visibility='public')  # type: object
@@ -1131,7 +1131,7 @@ class XMLConfig(object):
 # ################################################################################################################################
 
 @cy.cclass
-class SIODefinition(object):
+class SIODefinition:
     """ A single SimpleIO definition attached to a service.
     """
     # A list of Elem items required on input
@@ -1311,7 +1311,7 @@ class SIODefinition(object):
 # ################################################################################################################################
 
 @cy.cclass
-class CySimpleIO(object):
+class CySimpleIO:
     """ If a service uses SimpleIO then, during deployment, its class will receive an attribute called _sio
     based on the service's SimpleIO attribute. The _sio one will be an instance of this Cython class.
     """

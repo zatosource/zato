@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-class Reply(object):
+class Reply:
     __slots__ = ('service_name', 'body')
 
     def __init__(self, service_name, body):

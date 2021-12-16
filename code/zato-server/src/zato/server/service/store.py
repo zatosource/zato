@@ -103,7 +103,7 @@ hook_methods = ('accept', 'get_request_hash') + before_handle_hooks + after_hand
 
 # ################################################################################################################################
 
-class _TestingWorkerStore(object):
+class _TestingWorkerStore:
     sql_pool_store = None
     outconn_wsx = None
     vault_conn_api = None
@@ -125,7 +125,7 @@ class _TestingWorkerStore(object):
 
 # ################################################################################################################################
 
-class _TestingWorkerConfig(object):
+class _TestingWorkerConfig:
     out_odoo = None
     out_soap = None
     out_sap = None
@@ -134,7 +134,7 @@ class _TestingWorkerConfig(object):
 # ################################################################################################################################
 
 @total_ordering
-class InRAMService(object):
+class InRAMService:
     __slots__ = 'cluster_id', 'id', 'name', 'impl_name', 'deployment_info', 'service_class', 'is_active', 'is_internal', \
         'slow_threshold', 'source_code_info'
 
@@ -175,7 +175,7 @@ class InRAMService(object):
 
 # ################################################################################################################################
 
-class DeploymentInfo(object):
+class DeploymentInfo:
     __slots__ = 'to_process', 'total_services', 'total_size', 'total_size_human'
 
     def __init__(self):
@@ -241,7 +241,7 @@ def get_batch_indexes(services, max_batch_size):
 
 # ################################################################################################################################
 
-class ServiceStore(object):
+class ServiceStore:
     """ A store of Zato services.
     """
     def __init__(self, services=None, odb=None, server=None, is_testing=False):

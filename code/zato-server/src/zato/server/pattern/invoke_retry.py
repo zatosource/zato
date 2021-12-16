@@ -75,7 +75,7 @@ class RetryFailed(ZatoException):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class InvokeRetry(object):
+class InvokeRetry:
     """ Provides the invoke-retry pattern that lets one invoke a service with parametrized retries.
     """
     def __init__(self, invoking_service):

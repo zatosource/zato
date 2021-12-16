@@ -63,7 +63,7 @@ tcp_log = {
 reversed_http_log = {v[0]: k for k, v in http_log.items()}
 reversed_tcp_log = {v[0]: k for k, v in tcp_log.items()}
 
-class Config(object):
+class Config:
     """ An object for representing a HAProxy configuration file.
     """
     def __init__(self):
