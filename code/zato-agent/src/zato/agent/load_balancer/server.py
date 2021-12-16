@@ -245,7 +245,7 @@ class BaseLoadBalancerAgent:
             # we aren't currently aware of.
             if state not in servers_state:
                 msg = 'Encountered unknown state [{state}], recognized ones are [{states}]'
-                logger.warning((msg.format(state=state, states=str(sorted(servers_state))))
+                logger.warning(msg.format(state=state, states=str(sorted(servers_state))))
             else:
                 servers_state[state][access_type].append(server_name)
         return servers_state
