@@ -228,7 +228,10 @@ class Validator:
             return
 
         if not os.path.exists(self.config.schema_path):
-            raise ValidationException('JSON schema not found `{}` ({})'.format(self.config.schema_path, self.config.object_name))
+            raise ValueError('JSON schema not found `{}` ({})'.format(
+                self.config.schema_path,
+                self.config.object_name
+            ))
 
         # The file is sure to exist
         with open_r(self.config.schema_path) as f:

@@ -84,7 +84,7 @@ class BaseTest(TestCase):
             # .. but ignore it if such a user already exists.
             if not 'User already exists' in e.args[0]:
                 if isinstance(e, sh.ErrorReturnCode):
-                    logger.warninging('Shell exception %s', e.stderr)
+                    logger.warning(('Shell exception %s', e.stderr)
                 raise
 
         # Create a new context object for each test

@@ -547,7 +547,7 @@ class DeliveryTask:
                                         e.args[0])
 
                                     logger.warning(msg_logger)
-                                    logger_zato.warn(msg_logger_zato)
+                                    logger_zato.warning(msg_logger_zato)
 
                                 # .. sleep only if there are still some messages to be delivered,
                                 # as it is possible that our lists has been cleared out since the last time we run ..
@@ -573,7 +573,7 @@ class DeliveryTask:
                                             sleep_time, exc_len_msg, result.delivery_iter)
 
                                         logger.warning(sleep_msg)
-                                        logger_zato.warn(sleep_msg)
+                                        logger_zato.warning(sleep_msg)
 
                                         sleep(sleep_time)
 
@@ -589,7 +589,7 @@ class DeliveryTask:
             error_msg = 'Exception in delivery task for sub_key:`%s`, e:`%s`'
             e_formatted = format_exc()
             logger.warning(error_msg, self.sub_key, e_formatted)
-            logger_zato.warn(error_msg, self.sub_key, e_formatted)
+            logger_zato.warning(error_msg, self.sub_key, e_formatted)
 
 # ################################################################################################################################
 
@@ -954,7 +954,7 @@ class PubSubTool:
             all_subs = self.pubsub.get_all_subscriptions()
             msg = 'Sub key `%s` not found among `%s`'
             logger.warning(msg, sub_key, all_subs)
-            logger_zato.warn(msg, sub_key, all_subs)
+            logger_zato.warning(msg, sub_key, all_subs)
 
             # Return explicitly
             return
@@ -1033,7 +1033,7 @@ class PubSubTool:
         except Exception:
             e = format_exc()
             logger.warning(e)
-            logger_zato.warn(e)
+            logger_zato.warning(e)
 
 # ################################################################################################################################
 
@@ -1101,7 +1101,7 @@ class PubSubTool:
         except Exception:
             e = format_exc()
             logger.warning(e)
-            logger_zato.warn(e)
+            logger_zato.warning(e)
 
         finally:
             if session:
@@ -1117,7 +1117,7 @@ class PubSubTool:
         except Exception:
             e = format_exc()
             logger.warning(e)
-            logger_zato.warn(e)
+            logger_zato.warning(e)
 
 # ################################################################################################################################
 

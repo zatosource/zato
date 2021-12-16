@@ -231,7 +231,7 @@ class HL7MLLPServer:
         try:
             self._handle(socket, peer_address)
         except Exception:
-            self.logger_hl7.warn('Exception in %s (%s %s); e:`%s`', self._handle, socket, peer_address, format_exc())
+            self.logger_hl7.warning('Exception in %s (%s %s); e:`%s`', self._handle, socket, peer_address, format_exc())
             raise
 
 # ################################################################################################################################
@@ -443,7 +443,7 @@ class HL7MLLPServer:
 
                 # Log the exception ..
                 exc = format_exc()
-                self.logger_hl7.warn(exc)
+                self.logger_hl7.warning(exc)
 
                 # .. and sleep for a while in case we cannot re-enter the loop immediately.
                 sleep(2)
