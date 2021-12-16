@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.cli import ManageCommand, ZatoCommand
+from zato.common.crypto.api import CryptoManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,9 +39,6 @@ class Encrypt(ManageCommand):
 # ################################################################################################################################
 
     def execute(self, args):
-
-        # Zato
-        from zato.common.crypto.api import CryptoManager
 
         # We need to know what to encrypt
         if not args.data:
@@ -100,9 +98,6 @@ class Decrypt(ManageCommand):
 # ################################################################################################################################
 
     def execute(self, args):
-
-        # Zato
-        from zato.common.crypto.api import CryptoManager
 
         # We need to know what to decrypt
         if not args.data:

@@ -50,8 +50,6 @@ class _HTTPHandler(BaseHTTPRequestHandler):
 
 class _TLSServer(HTTPServer):
     def __init__(self, cert_reqs, ca_cert):
-        # pylint: disable=redefined-outer-name (for ca_cert)
-
         self.port = get_free_port()
         self.cert_reqs = cert_reqs
         self.ca_cert=None
@@ -82,8 +80,6 @@ class _TLSServer(HTTPServer):
 
 class TLSServer(Thread):
     def __init__(self, cert_reqs=ssl.CERT_NONE, ca_cert=None):
-        # pylint: disable=redefined-outer-name (for ca_cert)
-
         Thread.__init__(self)
         self.setDaemon(True)
 
