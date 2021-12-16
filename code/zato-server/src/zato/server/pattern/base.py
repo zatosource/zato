@@ -130,7 +130,7 @@ class ParallelBase:
 
             # .. exit early if we cannot find the entry for any reason ..
             if not entry:
-                logger.warn('No such parallel cache key `%s`', invoked_service.cid)
+                logger.warning('No such parallel cache key `%s`', invoked_service.cid)
                 return
 
             # .. alright, we can proceed ..

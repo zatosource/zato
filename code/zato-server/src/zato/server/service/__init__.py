@@ -921,7 +921,7 @@ class Service(object):
                 return g.get(block=True, timeout=timeout)
             except Timeout:
                 g.kill()
-                logger.warn('Service `%s` timed out (%s)', service.name, self.cid)
+                logger.warning('Service `%s` timed out (%s)', service.name, self.cid)
                 if raise_timeout:
                     raise
         else:
@@ -944,7 +944,7 @@ class Service(object):
         if self._enforce_service_invokes and self.invokes:
             if name not in self.invokes:
                 msg = 'Could not invoke `{}` which is not in `{}`'.format(name, self.invokes)
-                self.logger.warn(msg)
+                self.logger.warning(msg)
                 raise ValueError(msg)
 
         return self.invoke_by_impl_name(self.server.service_store.name_to_impl_name[name], *args, **kwargs)

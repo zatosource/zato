@@ -190,14 +190,14 @@ class BaseObserver:
                     error_found = True
 
                     if idx == 1 or (idx % log_every == 0):
-                        logger.warn('%s transfer path `%s` is not a directory (%s) (c:%s d:%s t:%s)',
+                        logger.warning('%s transfer path `%s` is not a directory (%s) (c:%s d:%s t:%s)',
                             self.observer_type_name_title, self.name, idx, utcnow() - start, self.observer_type_impl)
             else:
                 # Indicate that there was an erorr with path
                 error_found = True
 
                 if idx == 1 or (idx % log_every == 0):
-                    logger.warn('%s transfer path `%r` does not exist (%s) (c:%s d:%s t:%s)',
+                    logger.warning('%s transfer path `%r` does not exist (%s) (c:%s d:%s t:%s)',
                         self.observer_type_name_title, path, self.name, idx, utcnow() - start, self.observer_type_impl)
 
             if is_ok:
@@ -259,7 +259,7 @@ class BaseObserver:
                 except FileNotFoundError:
 
                     # Log the error ..
-                    logger.warn('Path not found caught in %s file observer main loop (%s) `%s` (%s t:%s)',
+                    logger.warning('Path not found caught in %s file observer main loop (%s) `%s` (%s t:%s)',
                         self.observer_type_name, path, format_exc(), self.name, self.observer_type_impl)
 
                     # .. start a background inspector which will wait for the path to become available ..
@@ -269,7 +269,7 @@ class BaseObserver:
                     return
 
                 except Exception as e:
-                    logger.warn('Exception %s in %s file observer main loop `%s` e:`%s (%s t:%s)',
+                    logger.warning('Exception %s in %s file observer main loop `%s` e:`%s (%s t:%s)',
                         type(e), self.observer_type_name, path, format_exc(), self.name, self.observer_type_impl)
                 finally:
 
@@ -283,11 +283,11 @@ class BaseObserver:
                         sleep(timeout)
 
         except Exception:
-            logger.warn('Exception in %s file observer `%s` e:`%s (%s t:%s)',
+            logger.warning('Exception in %s file observer `%s` e:`%s (%s t:%s)',
                 self.observer_type_name, path, format_exc(), self.name, self.observer_type_impl)
 
         if log_stop_event:
-            logger.warn('Stopped %s file transfer observer `%s` for `%s` (snapshot:%s/%s)',
+            logger.warning('Stopped %s file transfer observer `%s` for `%s` (snapshot:%s/%s)',
                 self.observer_type_name, self.name, path, current_iter, max_iters)
 
 # ################################################################################################################################

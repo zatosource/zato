@@ -138,7 +138,7 @@ class BrokerClient(object):
             self.server_rpc.invoke_all('zato.service.rpc-service-invoker', msg, ping_timeout=10)
 
         except Exception:
-            logger.warn(format_exc())
+            logger.warning(format_exc())
 
 # ################################################################################################################################
 

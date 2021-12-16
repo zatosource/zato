@@ -34,18 +34,18 @@ class MLLPSend(ZatoCommand):
         for name in ('file', 'address'):
             value = getattr(args, name, None)
             if not value:
-                self.logger.warn('Missing required parameter --%s', name)
+                self.logger.warning('Missing required parameter --%s', name)
                 sys.exit(self.SYS_ERROR.PARAMETER_MISSING)
 
         file_path = os.path.join(self.original_dir, args.file)
         file_path = os.path.abspath(file_path)
 
         if not os.path.exists(file_path):
-            self.logger.warn('File path not found `%s`', file_path)
+            self.logger.warning('File path not found `%s`', file_path)
             sys.exit(self.SYS_ERROR.FILE_MISSING)
 
         if not os.path.isfile(file_path):
-            self.logger.warn('Path is not a file `%s`', file_path)
+            self.logger.warning('Path is not a file `%s`', file_path)
             sys.exit(self.SYS_ERROR.PATH_NOT_A_FILE)
 
         # Now, read the file as bytes ..

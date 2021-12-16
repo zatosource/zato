@@ -98,7 +98,7 @@ class APISpec(ZatoCommand):
                 self.logger.info('Deleting %s', out_dir)
                 rmtree(out_dir)
             else:
-                self.logger.warn('Output directory %s already exists and --delete-dir was not provided', out_dir)
+                self.logger.warning('Output directory %s already exists and --delete-dir was not provided', out_dir)
                 return
 
         os.mkdir(out_dir)

@@ -171,7 +171,7 @@ class FileTransferAPI(object):
 
             # .. log a warning and disable parsing if no parser was configured when it was expected.
             if not config.parse_with:
-                logger.warn('Parsing is enabled but no parser is declared for file transfer channel `%s` (%s)',
+                logger.warning('Parsing is enabled but no parser is declared for file transfer channel `%s` (%s)',
                     config.name, config.source_type)
                 config.should_parse_on_pickup = False
 
@@ -381,7 +381,7 @@ class FileTransferAPI(object):
             try:
                 spawn_greenlet(self.server.invoke, item, request)
             except Exception:
-                logger.warn(format_exc())
+                logger.warning(format_exc())
 
 # ################################################################################################################################
 
@@ -392,7 +392,7 @@ class FileTransferAPI(object):
             try:
                 spawn_greenlet(self.server.invoke, item, request)
             except Exception:
-                logger.warn(format_exc())
+                logger.warning(format_exc())
 
 # ################################################################################################################################
 
@@ -406,7 +406,7 @@ class FileTransferAPI(object):
 
         if ping_response.status_code != OK:
 
-            logger.warn('Could not ping file transfer connection for `%s` (%s); config:`%s`, r:`%s`, h:`%s`',
+            logger.warning('Could not ping file transfer connection for `%s` (%s); config:`%s`, r:`%s`, h:`%s`',
                 request['full_path'], request['config'].name, item.config, ping_response.text, ping_response.headers)
 
         else:
@@ -427,7 +427,7 @@ class FileTransferAPI(object):
             response = item.conn.post(cid, payload, params, headers=headers) # type: Response
 
             if response.status_code != OK:
-                logger.warn('Could not send file `%s` (%s) to `%s` (p:`%s`, h:`%s`), r:`%s`, h:`%s`',
+                logger.warning('Could not send file `%s` (%s) to `%s` (p:`%s`, h:`%s`), r:`%s`, h:`%s`',
                     request['full_path'], request['config'].name, item.config, params, headers,
                     response.text, response.headers)
 
@@ -472,9 +472,9 @@ class FileTransferAPI(object):
                             observer.event_handler.on_created(PathCreatedEvent(src_path), observer)
 
                     except Exception:
-                        logger.warn('Exception in inotify handler `%s`', format_exc())
+                        logger.warning('Exception in inotify handler `%s`', format_exc())
             except Exception:
-                logger.warn('Exception in inotify.read() `%s`', format_exc())
+                logger.warning('Exception in inotify.read() `%s`', format_exc())
             finally:
                 sleep(0.25)
 
@@ -529,7 +529,7 @@ class FileTransferAPI(object):
                     logger.info('Started file observer `%s` path:`%s`', observer.name, observer.path_list)
 
             except Exception:
-                logger.warn('File observer `%s` could not be started, path:`%s`, e:`%s`',
+                logger.warning('File observer `%s` could not be started, path:`%s`, e:`%s`',
                     observer.name, observer.path_list, format_exc())
 
         # If there are any paths missing for any observer ..
@@ -635,7 +635,7 @@ class FileTransferAPI(object):
             if isinstance(e, ValueError):
                 log_func = logger.info
             else:
-                log_func = logger.warn
+                log_func = logger.warning
                 log_func('Could not build relative_dir from `%s` and `%s` (%s)', self.server.base_dir, path, e.args[0])
 
         else:

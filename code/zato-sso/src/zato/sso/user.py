@@ -453,12 +453,12 @@ class UserAPI(object):
 
             # The only field always required
             if not ctx.data.get('username'):
-                logger.warn('Missing `username` on input')
+                logger.warning('Missing `username` on input')
                 raise ValidationError(status_code.username.invalid, True)
 
             # Make sure the username is unique
             if get_user_by_name(session, ctx.data['username'], needs_approved=False):
-                logger.warn('Username `%s` already exists', ctx.data['username'])
+                logger.warning('Username `%s` already exists', ctx.data['username'])
                 raise ValidationError(status_code.username.exists, False)
 
             ctx.is_active = True
@@ -685,7 +685,7 @@ class UserAPI(object):
                         try:
                             out.email = self.decrypt_func(out.email)
                         except Exception:
-                            logger.warn('Could not decrypt email, user_id:`%s` (%s)', out.user_id, format_exc())
+                            logger.warning('Could not decrypt email, user_id:`%s` (%s)', out.user_id, format_exc())
 
                 # Custom attributes
                 out.attr = AttrAPI(cid, current_session.user_id, current_session.is_super_user, current_app, remote_addr,
@@ -791,7 +791,7 @@ class UserAPI(object):
 
             if rows_matched != 1:
                 msg = 'Expected for rows_matched to be 1 instead of %d, user_id:`%s`, username:`%s`'
-                logger.warn(msg, rows_matched, user_id, username)
+                logger.warning(msg, rows_matched, user_id, username)
 
             # After deleting the user from ODB, we can remove a reference to this account
             # from the map of linked accounts.
@@ -933,7 +933,7 @@ class UserAPI(object):
                 unexpected.append(attr)
 
         if unexpected:
-            logger.warn('Unexpected data on input %s', unexpected)
+            logger.warning('Unexpected data on input %s', unexpected)
             raise ValidationError(status_code.common.invalid_input, False)
 
 # ################################################################################################################################
@@ -947,7 +947,7 @@ class UserAPI(object):
         else:
             # .. and that no one attempts to overload us with it ..
             if len(data) > max_len_attrs:
-                logger.warn('Too many data arguments %d > %d', len(data), max_len_attrs)
+                logger.warning('Too many data arguments %d > %d', len(data), max_len_attrs)
                 raise ValidationError(status_code.common.invalid_input, False)
 
             # .. also, make sure that, no matter what kind of user this is, only supported arguments are given on input.
@@ -962,7 +962,7 @@ class UserAPI(object):
         """ Low-level implementation of user updates.
         """
         if not(user_id or update_self):
-            logger.warn('At least one of user_id or update_self is required')
+            logger.warning('At least one of user_id or update_self is required')
             raise ValidationError(status_code.common.invalid_input, False)
 
         # Basic checks first
@@ -982,7 +982,7 @@ class UserAPI(object):
                 # If current session belongs to a regular user yet a user_id was given on input,
                 # we may not continue because only super-users may update other users
                 if user_id and user_id != current_session.user_id:
-                    logger.warn('Current user `%s` is not a super-user, cannot update user `%s`',
+                    logger.warning('Current user `%s` is not a super-user, cannot update user `%s`',
                         current_session.user_id, user_id)
                     raise ValidationError(status_code.common.invalid_input, False)
 
@@ -1008,13 +1008,13 @@ class UserAPI(object):
                     if existing_user.user_id != _user_id:
 
                         # .. we need to reject the new username.
-                        logger.warn('Username `%s` already exists (update)',username)
+                        logger.warning('Username `%s` already exists (update)',username)
                         raise ValidationError(status_code.username.exists, False)
 
             # If sign_up_status was given on input, it must be among allowed values
             sign_up_status = data.get('sign_up_status')
             if sign_up_status and sign_up_status not in const.signup_status():
-                logger.warn('Invalid sign_up_status `%s`', sign_up_status)
+                logger.warning('Invalid sign_up_status `%s`', sign_up_status)
                 raise ValidationError(status_code.common.invalid_input, False)
 
             # All booleans must be actually booleans
@@ -1022,7 +1022,7 @@ class UserAPI(object):
                 value = data.get(attr, _no_such_value)
                 if value is not _no_such_value:
                     if not isinstance(value, bool):
-                        logger.warn('Expected for `%s` to be a boolean instead of `%r` (%s)', attr, value, type(value))
+                        logger.warning('Expected for `%s` to be a boolean instead of `%r` (%s)', attr, value, type(value))
                         raise ValidationError(status_code.common.invalid_input, False)
 
             # All datetime objects must be actual Python datetime objects
@@ -1030,14 +1030,14 @@ class UserAPI(object):
                 value = data.get(attr, _no_such_value)
                 if value is not _no_such_value:
                     if not isinstance(value, datetime):
-                        logger.warn('Expected for `%s` to be a datetime instead of `%r` (%s)', attr, value, type(value))
+                        logger.warning('Expected for `%s` to be a datetime instead of `%r` (%s)', attr, value, type(value))
                         raise ValidationError(status_code.common.invalid_input, False)
 
             # Only certain attributes may be set to None / NULL
             for key, value in data.items():
                 if value is None:
                     if key not in update.none_allowed:
-                        logger.warn('Key `%s` must not be None', key)
+                        logger.warning('Key `%s` must not be None', key)
                         raise ValidationError(status_code.common.invalid_input, False)
 
             # If approval_status is on input, it must be of correct value
@@ -1045,7 +1045,7 @@ class UserAPI(object):
             if 'approval_status' in data:
                 value = data['approval_status']
                 if value not in const.approval_status():
-                    logger.warn('Invalid approval_status `%s`', value)
+                    logger.warning('Invalid approval_status `%s`', value)
                     raise ValidationError(status_code.common.invalid_input, False)
                 else:
                     data['approval_status_mod_by'] = current_session.user_id
@@ -1148,7 +1148,7 @@ class UserAPI(object):
 
                 # A non-super-user tries to reset TOTP key of another user
                 if not current_session.is_super_user:
-                    logger.warn('Current user `%s` is not a super-user, cannot reset TOTP key for user `%s`',
+                    logger.warning('Current user `%s` is not a super-user, cannot reset TOTP key for user `%s`',
                         current_session.user_id, user_id)
                     raise ValidationError(status_code.common.invalid_input, False)
 
@@ -1157,7 +1157,7 @@ class UserAPI(object):
 
                     # We need to confirm that such a user exists
                     if not self.get_user_by_id(cid, user_id, current_ust, current_app, remote_addr):
-                        logger.warn('No such user `%s`', user_id)
+                        logger.warning('No such user `%s`', user_id)
                         raise ValidationError(status_code.common.invalid_input, False)
 
                     # Input user actually exists
@@ -1213,7 +1213,7 @@ class UserAPI(object):
 
                 # .. we must confirm we have a super-user's session.
                 if not current_session.is_super_user:
-                    logger.warn('Current user `%s` is not a super-user, cannot change password for user `%s`',
+                    logger.warning('Current user `%s` is not a super-user, cannot change password for user `%s`',
                         current_session.user_id, user_id)
                     raise ValidationError(status_code.common.invalid_input, False)
 
@@ -1235,7 +1235,7 @@ class UserAPI(object):
         # .. otherwise, if we are a regular user or a super-user changing his or her own password,
         # so we must check first if the old password is correct.
         if not check_credentials(self.decrypt_func, self.verify_hash_func, current_session.password, data['old_password']):
-            logger.warn('Password verification failed, user_id:`%s`', current_session.user_id)
+            logger.warning('Password verification failed, user_id:`%s`', current_session.user_id)
             raise ValidationError(status_code.auth.not_allowed, True)
         else:
 
@@ -1258,7 +1258,7 @@ class UserAPI(object):
             try:
                 self.set_password(cid, user_id, data['new_password'], must_change, password_expiry, current_app, remote_addr)
             except Exception:
-                logger.warn('Could not set a new password for user_id:`%s`, e:`%s`', current_session.user_id, format_exc())
+                logger.warning('Could not set a new password for user_id:`%s`, e:`%s`', current_session.user_id, format_exc())
                 raise ValidationError(status_code.auth.not_allowed, True)
 
 # ################################################################################################################################
@@ -1328,7 +1328,7 @@ class UserAPI(object):
 
                 return out
         except Exception:
-            logger.warn('Could not return linked accounts, e:`%s`', format_exc())
+            logger.warning('Could not return linked accounts, e:`%s`', format_exc())
 
 # ################################################################################################################################
 
@@ -1409,7 +1409,7 @@ class UserAPI(object):
             try:
                 session.commit()
             except IntegrityError:
-                logger.warn('Could not add auth link e:`%s`', format_exc())
+                logger.warning('Could not add auth link e:`%s`', format_exc())
                 raise ValueError('Auth link could not be added')
             else:
                 self._add_user_id_to_linked_auth(auth_type, auth_id, user_id)

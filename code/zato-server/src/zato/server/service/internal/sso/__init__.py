@@ -123,7 +123,7 @@ class BaseService(Service):
                 kwargs['cid'] = self.cid
                 log_msg = log_prefix.format(**kwargs)
                 log_msg = log_msg + ', cid:`{}`, e:`{}`'.format(self.cid, format_exc())
-                self.logger.warn(log_msg)
+                self.logger.warning(log_msg)
 
             # Make sure we don't return specific status codes if we are not allowed to
             if e.return_status:

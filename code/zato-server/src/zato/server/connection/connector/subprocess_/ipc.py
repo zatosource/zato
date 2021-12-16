@@ -155,7 +155,7 @@ class SubprocessIPC(object):
                 now = datetime.utcnow()
 
         if not is_ok:
-            logger.warn('{} connector (%s) could not be started after %s'.format(self.connector_name), address, timeout)
+            logger.warning('{} connector (%s) could not be started after %s'.format(self.connector_name), address, timeout)
         else:
             return is_ok
 
@@ -238,7 +238,7 @@ class SubprocessIPC(object):
                 else:
                     raise Exception(response.text)
             else:
-                logger.warn('Error message from {} connector `{}`'.format(self.connector_name, response.text))
+                logger.warning('Error message from {} connector `{}`'.format(self.connector_name, response.text))
         else:
             return response
 

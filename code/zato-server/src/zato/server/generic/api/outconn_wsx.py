@@ -165,7 +165,7 @@ class ZatoWSXClient(_BaseWSXClient):
                         }
                     })
                 except Exception:
-                    logger.warn('Could not subscribe WSX outconn to `%s`, e:`%s`', self.config.name, format_exc())
+                    logger.warning('Could not subscribe WSX outconn to `%s`, e:`%s`', self.config.name, format_exc())
 
 # ################################################################################################################################
 
@@ -244,7 +244,7 @@ class OutconnWSXWrapper(Wrapper):
                     'ctx': Connected(self.config, conn)
                 })
             except Exception:
-                logger.warn('Could not invoke CONNECT service `%s`, e:`%s`', self.config.on_close_service_name, format_exc())
+                logger.warning('Could not invoke CONNECT service `%s`, e:`%s`', self.config.on_close_service_name, format_exc())
 
 # ################################################################################################################################
 
@@ -279,7 +279,7 @@ class OutconnWSXWrapper(Wrapper):
                         'ctx': Close(code, reason, self.config, self)
                     })
                 except Exception:
-                    logger.warn('Could not invoke CLOSE service `%s`, e:`%s`', self.config.on_close_service_name, format_exc())
+                    logger.warning('Could not invoke CLOSE service `%s`, e:`%s`', self.config.on_close_service_name, format_exc())
 
             if self.config.has_auto_reconnect:
                 logger.info('WebSocket `%s` will reconnect to `%s` (hac:%d)',
@@ -287,7 +287,7 @@ class OutconnWSXWrapper(Wrapper):
                 try:
                     self.server.worker_store.reconnect_generic(self.config.id)
                 except Exception:
-                    logger.warn('Could not reconnect WebSocket `%s` to `%s`, e:`%s`',
+                    logger.warning('Could not reconnect WebSocket `%s` to `%s`, e:`%s`',
                         self.config.name, self.config.address, format_exc())
 
         else:
@@ -306,13 +306,13 @@ class OutconnWSXWrapper(Wrapper):
                 return
 
         except Exception:
-            logger.warn('WSX client `%s` could not be built `%s`', self.config.name, format_exc())
+            logger.warning('WSX client `%s` could not be built `%s`', self.config.name, format_exc())
         else:
             try:
                 if not self.client.put_client(conn):
                     self.delete_queue_connections(msg_closing_superfluous)
             except Exception:
-                logger.warn('WSX error `%s`', format_exc())
+                logger.warning('WSX error `%s`', format_exc())
             finally:
                 self.client.decr_in_progress_count()
 

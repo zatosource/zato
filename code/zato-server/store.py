@@ -33,12 +33,12 @@ class BaseAPI(object):
         item = self._conn_store.get(name)
         if not item:
             msg = 'No such item `{}` in `{}`'.format(name, sorted(self._conn_store.items))
-            logger.warn(msg)
+            logger.warning(msg)
             raise KeyError(msg)
 
         if not item.config.is_active and not skip_inactive:
             msg = '`{}` is inactive'.format(name)
-            logger.warn(msg)
+            logger.warning(msg)
             raise Inactive(msg)
 
         return item
@@ -105,7 +105,7 @@ class BaseStore(object):
 
             logger.debug('Created `%s`', config_no_sensitive)
         except Exception:
-            logger.warn('Could not create `%s`, config:`%s`, e:`%s`', name, config_no_sensitive, format_exc())
+            logger.warning('Could not create `%s`, config:`%s`, e:`%s`', name, config_no_sensitive, format_exc())
         else:
             item.impl = impl
             item.is_created = True
@@ -133,7 +133,7 @@ class BaseStore(object):
                 raise Exception('No such name `{}` among `{}`'.format(name, self.items.keys()))
             self.delete_impl()
         except Exception:
-            logger.warn('Error while deleting `%s`, e:`%s`', name, format_exc())
+            logger.warning('Error while deleting `%s`, e:`%s`', name, format_exc())
         finally:
             if name in self.items:
                 del self.items[name]

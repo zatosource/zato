@@ -60,7 +60,7 @@ class PasswordReset(BaseRESTService):
             )
         except Exception:
             # Log the exception but do not return it
-            self.logger.warn('Exception in FlowPRT._handle_sso_POST `%s`', format_exc())
+            self.logger.warning('Exception in FlowPRT._handle_sso_POST `%s`', format_exc())
 
 # ################################################################################################################################
 

@@ -47,7 +47,7 @@ class Base(Connector):
             self.is_connected = True
 
         except Exception:
-            logger.warn('ZeroMQ socket could not be initialized, e:`%s`', format_exc())
+            logger.warning('ZeroMQ socket could not be initialized, e:`%s`', format_exc())
             raise
 
     def _start(self):

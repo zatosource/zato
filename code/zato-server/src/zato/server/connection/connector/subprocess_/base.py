@@ -262,7 +262,7 @@ class BaseConnectionContainer(object):
             log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
             logging.basicConfig(level=logging.DEBUG, format=log_format)
             self.logger = getLogger('zato')
-            self.logger.warn('QQQ %s', self)
+            self.logger.warning('QQQ %s', self)
 
         # Store our process's pidfile
         if config.needs_pidfile:
@@ -322,7 +322,7 @@ class BaseConnectionContainer(object):
         try:
             _post(self.server_address, data=dumps(msg), auth=self.server_auth)
         except Exception as e:
-            self.logger.warn('Exception in BaseConnectionContainer._post: `%s`', e.args[0])
+            self.logger.warning('Exception in BaseConnectionContainer._post: `%s`', e.args[0])
 
 # ################################################################################################################################
 
@@ -407,7 +407,7 @@ class BaseConnectionContainer(object):
 
     def _on_send_exception(self):
         msg = 'Exception in _on_OUTGOING_SEND (2) `{}`'.format(format_exc())
-        self.logger.warn(msg)
+        self.logger.warning(msg)
         return Response(_http_503, msg)
 
 # ################################################################################################################################
@@ -439,11 +439,11 @@ class BaseConnectionContainer(object):
         username, password = parse_basic_auth(auth)
 
         if username != self.username:
-            self.logger.warn('Invalid username or password')
+            self.logger.warning('Invalid username or password')
             return
 
         elif password != self.password:
-            self.logger.warn('Invalid username or password')
+            self.logger.warning('Invalid username or password')
             return
         else:
             # All good, we let the request in
@@ -476,7 +476,7 @@ class BaseConnectionContainer(object):
                     content_type = 'text/plain'
 
         except Exception:
-            self.logger.warn(format_exc())
+            self.logger.warning(format_exc())
             content_type = 'text/plain'
             status = _http_400
             data = format_exc()
@@ -493,7 +493,7 @@ class BaseConnectionContainer(object):
 
             except Exception:
                 exc_formatted = format_exc()
-                self.logger.warn('Exception in finally block `%s`', exc_formatted)
+                self.logger.warning('Exception in finally block `%s`', exc_formatted)
 
 # ################################################################################################################################
 
@@ -580,7 +580,7 @@ class BaseConnectionContainer(object):
                 conn.password = str(msg.password)
                 conn.connect()
             except Exception as e:
-                self.logger.warn(format_exc())
+                self.logger.warning(format_exc())
                 return Response(_http_503, str(e.args[0]), 'text/plain')
             else:
                 return Response()
@@ -604,12 +604,12 @@ class BaseConnectionContainer(object):
                 delete_name = conn.name
                 self.connections[def_id].close()
             except Exception:
-                self.logger.warn(format_exc())
+                self.logger.warning(format_exc())
             finally:
                 try:
                     del self.connections[def_id]
                 except Exception:
-                    self.logger.warn(format_exc())
+                    self.logger.warning(format_exc())
 
                 # .. continue to delete outconns regardless of errors above ..
                 for outconn_id, outconn_def_id in self.outconn_id_to_def_id.items():
@@ -671,7 +671,7 @@ class BaseConnectionContainer(object):
             try:
                 self._create_definition(msg)
             except Exception as e:
-                self.logger.warn(format_exc())
+                self.logger.warning(format_exc())
                 return Response(_http_503, str(e.args[0]))
             else:
                 return Response()
@@ -701,7 +701,7 @@ class BaseConnectionContainer(object):
                     conn.close()
             except Exception:
                 # Log exception if cleanup was not possible
-                self.logger.warn('Exception in shutdown procedure `%s`', format_exc())
+                self.logger.warning('Exception in shutdown procedure `%s`', format_exc())
             finally:
                 # Anything happens, we need to shut down the process
                 os.kill(os.getpid(), signal.SIGTERM)

@@ -162,7 +162,7 @@ class SessionWrapper(object):
                 err_details = format_exc()
             else:
                 err_details = e.args[0]
-            self.logger.warn(msg, name, err_details)
+            self.logger.warning(msg, name, err_details)
         else:
             if config['engine'] == MS_SQL.ZATO_DIRECT:
                 self._Session = SimpleSession(self.pool.engine)
@@ -256,7 +256,7 @@ class SQLConnectionPool(object):
         try:
             self.engine = self._create_engine(engine_url, self.config, _extra)
         except Exception as e:
-            self.logger.warn('Could not create SQL connection `%s`, e:`%s`', self.config['name'], e.args[0])
+            self.logger.warning('Could not create SQL connection `%s`, e:`%s`', self.config['name'], e.args[0])
 
         if self.engine and (not self._is_unittest_engine(engine_url)) and self._is_sa_engine(engine_url):
             event.listen(self.engine, 'checkin', self.on_checkin)

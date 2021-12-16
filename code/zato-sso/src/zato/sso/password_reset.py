@@ -140,7 +140,7 @@ class PasswordResetAPI(object):
 
         # Validate input
         if not credential:
-            logger.warn('SSO credential missing on input to PasswordResetAPI.create_token (%r)', credential)
+            logger.warning('SSO credential missing on input to PasswordResetAPI.create_token (%r)', credential)
             return
 
         # For later use
@@ -152,7 +152,7 @@ class PasswordResetAPI(object):
 
             # .. make sure the user exists ..
             if not user:
-                logger.warn('No such SSO user `%s` (%s)', credential, self.user_search_by_func)
+                logger.warning('No such SSO user `%s` (%s)', credential, self.user_search_by_func)
                 return
 
             # .. the user exists so we can now generate a new PRT ..
@@ -213,7 +213,7 @@ class PasswordResetAPI(object):
             # .. no data matching the PRT, we need to reject the request ..
             if not user_info:
                 msg = 'Token rejected. No valid PRT matched input `%s` (now: %s)'
-                logger.warn(msg, token, now)
+                logger.warning(msg, token, now)
                 raise ValidationError(status_code.password_reset.could_not_access, False)
 
             # .. now, check if the user is still allowed to access the system;
@@ -274,7 +274,7 @@ class PasswordResetAPI(object):
             # .. no data matching the PRT, we need to reject the request ..
             if not user_info:
                 msg = 'Token or reset key rejected. No valid PRT or reset key matched input `%s` `%s` (now: %s)'
-                logger.warn(msg, token, reset_key, now)
+                logger.warning(msg, token, reset_key, now)
                 raise ValidationError(status_code.password_reset.could_not_access, False)
 
             # .. now, check if the user is still allowed to access the system;
@@ -329,7 +329,7 @@ class PasswordResetAPI(object):
 
         if not self.smtp_conn_name:
             msg = 'Could not notify user `%s`, SSO SMTP connection not configured in sso.conf (main.smtp_conn)'
-            logger.warn(msg, user.user_id)
+            logger.warning(msg, user.user_id)
             return
 
         # Decrypt email for later user
@@ -337,7 +337,7 @@ class PasswordResetAPI(object):
 
         # Make sure an email is associated with the user
         if not user_email:
-            logger.warn('Could not notify user `%s` (no email found)', user.user_id)
+            logger.warning('Could not notify user `%s` (no email found)', user.user_id)
             return
 
         # When user preferences, including the preferred language, are added,
@@ -350,7 +350,7 @@ class PasswordResetAPI(object):
         # Make sure we have the correct templates prepared
         if not pref_lang_templates:
             msg = 'Could not send a password reset notification to `%s`. Language `%s` not found among `%s``'
-            logger.warn(msg, user.user_id, pref_lang, sorted(self.server.static_config.sso.email))
+            logger.warning(msg, user.user_id, pref_lang, sorted(self.server.static_config.sso.email))
             return
 
         # Template with the body to send
@@ -359,7 +359,7 @@ class PasswordResetAPI(object):
         # Make sure we have the correct templates prepared
         if not template:
             msg = 'Could not send a password reset notification to `%s`. Template `%s` not found among `%s`.'
-            logger.warn(msg, user.user_id, _template_name, sorted(pref_lang_templates))
+            logger.warning(msg, user.user_id, _template_name, sorted(pref_lang_templates))
             return
 
         # Prepare the details for the template ..
