@@ -1,6 +1,12 @@
 
 .PHONY: static-check
 
+pylint:
+	echo Running pylint in zato-agent
+	$(CURDIR)/../bin/pylint --verbose \
+		--rcfile $(CURDIR)/../pylint.ini \
+				 $(CURDIR)/../zato-agent/src/zato/agent
+
 static-check:
 	echo "Running static checks in zato-agent"
 	$(CURDIR)/../bin/flake8 --version 1>&2

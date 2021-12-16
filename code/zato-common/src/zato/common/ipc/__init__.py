@@ -22,7 +22,7 @@ from zato.common.util.api import get_logger_for_class, make_repr, new_cid, spawn
 
 # ################################################################################################################################
 
-class Request(object):
+class Request:
     def __init__(self, publisher_tag, publisher_pid, payload='', request_id=None):
         self.publisher_tag = publisher_tag
         self.publisher_pid = publisher_pid
@@ -36,6 +36,7 @@ class Request(object):
         self.reply_to_tag = ''
         self.reply_to_fifo = ''
         self.in_reply_to = ''
+        self.socket = None
         self.creation_time_utc = datetime.utcnow()
 
     @property
@@ -52,13 +53,14 @@ class Request(object):
 
 # ################################################################################################################################
 
-class IPCBase(object):
+class IPCBase:
     """ Base class for core IPC objects.
     """
     def __init__(self, name, pid):
         self.name = name
         self.pid = pid
         self.ctx = zmq.Context()
+        self.socket = None
         spawn_greenlet(self.set_up_sockets)
         self.keep_running = True
         self.logger = get_logger_for_class(self.__class__)

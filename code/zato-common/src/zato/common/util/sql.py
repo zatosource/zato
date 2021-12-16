@@ -116,15 +116,15 @@ def sql_op_with_deadlock_retry(cid, name, func, *args, **kwargs):
         except _DeadlockException as e:
 
             if has_debug:
-                logger_zato.warn('Caught _DeadlockException `%s` `%s`', cid, e)
+                logger_zato.warning('Caught _DeadlockException `%s` `%s`', cid, e)
 
             if _deadlock_code not in e.args[0]:
                 raise
             else:
                 if attempts % 50 == 0:
                     msg = 'Still in deadlock for `{}` after %d attempts cid:%s args:%s'.format(name)
-                    logger_zato.warn(msg, attempts, cid, args)
-                    logger_pubsub.warn(msg, attempts, cid, args)
+                    logger_zato.warning(msg, attempts, cid, args)
+                    logger_pubsub.warning(msg, attempts, cid, args)
 
                 # Sleep for a while until the next attempt
                 sleep(0.005)
@@ -135,7 +135,7 @@ def sql_op_with_deadlock_retry(cid, name, func, *args, **kwargs):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ElemsWithOpaqueMaker(object):
+class ElemsWithOpaqueMaker:
     def __init__(self, elems):
         self.elems = elems
 

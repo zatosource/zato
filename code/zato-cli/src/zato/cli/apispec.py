@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Zato
 from zato.cli import ZatoCommand
+from zato.common.util.open_ import open_w
 
 # ################################################################################################################################
 
@@ -97,7 +98,7 @@ class APISpec(ZatoCommand):
                 self.logger.info('Deleting %s', out_dir)
                 rmtree(out_dir)
             else:
-                self.logger.warn('Output directory %s already exists and --delete-dir was not provided', out_dir)
+                self.logger.warning('Output directory %s already exists and --delete-dir was not provided', out_dir)
                 return
 
         os.mkdir(out_dir)
@@ -115,7 +116,7 @@ class APISpec(ZatoCommand):
                 pass # Must have been already created
             finally:
                 if contents:
-                    f = open(full_file_path, 'w')
+                    f = open_w(full_file_path)
                     f.write(contents)
                     f.close()
 

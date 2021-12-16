@@ -118,8 +118,8 @@ class LogConnectionInfo(AdminService):
                             'Uses sentinels: `%s %r`, master: `%r`', has_sentinels, config.redis_sentinels, master_address)
                     except MasterNotFoundError:
                         tb = format_exc()
-                        self.logger.warn(tb)
-                        kvdb_logger.warn(tb)
+                        self.logger.warning(tb)
+                        kvdb_logger.warning(tb)
                 else:
                     kvdb_logger.debug(
                         'Uses sentinels: `%s`, conn:`%r`', has_sentinels, self.kvdb.conn)

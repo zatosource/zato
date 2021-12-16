@@ -57,7 +57,7 @@ from zato.server.ext.zunicorn.util import is_forking
 
 version = get_version()
 
-class Arbiter(object):
+class Arbiter:
     """
     Arbiter maintain the workers processes alive. It launches or
     kills them if needed. It also manages application reloading

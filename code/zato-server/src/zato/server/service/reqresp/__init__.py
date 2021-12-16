@@ -94,7 +94,7 @@ direct_payload = simple_types + (EtreeElement, ObjectifiedElement)
 
 # ################################################################################################################################
 
-class HTTPRequestData(object):
+class HTTPRequestData:
     """ Data regarding an HTTP request.
     """
     __slots__ = 'method', 'GET', 'POST', 'path', 'params', 'user_agent', '_wsgi_environ'
@@ -142,7 +142,7 @@ class HTTPRequestData(object):
 
 # ################################################################################################################################
 
-class AMQPRequestData(object):
+class AMQPRequestData:
     """ Data regarding an AMQP request.
     """
     __slots__ = ('msg', 'ack', 'reject')
@@ -155,7 +155,7 @@ class AMQPRequestData(object):
 
 # ################################################################################################################################
 
-class IBMMQRequestData(object):
+class IBMMQRequestData:
     """ Metadata for IBM MQ requests.
     """
     __slots__ = ('ctx', 'data', 'msg_id', 'correlation_id', 'timestamp', 'put_date', 'put_time', 'reply_to', 'mqmd')
@@ -177,7 +177,7 @@ WebSphereMQRequestData = IBMMQRequestData
 
 # ################################################################################################################################
 
-class HL7RequestData(object):
+class HL7RequestData:
     """ Details of an individual HL7 request.
     """
     __slots__ = 'connection', 'data',
@@ -189,7 +189,7 @@ class HL7RequestData(object):
 
 # ################################################################################################################################
 
-class Request(object):
+class Request:
     """ Wraps a service request and adds some useful meta-data.
     """
     __slots__ = ('service', 'logger', 'payload', 'raw_request', 'input', 'cid', 'data_format', 'transport',
@@ -279,7 +279,7 @@ class Request(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Outgoing(object):
+class Outgoing:
     """ A container for various outgoing connections a service can access. This in fact is a thin wrapper around data
     fetched from the service's self.worker_store.
     """
@@ -319,14 +319,14 @@ class Outgoing(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class AWS(object):
+class AWS:
     def __init__(self, s3=None):
         self.s3 = s3
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Cloud(object):
+class Cloud:
     """ A container for cloud-related connections a service can establish.
     """
     __slots__ = 'aws', 'dropbox'
@@ -338,7 +338,7 @@ class Cloud(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Definition(object):
+class Definition:
     """ A container for connection definitions a service has access to.
     """
     __slots__ = 'kafka',
@@ -350,7 +350,7 @@ class Definition(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class InstantMessaging(object):
+class InstantMessaging:
     """ A container for Instant Messaging connections, e.g. Slack or Telegram.
     """
     __slots__ = 'slack', 'telegram'
@@ -363,13 +363,13 @@ class InstantMessaging(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class MLLP(object):
+class MLLP:
     pass
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class HL7API(object):
+class HL7API:
     """ A container for HL7 connections a service can establish.
     """
     __slots__ = 'mllp'

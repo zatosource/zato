@@ -26,7 +26,7 @@ if typing.TYPE_CHECKING:
     unicode = unicode
 
 # ################################################################################################################################
-class Util(object):
+class Util:
     def __init__(self, server_path):
         self.server_path = server_path
         self.client = None

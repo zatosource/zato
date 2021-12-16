@@ -54,7 +54,7 @@ class _msg:
 
 # ################################################################################################################################
 
-class _CleanupWSX(object):
+class _CleanupWSX:
     """ A container for WSX connections that are about to be cleaned up, along with their subscriptions.
     """
     __slots__ = 'pub_client_id', 'sk_dict'

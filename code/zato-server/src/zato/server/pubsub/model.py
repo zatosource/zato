@@ -6,6 +6,8 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# pylint: disable=unused-import, redefined-builtin, unused-variable
+
 # stdlib
 import logging
 from dataclasses import dataclass, field as dc_field
@@ -87,9 +89,6 @@ _pri_min=_PRIORITY.MIN
 _pri_max=_PRIORITY.MAX
 _pri_def=_PRIORITY.DEFAULT
 
-class msg:
-    wsx_sub_resumed = 'WSX subscription resumed, sk:`%s`, peer:`%s`'
-
 # ################################################################################################################################
 
 def get_priority(
@@ -149,7 +148,7 @@ class EventType:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ToDictBase(object):
+class ToDictBase:
 
     _to_dict_keys:'tuple'
     config:'anydict'
@@ -259,7 +258,7 @@ class Endpoint(ToDictBase):
 
                 else:
                     msg = 'Ignoring invalid %s pattern `%s` for `%s` (role:%s) (reason: no pub=/sub= prefix found)'
-                    logger.warn(msg, key, line, self.name, self.role)
+                    logger.warning(msg, key, line, self.name, self.role)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -453,7 +452,8 @@ class Subscription(ToDictBase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class HookCtx(object):
+class HookCtx:
+
     __slots__ = ('hook_type', 'msg', 'topic', 'sub', 'http_soap', 'outconn_name')
 
     msg:          'msgnone'
@@ -466,9 +466,9 @@ class HookCtx(object):
     def __init__(
         self,
         hook_type,      # type: str
+        *_ignored_args, # type: any_
         topic=None,     # type: ignore[valid-type]
         msg=None,       # type: msgnone
-        *_ignored_args, # type: any_
         **kwargs        # type: any_
         ) -> 'None':
 

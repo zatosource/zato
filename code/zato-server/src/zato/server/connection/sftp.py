@@ -8,6 +8,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# pylint: disable=attribute-defined-outside-init
+
 # stdlib
 from datetime import date, datetime
 from logging import getLogger
@@ -70,7 +72,7 @@ _other_types_check = EntryType.file, EntryType.directory, EntryType.symlink
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SFTPInfo(object):
+class SFTPInfo:
     __slots__ = 'type', 'name', 'owner', 'group', 'size', 'permissions', 'permissions_oct', 'last_modified'
 
     def __init__(self):
@@ -160,7 +162,7 @@ class SFTPInfo(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SFTPIPCFacade(object):
+class SFTPIPCFacade:
     """ Provides servers and services with access to SFTP resources.
     """
     def __init__(self, server, config):
@@ -640,7 +642,7 @@ class SFTPIPCFacade(object):
                 self.upload(local_path.name, remote_path, False, overwrite, log_level, False)
 
             except Exception:
-                logger.warn('Exception in SFTP write method `%s`', format_exc())
+                logger.warning('Exception in SFTP write method `%s`', format_exc())
 
             finally:
                 # Now we can close the file too

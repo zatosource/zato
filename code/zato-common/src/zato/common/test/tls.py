@@ -53,6 +53,8 @@ class _TLSServer(HTTPServer):
         self.port = get_free_port()
         self.cert_reqs = cert_reqs
         self.ca_cert=None
+        self.socket = None
+        self.server_address = None
         HTTPServer.__init__(self, ('0.0.0.0', self.port), _HTTPHandler)
 
     def server_bind(self):
@@ -69,7 +71,7 @@ class _TLSServer(HTTPServer):
                     ca_cert_tf.write(ca_cert)
                     ca_cert_tf.flush()
 
-                    self.socket = ssl.wrap_socket(
+                    self.socket = ssl.wrap_socket( # pylint: disable=deprecated-method
                         self.socket, server1_key_tf.name, server1_cert_tf.name, True, self.cert_reqs, ca_certs=ca_cert_tf.name)
 
                     if self.allow_reuse_address:

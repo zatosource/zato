@@ -6,6 +6,8 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# pylint: disable=unused-import, redefined-builtin, unused-variable
+
 # stdlib
 import logging
 from contextlib import closing
@@ -119,7 +121,7 @@ default_sk_server_table_columns = 6, 15, 8, 6, 17, 80
 _JSON=DATA_FORMAT.JSON
 _page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE
 
-class msg:
+class MsgConst:
     wsx_sub_resumed = 'WSX subscription resumed, sk:`%s`, peer:`%s`'
 
 # ################################################################################################################################
@@ -156,7 +158,7 @@ def get_expiration(cid:'str', input:'anydict', default_expiration:'int'=_default
 
 # ################################################################################################################################
 
-class PubSub(object):
+class PubSub:
 
     def __init__(
         self,
@@ -853,8 +855,8 @@ class PubSub(object):
             self.service_pubsub_tool.add_sub_key(sub_key)
         else:
             msg = 'No self.service_pubsub_tool to add sub key to (%s)'
-            logger.warn(msg, sub_key)
-            logger_zato.warn(msg, sub_key)
+            logger.warning(msg, sub_key)
+            logger_zato.warning(msg, sub_key)
 
         self.set_sub_key_server({
             'sub_key': sub_key,
@@ -1181,8 +1183,8 @@ class PubSub(object):
         except Exception:
             msg = 'Could not invoke server `%s` to get PID for sub_key `%s`, e:`%s`'
             exc_formatted = format_exc()
-            logger.warn(msg, server_name, sub_key, exc_formatted)
-            logger_zato.warn(msg, server_name, sub_key, exc_formatted)
+            logger.warning(msg, server_name, sub_key, exc_formatted)
+            logger_zato.warning(msg, server_name, sub_key, exc_formatted)
         else:
             return response['response']['server_pid']
 
@@ -1622,7 +1624,7 @@ class PubSub(object):
             topic_gd_pub_time_max = topic.gd_pub_time_max
 
             if topic_gd_pub_time_max > pub_time_max:
-                logger.warn('Choosing topic\'s gd_pub_time_max:`%s` over `%s`',
+                logger.warning('Choosing topic\'s gd_pub_time_max:`%s` over `%s`',
                     topic_gd_pub_time_max, _float_str.format(pub_time_max))
                 new_pub_time_max = topic_gd_pub_time_max
             else:
@@ -1678,8 +1680,8 @@ class PubSub(object):
         _keep_running = self.keep_running
 
         _logger_info      = logger.info
-        _logger_warn      = logger.warn
-        _logger_zato_warn = logger_zato.warn
+        _logger_warn      = logger.warning
+        _logger_zato_warn = logger_zato.warning
 
         _self_invoke_service   = self.invoke_service
         _self_set_sync_has_msg = self._set_sync_has_msg
@@ -1748,8 +1750,8 @@ class PubSub(object):
                         topic_name, subs = topic_id_dict[topic_id]
 
                         cid = _new_cid()
-                        _logger_info('Triggering sync for `%s` len_s:%d gd:%d ngd:%d cid:%s' % (
-                            topic_name, len(subs), topic.sync_has_gd_msg, topic.sync_has_non_gd_msg, cid))
+                        _logger_info('Triggering sync for `%s` len_s:%d gd:%d ngd:%d cid:%s',
+                            topic_name, len(subs), topic.sync_has_gd_msg, topic.sync_has_non_gd_msg, cid)
 
                         # Build a list of sub_keys for whom we know what their delivery server is which will
                         # allow us to send messages only to tasks that are known to be up.
@@ -1771,8 +1773,8 @@ class PubSub(object):
 
                                 non_gd_msg_list_msg_id_list = [elem['pub_msg_id'] for elem in non_gd_msg_list]
 
-                                _logger_info('Forwarding messages to a task for `%s` ngd-list:%s (sk_list:%s) cid:%s' % (
-                                    topic_name, non_gd_msg_list_msg_id_list, sub_keys, cid))
+                                _logger_info('Forwarding messages to a task for `%s` ngd-list:%s (sk_list:%s) cid:%s',
+                                    topic_name, non_gd_msg_list_msg_id_list, sub_keys, cid)
 
                                 # .. and notify all the tasks in background.
                                 _ = _spawn(_self_invoke_service, 'zato.pubsub.after-publish', {
@@ -2142,8 +2144,8 @@ class PubSub(object):
         # All done, we can store a new entry in logs now
         peer_info = wsx.get_peer_info_pretty()
 
-        logger.info(msg.wsx_sub_resumed, sub_key, peer_info)
-        logger_zato.info(msg.wsx_sub_resumed, sub_key, peer_info)
+        logger.info(MsgConst.wsx_sub_resumed, sub_key, peer_info)
+        logger_zato.info(MsgConst.wsx_sub_resumed, sub_key, peer_info)
 
 # ################################################################################################################################
 # ################################################################################################################################

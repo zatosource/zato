@@ -1,37 +1,34 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
+# ################################################################################################################################
+
+# Default encoding used with all text files
+default_encoding = 'utf8'
 
 # ################################################################################################################################
 
-# Type hints
-import typing
-
-if typing.TYPE_CHECKING:
-    from zato.server.base.parallel import ParallelServer
-    from zato.server.connection.http_soap.url_data import URLData
-
-    # For pyflakes
-    ParallelServer = ParallelServer
-    URLData = URLData
+if 0:
+    from zato.common.typing_ import textio_
 
 # ################################################################################################################################
-# ################################################################################################################################
 
-class WorkerImpl:
-    """ Base class for objects that implement worker functionality. Does not implement anything itself,
-    instead serving as a common marker for all derived subclasses.
-    """
-    def __init__(self):
-        self.server = None # type: ParallelServer
-        self.worker_idx = None # type: int
-        self.url_data = None # type: URLData
+def open_r(path:'str', encoding:'str'=default_encoding) -> 'textio_':
+    return open(path, 'r', encoding=encoding)
 
 # ################################################################################################################################
+
+def open_w(path:'str', encoding:'str'=default_encoding) -> 'textio_':
+    return open(path, 'w', encoding=encoding)
+
+# ################################################################################################################################
+
+def open_rw(path:'str', encoding:'str'=default_encoding) -> 'textio_':
+    return open(path, 'w+', encoding=encoding)
+
 # ################################################################################################################################

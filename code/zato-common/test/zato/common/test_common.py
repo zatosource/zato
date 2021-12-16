@@ -38,5 +38,5 @@ class StatsElemTestCase(TestCase):
 
 class TestSOAPNamespace(TestCase):
     def test_soap_ns(self):
-        self.assertEquals(soapenv11_namespace, 'http://schemas.xmlsoap.org/soap/envelope/')
-        self.assertEquals(soapenv12_namespace, 'http://www.w3.org/2003/05/soap-envelope')
+        self.assertEqual(soapenv11_namespace, 'http://schemas.xmlsoap.org/soap/envelope/')
+        self.assertEqual(soapenv12_namespace, 'http://www.w3.org/2003/05/soap-envelope')

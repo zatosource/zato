@@ -119,7 +119,7 @@ class SSOCommand(ZatoCommand):
 
         # This file must exist, otherwise it's not a path to a server
         if not secrets_conf:
-            self.logger.warn('Could not find file `secrets.conf` in `%s`', repo_location)
+            self.logger.warning('Could not find file `secrets.conf` in `%s`', repo_location)
             return self.SYS_ERROR.NOT_A_ZATO_SERVER
 
         user_api = self._get_sso_config(args, repo_location, secrets_conf)
@@ -127,7 +127,7 @@ class SSOCommand(ZatoCommand):
         if self.user_required:
             user = user_api.get_user_by_username(self._get_cid(), args.username)
             if not user:
-                self.logger.warn('No such user `%s`', args.username)
+                self.logger.warning('No such user `%s`', args.username)
                 return self.SYS_ERROR.NO_SUCH_SSO_USER
         else:
             user = None
@@ -171,13 +171,13 @@ class _CreateUser(SSOCommand):
         from zato.sso import ValidationError
 
         if user_api.get_user_by_username('', args.username):
-            self.logger.warn('User already exists `%s`', args.username)
+            self.logger.warning('User already exists `%s`', args.username)
             return self.SYS_ERROR.USER_EXISTS
 
         try:
             user_api.validate_password(args.password)
         except ValidationError as e:
-            self.logger.warn('Password validation error, reason code:`%s`', ', '.join(e.sub_status))
+            self.logger.warning('Password validation error, reason code:`%s`', ', '.join(e.sub_status))
             return self.SYS_ERROR.VALIDATION_ERROR
 
         data = Bunch()
@@ -329,7 +329,7 @@ class ChangeUserPassword(SSOCommand):
                 self._get_cid(), user.user_id, args.password, args.must_change, args.expiry, self._get_current_app(),
                 self._get_current_host())
         except ValidationError as e:
-            self.logger.warn('Password validation error, reason code:`%s`', ', '.join(e.sub_status))
+            self.logger.warning('Password validation error, reason code:`%s`', ', '.join(e.sub_status))
             return self.SYS_ERROR.VALIDATION_ERROR
         else:
             self.logger.info('Changed password for user `%s`', args.username)

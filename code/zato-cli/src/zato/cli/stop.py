@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Zato
 from zato.cli import ManageCommand
+from zato.common.util.open_ import open_r
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,7 +39,7 @@ class Stop(ManageCommand):
             self.logger.error('No pidfile found in `%s`', pidfile)
             sys.exit(self.SYS_ERROR.FILE_MISSING)
 
-        pid = open(pidfile).read().strip()
+        pid = open_r(pidfile).read().strip()
         if not pid:
             self.logger.error('Empty pidfile `%s`, did not attempt to stop `%s`', pidfile, component_dir)
             sys.exit(self.SYS_ERROR.NO_PID_FOUND)
