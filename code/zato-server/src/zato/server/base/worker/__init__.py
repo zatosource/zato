@@ -1927,7 +1927,6 @@ class WorkerStore(_WorkerStoreBase):
     def on_broker_msg_SERVICE_EDIT(self, msg, *args):
         # type: (dict)
         del msg['action']
-        del msg['msg_type']
         self.server.service_store.edit_service_data(msg)
 
 # ################################################################################################################################
