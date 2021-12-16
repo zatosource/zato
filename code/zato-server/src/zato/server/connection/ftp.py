@@ -128,7 +128,7 @@ class FTPStore(object):
                         ftp.close()
                 except Exception:
                     msg = 'Could not close the FTP connection `{}`, e:`{}`'.format(params.name, format_exc())
-                    logger.warn(msg)
+                    logger.warning(msg)
                 finally:
                     self._add(params)
 

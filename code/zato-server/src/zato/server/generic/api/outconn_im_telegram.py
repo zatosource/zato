@@ -73,7 +73,7 @@ class TelegramClient(object):
         try:
             return self._invoke(*args, **kwargs)
         except Exception:
-            logger.warn('Could not invoke Telegram API, e:`%s`', format_exc())
+            logger.warning('Could not invoke Telegram API, e:`%s`', format_exc())
             raise
 
 # ################################################################################################################################

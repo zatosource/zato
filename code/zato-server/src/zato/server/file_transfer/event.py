@@ -164,7 +164,7 @@ class FileTransferEventHandler:
                     except Exception:
                         exception = format_exc()
                         event.parse_error = exception
-                        logger.warn('File transfer parsing error (%s) e:`%s`', self.config.name, exception)
+                        logger.warning('File transfer parsing error (%s) e:`%s`', self.config.name, exception)
 
             # Invokes all callbacks for the event
             spawn_greenlet(self.manager.invoke_callbacks, event, self.config.service_list, self.config.topic_list,
@@ -174,7 +174,7 @@ class FileTransferEventHandler:
             self.manager.post_handle(event, self.config, observer, snapshot_maker)
 
         except Exception:
-            logger.warn('Exception in pickup event handler `%s` (%s) `%s`',
+            logger.warning('Exception in pickup event handler `%s` (%s) `%s`',
                 self.config.name, transfer_event.src_path, format_exc())
 
     on_modified = on_created

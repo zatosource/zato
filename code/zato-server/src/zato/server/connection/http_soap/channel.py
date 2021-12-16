@@ -300,7 +300,7 @@ class RequestDispatcher(object):
 
                 # Raise 404 if the channel is inactive
                 if not channel_item['is_active']:
-                    logger.warn('url_data:`%s` is not active, raising NotFound', sorted(url_match.items()))
+                    logger.warning('url_data:`%s` is not active, raising NotFound', sorted(url_match.items()))
                     raise NotFound(cid, 'Channel inactive')
 
                 # We need to read security info here so we know if POST needs to be
@@ -663,7 +663,7 @@ class RequestHandler(object):
         """
         service, is_active = self.server.service_store.new_instance(channel_item.service_impl_name) # type: (Service, bool)
         if not is_active:
-            logger.warn('Could not invoke an inactive service:`%s`, cid:`%s`', service.get_name(), cid)
+            logger.warning('Could not invoke an inactive service:`%s`, cid:`%s`', service.get_name(), cid)
             raise NotFound(cid, _response_404.format(
                 path_info, wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid))
 

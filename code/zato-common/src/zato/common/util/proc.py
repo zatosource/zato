@@ -128,7 +128,7 @@ def start_process(component_name, executable, run_in_fg, cli_options, extra_cli_
         _err = _stderr.wait_for_error()
         if _err:
             if 'pykafka.rdkafka' not in _err:
-                logger.warn('Stderr received from program `%s` e:`%s`, kw:`%s`', program, _err, run_kwargs)
+                logger.warning('Stderr received from program `%s` e:`%s`, kw:`%s`', program, _err, run_kwargs)
                 sys.exit(failed_to_start_err)
 
     except KeyboardInterrupt:

@@ -258,7 +258,7 @@ class Endpoint(ToDictBase):
 
                 else:
                     msg = 'Ignoring invalid %s pattern `%s` for `%s` (role:%s) (reason: no pub=/sub= prefix found)'
-                    logger.warn(msg, key, line, self.name, self.role)
+                    logger.warning(msg, key, line, self.name, self.role)
 
 # ################################################################################################################################
 # ################################################################################################################################

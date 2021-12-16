@@ -75,7 +75,7 @@ class DataClassSimpleIO:
             class_._sio = sio
 
         except Exception:
-            logger.warn('Could not attach DataClassSimpleIO to class `%s`, e:`%s`', class_, format_exc())
+            logger.warning('Could not attach DataClassSimpleIO to class `%s`, e:`%s`', class_, format_exc())
             raise
 
 # ################################################################################################################################

@@ -328,7 +328,7 @@ class ServiceStore(object):
             schema_path = class_.schema
 
         if not os.path.exists(schema_path):
-            logger.warn('Could not find JSON Schema for `%s` in `%s` (class_.schema=%s)',
+            logger.warning('Could not find JSON Schema for `%s` in `%s` (class_.schema=%s)',
                 class_name, schema_path, class_.schema)
             return
 
@@ -370,7 +370,7 @@ class ServiceStore(object):
 
             # .. and it needs to be our own Model subclass ..
             if not issubclass(msg_class,  DataClassModel):
-                logger.warn('%s definition %s in service %s will be ignored - \'%s\' should be a subclass of %s',
+                logger.warning('%s definition %s in service %s will be ignored - \'%s\' should be a subclass of %s',
                 msg_type,
                 msg_class,
                 class_,
@@ -594,7 +594,7 @@ class ServiceStore(object):
         try:
             impl_name = self.name_to_impl_name[name]
         except KeyError:
-            logger.warn('No such key `{}` among `{}`'.format(name, sorted(self.name_to_impl_name)))
+            logger.warning('No such key `{}` among `{}`'.format(name, sorted(self.name_to_impl_name)))
             raise
         else:
             return self.new_instance(impl_name, *args, **kwargs)
@@ -1139,7 +1139,7 @@ class ServiceStore(object):
         try:
             return self.import_services_from_module_object(import_module(mod_name), is_internal)
         except Exception as e:
-            logger.warn('Could not import module `%s` (internal:%d) -> `%s`', mod_name, is_internal, e.args)
+            logger.warning('Could not import module `%s` (internal:%d) -> `%s`', mod_name, is_internal, e.args)
             return []
 
 # ################################################################################################################################

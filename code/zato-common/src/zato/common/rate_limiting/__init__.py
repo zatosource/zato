@@ -231,7 +231,7 @@ class RateLimiting(object):
                 config.check_limit(cid, from_)
         else:
             if needs_warn:
-                logger.warn('No such rate limiting object `%s` (%s)', object_name, object_type)
+                logger.warning('No such rate limiting object `%s` (%s)', object_name, object_type)
 
 # ################################################################################################################################
 

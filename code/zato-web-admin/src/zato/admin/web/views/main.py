@@ -108,7 +108,7 @@ def login(req):
 
                 # TOTP is required but it is not set for user, we need to reject such a request
                 if not user_totp_data.key:
-                    logger.warn('No TOTP key for user `%s`', username)
+                    logger.warning('No TOTP key for user `%s`', username)
                     return get_login_response(req, True, True)
 
                 # Decrypt the key found in the user profile
@@ -119,7 +119,7 @@ def login(req):
                 totp = pyotp.TOTP(user_totp_key_decrypted)
 
                 if not totp.verify(totp_code):
-                    logger.warn('Invalid TOTP code received')
+                    logger.warning('Invalid TOTP code received')
                     return get_login_response(req, True, True)
 
             # Make sure the redirect-to address is valid
@@ -133,7 +133,7 @@ def login(req):
             return HttpResponseRedirect(redirect_to)
 
         else:
-            logger.warn('User password validation error `%s`', username)
+            logger.warning('User password validation error `%s`', username)
             needs_post_form_data = True
 
     # Here, we know that we need to return the form, either because it is a GET request

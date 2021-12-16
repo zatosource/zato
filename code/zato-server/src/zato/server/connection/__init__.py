@@ -42,12 +42,12 @@ class BasePoolAPI(object):
         item = self._conn_store.get(name)
         if not item:
             msg = 'No such connection `{}` in `{}`'.format(name, sorted(self._conn_store.sessions))
-            logger.warn(msg)
+            logger.warning(msg)
             raise KeyError(msg)
 
         if not item.config.is_active:
             msg = 'Connection `{}` is not active'.format(name)
-            logger.warn(msg)
+            logger.warning(msg)
             raise Inactive(msg)
 
         return item
@@ -108,7 +108,7 @@ class BaseConnPoolStore(object):
         raise NotImplementedError('Must be overridden in subclasses')
 
     def _log_connection_error(self, name, config_no_sensitive, e, additional=''):
-        logger.warn('Could not connect to %s `%s`, config:`%s`, e:`%s`%s', self.conn_name, name, config_no_sensitive,
+        logger.warning('Could not connect to %s `%s`, config:`%s`, e:`%s`%s', self.conn_name, name, config_no_sensitive,
             format_exc(e), additional)
 
     def get_config_no_sensitive(self, config):
@@ -211,7 +211,7 @@ class BaseConnPoolStore(object):
                     self.delete_session(name)
 
             except Exception:
-                logger.warn('Error while shutting down session `%s`, e:`%s`', name, format_exc())
+                logger.warning('Error while shutting down session `%s`, e:`%s`', name, format_exc())
             finally:
                 self.sessions.pop(name, None)
 
@@ -220,7 +220,7 @@ class BaseConnPoolStore(object):
             try:
                 self.delete_session(name)
             except Exception:
-                logger.warn('Could not delete session `%s`, config:`%s`, e:`%s`', name, config, format_exc())
+                logger.warning('Could not delete session `%s`, config:`%s`, e:`%s`', name, config, format_exc())
             else:
                 return self._create(config.name, config, on_connection_established_callback, *args, **kwargs)
 

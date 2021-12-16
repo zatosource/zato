@@ -158,7 +158,7 @@ class Start(Service):
     def handle(self):
         input = self.request.input
         if input.bind_port and is_port_taken(input.bind_port):
-            self.logger.warn('Cannot bind WebSocket channel `%s` to TCP port %s (already taken)', input.name, input.bind_port)
+            self.logger.warning('Cannot bind WebSocket channel `%s` to TCP port %s (already taken)', input.name, input.bind_port)
         else:
             self.server.worker_store.web_socket_channel_create(self.request.input)
 
@@ -229,7 +229,7 @@ class _BaseAPICommand(_BaseCommand):
             response_data = server_response.get('response_data') or {}
             self.response.payload.response_data = response_data
         else:
-            self.logger.warn('No server response from %s:%s received to command `%s` (sr:%s)',
+            self.logger.warning('No server response from %s:%s received to command `%s` (sr:%s)',
                 server_name, server_proc_pid, self.request.input, server_response)
 
 # ################################################################################################################################

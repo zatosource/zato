@@ -156,7 +156,7 @@ class ServerMessage(object):
 
             return _dumps_func(msg)
         except Exception:
-            logger.warn('Exception while serializing message `%r`, e:`%s`', msg, format_exc())
+            logger.warning('Exception while serializing message `%r`, e:`%s`', msg, format_exc())
             raise
 
 # ################################################################################################################################

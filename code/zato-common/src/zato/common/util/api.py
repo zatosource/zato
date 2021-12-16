@@ -353,7 +353,7 @@ def _get_config(conf, bunchified, needs_user_config, repo_location=None):
             for name, path in user_config.items():
                 path = absolutize(path, repo_location)
                 if not os.path.exists(path):
-                    logger.warn('User config not found `%s`, name:`%s`', path, name)
+                    logger.warning('User config not found `%s`, name:`%s`', path, name)
                 else:
                     user_conf = ConfigObj(path)
                     user_conf = bunchify(user_conf) if bunchified else user_conf
@@ -376,7 +376,7 @@ def get_config(repo_location, config_name, bunchified=True, needs_user_config=Tr
         result = _get_config(conf, bunchified, needs_user_config, repo_location)
     except Exception:
         if log_exception:
-            logger.warn('Error while reading %s from %s; e:`%s`', config_name, repo_location, format_exc())
+            logger.warning('Error while reading %s from %s; e:`%s`', config_name, repo_location, format_exc())
         if raise_on_error:
             raise
         else:
@@ -489,7 +489,7 @@ def payload_from_request(json_parser, cid, request, data_format, transport, chan
                     if hasattr(payload, 'as_dict'):
                         payload = payload.as_dict()
                 except ValueError:
-                    logger.warn('Could not parse request as JSON:`%s`, (%s), e:`%s`', request, type(request), format_exc())
+                    logger.warning('Could not parse request as JSON:`%s`, (%s), e:`%s`', request, type(request), format_exc())
                     raise
             else:
                 payload = request
@@ -866,7 +866,7 @@ def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
                 session.commit()
 
             except Exception:
-                logger.warn(format_exc())
+                logger.warning(format_exc())
 
             else:
                 logger.info('Initial job added `%s`', job.name)
@@ -889,7 +889,7 @@ def validate_input_dict(cid, *validation_info):
             msg = 'Invalid {}:[{}]'.format(key_name, key)
             log_msg = '{} (attrs: {})'.format(msg, source.attrs)
 
-            logger.warn(log_msg)
+            logger.warning(log_msg)
             raise ZatoException(cid, msg)
 
 # ################################################################################################################################
@@ -1267,7 +1267,7 @@ class StaticConfig(Bunch):
                 if elem.is_file():
                     self.read_file(full_path, elem.name)
             except Exception as e:
-                logger.warn('Could not read file `%s`, e:`%s`', full_path, e.args)
+                logger.warning('Could not read file `%s`, e:`%s`', full_path, e.args)
 
 # ################################################################################################################################
 
@@ -1552,7 +1552,7 @@ def startup_service_payload_from_path(name, value, repo_location):
     try:
         payload = open(path, encoding='utf8').read()
     except Exception:
-        logger.warn(
+        logger.warning(
             'Could not open payload path:`%s` `%s`, skipping startup service:`%s`, e:`%s`', orig_path, path, name, format_exc())
     else:
         return payload

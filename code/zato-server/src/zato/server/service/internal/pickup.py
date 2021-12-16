@@ -199,14 +199,14 @@ class _OnUpdate(Service):
                     self.sync_pickup_file_in_ram(ctx)
 
                 except Exception:
-                    self.logger.warn('Could not sync in-RAM contents of `%s`, e:`%s` (%s)',
+                    self.logger.warning('Could not sync in-RAM contents of `%s`, e:`%s` (%s)',
                         ctx.file_path, format_exc(), self.update_type)
                 else:
                     self.logger.info('Successfully finished syncing in-RAM contents of `%s` (%s)',
                         ctx.file_path, self.update_type)
 
         except Exception:
-            self.logger.warn('Could not update file `%s`, e:`%s`', format_exc())
+            self.logger.warning('Could not update file `%s`, e:`%s`', format_exc())
 
         #
         # Step (3) - Remove the file name from the ignored ones

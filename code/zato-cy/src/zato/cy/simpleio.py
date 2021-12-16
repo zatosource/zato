@@ -357,7 +357,7 @@ class Elem(object):
     def _get_unicode_name(self, name:object) -> str:
         if name:
             if not isinstance(name, basestring):
-                logger.warn('Name `%s` should be a str/bytes/unicode object rather than `%s`', name, type(name))
+                logger.warning('Name `%s` should be a str/bytes/unicode object rather than `%s`', name, type(name))
             if not isinstance(name, str):
                 name = name.decode('utf8')
 
@@ -1806,7 +1806,7 @@ class CySimpleIO(object):
             class_._sio = sio
 
         except Exception:
-            logger.warn('Could not attach CySimpleIO to class `%s`, e:`%s`', class_, format_exc())
+            logger.warning('Could not attach CySimpleIO to class `%s`, e:`%s`', class_, format_exc())
             raise
 
 # ################################################################################################################################
@@ -1931,7 +1931,7 @@ class CySimpleIO(object):
                         all_elems = elem
 
                     # This goes to logs ..
-                    logger.warn('%s; No such input elem `%s` among `%s` in `%s`' % (
+                    logger.warning('%s; No such input elem `%s` among `%s` in `%s`' % (
                         self.service_class, sio_item_name, all_elems, elem))
 
                     # .. while this is potentially returned to users.

@@ -211,7 +211,7 @@ class WebSocket(_WebSocket):
 
             # Warn only if something was set by users
             if json_library:
-                logger.warning('Unrecognized JSON library `%s` configured for WSX, not one of `%s`, switching to `%s`',
+                logger.warninging('Unrecognized JSON library `%s` configured for WSX, not one of `%s`, switching to `%s`',
                     json_library, _supported, _default)
 
             json_library = _default
@@ -704,7 +704,7 @@ class WebSocket(_WebSocket):
 
     def on_forbidden(self, action, data=copy_forbidden):
         cid = new_cid()
-        logger.warning(
+        logger.warninging(
             'Peer %s (%s) %s, closing its connection to %s (%s), cid:`%s` (%s)', self._peer_address, self._peer_fqdn, action,
             self._local_address, self.config.name, cid, self.peer_conn_info_pretty)
 
@@ -765,10 +765,10 @@ class WebSocket(_WebSocket):
 
                         response = self.invoke_client(new_cid(), None, use_send=False)
                     except ConnectionError as e:
-                        logger.warning('ConnectionError; closing connection -> `%s`', e.args)
+                        logger.warninging('ConnectionError; closing connection -> `%s`', e.args)
                         self.on_socket_terminated(close_code.runtime_background_ping, 'Background ping connection error')
                     except RuntimeError:
-                        logger.warning('RuntimeError; closing connection -> `%s`', format_exc())
+                        logger.warninging('RuntimeError; closing connection -> `%s`', format_exc())
                         self.on_socket_terminated(close_code.runtime_background_ping, 'Background ping runtime error')
 
                     with self.update_lock:
@@ -792,7 +792,7 @@ class WebSocket(_WebSocket):
                         else:
                             self.pings_missed += 1
                             if self.pings_missed < self.pings_missed_threshold:
-                                logger.warning(
+                                logger.warninging(
                                     'Peer %s (%s) missed %s/%s ping messages from %s (%s). Last response time: %s{} (%s)'.format(
                                         ' UTC' if self.ping_last_response_time else ''),
 
@@ -827,7 +827,7 @@ class WebSocket(_WebSocket):
                     return
 
         except Exception:
-            logger.warning(format_exc())
+            logger.warninging(format_exc())
 
 # ################################################################################################################################
 
@@ -847,7 +847,7 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def on_pings_missed(self, reason):
-        logger.warning(
+        logger.warninging(
             'Peer %s (%s) missed %s/%s pings, forcing its connection to close (%s)',
             self._peer_address, self._peer_fqdn, self.pings_missed, self.pings_missed_threshold,
             self.peer_conn_info_pretty)
@@ -968,7 +968,7 @@ class WebSocket(_WebSocket):
         except Exception as e:
 
             # This goes to WSX logs, without a full traceback
-            logger.warning('Service `%s` could not be invoked, id:`%s` cid:`%s`, conn:`%s`, e:`%s`',
+            logger.warninging('Service `%s` could not be invoked, id:`%s` cid:`%s`, conn:`%s`, e:`%s`',
                 self.config.service_name, msg.id, cid, self.peer_conn_info_pretty, format_exc())
 
             # This goes to server.log and has a full traceback
@@ -1006,7 +1006,7 @@ class WebSocket(_WebSocket):
             if e.args[0] == "'NoneType' object has no attribute 'text_message'":
                 _msg = 'Service response discarded (client disconnected), cid:`%s`, msg.meta:`%s`'
                 _meta = msg.get_meta()
-                logger.warning(_msg, _meta)
+                logger.warninging(_msg, _meta)
                 logger_zato.warn(_msg, _meta)
 
 # ################################################################################################################################
@@ -1036,7 +1036,7 @@ class WebSocket(_WebSocket):
             hook = self.get_on_pubsub_hook()
             if not hook:
                 log_msg = 'Ignoring pub/sub response, on_pubsub_response hook not implemented for `%s`, conn:`%s`, msg:`%s`'
-                logger.warning(log_msg, self.config.name, self.peer_conn_info_pretty, msg)
+                logger.warninging(log_msg, self.config.name, self.peer_conn_info_pretty, msg)
                 logger_zato.warn(log_msg, self.config.name, self.peer_conn_info_pretty, msg)
             else:
                 request = self._get_hook_request()
@@ -1073,18 +1073,18 @@ class WebSocket(_WebSocket):
             except UnicodeDecodeError as e:
                 reason = 'Invalid UTF-8 bytes'
                 msg = '{}; `{}`'.format(reason, e.args)
-                logger.warn(msg)
+                logger.warning(msg)
                 logger_zato.warn(msg)
                 if self.has_session_opened:
                     response = ErrorResponse('<no-cid>', '<no-msg-id>', UNPROCESSABLE_ENTITY, reason)
                     log_msg = 'About to send the invalid UTF-8 message to client'
-                    logger.warning(log_msg)
+                    logger.warninging(log_msg)
                     logger_zato.warning(log_msg)
                     self._send_response_to_client(response)
                     return
                 else:
                     log_msg = 'Disconnecting client due to invalid UTF-8 data'
-                    logger.warning(log_msg)
+                    logger.warninging(log_msg)
                     logger_zato.warning(log_msg)
                     self.disconnect_client('<no-cid>', code_invalid_utf8, reason)
                     return
@@ -1135,7 +1135,7 @@ class WebSocket(_WebSocket):
                 except RuntimeError as e:
                     if e.args[0] == _cannot_send:
                         msg = 'Ignoring message (socket terminated #1), cid:`%s`, request:`%s` conn:`%s`'
-                        logger.warn(msg, cid, request, self.peer_conn_info_pretty)
+                        logger.warning(msg, cid, request, self.peer_conn_info_pretty)
                         logger_zato.warn(msg, cid, request, self.peer_conn_info_pretty)
                     else:
                         raise
@@ -1148,7 +1148,7 @@ class WebSocket(_WebSocket):
                 logger.debug('Response returned cid:`%s`, time:`%s`', cid, _now() - now)
 
         except Exception:
-            logger.warning(format_exc())
+            logger.warninging(format_exc())
 
 # ################################################################################################################################
 
@@ -1160,7 +1160,7 @@ class WebSocket(_WebSocket):
         try:
             self._received_message(message.data)
         except Exception:
-            logger.warning(format_exc())
+            logger.warninging(format_exc())
 
 # ################################################################################################################################
 
@@ -1214,7 +1214,7 @@ class WebSocket(_WebSocket):
             self._init()
             super(WebSocket, self).run()
         except Exception:
-            logger.warning('Exception in WebSocket.run `%s`', format_exc())
+            logger.warninging('Exception in WebSocket.run `%s`', format_exc())
 
 # ################################################################################################################################
 
@@ -1234,7 +1234,7 @@ class WebSocket(_WebSocket):
             if e.message == "'NoneType' object has no attribute 'text_message'":
                 self.on_forbidden('did not create session within {}s (#2)'.format(self.config.new_token_wait_time))
             else:
-                logger.warning('Exception in WSX _ensure_session_created `%s`', format_exc())
+                logger.warninging('Exception in WSX _ensure_session_created `%s`', format_exc())
 
 # ################################################################################################################################
 
@@ -1422,7 +1422,7 @@ class WebSocketContainer(WebSocketWSGIApplication):
             wsgi_environ['ws4py.websocket'] = websocket
             return websocket
         except Exception:
-            logger.warning(format_exc())
+            logger.warninging(format_exc())
 
     def __call__(self, wsgi_environ, start_response):
 
@@ -1443,13 +1443,13 @@ class WebSocketContainer(WebSocketWSGIApplication):
                 super(WebSocketContainer, self).__call__(wsgi_environ, start_response)
 
         except HandshakeError:
-            logger.warning('Handshake error; e:`%s`', format_exc())
+            logger.warninging('Handshake error; e:`%s`', format_exc())
 
             start_response(http400, {})
             return [error_response[BAD_REQUEST][self.config.data_format]]
 
         except Exception as e:
-            logger.warning('Could not execute __call__; e:`%s`', e.args[0])
+            logger.warninging('Could not execute __call__; e:`%s`', e.args[0])
             raise
 
     def invoke_client(self, cid, pub_client_id, request, timeout):

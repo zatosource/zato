@@ -226,7 +226,7 @@ class SessionAPI(object):
 
             # If we do not have a user object here, it means that the input was invalid and there is no such user
             if not user:
-                logger.warn('User not found; username:`%s`, user_id:`%s`',
+                logger.warning('User not found; username:`%s`, user_id:`%s`',
 
                     ctx.input.get('username'), ctx.input.get('user_id'))
                 raise ValidationError(status_code.auth.not_allowed, False)
@@ -244,7 +244,7 @@ class SessionAPI(object):
 
                     # Make sure we have a password on input
                     if not input_password:
-                        logger.warn('Password missing on input; user_id:`%s`', user.user_id)
+                        logger.warning('Password missing on input; user_id:`%s`', user.user_id)
                         raise ValidationError(status_code.auth.not_allowed, False)
 
                     # This may have been encrypted by SIO
@@ -260,7 +260,7 @@ class SessionAPI(object):
             if self._needs_totp_login_check(user, is_logged_in_ext, ctx.input.get('sec_type')):
                 input_totp_code = ctx.input.get('totp_code')
                 if not input_totp_code:
-                    logger.warn('Missing TOTP code; user `%s`', user.username)
+                    logger.warning('Missing TOTP code; user `%s`', user.username)
                     if self.sso_conf.login.get('inform_if_totp_missing', False):
                         _code = status_code.auth.totp_missing
                         _return_status = True
@@ -271,7 +271,7 @@ class SessionAPI(object):
                 else:
                     user_totp_key = self.decrypt_func(user.totp_key)
                     if not TOTPManager.verify_totp_code(user_totp_key, input_totp_code):
-                        logger.warn('Invalid TOTP code; user `%s`', user.username)
+                        logger.warning('Invalid TOTP code; user `%s`', user.username)
                         raise ValidationError(status_code.auth.not_allowed, False)
 
             # We assume that we will not have to warn about an approaching password expiry
@@ -477,7 +477,7 @@ class SessionAPI(object):
             with closing(self.odb_session_func()) as session:
                 return self._get(session, target_ust, current_app, remote_addr, 'verify', renew=False, user_agent=user_agent)
         except Exception:
-            logger.warn('Could not verify UST, e:`%s`', format_exc())
+            logger.warning('Could not verify UST, e:`%s`', format_exc())
             return False
 
 # ################################################################################################################################
@@ -544,14 +544,14 @@ class SessionAPI(object):
         # Verify current session's very existence first ..
         current_session = self._get_session(current_ust, current_app, remote_addr, 'get_current_session')
         if not current_session:
-            logger.warn('Could not verify session `%s` `%s` `%s` `%s`',
+            logger.warning('Could not verify session `%s` `%s` `%s` `%s`',
                 current_ust, current_app, remote_addr, format_exc())
             raise ValidationError(status_code.auth.not_allowed, True)
 
         # .. the session exists but it may be still the case that we require a super-user on input.
         if needs_super_user:
             if not current_session.is_super_user:
-                logger.warn(
+                logger.warning(
                     'Current UST does not belong to a super-user, cannot continue (session.get_current_session), ' \
                     'current user is `%s` `%s`', current_session.user_id, current_session.username)
                 raise ValidationError(status_code.auth.not_allowed, True)
@@ -597,7 +597,7 @@ class SessionAPI(object):
         else:
             # If we are to return a list of sessions for another UST, we need to be a super-user
             if not current_session.is_super_user:
-                logger.warn(
+                logger.warning(
                     'Current UST does not belong to a super-user, cannot continue (session.get_list), current user is ' \
                     '`%s` `%s`', current_session.user_id, current_session.username)
                 raise ValidationError(status_code.auth.not_allowed, True)

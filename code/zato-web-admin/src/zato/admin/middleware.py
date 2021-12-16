@@ -93,7 +93,7 @@ class Client(AnyServiceInvoker):
             if kwargs.get('needs_exception', True):
                 raise Exception(err_details)
             else:
-                logger.warn(err_details)
+                logger.warning(err_details)
         return response
 
 # ################################################################################################################################

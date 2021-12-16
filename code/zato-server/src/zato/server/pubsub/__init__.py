@@ -855,7 +855,7 @@ class PubSub:
             self.service_pubsub_tool.add_sub_key(sub_key)
         else:
             msg = 'No self.service_pubsub_tool to add sub key to (%s)'
-            logger.warn(msg, sub_key)
+            logger.warning(msg, sub_key)
             logger_zato.warn(msg, sub_key)
 
         self.set_sub_key_server({
@@ -1183,7 +1183,7 @@ class PubSub:
         except Exception:
             msg = 'Could not invoke server `%s` to get PID for sub_key `%s`, e:`%s`'
             exc_formatted = format_exc()
-            logger.warn(msg, server_name, sub_key, exc_formatted)
+            logger.warning(msg, server_name, sub_key, exc_formatted)
             logger_zato.warn(msg, server_name, sub_key, exc_formatted)
         else:
             return response['response']['server_pid']
@@ -1624,7 +1624,7 @@ class PubSub:
             topic_gd_pub_time_max = topic.gd_pub_time_max
 
             if topic_gd_pub_time_max > pub_time_max:
-                logger.warn('Choosing topic\'s gd_pub_time_max:`%s` over `%s`',
+                logger.warning('Choosing topic\'s gd_pub_time_max:`%s` over `%s`',
                     topic_gd_pub_time_max, _float_str.format(pub_time_max))
                 new_pub_time_max = topic_gd_pub_time_max
             else:
@@ -1680,7 +1680,7 @@ class PubSub:
         _keep_running = self.keep_running
 
         _logger_info      = logger.info
-        _logger_warn      = logger.warn
+        _logger_warn      = logger.warning
         _logger_zato_warn = logger_zato.warn
 
         _self_invoke_service   = self.invoke_service
