@@ -30,6 +30,8 @@ method_any_internal = HTTP_SOAP.METHOD.ANY_INTERNAL
 def get_match_target(config, sep=MISC.SEPARATOR, accept_any_http=accept_any_http, accept_any_internal=accept_any_internal,
     method_any_internal=method_any_internal, http_methods_allowed_re=None):
 
+    # pylint: disable=redefined-outer-name (for accept_any_http, accept_any_internal and method_any_internal)
+
     http_method = config.get('method') or config.get('http_method')
     if not http_method:
         http_method = http_methods_allowed_re

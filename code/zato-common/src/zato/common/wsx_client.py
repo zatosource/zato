@@ -50,7 +50,9 @@ _invalid = '_invalid.' + uuid4().hex
 
 class Config(object):
     def __init__(self, client_name=None, client_id=None, address=None, username=None, secret=None, on_request_callback=None,
-                 wait_time=5):
+        wait_time=5):
+        # pylint: disable=redefined-outer-name (for fifo_ignore_err)
+
         self.client_name = client_name
         self.client_id = client_id
         self.address = address
@@ -423,6 +425,8 @@ class Client(object):
 # ################################################################################################################################
 
 if __name__ == '__main__':
+
+    # pylint: disable=all
 
     def on_request_from_zato(msg):
         try:

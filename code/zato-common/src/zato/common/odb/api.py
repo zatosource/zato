@@ -360,6 +360,8 @@ class SQLConnectionPool(object):
     def ping(self, fs_sql_config):
         """ Pings the SQL database and returns the response time, in milliseconds.
         """
+        # pylint: disable=redefined-outer-name (for query)
+
         if not self.engine:
             return
 
@@ -590,6 +592,8 @@ class ODBManager(SessionWrapper):
     def get_servers(self, up_status=SERVER_UP_STATUS.RUNNING, filter_out_self=True):
         """ Returns all servers matching criteria provided on input.
         """
+        # pylint: disable=redefined-outer-name (for query)
+
         with closing(self.session()) as session:
 
             query = session.query(Server).\
@@ -801,6 +805,8 @@ class ODBManager(SessionWrapper):
     def get_basic_data_service_list(self, session):
         """ Returns basic information about all the services in ODB.
         """
+        # pylint: disable=redefined-outer-name (for query)
+
         query = select([
             ServiceTable.c.id,
             ServiceTable.c.name,
@@ -817,6 +823,8 @@ class ODBManager(SessionWrapper):
     def get_basic_data_deployed_service_list(self):
         """ Returns basic information about all the deployed services in ODB.
         """
+        # pylint: disable=redefined-outer-name (for query)
+
         with closing(self.session()) as session:
 
             query = select([
