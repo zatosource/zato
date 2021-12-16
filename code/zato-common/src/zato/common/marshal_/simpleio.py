@@ -60,6 +60,8 @@ class DataClassSimpleIO:
         and attaches the Cython-based one to the class's _sio attribute.
         """
         try:
+            # pylint: disable=attribute-defined-outside-init
+
             # Get the user-defined SimpleIO definition
             user_sio = getattr(class_, 'SimpleIO', None)
 
@@ -73,7 +75,7 @@ class DataClassSimpleIO:
             class_._sio = sio
 
         except Exception:
-            logger.warn('Could not attach DataClassSimpleIO to class `%s`, e:`%s`', class_, format_exc())
+            logger.warning('Could not attach DataClassSimpleIO to class `%s`, e:`%s`', class_, format_exc())
             raise
 
 # ################################################################################################################################

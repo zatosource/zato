@@ -8,6 +8,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # ################################################################################################################################
 
+# Zato
+from zato.common.util.open_ import open_r, open_w
+
+# ################################################################################################################################
+
 # Some objects are re-defined here to avoid importing them from zato.common = improves CLI performance.
 class MS_SQL:
     ZATO_DIRECT = 'zato+mssql1'
@@ -189,7 +194,7 @@ def run_command(args):
 
 # ################################################################################################################################
 
-class ZatoCommand(object):
+class ZatoCommand:
     """ A base class for all Zato CLI commands. Handles common things like parsing
     the arguments, checking whether a config file or command line switches should
     be used, asks for passwords etc.
@@ -204,7 +209,7 @@ class ZatoCommand(object):
 
 # ################################################################################################################################
 
-    class SYS_ERROR(object):
+    class SYS_ERROR:
         """ All non-zero sys.exit return codes the commands may use.
         """
         ODB_EXISTS = 1
@@ -240,9 +245,9 @@ class ZatoCommand(object):
 
 # ################################################################################################################################
 
-    class COMPONENTS(object):
+    class COMPONENTS:
 
-        class _ComponentName(object):
+        class _ComponentName:
             def __init__(self, code, name):
                 self.code = code
                 self.name = name
@@ -425,7 +430,7 @@ class ZatoCommand(object):
                 'created_ts': datetime.utcnow().isoformat(), # noqa
                 'component': component
                 }
-        open(os.path.join(target_dir, ZATO_INFO_FILE), 'w').write(dumps(info))
+        open_w(os.path.join(target_dir, ZATO_INFO_FILE)).write(dumps(info))
 
 # ################################################################################################################################
 
@@ -450,7 +455,7 @@ class ZatoCommand(object):
 
         body = '# {} - {}\n{}'.format(now, self._get_user_host(), file_args.getvalue())
 
-        open(file_name, 'w').write(body)
+        open_w(file_name).write(body)
         file_args.close()
 
         self.logger.debug('Options saved in file {file_name}'.format(
@@ -680,7 +685,7 @@ class FromConfig(ZatoCommand):
     def execute(self, args):
         """ Runs the command with arguments read from a config file.
         """
-        f = open(args.path)
+        f = open_r(args.path)
         for line in f:
             if line.lstrip().startswith('#'):
                 continue
@@ -725,7 +730,7 @@ class CACreateCommand(ZatoCommand):
         import tempfile
 
         now = self._get_now()
-        openssl_template = open(os.path.join(self.target_dir, 'ca-material', 'openssl-template.conf')).read()
+        openssl_template = open_r(os.path.join(self.target_dir, 'ca-material', 'openssl-template.conf')).read()
 
         ou_attrs = ('organizational_unit', 'organizational-unit')
         template_args = {}
@@ -810,14 +815,14 @@ class CACreateCommand(ZatoCommand):
         # the public key from the CSR.
 
         split_line = '-----END PUBLIC KEY-----'
-        csr_pub = open(csr_name).read()
+        csr_pub = open_r(csr_name).read()
         csr_pub = csr_pub.split(split_line)
 
         pub = csr_pub[0] + split_line
         csr = csr_pub[1].lstrip()
 
-        open(csr_name, 'w').write(csr)
-        open(pub_key_name, 'w').write(pub)
+        open_w(csr_name).write(csr)
+        open_w(pub_key_name).write(pub)
 
         # Generate the certificate
         cmd = """openssl ca -batch -passin file:{ca_password} -config {config} \
@@ -830,7 +835,7 @@ class CACreateCommand(ZatoCommand):
 
         # Now delete the default certificate stored in '.\', we don't really
         # need it because we have its copy in '.\out-cert' anyway.
-        last_serial = open(os.path.join(self.target_dir, 'ca-material', 'ca-serial.old')).read().strip()
+        last_serial = open_r(os.path.join(self.target_dir, 'ca-material', 'ca-serial.old')).read().strip()
         os.remove(os.path.join(self.target_dir, last_serial + '.pem'))
 
         msg = """Crypto material generated and saved in:
@@ -882,6 +887,8 @@ class ManageCommand(ZatoCommand):
 
     def execute(self, args):
 
+        # pylint: disable=attribute-defined-outside-init
+
         # stdlib
         import os
         import sys
@@ -903,7 +910,7 @@ class ManageCommand(ZatoCommand):
             sys.exit(self.SYS_ERROR.NOT_A_ZATO_COMPONENT) # noqa
 
         found = list(found)[0]
-        json_data = load(open(os.path.join(self.component_dir, found)))
+        json_data = load(open_r(os.path.join(self.component_dir, found)))
 
         os.chdir(self.component_dir)
 

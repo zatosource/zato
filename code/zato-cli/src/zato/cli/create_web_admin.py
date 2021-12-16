@@ -13,6 +13,7 @@ from copy import deepcopy
 
 # Zato
 from zato.cli import common_odb_opts, ZatoCommand
+from zato.common.util.open_ import open_r, open_w
 
 config_template = """{{
   "host": "{host}",
@@ -180,14 +181,14 @@ class Create(ZatoCommand):
 
         logging_conf_contents = get_logging_conf_contents()
 
-        open(os.path.join(repo_dir, 'logging.conf'), 'w').write(logging_conf_contents)
-        open(web_admin_conf_path, 'w').write(config_template.format(**config))
-        open(initial_data_json_path, 'w').write(initial_data_json.format(**config))
+        open_w(os.path.join(repo_dir, 'logging.conf')).write(logging_conf_contents)
+        open_w(web_admin_conf_path).write(config_template.format(**config))
+        open_w(initial_data_json_path).write(initial_data_json.format(**config))
 
         # Initial info
         self.store_initial_info(self.target_dir, self.COMPONENTS.WEB_ADMIN.code)
 
-        config = json.loads(open(os.path.join(repo_dir, 'web-admin.conf')).read())
+        config = json.loads(open_r(os.path.join(repo_dir, 'web-admin.conf')).read())
         config['config_dir'] = self.target_dir
         update_globals(config, self.target_dir)
 

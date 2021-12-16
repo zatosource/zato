@@ -38,7 +38,7 @@ ACCESS_LOG_DT_FORMAT = '%d/%b/%Y:%H:%M:%S %z'
 
 # ################################################################################################################################
 
-class HTTPHandler(object):
+class HTTPHandler:
     """ Handles incoming HTTP requests.
     """
     def on_wsgi_request(self, wsgi_environ, start_response, _new_cid=new_cid, _local_zone=get_localzone(),

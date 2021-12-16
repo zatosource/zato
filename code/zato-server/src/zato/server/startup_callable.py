@@ -26,7 +26,7 @@ logger = getLogger('zato')
 
 # ################################################################################################################################
 
-class PhaseCtx(object):
+class PhaseCtx:
     """ Describes a particular phase of a server startup process.
     """
     def __init__(self, phase, args, kwargs):
@@ -37,7 +37,7 @@ class PhaseCtx(object):
 
 # ################################################################################################################################
 
-class StartupCallableTool(object):
+class StartupCallableTool:
     """ Handles logic related to server startup callables.
     """
     def __init__(self, server_config):
@@ -53,7 +53,7 @@ class StartupCallableTool(object):
         for item in self._callable_names:
             if item:
                 if '.' not in item:
-                    logger.warn('Invalid startup callable name `%s`, must be a dotted Python name', item)
+                    logger.warning('Invalid startup callable name `%s`, must be a dotted Python name', item)
                     continue
 
                 try:
@@ -62,7 +62,7 @@ class StartupCallableTool(object):
                     obj = getattr(mod, object_name)
                     self.callable_list.append(obj)
                 except Exception as e:
-                    logger.warn('Could not import startup callable `%s`, e:`%s`', item, e)
+                    logger.warning('Could not import startup callable `%s`, e:`%s`', item, e)
 
     def invoke(self, phase, args=None, kwargs=None):
         # type: (PhaseCtx, list, dict)
@@ -71,7 +71,7 @@ class StartupCallableTool(object):
             try:
                 callable_object(ctx)
             except Exception:
-                logger.warn('Could not invoke `%s`, e:`%s`', callable_object, format_exc())
+                logger.warning('Could not invoke `%s`, e:`%s`', callable_object, format_exc())
 
 # ################################################################################################################################
 

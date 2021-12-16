@@ -1,5 +1,0 @@
-mypy
-selenium
-selenium-wire
-vulture
-yapf

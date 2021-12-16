@@ -103,7 +103,7 @@ hook_methods = ('accept', 'get_request_hash') + before_handle_hooks + after_hand
 
 # ################################################################################################################################
 
-class _TestingWorkerStore(object):
+class _TestingWorkerStore:
     sql_pool_store = None
     outconn_wsx = None
     vault_conn_api = None
@@ -125,7 +125,7 @@ class _TestingWorkerStore(object):
 
 # ################################################################################################################################
 
-class _TestingWorkerConfig(object):
+class _TestingWorkerConfig:
     out_odoo = None
     out_soap = None
     out_sap = None
@@ -134,7 +134,7 @@ class _TestingWorkerConfig(object):
 # ################################################################################################################################
 
 @total_ordering
-class InRAMService(object):
+class InRAMService:
     __slots__ = 'cluster_id', 'id', 'name', 'impl_name', 'deployment_info', 'service_class', 'is_active', 'is_internal', \
         'slow_threshold', 'source_code_info'
 
@@ -175,7 +175,7 @@ class InRAMService(object):
 
 # ################################################################################################################################
 
-class DeploymentInfo(object):
+class DeploymentInfo:
     __slots__ = 'to_process', 'total_services', 'total_size', 'total_size_human'
 
     def __init__(self):
@@ -241,7 +241,7 @@ def get_batch_indexes(services, max_batch_size):
 
 # ################################################################################################################################
 
-class ServiceStore(object):
+class ServiceStore:
     """ A store of Zato services.
     """
     def __init__(self, services=None, odb=None, server=None, is_testing=False):
@@ -328,7 +328,7 @@ class ServiceStore(object):
             schema_path = class_.schema
 
         if not os.path.exists(schema_path):
-            logger.warn('Could not find JSON Schema for `%s` in `%s` (class_.schema=%s)',
+            logger.warning('Could not find JSON Schema for `%s` in `%s` (class_.schema=%s)',
                 class_name, schema_path, class_.schema)
             return
 
@@ -370,7 +370,7 @@ class ServiceStore(object):
 
             # .. and it needs to be our own Model subclass ..
             if not issubclass(msg_class,  DataClassModel):
-                logger.warn('%s definition %s in service %s will be ignored - \'%s\' should be a subclass of %s',
+                logger.warning('%s definition %s in service %s will be ignored - \'%s\' should be a subclass of %s',
                 msg_type,
                 msg_class,
                 class_,
@@ -594,7 +594,7 @@ class ServiceStore(object):
         try:
             impl_name = self.name_to_impl_name[name]
         except KeyError:
-            logger.warn('No such key `{}` among `{}`'.format(name, sorted(self.name_to_impl_name)))
+            logger.warning('No such key `{}` among `{}`'.format(name, sorted(self.name_to_impl_name)))
             raise
         else:
             return self.new_instance(impl_name, *args, **kwargs)
@@ -1139,7 +1139,7 @@ class ServiceStore(object):
         try:
             return self.import_services_from_module_object(import_module(mod_name), is_internal)
         except Exception as e:
-            logger.warn('Could not import module `%s` (internal:%d) -> `%s`', mod_name, is_internal, e.args)
+            logger.warning('Could not import module `%s` (internal:%d) -> `%s`', mod_name, is_internal, e.args)
             return []
 
 # ################################################################################################################################

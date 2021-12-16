@@ -44,12 +44,12 @@ class Wait(ZatoCommand):
 
         # We need to have a local or remote server on input ..
         if not (args.path or args.address):
-            self.logger.warn('Exactly one of --path or --address is required (#1)')
+            self.logger.warning('Exactly one of --path or --address is required (#1)')
             sys.exit(self.SYS_ERROR.INVALID_INPUT)
 
         # .. but we cannot have both of them at the same time.
         if args.path and args.address:
-            self.logger.warn('Exactly one of --path or --address is required (#2)')
+            self.logger.warning('Exactly one of --path or --address is required (#2)')
             sys.exit(self.SYS_ERROR.INVALID_INPUT)
 
         # We need to look up the server's address through its client ..

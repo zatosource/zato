@@ -6,6 +6,8 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# pylint: disable=unused-import, unused-variable
+
 # stdlib
 from bisect import bisect_left
 from copy import deepcopy
@@ -101,7 +103,7 @@ class SortedList(_SortedList):
 
 # ################################################################################################################################
 
-class DeliveryTask(object):
+class DeliveryTask:
     """ Runs a greenlet responsible for delivery of messages for a given sub_key.
     """
     def __init__(self,
@@ -394,7 +396,7 @@ class DeliveryTask(object):
                 # Status of messages is updated in both SQL and RAM so we can now log success
                 # unless, for some reason, we were not able to remove the messages from self.delivery_list.
                 if result.status_code in (status_code.Error, status_code.Warning):
-                    logger.warn('Could not remove delivered messages from self.delivery_list `%s` (%s) -> `%s`',
+                    logger.warning('Could not remove delivered messages from self.delivery_list `%s` (%s) -> `%s`',
                         to_deliver, self.delivery_list, result.exception_list)
                 else:
                     len_delivered = len(delivered_msg_id_list)
@@ -512,7 +514,7 @@ class DeliveryTask(object):
 
                         if not self.keep_running:
                             msg = 'Skipping delivery loop after r:%s, kr:%d [lend:%d]'
-                            logger.warn(msg, result, self.keep_running, self.len_delivered)
+                            logger.warning(msg, result, self.keep_running, self.len_delivered)
                             continue
 
                         if result.is_ok:
@@ -544,8 +546,8 @@ class DeliveryTask(object):
                                         idx, len_exception_list, result.delivery_iter, self.topic_name, self.sub_key,
                                         e.args[0])
 
-                                    logger.warn(msg_logger)
-                                    logger_zato.warn(msg_logger_zato)
+                                    logger.warning(msg_logger)
+                                    logger_zato.warning(msg_logger_zato)
 
                                 # .. sleep only if there are still some messages to be delivered,
                                 # as it is possible that our lists has been cleared out since the last time we run ..
@@ -570,8 +572,8 @@ class DeliveryTask(object):
                                         sleep_msg = 'Sleeping for {}s after {} in iter #{}'.format(
                                             sleep_time, exc_len_msg, result.delivery_iter)
 
-                                        logger.warn(sleep_msg)
-                                        logger_zato.warn(sleep_msg)
+                                        logger.warning(sleep_msg)
+                                        logger_zato.warning(sleep_msg)
 
                                         sleep(sleep_time)
 
@@ -586,8 +588,8 @@ class DeliveryTask(object):
         except Exception:
             error_msg = 'Exception in delivery task for sub_key:`%s`, e:`%s`'
             e_formatted = format_exc()
-            logger.warn(error_msg, self.sub_key, e_formatted)
-            logger_zato.warn(error_msg, self.sub_key, e_formatted)
+            logger.warning(error_msg, self.sub_key, e_formatted)
+            logger_zato.warning(error_msg, self.sub_key, e_formatted)
 
 # ################################################################################################################################
 
@@ -822,7 +824,7 @@ class NonGDMessage(Message):
 
 # ################################################################################################################################
 
-class PubSubTool(object):
+class PubSubTool:
     """ A utility object for pub/sub-related tasks.
     """
     def __init__(self,
@@ -951,8 +953,8 @@ class PubSubTool(object):
         if not sub:
             all_subs = self.pubsub.get_all_subscriptions()
             msg = 'Sub key `%s` not found among `%s`'
-            logger.warn(msg, sub_key, all_subs)
-            logger_zato.warn(msg, sub_key, all_subs)
+            logger.warning(msg, sub_key, all_subs)
+            logger_zato.warning(msg, sub_key, all_subs)
 
             # Return explicitly
             return
@@ -985,7 +987,7 @@ class PubSubTool(object):
                 del self.delivery_tasks[sub_key]
 
             except Exception:
-                logger.warn('Exception during sub_key removal `%s`, e:`%s`', sub_key, format_exc())
+                logger.warning('Exception during sub_key removal `%s`, e:`%s`', sub_key, format_exc())
 
 # ################################################################################################################################
 
@@ -1030,8 +1032,8 @@ class PubSubTool(object):
                 self._add_non_gd_messages_by_sub_key(sub_key, messages)
         except Exception:
             e = format_exc()
-            logger.warn(e)
-            logger_zato.warn(e)
+            logger.warning(e)
+            logger_zato.warning(e)
 
 # ################################################################################################################################
 
@@ -1098,8 +1100,8 @@ class PubSubTool(object):
 
         except Exception:
             e = format_exc()
-            logger.warn(e)
-            logger_zato.warn(e)
+            logger.warning(e)
+            logger_zato.warning(e)
 
         finally:
             if session:
@@ -1114,8 +1116,8 @@ class PubSubTool(object):
             _ = spawn(self._handle_new_messages, ctx) # noqa: F841
         except Exception:
             e = format_exc()
-            logger.warn(e)
-            logger_zato.warn(e)
+            logger.warning(e)
+            logger_zato.warning(e)
 
 # ################################################################################################################################
 
@@ -1237,7 +1239,7 @@ class PubSubTool(object):
 
             except Exception:
                 for _logger in logger, logger_zato:
-                    _logger.warn('Could not enqueue initial messages for `%s` (%s -> %s), e:`%s`',
+                    _logger.warning('Could not enqueue initial messages for `%s` (%s -> %s), e:`%s`',
                         sub_key, topic_name, endpoint_name, format_exc())
 
             finally:

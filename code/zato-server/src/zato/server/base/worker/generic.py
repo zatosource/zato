@@ -217,7 +217,7 @@ class Generic(WorkerImpl):
             try:
                 func(config)
             except Exception:
-                self.logger.warn('Could not invoke `%s` with `%r`', func, config)
+                self.logger.warning('Could not invoke `%s` with `%r`', func, config)
                 raise
 
 # ################################################################################################################################

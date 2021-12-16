@@ -27,6 +27,7 @@ from zato.server.service import List, Opaque, Service
 from zato.common.ext.dataclasses import asdict
 from zato.common.util.eval_ import as_list
 from zato.common.util.file_system import fs_safe_name
+from zato.common.util.open_ import open_r
 from zato.server.apispec import Generator, FieldInfo
 from zato.server.service import AsIs, Bool
 
@@ -124,7 +125,7 @@ class GetSphinx(Service):
             for file_name in file_names:
                 relative_path = os.path.join(base_dir, file_name)
 
-                f = open(os.path.join(dir_path, file_name))
+                f = open_r(os.path.join(dir_path, file_name))
                 contents = f.read()
                 f.close()
 

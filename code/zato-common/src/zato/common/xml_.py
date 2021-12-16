@@ -86,7 +86,7 @@ zato_details_xpath = etree.XPath(zato_details_path, namespaces=common_namespaces
 # ################################################################################################################################
 # ################################################################################################################################
 
-class path(object):
+class path:
     def __init__(self, path, raise_on_not_found=False, ns='', text_only=False):
         self.path = path
         self.ns = ns

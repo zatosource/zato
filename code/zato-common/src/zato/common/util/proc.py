@@ -23,6 +23,7 @@ from six import PY2
 
 # Zato
 from zato.common.api import CLI_ARG_SEP
+from zato.common.util.open_ import open_r
 
 # ################################################################################################################################
 
@@ -56,7 +57,7 @@ def get_executable():
 
 # ################################################################################################################################
 
-class _StdErr(object):
+class _StdErr:
 
     # Some log messages (like the ones produced by PyKafka) go to stderr but they are not really errors,
     # in which case we need to ignore them.
@@ -75,7 +76,7 @@ class _StdErr(object):
 
         while time() - now < self.timeout:
             sleep(0.1)
-            _stderr = open(self.path)
+            _stderr = open_r(self.path)
             _err = _stderr.read()
             if _err and (not self.should_ignore(_err)):
                 return _err
@@ -127,7 +128,7 @@ def start_process(component_name, executable, run_in_fg, cli_options, extra_cli_
         _err = _stderr.wait_for_error()
         if _err:
             if 'pykafka.rdkafka' not in _err:
-                logger.warn('Stderr received from program `%s` e:`%s`, kw:`%s`', program, _err, run_kwargs)
+                logger.warning('Stderr received from program `%s` e:`%s`, kw:`%s`', program, _err, run_kwargs)
                 sys.exit(failed_to_start_err)
 
     except KeyboardInterrupt:

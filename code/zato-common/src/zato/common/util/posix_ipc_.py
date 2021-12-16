@@ -41,7 +41,7 @@ _shmem_pattern = '/zato-shmem-{}'
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SharedMemoryIPC(object):
+class SharedMemoryIPC:
     """ An IPC object which Zato processes use to communicate with each other using mmap files
     backed by shared memory. All data in shared memory is kept as a dictionary and serialized as JSON
     each time any read or write is needed.
@@ -53,6 +53,7 @@ class SharedMemoryIPC(object):
         self.size = -1
         self._mmap = None
         self.running = False
+        self._mem = None
 
 # ################################################################################################################################
 
@@ -195,7 +196,7 @@ class SharedMemoryIPC(object):
 
                 # Same message for logger and exception
                 msg = 'Could not get parent/key `{}` `{}` after {}s'.format(parent, key, timeout)
-                logger.warn(msg)
+                logger.warning(msg)
                 raise KeyError(msg)
 
             # No exception = re-raise exception immediately

@@ -36,7 +36,7 @@ def get_queue_pool(pool_kwargs):
 
 # ################################################################################################################################
 
-class SimpleSession(object):
+class SimpleSession:
     """ A simple object simulating SQLAlchemy sessions.
     """
     def __init__(self, api):
@@ -57,7 +57,7 @@ class SimpleSession(object):
 
 # ################################################################################################################################
 
-class MSSQLDirectAPI(object):
+class MSSQLDirectAPI:
     """ An object through which MS SQL connections can be obtained and stored procedures invoked.
     """
     name = MS_SQL.ZATO_DIRECT
@@ -138,7 +138,7 @@ class MSSQLDirectAPI(object):
 
         except Exception:
             has_exception = True
-            logger.warn(format_exc())
+            logger.warning(format_exc())
             raise
 
         finally:
@@ -147,9 +147,9 @@ class MSSQLDirectAPI(object):
             conn.commit()
             conn.close()
 
-            # Return the result only if there was no exception along the way
-            if not has_exception:
-                return result
+        # Return the result only if there was no exception along the way
+        if not has_exception:
+            return result
 
 # ################################################################################################################################
 
@@ -172,7 +172,7 @@ class MSSQLDirectAPI(object):
                     break
 
         except Exception:
-            logger.warn(format_exc())
+            logger.warning(format_exc())
             raise
 
         finally:

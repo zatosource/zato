@@ -37,7 +37,6 @@ from past.builtins import unicode as past_unicode
 
 if 0:
     from zato.simpleio import CySimpleIO
-
     CySimpleIO = CySimpleIO
     past_unicode = past_unicode
 
@@ -53,7 +52,7 @@ direct_payload:tuple = simple_types + (EtreeElement, ObjectifiedElement)
 # ################################################################################################################################
 
 @cy.cclass
-class Response(object):
+class Response:
     """ A response from a service's invocation.
     """
     # Public attributes

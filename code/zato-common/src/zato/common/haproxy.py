@@ -15,6 +15,7 @@ from traceback import format_exc
 
 # Zato
 from zato.common.util.api import make_repr, timeouting_popen
+from zato.common.util.open_ import open_r
 
 logger = getLogger(__name__)
 
@@ -62,7 +63,7 @@ tcp_log = {
 reversed_http_log = {v[0]: k for k, v in http_log.items()}
 reversed_tcp_log = {v[0]: k for k, v in tcp_log.items()}
 
-class Config(object):
+class Config:
     """ An object for representing a HAProxy configuration file.
     """
     def __init__(self):
@@ -140,7 +141,7 @@ def validate_haproxy_config(config_data, haproxy_command):
             tf.flush()
 
             common_msg = 'config_file:`{}`'
-            common_msg = common_msg.format(open(tf.name).read())
+            common_msg = common_msg.format(open_r(tf.name).read())
 
             timeout_msg = 'HAProxy didn\'t respond in `{}` seconds. '
             rc_non_zero_msg = 'Failed to validate the config file using HAProxy. '

@@ -168,7 +168,7 @@ _UNRECOGNIZED_ARGS_ATTR = '_unrecognized_args'
 # Utility functions and classes
 # =============================
 
-class _AttributeHolder(object):
+class _AttributeHolder:
     """Abstract base class that provides __repr__.
 
     The __repr__ method returns a string in the format::
@@ -203,7 +203,7 @@ def _ensure_value(namespace, name, value):
 # Formatting Help
 # ===============
 
-class HelpFormatter(object):
+class HelpFormatter:
     """Formatter for generating usage messages and argument help strings.
 
     Only the name of this class is considered a public API. All the methods
@@ -251,7 +251,7 @@ class HelpFormatter(object):
         assert self._current_indent >= 0, 'Indent decreased below 0.'
         self._level -= 1
 
-    class _Section(object):
+    class _Section:
 
         def __init__(self, formatter, parent, heading=None):
             self.formatter = formatter
@@ -1156,7 +1156,7 @@ class _SubParsersAction(Action):
 # Type classes
 # ==============
 
-class FileType(object):
+class FileType:
     """Factory for creating file object types
 
     Instances of FileType are typically passed as type= arguments to the
@@ -1222,7 +1222,7 @@ class Namespace(_AttributeHolder):
         return key in self.__dict__
 
 
-class _ActionsContainer(object):
+class _ActionsContainer:
 
     def __init__(self,
                  description,

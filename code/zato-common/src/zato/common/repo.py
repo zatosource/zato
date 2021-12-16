@@ -32,7 +32,7 @@ logger_sh.setLevel(logging.WARN)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _BaseRepoManager(object):
+class _BaseRepoManager:
     def __init__(self, repo_location='.'):
         self.repo_location = os.path.abspath(os.path.expanduser(repo_location))
 

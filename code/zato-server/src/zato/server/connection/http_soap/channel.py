@@ -173,7 +173,7 @@ def get_client_error_wrapper(transport, data_format):
 
 # ################################################################################################################################
 
-class _CachedResponse(object):
+class _CachedResponse:
     """ A wrapper for responses served from caches.
     """
     __slots__ = ('payload', 'content_type', 'headers', 'status_code')
@@ -186,7 +186,7 @@ class _CachedResponse(object):
 
 # ################################################################################################################################
 
-class _HashCtx(object):
+class _HashCtx:
     """ Encapsulates information needed to compute a hash value of an incoming request.
     """
     def __init__(self, raw_request, channel_item, channel_params, wsgi_environ):
@@ -197,7 +197,7 @@ class _HashCtx(object):
 
 # ################################################################################################################################
 
-class RequestDispatcher(object):
+class RequestDispatcher:
     """ Dispatches all the incoming HTTP/SOAP requests to appropriate handlers.
     """
     def __init__(self, server=None, url_data=None, security=None, request_handler=None, simple_io_config=None,
@@ -300,7 +300,7 @@ class RequestDispatcher(object):
 
                 # Raise 404 if the channel is inactive
                 if not channel_item['is_active']:
-                    logger.warn('url_data:`%s` is not active, raising NotFound', sorted(url_match.items()))
+                    logger.warning('url_data:`%s` is not active, raising NotFound', sorted(url_match.items()))
                     raise NotFound(cid, 'Channel inactive')
 
                 # We need to read security info here so we know if POST needs to be
@@ -533,7 +533,7 @@ class RequestDispatcher(object):
 
 # ################################################################################################################################
 
-class RequestHandler(object):
+class RequestHandler:
     """ Handles individual HTTP requests to a given service.
     """
     def __init__(self, server=None):
@@ -663,7 +663,7 @@ class RequestHandler(object):
         """
         service, is_active = self.server.service_store.new_instance(channel_item.service_impl_name) # type: (Service, bool)
         if not is_active:
-            logger.warn('Could not invoke an inactive service:`%s`, cid:`%s`', service.get_name(), cid)
+            logger.warning('Could not invoke an inactive service:`%s`, cid:`%s`', service.get_name(), cid)
             raise NotFound(cid, _response_404.format(
                 path_info, wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid))
 

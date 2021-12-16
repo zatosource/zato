@@ -353,7 +353,7 @@ def _get_config(conf, bunchified, needs_user_config, repo_location=None):
             for name, path in user_config.items():
                 path = absolutize(path, repo_location)
                 if not os.path.exists(path):
-                    logger.warn('User config not found `%s`, name:`%s`', path, name)
+                    logger.warning('User config not found `%s`, name:`%s`', path, name)
                 else:
                     user_conf = ConfigObj(path)
                     user_conf = bunchify(user_conf) if bunchified else user_conf
@@ -367,8 +367,6 @@ def get_config(repo_location, config_name, bunchified=True, needs_user_config=Tr
     raise_on_error=False, log_exception=True):
     """ Returns the configuration object. Will load additional user-defined config files, if any are available.
     """
-    # type: (str, str, bool, bool, object, object) -> Bunch
-
     # Default output to produce
     result = Bunch()
 
@@ -378,7 +376,7 @@ def get_config(repo_location, config_name, bunchified=True, needs_user_config=Tr
         result = _get_config(conf, bunchified, needs_user_config, repo_location)
     except Exception:
         if log_exception:
-            logger.warn('Error while reading %s from %s; e:`%s`', config_name, repo_location, format_exc())
+            logger.warning('Error while reading %s from %s; e:`%s`', config_name, repo_location, format_exc())
         if raise_on_error:
             raise
         else:
@@ -391,7 +389,6 @@ def get_config(repo_location, config_name, bunchified=True, needs_user_config=Tr
 def get_config_from_string(data):
     """ A simplified version of get_config which creates a config object from string, skipping any user-defined config files.
     """
-    # type: (str) -> Bunch
     buff = StringIO()
     buff.write(data)
     buff.seek(0)
@@ -465,7 +462,6 @@ def get_body_payload(body):
 def payload_from_request(json_parser, cid, request, data_format, transport, channel_item=None):
     """ Converts a raw request to a payload suitable for usage with SimpleIO.
     """
-    # type: (SIMDJSONParser, str, object, str, str, object)
     if request is not None:
 
         #
@@ -493,7 +489,7 @@ def payload_from_request(json_parser, cid, request, data_format, transport, chan
                     if hasattr(payload, 'as_dict'):
                         payload = payload.as_dict()
                 except ValueError:
-                    logger.warn('Could not parse request as JSON:`%s`, (%s), e:`%s`', request, type(request), format_exc())
+                    logger.warning('Could not parse request as JSON:`%s`, (%s), e:`%s`', request, type(request), format_exc())
                     raise
             else:
                 payload = request
@@ -577,7 +573,7 @@ def is_python_file(name):
 
 # ################################################################################################################################
 
-class _DummyLink(object):
+class _DummyLink:
     """ A dummy class for staying consistent with pip's API in certain places
     below.
     """
@@ -586,7 +582,7 @@ class _DummyLink(object):
 
 # ################################################################################################################################
 
-class ModuleInfo(object):
+class ModuleInfo:
     def __init__(self, file_name, module):
         self.file_name = file_name
         self.module = module
@@ -790,8 +786,6 @@ def dotted_getattr(o, path):
 # ################################################################################################################################
 
 def wait_for_odb_service(session, cluster_id, service_name):
-    # type: (object, int, str) -> Service
-
     # Assume we do not have it
     service = None
 
@@ -872,7 +866,7 @@ def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
                 session.commit()
 
             except Exception:
-                logger.warn(format_exc())
+                logger.warning(format_exc())
 
             else:
                 logger.info('Initial job added `%s`', job.name)
@@ -895,7 +889,7 @@ def validate_input_dict(cid, *validation_info):
             msg = 'Invalid {}:[{}]'.format(key_name, key)
             log_msg = '{} (attrs: {})'.format(msg, source.attrs)
 
-            logger.warn(log_msg)
+            logger.warning(log_msg)
             raise ZatoException(cid, msg)
 
 # ################################################################################################################################
@@ -903,7 +897,7 @@ def validate_input_dict(cid, *validation_info):
 # Code below taken from tripod https://github.com/shayne/tripod/blob/master/tripod/sampler.py and slightly modified
 # under the terms of LGPL (see LICENSE.txt file for details).
 
-class SafePrettyPrinter(PrettyPrinter, object):
+class SafePrettyPrinter(PrettyPrinter):
     def format(self, obj, context, maxlevels, level):
         try:
             return super(SafePrettyPrinter, self).format(
@@ -1093,11 +1087,13 @@ def validate_xpath(expr):
 # ################################################################################################################################
 
 def get_haproxy_agent_pidfile(component_dir):
-    json_config = loads(open(os.path.join(component_dir, 'config', 'repo', 'lb-agent.conf')).read())
+    json_config = loads(
+        open(os.path.join(component_dir, 'config', 'repo', 'lb-agent.conf'), encoding='utf8').read()
+        )
     return os.path.abspath(os.path.join(component_dir, json_config['pid_file']))
 
 def store_pidfile(component_dir, pidfile=MISC.PIDFILE):
-    open(os.path.join(component_dir, pidfile), 'w').write('{}'.format(os.getpid()))
+    open(os.path.join(component_dir, pidfile), 'w', encoding='utf8').write('{}'.format(os.getpid()))
 
 # ################################################################################################################################
 
@@ -1115,7 +1111,7 @@ def validate_tls_from_payload(payload, is_key=False):
         tf.write(payload)
         tf.flush()
 
-        pem = open(tf.name).read()
+        pem = open(tf.name, encoding='utf8').read()
 
         cert_info = crypto.load_certificate(crypto.FILETYPE_PEM, pem)
         cert_info = sorted(cert_info.get_subject().get_components())
@@ -1153,7 +1149,7 @@ def store_tls(root_dir, payload, is_key=False):
     info = get_tls_from_payload(payload, is_key)
 
     pem_file_path = get_tls_full_path(root_dir, TLS.DIR_KEYS_CERTS if is_key else TLS.DIR_CA_CERTS, info)
-    pem_file = open(pem_file_path, 'w')
+    pem_file = open(pem_file_path, 'w', encoding='utf8')
 
     try:
         portalocker.lock(pem_file, portalocker.LOCK_EX)
@@ -1225,7 +1221,7 @@ class StaticConfig(Bunch):
 
     def read_file(self, full_path, file_name):
         # type: (str, str) -> None
-        f = open(full_path)
+        f = open(full_path, encoding='utf8')
         file_contents = f.read()
         f.close()
 
@@ -1271,7 +1267,7 @@ class StaticConfig(Bunch):
                 if elem.is_file():
                     self.read_file(full_path, elem.name)
             except Exception as e:
-                logger.warn('Could not read file `%s`, e:`%s`', full_path, e.args)
+                logger.warning('Could not read file `%s`, e:`%s`', full_path, e.args)
 
 # ################################################################################################################################
 
@@ -1554,9 +1550,9 @@ def startup_service_payload_from_path(name, value, repo_location):
         path = orig_path
 
     try:
-        payload = open(path).read()
+        payload = open(path, encoding='utf8').read()
     except Exception:
-        logger.warn(
+        logger.warning(
             'Could not open payload path:`%s` `%s`, skipping startup service:`%s`, e:`%s`', orig_path, path, name, format_exc())
     else:
         return payload
@@ -1719,7 +1715,7 @@ def get_response_value(response):
 # ################################################################################################################################
 
 def get_lb_agent_json_config(repo_dir):
-    return loads(open(os.path.join(repo_dir, 'lb-agent.conf')).read())
+    return loads(open(os.path.join(repo_dir, 'lb-agent.conf'), encoding='utf8').read())
 
 # ################################################################################################################################
 

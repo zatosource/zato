@@ -55,7 +55,7 @@ class ZatoEventsIPC(SubprocessIPC):
                 s.settimeout(1)
                 s.connect(('127.0.0.1', self.ipc_tcp_port))
             except Exception as e:
-                logger.warn('IPC ping failed. Could not connect to 127.0.0.1:%s; e=%s', self.ipc_tcp_port, e.args)
+                logger.warning('IPC ping failed. Could not connect to 127.0.0.1:%s; e=%s', self.ipc_tcp_port, e.args)
             else:
                 return True
 

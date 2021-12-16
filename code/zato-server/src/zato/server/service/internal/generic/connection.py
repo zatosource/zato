@@ -310,7 +310,7 @@ class Ping(_BaseService):
                 ping_func(self.request.input.id)
             except Exception:
                 exc = format_exc()
-                self.logger.warn(exc)
+                self.logger.warning(exc)
                 self.response.payload.info = exc
             else:
                 response_time = datetime.utcnow() - start_time
@@ -348,7 +348,7 @@ class Invoke(AdminService):
             except Exception:
                 exc = format_exc()
                 response = exc
-                self.logger.warn(exc)
+                self.logger.warning(exc)
             finally:
                 self.response.payload.response_data = response
 

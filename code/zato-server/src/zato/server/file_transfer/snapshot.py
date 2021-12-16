@@ -363,11 +363,11 @@ class BaseRemoteSnapshotMaker(AbstractSnapshotMaker):
             return snapshot
 
         except PathAccessException as e:
-            logger.warn('%s. File transfer channel `%s` (%s); e:`%s`',
+            logger.warning('%s. File transfer channel `%s` (%s); e:`%s`',
                 e.args[0], self.channel_config.name, self.channel_config.source_type, format_exc())
 
         except Exception:
-            logger.warn('Exception caught in get_snapshot (%s), e:`%s`', self.channel_config.source_type, format_exc())
+            logger.warning('Exception caught in get_snapshot (%s), e:`%s`', self.channel_config.source_type, format_exc())
             raise
 
         finally:

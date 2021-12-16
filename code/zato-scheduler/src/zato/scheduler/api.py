@@ -65,13 +65,13 @@ class SchedulerAPI:
             try:
                 spawn_greenlet(self.sched.run)
             except Exception:
-                logger.warn(format_exc())
+                logger.warning(format_exc())
 
             while not self.sched.ready:
                 sleep(0.1)
 
         except Exception:
-            logger.warn(format_exc())
+            logger.warning(format_exc())
 
 # ################################################################################################################################
 

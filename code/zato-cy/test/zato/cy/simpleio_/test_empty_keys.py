@@ -28,7 +28,7 @@ class SkipEmptyTestCase(BaseSIOTestCase):
             self.get_sio(SimpleIO, test_class_name)
 
         e = ctx.exception # type: ValueError
-        self.assertEquals(e.args[0], 'Cannot specify both skip_empty_input and SkipEmpty in a SimpleIO definition')
+        self.assertEqual(e.args[0], 'Cannot specify both skip_empty_input and SkipEmpty in a SimpleIO definition')
 
 # ################################################################################################################################
 
@@ -42,7 +42,7 @@ class SkipEmptyTestCase(BaseSIOTestCase):
 
         # The single string should be converted to a set
         self.assertTrue(isinstance(result.definition.skip_empty.skip_input_set, set))
-        self.assertEquals(list(result.definition.skip_empty.skip_output_set), ['abc'])
+        self.assertEqual(list(result.definition.skip_empty.skip_output_set), ['abc'])
 
         # This should be False because skip_empty_keys deals with responses, not requests
         self.assertFalse(result.definition.skip_empty.skip_all_empty_input)
@@ -58,7 +58,7 @@ class SkipEmptyTestCase(BaseSIOTestCase):
         result = self.get_sio(SimpleIO, test_class_name)
 
         self.assertTrue(isinstance(result.definition.skip_empty.skip_input_set, set))
-        self.assertEquals(sorted(result.definition.skip_empty.skip_output_set), ['abc', 'def'])
+        self.assertEqual(sorted(result.definition.skip_empty.skip_output_set), ['abc', 'def'])
 
         # This should be False as we gave a tuple on input, rather than True
         self.assertFalse(result.definition.skip_empty.skip_all_empty_input)
@@ -73,7 +73,7 @@ class SkipEmptyTestCase(BaseSIOTestCase):
         result = self.get_sio(SimpleIO, test_class_name)
 
         self.assertTrue(isinstance(result.definition.skip_empty.skip_input_set, set))
-        self.assertEquals(list(result.definition.skip_empty.skip_input_set), [])
+        self.assertEqual(list(result.definition.skip_empty.skip_input_set), [])
         self.assertFalse(result.definition.skip_empty.skip_all_empty_input)
 
         # This should be False if only skip_empty_keys is used, no matter if skip_empty_keys is True or False
@@ -89,7 +89,7 @@ class SkipEmptyTestCase(BaseSIOTestCase):
         result = self.get_sio(SimpleIO, test_class_name)
 
         self.assertTrue(isinstance(result.definition.skip_empty.skip_input_set, set))
-        self.assertEquals(list(result.definition.skip_empty.skip_input_set), [])
+        self.assertEqual(list(result.definition.skip_empty.skip_input_set), [])
         self.assertFalse(result.definition.skip_empty.skip_all_empty_input)
 
         # This should be False if only skip_empty_keys is used, no matter if skip_empty_keys is True or False
@@ -104,8 +104,8 @@ class SkipEmptyTestCase(BaseSIOTestCase):
 
         result = self.get_sio(SimpleIO, test_class_name)
         self.assertTrue(result.has_bool_force_empty_keys)
-        self.assertEquals(list(result.definition.skip_empty.skip_output_set), [])
-        self.assertEquals(list(result.definition.skip_empty.force_empty_output_set), [])
+        self.assertEqual(list(result.definition.skip_empty.skip_output_set), [])
+        self.assertEqual(list(result.definition.skip_empty.force_empty_output_set), [])
         self.assertFalse(result.definition.skip_empty.skip_all_empty_output)
 
 # ################################################################################################################################
@@ -117,8 +117,8 @@ class SkipEmptyTestCase(BaseSIOTestCase):
 
         result = self.get_sio(SimpleIO, test_class_name)
         self.assertTrue(result.has_bool_force_empty_keys)
-        self.assertEquals(list(result.definition.skip_empty.skip_output_set), [])
-        self.assertEquals(list(result.definition.skip_empty.force_empty_output_set), [])
+        self.assertEqual(list(result.definition.skip_empty.skip_output_set), [])
+        self.assertEqual(list(result.definition.skip_empty.force_empty_output_set), [])
         self.assertFalse(result.definition.skip_empty.skip_all_empty_output)
 
 # ################################################################################################################################
@@ -132,8 +132,8 @@ class SkipEmptyTestCase(BaseSIOTestCase):
 
         result = self.get_sio(SimpleIO, test_class_name)
         self.assertFalse(result.has_bool_force_empty_keys)
-        self.assertEquals(list(result.definition.skip_empty.skip_output_set), [])
-        self.assertEquals(list(result.definition.skip_empty.force_empty_output_set), [])
+        self.assertEqual(list(result.definition.skip_empty.skip_output_set), [])
+        self.assertEqual(list(result.definition.skip_empty.force_empty_output_set), [])
         self.assertFalse(result.definition.skip_empty.skip_all_empty_output)
 
 # ################################################################################################################################

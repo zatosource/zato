@@ -16,7 +16,7 @@ from django.contrib.auth.models import User
 from zato.admin.web import DATE_FORMATS, MONTH_YEAR_FORMATS, TIME_FORMATS
 from zato.common.json_internal import loads
 
-class TOTPData(object):
+class TOTPData:
     def __init__(self):
         self.key = None
         self.label = None

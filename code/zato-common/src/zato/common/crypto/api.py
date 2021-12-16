@@ -39,7 +39,7 @@ class SecretKeyError(Exception):
 
 # ################################################################################################################################
 
-class CryptoManager(object):
+class CryptoManager:
     """ Used for encryption and decryption of secrets.
     """
     def __init__(self, repo_dir=None, secret_key=None, stdin_data=None, well_known_data=None):
@@ -263,7 +263,7 @@ class ServerCryptoManager(CryptoManager):
 
 # ################################################################################################################################
 
-class HashParamsComputer(object):
+class HashParamsComputer:
     """ Computes parameters for hashing purposes, e.g. number of rounds in PBKDF2.
     """
     def __init__(self, goal, header_func=None, progress_func=None, footer_func=None, scheme='pbkdf2_sha512', loops=10,

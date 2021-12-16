@@ -148,7 +148,7 @@ _interact_update_interval = WEB_SOCKET.DEFAULT.INTERACT_UPDATE_INTERVAL
 
 # ################################################################################################################################
 
-class HookCtx(object):
+class HookCtx:
     __slots__ = (
         'hook_type', 'config', 'pub_client_id', 'ext_client_id', 'ext_client_name', 'connection_time', 'user_data',
         'forwarded_for', 'forwarded_for_fqdn', 'peer_address', 'peer_host', 'peer_fqdn', 'peer_conn_info_pretty', 'msg'
@@ -162,7 +162,7 @@ class HookCtx(object):
 
 # ################################################################################################################################
 
-class TokenInfo(object):
+class TokenInfo:
     def __init__(self, value, ttl, _now=datetime.utcnow):
         self.value = value
         self.ttl = ttl
@@ -846,7 +846,7 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def on_pings_missed(self, reason):
+    def on_pings_missed(self):
         logger.warning(
             'Peer %s (%s) missed %s/%s pings, forcing its connection to close (%s)',
             self._peer_address, self._peer_fqdn, self.pings_missed, self.pings_missed_threshold,
@@ -1007,7 +1007,7 @@ class WebSocket(_WebSocket):
                 _msg = 'Service response discarded (client disconnected), cid:`%s`, msg.meta:`%s`'
                 _meta = msg.get_meta()
                 logger.warning(_msg, _meta)
-                logger_zato.warn(_msg, _meta)
+                logger_zato.warning(_msg, _meta)
 
 # ################################################################################################################################
 
@@ -1037,7 +1037,7 @@ class WebSocket(_WebSocket):
             if not hook:
                 log_msg = 'Ignoring pub/sub response, on_pubsub_response hook not implemented for `%s`, conn:`%s`, msg:`%s`'
                 logger.warning(log_msg, self.config.name, self.peer_conn_info_pretty, msg)
-                logger_zato.warn(log_msg, self.config.name, self.peer_conn_info_pretty, msg)
+                logger_zato.warning(log_msg, self.config.name, self.peer_conn_info_pretty, msg)
             else:
                 request = self._get_hook_request()
                 request['msg'] = msg
@@ -1073,8 +1073,8 @@ class WebSocket(_WebSocket):
             except UnicodeDecodeError as e:
                 reason = 'Invalid UTF-8 bytes'
                 msg = '{}; `{}`'.format(reason, e.args)
-                logger.warn(msg)
-                logger_zato.warn(msg)
+                logger.warning(msg)
+                logger_zato.warning(msg)
                 if self.has_session_opened:
                     response = ErrorResponse('<no-cid>', '<no-msg-id>', UNPROCESSABLE_ENTITY, reason)
                     log_msg = 'About to send the invalid UTF-8 message to client'
@@ -1135,8 +1135,8 @@ class WebSocket(_WebSocket):
                 except RuntimeError as e:
                     if e.args[0] == _cannot_send:
                         msg = 'Ignoring message (socket terminated #1), cid:`%s`, request:`%s` conn:`%s`'
-                        logger.warn(msg, cid, request, self.peer_conn_info_pretty)
-                        logger_zato.warn(msg, cid, request, self.peer_conn_info_pretty)
+                        logger.warning(msg, cid, request, self.peer_conn_info_pretty)
+                        logger_zato.warning(msg, cid, request, self.peer_conn_info_pretty)
                     else:
                         raise
 
@@ -1620,6 +1620,8 @@ class ChannelWebSocket(Connector):
 # ################################################################################################################################
 
 if __name__ == '__main__':
+
+    # noqa
 
     # stdlib
     import os

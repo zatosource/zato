@@ -45,7 +45,7 @@ headers = [('Content-Type', 'application/json')]
 
 # ################################################################################################################################
 
-class Config(object):
+class Config:
     """ Encapsulates configuration of various scheduler-related layers.
     """
     def __init__(self):
@@ -61,7 +61,7 @@ class Config(object):
 
 # ################################################################################################################################
 
-class SchedulerServer(object):
+class SchedulerServer:
     """ Main class spawning scheduler-related tasks and listening for HTTP API requests.
     """
     def __init__(self, config, repo_location):
@@ -192,6 +192,6 @@ class SchedulerServer(object):
             start_response(ok, headers)
             return [b'{}\n']
         except Exception:
-            logger.warn(format_exc())
+            logger.warning(format_exc())
 
 # ################################################################################################################################

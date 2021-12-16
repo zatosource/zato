@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# flake8: noqa
+# pylint: disable=all
+
 """
 Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
@@ -22,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-class Reply(object):
+class Reply:
     __slots__ = ('service_name', 'body')
 
     def __init__(self, service_name, body):

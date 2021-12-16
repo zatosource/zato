@@ -57,7 +57,7 @@ class GetInfo(Service):
                         response = loads(response)['response']
                         server_info['info'] = loads(response['info'])
                     else:
-                        self.logger.warn(response)
+                        self.logger.warning(response)
 
         self.response.content_type = 'application/json'
         self.response.payload = dumps(out)
@@ -67,7 +67,7 @@ class GetInfo(Service):
 class GetServerInfo(Service):
     """ Collects information about a server it's invoked on.
     """
-    class SimpleIO(object):
+    class SimpleIO:
         output_required = ('info',)
 
     def handle(self):
@@ -79,7 +79,7 @@ class GetServerInfo(Service):
 class GetWorkerPids(Service):
     """ Returns PIDs of all workers of current server.
     """
-    class SimpleIO(object):
+    class SimpleIO:
         output_required = (List('pids'),)
 
     def handle(self):

@@ -81,9 +81,9 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
         parsed = self._parse(sio, data)
 
         self.assertIsInstance(parsed, datetime)
-        self.assertEquals(parsed.year, year)
-        self.assertEquals(parsed.month, month)
-        self.assertEquals(parsed.day, day)
+        self.assertEqual(parsed.year, year)
+        self.assertEqual(parsed.month, month)
+        self.assertEqual(parsed.day, day)
 
 # ################################################################################################################################
 
@@ -114,12 +114,12 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
         parsed = self._parse(sio, data)
 
         self.assertIsInstance(parsed, datetime)
-        self.assertEquals(parsed.year, year)
-        self.assertEquals(parsed.month, month)
-        self.assertEquals(parsed.day, day)
-        self.assertEquals(parsed.hour, hour)
-        self.assertEquals(parsed.minute, minute)
-        self.assertEquals(parsed.second, second)
+        self.assertEqual(parsed.year, year)
+        self.assertEqual(parsed.month, month)
+        self.assertEqual(parsed.day, day)
+        self.assertEqual(parsed.hour, hour)
+        self.assertEqual(parsed.minute, minute)
+        self.assertEqual(parsed.second, second)
 
 # ################################################################################################################################
 
@@ -152,7 +152,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
         parsed = self._parse(sio, data)
 
         self.assertIsInstance(parsed, decimal_Decimal)
-        self.assertEquals(str(parsed), data)
+        self.assertEqual(str(parsed), data)
 
 # ################################################################################################################################
 
@@ -274,7 +274,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
         parsed = self._parse(sio, data)
 
         self.assertIsInstance(parsed, float)
-        self.assertEquals(parsed, 1.23)
+        self.assertEqual(parsed, 1.23)
 
 # ################################################################################################################################
 
@@ -284,7 +284,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
         parsed = self._parse(sio, data)
 
         self.assertIsInstance(parsed, (int, long))
-        self.assertEquals(parsed, int(data))
+        self.assertEqual(parsed, int(data))
 
 # ################################################################################################################################
 
@@ -294,7 +294,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
         parsed = self._parse(sio, data)
 
         self.assertIsInstance(parsed, tuple)
-        self.assertEquals(parsed, data)
+        self.assertEqual(parsed, data)
 
 # ################################################################################################################################
 
@@ -304,7 +304,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
         parsed = self._parse(sio, data)
 
         self.assertIsInstance(parsed, list)
-        self.assertEquals(parsed, [data])
+        self.assertEqual(parsed, [data])
 
 # ################################################################################################################################
 
@@ -314,7 +314,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
         parsed = self._parse(sio, data)
 
         self.assertIsInstance(parsed, list)
-        self.assertEquals(parsed, [data])
+        self.assertEqual(parsed, [data])
 
 # ################################################################################################################################
 
@@ -339,7 +339,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
         parsed = self._parse(sio, data)
 
         self.assertIsInstance(parsed, basestring)
-        self.assertEquals(parsed, unicode(data))
+        self.assertEqual(parsed, unicode(data))
 
 # ################################################################################################################################
 
@@ -350,7 +350,7 @@ class ElemsFromJSONTestCase(BaseSIOTestCase):
         parsed = self._parse(sio, data)
 
         self.assertIsInstance(parsed, uuid_UUID)
-        self.assertEquals(str(parsed), data)
+        self.assertEqual(str(parsed), data)
 
 # ################################################################################################################################
 # ################################################################################################################################

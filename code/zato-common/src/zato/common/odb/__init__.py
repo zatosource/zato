@@ -114,12 +114,12 @@ def drop_all(engine):
         try:
             engine.execute(text('DROP TABLE %s CASCADE' % table))
         except Exception:
-            logger.warn(format_exc())
+            logger.warning(format_exc())
 
     for seq in [name for (name,) in engine.execute(text(sequence_sql))]:
         try:
             engine.execute(text('DROP SEQUENCE %s CASCADE' % seq))
         except Exception:
-            logger.warn(format_exc())
+            logger.warning(format_exc())
 
 # ################################################################################################################################

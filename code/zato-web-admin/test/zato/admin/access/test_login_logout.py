@@ -37,8 +37,8 @@ class LoginLogoutTestCase(BaseTestCase):
         self.login()
 
         # .. confirm that we are in ..
-        self.assertEquals(self.client.title, 'Hello - Zato')
-        self.assertEquals(self.client.current_url, address)
+        self.assertEqual(self.client.title, 'Hello - Zato')
+        self.assertEqual(self.client.current_url, address)
 
         # .. now, log us out ..
         logout = self.client.find_element_by_partial_link_text('Log out') # type: WebElement

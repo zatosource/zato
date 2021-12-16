@@ -73,7 +73,7 @@ class Create(AdminService):
                 shutil.rmtree(item)
             else:
                 msg = "Could not delete `%s`, it's neither file nor a directory, stat:`%s`"
-                self.logger.warn(msg, item, os.stat(item))
+                self.logger.warning(msg, item, os.stat(item))
 
 # ################################################################################################################################
 
@@ -285,7 +285,7 @@ class Create(AdminService):
         # .. we could not find anything to deploy in the file.
         else:
             msg = 'No services nor models were deployed from module `%s`'
-            self.logger.warn(msg, payload_name)
+            self.logger.warning(msg, payload_name)
 
 # ################################################################################################################################
 
@@ -327,7 +327,7 @@ class Create(AdminService):
             # This shouldn't really happen at all because the pickup notifier is to
             # filter such things out but life is full of surprises
             self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.IGNORED)
-            self.logger.warn(
+            self.logger.warning(
                 'Ignoring package id:`%s`, payload_name:`%s`, not a Python file nor an archive', dp.id, dp.payload_name)
 
 # ################################################################################################################################
