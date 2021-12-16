@@ -24,7 +24,7 @@ from zato.url_dispatcher import Matcher
 # ################################################################################################################################
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from zato.common.model.wsx import WSXConnectorConfig
 
     WSXConnectorConfig = WSXConnectorConfig

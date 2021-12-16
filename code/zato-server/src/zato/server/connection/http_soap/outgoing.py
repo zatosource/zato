@@ -42,7 +42,7 @@ from zato.server.connection.queue import ConnectionQueue
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from zato.server.base.parallel import ParallelServer
     ParallelServer = ParallelServer
 

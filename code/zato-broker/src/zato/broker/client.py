@@ -29,7 +29,7 @@ from zato.common.util.platform_ import is_non_windows
 # ################################################################################################################################
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from zato.client import AnyServiceInvoker
     from zato.common.typing_ import any_, anydict
     from zato.server.connection.server.rpc.api import ServerRPC

@@ -35,7 +35,7 @@ from zato.simpleio import SIO_TYPE_MAP
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from zato.server.service import Service
     Service = Service
 

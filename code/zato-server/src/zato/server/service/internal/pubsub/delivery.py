@@ -21,7 +21,7 @@ from future.utils import itervalues
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from typing import Callable
     from zato.common.pubsub import PubSubMessage
     from zato.server.pubsub.model import Subscription

@@ -32,7 +32,7 @@ from zato.common.util.api import get_current_user, make_repr # pylint: disable=n
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from typing import BinaryIO
     BinaryIO = BinaryIO
 

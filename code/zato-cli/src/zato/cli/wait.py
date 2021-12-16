@@ -13,7 +13,7 @@ from zato.cli import ZatoCommand
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     # stdlib
     from argparse import Namespace
 

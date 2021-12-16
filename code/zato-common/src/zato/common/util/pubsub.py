@@ -15,7 +15,7 @@ from zato.common.typing_ import anydict
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from typing import Union as union
     from zato.server.base.parallel import ParallelServer
 

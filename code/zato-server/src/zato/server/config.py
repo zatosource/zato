@@ -31,7 +31,7 @@ from zato.common.util.sql import ElemsWithOpaqueMaker
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from zato.server.connection.ftp import FTPStore
 
     FTPStore = FTPStore

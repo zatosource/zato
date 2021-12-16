@@ -27,7 +27,7 @@ from zato.common.util.tcp import get_fqdn_by_ip, ZatoStreamServer
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from bunch import Bunch
     from gevent import socket
     from zato.common.audit_log import DataEvent, AuditLog

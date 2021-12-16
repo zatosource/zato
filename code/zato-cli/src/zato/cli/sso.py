@@ -14,7 +14,7 @@ from zato.common.util.api import as_bool
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
 
     # stdlib
     from argparse import Namespace

@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from zato.server.connection.sms.twilio import TwilioAPI
 
     TwilioAPI = TwilioAPI

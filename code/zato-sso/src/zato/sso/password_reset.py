@@ -31,7 +31,7 @@ from zato.sso.util import new_prt, new_prt_reset_key, UserChecker
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from typing import Callable
     from zato.common.odb.model import SSOUser
     from zato.server.base.parallel import ParallelServer

@@ -17,7 +17,7 @@ from zato.server.pattern.model import CacheEntry, InvocationResponse, ParallelCt
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from gevent.lock import RLock
     from zato.server.service import Service
 

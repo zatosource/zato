@@ -14,7 +14,7 @@ from zato.common.odb.model import PubSubEndpoint
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from zato.common.odb.model import Cluster
     Cluster = Cluster
 

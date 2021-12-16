@@ -16,7 +16,7 @@ from zato.server.apispec import not_public, ServiceInfo
 
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from zato.server.apispec import _DocstringSegment
     from zato.server.apispec import SimpleIODescription
 

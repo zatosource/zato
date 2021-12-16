@@ -18,7 +18,7 @@ from zato.common.odb.query import server_by_name, server_list
 # ################################################################################################################################
 # ################################################################################################################################
 
-if _ := False:
+if 0:
     from typing import Callable
     from zato.common.odb.api import SessionWrapper
     from zato.common.odb.model import Server as ServerModel
