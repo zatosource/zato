@@ -28,7 +28,7 @@ logger = logging.getLogger('zato')
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SFTPServer(object):
+class SFTPServer:
     def __init__(self, logger, model):
         self.logger = logger # type: logging.Logger
         self.model = model   # type: SFTPChannelModel
@@ -84,14 +84,14 @@ class SFTPServer(object):
 # ################################################################################################################################
 
     def serve_forever(self):
-        logger.warn('CCC %s', self.command)
+        logger.warning('CCC %s', self.command)
 
         self.command()
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SFTPChannel(object):
+class SFTPChannel:
     """ Represents a particular FTP channel along with its configuration, users and connected clients.
     """
     def __init__(self, config):

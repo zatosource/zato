@@ -32,7 +32,6 @@ from zato.common.util.tcp import read_from_socket, SocketReaderCtx, wait_until_p
 
 if 0:
     from zato.common.events.common import PushCtx
-
     PushCtx = PushCtx
 
 # ################################################################################################################################

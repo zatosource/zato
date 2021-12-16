@@ -44,6 +44,6 @@ class Subscriber(IPCEndpoint):
                     self.logger.debug('Stopping IPC socket `%s` (ENOTSOCK)', self.name)
                     self.keep_running = False
             except Exception:
-                self.logger.warn('Error in IPC subscriber, e:`%s`', format_exc())
+                self.logger.warning('Error in IPC subscriber, e:`%s`', format_exc())
 
 # ################################################################################################################################

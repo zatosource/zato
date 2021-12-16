@@ -20,6 +20,7 @@ from bunch import Bunch
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE
 from zato.common.typing_ import dataclass, from_dict
 from zato.common.util.api import get_config, get_user_config_name
+from zato.common.util.open_ import open_r
 from zato.server.service import Service
 
 # ################################################################################################################################
@@ -64,7 +65,7 @@ class LogCSV(Service):
     """ Picks up CSV files and logs their contents.
     """
     def handle(self):
-        with open(self.request.raw_request['full_path'], 'r') as f:
+        with open_r(self.request.raw_request['full_path']) as f:
             reader = csv.reader(f)
             for idx, line in enumerate(reader, 1):
                 self.logger.info('CSV line #%s `%s`', idx, line)
@@ -113,7 +114,7 @@ class _OnUpdate(Service):
     """
     update_type = '<update-type-_OnUpdate>'
 
-    class SimpleIO(object):
+    class SimpleIO:
         input_required = ('data', 'full_path', 'file_name', 'relative_dir')
 
     def handle(self):
@@ -198,14 +199,14 @@ class _OnUpdate(Service):
                     self.sync_pickup_file_in_ram(ctx)
 
                 except Exception:
-                    self.logger.warn('Could not sync in-RAM contents of `%s`, e:`%s` (%s)',
+                    self.logger.warning('Could not sync in-RAM contents of `%s`, e:`%s` (%s)',
                         ctx.file_path, format_exc(), self.update_type)
                 else:
                     self.logger.info('Successfully finished syncing in-RAM contents of `%s` (%s)',
                         ctx.file_path, self.update_type)
 
         except Exception:
-            self.logger.warn('Could not update file `%s`, e:`%s`', format_exc())
+            self.logger.warning('Could not update file `%s`, e:`%s`', format_exc())
 
         #
         # Step (3) - Remove the file name from the ignored ones

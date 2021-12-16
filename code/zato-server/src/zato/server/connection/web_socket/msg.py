@@ -76,7 +76,7 @@ class MSG_TYPE:
 
 # ################################################################################################################################
 
-class ClientMessage(object):
+class ClientMessage:
     """ An individual message received from a WebSocket client.
     """
     def __init__(self):
@@ -108,7 +108,7 @@ class ClientMessage(object):
 
 # ################################################################################################################################
 
-class ServerMessage(object):
+class ServerMessage:
     """ A message sent from a WebSocket server to a client.
     """
     is_response = True
@@ -156,7 +156,7 @@ class ServerMessage(object):
 
             return _dumps_func(msg)
         except Exception:
-            logger.warn('Exception while serializing message `%r`, e:`%s`', msg, format_exc())
+            logger.warning('Exception while serializing message `%r`, e:`%s`', msg, format_exc())
             raise
 
 # ################################################################################################################################

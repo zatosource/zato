@@ -6,6 +6,8 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# pylint: disable=too-many-public-methods
+
 # stdlib
 import logging
 import inspect
@@ -649,7 +651,7 @@ class WorkerStore(_WorkerStoreBase):
                 self.update_cassandra_conn(v.config)
                 self.cassandra_api.create_def(k, v.config, self._on_cassandra_connection_established)
             except Exception:
-                logger.warn('Could not create a Cassandra connection `%s`, e:`%s`', k, format_exc())
+                logger.warning('Could not create a Cassandra connection `%s`, e:`%s`', k, format_exc())
 
 # ################################################################################################################################
 
@@ -660,7 +662,7 @@ class WorkerStore(_WorkerStoreBase):
 
             idx += 1
             if not idx % 20:
-                logger.warn('Still waiting for `%s` Cassandra connection', config.def_name)
+                logger.warning('Still waiting for `%s` Cassandra connection', config.def_name)
 
         create_func(k, config, def_=self.cassandra_api[config.def_name])
 
@@ -669,7 +671,7 @@ class WorkerStore(_WorkerStoreBase):
             try:
                 gevent.spawn(self._init_cassandra_query, self.cassandra_query_api.create, k, v.config)
             except Exception:
-                logger.warn('Could not create a Cassandra query `%s`, e:`%s`', k, format_exc())
+                logger.warning('Could not create a Cassandra query `%s`, e:`%s`', k, format_exc())
 
 # ################################################################################################################################
 
@@ -679,7 +681,7 @@ class WorkerStore(_WorkerStoreBase):
             try:
                 api.create(k, v.config)
             except Exception:
-                logger.warn('Could not create {} connection `%s`, e:`%s`'.format(name), k, format_exc())
+                logger.warning('Could not create {} connection `%s`, e:`%s`'.format(name), k, format_exc())
 
 # ################################################################################################################################
 
@@ -1665,7 +1667,7 @@ class WorkerStore(_WorkerStoreBase):
         service, is_active = self.server.service_store.new_instance_by_name(msg['service']) # type: (Service, bool)
         if not is_active:
             msg = 'Could not invoke an inactive service:`{}`, cid:`{}`'.format(service.get_name(), cid)
-            logger.warn(msg)
+            logger.warning(msg)
             raise Exception(msg)
 
         skip_response_elem=kwargs.get('skip_response_elem')
@@ -1851,7 +1853,7 @@ class WorkerStore(_WorkerStoreBase):
                 try:
                     rmtree(suds_tmp_dir, True)
                 except Exception:
-                    logger.warn('Could not remove suds directory `%s`, e:`%s`', suds_tmp_dir, format_exc())
+                    logger.warning('Could not remove suds directory `%s`, e:`%s`', suds_tmp_dir, format_exc())
 
         # It might be a rename
         old_name = msg.get('old_name')
@@ -2312,6 +2314,6 @@ class WorkerStore(_WorkerStoreBase):
             with open(msg.reply_to_fifo, 'wb') as fifo:
                 fifo.write(data if isinstance(data, bytes) else data.encode('utf'))
         except Exception:
-            logger.warn('Could not write to FIFO, m:`%s`, r:`%s`, s:`%s`, e:`%s`', msg, response, status, format_exc())
+            logger.warning('Could not write to FIFO, m:`%s`, r:`%s`, s:`%s`, e:`%s`', msg, response, status, format_exc())
 
 # ################################################################################################################################

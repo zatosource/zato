@@ -59,7 +59,7 @@ class JSONToDataclassTestCase(TestCase):
         self.assertEqual(result.user.user_name, user_name)
 
         self.assertIsInstance(result.role_list, list)
-        self.assertEquals(len(result.role_list), 2)
+        self.assertEqual(len(result.role_list), 2)
 
         role1 = result.role_list[0] # type: Role
         role2 = result.role_list[1] # type: Role

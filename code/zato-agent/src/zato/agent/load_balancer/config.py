@@ -142,7 +142,7 @@ def string_from_config(config, config_template):
                 # Let's see to the simple options first..
                 for zato_item, (template, value) in zato_item_dispatch.items():
                     if zato_item_token + zato_item in line:
-                        new_line += template.format(**value) + ' ' + zato_item_token + zato_item
+                        new_line += template.format(**value) + ' ' + zato_item_token + zato_item # pylint: disable=not-a-mapping
 
                 # .. and the more complex ones now.
                 if zato_item_token + 'backend' in line and '--' in line:

@@ -21,6 +21,12 @@ upload2 upload3:
 	$(PYTHON_BIN) setup.py clean && $(PYTHON_BIN) setup.py bdist_wheel
 	$(MAKE) twine
 
+pylint:
+	echo Running pylint in zato-client
+	$(CURDIR)/../bin/pylint --verbose \
+		--rcfile $(CURDIR)/../pylint.ini \
+				 $(CURDIR)/../zato-client/src/zato/client
+
 static-check:
 	echo "Running static checks in zato-client"
 	$(CURDIR)/../bin/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/

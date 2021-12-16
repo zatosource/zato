@@ -17,7 +17,7 @@ if 0:
 
 # ################################################################################################################################
 
-class SMSAPI(object):
+class SMSAPI:
     def __init__(self, twilio):
         # type: (TwilioAPI)
         self.twilio = twilio

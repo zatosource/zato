@@ -262,7 +262,7 @@ def normalize_sso_config(sso_conf):
 
 def check_remote_app_exists(current_app, apps_all, logger):
     if current_app not in apps_all:
-        logger.warn('Invalid current_app `%s`, not among `%s', current_app, apps_all)
+        logger.warning('Invalid current_app `%s`, not among `%s', current_app, apps_all)
         raise ValidationError(status_code.app_list.invalid)
     else:
         return True

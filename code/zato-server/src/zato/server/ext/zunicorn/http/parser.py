@@ -38,7 +38,7 @@ from zato.server.ext.zunicorn.http.message import Request
 from zato.server.ext.zunicorn.http.unreader import SocketUnreader, IterUnreader
 
 
-class Parser(object):
+class Parser:
 
     mesg_class = None
 

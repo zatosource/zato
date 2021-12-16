@@ -48,7 +48,7 @@ _invalid = '_invalid.' + uuid4().hex
 
 # ################################################################################################################################
 
-class Config(object):
+class Config:
     def __init__(self, client_name=None, client_id=None, address=None, username=None, secret=None, on_request_callback=None,
                  wait_time=5):
         self.client_name = client_name
@@ -62,7 +62,7 @@ class Config(object):
 
 # ################################################################################################################################
 
-class MessageToZato(object):
+class MessageToZato:
     """ An individual message from a WebSocket client to Zato, either request or response to a previous request from Zato.
     """
     action = _invalid
@@ -119,7 +119,7 @@ class ServiceInvokeRequest(MessageToZato):
 
 # ################################################################################################################################
 
-class ResponseFromZato(object):
+class ResponseFromZato:
     """ A response from Zato to a previous request by this client.
     """
     __slots__ = ('id', 'timestamp', 'in_reply_to', 'status', 'is_ok', 'data', 'msg_impl')
@@ -149,7 +149,7 @@ class ResponseFromZato(object):
 
 # ################################################################################################################################
 
-class RequestFromZato(object):
+class RequestFromZato:
     """ A request from Zato to this client.
     """
     __slots__ = ('id', 'timestamp', 'data', 'msg_impl')
@@ -214,7 +214,7 @@ class _WSClient(WebSocketClient):
 
 # ################################################################################################################################
 
-class Client(object):
+class Client:
     """ A WebSocket client that knows how to invoke Zato services.
     """
     def __init__(self, config):
@@ -301,7 +301,7 @@ class Client(object):
         response = self._wait_for_response(request_id)
 
         if not response:
-            logger.warn('No response to authentication request `%s`', request_id)
+            logger.warning('No response to authentication request `%s`', request_id)
         else:
             self.auth_token = response.data['token']
             self.is_authenticated = True
@@ -342,7 +342,7 @@ class Client(object):
     def on_error(self, error):
         """ Invoked for each unhandled error in the lower-level ws4py library.
         """
-        logger.warn('Caught error %s', error)
+        logger.warning('Caught error %s', error)
 
 # ################################################################################################################################
 
@@ -368,10 +368,10 @@ class Client(object):
             except Exception as e:
 
                 if use_warn:
-                    log_func = logger.warn
+                    log_func = logger.warning
                 else:
                     if now >= warn_from:
-                        log_func = logger.warn
+                        log_func = logger.warning
                         use_warn = True
                     else:
                         log_func = logger.debug
@@ -416,7 +416,7 @@ class Client(object):
         response = self._wait_for_response(request_id, wait_time=timeout)
 
         if not response:
-            logger.warn('No response to invocation request `%s`', request_id)
+            logger.warning('No response to invocation request `%s`', request_id)
         else:
             return response
 

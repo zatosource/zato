@@ -57,7 +57,7 @@ def datetime_from_ms(ms:'float', isoformat:'bool'=True) -> 'str | datetime':
 
 # ################################################################################################################################
 
-class TimeUtil(object):
+class TimeUtil:
     """ A thin layer around Arrow's date/time handling library customized for our needs.
     Default format is always taken from ISO 8601 (so it's sorted lexicographically)
     and default timezone is always UTC.

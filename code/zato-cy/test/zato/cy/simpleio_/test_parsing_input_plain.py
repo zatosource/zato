@@ -28,11 +28,11 @@ class InputPlainParsingTestCase(BaseSIOTestCase):
 
         sio = self.get_sio(SimpleIO, test_class_name)
 
-        self.assertEquals(sio.definition._input_required.get_elem_names(), ['abc', 'ghj', 'zxc'])
-        self.assertEquals(sio.definition._input_optional.get_elem_names(), ['eee', 'rrr'])
+        self.assertEqual(sio.definition._input_required.get_elem_names(), ['abc', 'ghj', 'zxc'])
+        self.assertEqual(sio.definition._input_optional.get_elem_names(), ['eee', 'rrr'])
 
-        self.assertEquals(sio.definition._output_required.get_elem_names(), ['abc2', 'ghj2', 'zxc2'])
-        self.assertEquals(sio.definition._output_optional.get_elem_names(), ['eee2', 'rrr2'])
+        self.assertEqual(sio.definition._output_required.get_elem_names(), ['abc2', 'ghj2', 'zxc2'])
+        self.assertEqual(sio.definition._output_optional.get_elem_names(), ['eee2', 'rrr2'])
 
 # ################################################################################################################################
 
@@ -45,8 +45,8 @@ class InputPlainParsingTestCase(BaseSIOTestCase):
 
         CySimpleIO.attach_sio(None, self.get_server_config(), MyService)
 
-        self.assertEquals(MyService._sio.definition._input_required.get_elem_names(), ['-ddd', '-eee', 'aaa', 'bbb', 'ccc'])
-        self.assertEquals(MyService._sio.definition._output_required.get_elem_names(), ['-eee', '-fff', 'qqq', 'www'])
+        self.assertEqual(MyService._sio.definition._input_required.get_elem_names(), ['-ddd', '-eee', 'aaa', 'bbb', 'ccc'])
+        self.assertEqual(MyService._sio.definition._output_required.get_elem_names(), ['-eee', '-fff', 'qqq', 'www'])
 
 # ################################################################################################################################
 # ################################################################################################################################

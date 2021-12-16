@@ -505,7 +505,7 @@ class VdtValueTooLongError(VdtValueError):
         ValidateError.__init__(self, 'the value "%s" is too long.' % (value,))
 
 
-class Validator(object):
+class Validator:
     """
     Validator is an object that allows you to register a set of 'checks'.
     These checks take input and test that it conforms to the check.

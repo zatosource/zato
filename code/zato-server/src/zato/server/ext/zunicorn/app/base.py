@@ -48,7 +48,7 @@ from zato.server.ext.zunicorn.arbiter import Arbiter
 from zato.server.ext.zunicorn.config import Config, get_default_config_file
 from zato.server.ext.zunicorn import debug
 
-class BaseApplication(object):
+class BaseApplication:
     """
     An application interface for configuring and loading
     the various necessities for any given web framework.

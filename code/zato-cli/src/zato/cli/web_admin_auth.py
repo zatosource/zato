@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Zato
 from zato.cli import common_totp_opts, ManageCommand
+from zato.common.util.open_ import open_r, open_w
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,7 +30,7 @@ class _WebAdminAuthCommand(ManageCommand):
 
         os.chdir(os.path.abspath(args.path))
         base_dir = os.path.join(self.original_dir, args.path)
-        config = loads(open(os.path.join(base_dir, '.', 'config/repo/web-admin.conf')).read())
+        config = loads(open_r(os.path.join(base_dir, '.', 'config/repo/web-admin.conf')).read())
         config['config_dir'] = os.path.abspath(args.path)
         update_globals(config, base_dir)
 
@@ -60,14 +61,14 @@ class CreateUser(_WebAdminAuthCommand):
 
     # Class django.contrib.auth.management.commands.createsuperuser.Command needs self.stding and self.stdout
     # so we fake them here.
-    class _FakeStdout(object):
+    class _FakeStdout:
         def __init__(self, logger):
             self.logger = logger
 
         def write(self, msg):
             self.logger.info(msg.strip())
 
-    class _FakeStdin(object):
+    class _FakeStdin:
         def isatty(self):
             return True
 
@@ -198,7 +199,7 @@ class ResetTOTPKey(_WebAdminAuthCommand):
         try:
             user = User.objects.get(username=args.username)
         except User.DoesNotExist:
-            self.logger.warn('No such user `%s` found in `%s`', args.username, args.path)
+            self.logger.warning('No such user `%s` found in `%s`', args.username, args.path)
             return
 
         # Here we know we have the user and key for sure, now we need to get the person's profile
@@ -247,7 +248,7 @@ class SetAdminInvokePassword(_WebAdminAuthCommand):
 
         # Read config in
         config_path = os.path.join(repo_dir, 'web-admin.conf')
-        config_data = open(config_path).read()
+        config_data = open_r(config_path).read()
 
         # Encrypted the provided password
         cm = WebAdminCryptoManager(repo_dir=repo_dir)
@@ -263,7 +264,7 @@ class SetAdminInvokePassword(_WebAdminAuthCommand):
 
         # Save config with the updated password
         new_config = '\n'.join(new_config)
-        open(config_path, 'w').write(new_config)
+        open_w(config_path).write(new_config)
 
 # ################################################################################################################################
 # ################################################################################################################################

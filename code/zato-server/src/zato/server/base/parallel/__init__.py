@@ -845,7 +845,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                     self.connector_ibm_mq.create_initial_wmq_outconns(self.worker_store.worker_config.out_wmq)
                     self.connector_ibm_mq.create_initial_wmq_channels(self.worker_store.worker_config.channel_wmq)
             except Exception as e:
-                logger.warn('Could not create initial IBM MQ objects, e:`%s`', e)
+                logger.warning('Could not create initial IBM MQ objects, e:`%s`', e)
             else:
                 self.subproc_current_state.is_ibm_mq_running = True
 
@@ -991,7 +991,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 finally:
                     out[pid] = response
         except Exception:
-            logger.warn('PID invocation error `%s`', format_exc())
+            logger.warning('PID invocation error `%s`', format_exc())
         finally:
             return out
 

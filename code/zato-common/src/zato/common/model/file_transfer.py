@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 # ################################################################################################################################
 
-class FileTransferChannel(object):
+class FileTransferChannel:
     def __init__(self):
         self._config_attrs = []
         self.id   = None      # type: int

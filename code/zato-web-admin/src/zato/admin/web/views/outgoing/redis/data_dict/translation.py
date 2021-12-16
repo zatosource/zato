@@ -29,7 +29,7 @@ def _get_systems(client):
         systems.append([item.name] * 2)
     return systems
 
-class DictItem(object):
+class DictItem:
     pass
 
 class Index(_Index):

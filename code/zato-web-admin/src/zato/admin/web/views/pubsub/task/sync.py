@@ -58,7 +58,7 @@ time_keys = 'creation_time', 'last_synced', 'gd_pub_time_max'
 
 # ################################################################################################################################
 
-class PubSubTool(object):
+class PubSubTool:
     def __init__(self):
         self.server_name = None
         self.server_pid = None
@@ -95,7 +95,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-class _SubscriptionDictKeys(object):
+class _SubscriptionDictKeys:
     def __init__(self):
         self.key = None
         self.key_len = None
@@ -103,12 +103,12 @@ class _SubscriptionDictKeys(object):
 
 # ################################################################################################################################
 
-class _DictValuesData(object):
+class _DictValuesData:
     pass
 
 # ################################################################################################################################
 
-class _Event(object):
+class _Event:
     pass
 
 # ################################################################################################################################

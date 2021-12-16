@@ -50,7 +50,7 @@ if PY2:
     from oauth.oauth import OAuthDataStore, OAuthConsumer, OAuthRequest, OAuthServer, OAuthSignatureMethod_HMAC_SHA1, \
          OAuthSignatureMethod_PLAINTEXT, OAuthToken
 else:
-    class _Placeholder(object):
+    class _Placeholder:
         def __init__(self, *ignored_args, **ignored_kwargs):
             pass
 
@@ -73,7 +73,7 @@ _internal_url_path_indicator = '{}/zato/'.format(MISC.SEPARATOR)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class OAuthStore(object):
+class OAuthStore:
     def __init__(self, oauth_config):
         self.oauth_config = oauth_config
 
@@ -555,7 +555,7 @@ class URLData(CyURLData, OAuthDataStore):
                     vault_response = self._vault_conn_check_headers(client, wsgi_environ, sec_def_config)
 
         except Exception:
-            logger.warn(format_exc())
+            logger.warning(format_exc())
             if enforce_auth:
                 self._enforce_vault_sec(cid, sec_def.name)
             else:
@@ -617,7 +617,7 @@ class URLData(CyURLData, OAuthDataStore):
         if auth_result:
             return auth_result
         else:
-            logger.warn('None of RBAC definitions allowed request in, cid:`%s`', cid)
+            logger.warning('None of RBAC definitions allowed request in, cid:`%s`', cid)
 
             # We need to return 401 Unauthorized but we need to send a challenge, i.e. authentication type
             # that this channel can be accessed through so we as the last resort, we invoke a hook

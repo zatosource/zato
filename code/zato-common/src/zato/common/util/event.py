@@ -23,7 +23,7 @@ class default:
 
 # ################################################################################################################################
 
-class Event(object):
+class Event:
     """ An individual event emitted to an event log.
     """
     __slots__ = 'log_id', 'event_id', 'name', 'timestamp', 'ctx'
@@ -50,7 +50,7 @@ class Event(object):
 
 # ################################################################################################################################
 
-class EventLog(object):
+class EventLog:
     """ A backlog of max_size events of arbitrary nature described by attributes such as ID, name, timestamp and opaque context.
     """
     def __init__(self, log_id, max_size=default.max_size):

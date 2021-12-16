@@ -47,7 +47,7 @@ class MigrateDeliveryServer(AdminService):
         })
 
         if reply.is_ok:
-            self.logger.warn('Could not notify other servers of a stopping delivery task, e:`%s`', reply)
+            self.logger.warning('Could not notify other servers of a stopping delivery task, e:`%s`', reply)
             return
 
         # Stop the task before proceeding to make sure this task will handle no new messages

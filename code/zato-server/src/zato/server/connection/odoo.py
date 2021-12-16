@@ -34,7 +34,7 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
-class OdooWrapper(object):
+class OdooWrapper:
     """ Wraps a queue of connections to Odoo.
     """
     def __init__(self, config, server):
@@ -65,7 +65,7 @@ class OdooWrapper(object):
         try:
             ping_odoo(conn)
         except Exception:
-            logger.warn('Could not ping Odoo (%s), e:`%s`', self.config.name, format_exc())
+            logger.warning('Could not ping Odoo (%s), e:`%s`', self.config.name, format_exc())
 
         self.client.put_client(conn)
 

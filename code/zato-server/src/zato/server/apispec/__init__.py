@@ -144,7 +144,7 @@ class APISpecInfo:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Config(object):
+class Config:
     def __init__(self):
         self.is_module_level = True
         self.ns = ''
@@ -153,7 +153,7 @@ class Config(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Docstring(object):
+class Docstring:
     __slots__ = 'summary', 'description', 'full', 'tags', 'by_tag'
 
     def __init__(self, tags):
@@ -167,7 +167,7 @@ class Docstring(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Namespace(object):
+class Namespace:
     def __init__(self):
         self.name = APISPEC.NAMESPACE_NULL
         self.docs = ''
@@ -175,7 +175,7 @@ class Namespace(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _DocstringSegment(object):
+class _DocstringSegment:
     __slots__ = 'tag', 'summary', 'description', 'full'
 
     def __init__(self):
@@ -195,7 +195,7 @@ class _DocstringSegment(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SimpleIO(object):
+class SimpleIO:
     __slots__ = 'input', 'output', 'request_elem', 'response_elem', 'spec_name', 'description', 'needs_sio_desc'
 
     def __init__(self, api_spec_info, description, needs_sio_desc=True):
@@ -221,7 +221,7 @@ class SimpleIO(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SimpleIODescription(object):
+class SimpleIODescription:
     __slots__ = 'input', 'output'
 
     def __init__(self):
@@ -238,7 +238,7 @@ class SimpleIODescription(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ServiceInfo(object):
+class ServiceInfo:
     """ Contains information about a service basing on which documentation is generated.
     """
     def __init__(self, name, service_class, simple_io_config, tags='public', needs_sio_desc=True):
@@ -676,7 +676,7 @@ class ServiceInfo(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Generator(object):
+class Generator:
     def __init__(self, service_store_services, simple_io_config, include, exclude, query=None, tags=None, needs_sio_desc=True):
         self.service_store_services = service_store_services
         self.simple_io_config = simple_io_config

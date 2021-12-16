@@ -12,6 +12,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from typing import           \
     Any as any_,             \
+    BinaryIO as binaryio_,   \
     Callable as callable_,   \
     cast as cast_,           \
     Dict as dict_,           \
@@ -20,6 +21,7 @@ from typing import           \
     List as list_,           \
     Optional as optional,    \
     Text as str_,            \
+    TextIO as textio_,       \
     Tuple as tuple_,         \
     Type as type_,           \
     TypeVar as typevar_,     \
@@ -85,6 +87,7 @@ anydict      = dict_[any_, any_]
 anylist      = list_[any_]
 anyset       = set_[any_]
 anytuple     = tuple_[any_, ...]
+binaryio_    = binaryio_
 boolnone     = optional[bool]
 callable_    = callable_[..., any_]
 callnone     = optional[callable_]
@@ -117,6 +120,7 @@ strset       = set_[str]
 strsetdict   = dict_[str, anyset]
 strstrdict   = dict_[str, str]
 strtuple     = tuple_[str, ...]
+textio_      = textio_
 tuple_       = tuple_
 type_        = type_
 typealias_   = typealias_

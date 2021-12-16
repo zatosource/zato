@@ -75,7 +75,7 @@ JMS message class: jms_text
 
 # ################################################################################################################################
 
-class MessageConverter(object):
+class MessageConverter:
     def to_message(self, object_to_be_converted_to_a_message):
         raise NotImplementedError('Should be implemented by subclasses')
 
@@ -84,7 +84,7 @@ class MessageConverter(object):
 
 # ################################################################################################################################
 
-class JMSTemplate(object):
+class JMSTemplate:
     def __init__(self, factory=None, delivery_persistent=None, priority=None, time_to_live=None, message_converter=None,
         default_destination=None):
 
@@ -154,7 +154,7 @@ class JMSTemplate(object):
 
 # ################################################################################################################################
 
-class TextMessage(object):
+class TextMessage:
 
     def __init__(self, text=None, jms_correlation_id=None, jms_delivery_mode=None, jms_destination=None, jms_expiration=None,
         jms_message_id=None, jms_priority=None, jms_redelivered=None, jms_reply_to=None, jms_timestamp=None,
@@ -234,7 +234,7 @@ class TextMessage(object):
             buff.write(text_to_show)
 
             if len(text_to_show) < len(self.text):
-                omitted = locale.format('%d', (len(self.text) - len(text_to_show)), True)
+                omitted = locale.format_string('%d', (len(self.text) - len(text_to_show)), True)
                 buff.write('\nAnother ')
                 buff.write(omitted)
                 buff.write(' character(s) omitted')
