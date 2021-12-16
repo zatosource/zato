@@ -60,6 +60,8 @@ class DataClassSimpleIO:
         and attaches the Cython-based one to the class's _sio attribute.
         """
         try:
+            # pylint: disable=attribute-defined-outside-init
+
             # Get the user-defined SimpleIO definition
             user_sio = getattr(class_, 'SimpleIO', None)
 
