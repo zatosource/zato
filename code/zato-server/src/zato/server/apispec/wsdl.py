@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from json import load
@@ -226,17 +224,17 @@ class WSDLGenerator:
 
             # First, collect all I/O elements
 
-            for elem in sio.input_required:
+            for elem in sio.input:#_required:
                 self.append_xs_elem(sio_input_req, elem, 1, 1)
 
-            for elem in sio.input_optional:
-                self.append_xs_elem(sio_input_opt, elem, 0, 1)
+            #for elem in sio.input_optional:
+            #    self.append_xs_elem(sio_input_opt, elem, 0, 1)
 
-            for elem in sio.output_required:
+            for elem in sio.output:#_required:
                 self.append_xs_elem(sio_output_req, elem, 1, 1)
 
-            for elem in sio.output_optional:
-                self.append_xs_elem(sio_output_opt, elem, 0, 1)
+            #for elem in sio.output_optional:
+            #    self.append_xs_elem(sio_output_opt, elem, 0, 1)
 
             # Current service's request and response names
             req_msg_name = '{}_{}'.format(service_name, 'request')
