@@ -139,9 +139,23 @@ response_404_log = 'URL not found `%s` (Method:%s; Accept:%s; CID:%s)'
 # ################################################################################################################################
 
 def client_json_error(cid, details):
+
+    # This may be a tuple of arguments to an exception object
+    if isinstance(details, tuple):
+        exc_details = []
+        for item in details:
+            if isinstance(item, bytes):
+                item = item.decode('utf8')
+            exc_details.append(item)
+    else:
+        exc_details = details
+        if isinstance(exc_details, bytes):
+            exc_details = exc_details.decode('utf8')
+
     message = {'result':'Error', 'cid':cid}
     if details:
-        message['details'] = details
+        message['details'] = exc_details
+
     return dumps(message)
 
 # ################################################################################################################################
@@ -463,7 +477,7 @@ class RequestDispatcher:
 
                     else:
                         status_code = INTERNAL_SERVER_ERROR
-                        response = _format_exc if self.return_tracebacks else self.default_error_message
+                        response = e.args if self.return_tracebacks else self.default_error_message
 
                 _exc = _stack_format(e, style='color', show_vals='like_source', truncate_vals=5000,
                     add_summary=True, source_lines=20) if _stack_format else _format_exc
