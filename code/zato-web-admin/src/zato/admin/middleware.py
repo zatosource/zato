@@ -89,8 +89,15 @@ class Client(AnyServiceInvoker):
         response = super(Client, self).invoke(*args, headers={'X-Zato-Forwarded-For': self.forwarded_for}, **kwargs)
         if response.inner.status_code != OK:
             json_data = loads(response.inner.text)
-            err_details = 'CID: {}\nDetails: {}'.format(json_data.get('cid'), json_data.get('details'))
+
+            err_details = json_data.get('details')
+            full_details = 'CID: {}; nDetails: {}'.format(json_data.get('cid'), err_details)
+
+            if not err_details:
+                err_details = json_data
+
             if kwargs.get('needs_exception', True):
+                logger.warning(full_details)
                 raise Exception(err_details)
             else:
                 logger.warning(err_details)
