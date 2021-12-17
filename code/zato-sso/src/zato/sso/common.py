@@ -8,10 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import datetime
-from typing import Optional as optional
-
-# Bunch
-from bunch import Bunch
 
 # ipaddress
 from ipaddress import ip_address
@@ -23,8 +19,11 @@ from zato.common.json_internal import dumps
 from zato.common.odb.model import SSOSession as SessionModel
 from zato.sso import const
 
-# Python 2/3 compatibility
-from past.builtins import unicode
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import anydict, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,11 +36,12 @@ SessionModelInsert = SessionModelTable.insert
 
 @dataclass
 class BaseRequestCtx:
-    remote_addr: str
-    user_agent: str
-    input: Bunch
-    has_remote_addr: bool = field(init=False, default=False)
-    has_user_agent: bool = field(init=False, default=False)
+    cid:             'str'
+    remote_addr:     'str'
+    user_agent:      'str'
+    input:           'anydict'
+    has_remote_addr: 'bool' = field(init=False, default=False)
+    has_user_agent:  'bool' = field(init=False, default=False)
 
     def __post_init__(self):
         self.has_remote_addr = bool(self.input.get('remote_addr'))
@@ -59,8 +59,7 @@ class BaseRequestCtx:
 class SSOCtx(BaseRequestCtx):
     """ A set of attributes describing current SSO request.
     """
-    sso_conf: dict
-    cid: str
+    sso_conf: 'anydict'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -69,7 +68,7 @@ class SSOCtx(BaseRequestCtx):
 class LoginCtx(BaseRequestCtx):
     """ A set of data about a login request.
     """
-    ext_session_id: str = field(init=False)
+    ext_session_id: 'str' = field(init=False)
 
     def __post_init__(self):
         super().__post_init__()
@@ -80,17 +79,17 @@ class LoginCtx(BaseRequestCtx):
 
 @dataclass(init=False)
 class SessionInsertCtx:
-    ust: str
-    creation_time: datetime
-    expiration_time: datetime
-    user_id: int
-    auth_type: str
-    auth_principal: str
-    remote_addr: str
-    user_agent: str
-    ctx_source: str
-    ext_session_id: optional[str]
-    interaction_max_len: int
+    ust:             'str'
+    creation_time:   'datetime'
+    expiration_time: 'datetime'
+    user_id:         'int'
+    auth_type:       'str'
+    auth_principal:  'str'
+    remote_addr:     'str'
+    user_agent:      'str'
+    ctx_source:      'str'
+    ext_session_id:  'strnone'
+    interaction_max_len: 'int'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -100,8 +99,15 @@ class VerifyCtx:
     """
     __slots__ = ('ust', 'remote_addr', 'input', 'has_remote_addr', 'has_user_agent')
 
-    def __init__(self, ust, remote_addr, current_app, has_remote_addr=None, has_user_agent=None):
-        # type: (unicode, unicode, unicode, bool, bool)
+    def __init__(
+        self,
+        ust,         # type: str
+        remote_addr, # type: str
+        current_app, # type: str
+        has_remote_addr=False, # type: bool
+        has_user_agent=False   # type: bool
+        ) -> 'None':
+
         self.ust = ust
         self.remote_addr = remote_addr
         self.has_remote_addr = has_remote_addr
