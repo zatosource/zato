@@ -404,7 +404,7 @@ reject_if_not_listed=False
 inform_if_locked=True
 inform_if_not_confirmed=True
 inform_if_not_approved=True
-inform_if_totp_is_missing=False
+inform_if_totp_missing=False
 
 [password_reset]
 valid_for=1440 # In minutes = 1 day
