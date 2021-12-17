@@ -172,7 +172,7 @@ class TOTPAPI:
         user = self.sso_api.user.get_user_by_username(req_ctx.cid, username) # type: SSOUser
 
         # Raises an exception if the input code is invalid
-        self._ensure_code_is_valid(req_ctx, code=code, user_totp_key=user.totp_key)
+        self.validate_code_for_user(req_ctx, code=code, user=user)
 
 # ################################################################################################################################
 # ################################################################################################################################
