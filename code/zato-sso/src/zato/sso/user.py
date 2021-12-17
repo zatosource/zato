@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from contextlib import closing
@@ -45,26 +43,16 @@ from zato.sso.util import check_credentials, check_remote_app_exists, make_data_
 
 # ################################################################################################################################
 
-# Type checking
-import typing
-
-if typing.TYPE_CHECKING:
-
-    # stdlib
-    from typing import Callable
-
-    # Zato
+if 0:
     from zato.common.odb.model import SSOSession
+    from zato.common.typing_ import anydict, callable_
     from zato.server.base.parallel import ParallelServer
-
-    # For pyflakes
-    Callable = Callable
-    ParallelServer = ParallelServer
-    SSOSession = SSOSession
+    from zato.sso.totp_ import TOTPAPI
 
 # ################################################################################################################################
 
-logger = getLogger('zato')
+logger           = getLogger('zato')
+logger_audit_pii = getLogger('zato_audit_pii')
 
 # ################################################################################################################################
 
@@ -244,11 +232,22 @@ class CreateUserCtx:
 class UserAPI:
     """ The main object through SSO users are managed.
     """
-    def __init__(self, server, sso_conf, odb_session_func, encrypt_func, decrypt_func, hash_func, verify_hash_func,
-            new_user_id_func):
-        # type: (ParallelServer, dict, Callable, Callable, Callable, Callable, Callable, Callable)
+    def __init__(
+        self,
+        server,           # type: ParallelServer
+        sso_conf,         # type: anydict
+        totp,             # type: TOTPAPI
+        odb_session_func, # type: callable_
+        encrypt_func,     # type: callable_
+        decrypt_func,     # type: callable_
+        hash_func,        # type: callable_
+        verify_hash_func, # type: callable_
+        new_user_id_func, # type: callable_
+        ) -> 'None':
+
         self.server = server
         self.sso_conf = sso_conf
+        self.totp = totp
         self.odb_session_func = odb_session_func
         self.is_sqlite = None
         self.encrypt_func = encrypt_func
@@ -272,7 +271,8 @@ class UserAPI:
         }
 
         # For convenience, sessions are accessible through user API.
-        self.session = SessionAPI(self.sso_conf, self.encrypt_func, self.decrypt_func, self.hash_func, self.verify_hash_func)
+        self.session = SessionAPI(self.sso_conf, self.totp, self.encrypt_func, self.decrypt_func, self.hash_func,
+            self.verify_hash_func)
 
 # ################################################################################################################################
 
@@ -613,11 +613,17 @@ class UserAPI:
 
 # ################################################################################################################################
 
-    def _get_current_session(self, cid, current_ust, current_app, remote_addr, needs_super_user):
+    def _get_current_session(
+        self,
+        cid,         # type: str
+        current_ust, # type: str
+        current_app, # type: str
+        remote_addr, # type: str
+        needs_super_user, # type: bool
+        ) -> 'SSOSession':
         """ Returns current session info or raises an exception if it could not be found.
         Optionally, requires that a super-user be owner of current_ust.
         """
-        # type: (unicode, unicode, unicode, unicode, bool) -> SSOSession
         return self.session.get_current_session(cid, current_ust, current_app, remote_addr, needs_super_user)
 
 # ################################################################################################################################
@@ -652,7 +658,7 @@ class UserAPI:
                 access_msg = 'Cid:%s. Accessing %s user attrs (s:%d, r:%d).'
 
                 if current_session.is_super_user or return_all_attrs:
-                    logger.info(access_msg, cid, 'all', current_session.is_super_user, return_all_attrs)
+                    logger_audit_pii.info(access_msg, cid, 'all', current_session.is_super_user, return_all_attrs)
 
                     # This will suffice for 99% of purposes ..
                     attrs = _all_super_user_attrs
@@ -661,10 +667,9 @@ class UserAPI:
                     # .. we need to be requested to do it explicitly via this flag.
                     if return_all_attrs:
                         attrs['totp_key'] = None
-
                     out.is_approval_needed = self.sso_conf.signup.is_approval_needed
                 else:
-                    logger.info(access_msg, cid, 'regular', current_session.is_super_user, return_all_attrs)
+                    logger_audit_pii.info(access_msg, cid, 'regular', current_session.is_super_user, return_all_attrs)
                     attrs = regular_attrs
 
                 for key in attrs:
@@ -910,7 +915,7 @@ class UserAPI:
           'new_password': new_password,
           'totp_code': totp_code,
         }
-        login_ctx = LoginCtx(remote_addr, user_agent, ctx_input)
+        login_ctx = LoginCtx(cid, remote_addr, user_agent, ctx_input)
         return self.session.login(login_ctx, is_logged_in_ext=False, skip_sec=skip_sec)
 
 # ################################################################################################################################
