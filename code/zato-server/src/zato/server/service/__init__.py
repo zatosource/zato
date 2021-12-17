@@ -17,6 +17,9 @@ from typing import Optional as optional
 # Bunch
 from bunch import bunchify
 
+# datetutil
+from dateutil.parser import parse as dt_parse
+
 # lxml
 from lxml.etree import _Element as EtreeElement
 from lxml.objectify import ObjectifiedElement
@@ -86,17 +89,14 @@ UUID = UUID
 # ################################################################################################################################
 
 if 0:
-
-    # stdlib
     from typing import Callable
-
-    # Zato
     from zato.broker.client import BrokerClient
     from zato.common.audit import AuditPII
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.json_schema import Validator as JSONSchemaValidator
     from zato.common.kvdb.api import KVDB as KVDBAPI
     from zato.common.odb.api import ODBManager
+    from zato.common.typing_ import any_
     from zato.common.util.time_ import TimeUtil
     from zato.distlock import LockManager
     from zato.server.connection.ftp import FTPStore
@@ -106,11 +106,8 @@ if 0:
     from zato.server.connection.cassandra import CassandraAPI
     from zato.server.query import CassandraQueryAPI
     from zato.sso.api import SSOAPI
-
-    # Zato - Cython
     from zato.simpleio import CySimpleIO
 
-    # For pyflakes
     AuditPII = AuditPII
     BrokerClient = BrokerClient
     Callable = Callable
@@ -360,27 +357,56 @@ class SchedulerFacade:
         # type: (ParallelServer) -> None
         self.server = server
 
-    def onetime(self, invoking_service, target_service, name='', after_seconds=0, after_minutes=0, data=''):
-        # type: (Service, type[Service], str, int, int, object) -> int
+    def onetime(
+        self,
+        invoking_service, # type: Service
+        target_service,   # type: type[Service]
+        name='',          # type: str
+        *,
+        prefix='',        # type: str
+        start_date='',    # type: str
+        after_seconds=0,  # type: int
+        after_minutes=0,  # type: int
+        data=''           # type: any_
+        ) -> 'int':
+        """ Schedules a service to run at a specific date and time or aftern N minutes or seconds.
+        """
 
+        # This is reusable
         now = self.server.time_util.utcnow(needs_format=False)
 
+        # We are given a start date on input ..
+        if start_date:
+            if not isinstance(start_date, datetime):
+                start_date = dt_parse(start_date)
+
+        # .. or we need to compute one ourselves.
+        else:
+            start_date = now + timedelta(seconds=after_seconds, minutes=after_minutes)
+
+        # This is the service that is scheduling a job ..
         invoking_name = invoking_service.get_name()
+
+        # .. and this is the service that is being scheduled.
         target_name   = target_service if isinstance(target_service, str) else target_service.get_name()
 
-        name = name or '{} -> {} {} {}'.format(
+        # Construct a name for the job
+        name = name or '{}{} -> {} {} {}'.format(
+            '{} '.format(prefix) if prefix else '',
             invoking_name,
             target_name,
             now.isoformat(),
             invoking_service.cid,
         )
 
+        # This is what the service being invoked will receive on input
         if data:
             data = dumps({
                 SCHEDULER.EmbeddedIndicator: True,
                 'data': data
             })
 
+        # Now, we are ready to create a new job ..
         response = self.server.invoke(
             'zato.scheduler.job.create', {
                 'cluster_id': self.server.cluster_id,
@@ -388,11 +414,12 @@ class SchedulerFacade:
                 'is_active': True,
                 'job_type': SCHEDULER.JOB_TYPE.ONE_TIME,
                 'service': target_name,
-                'start_date': now + timedelta(seconds=after_seconds, minutes=after_minutes),
+                'start_date': start_date,
                 'extra': data
             }
         )
 
+        # .. and return its ID to the caller.
         return response['id'] # type: ignore
 
 # ################################################################################################################################
