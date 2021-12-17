@@ -712,8 +712,8 @@ def id_only_service(req, service, id, error_template='{}', initial=None):
             raise Exception(result.details)
         else:
             return result
-    except Exception:
-        msg = error_template.format(format_exc())
+    except Exception as e:
+        msg = error_template.format(e.args)
         logger.error(msg)
         return HttpResponseServerError(msg)
 
