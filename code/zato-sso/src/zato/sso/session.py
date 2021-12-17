@@ -22,30 +22,25 @@ from zato.common.api import GENERIC, SEC_DEF_TYPE
 from zato.common.audit import audit_pii
 from zato.common.json_internal import dumps
 from zato.common.odb.model import SSOSession as SessionModel
-from zato.common.crypto.totp_ import TOTPManager
 from zato.sso import status_code, Session as SessionEntity, ValidationError
 from zato.sso.attr import AttrAPI
 from zato.sso.odb.query import get_session_by_ext_id, get_session_by_ust, get_session_list_by_user_id, get_user_by_id, \
      get_user_by_name
 from zato.sso.common import insert_sso_session, LoginCtx, SessionInsertCtx, \
      update_session_state_change_list as _update_session_state_change_list, VerifyCtx
+from zato.sso.model import RequestCtx
 from zato.sso.util import new_user_session_token, set_password, UserChecker, validate_password
 
 # ################################################################################################################################
 
 if 0:
-
-    # stdlib
     from typing import Callable
-
-    # Bunch
     from bunch import Bunch
-
-    # Zato
     from zato.common.odb.model import SSOUser
+    from zato.common.typing_ import anydict, callable_
+    from zato.sso.totp_ import TOTPAPI
     from zato.sso.user import User
 
-    # For pyflakes
     Bunch = Bunch
     Callable = Callable
     SSOUser = SSOUser
@@ -98,9 +93,17 @@ class SessionAPI:
     """ Logs a user in or out, provided that all authentication and authorization checks succeed,
     or returns details about already existing sessions.
     """
-    def __init__(self, sso_conf, encrypt_func, decrypt_func, hash_func, verify_hash_func):
-        # type: (dict, Callable, Callable, Callable, Callable)
+    def __init__(
+        self,
+        sso_conf,         # type: anydict
+        totp,             # type: TOTPAPI
+        encrypt_func,     # type: 'callable_'
+        decrypt_func,     # type: 'callable_'
+        hash_func,        # type: 'callable_'
+        verify_hash_func, # type: 'callable_'
+        ) -> 'None':
         self.sso_conf = sso_conf
+        self.totp = totp
         self.encrypt_func = encrypt_func
         self.decrypt_func = decrypt_func
         self.hash_func = hash_func
@@ -185,7 +188,7 @@ class SessionAPI:
 
         # .. otherwise, create a new one. Note that we get here only if
         else:
-            ctx = LoginCtx(remote_addr, user_agent, {
+            ctx = LoginCtx(cid, remote_addr, user_agent, {
                 'user_id': user_id,
                 'current_app': current_app,
                 'totp_code': totp_code,
@@ -210,11 +213,18 @@ class SessionAPI:
 
 # ################################################################################################################################
 
-    def login(self, ctx, _ok=status_code.ok, _now=datetime.utcnow, _timedelta=timedelta, _dummy_password=_dummy_password,
-        is_logged_in_ext=False, skip_sec=False):
+    def login(
+        self,
+        ctx,                             # type: LoginCtx
+        _ok=status_code.ok,              # type: str
+        _now=datetime.utcnow,            # type: callable_
+        _timedelta=timedelta,            # type: callable_
+        _dummy_password=_dummy_password, # type: str
+        is_logged_in_ext=False,          # type: bool
+        skip_sec=False                   # type: bool
+        ) -> 'SessionInfo':
         """ Logs a user in, returning session info on success or raising ValidationError on any error.
         """
-        # type: (LoginCtx, unicode, datetime, timedelta, unicode, bool) -> SessionInfo
 
         # Look up user and raise exception if not found by username
         with closing(self.odb_session_func()) as session:
@@ -227,7 +237,6 @@ class SessionAPI:
             # If we do not have a user object here, it means that the input was invalid and there is no such user
             if not user:
                 logger.warning('User not found; username:`%s`, user_id:`%s`',
-
                     ctx.input.get('username'), ctx.input.get('user_id'))
                 raise ValidationError(status_code.auth.not_allowed, False)
 
@@ -258,21 +267,16 @@ class SessionAPI:
 
             # Check input TOTP key if two-factor authentication is enabled ..
             if self._needs_totp_login_check(user, is_logged_in_ext, ctx.input.get('sec_type')):
-                input_totp_code = ctx.input.get('totp_code')
-                if not input_totp_code:
-                    logger.warning('Missing TOTP code; user `%s`', user.username)
-                    if self.sso_conf.login.get('inform_if_totp_missing', False):
-                        _code = status_code.auth.totp_missing
-                        _return_status = True
-                    else:
-                        _code = status_code.auth.not_allowed
-                        _return_status = False
-                    raise ValidationError(_code, _return_status)
-                else:
-                    user_totp_key = self.decrypt_func(user.totp_key)
-                    if not TOTPManager.verify_totp_code(user_totp_key, input_totp_code):
-                        logger.warning('Invalid TOTP code; user `%s`', user.username)
-                        raise ValidationError(status_code.auth.not_allowed, False)
+
+                # Build a request context object here until we start to receive them on input ..
+                req_ctx = RequestCtx.from_ctx(ctx)
+                req_ctx.current_app = ctx.input['current_app']
+
+                # .. this will raise an exception if input TOTP code is invalid.
+                self.totp.validate_code_for_user(
+                    req_ctx,
+                    code=ctx.input.get('totp_code'),
+                    user=user)
 
             # We assume that we will not have to warn about an approaching password expiry
             has_w_about_to_exp = False

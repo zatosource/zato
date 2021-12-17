@@ -107,8 +107,14 @@ class BaseService(Service):
             remote_addr = None
 
         # OK, we can proceed to the actual call now
-        self._call_sso_api(self._handle_sso, 'Could not call service',
-            ctx=SSOCtx(remote_addr, self.wsgi_environ.get('HTTP_USER_AGENT'), self.request.input, sso_conf, self.cid))
+        sso_ctx = SSOCtx(
+            self.cid,
+            remote_addr,
+            self.wsgi_environ.get('HTTP_USER_AGENT'),
+            self.request.input,
+            sso_conf
+        )
+        _ = self._call_sso_api(self._handle_sso, 'Could not call service', ctx=sso_ctx)
 
 # ################################################################################################################################
 
@@ -189,14 +195,14 @@ class SSOTestService(Service):
         self.logger.info('SSO login with password1 (str)')
 
         # Check the str password
-        self.sso.user.login(
+        _ = self.sso.user.login(
             self.cid, config.super_user_name, password1, config.current_app,
             '127.0.0.1', 'Zato', totp_code=totp_manager.get_current_totp_code(config.super_user_totp_key))
 
         self.logger.info('SSO login with password2 (bytes)')
 
         # Check the bytes password
-        self.sso.user.login(
+        _ = self.sso.user.login(
             self.cid, config.super_user_name, password2, config.current_app,
             '127.0.0.1', 'Zato', totp_code=totp_manager.get_current_totp_code(config.super_user_totp_key))
 
@@ -281,5 +287,23 @@ class SSOTestService(Service):
             if value is None:
                 if name not in none_allowed:
                     raise Exception('Value of {} should not be None'.format(name))
+
+# ################################################################################################################################
+
+    def _validate_totp_token(self, config, totp_manager):
+        # type: (TestConfig, TOTPManager) -> None
+
+        # Local aliases
+        # password = config.super_user_password
+
+        self.logger.info('SSO is_totp_token_valid')
+
+        # Check the str password
+        # info = self.sso.user.login(
+        #    self.cid, config.super_user_name, password, config.current_app,
+        #    '127.0.0.1', 'Zato', totp_code=totp_manager.get_current_totp_code(config.super_user_totp_key))
+
+        # Let's get the latest one
+        # current_totp_code = totp_manager.get_current_totp_code(config.super_user_totp_key)
 
 # ################################################################################################################################
