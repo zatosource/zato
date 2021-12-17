@@ -386,7 +386,7 @@ class Edit(_CreateEdit):
             'is_audit_log_sent_active', 'is_audit_log_received_active', \
             Integer('max_len_messages_sent'), Integer('max_len_messages_received'), \
             Integer('max_bytes_per_message_sent'), Integer('max_bytes_per_message_received')
-        output_required = 'id', 'name'
+        output_optional = 'id', 'name'
 
     def handle(self):
 
@@ -407,7 +407,10 @@ class Edit(_CreateEdit):
 
         with closing(self.odb.session()) as session:
 
-            existing_one = session.query(HTTPSOAP.id).\
+            existing_one = session.query(
+                HTTPSOAP.id,
+                HTTPSOAP.url_path,
+                ).\
                 filter(HTTPSOAP.cluster_id==input.cluster_id).\
                 filter(HTTPSOAP.id!=input.id).\
                 filter(HTTPSOAP.name==input.name).\
@@ -416,9 +419,12 @@ class Edit(_CreateEdit):
                 first()
 
             if existing_one:
-                raise Exception('An object of that input.name:`{}` already exists in this cluster ' \
-                '(input.connection:`{}` input.transport:`{}` input.id:`{}` existing_one.id:`{}`)'.format(
-                    input.name, input.connection, input.transport, input.id, existing_one.id))
+                if input.connection == CONNECTION.CHANNEL:
+                    object_type = 'channel'
+                else:
+                    object_type = 'connection'
+                msg = 'A {} of that name:`{}` already exists in this cluster; path: `{}` (id:{})'
+                raise Exception(msg.format(object_type, input.name, existing_one.url_path, existing_one.id))
 
             # Is the service's name correct?
             service = session.query(Service).\
