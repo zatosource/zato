@@ -396,13 +396,13 @@ class PasswordResetAPI:
     def _build_sso_ctx(self, cid, remote_addr, user_agent, current_app):
         # type: (str, str, str, str) -> None
         return SSOCtx(
+            cid=cid,
             remote_addr=remote_addr,
             user_agent=user_agent,
             input=Bunch({
                 'current_app': current_app,
             }),
             sso_conf=self.sso_conf,
-            cid=cid,
         )
 
 # ################################################################################################################################
