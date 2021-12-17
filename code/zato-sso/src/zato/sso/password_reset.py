@@ -378,7 +378,7 @@ class PasswordResetAPI:
 
         # .. create a new message ..
         msg = SMTPMessage()
-        msg.is_html = False
+        msg.is_html = True
 
         # .. provide metadata ..
         msg.subject = self.sso_conf.password_reset.get('email_title_' + pref_lang) or 'Password reset'
