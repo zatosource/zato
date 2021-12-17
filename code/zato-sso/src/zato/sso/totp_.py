@@ -7,6 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from datetime import datetime
 from logging import getLogger
 
 # Zato
@@ -42,25 +43,39 @@ class TOTPAPI:
 
 # ################################################################################################################################
 
-    def _validate_code(
+    def _ensure_code_is_valid(
         self,
         req_ctx,     # type: RequestCtx
         *,
-        user_totp_key, # type: str
         code='',       # type: str
-        ust='',     # type: str
-        username='' # type: str
+        user_totp_key, # type: str
         ):
-        """ Checks whether input TOTP token is valid for a UST or username.
+        """ Checks whether input TOTP token matches the user TOTP key.
         """
 
-        # Basic validation ..
-        if not (ust or username):
-            raise ValueError('Exactly one of ust or username is required on input')
+        # This may be potentially encrypted ..
+        user_totp_key = self.decrypt_func(user_totp_key)
 
-        # .. basic validation continued ..
-        if ust and username:
-            raise ValueError('Cannot provide both ust and username on input')
+        # .. finally, verify the code ..
+        if TOTPManager.verify_totp_code(user_totp_key, code):
+            logger_audit_pii.info('TOTP code accepted; cid `%s`', req_ctx.cid)
+
+        # .. the code was invalid ..
+        else:
+
+            # .. this goes to logs ..
+            msg = 'Invalid TOTP code; cid `%s`'
+            logger.warning(msg, req_ctx.cid)
+            logger_audit_pii.warning(msg, req_ctx.cid)
+
+            # .. and this specific exception is raised if the code was invalid,
+            # .. note, however, that the status code is a generic one because
+            # .. this is what will be likely returned to the user.
+            raise InvalidTOTPError(status_code.auth.not_allowed, False)
+
+# ################################################################################################################################
+
+    def _ensure_code_exists(self, req_ctx:'RequestCtx', code:'str') -> 'None':
 
         # We expect to have a code on input ..
         if not code:
@@ -82,29 +97,6 @@ class TOTPAPI:
             # Notify the caller that TOTP validation failed
             raise ValidationError(_code, _return_status)
 
-        # .. if we are here, it means that we have a code that we can check
-        else:
-
-            # This may be potentially encrypted ..
-            user_totp_key = self.decrypt_func(user_totp_key)
-
-            # .. finally, verify the code ..
-            if TOTPManager.verify_totp_code(user_totp_key, code):
-                logger_audit_pii.info('TOTP code accepted; cid `%s`', req_ctx.cid)
-
-            # .. the code was invalid ..
-            else:
-
-                # .. this goes to logs ..
-                msg = 'Invalid TOTP code; cid `%s`'
-                logger.warning(msg, req_ctx.cid)
-                logger_audit_pii.warning(msg, req_ctx.cid)
-
-                # .. and this specific exception is raised if the code was invalid,
-                # .. note, however, that the status code is a generic one because
-                # .. this is what will be likely returned to the user.
-                raise InvalidTOTPError(status_code.auth.not_allowed, False)
-
 # ################################################################################################################################
 
     def validate_code_for_user(
@@ -121,10 +113,66 @@ class TOTPAPI:
         audit_pii.info(req_ctx.cid, 'totp_api.validate_code_for_user', extra={
             'current_app':req_ctx.current_app,
             'remote_addr':req_ctx.remote_addr,
+            'has_code':   bool(code),
+            'has_user':   bool(user),
         })
 
+        # Raises an exception if code is missing
+        self._ensure_code_exists(req_ctx, code)
+
         # Raises an exception if the input code is invalid
-        self._validate_code(req_ctx, user_totp_key=user.totp_key, code=code, username=user.username)
+        self._ensure_code_is_valid(req_ctx, code=code, user_totp_key=user.totp_key)
+
+# ################################################################################################################################
+
+    def validate_code(
+        self,
+        req_ctx, # type: RequestCtx
+        *,
+        code, # type: str
+        ust='',     # type: str
+        username='' # type: str
+        ) -> 'None':
+        """ Checks whether input TOTP token is valid for a UST or username.
+        """
+
+        # PII audit comes first
+        audit_pii.info(req_ctx.cid, 'totp_api.validate_code', extra={
+            'current_app':  req_ctx.current_app,
+            'remote_addr':  req_ctx.remote_addr,
+            'has_code':     bool(code),
+            'has_ust':      bool(ust),
+            'has_username': bool(username),
+        })
+
+        # Basic validation ..
+        if not (ust or username):
+            raise ValueError('Exactly one of ust or username is required on input')
+
+        # .. basic validation continued ..
+        if ust and username:
+            raise ValueError('Cannot provide both ust and username on input')
+
+        # Raises an exception if code is missing
+        self._ensure_code_exists(req_ctx, code)
+
+        #
+        # Now, we can look up our the user object needed.
+        #
+
+        # If we have a UST, we first need to find the corresponding session,
+        # which will point us to the underlying username ..
+        if ust:
+            # This may be potentially encrypted
+            ust = self.decrypt_func(ust)
+            session = self.sso_api.user.session.get_session_by_ust(ust, datetime.utcnow())
+            username = session.username
+
+        # .. either through an input parameter or via UST, at this point we have a username
+        user = self.sso_api.user.get_user_by_username(req_ctx.cid, username) # type: SSOUser
+
+        # Raises an exception if the input code is invalid
+        self._ensure_code_is_valid(req_ctx, code=code, user_totp_key=user.totp_key)
 
 # ################################################################################################################################
 # ################################################################################################################################
