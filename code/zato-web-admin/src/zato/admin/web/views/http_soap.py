@@ -290,8 +290,8 @@ def edit(req):
                 req.POST['transport'], req.POST['connection'], req.POST['edit-name'])
         else:
             raise ZatoException(msg=response.details)
-    except Exception:
-        msg = 'Update error, e:`{}`'.format(format_exc())
+    except Exception as e:
+        msg = 'Update error: {}'.format(e.args[0])
         logger.error(msg)
         return HttpResponseServerError(msg)
 
