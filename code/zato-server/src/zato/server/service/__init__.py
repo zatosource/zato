@@ -8,17 +8,21 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED
 from inspect import isclass
 from traceback import format_exc
 from typing import Optional as optional
+
+# Arrow
+from arrow import Arrow
 
 # Bunch
 from bunch import bunchify
 
 # datetutil
 from dateutil.parser import parse as dt_parse
+from dateutil.tz.tz import tzutc
 
 # lxml
 from lxml.etree import _Element as EtreeElement
@@ -161,6 +165,7 @@ _wsgi_channels = (CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC)
 # ################################################################################################################################
 
 _response_raw_types=(bytes, str, dict, list, tuple, EtreeElement, Model, ObjectifiedElement)
+_utz_utc = timezone.utc
 
 # ################################################################################################################################
 
@@ -378,7 +383,14 @@ class SchedulerFacade:
         # We are given a start date on input ..
         if start_date:
             if not isinstance(start_date, datetime):
+
+                # This gives us a datetime object but we need to ensure
+                # that it is in UTC because this what the scheduler expects.
                 start_date = dt_parse(start_date)
+
+                if not isinstance(start_date.tzinfo, tzutc):
+                    _as_arrow = Arrow.fromdatetime(start_date)
+                    start_date = _as_arrow.to(_utz_utc)
 
         # .. or we need to compute one ourselves.
         else:
