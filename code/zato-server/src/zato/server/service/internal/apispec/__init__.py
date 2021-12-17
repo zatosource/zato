@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from io import StringIO
@@ -203,9 +201,14 @@ class GetSphinx(Service):
         # Find the longest elements for each column
         for elem in chain(input, output):
             elem.name_sphinx = elem.name.replace('_', '\_') # Sphinx treats _ as hyperlinks # noqa: W605
-            longest_name = max(longest_name, len(elem.name_sphinx))
-            longest_datatype = max(longest_datatype, len(elem.subtype))
-            longest_description = max(longest_description, len(elem.description))
+
+            len_elem_name_sphinx = len(elem.name_sphinx)
+            len_elem_subtype     = len(elem.subtype)
+            len_elem_description = len(elem.description)
+
+            longest_name        = max(longest_name, len_elem_name_sphinx)
+            longest_datatype    = max(longest_datatype, len_elem_subtype)
+            longest_description = max(longest_description, len_elem_description)
 
         # We need to know how much to indent multi-line descriptions,
         # this includes all the preceding headers and 1 for each single space.
@@ -303,52 +306,53 @@ class GetSphinx(Service):
         output_title = 'Output'
         len_output_title = len(output_title)
 
-        buff.write(item.sphinx_name)
-        buff.write('\n')
+        _ = buff.write(item.sphinx_name)
+        _ = buff.write('\n')
 
-        buff.write('=' * len(item.sphinx_name))
-        buff.write('\n')
-        buff.write('\n')
+        _ = buff.write('=' * len(item.sphinx_name))
+        _ = buff.write('\n')
+        _ = buff.write('\n')
 
         docs_full = self._make_sphinx_safe(item.docs.full)
 
-        buff.write(docs_full)
-        buff.write('\n')
-        buff.write('\n')
+        _ = buff.write(docs_full)
+        _ = buff.write('\n')
+        _ = buff.write('\n')
 
         # No SimpleIO for that services
-        if 'zato' not in item.sio:
+        if 'zato' not in item.sio or (not item.sio.zato):
             return buff
 
-        input_required = sorted(item.sio.zato.input_required, key=attrgetter('name'))
-        input_optional = sorted(item.sio.zato.input_optional, key=attrgetter('name'))
-        output_required = sorted(item.sio.zato.output_required, key=attrgetter('name'))
-        output_optional = sorted(item.sio.zato.output_optional, key=attrgetter('name'))
+        input_required = sorted(item.sio.zato.input, key=attrgetter('name'))
+        input_optional = sorted(item.sio.zato.input, key=attrgetter('name'))
+
+        output_required = sorted(item.sio.zato.output, key=attrgetter('name'))
+        output_optional = sorted(item.sio.zato.output, key=attrgetter('name'))
 
         # Input
-        buff.write(input_title)
-        buff.write('\n')
-        buff.write('-' * len_input_title)
-        buff.write('\n' * 2)
+        _ = buff.write(input_title)
+        _ = buff.write('\n')
+        _ = buff.write('-' * len_input_title)
+        _ = buff.write('\n' * 2)
 
         if input_required or input_optional:
             self.write_sio(buff, input_required, input_optional)
         else:
-            buff.write('(None)')
-            buff.write('\n')
-            buff.write('\n')
+            _ = buff.write('(None)')
+            _ = buff.write('\n')
+            _ = buff.write('\n')
 
         # Output
-        buff.write(output_title)
-        buff.write('\n')
-        buff.write('-' * len_output_title)
-        buff.write('\n' * 2)
+        _ = buff.write(output_title)
+        _ = buff.write('\n')
+        _ = buff.write('-' * len_output_title)
+        _ = buff.write('\n' * 2)
 
         if output_required or output_optional:
             self.write_sio(buff, output_required, output_optional)
         else:
-            buff.write('(None)')
-            buff.write('\n')
+            _ = buff.write('(None)')
+            _ = buff.write('\n')
 
         return buff
 
@@ -358,8 +362,8 @@ class GetSphinx(Service):
 
         buff = StringIO()
 
-        buff.write('Services\n')
-        buff.write('--------\n\n')
+        _ = buff.write('Services\n')
+        _ = buff.write('--------\n\n')
 
         lines = []
 
@@ -388,31 +392,31 @@ class GetSphinx(Service):
 
         self.write_separators(buff, ns_border, name_border, desc_border)
 
-        buff.write('---'.ljust(longest_ns))
-        buff.write(col_sep)
+        _ = buff.write('---'.ljust(longest_ns))
+        _ = buff.write(col_sep)
 
-        buff.write('Name'.ljust(longest_name))
-        buff.write(col_sep)
+        _ = buff.write('Name'.ljust(longest_name))
+        _ = buff.write(col_sep)
 
-        buff.write('Description'.ljust(longest_desc))
-        buff.write(col_sep)
-        buff.write('\n')
+        _ = buff.write('Description'.ljust(longest_desc))
+        _ = buff.write(col_sep)
+        _ = buff.write('\n')
 
         self.write_separators(buff, ns_border, name_border, desc_border)
 
         for item in lines:
 
             # First, add the services to the main table
-            buff.write(item.ns.ljust(longest_ns))
-            buff.write(col_sep)
+            _ = buff.write(item.ns.ljust(longest_ns))
+            _ = buff.write(col_sep)
 
-            buff.write(item.name_link.ljust(longest_name))
-            buff.write(col_sep)
+            _ = buff.write(item.name_link.ljust(longest_name))
+            _ = buff.write(col_sep)
 
-            buff.write((item.description or '---').ljust(longest_desc))
-            buff.write(col_sep)
+            _ = buff.write((item.description or '---').ljust(longest_desc))
+            _ = buff.write(col_sep)
 
-            buff.write('\n')
+            _ = buff.write('\n')
 
             # Now, create a description file for each service
             files[item.file_name] = self.get_service_page(item).getvalue()
