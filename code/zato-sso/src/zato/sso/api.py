@@ -1,17 +1,16 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
 from zato.sso import const, status_code, ValidationError
 from zato.sso.password_reset import PasswordResetAPI
 from zato.sso.user import Forbidden, User, UserAPI
+from zato.sso.totp_ import TOTPAPI
 
 # For pyflakes
 const = const
@@ -39,9 +38,12 @@ class SSOAPI:
         self.encrypt_password = self.sso_conf.main.encrypt_password
         self.password_expiry = self.sso_conf.password.expiry
 
+        # Management of TOTP tokens
+        self.totp = TOTPAPI(self, self.sso_conf, self.decrypt_func)
+
         # User management, including passwords
-        self.user = UserAPI(server, sso_conf, odb_session_func, encrypt_func, decrypt_func, hash_func, verify_hash_func,
-            new_user_id_func)
+        self.user = UserAPI(server, sso_conf, self.totp, odb_session_func, encrypt_func, decrypt_func,
+            hash_func, verify_hash_func, new_user_id_func)
 
         # Management of Password reset tokens (PRT)
         self.password_reset = PasswordResetAPI(server, sso_conf, odb_session_func, decrypt_func, verify_hash_func)

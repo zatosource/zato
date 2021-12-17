@@ -144,6 +144,12 @@ class ValidationError(Exception):
 
 # ################################################################################################################################
 
+class InvalidTOTPError(ValidationError):
+    """ Raised if any input TOTP code is invalid for user.
+    """
+
+# ################################################################################################################################
+
 class SearchCtx:
     """ A container for SSO user search parameters.
     """
