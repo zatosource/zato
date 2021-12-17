@@ -20,25 +20,44 @@ from zato.common.api import URL_TYPE
 from zato.common.marshal_.api import Model
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.import_ import import_string
-from zato.server.apispec import build_field_list, FieldInfo
+from zato.server.apispec import build_field_list
 
 # Zato - Cython
 from zato.simpleio import SIO_TYPE_MAP
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import anydict, strlist
+    from zato.server.apispec import FieldInfo
+    FieldInfo = FieldInfo
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 logger = getLogger('zato')
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 _SIO_TYPE_MAP = SIO_TYPE_MAP()
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class OpenAPIGenerator:
     """ Generates OpenAPI specifications.
     """
-    def __init__(self, data, channel_data, needs_api_invoke, needs_rest_channels, api_invoke_path):
+    def __init__(
+        self,
+        data,
+        channel_data,        # type: anydict
+        needs_api_invoke,    # type: bool
+        needs_rest_channels, # type: bool
+        api_invoke_path      # type: strlist
+        ) -> 'None':
+
         self.data = data
         self.channel_data = channel_data
         self.needs_api_invoke = needs_api_invoke
@@ -53,18 +72,17 @@ class OpenAPIGenerator:
 
 # ################################################################################################################################
 
-    def _get_request_name(self, service_name):
+    def _get_request_name(self, service_name:'str') -> 'str':
         return 'request_{}'.format(fs_safe_name(service_name))
 
 # ################################################################################################################################
 
-    def _get_response_name(self, service_name):
+    def _get_response_name(self, service_name:'str') -> 'str':
         return 'response_{}'.format(fs_safe_name(service_name))
 
 # ################################################################################################################################
 
-    def _add_model_schema(self, model_name, model, out):
-        # type: (Model, dict) -> None
+    def _add_model_schema(self, model_name:'str', model:'Model', out:'anydict') -> 'None':
 
         # Do not visit the model if we have already seen it
         if model_name in out:

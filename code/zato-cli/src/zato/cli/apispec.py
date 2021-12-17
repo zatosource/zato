@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
 from zato.cli import ZatoCommand
@@ -104,7 +102,6 @@ class APISpec(ZatoCommand):
         os.mkdir(out_dir)
 
         response = client.invoke('zato.apispec.get-api-spec', request)
-
         data = response.data['response']['data']
 
         for file_path, contents in data.items():
@@ -117,7 +114,7 @@ class APISpec(ZatoCommand):
             finally:
                 if contents:
                     f = open_w(full_file_path)
-                    f.write(contents)
+                    _ = f.write(contents)
                     f.close()
 
         self.logger.info('Output saved to %s', out_dir)
