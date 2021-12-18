@@ -740,7 +740,7 @@ class Generator:
 
         # This is the call that finds all the services in the server's service store
         # and turns them into a data structure that SIO information is applied to in later steps.
-        self.prepare_service_information()
+        self.build_service_information()
 
         if self.query:
             query_items = [elem.strip() for elem in self.query.strip().split()]
@@ -812,7 +812,7 @@ class Generator:
 
 # ################################################################################################################################
 
-    def prepare_service_information(self):
+    def build_service_information(self):
 
         for details in self.service_store_services.values():
 
