@@ -152,7 +152,6 @@ class OpenAPIGenerator:
 # ################################################################################################################################
 
     def _get_message_schemas(self, data:'ServiceInfo', is_request:'bool') -> 'Bunch':
-        # type: (ServiceInfo, bool) -> Bunch
 
         if is_request:
             name_func = self._get_request_name
