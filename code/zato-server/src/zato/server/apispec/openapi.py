@@ -29,7 +29,7 @@ from zato.simpleio import SIO_TYPE_MAP
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, strlist
+    from zato.common.typing_ import anydict, anydictnone, anylist, strorlist
     from zato.server.apispec import FieldInfo
     FieldInfo = FieldInfo
 
@@ -51,11 +51,11 @@ class OpenAPIGenerator:
     """
     def __init__(
         self,
-        data,
+        data,                # type: Bunch
         channel_data,        # type: anydict
         needs_api_invoke,    # type: bool
         needs_rest_channels, # type: bool
-        api_invoke_path      # type: strlist
+        api_invoke_path      # type: strorlist
         ) -> 'None':
 
         self.data = data
@@ -98,8 +98,7 @@ class OpenAPIGenerator:
 
 # ################################################################################################################################
 
-    def _visit_sio_elems(self, schema_name, sio_elems, out):
-        # type: (str, list, dict) -> None
+    def _visit_sio_elems(self, schema_name:'str', sio_elems:'anylist', out:'anydict') -> 'None':
 
         properties = {}
         out[schema_name]['properties'] = properties
@@ -194,7 +193,7 @@ class OpenAPIGenerator:
 
 # ################################################################################################################################
 
-    def get_rest_channel(self, service_name):
+    def get_rest_channel(self, service_name:'str') -> 'anydictnone':
         for channel_item in self.channel_data:
             if channel_item['service_name'] == service_name:
                 if channel_item['transport'] == URL_TYPE.PLAIN_HTTP:
@@ -202,7 +201,7 @@ class OpenAPIGenerator:
 
 # ################################################################################################################################
 
-    def get_path_operation(self, service_name):
+    def get_path_operation(self, service_name:'str') -> 'str':
         service_name = service_name.split('.') # E.g. my.api.name.get-client -> ['my', 'api', 'name', 'get-client']
         op_name = service_name[-1]
 
@@ -215,13 +214,13 @@ class OpenAPIGenerator:
 
 # ################################################################################################################################
 
-    def has_path_elem(self, url_path, elem_name):
+    def has_path_elem(self, url_path:'str', elem_name:'str') -> 'bool':
         pattern = '{%s}' % elem_name
         return pattern in url_path
 
 # ################################################################################################################################
 
-    def generate(self):
+    def generate(self) -> 'str':
         # Basic information, always available
         out = Bunch()
         out.openapi = '3.0.2'
