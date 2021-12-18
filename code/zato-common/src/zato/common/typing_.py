@@ -85,6 +85,7 @@ def instance_from_dict(class_, data):
 
 anydict      = dict_[any_, any_]
 anylist      = list_[any_]
+anylistnone  = optional[anylist]
 anyset       = set_[any_]
 anytuple     = tuple_[any_, ...]
 binaryio_    = binaryio_
