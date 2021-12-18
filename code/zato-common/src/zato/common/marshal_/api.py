@@ -32,6 +32,7 @@ from zato.common.ext.dataclasses import asdict, _FIELDS, MISSING, _PARAMS
 
 if 0:
     from dataclasses import Field
+    from zato.common.typing_ import any_, anydict
     from zato.server.service import Service
 
     Field = Field
@@ -64,15 +65,15 @@ def extract_model_class(field_type):
 # ################################################################################################################################
 
 class Model:
+    __name__: 'str'
     after_created = None
 
     def __getitem__(self, name, default=None):
         return getattr(self, name, default)
 
     @classmethod
-    def _zato_get_fields(class_):
-        # type: (Field) -> dict
-        fields = getattr(class_, _FIELDS) # type: dict
+    def _zato_get_fields(class_:'any_') -> 'anydict':
+        fields = getattr(class_, _FIELDS) # type: anydict
         return fields
 
     @classmethod
