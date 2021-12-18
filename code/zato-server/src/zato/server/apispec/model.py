@@ -7,7 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from dataclasses import dataclass, Field, MISSING
+from dataclasses import dataclass, field, Field, MISSING
 from inspect import isclass
 
 # Bunch
@@ -21,7 +21,7 @@ from zato.common.marshal_.api import extract_model_class, is_list, Model
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anylist
+    from zato.common.typing_ import any_, anydict, anylist
     from zato.server.service import Service
     Service = Service
 
@@ -100,11 +100,11 @@ class APISpecInfo:
 # ################################################################################################################################
 # ################################################################################################################################
 
+@dataclass(init=False)
 class Config:
-    def __init__(self):
-        self.is_module_level = True
-        self.ns = ''
-        self.services = []
+    ns: 'str' = ''
+    services: 'anylist' = field(default_factory=list)
+    is_module_level: 'bool' = True
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -113,29 +113,34 @@ class Docstring:
     __slots__ = 'summary', 'description', 'full', 'tags', 'by_tag'
 
     def __init__(self, tags:'anylist') -> 'None':
-        self.summary = ''
+        self.summary     = ''
         self.description = ''
-        self.full = ''
-        self.tags = tags
-        self.by_tag = {} # Keys are tags used, values are documentation for key
+        self.full        = ''
+        self.tags        = tags
+
+        # Keys are tags used, values are documentation for key
+        self.by_tag = {} # type: anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
+@dataclass(init=False)
 class Namespace:
-
-    name: str
-    docs: str
-
-    def __init__(self):
-        self.name = APISPEC.NAMESPACE_NULL
-        self.docs = ''
+    name: 'str' = APISPEC.NAMESPACE_NULL
+    docs: 'str' = ''
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class SimpleIO:
-    __slots__ = 'input', 'output', 'request_elem', 'response_elem', 'spec_name', 'description', 'needs_sio_desc'
+
+    input:          'anylist'
+    output:         'anylist'
+    request_elem:   'any_'
+    response_elem:  'any_'
+    spec_name:      'str'
+    description:    'SimpleIODescription'
+    needs_sio_desc: 'bool'
 
     def __init__(
         self,
@@ -144,17 +149,19 @@ class SimpleIO:
         needs_sio_desc, # type: bool
         ) -> 'None':
 
-        self.input = api_spec_info.field_list.get('input', [])
+        self.input  = api_spec_info.field_list.get('input', [])
         self.output = api_spec_info.field_list.get('output', [])
-        self.request_elem = api_spec_info.request_elem
-        self.response_elem = api_spec_info.response_elem
-        self.spec_name = api_spec_info.name
-        self.description = description
+
+        self.request_elem   = api_spec_info.request_elem
+        self.response_elem  = api_spec_info.response_elem
+
+        self.spec_name      = api_spec_info.name
+        self.description    = description
         self.needs_sio_desc = needs_sio_desc
 
 # ################################################################################################################################
 
-    def to_bunch(self):
+    def to_bunch(self) -> 'Bunch':
         out = Bunch()
         for name in _sio_attrs + ('request_elem', 'response_elem', 'spec_name'):
             out[name] = getattr(self, name)
@@ -168,17 +175,19 @@ class SimpleIO:
 # ################################################################################################################################
 
 class SimpleIODescription:
-    __slots__ = 'input', 'output'
 
-    def __init__(self):
-        self.input = {}
+    input:  'anydict'
+    output: 'anydict'
+
+    def __init__(self) -> 'None':
+        self.input  = {}
         self.output = {}
 
 # ################################################################################################################################
 
-    def to_bunch(self):
+    def to_bunch(self) -> 'Bunch':
         out = Bunch()
-        out.input = self.input
+        out.input  = self.input
         out.output = self.output
 
         return out

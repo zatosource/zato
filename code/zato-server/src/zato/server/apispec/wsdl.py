@@ -220,7 +220,7 @@ class WSDLGenerator:
 
 # ################################################################################################################################
 
-    def generate(self):
+    def generate(self) -> 'str':
 
         zato_msg_list = []
         wsdl_msg_part_list = []
@@ -235,11 +235,11 @@ class WSDLGenerator:
 
             sio = service.simple_io.soap_12
 
-            sio_input_req = []
-            sio_input_opt = []
+            sio_input_req = [] # type: anylist
+            sio_input_opt = [] # type: anylist
 
-            sio_output_req = []
-            sio_output_opt = []
+            sio_output_req = [] # type: anylist
+            sio_output_opt = [] # type: anylist
 
             # First, collect all I/O elements
 

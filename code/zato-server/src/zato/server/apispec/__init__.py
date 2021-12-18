@@ -33,8 +33,12 @@ from zato.simpleio import SIO_TYPE_MAP
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, anylistnone, anytuple, dict_, iterator_, optional, strorlist, type_
+    from dataclasses import Field
+    from zato.common.typing_ import any_, anydict, anylist, anylistnone, anytuple, dict_, iterator_, list_, optional, strlist, \
+        strorlist, type_
     from zato.server.service import Service
+
+    Field   = Field
     Service = Service
 
 # ################################################################################################################################
@@ -63,7 +67,7 @@ def build_field_list(model:'Model', api_spec_info:'any_') -> 'anylist':
     out = []
 
     # All the fields of this dataclass
-    python_field_list = model._zato_get_fields()
+    python_field_list = model.zato_get_fields()
 
     for _, field in sorted(python_field_list.items()): # type: (str, Field)
 
@@ -79,7 +83,7 @@ def build_field_list(model:'Model', api_spec_info:'any_') -> 'anylist':
 class _DocstringSegment:
     __slots__ = 'tag', 'summary', 'description', 'full'
 
-    def __init__(self):
+    def __init__(self) -> 'None':
         self.tag = ''         # type: str
         self.summary = ''     # type: str
         self.description = '' # type: str
@@ -87,7 +91,7 @@ class _DocstringSegment:
 
 # ################################################################################################################################
 
-    def to_dict(self):
+    def to_dict(self) -> 'anydict':
         return {
             'tag': self.tag,
             'summary': self.summary,
@@ -113,7 +117,7 @@ class ServiceInfo:
         self.service_class = service_class
         self.simple_io_config = simple_io_config
         self.config = Config()
-        self.simple_io = {}
+        self.simple_io = {} # type: anydict
         self.docstring = Docstring(tags if isinstance(tags, list) else [tags])
 
         self.namespace = Namespace()
@@ -122,13 +126,13 @@ class ServiceInfo:
 
 # ################################################################################################################################
 
-    def parse(self):
+    def parse(self) -> 'None':
         self.set_config()
         self.set_summary_desc()
 
 # ################################################################################################################################
 
-    def _add_ns_sio(self):
+    def _add_ns_sio(self) -> 'None':
         """ Adds metadata about the service's namespace and SimpleIO definition.
         """
         # Namespace can be declared as a service-level attribute of a module-level one. Former takes precedence.
@@ -167,7 +171,7 @@ class ServiceInfo:
 
 # ################################################################################################################################
 
-    def set_config(self):
+    def set_config(self) -> 'None':
         self._add_ns_sio()
 
 # ################################################################################################################################
@@ -255,7 +259,7 @@ class ServiceInfo:
 
     def _get_next_split_segment(self, lines:'anylist', tag_indicator:'str'='@') -> 'iterator_[anytuple]':
 
-        current_lines = []
+        current_lines = [] # type: strlist
         len_lines = len(lines) -1 # type: int # Substract one because enumerate counts from zero
 
         # The very first line must contain tag name(s),
@@ -288,11 +292,11 @@ class ServiceInfo:
 
 # ################################################################################################################################
 
-    def extract_segments(self, doc:'str') -> 'anylist':
+    def extract_segments(self, doc:'str') -> 'list_[_DocstringSegment]':
         """ Makes a pass over the docstring to extract all of its tags and their text.
         """
         # Response to produce
-        out = []
+        out = [] # type: list_[_DocstringSegment]
 
         # Nothing to parse
         if not doc:
@@ -331,7 +335,7 @@ class ServiceInfo:
 
 # ################################################################################################################################
 
-    def set_summary_desc(self):
+    def set_summary_desc(self) -> 'None':
 
         segments = self.extract_segments(self.service_class.__doc__)
 
@@ -359,9 +363,9 @@ class ServiceInfo:
         if not doc:
             return out
 
-        doc = doc.strip() # type: str
+        doc = doc.strip() # type: str # type: ignore[no-redef]
 
-        lines = []
+        lines = [] # type: strlist
 
         # Strip leading whitespace but only from lines containing element names
         for line in doc.splitlines(): # type: str
@@ -412,8 +416,8 @@ class ServiceInfo:
         # We may still have some empty lines left over which we remove now
         lines = [elem for elem in with_new_lines[:] if elem]
 
-        input_lines = []
-        output_lines = []
+        input_lines  = [] # type: strlist
+        output_lines = [] # type: strlist
 
         # If there is no empty line, the docstring will describe either input or output (we do not know yet).
         # If there is only one empty line, it constitutes a separator between input and output.
@@ -478,9 +482,9 @@ class ServiceInfo:
                 orig_line = line
 
                 # Remove whitespace, skip the new element marker and the first string left over will be the element name.
-                line = [elem for elem in line.split()]
-                line.remove(new_elem_marker)
-                current_elem = line[0]
+                line_list = [elem for elem in line.split()] # type: strlist
+                line_list.remove(new_elem_marker)
+                current_elem = line_list[0]
 
                 # We have the element name so we can now remove it from the full line
                 to_remove = '{} {} - '.format(new_elem_marker, current_elem)
@@ -504,13 +508,13 @@ class ServiceInfo:
             # but only to elements that are not the last in the list because they end a sentence.
             new_value = []
             len_value = len(value)
-            for idx, elem in enumerate(value, 1): # type: str
+            for idx, elem in enumerate(value, 1): # type: (int, str)
                 if idx != len_value and not elem.endswith('\n'):
                     elem += ' '
                 new_value.append(elem)
 
             # Everything is preprocesses so we can create a new string now ..
-            new_value = ''.join(new_value)
+            new_value = ''.join(new_value) # type: ignore[assignment]
 
             # .. and set it for that key.
             out[key] = new_value
@@ -548,7 +552,7 @@ class Generator:
 
 # ################################################################################################################################
 
-    def get_info(self):
+    def get_info(self) -> 'anydict':
         """ Returns a list of dicts containing metadata about services in the scope required to generate docs and API clients.
         """
 
@@ -571,8 +575,8 @@ class Generator:
             proceed = True
 
             if query_items:
-                for item in query_items:
-                    if item not in name:
+                for query_item in query_items:
+                    if query_item not in name:
                         proceed = False
 
             if not proceed:
@@ -624,7 +628,7 @@ class Generator:
 
 # ################################################################################################################################
 
-    def build_service_information(self):
+    def build_service_information(self) -> 'None':
 
         for details in self.service_store_services.values():
 
