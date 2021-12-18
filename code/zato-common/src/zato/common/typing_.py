@@ -17,6 +17,7 @@ from typing import           \
     cast as cast_,           \
     Dict as dict_,           \
     Generator as generator_, \
+    Iterator as iterator_,   \
     NoReturn as noreturn,    \
     List as list_,           \
     Optional as optional,    \
