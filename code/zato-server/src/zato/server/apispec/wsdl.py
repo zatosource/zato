@@ -16,6 +16,9 @@ from bunch import bunchify
 # regex
 import regex
 
+if 0:
+    from zato.common.typing_ import anydict, anydictnone, anylist, strorlist
+
 # ################################################################################################################################
 
 wsdl_template = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
@@ -140,18 +143,18 @@ class WSDLGenerator:
     """ Generates WSDL 1.1 output in document/literal style for input services
     based on their SimpleIO definitions extracted from API spec.
     """
-    def __init__(self, services, target_ns):
+    def __init__(self, services:'anylist', target_ns:'str') -> 'None':
         self.services = services
         self.target_ns = target_ns
 
 # ################################################################################################################################
 
-    def slugify(self, value):
+    def slugify(self, value:'str') -> 'str':
         return regex.sub(whitespace, '_', value) # Replacing whitespace will suffice
 
 # ################################################################################################################################
 
-    def append_xs_elem(self, destination, elem, min_occ, max_occ):
+    def append_xs_elem(self, destination:'anylist', elem:'any', min_occ:'int', max_occ:'int') -> 'None':
         destination.append(xs_elem_template.format(**{
             'name': elem.name,
             'type': elem.subtype,
@@ -161,7 +164,7 @@ class WSDLGenerator:
 
 # ################################################################################################################################
 
-    def get_zato_msg(self, service_name, msg_name, sio_req, sio_opt):
+    def get_zato_msg(self, msg_name:'str', sio_req:'anylist', sio_opt:'anylist') -> 'str':
         return zato_msg_template.format(**{
             'elem_name': msg_name,
             'sequence': '\n'.join(sio_req) + '\n'.join(sio_opt).lstrip()
@@ -169,28 +172,35 @@ class WSDLGenerator:
 
 # ################################################################################################################################
 
-    def get_wsdl_msg_part(self, service_name):
+    def get_wsdl_msg_part(self, service_name:'str') -> 'str':
         return wsdl_msg_part_template.format(**{
             'service_name': service_name,
         })
 
 # ################################################################################################################################
 
-    def get_wsdl_op_io(self, service_name):
+    def get_wsdl_op_io(self, service_name:'str') -> 'str':
         return wsdl_op_io_template.format(**{
             'service_name': service_name,
         })
 
 # ################################################################################################################################
 
-    def get_wsdl_op_body(self, service_name):
+    def get_wsdl_op_body(self, service_name:'str') -> 'str':
         return wsdl_op_body_template.format(**{
             'service_name': service_name,
         })
 
 # ################################################################################################################################
 
-    def get_wsdl(self, target_ns, zato_msg_list, wsdl_msg_part_list, wsdl_op_io_list, wsdl_op_body_list):
+    def get_wsdl(
+        self,
+        target_ns,          # type: str
+        zato_msg_list,      # type: anylist
+        wsdl_msg_part_list, # type: anylist
+        wsdl_op_io_list,    # type: anylist
+        wsdl_op_body_list   # type: anylist
+        ) -> 'str':
         return wsdl_template.format(**{
             'target_ns': target_ns,
             'zato_msg_list': '\n'.join(zato_msg_list),
@@ -241,8 +251,8 @@ class WSDLGenerator:
             resp_msg_name = '{}_{}'.format(service_name, 'response')
 
             # Current service's actual XSD request/response elements
-            zato_msg_list.append(self.get_zato_msg(service_name, req_msg_name, sio_input_req, sio_input_opt))
-            zato_msg_list.append(self.get_zato_msg(service_name, resp_msg_name, sio_output_req, sio_output_opt))
+            zato_msg_list.append(self.get_zato_msg(req_msg_name, sio_input_req, sio_input_opt))
+            zato_msg_list.append(self.get_zato_msg(resp_msg_name, sio_output_req, sio_output_opt))
 
             # Request/response for WSDL itself
             wsdl_msg_part_list.append(self.get_wsdl_msg_part(service_name))
