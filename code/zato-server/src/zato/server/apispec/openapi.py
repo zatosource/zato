@@ -29,8 +29,8 @@ from zato.simpleio import SIO_TYPE_MAP
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anydictnone, anylist, strorlist
-    from zato.server.apispec import FieldInfo, ServiceInfo
+    from zato.common.typing_ import anydict, anydictnone, anylist, stranydict, strorlist
+    from zato.server.apispec import FieldInfo
     FieldInfo = FieldInfo
 
 # ################################################################################################################################
@@ -100,7 +100,7 @@ class OpenAPIGenerator:
 
     def _visit_sio_elems(self, schema_name:'str', sio_elems:'anylist', out:'anydict') -> 'None':
 
-        properties = {}
+        properties = {} # type: stranydict
         out[schema_name]['properties'] = properties
 
         # All the elements of this model that are required
@@ -151,7 +151,7 @@ class OpenAPIGenerator:
 
 # ################################################################################################################################
 
-    def _get_message_schemas(self, data:'ServiceInfo', is_request:'bool') -> 'Bunch':
+    def _get_message_schemas(self, data:'Bunch', is_request:'bool') -> 'Bunch':
 
         if is_request:
             name_func = self._get_request_name
