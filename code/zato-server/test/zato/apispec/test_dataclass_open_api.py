@@ -22,8 +22,8 @@ from zato.common.api import APISPEC, URL_TYPE
 from zato.common.marshal_.simpleio import DataClassSimpleIO
 from zato.common.test import BaseSIOTestCase
 from zato.common.util.file_system import fs_safe_name
-from zato.server.apispec import Generator
-from zato.server.apispec.openapi import OpenAPIGenerator
+from zato.server.apispec.spec.core import Generator
+from zato.server.apispec.spec.openapi import OpenAPIGenerator
 
 # ################################################################################################################################
 
