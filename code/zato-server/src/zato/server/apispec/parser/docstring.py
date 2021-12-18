@@ -62,6 +62,7 @@ class _DocstringSegment:
 # ################################################################################################################################
 
 class DocstringParser:
+
     def __init__(
         self,
         service_class, # type: type_[Service]
@@ -72,6 +73,24 @@ class DocstringParser:
         self.docstring = Docstring(tags if isinstance(tags, list) else [tags])
 
 # ################################################################################################################################
+
+    def set_summary_desc(self):
+
+        segments = self.extract_segments(self.service_class.__doc__ or '')
+
+        for segment in segments: # type: _DocstringSegment
+
+            # The very first summary found will set the whole docstring's summary
+            if segment.summary:
+                if not self.docstring.summary:
+                    self.docstring.summary = segment.summary
+
+            if segment.description:
+                self.docstring.description += segment.description
+
+            if segment.full:
+                self.docstring.full += segment.full
+
 # ################################################################################################################################
 
     def _parse_split_segment(

@@ -48,9 +48,9 @@ class APISpecDocstringParsing(TestCase):
         # This service's docstring has a summary only so it will constitute
         # all of its summary, decsription and full docstring.
 
-        self.assertEqual(info.docstring.summary, 'This is a one-line summary.')
-        self.assertEqual(info.docstring.description, 'This is a one-line summary.')
-        self.assertEqual(info.docstring.full, 'This is a one-line summary.')
+        self.assertEqual(info.docstring_parser.docstring.summary, 'This is a one-line summary.')
+        self.assertEqual(info.docstring_parser.docstring.description, 'This is a one-line summary.')
+        self.assertEqual(info.docstring_parser.docstring.full, 'This is a one-line summary.')
 
 # ################################################################################################################################
 
@@ -93,10 +93,10 @@ class APISpecDocstringParsing(TestCase):
             sio_config,
             'public'
         )
-        self.assertEqual(info.docstring.summary, 'This is a one-line summary.')
+        self.assertEqual(info.docstring_parser.docstring.summary, 'This is a one-line summary.')
 
         service_docstring_lines = CyMyService.__doc__.strip().splitlines()
-        docstring_full_lines = info.docstring.full.splitlines()
+        docstring_full_lines = info.docstring_parser.docstring.full.splitlines()
 
         for idx, line in enumerate(service_docstring_lines):
 
@@ -120,7 +120,7 @@ class APISpecDocstringParsing(TestCase):
             service_name,
             CyMyService, # type: ignore
             sio_config,
-            APISPEC.DEFAULT_TAG).extract_segments(
+            APISPEC.DEFAULT_TAG).docstring_parser.extract_segments(
                 CyMyService.__doc__ # type: ignore
             )
 
@@ -158,7 +158,7 @@ class APISpecDocstringParsing(TestCase):
             service_name,
             CyMyService, # type: ignore
             sio_config,
-            APISPEC.DEFAULT_TAG).extract_segments(
+            APISPEC.DEFAULT_TAG).docstring_parser.extract_segments(
                 CyMyService.__doc__ # type: ignore
             )
 
@@ -204,7 +204,7 @@ class APISpecDocstringParsing(TestCase):
             service_name,
             CyMyService, # type: ignore
             sio_config,
-            tags).extract_segments(
+            tags).docstring_parser.extract_segments(
                 CyMyService.__doc__ # type: ignore
             )
 
