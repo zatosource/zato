@@ -10,14 +10,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from json import load
 from string import whitespace
 
-# Bunch
-from bunch import bunchify
-
 # regex
 import regex
 
 if 0:
-    from zato.common.typing_ import anydict, anydictnone, anylist, strorlist
+    from zato.common.typing_ import any_, anylist
 
 # ################################################################################################################################
 
@@ -154,7 +151,7 @@ class WSDLGenerator:
 
 # ################################################################################################################################
 
-    def append_xs_elem(self, destination:'anylist', elem:'any', min_occ:'int', max_occ:'int') -> 'None':
+    def append_xs_elem(self, destination:'anylist', elem:'any_', min_occ:'int', max_occ:'int') -> 'None':
         destination.append(xs_elem_template.format(**{
             'name': elem.name,
             'type': elem.subtype,
@@ -269,7 +266,7 @@ class WSDLGenerator:
 if __name__ == '__main__':
     data = load(open('apispec.json', 'rb'))
 
-    services = bunchify(data['services'])
+    services = data['services']
     target_ns = 'urn:zato-apispec'
 
     g = WSDLGenerator(services, target_ns)

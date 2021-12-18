@@ -35,7 +35,7 @@ from zato.simpleio import SIO_TYPE_MAP
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, anylistnone, anytuple, type_
+    from zato.common.typing_ import any_, anydict, anylist, anylistnone, anytuple, iterator_, optional, strorlist, type_
     from zato.server.service import Service
     Service = Service
 
@@ -92,18 +92,20 @@ class FieldInfo:
     is_list: bool = False
 
     @staticmethod
-    def from_python_field(field, api_spec_info):
-        # type: (Field, Bunch) -> FieldInfo
+    def from_python_field(field:'Field', api_spec_info:'Bunch') -> 'FieldInfo':
+
+        if not field.type:
+            raise ValueError('Value missing -> field.type ({})'.format(field))
 
         info = FieldInfo()
-        info.name = field.name
+        info.name = field.name or '<field-no-name>'
         info.is_required = field.default is MISSING
         info.description = field.__doc__ or ''
 
         is_class = isclass(field.type)
 
         if is_list(field.type, is_class):
-            type_info = None, None
+            type_info = '', ''
             ref = extract_model_class(field.type)
             info.is_list = True
             info.ref = '#/components/schemas/{}.{}'.format(ref.__module__, ref.__name__)
@@ -118,7 +120,7 @@ class FieldInfo:
             type_info = api_spec_info.FLOAT
 
         elif issubclass(field.type, Model):
-            type_info = None, None
+            type_info = '', ''
             info.ref = '#/components/schemas/{}.{}'.format(field.type.__module__, field.type.__name__)
         else:
             try:
@@ -172,10 +174,7 @@ class Namespace:
 
     def __init__(self):
         self.name = APISPEC.NAMESPACE_NULL
-        self.docs = 123
-
-    def x(self) -> int:
-        return self.docs
+        self.docs = ''
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -184,10 +183,10 @@ class _DocstringSegment:
     __slots__ = 'tag', 'summary', 'description', 'full'
 
     def __init__(self):
-        self.tag = None         # type: str
-        self.summary = None     # type: str
-        self.description = None # type: str
-        self.full = None        # type: str
+        self.tag = ''         # type: str
+        self.summary = ''     # type: str
+        self.description = '' # type: str
+        self.full = ''        # type: str
 
     def to_dict(self):
         return {
@@ -203,7 +202,13 @@ class _DocstringSegment:
 class SimpleIO:
     __slots__ = 'input', 'output', 'request_elem', 'response_elem', 'spec_name', 'description', 'needs_sio_desc'
 
-    def __init__(self, api_spec_info:'anydict', description:'SimpleIODescription', needs_sio_desc:'bool'=True) -> None:
+    def __init__(
+        self,
+        api_spec_info,  # type: APISpecInfo
+        description,    # type: SimpleIODescription
+        needs_sio_desc, # type: bool
+        ) -> 'None':
+
         self.input = api_spec_info.field_list.get('input', [])
         self.output = api_spec_info.field_list.get('output', [])
         self.request_elem = api_spec_info.request_elem
@@ -249,8 +254,8 @@ class ServiceInfo:
         self,
         name,               # type: str
         service_class,      # type: type_[Service]
-        simple_io_config,   # type: SimpleIO
-        tags='public',      # type: str
+        simple_io_config,   # type: anydict
+        tags='public',      # type: strorlist
         needs_sio_desc=True # type: bool
         ) -> 'None':
         self.name = name
@@ -308,7 +313,7 @@ class ServiceInfo:
             self.namespace.docs = getattr(mod, 'namespace_docs', '')
 
         # SimpleIO
-        sio = getattr(self.service_class, '_sio', None) # type: DataClassSimpleIO
+        sio = getattr(self.service_class, '_sio', None) # type: optional[DataClassSimpleIO]
 
         if sio:
 
@@ -320,11 +325,11 @@ class ServiceInfo:
                 _api_spec_info = APISpecInfo()
                 _api_spec_info.name = api_spec_info.name
                 _api_spec_info.field_list = {}
-                _api_spec_info.request_elem = getattr(sio, 'request_elem', None)
-                _api_spec_info.response_elem = getattr(sio, 'response_elem', None)
+                _api_spec_info.request_elem = getattr(sio, 'request_elem', '')
+                _api_spec_info.response_elem = getattr(sio, 'response_elem', '')
 
                 for sio_attr_name in ('input', 'output'): # type: str
-                    model = getattr(sio.user_declaration, sio_attr_name, None) # type: Model
+                    model = getattr(sio.user_declaration, sio_attr_name, None) # type: optional[Model]
                     if model:
                         _api_spec_info.field_list[sio_attr_name] = build_field_list(model, api_spec_info)
 
@@ -419,7 +424,7 @@ class ServiceInfo:
 
 # ################################################################################################################################
 
-    def _get_next_split_segment(self, lines:'anylist', tag_indicator:'str'='@') -> 'anytuple':
+    def _get_next_split_segment(self, lines:'anylist', tag_indicator:'str'='@') -> 'iterator_[anytuple]':
 
         current_lines = []
         len_lines = len(lines) -1 # type: int # Substract one because enumerate counts from zero

@@ -202,8 +202,8 @@ class OpenAPIGenerator:
 # ################################################################################################################################
 
     def get_path_operation(self, service_name:'str') -> 'str':
-        service_name = service_name.split('.') # E.g. my.api.name.get-client -> ['my', 'api', 'name', 'get-client']
-        op_name = service_name[-1]
+        service_name_list = service_name.split('.') # E.g. my.api.name.get-client -> ['my', 'api', 'name', 'get-client']
+        op_name = service_name_list[-1]
 
         if op_name.startswith('get'):
             return 'get'
@@ -271,10 +271,10 @@ class OpenAPIGenerator:
                 if rest_channel:
 
                     # This is always needed, whether path parameters exist or not
-                    url_paths.append(rest_channel.url_path)
+                    url_paths.append(rest_channel['url_path'])
 
                     # Path parameters
-                    group_names = rest_channel.match_target_compiled.group_names
+                    group_names = rest_channel['match_target_compiled'].group_names
                     if group_names:
 
                         # Populate details of path parameters
