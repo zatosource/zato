@@ -441,7 +441,6 @@ class Service:
     the transport and protocol, be it plain HTTP, SOAP, IBM MQ or any other,
     regardless whether they're built-in or user-defined ones.
     """
-    __doc__: 'str'
     schedule: SchedulerFacade
 
     call_hooks = True

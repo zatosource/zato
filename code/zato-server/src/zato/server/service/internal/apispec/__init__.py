@@ -26,7 +26,8 @@ from zato.common.ext.dataclasses import asdict
 from zato.common.util.eval_ import as_list
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.open_ import open_r
-from zato.server.apispec import Generator, FieldInfo
+from zato.server.apispec import FieldInfo
+from zato.server.apispec.spec.core import Generator
 from zato.server.service import AsIs, Bool
 
 # Python 2/3 compatibility

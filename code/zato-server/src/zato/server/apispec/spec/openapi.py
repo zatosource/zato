@@ -20,7 +20,7 @@ from zato.common.api import URL_TYPE
 from zato.common.marshal_.api import Model
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.import_ import import_string
-from zato.server.apispec import build_field_list
+from zato.server.apispec.parser import build_field_list
 
 # Zato - Cython
 from zato.simpleio import SIO_TYPE_MAP
