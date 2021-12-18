@@ -36,9 +36,6 @@ from dacite import from_dict
 from typing_extensions import \
     TypeAlias as typealias_
 
-from sqlalchemy import union
-
-
 # Be explicit about which import error we want to catch
 try:
     import dataclasses # noqa: F401
@@ -109,6 +106,7 @@ intnone      = optional[int]
 intset       = set_[int]
 intsetdict   = dict_[int, anyset]
 intstrdict   = dict_[int, str]
+iterator_    = iterator_
 noreturn     = noreturn
 set_         = set_
 stranydict   = dict_[str, any_]

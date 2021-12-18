@@ -72,7 +72,7 @@ class Model:
         return getattr(self, name, default)
 
     @classmethod
-    def _zato_get_fields(class_:'any_') -> 'anydict':
+    def zato_get_fields(class_:'any_') -> 'anydict':
         fields = getattr(class_, _FIELDS) # type: anydict
         return fields
 
