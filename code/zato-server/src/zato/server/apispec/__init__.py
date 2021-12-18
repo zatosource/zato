@@ -22,7 +22,6 @@ from markdown import markdown
 
 # Python 2/3 compatibility
 from future.utils import iteritems
-from past.builtins import basestring
 
 # Zato
 from zato.common.api import APISPEC
@@ -36,7 +35,7 @@ from zato.simpleio import SIO_TYPE_MAP
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist
+    from zato.common.typing_ import any_, anydict, anylist, anylistnone, anytuple, type_
     from zato.server.service import Service
     Service = Service
 
@@ -63,8 +62,7 @@ not_public = 'INFORMATION IN THIS SECTION IS NOT PUBLIC'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def build_field_list(model, api_spec_info):
-    # type: (Model, object) -> list
+def build_field_list(model:'Model', api_spec_info:'any_') -> 'anylist':
 
     # Response to produce
     out = []
@@ -138,7 +136,7 @@ class FieldInfo:
 @dataclass(init=False)
 class APISpecInfo:
     name: str
-    field_list: dict
+    field_list: 'anydict'
     request_elem: str
     response_elem: str
 
@@ -205,8 +203,7 @@ class _DocstringSegment:
 class SimpleIO:
     __slots__ = 'input', 'output', 'request_elem', 'response_elem', 'spec_name', 'description', 'needs_sio_desc'
 
-    def __init__(self, api_spec_info, description, needs_sio_desc=True):
-        # type: (Bunch, SimpleIODescription)
+    def __init__(self, api_spec_info:'anydict', description:'SimpleIODescription', needs_sio_desc:'bool'=True) -> None:
         self.input = api_spec_info.field_list.get('input', [])
         self.output = api_spec_info.field_list.get('output', [])
         self.request_elem = api_spec_info.request_elem
@@ -248,8 +245,14 @@ class SimpleIODescription:
 class ServiceInfo:
     """ Contains information about a service basing on which documentation is generated.
     """
-    def __init__(self, name, service_class, simple_io_config, tags='public', needs_sio_desc=True):
-        # type: (str, Service, SimpleIO, object, bool)
+    def __init__(
+        self,
+        name,               # type: str
+        service_class,      # type: type_[Service]
+        simple_io_config,   # type: SimpleIO
+        tags='public',      # type: str
+        needs_sio_desc=True # type: bool
+        ) -> 'None':
         self.name = name
         self.service_class = service_class
         self.simple_io_config = simple_io_config
@@ -282,7 +285,7 @@ class ServiceInfo:
         """
         invokes = getattr(self.service_class, 'invokes', None)
         if invokes:
-            if isinstance(invokes, basestring):
+            if isinstance(invokes, str):
                 self.invokes.append(invokes)
             else:
                 if isinstance(invokes, (list, tuple)):
@@ -307,7 +310,7 @@ class ServiceInfo:
         # SimpleIO
         sio = getattr(self.service_class, '_sio', None) # type: DataClassSimpleIO
 
-        if sio and isinstance(sio, DataClassSimpleIO):
+        if sio:
 
             # This can be reused across all the output data formats
             sio_desc = self.get_sio_desc(sio)
@@ -335,8 +338,13 @@ class ServiceInfo:
 
 # ################################################################################################################################
 
-    def _parse_split_segment(self, tag, split, is_tag_internal, prefix_with_tag):
-        # type: (str, list, bool, bool) -> _DocstringSegment
+    def _parse_split_segment(
+        self,
+        tag,             # type: str
+        split,           # type: anylist
+        is_tag_internal, # type: bool
+        prefix_with_tag  # type: bool
+        ) -> '_DocstringSegment':
 
         if is_tag_internal:
             split.insert(0, not_public)
@@ -411,8 +419,7 @@ class ServiceInfo:
 
 # ################################################################################################################################
 
-    def _get_next_split_segment(self, lines, tag_indicator='@'):
-        # type: (list) -> (str, list)
+    def _get_next_split_segment(self, lines:'anylist', tag_indicator:'str'='@') -> 'anytuple':
 
         current_lines = []
         len_lines = len(lines) -1 # type: int # Substract one because enumerate counts from zero
@@ -447,11 +454,9 @@ class ServiceInfo:
 
 # ################################################################################################################################
 
-    def extract_segments(self, doc):
+    def extract_segments(self, doc:'str') -> 'anylist':
         """ Makes a pass over the docstring to extract all of its tags and their text.
         """
-        # type: (str) -> list
-
         # Response to produce
         out = []
 
@@ -460,7 +465,7 @@ class ServiceInfo:
             return out
 
         # All lines in the docstring, possibly containing multiple tags
-        all_lines = doc.strip().splitlines() # type: list
+        all_lines = doc.strip().splitlines() # type: anylist
 
         # Again, nothing to parse
         if not all_lines:
@@ -511,8 +516,7 @@ class ServiceInfo:
 
 # ################################################################################################################################
 
-    def get_sio_desc(self, sio, io_separator='/', new_elem_marker='*'):
-        # type: (object) -> SimpleIODescription
+    def get_sio_desc(self, sio:'any_', io_separator:'str'='/', new_elem_marker:'str'='*') -> 'SimpleIODescription':
 
         out = SimpleIODescription()
         doc = sio.service_class.SimpleIO.__doc__
@@ -584,7 +588,7 @@ class ServiceInfo:
         empty_line_count = 0
 
         # Line that separates input from output in the list of arguments
-        input_output_sep_idx = None
+        input_output_sep_idx = 0 # Initially empty, i.e. set to zero
 
         # To indicate whether we have found a separator in the docstring
         has_separator = False
@@ -629,8 +633,7 @@ class ServiceInfo:
 
 # ################################################################################################################################
 
-    def _parse_sio_desc_lines(self, lines, new_elem_marker='*'):
-        # type: (list) -> dict
+    def _parse_sio_desc_lines(self, lines:'anylist', new_elem_marker:'str'='*') -> 'anydict':
         out = {}
         current_elem = None
 
@@ -684,13 +687,23 @@ class ServiceInfo:
 # ################################################################################################################################
 
 class Generator:
-    def __init__(self, service_store_services, simple_io_config, include, exclude, query=None, tags=None, needs_sio_desc=True):
+    def __init__(
+        self,
+        service_store_services, # type: anydict
+        simple_io_config,       # type: anydict
+        include,                # type: anylist
+        exclude,                # type: anylist
+        query='',               # type: str
+        tags=None,              # type: anylistnone
+        needs_sio_desc=True     # type: bool
+        ) -> 'None':
+
         self.service_store_services = service_store_services
         self.simple_io_config = simple_io_config
         self.include = include or []
         self.exclude = exclude or []
         self.query = query
-        self.tags = tags
+        self.tags = tags or []
         self.needs_sio_desc = needs_sio_desc
         self.services = {}
 
@@ -700,7 +713,7 @@ class Generator:
         # Service name -> list of services this service is invoked by
         self.invoked_by = {}
 
-    def to_html(self, value):
+    def to_html(self, value:'str') -> 'str':
         return markdown(value).lstrip('<p>').rstrip('</p>')
 
     def get_info(self):
@@ -716,7 +729,7 @@ class Generator:
         out = {
             'services': [],
             'namespaces': {'':{'name':APISPEC.NAMESPACE_NULL, 'docs':'', 'docs_md':'', 'services':[]}},
-        }
+        } # type: anydict
 
         # Add services
         for name in sorted(self.services):
@@ -760,7 +773,7 @@ class Generator:
             out['services'].append(item.toDict())
 
         # For each namespace, add copy of its services
-        for ns_name, _ignored_ns_info in iteritems(out['namespaces']):
+        for ns_name in out['namespaces']:
             for service in out['services']:
                 if service['namespace_name'] == ns_name:
                     out['namespaces'][ns_name]['services'].append(deepcopy(service))
@@ -769,16 +782,18 @@ class Generator:
 
 # ################################################################################################################################
 
-    def _should_handle(self, name, list_):
+    def _should_handle(self, name:'str', list_:'anylist') -> 'bool':
         for match_elem in list_:
             if fnmatch(name, match_elem):
                 return True
+        else:
+            return False
 
 # ################################################################################################################################
 
     def parse(self):
 
-        for _ignored_impl_name, details in iteritems(self.service_store_services):
+        for details in self.service_store_services.values():
 
             details = bunchify(details)
             _should_include = self._should_handle(details.name, self.include)
