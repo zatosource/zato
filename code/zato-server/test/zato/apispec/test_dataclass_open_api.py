@@ -42,7 +42,7 @@ class _MatchTestCompiled:
 
 class DataClassOpenAPITestCase(BaseSIOTestCase):
 
-    def test_dc_generate_open_api(self):
+    def test_dataclass_generate_open_api(self):
 
         MyClass = deepcopy(DataclassMyService)
         DataClassSimpleIO.attach_sio(None, self.get_server_config(), MyClass)
@@ -103,17 +103,21 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
         #
         schemas = components.schemas
 
+        user_class         = 'zato.common.test.apispec_.User'
+        account_class      = 'zato.common.test.apispec_.Account'
+        account_list_class = 'zato.common.test.apispec_.AccountList'
+
         self.assertListEqual(sorted(schemas), [
             'request_my_service',
             'response_my_service',
-            'test.zato.common.Account',
-            'test.zato.common.AccountList',
-            'test.zato.common.User',
+            f'{account_class}',
+            f'{account_list_class}',
+            f'{user_class}',
         ])
 
-        user         = schemas['test.zato.common.User']        # type: Bunch
-        account      = schemas['test.zato.common.Account']     # type: Bunch
-        account_list = schemas['test.zato.common.AccountList'] # type: Bunch
+        user         = schemas[f'{user_class}']        # type: Bunch
+        account      = schemas[f'{account_class}']     # type: Bunch
+        account_list = schemas[f'{account_list_class}'] # type: Bunch
 
         request_my_service  = schemas['request_my_service']  # type: Bunch
         response_my_service = schemas['response_my_service'] # type: Bunch
@@ -132,7 +136,7 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
                 'type':        'integer',
             },
             'user': {
-                '$ref':        '#/components/schemas/test.zato.common.User',
+                '$ref':        f'#/components/schemas/{user_class}',
                 'description': '',
             },
         })
@@ -146,7 +150,7 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
         self.assertListEqual(response_my_service.required, ['account_list', 'current_balance', 'pref_account'])
         self.assertDictEqual(response_my_service.properties, {
             'account_list': {
-                '$ref':        '#/components/schemas/test.zato.common.AccountList',
+                '$ref':        f'#/components/schemas/{account_list_class}',
                 'description': '',
             },
             'current_balance': {
@@ -160,7 +164,7 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
                 'type':        'integer',
             },
             'pref_account': {
-                '$ref':        '#/components/schemas/test.zato.common.Account',
+                '$ref':        f'#/components/schemas/{account_class}',
                 'description': '',
             },
         })
@@ -196,7 +200,7 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
                 'description': '',
                 'type':        'array',
                 'items': {
-                    '$ref': '#/components/schemas/test.zato.common.Account',
+                    '$ref': f'#/components/schemas/{account_class}',
                 }
             }
         })
