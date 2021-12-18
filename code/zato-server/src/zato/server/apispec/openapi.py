@@ -30,7 +30,7 @@ from zato.simpleio import SIO_TYPE_MAP
 
 if 0:
     from zato.common.typing_ import anydict, anydictnone, anylist, strorlist
-    from zato.server.apispec import FieldInfo
+    from zato.server.apispec import FieldInfo, ServiceInfo
     FieldInfo = FieldInfo
 
 # ################################################################################################################################
@@ -151,8 +151,8 @@ class OpenAPIGenerator:
 
 # ################################################################################################################################
 
-    def _get_message_schemas(self, data, is_request):
-        # type: (Bunch, bool) -> Bunch
+    def _get_message_schemas(self, data:'ServiceInfo', is_request:'bool') -> 'Bunch':
+        # type: (ServiceInfo, bool) -> Bunch
 
         if is_request:
             name_func = self._get_request_name

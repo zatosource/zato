@@ -17,7 +17,7 @@ from bunch import bunchify
 from yaml import FullLoader, load as yaml_load
 
 # Zato
-from ..common import DataclassMyService, service_name, sio_config
+from zato.common.test.apispec_ import DataclassMyService, service_name, sio_config
 from zato.common.api import APISPEC, URL_TYPE
 from zato.common.marshal_.simpleio import DataClassSimpleIO
 from zato.common.test import BaseSIOTestCase
