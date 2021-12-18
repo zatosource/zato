@@ -18,7 +18,7 @@ from markdown import markdown
 
 # Zato
 from zato.common.api import APISPEC
-from zato.server.apispec.parser import ServiceInfo
+from zato.server.apispec.parser.service import ServiceInfo
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -99,12 +99,12 @@ class Generator:
             item.simple_io = info.simple_io
 
             item.docs = Bunch()
-            item.docs.summary = info.docstring.summary
-            item.docs.summary_html = self.to_html(info.docstring.summary)
-            item.docs.description = info.docstring.description
-            item.docs.description_html = self.to_html(info.docstring.description)
-            item.docs.full = info.docstring.full
-            item.docs.full_html = self.to_html(info.docstring.full)
+            item.docs.summary = info.docstring_parser.docstring.summary
+            item.docs.summary_html = self.to_html(info.docstring_parser.docstring.summary)
+            item.docs.description = info.docstring_parser.docstring.description
+            item.docs.description_html = self.to_html(info.docstring_parser.docstring.description)
+            item.docs.full = info.docstring_parser.docstring.full
+            item.docs.full_html = self.to_html(info.docstring_parser.docstring.full)
             item.namespace_name = info.namespace.name
 
             # Add namespaces

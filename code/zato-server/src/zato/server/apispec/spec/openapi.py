@@ -20,7 +20,7 @@ from zato.common.api import URL_TYPE
 from zato.common.marshal_.api import Model
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.import_ import import_string
-from zato.server.apispec.parser import build_field_list
+from zato.server.apispec.parser.service import build_field_list
 
 # Zato - Cython
 from zato.simpleio import SIO_TYPE_MAP
@@ -30,7 +30,7 @@ from zato.simpleio import SIO_TYPE_MAP
 
 if 0:
     from zato.common.typing_ import anydict, anydictnone, anylist, stranydict, strorlist
-    from zato.server.apispec import FieldInfo
+    from zato.server.apispec.model import FieldInfo
     FieldInfo = FieldInfo
 
 # ################################################################################################################################

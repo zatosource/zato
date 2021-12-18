@@ -88,7 +88,7 @@ class ServiceInfo:
 
     def parse(self) -> 'None':
         self.parse_simple_io()
-        self.set_summary_desc()
+        self.docstring_parser.set_summary_desc()
 
 # ################################################################################################################################
 
@@ -112,7 +112,7 @@ class ServiceInfo:
         if sio:
 
             # This can be reused across all the output data formats
-            sio_desc = self.get_sio_desc(sio)
+            sio_desc = self.docstring_parser.get_sio_desc(sio)
 
             for api_spec_info in _SIO_TYPE_MAP:
 
