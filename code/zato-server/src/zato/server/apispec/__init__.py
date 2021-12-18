@@ -86,13 +86,13 @@ def build_field_list(model:'Model', api_spec_info:'any_') -> 'anylist':
 
 @dataclass(init=False)
 class FieldInfo:
-    name: str
-    is_required: bool
-    description: str = ''
-    type: str = ''
-    subtype: str = ''
-    ref: str = ''
-    is_list: bool = False
+    name:        'str'
+    type:        'str'  = ''
+    subtype:     'str'  = ''
+    is_required: 'bool' = False
+    description: 'str'  = ''
+    ref:         'str'  = ''
+    is_list:     'bool' = False
 
     @staticmethod
     def from_python_field(field:'Field', api_spec_info:'Bunch') -> 'FieldInfo':
