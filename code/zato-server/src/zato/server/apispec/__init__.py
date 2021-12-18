@@ -36,6 +36,7 @@ from zato.simpleio import SIO_TYPE_MAP
 # ################################################################################################################################
 
 if 0:
+    from zato.common.typing_ import anylist
     from zato.server.service import Service
     Service = Service
 
@@ -156,8 +157,7 @@ class Config:
 class Docstring:
     __slots__ = 'summary', 'description', 'full', 'tags', 'by_tag'
 
-    def __init__(self, tags):
-        # type: (list)
+    def __init__(self, tags:'anylist') -> 'None':
         self.summary = ''
         self.description = ''
         self.full = ''
@@ -168,9 +168,16 @@ class Docstring:
 # ################################################################################################################################
 
 class Namespace:
+
+    name: str
+    docs: str
+
     def __init__(self):
         self.name = APISPEC.NAMESPACE_NULL
-        self.docs = ''
+        self.docs = 123
+
+    def x(self) -> int:
+        return self.docs
 
 # ################################################################################################################################
 # ################################################################################################################################
