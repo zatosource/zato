@@ -35,6 +35,8 @@ from dacite import from_dict
 from typing_extensions import \
     TypeAlias as typealias_
 
+from sqlalchemy import union
+
 
 # Be explicit about which import error we want to catch
 try:
@@ -84,6 +86,7 @@ def instance_from_dict(class_, data):
 # ################################################################################################################################
 
 anydict      = dict_[any_, any_]
+anydictnone  = optional[anydict]
 anylist      = list_[any_]
 anylistnone  = optional[anylist]
 anyset       = set_[any_]
@@ -117,6 +120,7 @@ strlist      = list_[str]
 strlistdict  = dict_[str, anylist]
 strlistempty = list_[optional[str]]
 strnone      = optional[str]
+strorlist    = union_[str, anylist]
 strset       = set_[str]
 strsetdict   = dict_[str, anyset]
 strstrdict   = dict_[str, str]
