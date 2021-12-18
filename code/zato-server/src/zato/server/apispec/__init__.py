@@ -33,12 +33,14 @@ from zato.common.marshal_.simpleio import DataClassSimpleIO
 from zato.simpleio import SIO_TYPE_MAP
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 if 0:
     from zato.common.typing_ import any_, anydict, anylist, anylistnone, anytuple, iterator_, optional, strorlist, type_
     from zato.server.service import Service
     Service = Service
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 _sio_attrs = (
@@ -48,6 +50,7 @@ _sio_attrs = (
 
 _SIO_TYPE_MAP = SIO_TYPE_MAP()
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 tag_internal = ('@classified', '@confidential', '@internal', '@private', '@restricted', '@secret')
@@ -70,7 +73,7 @@ def build_field_list(model:'Model', api_spec_info:'any_') -> 'anylist':
     # All the fields of this dataclass
     python_field_list = model._zato_get_fields()
 
-    for _ignored_field_name, field in sorted(python_field_list.items()): # type: (str, Field)
+    for _, field in sorted(python_field_list.items()): # type: (str, Field)
 
         # Parameter details object
         info = FieldInfo.from_python_field(field, api_spec_info)
@@ -188,6 +191,8 @@ class _DocstringSegment:
         self.description = '' # type: str
         self.full = ''        # type: str
 
+# ################################################################################################################################
+
     def to_dict(self):
         return {
             'tag': self.tag,
@@ -217,6 +222,8 @@ class SimpleIO:
         self.description = description
         self.needs_sio_desc = needs_sio_desc
 
+# ################################################################################################################################
+
     def to_bunch(self):
         out = Bunch()
         for name in _sio_attrs + ('request_elem', 'response_elem', 'spec_name'):
@@ -236,6 +243,8 @@ class SimpleIODescription:
     def __init__(self):
         self.input = {}
         self.output = {}
+
+# ################################################################################################################################
 
     def to_bunch(self):
         out = Bunch()
@@ -718,13 +727,20 @@ class Generator:
         # Service name -> list of services this service is invoked by
         self.invoked_by = {}
 
+# ################################################################################################################################
+
     def to_html(self, value:'str') -> 'str':
         return markdown(value).lstrip('<p>').rstrip('</p>')
+
+# ################################################################################################################################
 
     def get_info(self):
         """ Returns a list of dicts containing metadata about services in the scope required to generate docs and API clients.
         """
-        self.parse()
+
+        # This is the call that finds all the services in the server's service store
+        # and turns them into a data structure that SIO information is applied to in later steps.
+        self.prepare_service_information()
 
         if self.query:
             query_items = [elem.strip() for elem in self.query.strip().split()]
@@ -796,7 +812,7 @@ class Generator:
 
 # ################################################################################################################################
 
-    def parse(self):
+    def prepare_service_information(self):
 
         for details in self.service_store_services.values():
 
@@ -821,4 +837,5 @@ class Generator:
         for name, info in iteritems(self.services):
             info.invoked_by = self.invoked_by.get(name, [])
 
+# ################################################################################################################################
 # ################################################################################################################################
