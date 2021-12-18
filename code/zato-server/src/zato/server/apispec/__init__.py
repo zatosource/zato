@@ -33,7 +33,7 @@ from zato.simpleio import SIO_TYPE_MAP
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, anylistnone, anytuple, iterator_, optional, strorlist, type_
+    from zato.common.typing_ import any_, anydict, anylist, anylistnone, anytuple, dict_, iterator_, optional, strorlist, type_
     from zato.server.service import Service
     Service = Service
 
@@ -694,7 +694,7 @@ class Generator:
         self.query = query
         self.tags = tags or []
         self.needs_sio_desc = needs_sio_desc
-        self.services = {}
+        self.services = {} # type: dict_[str, ServiceInfo]
 
 # ################################################################################################################################
 
