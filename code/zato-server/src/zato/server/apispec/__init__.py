@@ -20,9 +20,6 @@ from docformatter import format_docstring
 # markdown
 from markdown import markdown
 
-# Python 2/3 compatibility
-from future.utils import iteritems
-
 # Zato
 from zato.common.api import APISPEC
 from zato.common.ext.dataclasses import dataclass, Field, MISSING
@@ -275,8 +272,6 @@ class ServiceInfo:
         self.docstring = Docstring(tags if isinstance(tags, list) else [tags])
 
         self.namespace = Namespace()
-        self.invokes = []
-        self.invoked_by = []
         self.needs_sio_desc = needs_sio_desc
         self.parse()
 
@@ -285,25 +280,6 @@ class ServiceInfo:
     def parse(self):
         self.set_config()
         self.set_summary_desc()
-
-# ################################################################################################################################
-
-    def _add_services_from_invokes(self):
-        """ Populates the list of services that this services invokes.
-
-        class MyService(Service):
-          invokes = 'foo'
-
-        class MyService(Service):
-          invokes = ['foo', 'bar']
-        """
-        invokes = getattr(self.service_class, 'invokes', None)
-        if invokes:
-            if isinstance(invokes, str):
-                self.invokes.append(invokes)
-            else:
-                if isinstance(invokes, (list, tuple)):
-                    self.invokes.extend(list(invokes))
 
 # ################################################################################################################################
 
@@ -347,7 +323,6 @@ class ServiceInfo:
 # ################################################################################################################################
 
     def set_config(self):
-        self._add_services_from_invokes()
         self._add_ns_sio()
 
 # ################################################################################################################################
@@ -721,12 +696,6 @@ class Generator:
         self.needs_sio_desc = needs_sio_desc
         self.services = {}
 
-        # Service name -> list of services this service invokes
-        self.invokes = {}
-
-        # Service name -> list of services this service is invoked by
-        self.invoked_by = {}
-
 # ################################################################################################################################
 
     def to_html(self, value:'str') -> 'str':
@@ -768,8 +737,6 @@ class Generator:
             item = Bunch()
 
             item.name = info.name
-            item.invokes = sorted(info.invokes)
-            item.invoked_by = sorted(info.invoked_by)
             item.simple_io = info.simple_io
 
             item.docs = Bunch()
@@ -825,17 +792,6 @@ class Generator:
 
             info = ServiceInfo(details.name, details.service_class, self.simple_io_config, self.tags, self.needs_sio_desc)
             self.services[info.name] = info
-
-        for name, info in iteritems(self.services):
-            self.invokes[name] = info.invokes
-
-        for source, targets in iteritems(self.invokes):
-            for target in targets:
-                sources = self.invoked_by.setdefault(target, [])
-                sources.append(source)
-
-        for name, info in iteritems(self.services):
-            info.invoked_by = self.invoked_by.get(name, [])
 
 # ################################################################################################################################
 # ################################################################################################################################
