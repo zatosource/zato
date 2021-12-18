@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main, TestCase
 
 # Zato
-from ..common import service_name, sio_config
+from zato.common.test.apispec_ import service_name, sio_config
 from zato.common.api import APISPEC
 from zato.server.apispec import not_public, ServiceInfo
 
@@ -80,6 +80,7 @@ class APISpecDocstringParsing(TestCase):
             - More bullets in the list
 
             """
+            __doc__: 'str'
 
         info = ServiceInfo(service_name, CyMyService, sio_config, 'public')
         self.assertEqual(info.docstring.summary, 'This is a one-line summary.')
