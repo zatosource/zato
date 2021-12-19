@@ -17,7 +17,7 @@ from zato.server.apispec.parser.service import ServiceInfo
 
 if 0:
     from dataclasses import Field
-    from zato.common.typing_ import anydict, anylist, anylistnone, dict_
+    from zato.common.typing_ import anydict, anylist, anylistnone, dict_, dictlist
     from zato.server.service import Service
 
     Field   = Field
@@ -49,7 +49,7 @@ class Generator:
 
 # ################################################################################################################################
 
-    def get_info(self) -> 'anydict':
+    def get_info(self) -> 'dictlist':
         """ Returns a list of dicts containing metadata about services in the scope required to generate docs and API clients.
         """
 
@@ -62,9 +62,7 @@ class Generator:
         else:
             query_items = []
 
-        out = {
-            'services': [],
-        } # type: anydict
+        out = []
 
         # Add services
         for name in sorted(self.services):
@@ -79,7 +77,7 @@ class Generator:
                 continue
 
             info = self.services[name] # type: ServiceInfo
-            out['services'].append(info.to_dict())
+            out.append(info.to_dict())
 
         return out
 
