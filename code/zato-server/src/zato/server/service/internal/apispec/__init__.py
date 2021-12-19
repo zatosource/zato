@@ -17,8 +17,8 @@ import os
 from bunch import bunchify
 
 # Zato
-from zato.server.apispec.openapi import OpenAPIGenerator
-from zato.server.apispec.wsdl import WSDLGenerator
+from zato.server.apispec.spec.openapi import OpenAPIGenerator
+from zato.server.apispec.spec.wsdl import WSDLGenerator
 from zato.server.service import List, Opaque, Service
 
 # Zato
@@ -26,7 +26,7 @@ from zato.common.ext.dataclasses import asdict
 from zato.common.util.eval_ import as_list
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.open_ import open_r
-from zato.server.apispec import FieldInfo
+from zato.server.apispec.model import FieldInfo
 from zato.server.apispec.spec.core import Generator
 from zato.server.service import AsIs, Bool
 
@@ -133,7 +133,7 @@ class GetSphinx(Service):
 # ################################################################################################################################
 
     def get_wsdl_spec(self, data):
-        services = bunchify(data['services'])
+        services = bunchify(data)
         target_ns = 'urn:zato-apispec'
         return WSDLGenerator(services, target_ns).generate()
 
@@ -372,7 +372,7 @@ class GetSphinx(Service):
         longest_name = 4  # len('Name')
         longest_desc = 11 # len('Description')
 
-        for idx, elem in enumerate(data.services, 1):
+        for idx, elem in enumerate(data, 1):
             name = elem.name
             docs = elem.docs
             sio = elem.simple_io
