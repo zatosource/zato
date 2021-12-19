@@ -110,9 +110,9 @@ class ServiceInfo:
         """
 
         # SimpleIO
-        sio = getattr(self.service_class, '_sio', None) # type: optional[DataClassSimpleIO]
+        sio = getattr(self.service_class, '_sio', None) # type: any_
 
-        if sio:
+        if sio and isinstance(sio, DataClassSimpleIO):
 
             # This can be reused across all the output data formats
             sio_desc = self.docstring.get_sio_desc(sio)
