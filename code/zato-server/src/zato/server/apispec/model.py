@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from dataclasses import dataclass, field, Field, MISSING
 from inspect import isclass
+from mimetypes import init
 
 # Bunch
 from bunch import Bunch
@@ -45,6 +46,8 @@ class FieldInfo:
     description: 'str'  = ''
     ref:         'str'  = ''
     is_list:     'bool' = False
+
+# ################################################################################################################################
 
     @staticmethod
     def from_python_field(field:'Field', api_spec_info:'Bunch') -> 'FieldInfo':
@@ -109,31 +112,37 @@ class Config:
 # ################################################################################################################################
 # ################################################################################################################################
 
+@dataclass
 class DocstringModel:
-    __slots__ = 'summary', 'description', 'full', 'tags', 'by_tag'
 
-    def __init__(self, tags:'anylist') -> 'None':
-        self.summary     = ''
-        self.description = ''
-        self.full        = ''
-        self.tags        = tags
+    full:      'str' = ''
+    full_html: 'str' = ''
 
-        # Keys are tags used, values are documentation for key
-        self.by_tag = {} # type: anydict
+    summary:      'str' = ''
+    summary_html: 'str' = ''
+
+    description:      'str' = ''
+    description_html: 'str' = ''
+
+    # Keys are tags used, values are documentation for key
+    by_tag: 'anydict' = field(default_factory=dict)
+    tags:   'anylist' = field(default_factory=list)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @dataclass(init=False)
 class Namespace:
-    name: 'str' = APISPEC.NAMESPACE_NULL
-    docs: 'str' = ''
+    name:    'str' = APISPEC.NAMESPACE_NULL
+    docs:    'str' = ''
+    docs_md: 'str' = ''
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class SimpleIO:
-
+    """ Represents a SimpleIO definition of a particular service.
+    """
     input:          'anylist'
     output:         'anylist'
     request_elem:   'any_'

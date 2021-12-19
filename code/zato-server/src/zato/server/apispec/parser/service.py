@@ -9,6 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from inspect import getmodule
 
+# markdown
+from markdown import markdown
+
 # Zato
 from zato.common.api import APISPEC
 from zato.common.marshal_.api import Model
@@ -105,6 +108,7 @@ class ServiceInfo:
         # Set namespace's documentation but only if it was declared top-level and is equal to our own
         if self.namespace.name and self.namespace.name == mod_ns:
             self.namespace.docs = getattr(mod, 'namespace_docs', '')
+            self.namespace.docs_md = markdown(self.namespace.docs)
 
         # SimpleIO
         sio = getattr(self.service_class, '_sio', None) # type: optional[DataClassSimpleIO]
