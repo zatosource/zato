@@ -7,14 +7,12 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from copy import deepcopy
 from fnmatch import fnmatch
 
 # Bunch
 from bunch import Bunch, bunchify
 
 # Zato
-from zato.common.api import APISPEC
 from zato.server.apispec.parser.service import ServiceInfo
 
 # ################################################################################################################################
@@ -69,7 +67,6 @@ class Generator:
 
         out = {
             'services': [],
-            'namespaces': {'':{'name':APISPEC.NAMESPACE_NULL, 'docs':'', 'docs_md':'', 'services':[]}},
         } # type: anydict
 
         # Add services
@@ -97,25 +94,8 @@ class Generator:
             item.docs.description_html = info.docstring.data.description_html
             item.docs.full = info.docstring.data.full
             item.docs.full_html = info.docstring.data.full_html
-            item.namespace_name = info.namespace.name
-
-            # Add namespaces
-            if info.namespace.name:
-                ns = out['namespaces'].setdefault(info.namespace.name, {'docs':'', 'docs_md':''})
-                ns['name'] = info.namespace.name
-                ns['services'] = []
-
-                if info.namespace.docs:
-                    ns['docs'] = info.namespace.docs
-                    ns['docs_md'] = info.namespace.docs_md
 
             out['services'].append(item.toDict())
-
-        # For each namespace, add copy of its services
-        for ns_name in out['namespaces']:
-            for service in out['services']:
-                if service['namespace_name'] == ns_name:
-                    out['namespaces'][ns_name]['services'].append(deepcopy(service))
 
         return out
 
