@@ -99,12 +99,12 @@ class Generator:
             item.simple_io = info.simple_io
 
             item.docs = Bunch()
-            item.docs.summary = info.docstring_parser.docstring.summary
-            item.docs.summary_html = self.to_html(info.docstring_parser.docstring.summary)
-            item.docs.description = info.docstring_parser.docstring.description
-            item.docs.description_html = self.to_html(info.docstring_parser.docstring.description)
-            item.docs.full = info.docstring_parser.docstring.full
-            item.docs.full_html = self.to_html(info.docstring_parser.docstring.full)
+            item.docs.summary = info.docstring.data.summary
+            item.docs.summary_html = self.to_html(info.docstring.data.summary)
+            item.docs.description = info.docstring.data.description
+            item.docs.description_html = self.to_html(info.docstring.data.description)
+            item.docs.full = info.docstring.data.full
+            item.docs.full_html = self.to_html(info.docstring.data.full)
             item.namespace_name = info.namespace.name
 
             # Add namespaces
