@@ -56,12 +56,12 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
         include = ['*']
         exclude = []
         query   = ''
-        tags    = 'public'
+        tags    = ['public']
 
         generator = Generator(service_store_services, sio_config, include, exclude, query, tags, needs_sio_desc=False)
 
-        info = generator.get_info()
-        info = bunchify(info)
+        info_dict = generator.get_info()
+        info = bunchify(info_dict)
 
         channel_data = [{
             'service_name': service_name,
@@ -69,6 +69,7 @@ class DataClassOpenAPITestCase(BaseSIOTestCase):
             'url_path':     '/test/{phone_number}',
             'match_target_compiled': _MatchTestCompiled()
         }]
+
         needs_api_invoke = True
         needs_rest_channels = True
         api_invoke_path = APISPEC.GENERIC_INVOKE_PATH

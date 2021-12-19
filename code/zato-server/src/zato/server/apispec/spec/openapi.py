@@ -29,7 +29,7 @@ from zato.simpleio import SIO_TYPE_MAP
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anydictnone, anylist, stranydict, strorlist
+    from zato.common.typing_ import anydict, anydictnone, anylist, dictlist, stranydict, strorlist
     from zato.server.apispec.model import FieldInfo
     FieldInfo = FieldInfo
 
@@ -52,7 +52,7 @@ class OpenAPIGenerator:
     def __init__(
         self,
         data,                # type: Bunch
-        channel_data,        # type: anydict
+        channel_data,        # type: dictlist
         needs_api_invoke,    # type: bool
         needs_rest_channels, # type: bool
         api_invoke_path      # type: strorlist
