@@ -11,7 +11,7 @@ from docformatter import format_docstring
 
 # Zato
 from zato.common.api import APISPEC
-from zato.server.apispec.model import Docstring, SimpleIODescription
+from zato.server.apispec.model import DocstringModel, SimpleIODescription
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,11 +70,11 @@ class DocstringParser:
         ) -> 'None':
 
         self.service_class = service_class
-        self.docstring = Docstring(tags if isinstance(tags, list) else [tags])
+        self.data = DocstringModel(tags if isinstance(tags, list) else [tags])
 
 # ################################################################################################################################
 
-    def set_summary_desc(self):
+    def set_summary_desc(self) -> 'None':
 
         segments = self.extract_segments(self.service_class.__doc__ or '')
 
@@ -82,14 +82,14 @@ class DocstringParser:
 
             # The very first summary found will set the whole docstring's summary
             if segment.summary:
-                if not self.docstring.summary:
-                    self.docstring.summary = segment.summary
+                if not self.data.summary:
+                    self.data.summary = segment.summary
 
             if segment.description:
-                self.docstring.description += segment.description
+                self.data.description += segment.description
 
             if segment.full:
-                self.docstring.full += segment.full
+                self.data.full += segment.full
 
 # ################################################################################################################################
 
@@ -245,7 +245,7 @@ class DocstringParser:
 
             segment = self._parse_split_segment(tag, tag_lines, is_tag_internal, prefix_with_tag)
 
-            if segment.tag in self.docstring.tags:
+            if segment.tag in self.data.tags:
                 out.append(segment)
 
         return out
@@ -260,14 +260,14 @@ class DocstringParser:
 
             # The very first summary found will set the whole docstring's summary
             if segment.summary:
-                if not self.docstring.summary:
-                    self.docstring.summary = segment.summary
+                if not self.data.summary:
+                    self.data.summary = segment.summary
 
             if segment.description:
-                self.docstring.description += segment.description
+                self.data.description += segment.description
 
             if segment.full:
-                self.docstring.full += segment.full
+                self.data.full += segment.full
 
 # ################################################################################################################################
 

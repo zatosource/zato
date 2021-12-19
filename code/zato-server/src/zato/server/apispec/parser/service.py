@@ -79,7 +79,7 @@ class ServiceInfo:
         self.needs_sio_desc = needs_sio_desc
 
         # This is the object that extracts docstrings from services or from their SimpleIO definitions.
-        self.docstring_parser = DocstringParser(service_class, tags)
+        self.docstring = DocstringParser(service_class, tags)
 
         # Run the parser now
         self.parse()
@@ -88,7 +88,7 @@ class ServiceInfo:
 
     def parse(self) -> 'None':
         self.parse_simple_io()
-        self.docstring_parser.set_summary_desc()
+        self.docstring.set_summary_desc()
 
 # ################################################################################################################################
 
@@ -112,7 +112,7 @@ class ServiceInfo:
         if sio:
 
             # This can be reused across all the output data formats
-            sio_desc = self.docstring_parser.get_sio_desc(sio)
+            sio_desc = self.docstring.get_sio_desc(sio)
 
             for api_spec_info in _SIO_TYPE_MAP:
 
