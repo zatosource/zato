@@ -13,9 +13,6 @@ from fnmatch import fnmatch
 # Bunch
 from bunch import Bunch, bunchify
 
-# markdown
-from markdown import markdown
-
 # Zato
 from zato.common.api import APISPEC
 from zato.server.apispec.parser.service import ServiceInfo
@@ -57,11 +54,6 @@ class Generator:
 
 # ################################################################################################################################
 
-    def to_html(self, value:'str') -> 'str':
-        return markdown(value).lstrip('<p>').rstrip('</p>')
-
-# ################################################################################################################################
-
     def get_info(self) -> 'anydict':
         """ Returns a list of dicts containing metadata about services in the scope required to generate docs and API clients.
         """
@@ -100,11 +92,11 @@ class Generator:
 
             item.docs = Bunch()
             item.docs.summary = info.docstring.data.summary
-            item.docs.summary_html = self.to_html(info.docstring.data.summary)
+            item.docs.summary_html = info.docstring.data.summary_html
             item.docs.description = info.docstring.data.description
-            item.docs.description_html = self.to_html(info.docstring.data.description)
+            item.docs.description_html = info.docstring.data.description_html
             item.docs.full = info.docstring.data.full
-            item.docs.full_html = self.to_html(info.docstring.data.full)
+            item.docs.full_html = info.docstring.data.full_html
             item.namespace_name = info.namespace.name
 
             # Add namespaces
@@ -115,7 +107,7 @@ class Generator:
 
                 if info.namespace.docs:
                     ns['docs'] = info.namespace.docs
-                    ns['docs_md'] = markdown(info.namespace.docs)
+                    ns['docs_md'] = info.namespace.docs_md
 
             out['services'].append(item.toDict())
 

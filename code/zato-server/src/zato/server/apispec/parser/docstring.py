@@ -6,11 +6,18 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# dataclasses
+from dataclasses import dataclass
+
 # docformatter
 from docformatter import format_docstring
 
+# markdown
+from markdown import markdown
+
 # Zato
 from zato.common.api import APISPEC
+from zato.common.marshal_.api import Model
 from zato.server.apispec.model import DocstringModel, SimpleIODescription
 
 # ################################################################################################################################
@@ -39,24 +46,12 @@ not_public = 'INFORMATION IN THIS SECTION IS NOT PUBLIC'
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _DocstringSegment:
-    __slots__ = 'tag', 'summary', 'description', 'full'
-
-    def __init__(self) -> 'None':
-        self.tag = ''         # type: str
-        self.summary = ''     # type: str
-        self.description = '' # type: str
-        self.full = ''        # type: str
-
-# ################################################################################################################################
-
-    def to_dict(self) -> 'anydict':
-        return {
-            'tag': self.tag,
-            'summary': self.summary,
-            'description': self.description,
-            'full': self.full,
-        }
+@dataclass(init=False)
+class _DocstringSegment(Model):
+    tag:         'str' = ''
+    summary:     'str' = ''
+    description: 'str' = ''
+    full:        'str' = ''
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,7 +65,8 @@ class DocstringParser:
         ) -> 'None':
 
         self.service_class = service_class
-        self.data = DocstringModel(tags if isinstance(tags, list) else [tags])
+        self.data = DocstringModel()
+        self.data.tags = tags if isinstance(tags, list) else [tags]
 
 # ################################################################################################################################
 
@@ -90,6 +86,11 @@ class DocstringParser:
 
             if segment.full:
                 self.data.full += segment.full
+
+        # Now that we have visited all the segments, we can also add an HTML version of the data found.
+        self.data.full_html = self.to_html(self.data.full)
+        self.data.summary_html = self.to_html(self.data.summary)
+        self.data.description_html = self.to_html(self.data.description)
 
 # ################################################################################################################################
 
@@ -437,6 +438,12 @@ class DocstringParser:
             out[key] = new_value
 
         return out
+
+
+# ################################################################################################################################
+
+    def to_html(self, value:'str') -> 'str':
+        return markdown(value).lstrip('<p>').rstrip('</p>')
 
 # ################################################################################################################################
 # ################################################################################################################################
