@@ -16,7 +16,7 @@ from markdown import markdown
 from zato.common.api import APISPEC
 from zato.common.marshal_.api import Model
 from zato.common.marshal_.simpleio import DataClassSimpleIO
-from zato.server.apispec.model import APISpecInfo, Config, FieldInfo, Namespace, SimpleIO
+from zato.server.apispec.model import APISpecInfo, Config, FieldInfo, SimpleIO
 from zato.server.apispec.parser.docstring import DocstringParser
 
 # Zato - Cython
@@ -77,8 +77,6 @@ class ServiceInfo:
         self.simple_io_config = simple_io_config
         self.config = Config()
         self.simple_io = {} # type: anydict
-
-        self.namespace = Namespace()
         self.needs_sio_desc = needs_sio_desc
 
         # This is the object that extracts docstrings from services or from their SimpleIO definitions.
@@ -96,19 +94,8 @@ class ServiceInfo:
 # ################################################################################################################################
 
     def parse_simple_io(self) -> 'None':
-        """ Adds metadata about the service's namespace and SimpleIO definition.
+        """ Adds metadata about the service's SimpleIO definition.
         """
-        # Namespace can be declared as a service-level attribute of a module-level one. Former takes precedence.
-        service_ns = getattr(self.service_class, 'namespace', APISPEC.NAMESPACE_NULL)
-        mod = getmodule(self.service_class)
-        mod_ns = getattr(mod, 'namespace', APISPEC.NAMESPACE_NULL)
-
-        self.namespace.name = service_ns if service_ns else mod_ns
-
-        # Set namespace's documentation but only if it was declared top-level and is equal to our own
-        if self.namespace.name and self.namespace.name == mod_ns:
-            self.namespace.docs = getattr(mod, 'namespace_docs', '')
-            self.namespace.docs_md = markdown(self.namespace.docs)
 
         # SimpleIO
         sio = getattr(self.service_class, '_sio', None) # type: optional[DataClassSimpleIO]
