@@ -72,7 +72,10 @@ class DocstringParser:
 
     def set_summary_desc(self) -> 'None':
 
-        segments = self.extract_segments(self.service_class.__doc__ or '')
+        doc = self.service_class.__doc__ or ''
+        doc = doc.replace('*', r'\*')
+
+        segments = self.extract_segments(doc)
 
         for segment in segments: # type: _DocstringSegment
 
@@ -255,7 +258,10 @@ class DocstringParser:
 
     def parse_docstring(self) -> 'None':
 
-        segments = self.extract_segments(self.service_class.__doc__ or '')
+        doc = self.service_class.__doc__ or ''
+        doc = doc.replace('*', r'\*')
+
+        segments = self.extract_segments(doc)
 
         for segment in segments: # type: _DocstringSegment
 
@@ -275,7 +281,9 @@ class DocstringParser:
     def get_sio_desc(self, sio:'any_', io_separator:'str'='/', new_elem_marker:'str'='*') -> 'SimpleIODescription':
 
         out = SimpleIODescription()
-        doc = sio.service_class.SimpleIO.__doc__
+
+        doc = sio.service_class.SimpleIO.__doc__ or ''
+        doc = doc.replace('*', r'\*')
 
         # No description to parse
         if not doc:
