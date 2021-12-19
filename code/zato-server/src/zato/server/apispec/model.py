@@ -61,7 +61,7 @@ class FieldInfo:
         field_type = field.type
         origin = getattr(field_type, '__origin__', None)
 
-        if origin and origin._name == 'Union':
+        if origin and getattr(origin, '_name', '') == 'Union':
             field_type_args = field_type.__args__
             field_type = field_type_args[0]
             union_with = field_type_args[1]
@@ -77,10 +77,10 @@ class FieldInfo:
         is_class = isclass(field_type)
 
         if is_list(field_type, is_class):
-            type_info = '', ''
             ref = extract_model_class(field_type)
             info.is_list = True
             info.ref = '#/components/schemas/{}.{}'.format(ref.__module__, ref.__name__)
+            type_info = '', ref.__name__
 
         elif issubclass(field_type, bool):
             type_info = api_spec_info.BOOLEAN

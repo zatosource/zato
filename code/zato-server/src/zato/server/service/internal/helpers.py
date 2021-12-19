@@ -327,7 +327,7 @@ class APISpecHelperUser(Service):
     name = 'helpers.api-spec.user'
 
     class SimpleIO:
-        input  = GetUserRequest
+        #input  = GetUserRequest
         output = GetUserResponse
 
 # ################################################################################################################################
@@ -340,7 +340,7 @@ class APISpecHelperAccountList(Service):
 
     class SimpleIO:
         input  = GetUserAccountListRequest
-        #output = GetUserAccountListResponse
+        output = GetUserAccountListResponse
 
 # ################################################################################################################################
 # ################################################################################################################################
