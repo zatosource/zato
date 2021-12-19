@@ -6,14 +6,7 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from inspect import getmodule
-
-# markdown
-from markdown import markdown
-
 # Zato
-from zato.common.api import APISPEC
 from zato.common.marshal_.api import Model
 from zato.common.marshal_.simpleio import DataClassSimpleIO
 from zato.server.apispec.model import APISpecInfo, Config, FieldInfo, SimpleIO
@@ -84,6 +77,27 @@ class ServiceInfo:
 
         # Run the parser now
         self.parse()
+
+# ################################################################################################################################
+
+    def to_dict(self) -> 'anydict':
+
+        docs = {
+            'full':      self.docstring.data.full,
+            'full_html': self.docstring.data.full_html,
+
+            'summary':      self.docstring.data.summary,
+            'summary_html': self.docstring.data.summary_html,
+
+            'description':      self.docstring.data.description,
+            'description_html': self.docstring.data.description_html,
+        } # type: anydict
+
+        return {
+            'name': self.name,
+            'docs': docs,
+            'simple_io': self.simple_io
+        }
 
 # ################################################################################################################################
 

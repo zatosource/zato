@@ -9,9 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from fnmatch import fnmatch
 
-# Bunch
-from bunch import Bunch, bunchify
-
 # Zato
 from zato.server.apispec.parser.service import ServiceInfo
 
@@ -82,20 +79,7 @@ class Generator:
                 continue
 
             info = self.services[name] # type: ServiceInfo
-            item = Bunch()
-
-            item.name = info.name
-            item.simple_io = info.simple_io
-
-            item.docs = Bunch()
-            item.docs.summary = info.docstring.data.summary
-            item.docs.summary_html = info.docstring.data.summary_html
-            item.docs.description = info.docstring.data.description
-            item.docs.description_html = info.docstring.data.description_html
-            item.docs.full = info.docstring.data.full
-            item.docs.full_html = info.docstring.data.full_html
-
-            out['services'].append(item.toDict())
+            out['services'].append(info.to_dict())
 
         return out
 
@@ -114,14 +98,13 @@ class Generator:
 
         for details in self.service_store_services.values():
 
-            details = bunchify(details)
-            _should_include = self._should_handle(details.name, self.include)
-            _should_exclude = self._should_handle(details.name, self.exclude)
+            _should_include = self._should_handle(details['name'], self.include)
+            _should_exclude = self._should_handle(details['name'], self.exclude)
 
             if (not _should_include) or _should_exclude:
                 continue
 
-            info = ServiceInfo(details.name, details.service_class, self.simple_io_config, self.tags, self.needs_sio_desc)
+            info = ServiceInfo(details['name'], details['service_class'], self.simple_io_config, self.tags, self.needs_sio_desc)
             self.services[info.name] = info
 
 # ################################################################################################################################
