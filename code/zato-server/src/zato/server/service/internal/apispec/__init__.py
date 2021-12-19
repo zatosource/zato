@@ -190,6 +190,10 @@ class GetSphinx(Service):
 
     def write_sio(self, buff, input, output):
 
+        # Reusable
+        list_suffix = ' (list)'
+        len_list_suffix = len(list_suffix)
+
         sio_lines = []
         longest_name        = 4  # len('Name')
         longest_datatype    = 8  # len('Datatype')
@@ -208,7 +212,7 @@ class GetSphinx(Service):
             len_elem_description = len(elem.description)
 
             longest_name        = max(longest_name, len_elem_name_sphinx)
-            longest_datatype    = max(longest_datatype, len_elem_subtype)
+            longest_datatype    = max(longest_datatype, len_elem_subtype + len_list_suffix)
             longest_description = max(longest_description, len_elem_description)
 
         # We need to know how much to indent multi-line descriptions,
@@ -232,7 +236,7 @@ class GetSphinx(Service):
 
             sio_lines.append(bunchify({
                 'name': elem.name_sphinx,
-                'datatype': elem.subtype,
+                'datatype': elem.subtype + (list_suffix if elem.is_list else ''),
                 'is_required': elem.is_required,
                 'is_required_str': 'Yes' if elem.is_required else no_value,
                 'description': elem.description,
