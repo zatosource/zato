@@ -53,7 +53,7 @@ class UserAccount(Model):
 
 @dataclass
 class GetUserRequest(Model):
-    user_id: int
+    username: str
 
 @dataclass
 class GetUserAccountListRequest(Model):
@@ -69,7 +69,9 @@ class GetUserAccountListResponse(Model):
 
 @dataclass
 class GetUserResponse(Model):
-    user: optional[User]
+    user:          list_[User]
+    parent_user:   list_[optional[User]]
+    previous_user: optional[list_[User]]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -327,7 +329,7 @@ class APISpecHelperUser(Service):
     name = 'helpers.api-spec.user'
 
     class SimpleIO:
-        #input  = GetUserRequest
+        input  = GetUserRequest
         output = GetUserResponse
 
 # ################################################################################################################################
