@@ -1,22 +1,29 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
+from dataclasses import dataclass
 from io import StringIO
 from logging import DEBUG
 
 # Zato
 from zato.common.exception import Forbidden
-from zato.server.service import AsIs, Service
+from zato.common.typing_ import intnone, list_, optional
+from zato.server.service import AsIs, Model, Service
 from zato.server.service.internal.service import Invoke
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, anytuple
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 default_services_allowed = (
@@ -27,13 +34,53 @@ default_services_allowed = (
 )
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass
+class User(Model):
+    user_id:      int
+    username:     str
+    display_name: optional[str]
+
+@dataclass
+class UserAccount(Model):
+    user:         User
+    account_id:   int
+    account_type: intnone
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass
+class GetUserRequest(Model):
+    user_id: int
+
+@dataclass
+class GetUserAccountListRequest(Model):
+    user_id:    optional[int]
+    account_id: int
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass
+class GetUserAccountListResponse(Model):
+    user_account_list: list_[UserAccount]
+
+@dataclass
+class GetUserResponse(Model):
+    user: optional[User]
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class Echo(Service):
     """ Copies request over to response.
     """
-    def handle(self):
+    def handle(self) -> 'None':
         self.response.payload = self.request.raw_request
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class InputLogger(Service):
@@ -42,9 +89,10 @@ class InputLogger(Service):
     def handle(self):
         pass
 
-    def finalize_handle(self):
+    def finalize_handle(self) -> 'None': # type: ignore
         self.log_input()
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class PubInputLogger(InputLogger):
@@ -53,15 +101,17 @@ class PubInputLogger(InputLogger):
     name = 'pub.helpers.input-logger'
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class RawRequestLogger(Service):
     """ Writes out self.request.raw_request to server logs.
     """
     name = 'pub.helpers.raw-request-logger'
 
-    def handle(self):
+    def handle(self) -> 'None':
         self.logger.info('Received request: `%s`', self.request.raw_request)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class IBMMQLogger(Service):
@@ -69,7 +119,7 @@ class IBMMQLogger(Service):
     """
     name = 'pub.helpers.ibm-mq-logger'
 
-    def handle(self):
+    def handle(self) -> 'None':
         template = """
 ***********************
 IBM MQ message received
@@ -114,32 +164,35 @@ Data: `{data}`
         }
 
         msg = template.format(**info)
-        msg_out = msg.decode('utf8')
+        msg_out = msg.encode('utf8')
 
         self.logger.info(msg_out)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class JSONRawRequestLogger(RawRequestLogger):
     """ Same as RawRequestLogger but returns a JSON response.
     """
-    def handle(self):
+    def handle(self) -> 'None':
         super(JSONRawRequestLogger, self).handle()
         self.response.payload = {'status': 'OK'}
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class SIOInputLogger(Service):
     """ Writes out all SIO input parameters to server logs.
     """
-    def handle(self):
+    def handle(self) -> 'None':
         self.logger.info('%r', self.request.input)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class HTMLService(Service):
 
-    def before_handle(self):
+    def before_handle(self) -> 'None': # type: ignore
 
         # Configure Django if this service is used - not that we are not doing it
         # globally for the module because the configuration takes some milliseconds
@@ -154,7 +207,7 @@ class HTMLService(Service):
             settings.configure()
             django.setup()
 
-    def set_html_payload(self, ctx, template):
+    def set_html_payload(self, ctx:'any_', template:'str') -> 'None':
 
         # Django
         from django.template import Context, Template
@@ -176,11 +229,12 @@ class HTMLService(Service):
         self.response.content_type = 'text/html; charset=utf-8'
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class TLSLogger(Service):
     """ Logs details of client TLS certificates.
     """
-    def handle(self):
+    def handle(self) -> 'None':
         has_tls = False
         for k, v in sorted(self.wsgi_environ.items()):
             if k.startswith('HTTP_X_ZATO_TLS_'):
@@ -190,6 +244,7 @@ class TLSLogger(Service):
         if not has_tls:
             self.logger.warning('No HTTP_X_ZATO_TLS_* headers found')
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class WebSocketsGateway(Service):
@@ -204,7 +259,7 @@ class WebSocketsGateway(Service):
         output_optional = 'sub_key',
         skip_empty_keys = True
 
-    def handle(self, _pubsub_prefix='zato.pubsub.pubapi', _default_allowed=default_services_allowed):
+    def handle(self, _default_allowed:'anytuple'=default_services_allowed) -> 'None':
 
         # Local aliases
         input = self.request.input
@@ -231,6 +286,7 @@ class WebSocketsGateway(Service):
             self.response.payload = response
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class WebSocketsPubSubGateway(Service):
     """ Dispatches incoming WebSocket publish/subscribe requests to target services.
@@ -241,7 +297,9 @@ class WebSocketsPubSubGateway(Service):
         input_required = ('service',)
         input_optional = (AsIs('request'),)
 
-    def handle(self):
+# ################################################################################################################################
+
+    def handle(self) -> 'None':
 
         # Make sure this is one of allowed services that we are to invoke
         if self.request.input.service not in self.server.fs_server_config.pubsub.wsx_gateway_service_allowed:
@@ -253,10 +311,36 @@ class WebSocketsPubSubGateway(Service):
                 wsgi_environ=self.wsgi_environ)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class ServiceGateway(Invoke):
     """ Service to invoke other services through.
     """
     name = 'helpers.service-gateway'
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class APISpecHelperUser(Service):
+    """ Test support services - User.
+    """
+    name = 'helpers.api-spec.user'
+
+    class SimpleIO:
+        input  = GetUserRequest
+        output = GetUserResponse
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class APISpecHelperAccountList(Service):
+    """ Test support services - AccountList.
+    """
+    name = 'helpers.api-spec.account-list'
+
+    class SimpleIO:
+        input  = GetUserAccountListRequest
+        #output = GetUserAccountListResponse
+
+# ################################################################################################################################
 # ################################################################################################################################
