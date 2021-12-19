@@ -324,11 +324,26 @@ class GetSphinx(Service):
         if 'zato' not in item.sio or (not item.sio.zato):
             return buff
 
-        input_required = sorted(item.sio.zato.input, key=attrgetter('name'))
-        input_optional = sorted(item.sio.zato.input, key=attrgetter('name'))
+        input_fields  = sorted(item.sio.zato.input, key=attrgetter('name'))
+        output_fields = sorted(item.sio.zato.output, key=attrgetter('name'))
 
-        output_required = sorted(item.sio.zato.output, key=attrgetter('name'))
-        output_optional = sorted(item.sio.zato.output, key=attrgetter('name'))
+        input_required = []
+        input_optional = []
+
+        output_required = []
+        output_optional = []
+
+        for field in input_fields: # type: FieldInfo
+            if field.is_required:
+                input_required.append(field)
+            else:
+                input_optional.append(field)
+
+        for field in output_fields: # type: FieldInfo
+            if field.is_required:
+                output_required.append(field)
+            else:
+                output_optional.append(field)
 
         # Input
         _ = buff.write(input_title)

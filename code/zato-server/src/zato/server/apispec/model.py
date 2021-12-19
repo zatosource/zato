@@ -9,13 +9,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from dataclasses import dataclass, field, Field, MISSING
 from inspect import isclass
-from mimetypes import init
 
 # Bunch
 from bunch import Bunch
 
 # Zato
-from zato.common.api import APISPEC
 from zato.common.marshal_.api import extract_model_class, is_list, Model
 
 # ################################################################################################################################
@@ -60,26 +58,42 @@ class FieldInfo:
         info.is_required = field.default is MISSING
         info.description = field.__doc__ or ''
 
-        is_class = isclass(field.type)
+        field_type = field.type
+        origin = getattr(field_type, '__origin__', None)
 
-        if is_list(field.type, is_class):
+        if origin and origin._name == 'Union':
+            field_type_args = field_type.__args__
+            field_type = field_type_args[0]
+            union_with = field_type_args[1]
+
+            # If this was a union with a None type, it means that it was actually an optional field
+            # because optional[Something] is equal to Union[Something, None], in which case
+            # we set the is_required flag to None, no matter what was set earlier up.
+            if union_with is type(None): # noqa: E721
+                info.is_required = False
+        else:
+            field_type = field_type
+
+        is_class = isclass(field_type)
+
+        if is_list(field_type, is_class):
             type_info = '', ''
-            ref = extract_model_class(field.type)
+            ref = extract_model_class(field_type)
             info.is_list = True
             info.ref = '#/components/schemas/{}.{}'.format(ref.__module__, ref.__name__)
 
-        elif issubclass(field.type, bool):
+        elif issubclass(field_type, bool):
             type_info = api_spec_info.BOOLEAN
 
-        elif issubclass(field.type, int):
+        elif issubclass(field_type, int):
             type_info = api_spec_info.INTEGER
 
-        elif issubclass(field.type, float):
+        elif issubclass(field_type, float):
             type_info = api_spec_info.FLOAT
 
-        elif issubclass(field.type, Model):
+        elif issubclass(field_type, Model):
             type_info = '', ''
-            info.ref = '#/components/schemas/{}.{}'.format(field.type.__module__, field.type.__name__)
+            info.ref = '#/components/schemas/{}.{}'.format(field_type.__module__, field_type.__name__)
         else:
             try:
                 type_info = api_spec_info.map[field.__class__]
