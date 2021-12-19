@@ -20,7 +20,7 @@ from zato.common.marshal_.api import extract_model_class, is_list, Model
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist
+    from zato.common.typing_ import any_, anydict, anylist, anytuple
     from zato.server.service import Service
     Service = Service
 
@@ -31,6 +31,18 @@ _sio_attrs = (
     'input',
     'output'
 )
+
+_singleton = object()
+
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class FieldTypeInfo:
+    field_type:      'any_'
+    field_type_args: 'anylist'
+    union_with:      'any_'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -48,6 +60,44 @@ class FieldInfo:
 # ################################################################################################################################
 
     @staticmethod
+    def is_union(elem:'any_') -> 'bool':
+        origin = getattr(elem, '__origin__', None)
+        return origin and getattr(origin, '_name', '') == 'Union'
+
+# ################################################################################################################################
+
+    @staticmethod
+    def extract_from_union(elem:'any_') -> 'anytuple':
+        field_type_args = elem.__args__ # type: anylist
+        field_type = field_type_args[0]
+        union_with = field_type_args[1]
+
+        return field_type_args, field_type, union_with
+
+# ################################################################################################################################
+
+    @staticmethod
+    def get_field_type_info(field:'Field') -> 'FieldTypeInfo':
+
+        field_type = field.type
+
+        if FieldInfo.is_union(field_type):
+            result = FieldInfo.extract_from_union(field_type)
+            field_type_args, field_type, union_with = result
+        else:
+            field_type_args = []
+            union_with = _singleton
+
+        info = FieldTypeInfo()
+        info.field_type = field_type
+        info.field_type_args = field_type_args
+        info.union_with = union_with
+
+        return info
+
+# ################################################################################################################################
+
+    @staticmethod
     def from_python_field(field:'Field', api_spec_info:'Bunch') -> 'FieldInfo':
 
         if not field.type:
@@ -58,27 +108,26 @@ class FieldInfo:
         info.is_required = field.default is MISSING
         info.description = field.__doc__ or ''
 
-        field_type = field.type
-        origin = getattr(field_type, '__origin__', None)
+        field_type_info = FieldInfo.get_field_type_info(field)
+        field_type = field_type_info.field_type
 
-        if origin and getattr(origin, '_name', '') == 'Union':
-            field_type_args = field_type.__args__
-            field_type = field_type_args[0]
-            union_with = field_type_args[1]
-
-            # If this was a union with a None type, it means that it was actually an optional field
-            # because optional[Something] is equal to Union[Something, None], in which case
-            # we set the is_required flag to None, no matter what was set earlier up.
-            if union_with is type(None): # noqa: E721
-                info.is_required = False
-        else:
-            field_type = field_type
+        # If this was a union with a None type, it means that it was actually an optional field
+        # because optional[Something] is equal to Union[Something, None], in which case
+        # we set the is_required flag to None, no matter what was set earlier up.
+        if field_type_info.union_with is type(None): # noqa: E721
+            info.is_required = False
 
         is_class = isclass(field_type)
 
         if is_list(field_type, is_class):
-            ref = extract_model_class(field_type)
             info.is_list = True
+            ref = extract_model_class(field_type)
+
+            if FieldInfo.is_union(ref):
+                result = FieldInfo.extract_from_union(ref)
+                _, field_type, _ = result
+                ref = field_type
+
             info.ref = '#/components/schemas/{}.{}'.format(ref.__module__, ref.__name__)
             type_info = '', ref.__name__
 
@@ -92,8 +141,8 @@ class FieldInfo:
             type_info = api_spec_info.FLOAT
 
         elif issubclass(field_type, Model):
-            type_info = '', ''
             info.ref = '#/components/schemas/{}.{}'.format(field_type.__module__, field_type.__name__)
+            type_info = '', field_type.__name__
         else:
             try:
                 type_info = api_spec_info.map[field.__class__]
