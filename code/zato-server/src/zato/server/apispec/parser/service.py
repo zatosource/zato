@@ -82,21 +82,19 @@ class ServiceInfo:
 
     def to_dict(self) -> 'anydict':
 
-        docs = {
-            'full':      self.docstring.data.full,
-            'full_html': self.docstring.data.full_html,
-
-            'summary':      self.docstring.data.summary,
-            'summary_html': self.docstring.data.summary_html,
-
-            'description':      self.docstring.data.description,
-            'description_html': self.docstring.data.description_html,
-        } # type: anydict
-
         return {
             'name': self.name,
-            'docs': docs,
-            'simple_io': self.simple_io
+            'simple_io': self.simple_io,
+            'docs': {
+                'full':      self.docstring.data.full,
+                'full_html': self.docstring.data.full_html,
+
+                'summary':      self.docstring.data.summary,
+                'summary_html': self.docstring.data.summary_html,
+
+                'description':      self.docstring.data.description,
+                'description_html': self.docstring.data.description_html,
+            }
         }
 
 # ################################################################################################################################
