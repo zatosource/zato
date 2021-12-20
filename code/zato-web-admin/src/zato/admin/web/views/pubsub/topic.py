@@ -221,7 +221,7 @@ class TopicMessages(_Index):
             'service_name', 'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name', 'server_name', 'server_pid')
         output_repeated = True
 
-    def get_service_name(self):
+    def get_service_name(self, _ignored):
         return 'zato.pubsub.topic.get-gd-message-list' if self.req.has_gd else 'zato.pubsub.topic.get-non-gd-message-list'
 
     def on_before_append_item(self, item):

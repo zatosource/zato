@@ -311,7 +311,7 @@ class _BaseView:
         output_optional = []
         output_repeated = False
 
-    def get_service_name(self):
+    def get_service_name(self, *_args, **_kwargs):
         raise NotImplementedError('May be implemented by subclasses')
 
     def fetch_cluster_id(self):

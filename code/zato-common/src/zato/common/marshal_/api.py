@@ -26,12 +26,14 @@ from typing_utils import issubtype
 # Zato
 from zato.common.api import ZatoNotGiven
 from zato.common.ext.dataclasses import asdict, _FIELDS, MISSING, _PARAMS
+from zato.common.typing_ import extract_from_union, is_union
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from dataclasses import Field
+    from zato.common.typing_ import any_, anydict
     from zato.server.service import Service
 
     Field = Field
@@ -42,7 +44,9 @@ if 0:
 
 def is_list(field_type, is_class):
     # type: (Field, bool) -> bool
-    return isinstance(field_type, _ListBaseClass) or (is_class and issubtype(field_type, list))
+    is_list_base_class_instance = isinstance(field_type, _ListBaseClass)
+    is_list_sub_type = issubtype(field_type, list)
+    return is_list_base_class_instance or (is_class and is_list_sub_type)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -64,15 +68,15 @@ def extract_model_class(field_type):
 # ################################################################################################################################
 
 class Model:
+    __name__: 'str'
     after_created = None
 
     def __getitem__(self, name, default=None):
         return getattr(self, name, default)
 
     @classmethod
-    def _zato_get_fields(class_):
-        # type: (Field) -> dict
-        fields = getattr(class_, _FIELDS) # type: dict
+    def zato_get_fields(class_:'any_') -> 'anydict':
+        fields = getattr(class_, _FIELDS) # type: anydict
         return fields
 
     @classmethod
@@ -292,6 +296,11 @@ class MarshalAPI:
         dict_ctx.init()
 
         for _ignored_name, _field in sorted(dict_ctx.fields.items()): # type: (str, Field)
+
+            if is_union(_field.type):
+                result = extract_from_union(_field.type)
+                _, field_type, _ = result
+                _field.type = field_type
 
             # Represents a current field in the model in the context of the input dict ..
             field_ctx = FieldCtx(dict_ctx, _field, parent)
