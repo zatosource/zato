@@ -63,11 +63,11 @@ class GetUserAccountListRequest(Model):
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass
+@dataclass(init=False)
 class GetUserAccountListResponse(Model):
     user_account_list: list_[UserAccount]
 
-@dataclass
+@dataclass(init=False)
 class GetUserResponse(Model):
     user:          list_[User]
     parent_user:   list_[optional[User]]
@@ -333,7 +333,11 @@ class APISpecHelperUser(Service):
         output = GetUserResponse
 
     def handle(self):
-        pass
+        out = GetUserResponse()
+        out.user = []
+        out.parent_user = []
+        out.previous_user = []
+        self.response.payload = out
 
 # ################################################################################################################################
 # ################################################################################################################################

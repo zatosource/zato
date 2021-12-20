@@ -742,7 +742,7 @@ class RequestHandler:
         if isinstance(service_instance, AdminService):
             if data_format == _sio_json:
                 zato_env = {'zato_env':{'result':response.result, 'cid':service_instance.cid, 'details':response.result_details}}
-                if response.payload:
+                if response.payload and (not isinstance(response.payload, str)):
                     payload = response.payload.getvalue(False)
                     payload.update(zato_env)
                 else:
