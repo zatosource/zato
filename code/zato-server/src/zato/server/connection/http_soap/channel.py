@@ -32,6 +32,7 @@ from past.builtins import basestring, unicode
 from zato.common.api import CHANNEL, DATA_FORMAT, JSON_RPC, HL7, HTTP_SOAP, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, \
      URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE, ZATO_OK
 from zato.common.audit_log import DataReceived, DataSent
+from zato.common.const import ServiceConst
 from zato.common.exception import HTTP_RESPONSES
 from zato.common.hl7 import HL7Exception
 from zato.common.json_internal import dumps, loads
@@ -731,6 +732,15 @@ class RequestHandler:
 
 # ################################################################################################################################
 
+    def _needs_admin_response(
+        self,
+        service_instance, # type: Service
+        service_invoker_name=ServiceConst.ServiceInvokerName # type: str
+        ) -> 'bool':
+        return isinstance(service_instance, AdminService) and service_instance.name != service_invoker_name
+
+# ################################################################################################################################
+
     def set_payload(self, response, data_format, transport, service_instance, _sio_json=SIMPLE_IO.FORMAT.JSON,
         _url_type_soap=URL_TYPE.SOAP, _dict_like=(DATA_FORMAT.JSON, DATA_FORMAT.DICT), _AdminService=AdminService,
         _dumps=dumps, _basestring=basestring):
@@ -739,7 +749,7 @@ class RequestHandler:
         """
         # type: (Response, str, str, Service)
 
-        if isinstance(service_instance, AdminService):
+        if self._needs_admin_response(service_instance):
             if data_format == _sio_json:
                 zato_env = {'zato_env':{'result':response.result, 'cid':service_instance.cid, 'details':response.result_details}}
                 if response.payload and (not isinstance(response.payload, str)):
