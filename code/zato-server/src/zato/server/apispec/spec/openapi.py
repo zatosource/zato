@@ -20,25 +20,44 @@ from zato.common.api import URL_TYPE
 from zato.common.marshal_.api import Model
 from zato.common.util.file_system import fs_safe_name
 from zato.common.util.import_ import import_string
-from zato.server.apispec import build_field_list, FieldInfo
+from zato.server.apispec.parser.service import build_field_list
 
 # Zato - Cython
 from zato.simpleio import SIO_TYPE_MAP
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import anydict, anydictnone, anylist, dictlist, stranydict, strorlist
+    from zato.server.apispec.model import FieldInfo
+    FieldInfo = FieldInfo
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 logger = getLogger('zato')
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 _SIO_TYPE_MAP = SIO_TYPE_MAP()
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class OpenAPIGenerator:
     """ Generates OpenAPI specifications.
     """
-    def __init__(self, data, channel_data, needs_api_invoke, needs_rest_channels, api_invoke_path):
+    def __init__(
+        self,
+        data,                # type: dictlist
+        channel_data,        # type: dictlist
+        needs_api_invoke,    # type: bool
+        needs_rest_channels, # type: bool
+        api_invoke_path      # type: strorlist
+        ) -> 'None':
+
         self.data = data
         self.channel_data = channel_data
         self.needs_api_invoke = needs_api_invoke
@@ -53,18 +72,17 @@ class OpenAPIGenerator:
 
 # ################################################################################################################################
 
-    def _get_request_name(self, service_name):
+    def _get_request_name(self, service_name:'str') -> 'str':
         return 'request_{}'.format(fs_safe_name(service_name))
 
 # ################################################################################################################################
 
-    def _get_response_name(self, service_name):
+    def _get_response_name(self, service_name:'str') -> 'str':
         return 'response_{}'.format(fs_safe_name(service_name))
 
 # ################################################################################################################################
 
-    def _add_model_schema(self, model_name, model, out):
-        # type: (Model, dict) -> None
+    def _add_model_schema(self, model_name:'str', model:'Model', out:'anydict') -> 'None':
 
         # Do not visit the model if we have already seen it
         if model_name in out:
@@ -80,10 +98,9 @@ class OpenAPIGenerator:
 
 # ################################################################################################################################
 
-    def _visit_sio_elems(self, schema_name, sio_elems, out):
-        # type: (str, list, dict) -> None
+    def _visit_sio_elems(self, schema_name:'str', sio_elems:'anylist', out:'anydict') -> 'None':
 
-        properties = {}
+        properties = {} # type: stranydict
         out[schema_name]['properties'] = properties
 
         # All the elements of this model that are required
@@ -134,8 +151,7 @@ class OpenAPIGenerator:
 
 # ################################################################################################################################
 
-    def _get_message_schemas(self, data, is_request):
-        # type: (Bunch, bool) -> Bunch
+    def _get_message_schemas(self, data:'dictlist', is_request:'bool') -> 'Bunch':
 
         if is_request:
             name_func = self._get_request_name
@@ -150,23 +166,23 @@ class OpenAPIGenerator:
         out = Bunch()
 
         # Go through all the services ..
-        for item in data.services:
+        for item in data:
 
             # .. skip it unless we can support OpenAPI ..
-            if 'openapi_v3' not in item.simple_io:
+            if 'openapi_v3' not in item['simple_io']:
                 continue
 
             # .. turn its class name into a schema name ..
-            message_name = name_func(item.name)
+            message_name = name_func(item['name'])
 
             # .. prepare it upfront here ..
             out[message_name] = {
-                'title': '{} object for {}'.format(msg_name, item.name),
+                'title': '{} object for {}'.format(msg_name, item['name']),
                 'type': 'object',
             }
 
             # .. get all the elements of the model class ..
-            sio_elems = getattr(item.simple_io.openapi_v3, sio_elem_attr)
+            sio_elems = getattr(item['simple_io']['openapi_v3'], sio_elem_attr)
 
             # .. turn them into an OpenAPI schema ..
             self._visit_sio_elems(message_name, sio_elems, out)
@@ -176,7 +192,7 @@ class OpenAPIGenerator:
 
 # ################################################################################################################################
 
-    def get_rest_channel(self, service_name):
+    def get_rest_channel(self, service_name:'str') -> 'anydictnone':
         for channel_item in self.channel_data:
             if channel_item['service_name'] == service_name:
                 if channel_item['transport'] == URL_TYPE.PLAIN_HTTP:
@@ -184,9 +200,9 @@ class OpenAPIGenerator:
 
 # ################################################################################################################################
 
-    def get_path_operation(self, service_name):
-        service_name = service_name.split('.') # E.g. my.api.name.get-client -> ['my', 'api', 'name', 'get-client']
-        op_name = service_name[-1]
+    def get_path_operation(self, service_name:'str') -> 'str':
+        service_name_list = service_name.split('.') # E.g. my.api.name.get-client -> ['my', 'api', 'name', 'get-client']
+        op_name = service_name_list[-1]
 
         if op_name.startswith('get'):
             return 'get'
@@ -197,13 +213,13 @@ class OpenAPIGenerator:
 
 # ################################################################################################################################
 
-    def has_path_elem(self, url_path, elem_name):
+    def has_path_elem(self, url_path:'str', elem_name:'str') -> 'bool':
         pattern = '{%s}' % elem_name
         return pattern in url_path
 
 # ################################################################################################################################
 
-    def generate(self):
+    def generate(self) -> 'str':
         # Basic information, always available
         out = Bunch()
         out.openapi = '3.0.2'
@@ -231,7 +247,7 @@ class OpenAPIGenerator:
 
         out.components.schemas.update(schemas)
 
-        for item in self.data.services:
+        for item in self.data:
 
             # Container for all the URL paths found for this item (service)
             url_paths = []
@@ -245,19 +261,19 @@ class OpenAPIGenerator:
             # .. generic API invoker, e.g. /zato/api/invoke/{service_name} ..
             if self.needs_api_invoke and self.api_invoke_path:
                 for path in self.api_invoke_path:
-                    url_paths.append(path.format(service_name=item.name))
+                    url_paths.append(path.format(service_name=item['name']))
 
             # .. per-service specific REST channels.
             if self.needs_rest_channels:
-                rest_channel = self.get_rest_channel(item.name)
+                rest_channel = self.get_rest_channel(item['name'])
 
                 if rest_channel:
 
                     # This is always needed, whether path parameters exist or not
-                    url_paths.append(rest_channel.url_path)
+                    url_paths.append(rest_channel['url_path'])
 
                     # Path parameters
-                    group_names = rest_channel.match_target_compiled.group_names
+                    group_names = rest_channel['match_target_compiled'].group_names
                     if group_names:
 
                         # Populate details of path parameters
@@ -274,7 +290,7 @@ class OpenAPIGenerator:
                             })
 
             # Translate the service name into a normalised form
-            service_name_fs = fs_safe_name(item.name)
+            service_name_fs = fs_safe_name(item['name'])
 
             for url_path in url_paths:
 
@@ -312,4 +328,5 @@ class OpenAPIGenerator:
 
         return yaml_dump(out.toDict(), Dumper=YAMLDumper, default_flow_style=False)
 
+# ################################################################################################################################
 # ################################################################################################################################

@@ -5,9 +5,9 @@ typeCheckingMode = "off" # "basic"
 #
 # This is level 1
 #
-reportOptionalOperand       = "none"
-reportGeneralTypeIssues     = "none"
-reportOptionalMemberAccess  = "none"
+#reportOptionalOperand       = "none"
+#reportGeneralTypeIssues     = "none"
+#reportOptionalMemberAccess  = "none"
 reportPrivateUsage        = "error"
 reportAssertAlwaysTrue    = "error"
 reportUnusedImport        = "error"
@@ -50,6 +50,8 @@ reportImplicitStringConcatenation = "error"
 #reportUnknownMemberType    = "error"
 #reportUnknownParameterType = "error"
 #reportUnknownVariableType  = "error"
+#reportUntypedClassDecorator    = "error"
+#reportUntypedFunctionDecorator = "error"
 
 extraPaths = [
     "./lib/python3.8/site-packages",

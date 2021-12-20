@@ -308,7 +308,7 @@ class EndpointQueueBrowser(_Index):
 
 # ################################################################################################################################
 
-    def get_service_name(self):
+    def get_service_name(self, _ignored):
         suffix = '-gd' if self.input.has_gd else '-non-gd'
         return 'zato.pubsub.endpoint.get-endpoint-queue-messages' + suffix
 

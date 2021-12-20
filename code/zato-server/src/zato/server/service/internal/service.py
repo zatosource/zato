@@ -22,10 +22,12 @@ from past.builtins import basestring
 # Zato
 from zato.common.api import BROKER, SCHEDULER, StatsKey
 from zato.common.broker_message import SERVICE
+from zato.common.const import ServiceConst
 from zato.common.exception import BadRequest, ZatoException
 from zato.common.ext.validate_ import is_boolean
 from zato.common.json_internal import dumps, loads
 from zato.common.json_schema import get_service_config
+from zato.common.marshal_.api import Model
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, Service
 from zato.common.odb.query import service_list
 from zato.common.rate_limiting import DefinitionParser
@@ -597,7 +599,16 @@ class UploadPackage(AdminService):
 class ServiceInvoker(AdminService):
     """ A proxy service to invoke other services through via REST.
     """
-    name = 'pub.zato.service.service-invoker'
+    name = ServiceConst.ServiceInvokerName
+
+# ################################################################################################################################
+
+    def _extract_payload_from_request(self):
+        payload = self.request.raw_request
+        payload = loads(payload) if payload else None
+        return payload
+
+# ################################################################################################################################
 
     def handle(self, _internal=('zato', 'pub.zato')):
 
@@ -621,10 +632,9 @@ class ServiceInvoker(AdminService):
 
             # Depending on HTTP verb used, we may need to look up input in different places
             if self.request.http.method == 'GET':
-                payload = self.request.http.GET
+                payload = self.request.http.GET or self._extract_payload_from_request()
             else:
-                payload = self.request.raw_request
-                payload = loads(payload) if payload else None
+                payload = self._extract_payload_from_request()
 
             # Invoke the service now
             response = self.invoke(service_name, payload, wsgi_environ={'HTTP_METHOD':self.request.http.method})
@@ -633,6 +643,9 @@ class ServiceInvoker(AdminService):
             if is_internal and response:
                 top_level = list(iterkeys(response))[0]
                 response = response[top_level]
+
+            # Take dataclass-based models into account
+            response = response.to_dict() if isinstance(response, Model) else response
 
             # Assign response to outgoing payload
             self.response.payload = dumps(response)
