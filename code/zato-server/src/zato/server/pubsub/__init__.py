@@ -789,7 +789,7 @@ class PubSub:
 
 # ################################################################################################################################
 
-    def wait_for_topic(self, name:'str', timeout:'int'=10, _utcnow:'callable_'=datetime.utcnow) -> 'bool':
+    def wait_for_topic(self, topic_name:'str', timeout:'int'=10, _utcnow:'callable_'=datetime.utcnow) -> 'bool':
         now = _utcnow()
         until = now + timedelta(seconds=timeout)
 
@@ -799,7 +799,7 @@ class PubSub:
             # We have it, good
             with self.lock:
                 try:
-                    _ = self._get_topic_by_name(name)
+                    _ = self._get_topic_by_name(topic_name)
                 except KeyError:
                     pass # No such topic
                 else:
@@ -810,7 +810,7 @@ class PubSub:
             now = _utcnow()
 
         # We get here on timeout
-        raise ValueError('No such topic `{}` after {}s'.format(name, timeout))
+        raise ValueError('No such topic `{}` after {}s'.format(topic_name, timeout))
 
 # ################################################################################################################################
 
@@ -929,7 +929,7 @@ class PubSub:
             is_pub=True,
             security_id=0,
             ws_channel_id=0,
-            endpoint_id=0
+            endpoint_id=endpoint_id
         )
 
 # ################################################################################################################################
@@ -1860,6 +1860,7 @@ class PubSub:
             # We create a topic for that service to receive messages from unless it already exists
             if not self.has_topic_by_name(topic_name):
                 self.create_topic_for_service(name, topic_name)
+                self.wait_for_topic(topic_name)
 
             # Messages published to services always use GD
             has_gd = True
