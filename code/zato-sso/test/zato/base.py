@@ -13,22 +13,18 @@ from itertools import count
 from unittest import TestCase
 
 # Bunch
-from bunch import bunchify
 
 # ciso8601
 from ciso8601 import parse_datetime
-
-# requests
-import requests
 
 # sh
 import sh
 
 # Zato
 from zato.common.util.api import get_odb_session_from_server_dir
-from zato.common.json_internal import dumps, loads
 from zato.common.crypto.totp_ import TOTPManager
-from zato.common.sso import TestConfig
+from zato.common.test.config import TestConfig
+from zato.common.test.rest_client import RESTClient
 from zato.sso import const, status_code
 from zato.sso.odb.query import get_user_by_name
 
@@ -49,6 +45,7 @@ class NotGiven:
 # ################################################################################################################################
 
 class TestCtx:
+
     def __init__(self):
         self.reset()
 
@@ -61,6 +58,10 @@ class TestCtx:
 # ################################################################################################################################
 
 class BaseTest(TestCase):
+
+    def __init__(self, *args, **kwargs) -> 'None': # type: ignore
+        super().__init__(*args, **kwargs)
+        self.rest_client = RESTClient()
 
 # ################################################################################################################################
 
@@ -96,6 +97,26 @@ class BaseTest(TestCase):
 
 # ################################################################################################################################
 
+    def get(self, *args, **kwargs): # type: ignore
+        return self.rest_client.get(*args, **kwargs)
+
+# ################################################################################################################################
+
+    def post(self, *args, **kwargs): # type: ignore
+        return self.rest_client.post(*args, **kwargs)
+
+# ################################################################################################################################
+
+    def patch(self, *args, **kwargs): # type: ignore
+        return self.rest_client.get(*args, **kwargs)
+
+# ################################################################################################################################
+
+    def delete(self, *args, **kwargs): # type: ignore
+        return self.rest_client.patch(*args, **kwargs)
+
+# ################################################################################################################################
+
     def tearDown(self):
         self.ctx.reset()
 
@@ -118,41 +139,6 @@ class BaseTest(TestCase):
 
     def _get_random_data(self):
         return self._get_random(Config.random_prefix)
-
-# ################################################################################################################################
-
-    def _invoke(self, func, func_name, url_path, request, expect_ok, auth=None, _not_given='_test_not_given'):
-        address = Config.server_address.format(url_path)
-
-        request['current_app'] = Config.current_app
-        data = dumps(request)
-
-        logger.info('Invoking %s %s with %s', func_name, address, data)
-        response = func(address, data=data, auth=auth)
-
-        logger.info('Response received %s %s', response.status_code, response.text)
-
-        data = loads(response.text)
-        data = bunchify(data)
-
-        # Most tests require status OK and CID
-        if expect_ok:
-            self.assertNotEqual(data.get('cid', _not_given), _not_given)
-            self.assertEqual(data.status, status_code.ok)
-
-        return data
-
-    def get(self, url_path, request, expect_ok=True, auth=None):
-        return self._invoke(requests.get, 'GET', url_path, request, expect_ok, auth)
-
-    def post(self, url_path, request, expect_ok=True, auth=None):
-        return self._invoke(requests.post, 'POST', url_path, request, expect_ok, auth)
-
-    def patch(self, url_path, request, expect_ok=True, auth=None):
-        return self._invoke(requests.patch, 'PATCH', url_path, request, expect_ok, auth)
-
-    def delete(self, url_path, request, expect_ok=True, auth=None):
-        return self._invoke(requests.delete, 'DELETE', url_path, request, expect_ok, auth)
 
 # ################################################################################################################################
 
@@ -189,6 +175,8 @@ class BaseTest(TestCase):
 
         self.assertIsNotNone(response.approval_status_mod_by)
         self._assert_user_dates(response, now)
+
+# ################################################################################################################################
 
     def _assert_user_dates(self, response, now, is_default_user=False):
 
