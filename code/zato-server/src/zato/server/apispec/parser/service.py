@@ -119,18 +119,32 @@ class ServiceInfo:
 
             for api_spec_info in _SIO_TYPE_MAP:
 
-                _api_spec_info = APISpecInfo()
-                _api_spec_info.name = api_spec_info.name
-                _api_spec_info.field_list = {}
-                _api_spec_info.request_elem = getattr(sio, 'request_elem', '')
-                _api_spec_info.response_elem = getattr(sio, 'response_elem', '')
+                # A structure that contains an API specification for each major output format, e.g. Zato or OpenAPI
+                spec_info = APISpecInfo()
+                spec_info.name = api_spec_info.name
+                spec_info.field_list = {}
+                spec_info.request_elem = getattr(sio, 'request_elem', '')
+                spec_info.response_elem = getattr(sio, 'response_elem', '')
 
+                # This is where input and output are assigned based on a service's models ..
                 for sio_attr_name in ('input', 'output'): # type: str
                     model = getattr(sio.user_declaration, sio_attr_name, None) # type: optional[Model]
                     if model:
-                        _api_spec_info.field_list[sio_attr_name] = build_field_list(model, api_spec_info)
+                        spec_info.field_list[sio_attr_name] = build_field_list(model, api_spec_info)
 
-                self.simple_io[_api_spec_info.name] = SimpleIO(_api_spec_info, sio_desc, self.needs_sio_desc).to_bunch()
+                # This is a container for the entire SimpleIO definition ..
+                sio_def = SimpleIO(spec_info, sio_desc, self.needs_sio_desc)
+
+                # .. and this is where required and optional arguments
+                # .. are extracted and assigned to input_required/optional or output_required/optional,
+                # .. based on previously assigned input and output ..
+                sio_def.assign_required_optional()
+
+                # .. let's sort every input and output element alphabetically ..
+                sio_def.sort_elems()
+
+                # .. now, we can serialise the data structure for external users
+                self.simple_io[spec_info.name] = sio_def.to_bunch()
 
 # ################################################################################################################################
 # ################################################################################################################################
