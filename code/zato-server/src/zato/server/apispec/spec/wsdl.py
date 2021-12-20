@@ -243,20 +243,20 @@ class WSDLGenerator:
 
             # First, collect all I/O elements
 
-            for elem in sio.input:#_required:
+            for elem in sio.input_required:
                 self.append_xs_elem(sio_input_req, elem, 1, 1)
 
-            #for elem in sio.input_optional:
-            #    self.append_xs_elem(sio_input_opt, elem, 0, 1)
+            for elem in sio.input_optional:
+                self.append_xs_elem(sio_input_opt, elem, 0, 1)
 
-            for elem in sio.output:#_required:
+            for elem in sio.output_required:
                 self.append_xs_elem(sio_output_req, elem, 1, 1)
 
-            #for elem in sio.output_optional:
-            #    self.append_xs_elem(sio_output_opt, elem, 0, 1)
+            for elem in sio.output_optional:
+                self.append_xs_elem(sio_output_opt, elem, 0, 1)
 
             # Current service's request and response names
-            req_msg_name = '{}_{}'.format(service_name, 'request')
+            req_msg_name  = '{}_{}'.format(service_name, 'request')
             resp_msg_name = '{}_{}'.format(service_name, 'response')
 
             # Current service's actual XSD request/response elements
