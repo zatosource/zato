@@ -26,6 +26,7 @@ from typing_utils import issubtype
 # Zato
 from zato.common.api import ZatoNotGiven
 from zato.common.ext.dataclasses import asdict, _FIELDS, MISSING, _PARAMS
+from zato.common.typing_ import extract_from_union, is_union
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -295,6 +296,11 @@ class MarshalAPI:
         dict_ctx.init()
 
         for _ignored_name, _field in sorted(dict_ctx.fields.items()): # type: (str, Field)
+
+            if is_union(_field.type):
+                result = extract_from_union(_field.type)
+                _, field_type, _ = result
+                _field.type = field_type
 
             # Represents a current field in the model in the context of the input dict ..
             field_ctx = FieldCtx(dict_ctx, _field, parent)
