@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 from json import dumps, loads
+from unittest import TestCase
 
 # Bunch
 from bunch import Bunch, bunchify
@@ -35,7 +36,35 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class RESTClient:
+class RESTClientTestCase(TestCase):
+    def __init__(self, *args, **kwargs) -> 'None': # type: ignore
+        super().__init__(*args, **kwargs)
+        self.rest_client = _RESTClient()
+
+# ################################################################################################################################
+
+    def get(self, *args, **kwargs): # type: ignore
+        return self.rest_client.get(*args, **kwargs)
+
+# ################################################################################################################################
+
+    def post(self, *args, **kwargs): # type: ignore
+        return self.rest_client.post(*args, **kwargs)
+
+# ################################################################################################################################
+
+    def patch(self, *args, **kwargs): # type: ignore
+        return self.rest_client.patch(*args, **kwargs)
+
+# ################################################################################################################################
+
+    def delete(self, *args, **kwargs): # type: ignore
+        return self.rest_client.delete(*args, **kwargs)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _RESTClient:
 
     def _invoke(
         self,
@@ -60,7 +89,7 @@ class RESTClient:
         data = loads(response.text)
         data = bunchify(data)
 
-        # Most tests require status OK and CID
+        # Most SSO tests require status OK and CID
         if expect_ok:
             cid = data.get('cid', _unexpected)
             if cid is _unexpected:
