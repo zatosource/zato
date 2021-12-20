@@ -599,6 +599,15 @@ class ServiceInvoker(AdminService):
     """
     name = 'pub.zato.service.service-invoker'
 
+# ################################################################################################################################
+
+    def _extract_payload_from_request(self):
+        payload = self.request.raw_request
+        payload = loads(payload) if payload else None
+        return payload
+
+# ################################################################################################################################
+
     def handle(self, _internal=('zato', 'pub.zato')):
 
         # Service name is given in URL path
@@ -621,10 +630,9 @@ class ServiceInvoker(AdminService):
 
             # Depending on HTTP verb used, we may need to look up input in different places
             if self.request.http.method == 'GET':
-                payload = self.request.http.GET
+                payload = self.request.http.GET or self._extract_payload_from_request()
             else:
-                payload = self.request.raw_request
-                payload = loads(payload) if payload else None
+                payload = self._extract_payload_from_request()
 
             # Invoke the service now
             response = self.invoke(service_name, payload, wsgi_environ={'HTTP_METHOD':self.request.http.method})

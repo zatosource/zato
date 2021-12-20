@@ -24,18 +24,17 @@ class InvocationTestCase(RESTClientTestCase):
 
 # ################################################################################################################################
 
-    def test_invoke_ping(self) -> 'None':
+    def test_invoke_helpers_api_spec_user(self) -> 'None':
 
-        # Invoke the default ping service ..
-        response = self.get('/zato/ping')
+        # Prepare our request ..
+        request = {
+            'username': 'my.username'
+        }
 
-        # .. and check all the detail.
-        self.assertEqual(response['pong'], 'zato')
-        self.assertEqual(response['zato_env']['result'],  ZATO_OK)
-        self.assertEqual(response['zato_env']['details'], '')
+        # .. invoke the helper service ..
+        response = self.get('/zato/api/invoke/helpers.api-spec.user', request)
 
-        len_cid = len(response['zato_env']['cid'])
-        self.assertTrue(len_cid >= 23) # We cannot be certain but it should be at least 23 characters of random data
+        # .. and check the response.
 
 # ################################################################################################################################
 # ################################################################################################################################
