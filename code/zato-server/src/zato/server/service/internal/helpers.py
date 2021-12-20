@@ -1,22 +1,29 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # stdlib
+from dataclasses import dataclass
 from io import StringIO
 from logging import DEBUG
 
 # Zato
 from zato.common.exception import Forbidden
-from zato.server.service import AsIs, Service
+from zato.common.typing_ import intnone, list_, optional
+from zato.server.service import AsIs, Model, Service
 from zato.server.service.internal.service import Invoke
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, anytuple
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 default_services_allowed = (
@@ -27,13 +34,64 @@ default_services_allowed = (
 )
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class User(Model):
+    user_id:      int
+    username:     str
+    display_name: optional[str]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class UserAccount(Model):
+    user:         User
+    account_id:   int
+    account_type: intnone
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass
+class GetUserRequest(Model):
+    username: str
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass
+class GetUserAccountListRequest(Model):
+    user_id:    optional[int]
+    account_id: int
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class GetUserAccountListResponse(Model):
+    user_account_list: list_[UserAccount]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class GetUserResponse(Model):
+    user:          list_[User]
+    parent_user:   list_[optional[User]]
+    previous_user: optional[list_[User]]
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class Echo(Service):
     """ Copies request over to response.
     """
-    def handle(self):
+    def handle(self) -> 'None':
         self.response.payload = self.request.raw_request
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class InputLogger(Service):
@@ -42,9 +100,10 @@ class InputLogger(Service):
     def handle(self):
         pass
 
-    def finalize_handle(self):
+    def finalize_handle(self) -> 'None': # type: ignore
         self.log_input()
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class PubInputLogger(InputLogger):
@@ -53,15 +112,17 @@ class PubInputLogger(InputLogger):
     name = 'pub.helpers.input-logger'
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class RawRequestLogger(Service):
     """ Writes out self.request.raw_request to server logs.
     """
     name = 'pub.helpers.raw-request-logger'
 
-    def handle(self):
+    def handle(self) -> 'None':
         self.logger.info('Received request: `%s`', self.request.raw_request)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class IBMMQLogger(Service):
@@ -69,7 +130,7 @@ class IBMMQLogger(Service):
     """
     name = 'pub.helpers.ibm-mq-logger'
 
-    def handle(self):
+    def handle(self) -> 'None':
         template = """
 ***********************
 IBM MQ message received
@@ -114,32 +175,35 @@ Data: `{data}`
         }
 
         msg = template.format(**info)
-        msg_out = msg.decode('utf8')
+        msg_out = msg.encode('utf8')
 
         self.logger.info(msg_out)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class JSONRawRequestLogger(RawRequestLogger):
     """ Same as RawRequestLogger but returns a JSON response.
     """
-    def handle(self):
+    def handle(self) -> 'None':
         super(JSONRawRequestLogger, self).handle()
         self.response.payload = {'status': 'OK'}
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class SIOInputLogger(Service):
     """ Writes out all SIO input parameters to server logs.
     """
-    def handle(self):
+    def handle(self) -> 'None':
         self.logger.info('%r', self.request.input)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class HTMLService(Service):
 
-    def before_handle(self):
+    def before_handle(self) -> 'None': # type: ignore
 
         # Configure Django if this service is used - not that we are not doing it
         # globally for the module because the configuration takes some milliseconds
@@ -154,7 +218,7 @@ class HTMLService(Service):
             settings.configure()
             django.setup()
 
-    def set_html_payload(self, ctx, template):
+    def set_html_payload(self, ctx:'any_', template:'str') -> 'None':
 
         # Django
         from django.template import Context, Template
@@ -176,11 +240,12 @@ class HTMLService(Service):
         self.response.content_type = 'text/html; charset=utf-8'
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class TLSLogger(Service):
     """ Logs details of client TLS certificates.
     """
-    def handle(self):
+    def handle(self) -> 'None':
         has_tls = False
         for k, v in sorted(self.wsgi_environ.items()):
             if k.startswith('HTTP_X_ZATO_TLS_'):
@@ -190,6 +255,7 @@ class TLSLogger(Service):
         if not has_tls:
             self.logger.warning('No HTTP_X_ZATO_TLS_* headers found')
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class WebSocketsGateway(Service):
@@ -204,7 +270,7 @@ class WebSocketsGateway(Service):
         output_optional = 'sub_key',
         skip_empty_keys = True
 
-    def handle(self, _pubsub_prefix='zato.pubsub.pubapi', _default_allowed=default_services_allowed):
+    def handle(self, _default_allowed:'anytuple'=default_services_allowed) -> 'None':
 
         # Local aliases
         input = self.request.input
@@ -231,6 +297,7 @@ class WebSocketsGateway(Service):
             self.response.payload = response
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class WebSocketsPubSubGateway(Service):
     """ Dispatches incoming WebSocket publish/subscribe requests to target services.
@@ -241,7 +308,9 @@ class WebSocketsPubSubGateway(Service):
         input_required = ('service',)
         input_optional = (AsIs('request'),)
 
-    def handle(self):
+# ################################################################################################################################
+
+    def handle(self) -> 'None':
 
         # Make sure this is one of allowed services that we are to invoke
         if self.request.input.service not in self.server.fs_server_config.pubsub.wsx_gateway_service_allowed:
@@ -253,10 +322,109 @@ class WebSocketsPubSubGateway(Service):
                 wsgi_environ=self.wsgi_environ)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class ServiceGateway(Invoke):
     """ Service to invoke other services through.
     """
     name = 'helpers.service-gateway'
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class APISpecHelperUser(Service):
+    """ Test support services - User.
+    """
+    name = 'helpers.api-spec.user'
+
+    class SimpleIO:
+        input  = GetUserRequest
+        output = GetUserResponse
+
+# ################################################################################################################################
+
+    def handle(self):
+
+        # Our request
+        request = self.request.input # type: GetUserRequest
+
+        # Response to produce
+        out = GetUserResponse()
+
+        # To be returned in out.user ..
+        user1 = User()
+        user1.user_id      = 111
+        user1.username     = 'username.111'
+        user1.display_name = 'display_name.111.' + request.username
+
+        # .. also to be returned in out.user ..
+        user2 = User()
+        user2.user_id      = 222
+        user2.username     = 'username.222'
+        user2.display_name = 'display_name.222.' + request.username
+
+        # To be returned as out.parent_user
+        # This is an empty list on purpose becaue the field is optional
+        parent_user = []
+
+        # To be returned as out.previous_user
+        # This is an empty list on purpose becaue the field is optional as well
+        previous_user = []
+
+        # Note that user2 is added before user1 - this is on purpose because
+        # the test that invokes us will check that this is the specific order, non-ascending,
+        # that we are returning the data in, i.e. that nothing attempts to sort it itself
+        # before the data is returned to the caller (to the test).
+        out.user = [user2, user1]
+        out.parent_user = parent_user
+        out.previous_user = previous_user
+
+        self.response.payload = out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class APISpecHelperAccountList(Service):
+    """ Test support services - AccountList.
+    """
+    name = 'helpers.api-spec.account-list'
+
+    class SimpleIO:
+        input  = GetUserAccountListRequest
+        output = GetUserAccountListResponse
+
+# ################################################################################################################################
+
+    def handle(self):
+
+        # Our request
+        request = self.request.input # type: GetUserAccountListRequest
+
+        # Response to produce
+        out = GetUserAccountListResponse()
+
+        user1 = User()
+        user1.user_id      = 111
+        user1.username     = 'username.111'
+        user1.display_name = 'display_name.111.{}'.format(request.user_id)
+
+        user2 = User()
+        user2.user_id      = 222
+        user2.username     = 'username.222'
+        user2.display_name = 'display_name.222.{}'.format(request.user_id)
+
+        account1 = UserAccount()
+        account1.user = user1
+        account1.account_id = 1010 + request.account_id
+        account1.account_type = 1111
+
+        account2 = UserAccount()
+        account2.user = user2
+        account2.account_id = 2020 + request.account_id
+        account2.account_type = 2222
+
+        out.user_account_list = [account2, account1]
+        self.response.payload = out
+
+# ################################################################################################################################
 # ################################################################################################################################

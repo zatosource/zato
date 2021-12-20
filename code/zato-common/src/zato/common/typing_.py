@@ -17,6 +17,7 @@ from typing import           \
     cast as cast_,           \
     Dict as dict_,           \
     Generator as generator_, \
+    Iterator as iterator_,   \
     NoReturn as noreturn,    \
     List as list_,           \
     Optional as optional,    \
@@ -34,7 +35,6 @@ from dacite import from_dict
 # typing-extensions
 from typing_extensions import \
     TypeAlias as typealias_
-
 
 # Be explicit about which import error we want to catch
 try:
@@ -73,18 +73,10 @@ TypedDict = TypedDict
 # ################################################################################################################################
 # ################################################################################################################################
 
-def instance_from_dict(class_, data):
-    # type: (object, dict) -> object
-    instance = class_()
-    for key, value in data.items():
-        setattr(instance, key, value)
-    return instance
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 anydict      = dict_[any_, any_]
+anydictnone  = optional[anydict]
 anylist      = list_[any_]
+anylistnone  = optional[anylist]
 anyset       = set_[any_]
 anytuple     = tuple_[any_, ...]
 binaryio_    = binaryio_
@@ -104,6 +96,7 @@ intnone      = optional[int]
 intset       = set_[int]
 intsetdict   = dict_[int, anyset]
 intstrdict   = dict_[int, str]
+iterator_    = iterator_
 noreturn     = noreturn
 set_         = set_
 stranydict   = dict_[str, any_]
@@ -116,6 +109,7 @@ strlist      = list_[str]
 strlistdict  = dict_[str, anylist]
 strlistempty = list_[optional[str]]
 strnone      = optional[str]
+strorlist    = union_[str, anylist]
 strset       = set_[str]
 strsetdict   = dict_[str, anyset]
 strstrdict   = dict_[str, str]
@@ -126,3 +120,32 @@ type_        = type_
 typealias_   = typealias_
 typevar_     = typevar_
 union_       = union_
+
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def instance_from_dict(class_, data):
+    # type: (object, dict) -> object
+    instance = class_()
+    for key, value in data.items():
+        setattr(instance, key, value)
+    return instance
+
+# ################################################################################################################################
+
+def is_union(elem:'any_') -> 'bool':
+    origin = getattr(elem, '__origin__', None) # type: any_
+    return origin and getattr(origin, '_name', '') == 'Union'
+
+# ################################################################################################################################
+
+def extract_from_union(elem:'any_') -> 'anytuple':
+    field_type_args = elem.__args__ # type: anylist
+    field_type = field_type_args[0]
+    union_with = field_type_args[1]
+
+    return field_type_args, field_type, union_with
+
+# ################################################################################################################################
+# ################################################################################################################################
