@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main
 
 # Zato
+from zato.common.api import ZATO_OK
 from zato.common.test.config import TestConfig
 from zato.common.test.rest_client import RESTClientTestCase
 
@@ -20,14 +21,24 @@ TestConfig = TestConfig
 
 class InvocationTestCase(RESTClientTestCase):
 
-    def test_invoke_get_user(self):
-        request = {
-            'user_id': 123,
-        }
+    needs_bunch = False
+    needs_current_app = False
+    payload_only_messages = False
 
-        response = self.get('/zato/invoke/zato.pub.ping', request, expect_ok=False)
+# ################################################################################################################################
 
-        print(111, response)
+    def test_invoke_ping(self) -> 'None':
+
+        # Invoke the default ping service ..
+        response = self.get('/zato/ping')
+
+        # .. and check all the detail.
+        self.assertEqual(response['pong'], 'zato')
+        self.assertEqual(response['zato_env']['result'],  ZATO_OK)
+        self.assertEqual(response['zato_env']['details'], '')
+
+        len_cid = len(response['zato_env']['cid'])
+        self.assertTrue(len_cid >= 23) # We cannot be certain but it should be at least 23 characters of random data
 
 # ################################################################################################################################
 # ################################################################################################################################
