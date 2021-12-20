@@ -8,7 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from http.client import OK
 from json import dumps, loads
 
 # Bunch
@@ -71,14 +70,22 @@ class RESTClient:
 
         return data
 
+# ################################################################################################################################
+
     def get(self, url_path:'str', request:'str', expect_ok:'bool'=True, auth:'any_'=None) -> 'Bunch':
         return self._invoke(requests.get, 'GET', url_path, request, expect_ok, auth)
+
+# ################################################################################################################################
 
     def post(self, url_path:'str', request:'str', expect_ok:'bool'=True, auth:'any_'=None) -> 'Bunch':
         return self._invoke(requests.post, 'POST', url_path, request, expect_ok, auth)
 
+# ################################################################################################################################
+
     def patch(self, url_path:'str', request:'str', expect_ok:'bool'=True, auth:'any_'=None) -> 'Bunch':
         return self._invoke(requests.patch, 'PATCH', url_path, request, expect_ok, auth)
+
+# ################################################################################################################################
 
     def delete(self, url_path:'str', request:'str', expect_ok:'bool'=True, auth:'any_'=None) -> 'Bunch':
         return self._invoke(requests.delete, 'DELETE', url_path, request, expect_ok, auth)
