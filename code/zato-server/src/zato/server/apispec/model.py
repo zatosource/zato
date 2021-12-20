@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from dataclasses import dataclass, field, Field, MISSING
 from inspect import isclass
+from operator import attrgetter
 
 # Bunch
 from bunch import Bunch
@@ -29,7 +30,11 @@ if 0:
 
 _sio_attrs = (
     'input',
-    'output'
+    'input_required',
+    'input_optional',
+    'output',
+    'output_required',
+    'output_optional',
 )
 
 _singleton = object()
@@ -198,29 +203,70 @@ class SimpleIO:
     """ Represents a SimpleIO definition of a particular service.
     """
     input:          'anylist'
-    output:         'anylist'
+    input_required: 'anylist'
+    input_optional: 'anylist'
+
+    output:          'anylist'
+    output_required: 'anylist'
+    output_optional: 'anylist'
+
     request_elem:   'any_'
     response_elem:  'any_'
+
     spec_name:      'str'
     description:    'SimpleIODescription'
     needs_sio_desc: 'bool'
 
     def __init__(
         self,
-        api_spec_info,  # type: APISpecInfo
+        spec_info,      # type: APISpecInfo
         description,    # type: SimpleIODescription
         needs_sio_desc, # type: bool
         ) -> 'None':
 
-        self.input  = api_spec_info.field_list.get('input', [])
-        self.output = api_spec_info.field_list.get('output', [])
+        self.input          = spec_info.field_list.get('input', [])
+        self.input_required = []
+        self.input_optional = []
 
-        self.request_elem   = api_spec_info.request_elem
-        self.response_elem  = api_spec_info.response_elem
+        self.output          = spec_info.field_list.get('output', [])
+        self.output_required = []
+        self.output_optional = []
 
-        self.spec_name      = api_spec_info.name
+        self.request_elem   = spec_info.request_elem
+        self.response_elem  = spec_info.response_elem
+
+        self.spec_name      = spec_info.name
         self.description    = description
         self.needs_sio_desc = needs_sio_desc
+
+# ################################################################################################################################
+
+    def assign_required_optional(self) -> 'None':
+
+        item: 'FieldInfo'
+
+        for item in self.input:
+            if item.is_required:
+                self.input_required.append(item)
+            else:
+                self.input_optional.append(item)
+
+        for item in self.output:
+            if item.is_required:
+                self.output_required.append(item)
+            else:
+                self.output_optional.append(item)
+
+# ################################################################################################################################
+
+    def sort_elems(self) -> 'None':
+        self.input          = sorted(self.input,          key=attrgetter('name'))
+        self.input_required = sorted(self.input_required, key=attrgetter('name'))
+        self.input_optional = sorted(self.input_optional, key=attrgetter('name'))
+
+        self.output          = sorted(self.output,          key=attrgetter('name'))
+        self.output_required = sorted(self.output_required, key=attrgetter('name'))
+        self.output_optional = sorted(self.output_optional, key=attrgetter('name'))
 
 # ################################################################################################################################
 
