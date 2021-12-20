@@ -2,4 +2,6 @@ mypy
 pylint
 selenium
 selenium-wire
+types-markdown
+types-pyyaml
 yapf

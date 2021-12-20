@@ -10,15 +10,15 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main, TestCase
 
 # Zato
-from ..common import service_name, sio_config
+from zato.common.test.apispec_ import service_name, sio_config
 from zato.common.api import APISPEC
-from zato.server.apispec import not_public, ServiceInfo
+from zato.server.apispec.parser.docstring import not_public
+from zato.server.apispec.parser.service import ServiceInfo
 
 # ################################################################################################################################
 
 if 0:
-    from zato.server.apispec import _DocstringSegment
-    from zato.server.apispec import SimpleIODescription
+    from zato.server.apispec.parser.docstring import _DocstringSegment, SimpleIODescription
 
     _DocstringSegment = _DocstringSegment
     SimpleIODescription = SimpleIODescription
@@ -38,14 +38,19 @@ class APISpecDocstringParsing(TestCase):
             """ This is a one-line summary.
             """
 
-        info = ServiceInfo(service_name, CyMyService, sio_config, 'public')
+        info = ServiceInfo(
+            service_name,
+            CyMyService, # type: ignore
+            sio_config,
+            'public'
+        )
 
         # This service's docstring has a summary only so it will constitute
         # all of its summary, decsription and full docstring.
 
-        self.assertEqual(info.docstring.summary, 'This is a one-line summary.')
-        self.assertEqual(info.docstring.description, 'This is a one-line summary.')
-        self.assertEqual(info.docstring.full, 'This is a one-line summary.')
+        self.assertEqual(info.docstring.data.summary, 'This is a one-line summary.')
+        self.assertEqual(info.docstring.data.description, 'This is a one-line summary.')
+        self.assertEqual(info.docstring.data.full, 'This is a one-line summary.')
 
 # ################################################################################################################################
 
@@ -80,12 +85,18 @@ class APISpecDocstringParsing(TestCase):
             - More bullets in the list
 
             """
+            __doc__: 'str'
 
-        info = ServiceInfo(service_name, CyMyService, sio_config, 'public')
-        self.assertEqual(info.docstring.summary, 'This is a one-line summary.')
+        info = ServiceInfo(
+            service_name,
+            CyMyService, # type: ignore
+            sio_config,
+            'public'
+        )
+        self.assertEqual(info.docstring.data.summary, 'This is a one-line summary.')
 
         service_docstring_lines = CyMyService.__doc__.strip().splitlines()
-        docstring_full_lines = info.docstring.full.splitlines()
+        docstring_full_lines = info.docstring.data.full.splitlines()
 
         for idx, line in enumerate(service_docstring_lines):
 
@@ -105,7 +116,13 @@ class APISpecDocstringParsing(TestCase):
             It is multiline
             """
 
-        segments = ServiceInfo(service_name, CyMyService, sio_config, APISPEC.DEFAULT_TAG).extract_segments(CyMyService.__doc__)
+        segments = ServiceInfo(
+            service_name,
+            CyMyService, # type: ignore
+            sio_config,
+            APISPEC.DEFAULT_TAG).docstring.extract_segments(
+                CyMyService.__doc__ # type: ignore
+            )
 
         # There should be only one tag, the default, implicit one called 'public'
         expected = {
@@ -137,7 +154,13 @@ class APISpecDocstringParsing(TestCase):
             It is multiline
             """
 
-        segments = ServiceInfo(service_name, CyMyService, sio_config, APISPEC.DEFAULT_TAG).extract_segments(CyMyService.__doc__)
+        segments = ServiceInfo(
+            service_name,
+            CyMyService, # type: ignore
+            sio_config,
+            APISPEC.DEFAULT_TAG).docstring.extract_segments(
+                CyMyService.__doc__ # type: ignore
+            )
 
         # There should be only one tag, the explicitly named 'public' one.
         expected = {
@@ -177,7 +200,13 @@ class APISpecDocstringParsing(TestCase):
             """
 
         tags = [APISPEC.DEFAULT_TAG, 'internal']
-        segments = ServiceInfo(service_name, CyMyService, sio_config, tags).extract_segments(CyMyService.__doc__)
+        segments = ServiceInfo(
+            service_name,
+            CyMyService, # type: ignore
+            sio_config,
+            tags).docstring.extract_segments(
+                CyMyService.__doc__ # type: ignore
+            )
 
         # There should be only one tag, the default, implicit one called 'public'
         expected_public = {
