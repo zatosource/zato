@@ -11,8 +11,8 @@ from copy import deepcopy
 from unittest import main
 
 # Zato
-from .common import CyMyService
 from zato.common.test import BaseSIOTestCase
+from zato.common.test.apispec_ import CyMyService
 
 # Zato - Cython
 from zato.simpleio import CySimpleIO

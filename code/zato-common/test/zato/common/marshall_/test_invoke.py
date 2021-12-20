@@ -13,6 +13,8 @@ from unittest import main, TestCase
 from zato.common.test.config import TestConfig
 from zato.common.test.rest_client import RESTClient
 
+TestConfig = TestConfig
+
 # ################################################################################################################################
 # ################################################################################################################################
 
