@@ -10,7 +10,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from io import StringIO
 from itertools import chain
 from json import dumps
-from operator import attrgetter
 import os
 
 # Bunch
@@ -328,26 +327,11 @@ class GetSphinx(Service):
         if 'zato' not in item.sio or (not item.sio.zato):
             return buff
 
-        input_fields  = sorted(item.sio.zato.input, key=attrgetter('name'))
-        output_fields = sorted(item.sio.zato.output, key=attrgetter('name'))
+        input_required = item.sio.zato.input_required
+        input_optional = item.sio.zato.input_optional
 
-        input_required = []
-        input_optional = []
-
-        output_required = []
-        output_optional = []
-
-        for field in input_fields: # type: FieldInfo
-            if field.is_required:
-                input_required.append(field)
-            else:
-                input_optional.append(field)
-
-        for field in output_fields: # type: FieldInfo
-            if field.is_required:
-                output_required.append(field)
-            else:
-                output_optional.append(field)
+        output_required = item.sio.zato.output_required
+        output_optional = item.sio.zato.output_optional
 
         # Input
         _ = buff.write(input_title)
