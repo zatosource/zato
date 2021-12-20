@@ -26,6 +26,7 @@ from zato.common.exception import BadRequest, ZatoException
 from zato.common.ext.validate_ import is_boolean
 from zato.common.json_internal import dumps, loads
 from zato.common.json_schema import get_service_config
+from zato.common.marshal_.api import Model
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, Service
 from zato.common.odb.query import service_list
 from zato.common.rate_limiting import DefinitionParser
@@ -641,6 +642,9 @@ class ServiceInvoker(AdminService):
             if is_internal and response:
                 top_level = list(iterkeys(response))[0]
                 response = response[top_level]
+
+            # Take dataclass-based models into account
+            response = response.to_dict() if isinstance(response, Model) else response
 
             # Assign response to outgoing payload
             self.response.payload = dumps(response)
