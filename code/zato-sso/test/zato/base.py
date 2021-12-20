@@ -108,12 +108,12 @@ class BaseTest(TestCase):
 # ################################################################################################################################
 
     def patch(self, *args, **kwargs): # type: ignore
-        return self.rest_client.get(*args, **kwargs)
+        return self.rest_client.patch(*args, **kwargs)
 
 # ################################################################################################################################
 
     def delete(self, *args, **kwargs): # type: ignore
-        return self.rest_client.patch(*args, **kwargs)
+        return self.rest_client.delete(*args, **kwargs)
 
 # ################################################################################################################################
 
