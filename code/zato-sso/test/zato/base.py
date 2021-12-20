@@ -24,7 +24,7 @@ import sh
 from zato.common.util.api import get_odb_session_from_server_dir
 from zato.common.crypto.totp_ import TOTPManager
 from zato.common.test.config import TestConfig
-from zato.common.test.rest_client import RESTClient
+from zato.common.test.rest_client import RESTClientTestCase
 from zato.sso import const, status_code
 from zato.sso.odb.query import get_user_by_name
 
@@ -57,11 +57,7 @@ class TestCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class BaseTest(TestCase):
-
-    def __init__(self, *args, **kwargs) -> 'None': # type: ignore
-        super().__init__(*args, **kwargs)
-        self.rest_client = RESTClient()
+class BaseTest(RESTClientTestCase):
 
 # ################################################################################################################################
 
@@ -94,26 +90,6 @@ class BaseTest(TestCase):
 
         # A new counter for random data
         self.rand_counter = count()
-
-# ################################################################################################################################
-
-    def get(self, *args, **kwargs): # type: ignore
-        return self.rest_client.get(*args, **kwargs)
-
-# ################################################################################################################################
-
-    def post(self, *args, **kwargs): # type: ignore
-        return self.rest_client.post(*args, **kwargs)
-
-# ################################################################################################################################
-
-    def patch(self, *args, **kwargs): # type: ignore
-        return self.rest_client.patch(*args, **kwargs)
-
-# ################################################################################################################################
-
-    def delete(self, *args, **kwargs): # type: ignore
-        return self.rest_client.delete(*args, **kwargs)
 
 # ################################################################################################################################
 
