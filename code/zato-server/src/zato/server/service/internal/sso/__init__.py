@@ -21,8 +21,9 @@ from zato.sso.model import RequestCtx
 # ################################################################################################################################
 
 if 0:
+    from zato.common.typing_ import type_
     from zato.common.crypto.totp_ import TOTPManager
-    from zato.common.sso import TestConfig
+    from zato.common.test.config import TestConfig
 
     TestConfig = TestConfig
     TOTPManager = TOTPManager
@@ -178,7 +179,7 @@ class SSOTestService(Service):
 
         # Zato
         from zato.common.crypto.totp_ import TOTPManager
-        from zato.common.sso import TestConfig
+        from zato.common.test.config import TestConfig
 
         # Run the test suite
         self._test_login(TestConfig, TOTPManager)
@@ -188,7 +189,7 @@ class SSOTestService(Service):
 # ################################################################################################################################
 
     def _test_login(self, config, totp_manager):
-        # type: (TestConfig, TOTPManager) -> None
+        # type: (TestConfig, type_[TOTPManager]) -> None
 
         # We want to ensure that both str and bytes passwords can be used
         password1 = config.super_user_password
@@ -211,7 +212,7 @@ class SSOTestService(Service):
 # ################################################################################################################################
 
     def _test_get_user_attrs(self, config, totp_manager):
-        # type: (TestConfig, TOTPManager) -> None
+        # type: (TestConfig, type_[TOTPManager]) -> None
 
         # Zato
         from zato.common.test import rand_string
@@ -293,7 +294,7 @@ class SSOTestService(Service):
 # ################################################################################################################################
 
     def _test_validate_totp_code(self, config, totp_manager):
-        # type: (TestConfig, TOTPManager) -> None
+        # type: (TestConfig, type_[TOTPManager]) -> None
 
         # Local aliases
         password = config.super_user_password
