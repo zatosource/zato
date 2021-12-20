@@ -43,7 +43,9 @@ if 0:
 
 def is_list(field_type, is_class):
     # type: (Field, bool) -> bool
-    return isinstance(field_type, _ListBaseClass) or (is_class and issubtype(field_type, list))
+    is_list_base_class_instance = isinstance(field_type, _ListBaseClass)
+    is_list_sub_type = issubtype(field_type, list)
+    return is_list_base_class_instance or (is_class and is_list_sub_type)
 
 # ################################################################################################################################
 # ################################################################################################################################
