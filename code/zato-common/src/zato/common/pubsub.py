@@ -81,6 +81,12 @@ msg_pub_ignore = (
     'delivery_status',
     'recv_time',
     'reply_to_sk',
+    'expiration_time_iso',
+    'ext_pub_time_iso',
+    'pub_time_iso',
+    'server_name',
+    'sub_key',
+    'server_pid',
 )
 
 # ################################################################################################################################
