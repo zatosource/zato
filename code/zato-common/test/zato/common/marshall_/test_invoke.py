@@ -7,22 +7,27 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from unittest import main, TestCase
+from unittest import main
 
 # Zato
 from zato.common.test.config import TestConfig
-from zato.common.test.rest_client import RESTClient
+from zato.common.test.rest_client import RESTClientTestCase
 
 TestConfig = TestConfig
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class InvocationTestCase(TestCase):
+class InvocationTestCase(RESTClientTestCase):
 
-    def __init__(self, *args, **kwargs) -> 'None': # type: ignore
-        super().__init__(*args, **kwargs)
-        self.rest_client = RESTClient()
+    def test_invoke_get_user(self):
+        request = {
+            'user_id': 123,
+        }
+
+        response = self.get('/zato/invoke/zato.pub.ping', request, expect_ok=False)
+
+        print(111, response)
 
 # ################################################################################################################################
 # ################################################################################################################################
