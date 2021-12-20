@@ -42,6 +42,9 @@ class User(Model):
     username:     str
     display_name: optional[str]
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 @dataclass(init=False)
 class UserAccount(Model):
     user:         User
@@ -55,6 +58,9 @@ class UserAccount(Model):
 class GetUserRequest(Model):
     username: str
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 @dataclass
 class GetUserAccountListRequest(Model):
     user_id:    optional[int]
@@ -66,6 +72,9 @@ class GetUserAccountListRequest(Model):
 @dataclass(init=False)
 class GetUserAccountListResponse(Model):
     user_account_list: list_[UserAccount]
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 @dataclass(init=False)
 class GetUserResponse(Model):
@@ -332,6 +341,8 @@ class APISpecHelperUser(Service):
         input  = GetUserRequest
         output = GetUserResponse
 
+# ################################################################################################################################
+
     def handle(self):
 
         # Our request
@@ -382,8 +393,38 @@ class APISpecHelperAccountList(Service):
         input  = GetUserAccountListRequest
         output = GetUserAccountListResponse
 
+# ################################################################################################################################
+
     def handle(self):
-        pass
+
+        # Our request
+        request = self.request.input # type: GetUserAccountListRequest
+
+        # Response to produce
+        out = GetUserAccountListResponse()
+
+        user1 = User()
+        user1.user_id      = 111
+        user1.username     = 'username.111'
+        user1.display_name = 'display_name.111.{}'.format(request.user_id)
+
+        user2 = User()
+        user2.user_id      = 222
+        user2.username     = 'username.222'
+        user2.display_name = 'display_name.222.{}'.format(request.user_id)
+
+        account1 = UserAccount()
+        account1.user = user1
+        account1.account_id = 1010 + request.account_id
+        account1.account_type = 1111
+
+        account2 = UserAccount()
+        account2.user = user2
+        account2.account_id = 2020 + request.account_id
+        account2.account_type = 2222
+
+        out.user_account_list = [account2, account1]
+        self.response.payload = out
 
 # ################################################################################################################################
 # ################################################################################################################################

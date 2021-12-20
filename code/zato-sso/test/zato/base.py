@@ -10,7 +10,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from datetime import datetime
 from itertools import count
-from unittest import TestCase
 
 # Bunch
 

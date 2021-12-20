@@ -15,13 +15,14 @@ from operator import attrgetter
 from bunch import Bunch
 
 # Zato
+from zato.common.typing_ import extract_from_union, is_union
 from zato.common.marshal_.api import extract_model_class, is_list, Model
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, anytuple
+    from zato.common.typing_ import any_, anydict, anylist
     from zato.server.service import Service
     Service = Service
 
@@ -64,29 +65,12 @@ class FieldInfo:
 # ################################################################################################################################
 
     @staticmethod
-    def is_union(elem:'any_') -> 'bool':
-        origin = getattr(elem, '__origin__', None)
-        return origin and getattr(origin, '_name', '') == 'Union'
-
-# ################################################################################################################################
-
-    @staticmethod
-    def extract_from_union(elem:'any_') -> 'anytuple':
-        field_type_args = elem.__args__ # type: anylist
-        field_type = field_type_args[0]
-        union_with = field_type_args[1]
-
-        return field_type_args, field_type, union_with
-
-# ################################################################################################################################
-
-    @staticmethod
     def get_field_type_info(field:'Field') -> 'FieldTypeInfo':
 
         field_type = field.type
 
-        if FieldInfo.is_union(field_type):
-            result = FieldInfo.extract_from_union(field_type)
+        if is_union(field_type):
+            result = extract_from_union(field_type)
             field_type_args, field_type, union_with = result
         else:
             field_type_args = []
@@ -127,8 +111,8 @@ class FieldInfo:
             info.is_list = True
             ref = extract_model_class(field_type)
 
-            if FieldInfo.is_union(ref):
-                result = FieldInfo.extract_from_union(ref)
+            if is_union(ref):
+                result = extract_from_union(ref)
                 _, field_type, _ = result
                 ref = field_type
 
