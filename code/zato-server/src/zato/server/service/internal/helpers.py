@@ -36,13 +36,13 @@ default_services_allowed = (
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass
+@dataclass(init=False)
 class User(Model):
     user_id:      int
     username:     str
     display_name: optional[str]
 
-@dataclass
+@dataclass(init=False)
 class UserAccount(Model):
     user:         User
     account_id:   int
@@ -333,10 +333,41 @@ class APISpecHelperUser(Service):
         output = GetUserResponse
 
     def handle(self):
+
+        # Our request
+        request = self.request.input # type: GetUserRequest
+
+        # Response to produce
         out = GetUserResponse()
-        out.user = []
-        out.parent_user = []
-        out.previous_user = []
+
+        # To be returned in out.user ..
+        user1 = User()
+        user1.user_id      = 111
+        user1.username     = 'username.111'
+        user1.display_name = 'display_name.111.' + request.username
+
+        # .. also to be returned in out.user ..
+        user2 = User()
+        user2.user_id      = 222
+        user2.username     = 'username.222'
+        user2.display_name = 'display_name.222.' + request.username
+
+        # To be returned as out.parent_user
+        # This is an empty list on purpose becaue the field is optional
+        parent_user = []
+
+        # To be returned as out.previous_user
+        # This is an empty list on purpose becaue the field is optional as well
+        previous_user = []
+
+        # Note that user2 is added before user1 - this is on purpose because
+        # the test that invokes us will check that this is the specific order, non-ascending,
+        # that we are returning the data in, i.e. that nothing attempts to sort it itself
+        # before the data is returned to the caller (to the test).
+        out.user = [user2, user1]
+        out.parent_user = parent_user
+        out.previous_user = previous_user
+
         self.response.payload = out
 
 # ################################################################################################################################

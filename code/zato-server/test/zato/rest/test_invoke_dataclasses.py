@@ -10,7 +10,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main
 
 # Zato
-from zato.common.api import ZATO_OK
 from zato.common.test.rest_client import RESTClientTestCase
 
 # ################################################################################################################################
@@ -26,16 +25,29 @@ class InvocationTestCase(RESTClientTestCase):
 
     def test_invoke_helpers_api_spec_user(self) -> 'None':
 
+        # Test data
+        username = 'my.username'
+
         # Prepare our request ..
         request = {
-            'username': 'my.username'
+            'username': username
         }
 
         # .. invoke the helper service ..
         response = self.get('/zato/api/invoke/helpers.api-spec.user', request)
 
         # .. and check the response.
-        print(111, response)
+        user          = response['user']
+        parent_user   = response['parent_user']
+        previous_user = response['previous_user']
+
+        self.assertListEqual(user, [
+            {'user_id': 222, 'username': 'username.222', 'display_name': 'display_name.222.' + username},
+            {'user_id': 111, 'username': 'username.111', 'display_name': 'display_name.111.' + username}
+        ])
+
+        self.assertListEqual(parent_user,   [])
+        self.assertListEqual(previous_user, [])
 
 # ################################################################################################################################
 # ################################################################################################################################

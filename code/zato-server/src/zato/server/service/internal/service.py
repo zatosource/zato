@@ -22,6 +22,7 @@ from past.builtins import basestring
 # Zato
 from zato.common.api import BROKER, SCHEDULER, StatsKey
 from zato.common.broker_message import SERVICE
+from zato.common.const import ServiceConst
 from zato.common.exception import BadRequest, ZatoException
 from zato.common.ext.validate_ import is_boolean
 from zato.common.json_internal import dumps, loads
@@ -598,7 +599,7 @@ class UploadPackage(AdminService):
 class ServiceInvoker(AdminService):
     """ A proxy service to invoke other services through via REST.
     """
-    name = 'pub.zato.service.service-invoker'
+    name = ServiceConst.ServiceInvokerName
 
 # ################################################################################################################################
 
