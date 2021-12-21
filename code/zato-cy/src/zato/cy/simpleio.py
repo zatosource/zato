@@ -893,15 +893,17 @@ class SIO_TYPE_MAP:
         INTEGER = ('integer', 'int32')
         FLOAT   = ('float',   'float')
         BOOLEAN = ('boolean', 'boolean')
+        LIST    = ('array',   'array')
+        DICT    = ('object',  'object')
 
         map = {
             AsIs: STRING,
             Bool: BOOLEAN,
             CSV: STRING,
-            Dict: ('string', 'binary'),
+            Dict: ('object', 'object'),
             Float: ('number', 'float'),
             Int: INTEGER,
-            List: ('string', 'binary'),
+            List: ('array', 'array'),
             DictList: ('string', 'binary'),
             Opaque: ('string', 'binary'),
             Text: STRING,
@@ -916,6 +918,8 @@ class SIO_TYPE_MAP:
         INTEGER = ('integer', 'xsd:integer')
         FLOAT   = ('float', 'xsd:float')
         BOOLEAN = ('boolean', 'xsd:boolean')
+        LIST    = ('list', 'zato:list')
+        DICT    = ('dict', 'zato:dict')
 
         map = {
             AsIs: STRING,
@@ -939,8 +943,10 @@ class SIO_TYPE_MAP:
         STRING  = ('string', 'string')
         DEFAULT = STRING
         INTEGER = ('integer', 'integer')
-        FLOAT   = ('float', 'float')
+        FLOAT   = ('float',   'float')
         BOOLEAN = ('boolean', 'boolean')
+        LIST    = ('list',    'list')
+        DICT    = ('dict',    'dict')
 
         map = {
             AsIs: STRING,
