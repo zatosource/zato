@@ -1815,12 +1815,15 @@ class PubSub:
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def publish(self, name:'str', *args:'any_', **kwargs:'any_') -> 'any_':
+    def publish(self, name:'any_', *args:'any_', **kwargs:'any_') -> 'any_':
         """ Publishes a new message to input name, which may point either to a topic or service.
         POST /zato/pubsub/topic/{topic_name}
         """
+        # We need to import it here to avoid circular imports
+        from zato.server.service import Service
+
         # For later use
-        from_service:Service = kwargs.get('service') # type: ignore
+        from_service:'Service' = kwargs.get('service') # type: ignore
         ext_client_id = from_service.name if from_service else kwargs.get('ext_client_id')
 
         # The first one is used if name is a service, the other one if it is a regular topic
@@ -1842,7 +1845,11 @@ class PubSub:
         # Otherwise, if there is no topic by input name, it may be actually a service name ..
         else:
 
-            # .. but if there is no such service, we give up.
+            # .. it may be a Python class representing the service ..
+            if issubclass(name, Service):
+                name = name.get_name()
+
+            # .. but if there is no such service at all, we give up.
             if not self.server.service_store.has_service(name):
                 raise ValueError('No such service `{}`'.format(name))
 
