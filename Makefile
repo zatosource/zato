@@ -30,6 +30,9 @@ pylint:
 server-tests:
 	cd $(CURDIR)/code/zato-server && make run-tests
 
+cli-tests:
+	cd $(CURDIR)/code/zato-cli && make run-tests
+
 sso-tests:
 	cd $(CURDIR)/code/zato-sso && make run-tests
 
@@ -70,6 +73,7 @@ run-tests:
 	$(MAKE) type-check
 	$(MAKE) common-tests
 	$(MAKE) server-tests
+	$(MAKE) cli-tests
 	$(MAKE) sso-tests
 	$(MAKE) web-admin-tests
 	$(MAKE) cy-tests

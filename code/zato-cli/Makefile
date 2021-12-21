@@ -1,6 +1,9 @@
 
 .PHONY: static-check
 
+run-tests:
+	py $(CURDIR)/test/zato/test_enmasse.py
+
 pylint:
 	echo Running pylint in zato-cli
 	$(CURDIR)/../bin/pylint --verbose \

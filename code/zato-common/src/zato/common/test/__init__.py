@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2020, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from datetime import datetime
@@ -53,6 +51,7 @@ from past.builtins import basestring, cmp, unicode, xrange
 # ################################################################################################################################
 
 if 0:
+    from zato.common.typing_ import any_
     from zato.common.util.search import SearchResults
     SearchResults = SearchResults
 
@@ -138,7 +137,7 @@ def rand_float(start=1.0, stop=100.0):
 
 # ################################################################################################################################
 
-def rand_string(count=1, prefix=''):
+def rand_string(count=1, prefix='') -> 'any_':
     prefix = ('-' + prefix + '-') if prefix else ''
 
     if count == 1:
@@ -149,7 +148,7 @@ def rand_string(count=1, prefix=''):
 # ################################################################################################################################
 
 def rand_unicode():
-    return u'ϠϡϢϣϤϥϦϧϨϩϪϫϬϭ'
+    return 'abc-123-ϠϡϢϣϤϥϦϧϨϩϪϫϬϭ'
 
 # ################################################################################################################################
 
