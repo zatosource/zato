@@ -14,7 +14,8 @@ import sh
 from sh import RunningCommand
 
 # Zato
-from base import BaseTest, Config
+from base import BaseTest
+from zato.common.test.config import TestConfig
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -23,14 +24,15 @@ class CommandLineTestCase(BaseTest):
 
 # ################################################################################################################################
 
-    def _assert_command_line_result(self, out:RunningCommand):
+    def _assert_command_line_result(self, out:'RunningCommand') -> 'None':
         self.assertEqual(out.exit_code, 0)
         self.assertEqual(out.stdout, b'(None)\n')
 
 # ################################################################################################################################
 
-    def test_command_line(self):
-        out = sh.zato('service', 'invoke', Config.server_location, 'zato.sso.sso-test-service')
+    def test_command_line(self) -> 'None':
+        command = sh.zato # type: ignore
+        out = command('service', 'invoke', TestConfig.server_location, 'zato.sso.sso-test-service')
         self._assert_command_line_result(out)
 
 # ################################################################################################################################
