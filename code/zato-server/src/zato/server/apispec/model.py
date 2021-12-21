@@ -119,16 +119,16 @@ class FieldInfo:
             info.ref = '#/components/schemas/{}.{}'.format(ref.__module__, ref.__name__)
             type_info = '', ref.__name__
 
-        elif issubclass(field_type, bool):
+        elif is_class and issubclass(field_type, bool):
             type_info = api_spec_info.BOOLEAN
 
-        elif issubclass(field_type, int):
+        elif is_class and issubclass(field_type, int):
             type_info = api_spec_info.INTEGER
 
-        elif issubclass(field_type, float):
+        elif is_class and issubclass(field_type, float):
             type_info = api_spec_info.FLOAT
 
-        elif issubclass(field_type, Model):
+        elif is_class and issubclass(field_type, Model):
             info.ref = '#/components/schemas/{}.{}'.format(field_type.__module__, field_type.__name__)
             type_info = '', field_type.__name__
         else:
