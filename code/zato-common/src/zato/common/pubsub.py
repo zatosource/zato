@@ -277,13 +277,13 @@ class PubSubMessage:
 
 # ################################################################################################################################
 
-    def to_json(self, *args:'any_', **kwargs:'any_') -> 'bytes':
+    def to_json(self, *args:'any_', **kwargs:'any_') -> 'str':
         data = self.to_dict(*args, **kwargs)
         return dumps(data)
 
 # ################################################################################################################################
 
-    def to_external_json(self, *args:'any_', **kwargs:'any_') -> 'bytes':
+    def to_external_json(self, *args:'any_', **kwargs:'any_') -> 'str':
         data = self.to_external_dict(*args, **kwargs)
         return dumps(data)
 
