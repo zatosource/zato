@@ -34,6 +34,7 @@ logger = getLogger(__name__)
 
 if 0:
     from sh import RunningCommand
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -92,6 +93,13 @@ class CommandLineTestCase(TestCase):
 
 # ################################################################################################################################
 
+    def _warn_on_error(self, stdout:'any_', stderr:'any_') -> 'None':
+        logger.warning(format_exc())
+        logger.warning('stdout -> %s', stdout)
+        logger.warning('stderr -> %s', stderr)
+
+# ################################################################################################################################
+
     def _assert_command_line_result(self, out:'RunningCommand') -> 'None':
 
         self.assertEqual(out.exit_code, 0)
@@ -100,22 +108,16 @@ class CommandLineTestCase(TestCase):
         stderr = out.stdout.decode('utf8')
 
         if 'error' in stdout:
-            logger.warning(format_exc())
-            logger.warning('stdout -> %s', stdout)
-            logger.warning('stderr -> %s', stderr)
-
+            self._warn_on_error(stdout, stderr)
             self.fail('Found an error in stdout while invoking enmasse')
 
         if 'error' in stderr:
-            logger.warning(format_exc())
-            logger.warning('stdout -> %s', stdout)
-            logger.warning('stderr -> %s', stderr)
-
+            self._warn_on_error(stdout, stderr)
             self.fail('Found an error in stderr while invoking enmasse')
 
 # ################################################################################################################################
 
-    def _invoke_enmasse(self, config_path:'str') -> 'None':
+    def _invoke_enmasse(self, config_path:'str', require_ok:'bool'=True) -> 'RunningCommand':
 
         # A shortcut
         command = sh.zato # type: ignore
@@ -124,12 +126,15 @@ class CommandLineTestCase(TestCase):
         out = command('enmasse', TestConfig.server_location,
             '--import', '--input', config_path, '--replace-odb-objects', '--verbose')
 
-        # .. make sure there was no error in stdout/stderr ..
-        self._assert_command_line_result(out)
+        # .. if told to, make sure there was no error in stdout/stderr ..
+        if require_ok:
+            self._assert_command_line_result(out)
+
+        return out
 
 # ################################################################################################################################
 
-    def test_command_line(self) -> 'None':
+    def test_enmasse_ok(self) -> 'None':
 
         tmp_dir = gettempdir()
         test_suffix = rand_unicode() + '.' + rand_string()
@@ -155,11 +160,37 @@ class CommandLineTestCase(TestCase):
             stdout = stdout.decode('utf8') # type: ignore
             stderr = e.stderr
 
-            logger.warning(format_exc())
-            logger.warning('stdout -> %s', stdout)
-            logger.warning('stderr -> %s', stderr)
-
+            self._warn_on_error(stdout, stderr)
             self.fail('Caught an exception while invoking enmasse')
+
+# ################################################################################################################################
+
+    def test_enmasse_service_does_not_exit(self) -> 'None':
+
+        tmp_dir = gettempdir()
+        test_suffix = rand_unicode() + '.' + rand_string()
+
+        file_name = 'zato-enmasse-' + test_suffix + '.yaml'
+        config_path = os.path.join(tmp_dir, file_name)
+
+        # Note that we replace pub.zato.ping with a service that certainly does not exist
+        data = template.replace('pub.zato.ping', 'zato-enmasse-service-does-not-exit')
+        data = data.format(test_suffix=test_suffix)
+
+        f = open_w(config_path)
+        f.write(data)
+        f.close()
+
+        # Invoke enmasse to create objects (which will fail because the service used above does not exist)
+        out = self._invoke_enmasse(config_path, require_ok=False)
+
+        stdout = out.stdout # type: any_
+        stdout = stdout.decode('utf8')
+        stderr = out.stderr
+
+        if not '3 errors found' in stdout:
+            self._warn_on_error(stdout, stderr)
+            self.fail('Expected for enmasse to return errors')
 
 # ################################################################################################################################
 # ################################################################################################################################
