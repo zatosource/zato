@@ -1,19 +1,18 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 from datetime import datetime
 from unittest import main
 
 # Zato
-from base import BaseTest, Config
+from base import BaseTest
+from zato.common.test.config import TestConfig
 from zato.sso import const, status_code
 
 # ################################################################################################################################
@@ -62,7 +61,7 @@ class UserSignupTestCase(BaseTest):
         response = self.post('/zato/sso/user/signup', {
             'username': self._get_random_username(),
             'password': self._get_random_data(),
-            'app_list': [Config.current_app]
+            'app_list': [TestConfig.current_app]
         })
 
         self.assertIsNotNone(response.confirm_token)
@@ -77,7 +76,7 @@ class UserConfirmSignupTestCase(BaseTest):
         response = self.post('/zato/sso/user/signup', {
             'username': self._get_random_username(),
             'password': self._get_random_data(),
-            'app_list': [Config.current_app]
+            'app_list': [TestConfig.current_app]
         })
 
         confirm_token = response.confirm_token
@@ -149,7 +148,7 @@ class UserApproveTestCase(BaseTest):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
+            'current_app': TestConfig.current_app,
             'username': self._get_random_username(),
         })
 
@@ -206,8 +205,8 @@ class UserLoginValidTestCase(BaseTest):
         })
 
         response = self.post('/zato/sso/user/login', {
-            'username': Config.super_user_name,
-            'password': Config.super_user_password,
+            'username': TestConfig.super_user_name,
+            'password': TestConfig.super_user_password,
         })
 
         self.assertIsNotNone(response.ust)
@@ -221,7 +220,7 @@ class UserLoginInvalidUsernameTestCase(BaseTest):
 
         response = self.post('/zato/sso/user/login', {
             'username': self._get_random_username(),
-            'password': Config.super_user_password,
+            'password': TestConfig.super_user_password,
         }, expect_ok=False)
 
         self.assertEqual(response.status, status_code.error)
@@ -234,7 +233,7 @@ class UserLoginInvalidUsernameTestCase(BaseTest):
 
         response = self.post('/zato/sso/user/login', {
             'username': '',
-            'password': Config.super_user_password,
+            'password': TestConfig.super_user_password,
         }, expect_ok=False)
 
         self.assertEqual(response.status, status_code.error)
@@ -247,7 +246,7 @@ class UserLoginInvalidUsernameTestCase(BaseTest):
 
         response = self.post('/zato/sso/user/login', {
             'username': None,
-            'password': Config.super_user_password,
+            'password': TestConfig.super_user_password,
         }, expect_ok=False)
 
         self.assertEqual(response.status, status_code.error)
@@ -259,7 +258,7 @@ class UserLoginInvalidUsernameTestCase(BaseTest):
     def test_user_login_no_username(self):
 
         response = self.post('/zato/sso/user/login', {
-            'password': Config.super_user_password,
+            'password': TestConfig.super_user_password,
         }, expect_ok=False)
 
         self.assertEqual(response.result, 'Error')
@@ -275,7 +274,7 @@ class UserLoginInvalidPasswordTestCase(BaseTest):
     def test_user_login_invalid_password(self):
 
         response = self.post('/zato/sso/user/login', {
-            'username': Config.super_user_name,
+            'username': TestConfig.super_user_name,
             'password': self._get_random_data(),
         }, expect_ok=False)
 
@@ -288,7 +287,7 @@ class UserLoginInvalidPasswordTestCase(BaseTest):
     def test_user_login_empty_password_string(self):
 
         response = self.post('/zato/sso/user/login', {
-            'username': Config.super_user_name,
+            'username': TestConfig.super_user_name,
             'password': '',
         }, expect_ok=False)
 
@@ -302,7 +301,7 @@ class UserLoginInvalidPasswordTestCase(BaseTest):
 
         response = self.post('/zato/sso/user/login', {
             'username': None,
-            'password': Config.super_user_password,
+            'password': TestConfig.super_user_password,
         }, expect_ok=False)
 
         self.assertEqual(response.status, status_code.error)
@@ -314,7 +313,7 @@ class UserLoginInvalidPasswordTestCase(BaseTest):
     def test_user_login_no_password(self):
 
         response = self.post('/zato/sso/user/login', {
-            'username': Config.super_user_name,
+            'username': TestConfig.super_user_name,
         }, expect_ok=False)
 
         self.assertEqual(response.result, 'Error')
@@ -335,8 +334,8 @@ class UserLogoutTestCase(BaseTest):
         })
 
         ust = self.post('/zato/sso/user/login', {
-            'username': Config.super_user_name,
-            'password': Config.super_user_password,
+            'username': TestConfig.super_user_name,
+            'password': TestConfig.super_user_password,
         }).ust
 
         self.post('/zato/sso/user/logout', {
@@ -408,7 +407,7 @@ class UserGetTestCase(BaseTest):
 
         self.assertEqual(response.approval_status, const.approval_status.approved)
         self.assertEqual(response.approval_status_mod_by, 'auto')
-        self.assertEqual(response.username, Config.super_user_name)
+        self.assertEqual(response.username, TestConfig.super_user_name)
         self.assertEqual(response.sign_up_status, const.signup_status.final)
 
         self.assertFalse(response.is_approval_needed)
