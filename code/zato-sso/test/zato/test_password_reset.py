@@ -10,9 +10,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main
 
 # Zato
-from base import BaseTest, Config
+from base import BaseTest
 from zato.common.crypto.api import CryptoManager
 from zato.common.odb.model import SSOPasswordReset, SSOUser
+from zato.common.test.config import TestConfig
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -42,7 +43,7 @@ class FlowPRTTestCase(BaseTest):
 
         # Request a new PRT ..
         self.post('/zato/sso/password/reset', {
-            'credential': Config.super_user_name,
+            'credential': TestConfig.super_user_name,
         })
 
         # .. above, we never receive the PRT so we know there will be at least one PRT
@@ -80,7 +81,7 @@ class FlowPRTTestCase(BaseTest):
             'ust': self.ctx.super_user_ust,
             'user_id': user_id,
             'old_password': password,
-            'new_password': Config.super_user_password
+            'new_password': TestConfig.super_user_password
         })
 
         # .. confirm that we can log in using the old password.
