@@ -107,7 +107,10 @@ class FieldInfo:
 
         is_class = isclass(field_type)
 
-        if is_list(field_type, is_class):
+        if field_type is list:
+            type_info = api_spec_info.LIST
+
+        elif is_list(field_type, is_class):
             info.is_list = True
             ref = extract_model_class(field_type)
 
@@ -118,6 +121,9 @@ class FieldInfo:
 
             info.ref = '#/components/schemas/{}.{}'.format(ref.__module__, ref.__name__)
             type_info = '', ref.__name__
+
+        elif is_class and issubclass(field_type, dict):
+            type_info = api_spec_info.DICT
 
         elif is_class and issubclass(field_type, bool):
             type_info = api_spec_info.BOOLEAN
