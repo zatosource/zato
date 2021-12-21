@@ -9,6 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from logging import getLogger
 
+# ujson
+from ujson import dumps
+
 # Zato
 from zato.common.api import GENERIC, PUBSUB
 from zato.common.util.api import new_cid
@@ -213,6 +216,7 @@ class PubSubMessage:
         self,
         skip=None,               # type: strtuple
         needs_utf8_encode=False, # type: bool
+        needs_utf8_decode=False, # type: bool
         add_id_attrs=False,      # type: bool
         _data_keys=_data_keys    # type: strtuple
         ) -> 'commondict':
@@ -226,9 +230,15 @@ class PubSubMessage:
             if key != 'topic' and key not in skip:
                 value = getattr(self, key)
                 if value is not None:
+
                     if needs_utf8_encode:
                         if key in _data_keys:
                             value = value.encode('utf8') if isinstance(value, str) else value
+
+                    if needs_utf8_decode:
+                        if key in _data_keys:
+                            value = value.decode('utf8') if isinstance(value, bytes) else value
+
                     out[key] = value
 
         if add_id_attrs:
@@ -258,12 +268,24 @@ class PubSubMessage:
         """ Returns a dict representation of self ready to be delivered to external systems,
         i.e. without internal attributes on output.
         """
-        out = self.to_dict(skip, needs_utf8_encode, True)
+        out = self.to_dict(skip, needs_utf8_encode=needs_utf8_encode, add_id_attrs=True)
         if self.reply_to_sk:
             out['ctx'] = {
                 'reply_to_sk': self.reply_to_sk
             }
         return out
+
+# ################################################################################################################################
+
+    def to_json(self, *args:'any_', **kwargs:'any_') -> 'bytes':
+        data = self.to_dict(*args, **kwargs)
+        return dumps(data)
+
+# ################################################################################################################################
+
+    def to_external_json(self, *args:'any_', **kwargs:'any_') -> 'bytes':
+        data = self.to_external_dict(*args, **kwargs)
+        return dumps(data)
 
 # ################################################################################################################################
 # ################################################################################################################################
