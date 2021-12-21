@@ -34,9 +34,6 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-# Rename for backward compatibility
-Config = TestConfig
-
 class NotGiven:
     pass
 
@@ -51,7 +48,7 @@ class TestCtx:
     def reset(self):
         self.super_user_ust = None # type: str
         self.super_user_id = None # type: str
-        self.config = Config
+        self.config = TestConfig
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -66,15 +63,15 @@ class BaseTest(RESTClientTestCase):
             # Create the test user if the account does not already exist ..
             odb_session = self.get_odb_session()
 
-            if not get_user_by_name(odb_session, Config.super_user_name, False):
+            if not get_user_by_name(odb_session, TestConfig.super_user_name, False):
 
                 # .. create the user ..
-                sh.zato('sso', 'create-super-user', Config.server_location, Config.super_user_name, '--password',
-                  Config.super_user_password, '--verbose')
+                sh.zato('sso', 'create-super-user', TestConfig.server_location, TestConfig.super_user_name, '--password',
+                  TestConfig.super_user_password, '--verbose')
 
                 # .. and set the TOTP ..
-                sh.zato('sso', 'reset-totp-key', Config.server_location, Config.super_user_name, '--key',
-                  Config.super_user_totp_key, '--verbose')
+                sh.zato('sso', 'reset-totp-key', TestConfig.server_location, TestConfig.super_user_name, '--key',
+                  TestConfig.super_user_totp_key, '--verbose')
 
         except Exception as e:
             # .. but ignore it if such a user already exists.
@@ -98,7 +95,7 @@ class BaseTest(RESTClientTestCase):
 # ################################################################################################################################
 
     def get_odb_session(self):
-        return get_odb_session_from_server_dir(Config.server_location)
+        return get_odb_session_from_server_dir(TestConfig.server_location)
 
 # ################################################################################################################################
 
@@ -108,20 +105,20 @@ class BaseTest(RESTClientTestCase):
 # ################################################################################################################################
 
     def _get_random_username(self):
-        return self._get_random(Config.username_prefix)
+        return self._get_random(TestConfig.username_prefix)
 
 # ################################################################################################################################
 
     def _get_random_data(self):
-        return self._get_random(Config.random_prefix)
+        return self._get_random(TestConfig.random_prefix)
 
 # ################################################################################################################################
 
     def _login_super_user(self):
         response = self.post('/zato/sso/user/login', {
-            'username': Config.super_user_name,
-            'password': Config.super_user_password,
-            'totp_code': TOTPManager.get_current_totp_code(Config.super_user_totp_key),
+            'username': TestConfig.super_user_name,
+            'password': TestConfig.super_user_password,
+            'totp_code': TOTPManager.get_current_totp_code(TestConfig.super_user_totp_key),
         })
         self.ctx.super_user_ust = response.ust
 
