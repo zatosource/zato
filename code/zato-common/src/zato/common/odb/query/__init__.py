@@ -967,12 +967,19 @@ def _pubsub_topic(session, cluster_id):
         order_by(PubSubTopic.name)
 
 @bunch_maker
-def pubsub_topic(session, cluster_id, id):
+def pubsub_topic(session, cluster_id, topic_id=None, topic_name=None):
     """ A pub/sub topic.
     """
-    return _pubsub_topic(session, cluster_id).\
-        filter(PubSubTopic.id==id).\
-        one()
+    q = _pubsub_topic(session, cluster_id)
+
+    if topic_id:
+        q = q.filter(PubSubTopic.id==topic_id)
+    elif topic_name:
+        q = q.filter(PubSubTopic.name==topic_name)
+    else:
+        raise ValueError('Topic ID or name is required on input')
+
+    return q.one()
 
 @query_wrapper
 def pubsub_topic_list(session, cluster_id, needs_columns=False):
