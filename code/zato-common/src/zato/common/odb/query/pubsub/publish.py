@@ -199,11 +199,6 @@ def insert_queue_messages(session, cluster_id, subscriptions_by_topic, msg_list,
 
     for sub in subscriptions_by_topic:
         for msg in msg_list:
-
-            print()
-            print(111, msg)
-            print()
-
             # Enqueues the message for each subscriber
             queue_msgs.append({
                 'creation_time': _float_str.format(now),
