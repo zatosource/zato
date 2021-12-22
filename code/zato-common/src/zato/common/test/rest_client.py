@@ -48,6 +48,7 @@ class RESTClientTestCase(TestCase):
     def __init__(self, *args, **kwargs) -> 'None': # type: ignore
         super().__init__(*args, **kwargs)
         self.rest_client = _RESTClient(self.needs_bunch, self.needs_current_app, self.payload_only_messages)
+        self.rest_client.init()
 
 # ################################################################################################################################
 
@@ -95,10 +96,24 @@ class _RESTClient:
         command = sh.zato # type: ignore
 
         # Generate a new password ..
+        password = CryptoManager.generate_password()
 
-        # Invoke enmasse ..
-        out = command('service', 'invoke', TestConfig.server_location,
-            '--payload', '--input', config_path, '--replace-odb-objects', '--verbose')
+        # .. wrap everything in a dict ..
+        payload = {
+            'name': sec_name,
+            'password1': password,
+            'password2': password,
+        }
+
+        # .. serialise to JSON, as expected by the CLI ..
+        payload = dumps(payload)
+
+        # .. log what we are about to do ..
+        logger.info('Changing password for HTTP Basic Auth `%s`', sec_name)
+
+        # .. and reset the password now.
+        command('service', 'invoke', TestConfig.server_location,
+            'zato.security.basic-auth.change-password', '--payload', payload)
 
 # ################################################################################################################################
 
