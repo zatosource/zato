@@ -66,12 +66,15 @@ class BaseTest(RESTClientTestCase):
             if not get_user_by_name(odb_session, TestConfig.super_user_name, False):
 
                 # .. create the user ..
-                sh.zato('sso', 'create-super-user', TestConfig.server_location, TestConfig.super_user_name, '--password',
-                  TestConfig.super_user_password, '--verbose')
+                sh.zato('sso', 'create-super-user', TestConfig.server_location, TestConfig.super_user_name,
+                    '--password', TestConfig.super_user_password,
+                    '--email', 'test@example.com',
+                    '--verbose')
 
                 # .. and set the TOTP ..
-                sh.zato('sso', 'reset-totp-key', TestConfig.server_location, TestConfig.super_user_name, '--key',
-                  TestConfig.super_user_totp_key, '--verbose')
+                sh.zato('sso', 'reset-totp-key', TestConfig.server_location, TestConfig.super_user_name,
+                    '--key', TestConfig.super_user_totp_key,
+                    '--verbose')
 
         except Exception as e:
             # .. but ignore it if such a user already exists.
