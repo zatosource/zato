@@ -35,6 +35,7 @@ from zato.sso.util import new_prt, new_prt_reset_key, UserChecker
 if 0:
     from typing import Callable
     from zato.common.odb.model import SSOUser
+    from zato.common.typing_ import anydict, anylist, callable_
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.email import SMTPConnection
 
@@ -58,16 +59,10 @@ FlowPRTModelUpdate = FlowPRTModelTable.update
 # ################################################################################################################################
 # ################################################################################################################################
 
-_unrecognised_locale = object()
-
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 @dataclass
 class AccessTokenCtx:
-    user: dict
-    reset_key: str
+    user:      'anydict'
+    reset_key: 'str'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -85,8 +80,15 @@ user_search_by_map = {
 class PasswordResetAPI:
     """ Message flow around password-reset tokens (PRT).
     """
-    def __init__(self, server, sso_conf, odb_session_func, decrypt_func, verify_hash_func):
-        # type: (ParallelServer, Bunch, Callable, Callable, Callable) -> None
+    def __init__(
+        self,
+        server,           # type: ParallelServer
+        sso_conf,         # type: Bunch
+        odb_session_func, # type: callable_
+        decrypt_func,     # type: callable_
+        verify_hash_func  # type: callable_
+        ) -> 'None':
+
         self.server = server
         self.sso_conf = sso_conf
         self.odb_session_func = odb_session_func
@@ -132,15 +134,21 @@ class PasswordResetAPI:
 
 # ################################################################################################################################
 
-    def post_configure(self, func, is_sqlite):
-        # type: (Callable, bool) -> None
+    def post_configure(self, func:'callable_', is_sqlite:'bool') -> 'None':
         self.odb_session_func = func
         self.is_sqlite = is_sqlite
 
 # ################################################################################################################################
 
-    def create_token(self, cid, credential, current_app, remote_addr, user_agent, _utcnow=datetime.utcnow, _timedelta=timedelta):
-        # type: (str, object, object) -> None
+    def create_token(
+        self,
+        cid,         # type: str
+        credential,  # type: str
+        current_app, # type: str
+        remote_addr, # type: anylist
+        user_agent,  # type: str
+        _utcnow=datetime.utcnow, # type: callable_
+        ) -> 'None':
 
         # Validate input
         if not credential:
@@ -200,8 +208,15 @@ class PasswordResetAPI:
 
 # ################################################################################################################################
 
-    def access_token(self, cid, token, current_app, remote_addr, user_agent, _utcnow=datetime.utcnow, _timedelta=timedelta):
-        # type: (str, str, str, str, str, object, object) -> AccessTokenCtx
+    def access_token(
+        self,
+        cid,         # type: str
+        token,       # type: str
+        current_app, # type: str
+        remote_addr, # type: anylist
+        user_agent,  # type: str
+        _utcnow=datetime.utcnow, # type: callable_
+        ) -> 'AccessTokenCtx':
 
         # For later use
         now = _utcnow()
@@ -257,9 +272,17 @@ class PasswordResetAPI:
 
 # ################################################################################################################################
 
-    def change_password(self, cid, new_password, token, reset_key, current_app, remote_addr, user_agent,
-        _utcnow=datetime.utcnow, _timedelta=timedelta):
-        # type: (str, str, str, str, str, str, object, object) -> str
+    def change_password(
+        self,
+        cid,          # type: str
+        new_password, # type: str
+        token,        # type: str
+        reset_key,    # type: str
+        current_app,  # type: str
+        remote_addr,  # type: anylist
+        user_agent,   # type: str
+        _utcnow=datetime.utcnow, # type: callable_
+        ) -> 'None':
 
         # For later use
         now = _utcnow()
@@ -426,9 +449,14 @@ class PasswordResetAPI:
 
 # ################################################################################################################################
 
-    def _build_sso_ctx(self, cid, remote_addr, user_agent, current_app):
-        # type: (str, str, str, str) -> None
-        return SSOCtx(
+    def _build_sso_ctx(
+        self,
+        cid,         # type: str
+        remote_addr, # type: anylist
+        user_agent,  # type: str
+        current_app  # type: str
+        ) -> 'SSOCtx':
+        ctx = SSOCtx(
             cid=cid,
             remote_addr=remote_addr,
             user_agent=user_agent,
@@ -436,7 +464,8 @@ class PasswordResetAPI:
                 'current_app': current_app,
             }),
             sso_conf=self.sso_conf,
-        )
+        ) # type: ignore
+        return ctx
 
 # ################################################################################################################################
 # ################################################################################################################################
