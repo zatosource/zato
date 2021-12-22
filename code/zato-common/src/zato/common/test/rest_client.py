@@ -93,7 +93,7 @@ class _RESTClient:
         self.payload_only_messages = payload_only_messages
 
         self._api_invoke_username = 'pubapi'
-        self._api_invoke_password = 'p6Ig-UuwGQzgM85kH3y1J8dS6_l8JpjG'
+        self._api_invoke_password = 'wILNUjacJjIyYBx6G9zCVHmfu87DRF7f'
 
 # ################################################################################################################################
 
