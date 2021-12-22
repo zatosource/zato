@@ -25,7 +25,7 @@ class SSOAPI:
     """ An object through which user management and SSO-related functionality is accessed.
     """
     def __init__(self, server, sso_conf, odb_session_func, encrypt_func, decrypt_func, hash_func, verify_hash_func,
-            new_user_id_func):
+            new_user_id_func=None):
         self.server = server
         self.sso_conf = sso_conf
         self.odb_session_func = odb_session_func
