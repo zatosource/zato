@@ -12,6 +12,7 @@ from io import StringIO
 from logging import DEBUG
 
 # Zato
+from zato.common.pubsub import PUBSUB
 from zato.common.exception import Forbidden
 from zato.common.typing_ import intnone, list_, optional
 from zato.common.util.open_ import open_rw
@@ -472,9 +473,13 @@ class HelperPubSubHook(PubSubHook):
     """
     name = 'helpers.pubsub.hook'
 
+    class SimpleIO:
+        output_required = 'hook_action'
+
     def before_publish(self):
         self.logger.info('Helpers before_publish; pub_msg_id:`%s`, data:`%s`',
             self.request.input.ctx.msg.pub_msg_id, self.request.input.ctx.msg.data)
+        self.response.hook_action = PUBSUB.HOOK_ACTION.DELIVER
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -488,7 +493,16 @@ class HelperPubSubSource(Service):
         input_required = 'random_data', 'file_name'
 
     def handle(self):
+
+        # Publish the message ..
         self.pubsub.publish(HelperPubSubTarget, data=self.request.raw_request)
+
+        # .. now, once the message has been published, we know that the topic
+        # .. for the receiving service exists, so we can assign a hook service to it ..
+        ...
+
+        # .. and now, we can publish the message once more, this time around expecting
+        # .. that the hook service will be invoked.
 
 # ################################################################################################################################
 # ################################################################################################################################

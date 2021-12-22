@@ -466,8 +466,7 @@ class HookCtx:
     def __init__(
         self,
         hook_type,      # type: str
-        *_ignored_args, # type: any_
-        topic=None,     # type: ignore[valid-type]
+        topic=None,     # type: topicnone
         msg=None,       # type: msgnone
         **kwargs        # type: any_
         ) -> 'None':
