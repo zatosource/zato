@@ -46,7 +46,7 @@ class RequestCtx(Model):
 
 @dataclass(init=False)
 class PasswordResetNotifCtx(Model):
-    user: 'anydict'
+    user:  'anydict'
     token: 'str'
     smtp_message: 'SMTPMessage'
 
