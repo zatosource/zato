@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
-
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -215,6 +213,7 @@ class ChangePasswordBase(AdminService):
         *args, **kwargs):
 
         instance_id = instance_id or self.request.input.id
+        instance_name = self.request.input.name
 
         with closing(self.odb.session()) as session:
             password1 = self.request.input.get('password1', '')
@@ -234,9 +233,23 @@ class ChangePasswordBase(AdminService):
                 if password1_decrypted != password2_decrypted:
                     raise Exception('Passwords need to be the same')
 
-                instance = session.query(class_).\
-                    filter(class_.id==instance_id).\
-                    one()
+                # Construct a basic query ..
+                query = session.query(class_)
+
+                # .. look up by ID if it is given ..
+                if instance_id:
+                    query = query.filter(class_.id==instance_id)
+
+                # .. try to use the name if ID is not available ..
+                elif instance_name:
+                    query = query.filter(class_.name==instance_name)
+
+                # .. otherwise, we do not know how to find the instance -> raise an exception.
+                else:
+                    raise Exception('Either ID or name are required on input')
+
+                # If we are here, it means that we can find the instance.
+                instance = query.one()
 
                 auth_func(instance, password1)
 
