@@ -445,10 +445,8 @@ class HelperPubSubTarget(Service):
         # Whatever happens next, log what we received
         self.logger.info('I was invoked with %r', msg.to_dict())
 
-        # .. load the inner JSON message ..
+        # .. load the inner dict ..
         data = msg.data # type: bytes
-        data = data.decode('utf8')
-        data = loads(data)
 
         # .. confirm what it was ..
         self.logger.info('Data is %r', data)
@@ -488,7 +486,7 @@ class HelperPubSubSource(Service):
     name = 'helpers.pubsub.source'
 
     class SimpleIO:
-        input_required = 'file_name', 'random'
+        input_required = 'random_data', 'file_name'
 
     def handle(self):
         self.pubsub.publish(HelperPubSubTarget, data=self.request.raw_request)

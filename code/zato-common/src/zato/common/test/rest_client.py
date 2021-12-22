@@ -18,6 +18,9 @@ from bunch import Bunch, bunchify
 # Requests
 import requests
 
+# sh
+import sh
+
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.config import TestConfig
@@ -48,7 +51,11 @@ class RESTClientTestCase(TestCase):
     def __init__(self, *args, **kwargs) -> 'None': # type: ignore
         super().__init__(*args, **kwargs)
         self.rest_client = _RESTClient(self.needs_bunch, self.needs_current_app, self.payload_only_messages)
-        self.rest_client.init()
+
+# ################################################################################################################################
+
+    def api_invoke(self, *args, **kwargs) -> 'any_':
+        return self.rest_client.api_invoke(*args, **kwargs)
 
 # ################################################################################################################################
 
@@ -85,9 +92,13 @@ class _RESTClient:
         self.needs_current_app = needs_current_app
         self.payload_only_messages = payload_only_messages
 
+        self._api_invoke_username = 'pubapi'
+        self._api_invoke_password = 'p6Ig-UuwGQzgM85kH3y1J8dS6_l8JpjG'
+
 # ################################################################################################################################
 
     def init(self) -> 'None':
+        return
 
         # Local aliases
         sec_name = 'pubapi'
@@ -96,13 +107,13 @@ class _RESTClient:
         command = sh.zato # type: ignore
 
         # Generate a new password ..
-        password = CryptoManager.generate_password()
+        self._api_invoke_password = CryptoManager.generate_password().decode('utf8')
 
         # .. wrap everything in a dict ..
         payload = {
             'name': sec_name,
-            'password1': password,
-            'password2': password,
+            'password1': self._api_invoke_password,
+            'password2': self._api_invoke_password,
         }
 
         # .. serialise to JSON, as expected by the CLI ..
@@ -161,6 +172,16 @@ class _RESTClient:
                     response.text, response.status_code))
 
         return data
+
+# ################################################################################################################################
+
+    def api_invoke(self, service:'str', request:'any_'=None) -> 'any_':
+
+        prefix = '/zato/api/invoke/'
+        url_path = prefix + service
+        auth = (self._api_invoke_username, self._api_invoke_password)
+
+        return self.post(url_path, request or {}, auth=auth)
 
 # ################################################################################################################################
 
