@@ -1069,13 +1069,10 @@ class WebSocket(_WebSocket):
                 # Ok, we can proceed
                 try:
                     self.handle_client_message(cid, request) if not request.is_auth else self.handle_create_session(cid, request)
-                except RuntimeError as e:
-                    if str(e) == _cannot_send:
-                        msg = 'Ignoring message (socket terminated #1), cid:`%s`, request:`%s` conn:`%s`'
-                        logger.info(msg, cid, request, self.peer_conn_info_pretty)
-                        logger_zato.info(msg, cid, request, self.peer_conn_info_pretty)
-                    else:
-                        raise
+                except Exception:
+                    msg = 'Ignoring message (socket terminated #1), cid:`%s`, request:`%s` conn:`%s`'
+                    logger.info(msg, cid, request, self.peer_conn_info_pretty)
+                    logger_zato.info(msg, cid, request, self.peer_conn_info_pretty)
 
             # Unauthenticated - require credentials on input
             else:
