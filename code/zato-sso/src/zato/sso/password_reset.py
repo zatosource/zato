@@ -364,7 +364,7 @@ class PasswordResetAPI:
 
             # .. prepare all the details for the custom service ..
             ctx = PasswordResetNotifCtx()
-            ctx.user = user
+            ctx.user = user._asdict()
             ctx.token = token
             ctx.smtp_message = smtp_message
 
