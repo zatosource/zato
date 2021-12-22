@@ -377,6 +377,7 @@ list_key=sample,list
 sso_conf_contents = '''[main]
 encrypt_email=True
 encrypt_password=True
+email_service=
 smtp_conn=
 site_name=
 

@@ -23,7 +23,7 @@ from zato.sso import const
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, strnone
+    from zato.common.typing_ import anydict, anylist, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,7 +37,7 @@ SessionModelInsert = SessionModelTable.insert
 @dataclass
 class BaseRequestCtx:
     cid:             'str'
-    remote_addr:     'str'
+    remote_addr:     'anylist'
     user_agent:      'str'
     input:           'anydict'
     has_remote_addr: 'bool' = field(init=False, default=False)
