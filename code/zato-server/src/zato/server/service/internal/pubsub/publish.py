@@ -213,7 +213,8 @@ class Publish(AdminService):
             ps_msg.sub_pattern_matched[sub.sub_key] = sub.sub_pattern_matched
 
         if ps_msg.data:
-            ps_msg.size = len(ps_msg.data.encode('utf8')) # We need to store the size in bytes rather than Unicode codepoints
+            # We need to store the size in bytes rather than Unicode codepoints
+            ps_msg.size = len(ps_msg.data if isinstance(ps_msg.data, bytes) else ps_msg.data.encode('utf8'))
         else:
             ps_msg.size = 0
 
